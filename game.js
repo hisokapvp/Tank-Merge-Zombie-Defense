@@ -46,7 +46,6 @@ const BAL = {
   trackWidth: 18,
   tankOrbitRadius: 210,
   tankOrbitSpeed: 0.55,
-  tankTrackWidth: 10,
   zombieCountTarget: 50,
   zombieHpBase: 44,
   zombieHpVar: 0.22,
@@ -233,10 +232,10 @@ function initBoard(){
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
-  const fenceRadius = Math.max(totalW, totalH) / 2 + 28;
-  BAL.tankOrbitRadius = fenceRadius + 40;
-  BAL.trackRadius = BAL.tankOrbitRadius + 70;
-  BAL.trackWidth = 18;
+  const fenceRadius = Math.max(totalW, totalH) / 2 + 36;
+  BAL.trackRadius = fenceRadius;
+  BAL.trackWidth = 16;
+  BAL.tankOrbitRadius = Math.max(120, fenceRadius - 70);
 }
 
 function makeTank(level, busy = true){
@@ -416,7 +415,7 @@ function stepTanks(dt){
     // pick nearest zombie in range
     let best = null;
     let bestD = Infinity;
-    const pos = tankFiringPos(cell, tank, nowSec());
+    const pos = tankOrbitPos(cell, nowSec());
     const sx = pos.x;
     const sy = pos.y;
 
@@ -453,16 +452,6 @@ function tankOrbitPos(cell, timeSec){
   return {
     x: center.x + Math.cos(angle) * BAL.tankOrbitRadius,
     y: center.y + Math.sin(angle) * BAL.tankOrbitRadius,
-  };
-}
-
-function tankFiringPos(cell, tank, timeSec){
-  if (tank.busy){
-    return tankOrbitPos(cell, timeSec);
-  }
-  return {
-    x: cell.x + cell.w/2,
-    y: cell.y + cell.h/2,
   };
 }
 
@@ -928,9 +917,7 @@ function drawBoard(){
     ctx.stroke();
 
     if (c.tank){
-      const cx = c.x + c.w/2;
-      const cy = c.y + c.h/2;
-      drawTank(cx, cy, c.tank.level, false, { muted: c.tank.busy, compact: true });
+      drawTankSlot(c);
     }
   }
 
@@ -946,20 +933,32 @@ function drawBoard(){
   ctx.restore();
 }
 
+function drawTankSlot(cell){
+  const cx = cell.x + cell.w/2;
+  const cy = cell.y + cell.h/2;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  rr(ctx, cx-14, cy-10, 28, 20, 8);
+  ctx.fill();
+  ctx.fillStyle = '#eaf1ff';
+  ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Lv${cell.tank.level}`, cx, cy);
+  ctx.restore();
+}
+
 function drawOrbitingTanks(){
   const t = nowSec();
   for (const c of state.cells){
     if (!c.tank) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
-    if (!c.tank.busy) continue;
     const pos = tankOrbitPos(c, t);
     drawTank(pos.x, pos.y, c.tank.level);
   }
 }
 
-function drawTank(x,y,level,ghost=false, options = {}){
-  const muted = options?.muted ?? false;
-  const compact = options?.compact ?? false;
+function drawTank(x,y,level,ghost=false){
   // Try sprite-based tanks if assets/tanks.json exists
   const spr = TankSprites?.pick?.(level);
   if (spr){
@@ -1015,9 +1014,7 @@ function drawTank(x,y,level,ghost=false, options = {}){
   }
 
   const tier = Math.floor((level-1)/3);
-  const hull = muted
-    ? ['#6f6f6f','#7a7a7a','#878787','#949494','#a1a1a1'][clamp(tier,0,4)]
-    : ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
+  const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
   const edge = 'rgba(255,255,255,.22)';
 
   // Silhouette differences by tier
