@@ -89,6 +89,33 @@ const BAL = {
   maxParticles: 1600,
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
+
+  // Crates
+  crateIntervalSec: 60,
+  crateDropSpeed: 220,
+  crateSize: 34,
+};
+
+const BASE_BAL = {
+  cellW: 39,
+  cellH: 30,
+  cellGap: 4,
+  boardPad: 6,
+  zombieTrackRadius: 295,
+  zombieTrackWidth: 18,
+  fenceWidth: 20,
+  fenceKeepout: 12,
+  zombieFencePush: 24,
+  tankOrbitRadius: 210,
+  tankTrackWidth: 12,
+  zombieScaleMul: 0.72,
+  zombieBobAmp: 2.2,
+  zombieShadowW: 11,
+  zombieShadowH: 5,
+  zombieShadowY: 12,
+  edgeSpawnRadius: 520,
+  crateDropSpeed: 220,
+  crateSize: 34,
 };
 
 const compact = true;
@@ -102,6 +129,7 @@ const backgroundLayer = {
 
 let state = {
   coins: 120,
+  kills: 0,
   cells: [],
   boardRect: {x:0,y:0,w:0,h:0},
   zombies: [],
@@ -109,6 +137,8 @@ let state = {
   impacts: [],     // rings + bolts
   decals: [],      // e.g., toxic pools
   particles: [],
+  crate: null,
+  nextCrateAt: 0,
   dragging: null,
   boostUntil: 0,
 };
@@ -123,7 +153,7 @@ const STRINGS = {
     title: 'Tank Merger: Zombie Orbit',
     subtitle: 'В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков',
     hudCoins: 'Монеты',
-    hudZombies: 'Зомби',
+    hudKills: 'Убито монстров',
     hudSprites: 'Спрайты',
     hudBoost: 'Буст',
     buyTank: 'Купить танк Lv{level}',
@@ -142,7 +172,8 @@ const STRINGS = {
     hintSpritesOff: 'Спрайты отключены (assets/zombies.json).',
     popTank: '+Танк',
     popHangar: 'Ангар',
-    popTrack: 'Трасса!',
+    popTrack: 'В бой!',
+    crateMessage: 'Посмотри рекламу и получи танк.',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
     statusOn: 'OK',
@@ -154,7 +185,7 @@ const STRINGS = {
     title: 'Tank Merger: Zombie Orbit',
     subtitle: 'Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported',
     hudCoins: 'Coins',
-    hudZombies: 'Zombies',
+    hudKills: 'Monsters defeated',
     hudSprites: 'Sprites',
     hudBoost: 'Boost',
     buyTank: 'Buy tank Lv{level}',
@@ -173,7 +204,8 @@ const STRINGS = {
     hintSpritesOff: 'Sprites OFF (assets/zombies.json).',
     popTank: '+Tank',
     popHangar: 'Hangar',
-    popTrack: 'Track!',
+    popTrack: 'To battle!',
+    crateMessage: 'Watch an ad to get a tank.',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
     statusOn: 'OK',
@@ -238,6 +270,7 @@ const ZombieSprites = {
         frame: t.frame || {x:0,y:0,w:64,h:64},
         anchor: t.anchor || {x:0.5,y:0.75},
         scale: t.scale ?? 1.0,
+        rotation: t.rotation ?? 0,
         hpMul: t.hpMul ?? 1.0,
         omegaMul: t.omegaMul ?? 1.0,
         rewardMul: t.rewardMul ?? 1.0,
@@ -340,6 +373,35 @@ function loadImage(url){
 }
 
 const BASE_CANVAS = { w: 1100, h: 650 };
+let balScale = 1;
+
+function applyBalScale(scale){
+  const clamped = clamp(scale, 1, 1.35);
+  balScale = clamped;
+
+  BAL.cellW = BASE_BAL.cellW * clamped;
+  BAL.cellH = BASE_BAL.cellH * clamped;
+  BAL.cellGap = BASE_BAL.cellGap * clamped;
+  BAL.boardPad = BASE_BAL.boardPad * clamped;
+
+  BAL.zombieTrackRadius = BASE_BAL.zombieTrackRadius * clamped;
+  BAL.zombieTrackWidth = BASE_BAL.zombieTrackWidth * clamped;
+  BAL.fenceWidth = BASE_BAL.fenceWidth * clamped;
+  BAL.fenceKeepout = BASE_BAL.fenceKeepout * clamped;
+  BAL.zombieFencePush = BASE_BAL.zombieFencePush * clamped;
+  BAL.tankOrbitRadius = BASE_BAL.tankOrbitRadius * clamped;
+  BAL.tankTrackWidth = BASE_BAL.tankTrackWidth * clamped;
+
+  BAL.zombieScaleMul = BASE_BAL.zombieScaleMul * clamped;
+  BAL.zombieBobAmp = BASE_BAL.zombieBobAmp * clamped;
+  BAL.zombieShadowW = BASE_BAL.zombieShadowW * clamped;
+  BAL.zombieShadowH = BASE_BAL.zombieShadowH * clamped;
+  BAL.zombieShadowY = BASE_BAL.zombieShadowY * clamped;
+  BAL.edgeSpawnRadius = BASE_BAL.edgeSpawnRadius * clamped;
+
+  BAL.crateDropSpeed = BASE_BAL.crateDropSpeed * clamped;
+  BAL.crateSize = BASE_BAL.crateSize * clamped;
+}
 
 function resizeCanvas(){
   const stage = document.querySelector('.stageCanvas');
@@ -367,6 +429,7 @@ function resizeCanvas(){
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   viewSize = { w: displayW, h: displayH, dpr };
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
+  applyBalScale(scale);
   initBoard();
 }
 
@@ -675,6 +738,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     level,
     theta,
     anchorTheta: theta,
+    heading: theta + (baseOmega >= 0 ? Math.PI/2 : -Math.PI/2),
     slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
     swayPhase: Math.random() * Math.PI * 2,
     swaySpeed: (0.6 + Math.random() * 0.8) * (t?.omegaMul ?? 1.0),
@@ -736,7 +800,11 @@ function zombieLevelScale(z){
 function stepZombies(dt){
   for (const z of state.zombies){
     z.swayPhase += dt * z.swaySpeed;
+    z.anchorTheta += z.omega * dt;
     z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
+
+    const targetHeading = z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2);
+    z.heading = smoothAngle(z.heading ?? targetHeading, targetHeading, dt * 6);
 
     // Join ring from edge
     const t = 1 - Math.exp(-dt * BAL.edgeJoinSpeed);
@@ -970,12 +1038,53 @@ function stepDecals(dt){
   state.decals = next;
 }
 
+// ---------- Crates ----------
+function spawnCrate(){
+  const maxR = Math.max(80, BAL.fenceRadius - 40);
+  const angle = Math.random() * Math.PI * 2;
+  const r = Math.random() * maxR;
+  const targetX = center.x + Math.cos(angle) * r;
+  const targetY = center.y + Math.sin(angle) * r;
+  const size = BAL.crateSize;
+  state.crate = {
+    x: targetX,
+    y: -size,
+    targetY,
+    size,
+    pulse: 0,
+  };
+}
+
+function maybeSpawnCrate(){
+  const now = nowSec();
+  if (!state.nextCrateAt) state.nextCrateAt = now + BAL.crateIntervalSec;
+  if (!state.crate && now >= state.nextCrateAt){
+    spawnCrate();
+    state.nextCrateAt = now + BAL.crateIntervalSec;
+  }
+}
+
+function stepCrate(dt){
+  if (!state.crate) return;
+  const c = state.crate;
+  c.y = Math.min(c.targetY, c.y + BAL.crateDropSpeed * dt);
+  c.pulse += dt * 4;
+}
+
+function crateHitTest(x,y){
+  if (!state.crate) return false;
+  const c = state.crate;
+  const half = c.size * 0.5;
+  return x >= c.x - half && x <= c.x + half && y >= c.y - half && y <= c.y + half;
+}
+
 // ---------- Kills / respawn ----------
 function cleanupKills(){
   const alive = [];
   for (const z of state.zombies){
     if (z.hp <= 0){
       state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
+      state.kills += 1;
       const p = zombiePos(z);
       burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
     } else alive.push(z);
@@ -1019,7 +1128,7 @@ function stepParticles(dt){
 // ---------- UI ----------
 function updateUI(){
   ui.coins.textContent = Math.floor(state.coins);
-  ui.zcount.textContent = `${state.zombies.length}/${BAL.zombieCountTarget}`;
+  ui.zcount.textContent = state.kills;
   ui.buyCost.textContent = BAL.buyCostLv1;
 
   const left = state.boostUntil - nowSec();
@@ -1059,6 +1168,11 @@ function cellAt(x,y){
 
 canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
+  if (crateHitTest(p.x, p.y)){
+    popText(p.x, p.y - 6, t('crateMessage'), '#ffe08a');
+    state.crate = null;
+    return;
+  }
   const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
   if (trackCell !== null){
     const trackTank = state.cells[trackCell].tank;
@@ -1132,6 +1246,7 @@ function draw(){
   drawTankTrack();
   drawBoard();
   drawOrbitingTanks();
+  drawCrate();
   drawDecals();
   drawZombies();
   drawProjectiles();
@@ -1356,8 +1471,8 @@ function drawOrbitingTanks(){
 function drawTankIcon(x,y,level,mutedSlot=false){
   const spr = TankSprites?.pick?.(level);
   if (spr){
-    const maxW = 22;
-    const maxH = 16;
+    const maxW = 22 * balScale;
+    const maxH = 16 * balScale;
     const scale = Math.min(maxW / spr.img.width, maxH / spr.img.height) * (spr.scale ?? 1.0);
     ctx.save();
     ctx.translate(x, y);
@@ -1378,7 +1493,7 @@ function drawTankIcon(x,y,level,mutedSlot=false){
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(0.35, 0.35);
+  ctx.scale(0.35 * balScale, 0.35 * balScale);
   ctx.globalAlpha = mutedSlot ? 0.65 : 0.95;
   ctx.fillStyle = 'rgba(0,0,0,.35)';
   rr(ctx, -22, -8, 44, 10, 5);
@@ -1409,7 +1524,7 @@ function drawTank(x,y,level,ghost=false,rotation=0){
       ctx.globalAlpha *= 0.6;
     }
 
-    const baseScale = compact ? 0.065 : 0.085;            // tuned for typical PNG sizes
+    const baseScale = (compact ? 0.065 : 0.085) * balScale;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale * (spr.scale ?? 1.0);
 
@@ -1440,7 +1555,7 @@ function drawTank(x,y,level,ghost=false,rotation=0){
   }
 
   // Fallback: vector tank (smaller)
-  const baseScale = compact ? 0.56 : 0.72;
+  const baseScale = (compact ? 0.56 : 0.72) * balScale;
   const levelScale = 1.0 + Math.min(0.20, level*0.010);
   const scale = baseScale * levelScale;
 
@@ -1554,7 +1669,8 @@ function drawZombieSprite(x,y,z){
   const h = f.h * scale;
 
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
-  const face = z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2);
+  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
+  const rot = face + (t.rotation ?? 0);
 
   // shadow
   ctx.save();
@@ -1567,7 +1683,7 @@ function drawZombieSprite(x,y,z){
   // body (rotated + bob)
   ctx.save();
   ctx.translate(x, y + bob);
-  ctx.rotate(face);
+  ctx.rotate(rot);
 
   ctx.drawImage(img, f.x, f.y, f.w, f.h, -w * a.x, -h * a.y, w, h);
   ctx.restore();
@@ -1595,7 +1711,7 @@ function drawZombieSprite(x,y,z){
 
 function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
-  const face = z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2);
+  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
   const skinTone = shade('#3cbe78', levelBoost * 10);
@@ -1733,6 +1849,42 @@ function drawImpacts(){
   }
 }
 
+function drawCrate(){
+  if (!state.crate) return;
+  const c = state.crate;
+  const size = c.size;
+  const half = size * 0.5;
+  const pulse = 1 + Math.sin(c.pulse) * 0.04;
+
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.scale(pulse, pulse);
+
+  ctx.fillStyle = 'rgba(0,0,0,.25)';
+  ctx.beginPath();
+  ctx.ellipse(0, half + 6, half * 0.9, half * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#c88b4c';
+  ctx.strokeStyle = 'rgba(0,0,0,.35)';
+  ctx.lineWidth = 2;
+  rr(ctx, -half, -half, size, size, 6);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#9c6a3a';
+  rr(ctx, -half, -half + size * 0.32, size, size * 0.22, 4);
+  ctx.fill();
+
+  ctx.fillStyle = '#f4d060';
+  rr(ctx, -8, -6, 16, 12, 3);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.25)';
+  ctx.strokeRect(-10, -8, 20, 16);
+
+  ctx.restore();
+}
+
 function drawDecals(){
   for (const d of state.decals){
     const t = d.life / d.max;
@@ -1796,6 +1948,11 @@ function tankOnTrackAt(x,y,timeSec){
 }
 
 // ---------- Helpers ----------
+function smoothAngle(current, target, amt){
+  const diff = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + diff * clamp(amt, 0, 1);
+}
+
 function rr(ctx, x,y,w,h,r){
   r = Math.min(r, w/2, h/2);
   ctx.beginPath();
@@ -1841,10 +1998,12 @@ function loop(now){
   last = now;
 
   ensureZombieCount();
+  maybeSpawnCrate();
   stepZombies(dt);
   stepTanks(dt);
   stepProjectiles(dt);
   stepDecals(dt);
+  stepCrate(dt);
   cleanupKills();
   stepImpacts(dt);
   stepParticles(dt);
@@ -1869,6 +2028,7 @@ async function boot(){
     window.visualViewport.addEventListener('resize', resizeCanvas);
   }
   resizeCanvas();
+  state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
 
   // starter tanks
   if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
