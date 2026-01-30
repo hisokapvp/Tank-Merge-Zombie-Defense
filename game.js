@@ -42,8 +42,12 @@ const BAL = {
   rangePerLevel: 10,
 
   // Zombie ring
-  trackRadius: 295,
-  trackWidth: 18,
+  zombieTrackRadius: 295,
+  zombieTrackWidth: 18,
+  fenceRadius: 0,
+  fenceWidth: 8,
+  fenceKeepout: 6,
+  zombieFencePush: 18,
   tankOrbitRadius: 210,
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 12,
@@ -242,10 +246,11 @@ function initBoard(){
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
-  const fenceRadius = Math.max(totalW, totalH) / 2 + 36;
-  BAL.trackRadius = fenceRadius;
-  BAL.trackWidth = 16;
-  BAL.tankOrbitRadius = Math.max(120, fenceRadius - 70);
+  const hangarRadius = Math.max(totalW, totalH) / 2 + 22;
+  BAL.tankOrbitRadius = Math.max(120, hangarRadius + 26);
+  BAL.fenceRadius = BAL.tankOrbitRadius + 26;
+  BAL.zombieTrackRadius = BAL.fenceRadius + 26;
+  BAL.zombieTrackWidth = 16;
 
   buildBackground();
 }
@@ -302,8 +307,8 @@ function buildBackground(){
   backgroundLayer.ready = true;
 }
 
-function makeTank(level, busy = true){
-  return { id: crypto.randomUUID(), level, cooldown: 0, busy };
+function makeTank(level, onTrack = false){
+  return { id: crypto.randomUUID(), level, cooldown: 0, onTrack };
 }
 
 function tryBuyTank(){
@@ -311,7 +316,7 @@ function tryBuyTank(){
   const empty = state.cells.find(c=>!c.tank);
   if (!empty) return;
   state.coins -= BAL.buyCostLv1;
-  empty.tank = makeTank(1, true);
+  empty.tank = makeTank(1, false);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, '+Tank', '#7dffb2');
 }
 
@@ -421,7 +426,7 @@ function makeZombie(fromEdge=true){
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar);
   const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir;
 
-  const targetR = BAL.trackRadius + (Math.random()*2-1)*BAL.trackWidth;
+  const targetR = BAL.zombieTrackRadius + (Math.random()*2-1)*BAL.zombieTrackWidth;
   const r = fromEdge ? edgeSpawnR() : targetR;
 
   return {
@@ -459,6 +464,10 @@ function stepZombies(dt){
     // Join ring from edge
     const t = 1 - Math.exp(-dt * BAL.edgeJoinSpeed);
     z.r = z.r + (z.targetR - z.r) * t;
+    z.r -= BAL.zombieFencePush * dt;
+
+    const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
+    if (z.r < fenceLimit) z.r = fenceLimit;
 
     const sp = Math.abs(z.omega) * BAL.zombieBobSpeedMul;
     z.anim += dt * (2.2 + sp);
@@ -469,7 +478,7 @@ function stepZombies(dt){
 function stepTanks(dt){
   for (const cell of state.cells){
     const tank = cell.tank;
-    if (!tank) continue;
+    if (!tank || !tank.onTrack) continue;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
     if (tank.cooldown > 0) continue;
@@ -765,19 +774,26 @@ function cellAt(x,y){
 
 canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
-  const c = cellAt(p.x, p.y);
-  if (!c || !c.tank) return;
-  if (c.tank.busy){
-    c.tank.busy = false;
-    popText(c.x+c.w/2, c.y+c.h/2, 'Back!', '#eaf1ff');
+  const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
+  if (trackCell !== null){
+    const trackTank = state.cells[trackCell].tank;
+    trackTank.onTrack = false;
+    trackTank.cooldown = 0;
+    popText(p.x, p.y, 'Hangar', '#eaf1ff');
     return;
   }
+  const c = cellAt(p.x, p.y);
+  if (!c || !c.tank) return;
+  if (c.tank.onTrack) return;
   state.dragging = {
     cellIndex: c.i,
     tank: c.tank,
     dx: p.x - (c.x+c.w/2),
     dy: p.y - (c.y+c.h/2),
     x: p.x, y: p.y,
+    startX: p.x,
+    startY: p.y,
+    moved: false,
   };
   canvas.setPointerCapture(e.pointerId);
 });
@@ -787,6 +803,9 @@ canvas.addEventListener('pointermove', (e)=>{
   const p = getPointerPos(e);
   state.dragging.x = p.x;
   state.dragging.y = p.y;
+  const dx = p.x - state.dragging.startX;
+  const dy = p.y - state.dragging.startY;
+  if (Math.hypot(dx, dy) > 6) state.dragging.moved = true;
 });
 
 canvas.addEventListener('pointerup', (e)=>{
@@ -797,7 +816,10 @@ canvas.addEventListener('pointerup', (e)=>{
   const from = state.cells[state.dragging.cellIndex];
   from.tank = state.dragging.tank;
 
-  if (target){
+  if (!state.dragging.moved){
+    from.tank.onTrack = true;
+    popText(from.x+from.w/2, from.y+from.h/2, 'Track!', '#bfe3ff');
+  } else if (target){
     const merged = mergeCells(from.i, target.i);
     if (!merged && !target.tank){
       target.tank = from.tank;
@@ -816,6 +838,7 @@ function draw(){
 
   drawBackground();
   drawTrack();
+  drawZombieFence();
   drawTankTrack();
   drawBoard();
   drawOrbitingTanks();
@@ -848,19 +871,19 @@ function drawTrack(){
   ctx.translate(center.x, center.y);
 
   ctx.beginPath();
-  ctx.arc(0,0,BAL.trackRadius,0,Math.PI*2);
+  ctx.arc(0,0,BAL.zombieTrackRadius,0,Math.PI*2);
   ctx.strokeStyle = 'rgba(110,168,255,.18)';
   ctx.lineWidth = 2;
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(0,0,BAL.trackRadius + BAL.trackWidth,0,Math.PI*2);
+  ctx.arc(0,0,BAL.zombieTrackRadius + BAL.zombieTrackWidth,0,Math.PI*2);
   ctx.strokeStyle = 'rgba(125,255,178,.07)';
   ctx.lineWidth = 1;
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(0,0,BAL.trackRadius - BAL.trackWidth,0,Math.PI*2);
+  ctx.arc(0,0,BAL.zombieTrackRadius - BAL.zombieTrackWidth,0,Math.PI*2);
   ctx.strokeStyle = 'rgba(125,255,178,.06)';
   ctx.lineWidth = 1;
   ctx.stroke();
@@ -889,6 +912,43 @@ function drawTankTrack(){
   ctx.strokeStyle = 'rgba(0,0,0,.16)';
   ctx.lineWidth = 1;
   ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawZombieFence(){
+  const r = BAL.fenceRadius;
+  ctx.save();
+  ctx.translate(center.x, center.y);
+
+  ctx.strokeStyle = 'rgba(235, 208, 140, .5)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(0,0,0,.28)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0,0,r-5,0,Math.PI*2);
+  ctx.stroke();
+
+  const posts = 40;
+  for (let i=0;i<posts;i++){
+    const a = (i/posts) * Math.PI*2;
+    const px = Math.cos(a) * r;
+    const py = Math.sin(a) * r;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(a);
+    ctx.fillStyle = 'rgba(255, 228, 170, .5)';
+    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.lineWidth = 1.5;
+    rr(ctx, -3, -10, 6, 18, 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
 
   ctx.restore();
 }
@@ -976,10 +1036,10 @@ function drawTankSlot(cell){
   const cx = cell.x + cell.w/2;
   const cy = cell.y + cell.h/2;
   ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
   rr(ctx, cx-14, cy-10, 28, 20, 8);
   ctx.fill();
-  ctx.fillStyle = '#eaf1ff';
+  ctx.fillStyle = cell.tank.onTrack ? 'rgba(234,241,255,.5)' : '#eaf1ff';
   ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -990,7 +1050,7 @@ function drawTankSlot(cell){
 function drawOrbitingTanks(){
   const t = nowSec();
   for (const c of state.cells){
-    if (!c.tank) continue;
+    if (!c.tank || !c.tank.onTrack) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
     const pos = tankOrbitPos(c, t);
     drawTank(pos.x, pos.y, c.tank.level);
@@ -1365,6 +1425,21 @@ function drawHint(text){
   ctx.restore();
 }
 
+function tankOnTrackAt(x,y,timeSec){
+  let best = null;
+  let bestD = Infinity;
+  for (const c of state.cells){
+    if (!c.tank || !c.tank.onTrack) continue;
+    const p = tankOrbitPos(c, timeSec);
+    const d = Math.hypot(p.x - x, p.y - y);
+    if (d < 20 && d < bestD){
+      best = c.i;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
 // ---------- Helpers ----------
 function rr(ctx, x,y,w,h,r){
   r = Math.min(r, w/2, h/2);
@@ -1430,8 +1505,8 @@ async function boot(){
   initBoard();
 
   // starter tanks
-  state.cells[0].tank = makeTank(1);
-  state.cells[1].tank = makeTank(1);
+  state.cells[0].tank = makeTank(1, true);
+  state.cells[1].tank = makeTank(1, true);
 
   await ZombieSprites.load();
   // optional tanks (won't break if missing)
