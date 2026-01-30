@@ -109,6 +109,74 @@ body{
   box-shadow:0 10px 0 rgba(0,0,0,.2), 0 12px 22px rgba(0,0,0,.22);
   backdrop-filter: blur(6px);
 }
+.crateModal{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:4;
+}
+.crateModal.hidden{
+  display:none;
+}
+.crateModal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(5, 10, 18, 0.6);
+  backdrop-filter: blur(3px);
+}
+.crateModal__panel{
+  position:relative;
+  z-index:1;
+  width:min(320px, 80%);
+  padding:18px;
+  border-radius:18px;
+  border:2px solid rgba(0,0,0,.25);
+  background:linear-gradient(160deg, rgba(17, 30, 55, 0.95), rgba(9, 18, 36, 0.95));
+  box-shadow:0 14px 0 rgba(0,0,0,.22), 0 20px 35px rgba(0,0,0,.35);
+  text-align:center;
+}
+.crateModal__close{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.08);
+  color:var(--text);
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:transform .2s ease, filter .2s ease;
+}
+.crateModal__close:hover{
+  filter:brightness(1.15);
+  transform:scale(1.05);
+}
+.crateModal__content{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  padding-top:8px;
+}
+#crateTankIcon{
+  width:80px;
+  height:80px;
+  border-radius:16px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+}
+.crateModal__text{
+  font-weight:700;
+  color:var(--text);
+}
 .btn{
   position:relative;
   padding:12px 12px;
