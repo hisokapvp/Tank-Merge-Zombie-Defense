@@ -12,53 +12,63 @@
     <div class="brand">
       <div class="logo"></div>
       <div>
-        <div class="title">Tank Merger: Zombie Orbit</div>
-        <div class="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
+        <div class="title" data-i18n="title">Tank Merger: Zombie Orbit</div>
+        <div class="subtitle" data-i18n="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
       </div>
     </div>
 
+    <div class="langSwitch" aria-label="Language switcher">
+      <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
+      <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
+    </div>
+
     <div class="hud">
-      <div class="hudItem"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
-      <div class="hudItem"><div class="k">Zombies</div><div class="v" id="zcount">50</div></div>
-      <div class="hudItem"><div class="k">Sprites</div><div class="v" id="spr">…</div></div>
-      <div class="hudItem"><div class="k">Boost</div><div class="v" id="boostState">—</div></div>
+      <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
+      <div class="hudItem"><div class="k" data-i18n="hudZombies">Zombies</div><div class="v" id="zcount">50</div></div>
+      <div class="hudItem"><div class="k" data-i18n="hudSprites">Sprites</div><div class="v" id="spr">…</div></div>
+      <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
     </div>
   </header>
 
   <main class="layout">
     <section class="stage">
-      <canvas id="c" width="1100" height="650"></canvas>
+      <div class="stageCanvas">
+        <canvas id="c" width="1100" height="650"></canvas>
+      </div>
 
-      <div class="tip">
+      <div class="tip" data-i18n="tipZombies">
         Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.
       </div>
-      <div class="tip">
+      <div class="tip" data-i18n-html="tipTanks">
         Танки-спрайты: добавь <span class="mono">assets/tanks.json</span> и PNG в <span class="mono">assets/tanks/</span>.
       </div>
     </section>
 
     <aside class="panel">
-      <button id="buy" class="btn primary">Купить танк Lv1 <span class="price">(<span id="buyCost">50</span>)</span></button>
-      <button id="boost" class="btn">Буст x2 на 60с (симуляция рекламы)</button>
+      <button id="buy" class="btn primary">
+        <span data-i18n="buyTank">Купить танк Lv1</span>
+        <span class="price">(<span id="buyCost">50</span>)</span>
+      </button>
+      <button id="boost" class="btn"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
 
       <div class="card">
-        <div class="cardTitle">Армия</div>
+        <div class="cardTitle" data-i18n="armyTitle">Армия</div>
         <div id="tankInfo" class="mono"></div>
       </div>
 
       <div class="card">
-        <div class="cardTitle">Зомби-спрайты</div>
+        <div class="cardTitle" data-i18n="zombieSpritesTitle">Зомби-спрайты</div>
         <div class="small">
-          Файлы:
+          <span data-i18n="filesLabel">Файлы:</span>
           <div class="mono">assets/zombies.json</div>
           <div class="mono">assets/zombie_atlas.png</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="cardTitle">Танки-спрайты (опционально)</div>
+        <div class="cardTitle" data-i18n="tankSpritesTitle">Танки-спрайты (опционально)</div>
         <div class="small">
-          Добавь:
+          <span data-i18n="addLabel">Добавь:</span>
           <div class="mono">assets/tanks.json</div>
           <div class="mono">assets/tanks/*.png</div>
         </div>

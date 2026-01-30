@@ -20,6 +20,8 @@ const ui = {
   boost: document.getElementById('boost'),
   boostState: document.getElementById('boostState'),
   tankInfo: document.getElementById('tankInfo'),
+  langRu: document.getElementById('langRu'),
+  langEn: document.getElementById('langEn'),
 };
 
 const BAL = {
@@ -52,7 +54,7 @@ const BAL = {
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 12,
   zombieCountTarget: 150,
-  zombieHpBase: 44,
+  zombieHpBase: 88,
   zombieHpVar: 0.22,
   omegaBase: 0.72,
   omegaVar: 0.18,
@@ -74,8 +76,8 @@ const BAL = {
   edgeJoinSpeed: 2.6,
 
   // Economy
-  coinsPerKillBase: 2,
-  coinsPerKillLevelMul: 0.55,
+  coinsPerKillBase: 1,
+  coinsPerKillLevelMul: 0.35,
   coinsPerShotBase: 1,
   coinsPerShotLevelMul: 0.55,
 
@@ -86,6 +88,7 @@ const BAL = {
   // FX
   maxParticles: 1600,
   maxDecals: 120,
+  tankTrackCenterOffset: 0.5,
 };
 
 const compact = true;
@@ -110,9 +113,111 @@ let state = {
   boostUntil: 0,
 };
 
-const center = { x: canvas.width/2, y: canvas.height/2 };
+let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
+let center = { x: viewSize.w/2, y: viewSize.h/2 };
 const nowSec = ()=>performance.now()/1000;
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+const STRINGS = {
+  ru: {
+    title: 'Tank Merger: Zombie Orbit',
+    subtitle: 'В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков',
+    hudCoins: 'Монеты',
+    hudZombies: 'Зомби',
+    hudSprites: 'Спрайты',
+    hudBoost: 'Буст',
+    buyTank: 'Купить танк Lv{level}',
+    boostBtn: 'Буст x2 на 60с (симуляция рекламы)',
+    armyTitle: 'Армия',
+    zombieSpritesTitle: 'Зомби-спрайты',
+    tankSpritesTitle: 'Танки-спрайты (опционально)',
+    filesLabel: 'Файлы:',
+    addLabel: 'Добавь:',
+    tipZombies: 'Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.',
+    tipTanks: 'Танки-спрайты: добавь <span class="mono">assets/tanks.json</span> и PNG в <span class="mono">assets/tanks/</span>.',
+    tankInfoCount: 'Кол-во',
+    tankInfoMax: 'Макс. уровень',
+    tankInfoLevels: 'Уровни',
+    boostActive: 'x{mult} {sec}с',
+    hintSpritesOff: 'Спрайты отключены (assets/zombies.json).',
+    popTank: '+Танк',
+    popHangar: 'Ангар',
+    popTrack: 'Трасса!',
+    levelShort: 'Ур.',
+    levelUp: 'Ур.{level}!',
+    statusOn: 'OK',
+    statusOff: 'OFF',
+    zombieShort: 'З',
+    tankShort: 'Т',
+  },
+  en: {
+    title: 'Tank Merger: Zombie Orbit',
+    subtitle: 'Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported',
+    hudCoins: 'Coins',
+    hudZombies: 'Zombies',
+    hudSprites: 'Sprites',
+    hudBoost: 'Boost',
+    buyTank: 'Buy tank Lv{level}',
+    boostBtn: 'Boost x2 for 60s (ad simulation)',
+    armyTitle: 'Army',
+    zombieSpritesTitle: 'Zombie sprites',
+    tankSpritesTitle: 'Tank sprites (optional)',
+    filesLabel: 'Files:',
+    addLabel: 'Add:',
+    tipZombies: 'Zombies visually “walk” (shadow + sway + tangent facing). Tanks fire visible shells.',
+    tipTanks: 'Tank sprites: add <span class="mono">assets/tanks.json</span> and PNGs to <span class="mono">assets/tanks/</span>.',
+    tankInfoCount: 'Count',
+    tankInfoMax: 'Max level',
+    tankInfoLevels: 'Levels',
+    boostActive: 'x{mult} {sec}s',
+    hintSpritesOff: 'Sprites OFF (assets/zombies.json).',
+    popTank: '+Tank',
+    popHangar: 'Hangar',
+    popTrack: 'Track!',
+    levelShort: 'Lv',
+    levelUp: 'Lv{level}!',
+    statusOn: 'OK',
+    statusOff: 'OFF',
+    zombieShort: 'Z',
+    tankShort: 'T',
+  }
+};
+
+let currentLang = 'ru';
+
+function t(key, vars = {}){
+  const dict = STRINGS[currentLang] || STRINGS.ru;
+  let text = dict[key] ?? STRINGS.ru[key] ?? key;
+  for (const [k, v] of Object.entries(vars)){
+    text = text.replaceAll(`{${k}}`, String(v));
+  }
+  return text;
+}
+
+function setLanguage(lang){
+  if (!STRINGS[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
+  applyTranslations();
+  updateUI();
+}
+
+function applyTranslations(){
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const vars = key === 'buyTank' ? {level: 1} : {};
+    el.textContent = t(key, vars);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  if (ui.langRu && ui.langEn){
+    ui.langRu.classList.toggle('active', currentLang === 'ru');
+    ui.langEn.classList.toggle('active', currentLang === 'en');
+  }
+}
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
 const ZombieSprites = {
@@ -234,8 +339,40 @@ function loadImage(url){
   });
 }
 
+const BASE_CANVAS = { w: 1100, h: 650 };
+
+function resizeCanvas(){
+  const stage = document.querySelector('.stageCanvas');
+  if (!stage) return;
+
+  const topbar = document.querySelector('.topbar');
+  if (topbar){
+    const topbarH = topbar.getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--topbar-h', `${topbarH}px`);
+  }
+
+  const rect = stage.getBoundingClientRect();
+  const maxW = Math.max(200, rect.width);
+  const maxH = Math.max(200, rect.height);
+  const scale = Math.min(maxW / BASE_CANVAS.w, maxH / BASE_CANVAS.h);
+  const displayW = Math.max(200, Math.floor(BASE_CANVAS.w * scale));
+  const displayH = Math.max(200, Math.floor(BASE_CANVAS.h * scale));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  canvas.style.width = `${displayW}px`;
+  canvas.style.height = `${displayH}px`;
+  canvas.width = Math.floor(displayW * dpr);
+  canvas.height = Math.floor(displayH * dpr);
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  viewSize = { w: displayW, h: displayH, dpr };
+  center = { x: viewSize.w / 2, y: viewSize.h / 2 };
+  initBoard();
+}
+
 // ---------- Board ----------
 function initBoard(){
+  const existing = state.cells.map(c=>c.tank);
   const totalW = BAL.cols*BAL.cellW + (BAL.cols-1)*BAL.cellGap + BAL.boardPad*2;
   const totalH = BAL.rows*BAL.cellH + (BAL.rows-1)*BAL.cellGap + BAL.boardPad*2;
   const x0 = center.x - totalW/2;
@@ -247,7 +384,7 @@ function initBoard(){
     for (let c=0;c<BAL.cols;c++){
       const x = x0 + BAL.boardPad + c*(BAL.cellW+BAL.cellGap);
       const y = y0 + BAL.boardPad + r*(BAL.cellH+BAL.cellGap);
-      state.cells.push({ i, r, c, x, y, w:BAL.cellW, h:BAL.cellH, tank:null });
+      state.cells.push({ i, r, c, x, y, w:BAL.cellW, h:BAL.cellH, tank: existing[i] ?? null });
       i++;
     }
   }
@@ -262,10 +399,14 @@ function initBoard(){
   buildBackground();
 }
 
+function getTankOrbitRadius(){
+  return BAL.tankOrbitRadius - BAL.tankTrackWidth * BAL.tankTrackCenterOffset;
+}
+
 function buildBackground(){
   const bg = document.createElement('canvas');
-  bg.width = canvas.width;
-  bg.height = canvas.height;
+  bg.width = viewSize.w;
+  bg.height = viewSize.h;
   const bctx = bg.getContext('2d');
 
   const grad = bctx.createLinearGradient(0, 0, 0, bg.height);
@@ -324,7 +465,7 @@ function tryBuyTank(){
   if (!empty) return;
   state.coins -= BAL.buyCostLv1;
   empty.tank = makeTank(1, false);
-  popText(empty.x+empty.w/2, empty.y+empty.h/2, '+Tank', '#7dffb2');
+  popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
 }
 
 function mergeCells(fromIdx, toIdx){
@@ -339,7 +480,7 @@ function mergeCells(fromIdx, toIdx){
   a.tank = null;
 
   burst(b.x+b.w/2, b.y+b.h/2, 20, 'rgba(125,255,178,.85)');
-  popText(b.x+b.w/2, b.y+b.h/2-16, `Lv${lvl}!`, '#eaf1ff');
+  popText(b.x+b.w/2, b.y+b.h/2-16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
 }
 
@@ -494,7 +635,7 @@ function pickZombieLevel(){
 
 // ---------- Zombies (constant population) ----------
 function edgeSpawnR(){
-  return Math.max(BAL.edgeSpawnRadius, Math.max(canvas.width, canvas.height)*0.62);
+  return Math.max(BAL.edgeSpawnRadius, Math.max(viewSize.w, viewSize.h) * 0.62);
 }
 
 function zombieSlotTheta(slotIndex, slotCount){
@@ -659,9 +800,10 @@ function tankOrbitState(cell, timeSec){
   const total = BAL.rows * BAL.cols;
   const offset = (cell.i / total) * Math.PI * 2;
   const angle = timeSec * BAL.tankOrbitSpeed + offset;
+  const orbitR = getTankOrbitRadius();
   return {
-    x: center.x + Math.cos(angle) * BAL.tankOrbitRadius,
-    y: center.y + Math.sin(angle) * BAL.tankOrbitRadius,
+    x: center.x + Math.cos(angle) * orbitR,
+    y: center.y + Math.sin(angle) * orbitR,
     heading: angle + Math.PI/2,
   };
 }
@@ -881,15 +1023,21 @@ function updateUI(){
   ui.buyCost.textContent = BAL.buyCostLv1;
 
   const left = state.boostUntil - nowSec();
-  ui.boostState.textContent = left > 0 ? `x${BAL.boostMult} ${Math.ceil(left)}s` : '—';
+  ui.boostState.textContent = left > 0
+    ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
+    : '—';
 
   // show both sprite systems status
-  ui.spr.textContent =
-    `${ZombieSprites.ready ? 'Z:OK' : 'Z:OFF'} ${TankSprites?.ready ? 'T:OK' : 'T:OFF'}`;
+  const zStatus = ZombieSprites.ready ? t('statusOn') : t('statusOff');
+  const tStatus = TankSprites?.ready ? t('statusOn') : t('statusOff');
+  ui.spr.textContent = `${t('zombieShort')}:${zStatus} ${t('tankShort')}:${tStatus}`;
 
   const tanks = state.cells.filter(c=>c.tank).map(c=>c.tank.level).sort((a,b)=>a-b);
   const maxL = tanks.length ? Math.max(...tanks) : 0;
-  ui.tankInfo.textContent = `Count: ${tanks.length}/${BAL.rows*BAL.cols}\nMax level: ${maxL}\nLevels: ${tanks.join(', ') || '-'}`;
+  ui.tankInfo.textContent =
+    `${t('tankInfoCount')}: ${tanks.length}/${BAL.rows*BAL.cols}\n` +
+    `${t('tankInfoMax')}: ${maxL}\n` +
+    `${t('tankInfoLevels')}: ${tanks.join(', ') || '-'}`;
 
   ui.buy.disabled = state.coins < BAL.buyCostLv1 || !state.cells.some(c=>!c.tank);
 }
@@ -897,8 +1045,8 @@ function updateUI(){
 // ---------- Input ----------
 function getPointerPos(evt){
   const r = canvas.getBoundingClientRect();
-  const x = (evt.clientX - r.left) * (canvas.width / r.width);
-  const y = (evt.clientY - r.top) * (canvas.height / r.height);
+  const x = (evt.clientX - r.left) * (viewSize.w / r.width);
+  const y = (evt.clientY - r.top) * (viewSize.h / r.height);
   return {x,y};
 }
 
@@ -916,7 +1064,7 @@ canvas.addEventListener('pointerdown', (e)=>{
     const trackTank = state.cells[trackCell].tank;
     trackTank.onTrack = false;
     trackTank.cooldown = 0;
-    popText(p.x, p.y, 'Hangar', '#eaf1ff');
+    popText(p.x, p.y, t('popHangar'), '#eaf1ff');
     return;
   }
   const c = cellAt(p.x, p.y);
@@ -924,7 +1072,7 @@ canvas.addEventListener('pointerdown', (e)=>{
   if (c.tank.onTrack){
     c.tank.onTrack = false;
     c.tank.cooldown = 0;
-    popText(p.x, p.y, 'Hangar', '#eaf1ff');
+    popText(p.x, p.y, t('popHangar'), '#eaf1ff');
     return;
   }
   state.dragging = {
@@ -960,7 +1108,7 @@ canvas.addEventListener('pointerup', (e)=>{
 
   if (!state.dragging.moved){
     from.tank.onTrack = true;
-    popText(from.x+from.w/2, from.y+from.h/2, 'Track!', '#bfe3ff');
+    popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
   } else if (target){
     const merged = mergeCells(from.i, target.i);
     if (!merged && !target.tank){
@@ -976,7 +1124,7 @@ ui.boost.addEventListener('click', ()=> { state.boostUntil = nowSec() + BAL.boos
 
 // ---------- Render ----------
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
   drawBackground();
   drawTrack();
@@ -992,7 +1140,7 @@ function draw(){
 
   // If sprites failed to load, show a small hint on canvas
   if (!ZombieSprites.ready){
-    drawHint('Sprites OFF (assets/zombies.json).');
+    drawHint(t('hintSpritesOff'));
   }
 }
 
@@ -1001,11 +1149,11 @@ function drawBackground(){
     ctx.drawImage(backgroundLayer.canvas, 0, 0);
     return;
   }
-  const g = ctx.createLinearGradient(0,0,0,canvas.height);
+  const g = ctx.createLinearGradient(0,0,0,viewSize.h);
   g.addColorStop(0, '#2f7a3d');
   g.addColorStop(1, '#6b4a2c');
   ctx.fillStyle = g;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillRect(0,0,viewSize.w,viewSize.h);
 }
 
 function drawTrack(){
@@ -1285,7 +1433,7 @@ function drawTank(x,y,level,ghost=false,rotation=0){
     ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Lv${level}`, 0, 14);
+    ctx.fillText(`${t('levelShort')}${level}`, 0, 14);
 
     ctx.restore();
     return;
@@ -1368,7 +1516,7 @@ function drawTank(x,y,level,ghost=false,rotation=0){
   ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(`Lv${level}`, 0, 9);
+  ctx.fillText(`${t('levelShort')}${level}`, 0, 9);
 
   // glow for high tier
   if (tier >= 3){
@@ -1709,11 +1857,24 @@ function loop(now){
 
 // ---------- Boot ----------
 async function boot(){
-  initBoard();
+  const savedLang = localStorage.getItem('lang');
+  if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
+  applyTranslations();
+  if (ui.langRu && ui.langEn){
+    ui.langRu.addEventListener('click', () => setLanguage('ru'));
+    ui.langEn.addEventListener('click', () => setLanguage('en'));
+  }
+  window.addEventListener('resize', resizeCanvas);
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', resizeCanvas);
+  }
+  resizeCanvas();
 
   // starter tanks
-  state.cells[0].tank = makeTank(1, true);
-  state.cells[1].tank = makeTank(1, true);
+  if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
+    state.cells[0].tank = makeTank(1, true);
+    state.cells[1].tank = makeTank(1, true);
+  }
 
   await ZombieSprites.load();
   // optional tanks (won't break if missing)
