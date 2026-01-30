@@ -1,0 +1,71 @@
+// index.html.txt
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tank Merger: Zombie Orbit (v4)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <div class="title">Tank Merger: Zombie Orbit</div>
+        <div class="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
+      </div>
+    </div>
+
+    <div class="hud">
+      <div class="hudItem"><div class="k">Coins</div><div class="v" id="coins">0</div></div>
+      <div class="hudItem"><div class="k">Zombies</div><div class="v" id="zcount">50</div></div>
+      <div class="hudItem"><div class="k">Sprites</div><div class="v" id="spr">…</div></div>
+      <div class="hudItem"><div class="k">Boost</div><div class="v" id="boostState">—</div></div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <canvas id="c" width="1100" height="650"></canvas>
+
+      <div class="tip">
+        Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.
+      </div>
+      <div class="tip">
+        Танки-спрайты: добавь <span class="mono">assets/tanks.json</span> и PNG в <span class="mono">assets/tanks/</span>.
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button id="buy" class="btn primary">Купить танк Lv1 <span class="price">(<span id="buyCost">50</span>)</span></button>
+      <button id="boost" class="btn">Буст x2 на 60с (симуляция рекламы)</button>
+
+      <div class="card">
+        <div class="cardTitle">Армия</div>
+        <div id="tankInfo" class="mono"></div>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle">Зомби-спрайты</div>
+        <div class="small">
+          Файлы:
+          <div class="mono">assets/zombies.json</div>
+          <div class="mono">assets/zombie_atlas.png</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardTitle">Танки-спрайты (опционально)</div>
+        <div class="small">
+          Добавь:
+          <div class="mono">assets/tanks.json</div>
+          <div class="mono">assets/tanks/*.png</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>

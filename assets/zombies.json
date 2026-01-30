@@ -1,0 +1,23 @@
+{
+  "atlas": "zombie_atlas.png",
+  "types": [
+    {
+      "id": "walker",
+      "frame": {"x": 0, "y": 0, "w": 64, "h": 64},
+      "anchor": {"x": 0.5, "y": 0.75},
+      "scale": 1.1,
+      "hpMul": 1.0,
+      "omegaMul": 1.0,
+      "rewardMul": 1.0
+    },
+    {
+      "id": "runner",
+      "frame": {"x": 64, "y": 0, "w": 64, "h": 64},
+      "anchor": {"x": 0.5, "y": 0.75},
+      "scale": 1.05,
+      "hpMul": 0.8,
+      "omegaMul": 1.35,
+      "rewardMul": 0.9
+    }
+  ]
+}
