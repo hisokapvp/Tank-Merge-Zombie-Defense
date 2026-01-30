@@ -45,13 +45,13 @@ const BAL = {
   zombieTrackRadius: 295,
   zombieTrackWidth: 18,
   fenceRadius: 0,
-  fenceWidth: 40,
-  fenceKeepout: 6,
-  zombieFencePush: 18,
+  fenceWidth: 20,
+  fenceKeepout: 12,
+  zombieFencePush: 24,
   tankOrbitRadius: 210,
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 12,
-  zombieCountTarget: 50,
+  zombieCountTarget: 150,
   zombieHpBase: 44,
   zombieHpVar: 0.22,
   omegaBase: 0.72,
@@ -249,8 +249,8 @@ function initBoard(){
 
   const hangarRadius = Math.max(totalW, totalH) / 2 + 22;
   BAL.tankOrbitRadius = Math.max(120, hangarRadius + 26);
-  BAL.fenceRadius = BAL.tankOrbitRadius + 26;
-  BAL.zombieTrackRadius = BAL.fenceRadius + 26;
+  BAL.fenceRadius = BAL.tankOrbitRadius + 32;
+  BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + 24;
   BAL.zombieTrackWidth = 16;
 
   buildBackground();
@@ -418,10 +418,26 @@ function edgeSpawnR(){
   return Math.max(BAL.edgeSpawnRadius, Math.max(canvas.width, canvas.height)*0.62);
 }
 
-function makeZombie(fromEdge=true){
+function zombieSlotTheta(slotIndex, slotCount){
+  const step = (Math.PI * 2) / Math.max(1, slotCount);
+  const jitter = (Math.random() * 2 - 1) * step * 0.25;
+  return slotIndex * step + jitter;
+}
+
+function assignZombieSlot(z, slotIndex, slotCount){
+  const theta = zombieSlotTheta(slotIndex, slotCount);
+  z.slotIndex = slotIndex;
+  z.anchorTheta = theta;
+  z.theta = theta;
+  z.targetR = BAL.zombieTrackRadius + (Math.random()*2-1)*BAL.zombieTrackWidth;
+}
+
+function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const t = ZombieSprites.pickType();
 
-  const theta = Math.random() * Math.PI*2;
+  const theta = Number.isFinite(slotIndex)
+    ? zombieSlotTheta(slotIndex, slotCount)
+    : Math.random() * Math.PI*2;
   const dir = Math.random() < 0.5 ? -1 : 1;
 
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar);
@@ -435,6 +451,7 @@ function makeZombie(fromEdge=true){
     type: t,
     theta,
     anchorTheta: theta,
+    slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
     swayPhase: Math.random() * Math.PI * 2,
     swaySpeed: (0.6 + Math.random() * 0.8) * (t?.omegaMul ?? 1.0),
     r,
@@ -448,8 +465,36 @@ function makeZombie(fromEdge=true){
 }
 
 function ensureZombieCount(){
-  while (state.zombies.length < BAL.zombieCountTarget) state.zombies.push(makeZombie(true));
-  if (state.zombies.length > BAL.zombieCountTarget) state.zombies.length = BAL.zombieCountTarget;
+  const target = BAL.zombieCountTarget;
+  const slotCount = Math.max(1, target);
+  const taken = new Set();
+
+  for (const z of state.zombies){
+    if (Number.isFinite(z.slotIndex)){
+      const idx = ((z.slotIndex % slotCount) + slotCount) % slotCount;
+      z.slotIndex = idx;
+      taken.add(idx);
+    }
+  }
+
+  const missing = [];
+  for (let i=0;i<slotCount;i++){
+    if (!taken.has(i)) missing.push(i);
+  }
+
+  for (const z of state.zombies){
+    if (!Number.isFinite(z.slotIndex)){
+      const idx = missing.shift();
+      if (idx === undefined) break;
+      assignZombieSlot(z, idx, slotCount);
+    }
+  }
+
+  while (state.zombies.length < target){
+    const idx = missing.shift();
+    state.zombies.push(makeZombie(true, idx ?? state.zombies.length, slotCount));
+  }
+  if (state.zombies.length > target) state.zombies.length = target;
 }
 
 function zombiePos(z){
@@ -905,21 +950,34 @@ function drawTankTrack(){
 
   ctx.beginPath();
   ctx.arc(0,0,BAL.tankOrbitRadius,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(255,140,140,.30)';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(106, 72, 40, .60)';
+  ctx.lineWidth = BAL.tankTrackWidth * 2.2;
+  ctx.lineCap = 'round';
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(0,0,BAL.tankOrbitRadius + BAL.tankTrackWidth,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(255,255,255,.08)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(155, 118, 76, .32)';
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(0,0,BAL.tankOrbitRadius - BAL.tankTrackWidth,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(0,0,0,.16)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(44, 28, 16, .35)';
+  ctx.lineWidth = 1.5;
   ctx.stroke();
+
+  for (let i=0;i<120;i++){
+    const n = seededNoise(i * 17.3, i * 41.7);
+    const angle = i * 0.35 + n * Math.PI * 0.8;
+    const r = BAL.tankOrbitRadius + (n - 0.5) * BAL.tankTrackWidth * 1.4;
+    const size = 2.2 + n * 3.2;
+    const alpha = 0.18 + n * 0.28;
+    ctx.fillStyle = `rgba(90, 58, 30, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(Math.cos(angle) * r, Math.sin(angle) * r, size, size * 0.6, angle, 0, Math.PI*2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -929,14 +987,14 @@ function drawZombieFence(){
   ctx.save();
   ctx.translate(center.x, center.y);
 
-  ctx.strokeStyle = 'rgba(235, 208, 140, .5)';
+  ctx.strokeStyle = 'rgba(161, 110, 64, .55)';
   ctx.lineWidth = BAL.fenceWidth;
   ctx.beginPath();
   ctx.arc(0,0,r,0,Math.PI*2);
   ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(0,0,0,.28)';
-  ctx.lineWidth = BAL.fenceWidth * 0.35;
+  ctx.strokeStyle = 'rgba(59, 35, 19, .38)';
+  ctx.lineWidth = BAL.fenceWidth * 0.4;
   ctx.beginPath();
   ctx.arc(0,0,r-5,0,Math.PI*2);
   ctx.stroke();
@@ -950,8 +1008,8 @@ function drawZombieFence(){
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(a);
-    ctx.fillStyle = 'rgba(255, 228, 170, .5)';
-    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.fillStyle = 'rgba(188, 126, 74, .55)';
+    ctx.strokeStyle = 'rgba(45, 26, 14, .3)';
     ctx.lineWidth = 1.5 * postScale;
     rr(ctx, -3 * postScale, -10 * postScale, 6 * postScale, 18 * postScale, 2 * postScale);
     ctx.fill();
@@ -971,8 +1029,8 @@ function drawFence(br){
   const x1 = br.x + br.w - pad, y1 = br.y + br.h - pad;
 
   // posts
-  ctx.fillStyle = 'rgba(255, 219, 140, .22)';
-  ctx.strokeStyle = 'rgba(0,0,0,.18)';
+  ctx.fillStyle = 'rgba(172, 113, 62, .22)';
+  ctx.strokeStyle = 'rgba(45, 26, 14, .25)';
   ctx.lineWidth = 2;
 
   const step = 22;
@@ -987,7 +1045,7 @@ function drawFence(br){
 
   // rails
   ctx.globalAlpha = 0.9;
-  ctx.strokeStyle = 'rgba(255, 219, 140, .18)';
+  ctx.strokeStyle = 'rgba(172, 113, 62, .18)';
   ctx.lineWidth = 4;
 
   ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke();
@@ -1044,11 +1102,7 @@ function drawTankSlot(cell){
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
   rr(ctx, cx-14, cy-10, 28, 20, 8);
   ctx.fill();
-  ctx.fillStyle = cell.tank.onTrack ? 'rgba(234,241,255,.5)' : '#eaf1ff';
-  ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`Lv${cell.tank.level}`, cx, cy);
+  drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
   ctx.restore();
 }
 
@@ -1060,6 +1114,49 @@ function drawOrbitingTanks(){
     const pos = tankOrbitPos(c, t);
     drawTank(pos.x, pos.y, c.tank.level);
   }
+}
+
+function drawTankIcon(x,y,level,mutedSlot=false){
+  const spr = TankSprites?.pick?.(level);
+  if (spr){
+    const maxW = 22;
+    const maxH = 16;
+    const scale = Math.min(maxW / spr.img.width, maxH / spr.img.height) * (spr.scale ?? 1.0);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = mutedSlot ? 0.6 : 0.92;
+    const w = spr.img.width * scale;
+    const h = spr.img.height * scale;
+    ctx.drawImage(
+      spr.img,
+      -w * (spr.anchor?.x ?? 0.5),
+      -h * (spr.anchor?.y ?? 0.55),
+      w, h
+    );
+    ctx.restore();
+    return;
+  }
+
+  const tier = Math.floor((level-1)/3);
+  const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(0.35, 0.35);
+  ctx.globalAlpha = mutedSlot ? 0.65 : 0.95;
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  rr(ctx, -22, -8, 44, 10, 5);
+  ctx.fill();
+  ctx.fillStyle = hull;
+  rr(ctx, -18, -18, 36, 14, 6);
+  ctx.fill();
+  ctx.fillStyle = shade(hull, -18);
+  ctx.beginPath();
+  ctx.arc(0, -18, 7 + clamp(tier,0,4)*0.8, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = shade(hull, -30);
+  rr(ctx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawTank(x,y,level,ghost=false){
