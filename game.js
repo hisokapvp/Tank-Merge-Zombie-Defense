@@ -22,6 +22,11 @@ const ui = {
   tankInfo: document.getElementById('tankInfo'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
+  crateModal: document.getElementById('crateModal'),
+  crateClose: document.getElementById('crateClose'),
+  crateGet: document.getElementById('crateGet'),
+  crateIcon: document.getElementById('crateTankIcon'),
+  crateText: document.getElementById('crateText'),
 };
 
 const BAL = {
@@ -174,6 +179,9 @@ const STRINGS = {
     popHangar: 'Ангар',
     popTrack: 'В бой!',
     crateMessage: 'Посмотри рекламу и получи танк.',
+    crateModalText: 'Посмотреть рекламу и получить танк',
+    crateGet: 'Получить',
+    crateAdLoading: 'Просмотр рекламы...',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
     statusOn: 'OK',
@@ -206,6 +214,9 @@ const STRINGS = {
     popHangar: 'Hangar',
     popTrack: 'To battle!',
     crateMessage: 'Watch an ad to get a tank.',
+    crateModalText: 'Watch an ad to get a tank',
+    crateGet: 'Claim',
+    crateAdLoading: 'Watching ad...',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
     statusOn: 'OK',
@@ -712,7 +723,8 @@ function assignZombieSlot(z, slotIndex, slotCount){
   z.slotIndex = slotIndex;
   z.anchorTheta = theta;
   z.theta = theta;
-  z.targetR = BAL.zombieTrackRadius + (Math.random()*2-1)*BAL.zombieTrackWidth;
+  const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
+  z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
 }
 
 function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
@@ -729,7 +741,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
   const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul;
 
-  const targetR = BAL.zombieTrackRadius + (Math.random()*2-1)*BAL.zombieTrackWidth;
+  const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
+  const targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
   const r = fromEdge ? edgeSpawnR() : targetR;
 
   return {
@@ -738,7 +751,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     level,
     theta,
     anchorTheta: theta,
-    heading: theta + (baseOmega >= 0 ? Math.PI/2 : -Math.PI/2),
+    heading: 0,
     slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
     swayPhase: Math.random() * Math.PI * 2,
     swaySpeed: (0.6 + Math.random() * 0.8) * (t?.omegaMul ?? 1.0),
@@ -799,12 +812,10 @@ function zombieLevelScale(z){
 
 function stepZombies(dt){
   for (const z of state.zombies){
-    z.swayPhase += dt * z.swaySpeed;
-    z.anchorTheta += z.omega * dt;
-    z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
+    const prevTheta = z.theta;
 
-    const targetHeading = z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2);
-    z.heading = smoothAngle(z.heading ?? targetHeading, targetHeading, dt * 6);
+    z.swayPhase += dt * z.swaySpeed;
+    z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
     // Join ring from edge
     const t = 1 - Math.exp(-dt * BAL.edgeJoinSpeed);
@@ -813,6 +824,11 @@ function stepZombies(dt){
 
     const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
     if (z.r < fenceLimit) z.r = fenceLimit;
+
+    const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
+    const moving = Math.abs(dTheta) > 0.0005;
+    const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
+    z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
 
     const sp = Math.abs(z.omega) * BAL.zombieBobSpeedMul;
     z.anim += dt * (2.2 + sp);
@@ -1039,12 +1055,25 @@ function stepDecals(dt){
 }
 
 // ---------- Crates ----------
+function pickCrateRewardLevel(){
+  const levels = state.cells.map(c => c.tank?.level).filter(Boolean);
+  const maxLevel = levels.length ? Math.max(...levels) : 1;
+  if (maxLevel <= 1) return 1;
+  const minLevel = Math.max(1, maxLevel - 1);
+  return minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
+}
+
+function pickEmptyCell(){
+  const empty = state.cells.filter(c => !c.tank);
+  if (!empty.length) return null;
+  return empty[Math.floor(Math.random() * empty.length)];
+}
+
 function spawnCrate(){
-  const maxR = Math.max(80, BAL.fenceRadius - 40);
-  const angle = Math.random() * Math.PI * 2;
-  const r = Math.random() * maxR;
-  const targetX = center.x + Math.cos(angle) * r;
-  const targetY = center.y + Math.sin(angle) * r;
+  const cell = pickEmptyCell();
+  if (!cell) return false;
+  const targetX = cell.x + cell.w / 2;
+  const targetY = cell.y + cell.h / 2;
   const size = BAL.crateSize;
   state.crate = {
     x: targetX,
@@ -1052,7 +1081,10 @@ function spawnCrate(){
     targetY,
     size,
     pulse: 0,
+    rewardLevel: pickCrateRewardLevel(),
+    claiming: false,
   };
+  return true;
 }
 
 function maybeSpawnCrate(){
@@ -1151,6 +1183,65 @@ function updateUI(){
   ui.buy.disabled = state.coins < BAL.buyCostLv1 || !state.cells.some(c=>!c.tank);
 }
 
+function renderCrateIcon(level){
+  if (!ui.crateIcon) return;
+  const iconCtx = ui.crateIcon.getContext('2d');
+  if (!iconCtx) return;
+  iconCtx.clearRect(0, 0, ui.crateIcon.width, ui.crateIcon.height);
+  drawTankIconTo(
+    iconCtx,
+    ui.crateIcon.width / 2,
+    ui.crateIcon.height / 2 + 4,
+    level,
+    false,
+    1.8
+  );
+}
+
+function openCrateModal(){
+  if (!state.crate || !ui.crateModal) return;
+  ui.crateModal.classList.remove('hidden');
+  ui.crateModal.setAttribute('aria-hidden', 'false');
+  if (ui.crateText) ui.crateText.textContent = t('crateModalText');
+  if (ui.crateGet){
+    ui.crateGet.disabled = false;
+    ui.crateGet.textContent = t('crateGet');
+  }
+  renderCrateIcon(state.crate.rewardLevel ?? 1);
+}
+
+function closeCrateModal(){
+  if (!ui.crateModal) return;
+  ui.crateModal.classList.add('hidden');
+  ui.crateModal.setAttribute('aria-hidden', 'true');
+}
+
+function grantCrateTank(level){
+  const cell = pickEmptyCell();
+  if (!cell) return false;
+  cell.tank = {
+    level,
+    onTrack: false,
+    cooldown: 0,
+  };
+  return true;
+}
+
+function claimCrateReward(){
+  if (!state.crate || state.crate.claiming) return;
+  state.crate.claiming = true;
+  if (ui.crateGet){
+    ui.crateGet.disabled = true;
+    ui.crateGet.textContent = t('crateAdLoading');
+  }
+  const rewardLevel = state.crate.rewardLevel ?? 1;
+  window.setTimeout(() => {
+    grantCrateTank(rewardLevel);
+    state.crate = null;
+    closeCrateModal();
+  }, 1200);
+}
+
 // ---------- Input ----------
 function getPointerPos(evt){
   const r = canvas.getBoundingClientRect();
@@ -1169,8 +1260,7 @@ function cellAt(x,y){
 canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
   if (crateHitTest(p.x, p.y)){
-    popText(p.x, p.y - 6, t('crateMessage'), '#ffe08a');
-    state.crate = null;
+    openCrateModal();
     return;
   }
   const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
@@ -1235,6 +1325,13 @@ canvas.addEventListener('pointerup', (e)=>{
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
 ui.boost.addEventListener('click', ()=> { state.boostUntil = nowSec() + BAL.boostDurationSec; });
+ui.crateGet?.addEventListener('click', () => claimCrateReward());
+ui.crateClose?.addEventListener('click', () => closeCrateModal());
+ui.crateModal?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.crateClose){
+    closeCrateModal();
+  }
+});
 
 // ---------- Render ----------
 function draw(){
@@ -1469,46 +1566,50 @@ function drawOrbitingTanks(){
 }
 
 function drawTankIcon(x,y,level,mutedSlot=false){
+  drawTankIconTo(ctx, x, y, level, mutedSlot);
+}
+
+function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   const spr = TankSprites?.pick?.(level);
   if (spr){
-    const maxW = 22 * balScale;
-    const maxH = 16 * balScale;
+    const maxW = 22 * balScale * scaleMul;
+    const maxH = 16 * balScale * scaleMul;
     const scale = Math.min(maxW / spr.img.width, maxH / spr.img.height) * (spr.scale ?? 1.0);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.globalAlpha = mutedSlot ? 0.6 : 0.92;
+    targetCtx.save();
+    targetCtx.translate(x, y);
+    targetCtx.globalAlpha = mutedSlot ? 0.6 : 0.92;
     const w = spr.img.width * scale;
     const h = spr.img.height * scale;
-    ctx.drawImage(
+    targetCtx.drawImage(
       spr.img,
       -w * (spr.anchor?.x ?? 0.5),
       -h * (spr.anchor?.y ?? 0.55),
       w, h
     );
-    ctx.restore();
+    targetCtx.restore();
     return;
   }
 
   const tier = Math.floor((level-1)/3);
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(0.35 * balScale, 0.35 * balScale);
-  ctx.globalAlpha = mutedSlot ? 0.65 : 0.95;
-  ctx.fillStyle = 'rgba(0,0,0,.35)';
-  rr(ctx, -22, -8, 44, 10, 5);
-  ctx.fill();
-  ctx.fillStyle = hull;
-  rr(ctx, -18, -18, 36, 14, 6);
-  ctx.fill();
-  ctx.fillStyle = shade(hull, -18);
-  ctx.beginPath();
-  ctx.arc(0, -18, 7 + clamp(tier,0,4)*0.8, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = shade(hull, -30);
-  rr(ctx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
-  ctx.fill();
-  ctx.restore();
+  targetCtx.save();
+  targetCtx.translate(x, y);
+  targetCtx.scale(0.35 * balScale * scaleMul, 0.35 * balScale * scaleMul);
+  targetCtx.globalAlpha = mutedSlot ? 0.65 : 0.95;
+  targetCtx.fillStyle = 'rgba(0,0,0,.35)';
+  rr(targetCtx, -22, -8, 44, 10, 5);
+  targetCtx.fill();
+  targetCtx.fillStyle = hull;
+  rr(targetCtx, -18, -18, 36, 14, 6);
+  targetCtx.fill();
+  targetCtx.fillStyle = shade(hull, -18);
+  targetCtx.beginPath();
+  targetCtx.arc(0, -18, 7 + clamp(tier,0,4)*0.8, 0, Math.PI*2);
+  targetCtx.fill();
+  targetCtx.fillStyle = shade(hull, -30);
+  rr(targetCtx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
+  targetCtx.fill();
+  targetCtx.restore();
 }
 
 function drawTank(x,y,level,ghost=false,rotation=0){
