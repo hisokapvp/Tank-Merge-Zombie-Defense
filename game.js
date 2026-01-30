@@ -45,7 +45,7 @@ const BAL = {
   zombieTrackRadius: 295,
   zombieTrackWidth: 18,
   fenceRadius: 0,
-  fenceWidth: 8,
+  fenceWidth: 40,
   fenceKeepout: 6,
   zombieFencePush: 18,
   tankOrbitRadius: 210,
@@ -56,6 +56,7 @@ const BAL = {
   zombieHpVar: 0.22,
   omegaBase: 0.72,
   omegaVar: 0.18,
+  zombieSwayAmp: 0.14,
 
   // Zombie visuals (walk + size)
   zombieScaleMul: 0.72,
@@ -433,6 +434,9 @@ function makeZombie(fromEdge=true){
     id: crypto.randomUUID(),
     type: t,
     theta,
+    anchorTheta: theta,
+    swayPhase: Math.random() * Math.PI * 2,
+    swaySpeed: (0.6 + Math.random() * 0.8) * (t?.omegaMul ?? 1.0),
     r,
     targetR,
     omega: baseOmega * (t?.omegaMul ?? 1.0),
@@ -457,9 +461,8 @@ function zombiePos(z){
 
 function stepZombies(dt){
   for (const z of state.zombies){
-    z.theta += z.omega * dt;
-    if (z.theta > Math.PI*2) z.theta -= Math.PI*2;
-    if (z.theta < 0) z.theta += Math.PI*2;
+    z.swayPhase += dt * z.swaySpeed;
+    z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
     // Join ring from edge
     const t = 1 - Math.exp(-dt * BAL.edgeJoinSpeed);
@@ -784,7 +787,12 @@ canvas.addEventListener('pointerdown', (e)=>{
   }
   const c = cellAt(p.x, p.y);
   if (!c || !c.tank) return;
-  if (c.tank.onTrack) return;
+  if (c.tank.onTrack){
+    c.tank.onTrack = false;
+    c.tank.cooldown = 0;
+    popText(p.x, p.y, 'Hangar', '#eaf1ff');
+    return;
+  }
   state.dragging = {
     cellIndex: c.i,
     tank: c.tank,
@@ -922,18 +930,19 @@ function drawZombieFence(){
   ctx.translate(center.x, center.y);
 
   ctx.strokeStyle = 'rgba(235, 208, 140, .5)';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = BAL.fenceWidth;
   ctx.beginPath();
   ctx.arc(0,0,r,0,Math.PI*2);
   ctx.stroke();
 
   ctx.strokeStyle = 'rgba(0,0,0,.28)';
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = BAL.fenceWidth * 0.35;
   ctx.beginPath();
   ctx.arc(0,0,r-5,0,Math.PI*2);
   ctx.stroke();
 
   const posts = 40;
+  const postScale = BAL.fenceWidth / 4;
   for (let i=0;i<posts;i++){
     const a = (i/posts) * Math.PI*2;
     const px = Math.cos(a) * r;
@@ -943,8 +952,8 @@ function drawZombieFence(){
     ctx.rotate(a);
     ctx.fillStyle = 'rgba(255, 228, 170, .5)';
     ctx.strokeStyle = 'rgba(0,0,0,.22)';
-    ctx.lineWidth = 1.5;
-    rr(ctx, -3, -10, 6, 18, 2);
+    ctx.lineWidth = 1.5 * postScale;
+    rr(ctx, -3 * postScale, -10 * postScale, 6 * postScale, 18 * postScale, 2 * postScale);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -1001,10 +1010,6 @@ function drawBoard(){
   ctx.stroke();
 
   drawFence(br);
-
-  ctx.fillStyle = 'rgba(234,241,255,.70)';
-  ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-  ctx.fillText('HANGAR 4×4', br.x+14, br.y+18);
 
   for (const c of state.cells){
     const hovered = state.dragging && cellAt(state.dragging.x, state.dragging.y)?.i === c.i;
