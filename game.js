@@ -26,10 +26,10 @@ const BAL = {
   // Board 4x4 (smaller cells)
   rows: 4,
   cols: 4,
-  cellW: 78,
-  cellH: 60,
-  cellGap: 8,
-  boardPad: 10,
+  cellW: 39,
+  cellH: 30,
+  cellGap: 4,
+  boardPad: 6,
 
   buyCostLv1: 50,
 
@@ -238,8 +238,8 @@ function initBoard(){
   BAL.tankOrbitRadius = Math.max(120, fenceRadius - 70);
 }
 
-function makeTank(level){
-  return { id: crypto.randomUUID(), level, cooldown: 0 };
+function makeTank(level, busy = true){
+  return { id: crypto.randomUUID(), level, cooldown: 0, busy };
 }
 
 function tryBuyTank(){
@@ -247,7 +247,7 @@ function tryBuyTank(){
   const empty = state.cells.find(c=>!c.tank);
   if (!empty) return;
   state.coins -= BAL.buyCostLv1;
-  empty.tank = makeTank(1);
+  empty.tank = makeTank(1, true);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, '+Tank', '#7dffb2');
 }
 
@@ -259,7 +259,7 @@ function mergeCells(fromIdx, toIdx){
   if (a.tank.level !== b.tank.level) return false;
 
   const lvl = a.tank.level + 1;
-  b.tank = makeTank(lvl);
+  b.tank = makeTank(lvl, false);
   a.tank = null;
 
   burst(b.x+b.w/2, b.y+b.h/2, 20, 'rgba(125,255,178,.85)');
@@ -703,6 +703,11 @@ canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
   const c = cellAt(p.x, p.y);
   if (!c || !c.tank) return;
+  if (c.tank.busy){
+    c.tank.busy = false;
+    popText(c.x+c.w/2, c.y+c.h/2, 'Back!', '#eaf1ff');
+    return;
+  }
   state.dragging = {
     cellIndex: c.i,
     tank: c.tank,
@@ -747,6 +752,7 @@ function draw(){
 
   drawBackground();
   drawTrack();
+  drawTankTrack();
   drawBoard();
   drawOrbitingTanks();
   drawDecals();
@@ -823,6 +829,31 @@ function drawTrack(){
   ctx.restore();
 }
 
+function drawTankTrack(){
+  ctx.save();
+  ctx.translate(center.x, center.y);
+
+  ctx.beginPath();
+  ctx.arc(0,0,BAL.tankOrbitRadius,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,140,140,.30)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0,0,BAL.tankOrbitRadius + BAL.tankTrackWidth,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(0,0,BAL.tankOrbitRadius - BAL.tankTrackWidth,0,Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,0,0,.16)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawFence(br){
   // simple fence around hangar (visual only)
   ctx.save();
@@ -879,7 +910,7 @@ function drawBoard(){
   for (const c of state.cells){
     const hovered = state.dragging && cellAt(state.dragging.x, state.dragging.y)?.i === c.i;
 
-    rr(ctx, c.x, c.y, c.w, c.h, 12);
+    rr(ctx, c.x, c.y, c.w, c.h, 10);
     ctx.fillStyle = hovered ? 'rgba(110,168,255,.14)' : 'rgba(255,255,255,.05)';
     ctx.fill();
     ctx.strokeStyle = hovered ? 'rgba(110,168,255,.28)' : 'rgba(255,255,255,.10)';
@@ -934,8 +965,12 @@ function drawTank(x,y,level,ghost=false){
     ctx.save();
     ctx.translate(x,y);
     ctx.globalAlpha = ghost ? 0.78 : 1;
+    if (muted){
+      ctx.filter = 'grayscale(1) brightness(0.75)';
+      ctx.globalAlpha *= 0.6;
+    }
 
-    const baseScale = 0.085;            // tuned for typical PNG sizes
+    const baseScale = compact ? 0.065 : 0.085;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale * (spr.scale ?? 1.0);
 
@@ -966,7 +1001,7 @@ function drawTank(x,y,level,ghost=false){
   }
 
   // Fallback: vector tank (smaller)
-  const baseScale = 0.72;
+  const baseScale = compact ? 0.56 : 0.72;
   const levelScale = 1.0 + Math.min(0.20, level*0.010);
   const scale = baseScale * levelScale;
 
@@ -974,6 +1009,9 @@ function drawTank(x,y,level,ghost=false){
   ctx.translate(x,y);
   ctx.scale(scale, scale);
   ctx.globalAlpha = ghost ? 0.78 : 1;
+  if (muted){
+    ctx.globalAlpha *= 0.6;
+  }
 
   const tier = Math.floor((level-1)/3);
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
