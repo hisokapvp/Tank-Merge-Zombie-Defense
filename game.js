@@ -60,11 +60,14 @@ const BAL = {
 
   // Zombie visuals (walk + size)
   zombieScaleMul: 0.72,
+  zombieLevelScaleAdd: 0.08,
   zombieBobAmp: 2.2,
   zombieBobSpeedMul: 7.0,
   zombieShadowW: 11,
   zombieShadowH: 5,
   zombieShadowY: 12,
+  zombieLevelHpMul: 0.38,
+  zombieLevelOmegaMul: 0.08,
 
   // Spawn from edge
   edgeSpawnRadius: 520,
@@ -72,6 +75,9 @@ const BAL = {
 
   // Economy
   coinsPerKillBase: 2,
+  coinsPerKillLevelMul: 0.55,
+  coinsPerShotBase: 1,
+  coinsPerShotLevelMul: 0.55,
 
   // Boost
   boostDurationSec: 60,
@@ -342,6 +348,16 @@ function incomeMult(){
   return (nowSec() < state.boostUntil) ? BAL.boostMult : 1;
 }
 
+function coinsForShot(level){
+  const base = BAL.coinsPerShotBase + BAL.coinsPerShotLevelMul * Math.max(0, level - 1);
+  return base * incomeMult();
+}
+
+function coinsForKill(level, rewardMul=1){
+  const base = BAL.coinsPerKillBase + BAL.coinsPerKillLevelMul * Math.max(0, level - 1);
+  return base * rewardMul * incomeMult();
+}
+
 function tankStats(level){
   const dmg = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
   const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
@@ -413,6 +429,69 @@ function projectileProfile(level){
   };
 }
 
+function tankLevelCounts(){
+  const counts = new Map();
+  for (const cell of state.cells){
+    if (!cell.tank) continue;
+    const lvl = cell.tank.level;
+    counts.set(lvl, (counts.get(lvl) || 0) + 1);
+  }
+  return counts;
+}
+
+function zombieLevelWeights(){
+  const counts = tankLevelCounts();
+  const levels = Array.from(counts.keys()).sort((a,b)=>a-b);
+  if (!levels.length) return [{level: 1, weight: 1}];
+  if (levels.length === 1) return [{level: levels[0], weight: 1}];
+
+  const minLevel = levels[0];
+  const remaining = 0.15;
+  const minWeightBase = 0.85;
+  const otherLevels = levels.slice(1);
+  const nonMinTotal = otherLevels.reduce((sum, lvl)=>sum + (counts.get(lvl) || 0), 0) || 1;
+  const snap = 0.05;
+
+  const weights = [];
+  let snappedSum = 0;
+  for (const lvl of otherLevels){
+    const raw = remaining * ((counts.get(lvl) || 0) / nonMinTotal);
+    let snapped = Math.round(raw / snap) * snap;
+    if (snapped < snap / 2) snapped = 0;
+    weights.push({level: lvl, weight: snapped, raw});
+    snappedSum += snapped;
+  }
+
+  if (snappedSum > remaining){
+    const scale = remaining / snappedSum;
+    snappedSum = 0;
+    for (const w of weights){
+      w.weight *= scale;
+      snappedSum += w.weight;
+    }
+  } else if (snappedSum === 0){
+    for (const w of weights){
+      w.weight = w.raw;
+      snappedSum += w.weight;
+    }
+  }
+
+  const minWeight = Math.max(0, 1 - snappedSum);
+  return [{level: minLevel, weight: minWeight}, ...weights.map(w=>({level:w.level, weight:w.weight}))];
+}
+
+function pickZombieLevel(){
+  const weights = zombieLevelWeights();
+  let total = 0;
+  for (const w of weights) total += w.weight;
+  let r = Math.random() * total;
+  for (const w of weights){
+    r -= w.weight;
+    if (r <= 0) return w.level;
+  }
+  return weights[weights.length - 1].level;
+}
+
 // ---------- Zombies (constant population) ----------
 function edgeSpawnR(){
   return Math.max(BAL.edgeSpawnRadius, Math.max(canvas.width, canvas.height)*0.62);
@@ -434,14 +513,17 @@ function assignZombieSlot(z, slotIndex, slotCount){
 
 function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const t = ZombieSprites.pickType();
+  const level = pickZombieLevel();
 
   const theta = Number.isFinite(slotIndex)
     ? zombieSlotTheta(slotIndex, slotCount)
     : Math.random() * Math.PI*2;
   const dir = Math.random() < 0.5 ? -1 : 1;
 
-  const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar);
-  const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir;
+  const levelHpMul = 1 + BAL.zombieLevelHpMul * (level - 1);
+  const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
+  const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
+  const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul;
 
   const targetR = BAL.zombieTrackRadius + (Math.random()*2-1)*BAL.zombieTrackWidth;
   const r = fromEdge ? edgeSpawnR() : targetR;
@@ -449,6 +531,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   return {
     id: crypto.randomUUID(),
     type: t,
+    level,
     theta,
     anchorTheta: theta,
     slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
@@ -504,6 +587,11 @@ function zombiePos(z){
   };
 }
 
+function zombieLevelScale(z){
+  const level = z.level ?? 1;
+  return 1 + BAL.zombieLevelScaleAdd * Math.max(0, level - 1);
+}
+
 function stepZombies(dt){
   for (const z of state.zombies){
     z.swayPhase += dt * z.swaySpeed;
@@ -536,7 +624,7 @@ function stepTanks(dt){
     // pick nearest zombie in range
     let best = null;
     let bestD = Infinity;
-    const pos = tankOrbitPos(cell, nowSec());
+    const pos = tankOrbitState(cell, nowSec());
     const sx = pos.x;
     const sy = pos.y;
 
@@ -562,17 +650,19 @@ function stepTanks(dt){
       prof: s.prof,
     });
 
+    state.coins += coinsForShot(tank.level);
     burst(sx, sy, 5, 'rgba(255,255,255,.55)');
   }
 }
 
-function tankOrbitPos(cell, timeSec){
+function tankOrbitState(cell, timeSec){
   const total = BAL.rows * BAL.cols;
   const offset = (cell.i / total) * Math.PI * 2;
   const angle = timeSec * BAL.tankOrbitSpeed + offset;
   return {
     x: center.x + Math.cos(angle) * BAL.tankOrbitRadius,
     y: center.y + Math.sin(angle) * BAL.tankOrbitRadius,
+    heading: angle + Math.PI/2,
   };
 }
 
@@ -740,11 +830,10 @@ function stepDecals(dt){
 
 // ---------- Kills / respawn ----------
 function cleanupKills(){
-  const mult = incomeMult();
   const alive = [];
   for (const z of state.zombies){
     if (z.hp <= 0){
-      state.coins += BAL.coinsPerKillBase * z.rewardMul * mult;
+      state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
       const p = zombiePos(z);
       burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
     } else alive.push(z);
@@ -1111,8 +1200,8 @@ function drawOrbitingTanks(){
   for (const c of state.cells){
     if (!c.tank || !c.tank.onTrack) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
-    const pos = tankOrbitPos(c, t);
-    drawTank(pos.x, pos.y, c.tank.level);
+    const pos = tankOrbitState(c, t);
+    drawTank(pos.x, pos.y, c.tank.level, false, pos.heading);
   }
 }
 
@@ -1159,12 +1248,13 @@ function drawTankIcon(x,y,level,mutedSlot=false){
   ctx.restore();
 }
 
-function drawTank(x,y,level,ghost=false){
+function drawTank(x,y,level,ghost=false,rotation=0){
   // Try sprite-based tanks if assets/tanks.json exists
   const spr = TankSprites?.pick?.(level);
   if (spr){
     ctx.save();
     ctx.translate(x,y);
+    ctx.rotate(rotation);
     ctx.globalAlpha = ghost ? 0.78 : 1;
     if (muted){
       ctx.filter = 'grayscale(1) brightness(0.75)';
@@ -1208,6 +1298,7 @@ function drawTank(x,y,level,ghost=false){
 
   ctx.save();
   ctx.translate(x,y);
+  ctx.rotate(rotation);
   ctx.scale(scale, scale);
   ctx.globalAlpha = ghost ? 0.78 : 1;
   if (muted){
@@ -1310,7 +1401,7 @@ function drawZombieSprite(x,y,z){
   const f = t.frame;
   const a = t.anchor;
 
-  const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul;
+  const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
   const w = f.w * scale;
   const h = f.h * scale;
 
@@ -1333,6 +1424,17 @@ function drawZombieSprite(x,y,z){
   ctx.drawImage(img, f.x, f.y, f.w, f.h, -w * a.x, -h * a.y, w, h);
   ctx.restore();
 
+  if ((z.level ?? 1) > 1){
+    const ring = clamp((z.level ?? 1) - 1, 1, 6);
+    ctx.save();
+    ctx.strokeStyle = `rgba(185,139,255,${0.08 + ring * 0.02})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y + bob, w * 0.36, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // HP bar (not rotated)
   const hp01 = clamp(z.hp / z.maxHp, 0, 1);
   const topY = (y + bob) - h * a.y;
@@ -1346,7 +1448,9 @@ function drawZombieSprite(x,y,z){
 function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
   const face = z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2);
-  const s = BAL.zombieScaleMul;
+  const s = BAL.zombieScaleMul * zombieLevelScale(z);
+  const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
+  const skinTone = shade('#3cbe78', levelBoost * 10);
 
   // shadow
   ctx.save();
@@ -1362,7 +1466,8 @@ function drawZombieFallback(x,y,z){
   ctx.scale(s, s);
 
   // ragged head
-  ctx.fillStyle = 'rgba(60, 190, 120, .95)';
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = skinTone;
   ctx.strokeStyle = 'rgba(255,255,255,.10)';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -1532,7 +1637,7 @@ function tankOnTrackAt(x,y,timeSec){
   let bestD = Infinity;
   for (const c of state.cells){
     if (!c.tank || !c.tank.onTrack) continue;
-    const p = tankOrbitPos(c, timeSec);
+    const p = tankOrbitState(c, timeSec);
     const d = Math.hypot(p.x - x, p.y - y);
     if (d < 20 && d < bestD){
       best = c.i;
