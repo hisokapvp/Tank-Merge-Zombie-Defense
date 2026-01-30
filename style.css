@@ -15,10 +15,10 @@ body{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   color:var(--text);
   background:
-    radial-gradient(900px 600px at 25% 15%, rgba(255,179,217,.22), transparent 60%),
-    radial-gradient(900px 600px at 70% 10%, rgba(185,247,208,.18), transparent 55%),
-    radial-gradient(900px 600px at 55% 85%, rgba(166,212,255,.16), transparent 60%),
-    linear-gradient(180deg,var(--bg1),var(--bg0));
+    radial-gradient(900px 600px at 20% 15%, rgba(68,126,78,.35), transparent 60%),
+    radial-gradient(900px 600px at 80% 20%, rgba(122,85,54,.35), transparent 60%),
+    radial-gradient(900px 600px at 55% 85%, rgba(48,100,61,.28), transparent 60%),
+    linear-gradient(180deg,#2f7a3d 0%, #245f33 50%, #6b4a2c 100%);
 }
 
 .topbar{

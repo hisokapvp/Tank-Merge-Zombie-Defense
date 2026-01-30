@@ -46,6 +46,7 @@ const BAL = {
   trackWidth: 18,
   tankOrbitRadius: 210,
   tankOrbitSpeed: 0.55,
+  tankTrackWidth: 12,
   zombieCountTarget: 50,
   zombieHpBase: 44,
   zombieHpVar: 0.22,
@@ -74,6 +75,15 @@ const BAL = {
   // FX
   maxParticles: 1600,
   maxDecals: 120,
+};
+
+const compact = true;
+const muted = false;
+
+const backgroundLayer = {
+  canvas: null,
+  ctx: null,
+  ready: false,
 };
 
 let state = {
@@ -236,6 +246,60 @@ function initBoard(){
   BAL.trackRadius = fenceRadius;
   BAL.trackWidth = 16;
   BAL.tankOrbitRadius = Math.max(120, fenceRadius - 70);
+
+  buildBackground();
+}
+
+function buildBackground(){
+  const bg = document.createElement('canvas');
+  bg.width = canvas.width;
+  bg.height = canvas.height;
+  const bctx = bg.getContext('2d');
+
+  const grad = bctx.createLinearGradient(0, 0, 0, bg.height);
+  grad.addColorStop(0, '#2f7a3d');
+  grad.addColorStop(0.5, '#266f36');
+  grad.addColorStop(1, '#6b4a2c');
+  bctx.fillStyle = grad;
+  bctx.fillRect(0, 0, bg.width, bg.height);
+
+  for (let y = 0; y < bg.height; y += 34){
+    for (let x = 0; x < bg.width; x += 42){
+      const n = seededNoise(x, y);
+      const w = 60 + n * 20;
+      const h = 40 + n * 18;
+      const rx = x + n * 18;
+      const ry = y + n * 16;
+      bctx.fillStyle = n > 0.52 ? 'rgba(112,77,46,.55)' : 'rgba(47,103,57,.35)';
+      bctx.beginPath();
+      bctx.ellipse(rx, ry, w * 0.5, h * 0.5, n * Math.PI, 0, Math.PI * 2);
+      bctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 1800; i++){
+    const x = (i * 53) % bg.width;
+    const y = (i * 91) % bg.height;
+    const n = seededNoise(x * 1.3, y * 1.7);
+    bctx.fillStyle = n > 0.5 ? 'rgba(84,141,75,.55)' : 'rgba(92,64,39,.5)';
+    bctx.fillRect(x, y, 2 + n * 2, 2 + n * 2);
+  }
+
+  for (let i = 0; i < 520; i++){
+    const x = (i * 37) % bg.width;
+    const y = (i * 71) % bg.height;
+    const n = seededNoise(x * 2.1, y * 1.9);
+    bctx.strokeStyle = `rgba(33,82,40,${0.28 + n * 0.3})`;
+    bctx.lineWidth = 1;
+    bctx.beginPath();
+    bctx.moveTo(x, y);
+    bctx.lineTo(x + 6 + n * 8, y - 6 - n * 6);
+    bctx.stroke();
+  }
+
+  backgroundLayer.canvas = bg;
+  backgroundLayer.ctx = bctx;
+  backgroundLayer.ready = true;
 }
 
 function makeTank(level, busy = true){
@@ -768,40 +832,15 @@ function draw(){
 }
 
 function drawBackground(){
-  // Cut-the-rope-ish: soft blobs + "rope" lines
-  ctx.save();
-
+  if (backgroundLayer.ready && backgroundLayer.canvas){
+    ctx.drawImage(backgroundLayer.canvas, 0, 0);
+    return;
+  }
   const g = ctx.createLinearGradient(0,0,0,canvas.height);
-  g.addColorStop(0, 'rgba(16,27,67,1)');
-  g.addColorStop(1, 'rgba(10,16,48,1)');
+  g.addColorStop(0, '#2f7a3d');
+  g.addColorStop(1, '#6b4a2c');
   ctx.fillStyle = g;
   ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // blobs
-  for (let i=0;i<8;i++){
-    const x = (i*173 + 70) % canvas.width;
-    const y = (i*97 + 60) % canvas.height;
-    const r = 120 + (i%3)*50;
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = (i%2===0) ? 'rgba(255,179,217,1)' : 'rgba(166,212,255,1)';
-    ctx.beginPath();
-    ctx.arc(x,y,r,0,Math.PI*2);
-    ctx.fill();
-  }
-
-  // ropes
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = 'rgba(255,255,255,1)';
-  ctx.lineWidth = 3;
-  for (let i=0;i<4;i++){
-    const y = 60 + i*120;
-    ctx.beginPath();
-    ctx.moveTo(-40, y);
-    ctx.bezierCurveTo(canvas.width*0.30, y-40, canvas.width*0.60, y+40, canvas.width+40, y);
-    ctx.stroke();
-  }
-
-  ctx.restore();
 }
 
 function drawTrack(){
@@ -1343,6 +1382,11 @@ function shade(hex, delta){
   const g = parseInt(hex.slice(3,5),16);
   const b = parseInt(hex.slice(5,7),16);
   return `rgb(${clamp(r+delta,0,255)},${clamp(g+delta,0,255)},${clamp(b+delta,0,255)})`;
+}
+
+function seededNoise(x, y){
+  const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return s - Math.floor(s);
 }
 
 // ---------- Impacts tick ----------
