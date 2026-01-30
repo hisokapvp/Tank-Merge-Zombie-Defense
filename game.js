@@ -68,17 +68,18 @@ const BAL = {
   // Zombie visuals (walk + size)
   zombieScaleMul: 0.72,
   zombieLevelScaleAdd: 0.08,
-  zombieBobAmp: 2.2,
+  zombieBobAmp: 1.2,
   zombieBobSpeedMul: 7.0,
   zombieShadowW: 11,
   zombieShadowH: 5,
-  zombieShadowY: 12,
+  zombieShadowY: 8,
+  zombieGroundOffset: 6,
   zombieLevelHpMul: 0.38,
   zombieLevelOmegaMul: 0.08,
 
   // Spawn from edge
   edgeSpawnRadius: 520,
-  edgeJoinSpeed: 2.6,
+  edgeJoinSpeed: 0.9,
 
   // Economy
   coinsPerKillBase: 1,
@@ -114,10 +115,11 @@ const BASE_BAL = {
   tankOrbitRadius: 210,
   tankTrackWidth: 12,
   zombieScaleMul: 0.72,
-  zombieBobAmp: 2.2,
+  zombieBobAmp: 1.2,
   zombieShadowW: 11,
   zombieShadowH: 5,
-  zombieShadowY: 12,
+  zombieShadowY: 8,
+  zombieGroundOffset: 6,
   edgeSpawnRadius: 520,
   crateDropSpeed: 220,
   crateSize: 34,
@@ -146,6 +148,7 @@ let state = {
   nextCrateAt: 0,
   dragging: null,
   boostUntil: 0,
+  maxTankLevelAchieved: 1,
 };
 
 let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
@@ -408,6 +411,7 @@ function applyBalScale(scale){
   BAL.zombieShadowW = BASE_BAL.zombieShadowW * clamped;
   BAL.zombieShadowH = BASE_BAL.zombieShadowH * clamped;
   BAL.zombieShadowY = BASE_BAL.zombieShadowY * clamped;
+  BAL.zombieGroundOffset = BASE_BAL.zombieGroundOffset * clamped;
   BAL.edgeSpawnRadius = BASE_BAL.edgeSpawnRadius * clamped;
 
   BAL.crateDropSpeed = BASE_BAL.crateDropSpeed * clamped;
@@ -533,12 +537,29 @@ function makeTank(level, onTrack = false){
   return { id: crypto.randomUUID(), level, cooldown: 0, onTrack };
 }
 
+function recordTankLevel(level){
+  state.maxTankLevelAchieved = Math.max(state.maxTankLevelAchieved || 0, level);
+}
+
+function buyTankLevel(){
+  const maxLevel = Math.max(1, state.maxTankLevelAchieved || 1);
+  return 1 + Math.floor(maxLevel / 5);
+}
+
+function buyTankCost(level){
+  if (level <= 1) return BAL.buyCostLv1;
+  return Math.round(BAL.buyCostLv1 * 2.25);
+}
+
 function tryBuyTank(){
-  if (state.coins < BAL.buyCostLv1) return;
+  const level = buyTankLevel();
+  const cost = buyTankCost(level);
+  if (state.coins < cost) return;
   const empty = state.cells.find(c=>!c.tank);
   if (!empty) return;
-  state.coins -= BAL.buyCostLv1;
-  empty.tank = makeTank(1, false);
+  state.coins -= cost;
+  empty.tank = makeTank(level, false);
+  recordTankLevel(level);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
 }
 
@@ -552,6 +573,7 @@ function mergeCells(fromIdx, toIdx){
   const lvl = a.tank.level + 1;
   b.tank = makeTank(lvl, false);
   a.tank = null;
+  recordTankLevel(lvl);
 
   burst(b.x+b.w/2, b.y+b.h/2, 20, 'rgba(125,255,178,.85)');
   popText(b.x+b.w/2, b.y+b.h/2-16, t('levelUp', {level: lvl}), '#eaf1ff');
@@ -723,7 +745,7 @@ function assignZombieSlot(z, slotIndex, slotCount){
   z.slotIndex = slotIndex;
   z.anchorTheta = theta;
   z.theta = theta;
-  const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
+  const fenceLimit = zombieFenceLimit(z);
   z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
 }
 
@@ -740,12 +762,9 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
   const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul;
+  const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
 
-  const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
-  const targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
-  const r = fromEdge ? edgeSpawnR() : targetR;
-
-  return {
+  const z = {
     id: crypto.randomUUID(),
     type: t,
     level,
@@ -755,14 +774,20 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
     swayPhase: Math.random() * Math.PI * 2,
     swaySpeed: (0.6 + Math.random() * 0.8) * (t?.omegaMul ?? 1.0),
-    r,
-    targetR,
+    r: fromEdge ? edgeSpawnR() : 0,
+    targetR: 0,
     omega: baseOmega * (t?.omegaMul ?? 1.0),
+    joinSpeed,
     hp: baseHp * (t?.hpMul ?? 1.0),
     maxHp: baseHp * (t?.hpMul ?? 1.0),
     rewardMul: (t?.rewardMul ?? 1.0),
     anim: Math.random()*10,
   };
+
+  const fenceLimit = zombieFenceLimit(z);
+  z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
+  if (!fromEdge) z.r = z.targetR;
+  return z;
 }
 
 function ensureZombieCount(){
@@ -810,6 +835,17 @@ function zombieLevelScale(z){
   return 1 + BAL.zombieLevelScaleAdd * Math.max(0, level - 1);
 }
 
+function zombieCollisionRadius(z){
+  const t = z.type;
+  const baseSize = t ? Math.max(t.frame.w, t.frame.h) : 34;
+  const scale = (t?.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
+  return baseSize * scale * 0.28;
+}
+
+function zombieFenceLimit(z){
+  return BAL.fenceRadius + BAL.fenceKeepout + zombieCollisionRadius(z);
+}
+
 function stepZombies(dt){
   for (const z of state.zombies){
     const prevTheta = z.theta;
@@ -818,11 +854,12 @@ function stepZombies(dt){
     z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
     // Join ring from edge
-    const t = 1 - Math.exp(-dt * BAL.edgeJoinSpeed);
+    const t = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed));
     z.r = z.r + (z.targetR - z.r) * t;
     z.r -= BAL.zombieFencePush * dt;
 
-    const fenceLimit = BAL.fenceRadius + BAL.fenceKeepout;
+    const fenceLimit = zombieFenceLimit(z);
+    if (z.targetR < fenceLimit) z.targetR = fenceLimit;
     if (z.r < fenceLimit) z.r = fenceLimit;
 
     const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
@@ -1082,6 +1119,7 @@ function spawnCrate(){
     size,
     pulse: 0,
     rewardLevel: pickCrateRewardLevel(),
+    cellIndex: cell.i,
     claiming: false,
   };
   return true;
@@ -1159,9 +1197,13 @@ function stepParticles(dt){
 
 // ---------- UI ----------
 function updateUI(){
+  const level = buyTankLevel();
+  const cost = buyTankCost(level);
   ui.coins.textContent = Math.floor(state.coins);
   ui.zcount.textContent = state.kills;
-  ui.buyCost.textContent = BAL.buyCostLv1;
+  ui.buyCost.textContent = cost;
+  const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
+  if (buyLabel) buyLabel.textContent = t('buyTank', {level});
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0
@@ -1180,7 +1222,7 @@ function updateUI(){
     `${t('tankInfoMax')}: ${maxL}\n` +
     `${t('tankInfoLevels')}: ${tanks.join(', ') || '-'}`;
 
-  ui.buy.disabled = state.coins < BAL.buyCostLv1 || !state.cells.some(c=>!c.tank);
+  ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
 }
 
 function renderCrateIcon(level){
@@ -1216,14 +1258,16 @@ function closeCrateModal(){
   ui.crateModal.setAttribute('aria-hidden', 'true');
 }
 
-function grantCrateTank(level){
-  const cell = pickEmptyCell();
+function grantCrateTank(level, preferredIndex = null){
+  let cell = null;
+  if (Number.isFinite(preferredIndex)){
+    const candidate = state.cells[preferredIndex];
+    if (candidate && !candidate.tank) cell = candidate;
+  }
+  if (!cell) cell = pickEmptyCell();
   if (!cell) return false;
-  cell.tank = {
-    level,
-    onTrack: false,
-    cooldown: 0,
-  };
+  cell.tank = makeTank(level, false);
+  recordTankLevel(level);
   return true;
 }
 
@@ -1235,8 +1279,9 @@ function claimCrateReward(){
     ui.crateGet.textContent = t('crateAdLoading');
   }
   const rewardLevel = state.crate.rewardLevel ?? 1;
+  const crateCellIndex = state.crate.cellIndex;
   window.setTimeout(() => {
-    grantCrateTank(rewardLevel);
+    grantCrateTank(rewardLevel, crateCellIndex);
     state.crate = null;
     closeCrateModal();
   }, 1200);
@@ -1770,6 +1815,7 @@ function drawZombieSprite(x,y,z){
   const h = f.h * scale;
 
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
+  const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
 
@@ -1777,13 +1823,13 @@ function drawZombieSprite(x,y,z){
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,.20)';
   ctx.beginPath();
-  ctx.ellipse(x, y + BAL.zombieShadowY, BAL.zombieShadowW*scale, BAL.zombieShadowH*scale, 0, 0, Math.PI*2);
+  ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*scale, BAL.zombieShadowH*scale, 0, 0, Math.PI*2);
   ctx.fill();
   ctx.restore();
 
   // body (rotated + bob)
   ctx.save();
-  ctx.translate(x, y + bob);
+  ctx.translate(x, y + bob + groundOffset);
   ctx.rotate(rot);
 
   ctx.drawImage(img, f.x, f.y, f.w, f.h, -w * a.x, -h * a.y, w, h);
@@ -1795,14 +1841,14 @@ function drawZombieSprite(x,y,z){
     ctx.strokeStyle = `rgba(185,139,255,${0.08 + ring * 0.02})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(x, y + bob, w * 0.36, 0, Math.PI * 2);
+    ctx.arc(x, y + bob + groundOffset, w * 0.36, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
 
   // HP bar (not rotated)
   const hp01 = clamp(z.hp / z.maxHp, 0, 1);
-  const topY = (y + bob) - h * a.y;
+  const topY = (y + bob + groundOffset) - h * a.y;
   const bw = 26, bh = 4;
   ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.fillRect(x - bw/2, topY - 10, bw, bh);
@@ -1812,6 +1858,7 @@ function drawZombieSprite(x,y,z){
 
 function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
+  const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
@@ -1821,12 +1868,12 @@ function drawZombieFallback(x,y,z){
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,.20)';
   ctx.beginPath();
-  ctx.ellipse(x, y + BAL.zombieShadowY, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
+  ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
   ctx.fill();
   ctx.restore();
 
   ctx.save();
-  ctx.translate(x, y + bob);
+  ctx.translate(x, y + bob + groundOffset);
   ctx.rotate(face);
   ctx.scale(s, s);
 
@@ -1864,9 +1911,9 @@ function drawZombieFallback(x,y,z){
   const hp01 = clamp(z.hp / z.maxHp, 0, 1);
   const bw = 24, bh = 4;
   ctx.fillStyle = 'rgba(0,0,0,.45)';
-  ctx.fillRect(x - bw/2, (y + bob) - 26*s, bw, bh);
+  ctx.fillRect(x - bw/2, (y + bob + groundOffset) - 26*s, bw, bh);
   ctx.fillStyle = hp01 > 0.45 ? '#7dffb2' : '#ff7a6b';
-  ctx.fillRect(x - bw/2, (y + bob) - 26*s, bw*hp01, bh);
+  ctx.fillRect(x - bw/2, (y + bob + groundOffset) - 26*s, bw*hp01, bh);
 }
 
 function drawProjectiles(){
@@ -2135,6 +2182,7 @@ async function boot(){
   if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
     state.cells[0].tank = makeTank(1, true);
     state.cells[1].tank = makeTank(1, true);
+    recordTankLevel(1);
   }
 
   await ZombieSprites.load();
