@@ -282,6 +282,8 @@ const ZombieSprites = {
       this.types = (data.types || []).map(t => ({
         id: t.id || 'zombie',
         frame: t.frame || {x:0,y:0,w:64,h:64},
+        frames: t.frames ?? 1,
+        animSpeed: t.animSpeed ?? 1.0,
         anchor: t.anchor || {x:0.5,y:0.75},
         scale: t.scale ?? 1.0,
         rotation: t.rotation ?? 0,
@@ -289,6 +291,7 @@ const ZombieSprites = {
         omegaMul: t.omegaMul ?? 1.0,
         rewardMul: t.rewardMul ?? 1.0,
         weight: t.weight ?? 1.0,
+        hitbox: t.hitbox ?? null,
       }));
       if (!this.types.length) throw new Error('types[] empty');
 
@@ -781,7 +784,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     hp: baseHp * (t?.hpMul ?? 1.0),
     maxHp: baseHp * (t?.hpMul ?? 1.0),
     rewardMul: (t?.rewardMul ?? 1.0),
-    anim: Math.random()*10,
+    anim: Math.random() * (t?.frames ?? 1),
   };
 
   const fenceLimit = zombieFenceLimit(z);
@@ -837,8 +840,10 @@ function zombieLevelScale(z){
 
 function zombieCollisionRadius(z){
   const t = z.type;
-  const baseSize = t ? Math.max(t.frame.w, t.frame.h) : 34;
   const scale = (t?.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
+  const hitbox = t?.hitbox?.r;
+  if (Number.isFinite(hitbox)) return hitbox * scale;
+  const baseSize = t ? Math.max(t.frame.w, t.frame.h) : 34;
   return baseSize * scale * 0.28;
 }
 
@@ -867,8 +872,9 @@ function stepZombies(dt){
     const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
     z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
 
-    const sp = Math.abs(z.omega) * BAL.zombieBobSpeedMul;
-    z.anim += dt * (2.2 + sp);
+    const speed = Math.abs(z.omega);
+    const animMul = z.type?.animSpeed ?? 1.0;
+    z.anim += dt * animMul * (1.4 + speed * 6.0);
   }
 }
 
@@ -1810,29 +1816,46 @@ function drawZombieSprite(x,y,z){
   const f = t.frame;
   const a = t.anchor;
 
+  const frames = t.frames || 1;
+  const frameIndex = Math.floor(z.anim) % frames;
+
+  const fx = f.x + frameIndex * f.w;
+  const fy = f.y;
+
   const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
   const w = f.w * scale;
   const h = f.h * scale;
 
-  const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
+  const bob = Math.sin(z.anim) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
 
-  // shadow
+  // shadow (without rotation)
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,.20)';
   ctx.beginPath();
-  ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*scale, BAL.zombieShadowH*scale, 0, 0, Math.PI*2);
+  ctx.ellipse(
+    x,
+    y + BAL.zombieShadowY + groundOffset,
+    BAL.zombieShadowW * scale,
+    BAL.zombieShadowH * scale,
+    0, 0, Math.PI * 2
+  );
   ctx.fill();
   ctx.restore();
 
-  // body (rotated + bob)
+  // body
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
   ctx.rotate(rot);
-
-  ctx.drawImage(img, f.x, f.y, f.w, f.h, -w * a.x, -h * a.y, w, h);
+  ctx.drawImage(
+    img,
+    fx, fy, f.w, f.h,
+    -w * a.x,
+    -h * a.y,
+    w, h
+  );
   ctx.restore();
 
   if ((z.level ?? 1) > 1){
