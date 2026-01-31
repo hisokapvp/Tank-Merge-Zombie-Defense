@@ -10,6 +10,7 @@
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 
 const ui = {
   coins: document.getElementById('coins'),
@@ -90,6 +91,8 @@ const BAL = {
   // Boost
   boostDurationSec: 60,
   boostMult: 2,
+  tankSpriteScaleMul: 2.2,            // tuned 2.0–3.5
+  tankSpriteRotOffset: -Math.PI/2,    // sprite orientation correction
 
   // FX
   maxParticles: 1600,
@@ -148,6 +151,17 @@ let state = {
   nextCrateAt: 0,
   dragging: null,
   boostUntil: 0,
+  empUntil: 0,
+  player: {
+    level: 1,
+    xp: 0,
+    xpToNext: 50,
+    maxLevel: 60,
+    talentPoints: 0,
+    talents: Array(18).fill(0),
+    activeAbility: null,
+    abilityCooldownUntil: 0,
+  },
   maxTankLevelAchieved: 1,
 };
 
@@ -164,7 +178,7 @@ const STRINGS = {
     hudKills: 'Убито монстров',
     hudSprites: 'Спрайты',
     hudBoost: 'Буст',
-    buyTank: 'Купить танк Lv{level}',
+    buyTank: 'Купить танк {level} уровня',
     boostBtn: 'Буст x2 на 60с (симуляция рекламы)',
     armyTitle: 'Армия',
     zombieSpritesTitle: 'Зомби-спрайты',
@@ -439,6 +453,7 @@ function resizeCanvas(){
   canvas.height = Math.floor(displayH * dpr);
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
   viewSize = { w: displayW, h: displayH, dpr };
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
   applyBalScale(scale);
@@ -483,6 +498,7 @@ function buildBackground(){
   bg.width = viewSize.w;
   bg.height = viewSize.h;
   const bctx = bg.getContext('2d');
+  bctx.imageSmoothingEnabled = false;
 
   const grad = bctx.createLinearGradient(0, 0, 0, bg.height);
   grad.addColorStop(0, '#2f7a3d');
@@ -590,6 +606,10 @@ function incomeMult(){
   return (nowSec() < state.boostUntil) ? BAL.boostMult : 1;
 }
 
+function speedMult(){
+  return (nowSec() < state.boostUntil) ? BAL.boostMult : 1;
+}
+
 function coinsForShot(level){
   const base = BAL.coinsPerShotBase + BAL.coinsPerShotLevelMul * Math.max(0, level - 1);
   return base * incomeMult();
@@ -597,17 +617,146 @@ function coinsForShot(level){
 
 function coinsForKill(level, rewardMul=1){
   const base = BAL.coinsPerKillBase + BAL.coinsPerKillLevelMul * Math.max(0, level - 1);
-  return base * rewardMul * incomeMult();
+  const m = talentMul();
+  return base * rewardMul * incomeMult() * (1 + m.eco);
 }
 
 function tankStats(level){
+  const m = talentMul();
   const dmg = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
   const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
   const range = BAL.rangeBase + BAL.rangePerLevel*(level-1);
   const prof = projectileProfile(level);
   // Tie AOE to profile but also allow slight growth with level.
   const aoe = clamp(prof.aoeBase + prof.aoePerLevel*(level-1), prof.aoeMin, prof.aoeMax);
-  return { dmg, fr, range, aoe, prof };
+  return { dmg: dmg * (1 + m.atk), fr, range, aoe: aoe * (1 + m.ctl), prof };
+}
+
+function xpNeededForLevel(level){
+  return 50 + (level - 1) * 100;
+}
+
+function grantXP(amount){
+  const p = state.player;
+  if (!p || p.level >= p.maxLevel) return;
+
+  p.xp += amount;
+  let leveled = false;
+
+  while (p.level < p.maxLevel){
+    p.xpToNext = xpNeededForLevel(p.level);
+    if (p.xp < p.xpToNext) break;
+
+    p.xp -= p.xpToNext;
+    p.level += 1;
+    p.talentPoints += 1;
+    leveled = true;
+  }
+  p.xpToNext = xpNeededForLevel(p.level);
+  if (leveled) saveProgress();
+}
+
+function talentIndex(branch,row){ return row*3 + branch; }
+
+function talentLabel(i){
+  const branch = i % 3;
+  const row = Math.floor(i/3);
+  const b = ['Атака','Контроль','Экономика'][branch];
+  return (row === 5) ? `${b}: Активка` : `${b}: ${row+1}`;
+}
+
+function talentMul(){
+  const p = state.player;
+  const t = p?.talents || [];
+
+  const atk =
+    (t[talentIndex(0,0)]?0.08:0) + (t[talentIndex(0,1)]?0.10:0) +
+    (t[talentIndex(0,2)]?0.12:0) + (t[talentIndex(0,3)]?0.14:0) +
+    (t[talentIndex(0,4)]?0.16:0);
+
+  const ctl =
+    (t[talentIndex(1,0)]?0.06:0) + (t[talentIndex(1,1)]?0.08:0) +
+    (t[talentIndex(1,2)]?0.10:0) + (t[talentIndex(1,3)]?0.12:0) +
+    (t[talentIndex(1,4)]?0.14:0);
+
+  const eco =
+    (t[talentIndex(2,0)]?0.08:0) + (t[talentIndex(2,1)]?0.10:0) +
+    (t[talentIndex(2,2)]?0.12:0) + (t[talentIndex(2,3)]?0.14:0) +
+    (t[talentIndex(2,4)]?0.16:0);
+
+  return { atk, ctl, eco };
+}
+
+function canBuyTalent(i){
+  const p = state.player;
+  const branch = i % 3;
+  const row = Math.floor(i/3);
+
+  if (!p || p.talentPoints <= 0) return false;
+  if (p.talents[i]) return false;
+
+  if (row === 5 && p.level < 40) return false;
+
+  if (row > 0){
+    const prev = talentIndex(branch, row-1);
+    if (!p.talents[prev]) return false;
+  }
+  return true;
+}
+
+function tryBuyTalent(i){
+  const p = state.player;
+  if (!canBuyTalent(i)) return;
+
+  p.talentPoints -= 1;
+  p.talents[i] = 1;
+
+  const row = Math.floor(i/3);
+  const branch = i % 3;
+  if (row === 5){
+    p.activeAbility = branch; // 0/1/2
+  }
+  saveProgress();
+}
+
+function useActiveAbility(){
+  const p = state.player;
+  if (!p || p.activeAbility === null) return;
+
+  const now = nowSec();
+  if (now < (p.abilityCooldownUntil || 0)) return;
+
+  p.abilityCooldownUntil = now + 30;
+
+  if (p.activeAbility === 0){
+    state.boostUntil = Math.max(state.boostUntil, now + 6);
+    return;
+  }
+
+  if (p.activeAbility === 1){
+    state.empUntil = now + 5;
+    return;
+  }
+
+  if (p.activeAbility === 2){
+    for (const z of state.zombies){
+      z.hp -= 999999;
+    }
+    burst(center.x, center.y, 90, 'rgba(255,122,107,.25)');
+  }
+}
+
+function saveProgress(){
+  try{
+    const p = state.player;
+    localStorage.setItem('progress', JSON.stringify({
+      level: p.level,
+      xp: p.xp,
+      talentPoints: p.talentPoints,
+      talents: p.talents,
+      activeAbility: p.activeAbility,
+    }));
+  }catch(e){}
 }
 
 function projectileProfile(level){
@@ -854,10 +1003,11 @@ function zombieFenceLimit(z){
 }
 
 function stepZombies(dt){
+  const slow = (state.empUntil && nowSec() < state.empUntil) ? 0.5 : 1;
   for (const z of state.zombies){
     const prevTheta = z.theta;
 
-    z.swayPhase += dt * z.swaySpeed;
+    z.swayPhase += dt * z.swaySpeed * slow;
     z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
     // Join ring from edge
@@ -876,7 +1026,7 @@ function stepZombies(dt){
 
     const speed = Math.abs(z.omega);
     const animMul = z.type?.animSpeed ?? 1.0;
-    z.anim += dt * animMul * (1.4 + speed * 6.0);
+    z.anim += dt * animMul * (1.4 + speed * 6.0) * slow;
   }
 }
 
@@ -913,7 +1063,7 @@ function stepTanks(dt){
       const cannonCfg = cannon?.cfg;
 
       if (best && tank.cooldown <= 0 && cannonCfg){
-        tank.cannonAnim += dt * (cannonCfg.animSpeed ?? 10.0);
+        tank.cannonAnim += dt * (cannonCfg.animSpeed ?? 10.0) * speedMult();
         const frames = cannonCfg.frames || 1;
         const fireFrame = cannonCfg.fireFrame ?? 1;
         const frameIndex = Math.floor(tank.cannonAnim) % frames;
@@ -938,7 +1088,7 @@ function stepTanks(dt){
             prof: s.prof,
           });
 
-          tank.cooldown = 1 / s.fr;
+          tank.cooldown = 1 / (s.fr * speedMult());
           state.coins += coinsForShot(tank.level);
           burst(mx, my, 5, 'rgba(255,255,255,.55)');
         }
@@ -953,7 +1103,7 @@ function stepTanks(dt){
 
     if (tank.cooldown > 0 || !best) continue;
 
-    tank.cooldown = 1 / s.fr;
+    tank.cooldown = 1 / (s.fr * speedMult());
 
     const tp = zombiePos(best);
     spawnProjectile({
@@ -976,7 +1126,7 @@ function stepTanks(dt){
 function tankOrbitState(cell, timeSec){
   const total = BAL.rows * BAL.cols;
   const offset = (cell.i / total) * Math.PI * 2;
-  const angle = timeSec * BAL.tankOrbitSpeed + offset;
+  const angle = timeSec * BAL.tankOrbitSpeed * speedMult() + offset;
   const orbitR = getTankOrbitRadius();
   return {
     x: center.x + Math.cos(angle) * orbitR,
@@ -1211,6 +1361,7 @@ function cleanupKills(){
     if (z.hp <= 0){
       state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
       state.kills += 1;
+      grantXP(1);
       const p = zombiePos(z);
       burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
     } else alive.push(z);
@@ -1257,9 +1408,9 @@ function updateUI(){
   const cost = buyTankCost(level);
   ui.coins.textContent = Math.floor(state.coins);
   ui.zcount.textContent = state.kills;
-  ui.buyCost.textContent = cost;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
-  if (buyLabel) buyLabel.textContent = t('buyTank', {level});
+  if (buyLabel) buyLabel.textContent = `${t('buyTank', {level})} ${cost}`;
+  ui.buyCost.innerHTML = `<span class="coinIcon">🪙</span>`;
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0
@@ -1279,12 +1430,106 @@ function updateUI(){
     `${t('tankInfoLevels')}: ${tanks.join(', ') || '-'}`;
 
   ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
+  updateProgressUI();
+  updateTalentUI();
+}
+
+function ensureProgressUI(){
+  const topbar = document.querySelector('.topbar') || document.body;
+  if (document.getElementById('xpWrap')) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'xpWrap';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin-left:12px;';
+
+  wrap.innerHTML = `
+    <div id="lvlText" style="color:#eaf1ff;font:12px system-ui;">Уровень: 1</div>
+    <div style="width:180px;height:10px;background:rgba(255,255,255,.12);border-radius:8px;overflow:hidden;">
+      <div id="xpBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7dffb2,#6ea8ff);"></div>
+    </div>
+    <div id="xpText" style="color:rgba(234,241,255,.85);font:12px system-ui;">0/50</div>
+  `;
+  topbar.appendChild(wrap);
+}
+
+function updateProgressUI(){
+  const p = state.player;
+  const lvlText = document.getElementById('lvlText');
+  const xpText = document.getElementById('xpText');
+  const xpBar  = document.getElementById('xpBar');
+  if (!p || !lvlText || !xpText || !xpBar) return;
+
+  const need = Math.max(1, p.xpToNext);
+  const pct = clamp(p.xp / need, 0, 1) * 100;
+  lvlText.textContent = `Уровень: ${p.level}`;
+  xpText.textContent = `${Math.floor(p.xp)}/${need}`;
+  xpBar.style.width = `${pct}%`;
+}
+
+function ensureTalentUI(){
+  if (document.getElementById('talentWrap')) return;
+
+  const panel = document.createElement('div');
+  panel.id = 'talentWrap';
+  panel.style.cssText =
+    'position:fixed;right:14px;top:74px;width:320px;padding:10px;border-radius:12px;' +
+    'background:rgba(0,0,0,.35);backdrop-filter:blur(6px);color:#eaf1ff;font:12px system-ui;z-index:50;';
+
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div><b>Таланты</b> • Очки: <span id="tp">0</span></div>
+      <button id="useAbility" style="padding:6px 10px;border-radius:10px;border:0;cursor:pointer;">Активка</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="talentGrid"></div>
+  `;
+
+  document.body.appendChild(panel);
+
+  const grid = panel.querySelector('#talentGrid');
+  for (let i=0;i<18;i++){
+    const btn = document.createElement('button');
+    btn.dataset.talent = String(i);
+    btn.style.cssText = 'height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eaf1ff;cursor:pointer;';
+    btn.textContent = talentLabel(i);
+    btn.addEventListener('click', ()=> tryBuyTalent(i));
+    grid.appendChild(btn);
+  }
+
+  panel.querySelector('#useAbility').addEventListener('click', ()=> useActiveAbility());
+}
+
+function updateTalentUI(){
+  const p = state.player;
+  const tp = document.getElementById('tp');
+  const wrap = document.getElementById('talentWrap');
+  if (!p || !wrap || !tp) return;
+
+  tp.textContent = String(p.talentPoints);
+
+  wrap.querySelectorAll('button[data-talent]').forEach(btn=>{
+    const i = parseInt(btn.dataset.talent, 10);
+    const owned = !!p.talents[i];
+    btn.style.opacity = owned ? '1' : (canBuyTalent(i) ? '1' : '0.45');
+    btn.style.borderColor = owned ? 'rgba(125,255,178,.55)' : 'rgba(255,255,255,.12)';
+    btn.style.background = owned ? 'rgba(125,255,178,.12)' : 'rgba(255,255,255,.06)';
+  });
+
+  const useBtn = document.getElementById('useAbility');
+  if (useBtn){
+    const now = nowSec();
+    const cd = Math.max(0, (p.abilityCooldownUntil || 0) - now);
+    useBtn.disabled = (p.activeAbility === null) || cd > 0;
+    useBtn.textContent = p.activeAbility === null
+      ? 'Активка (нет)'
+      : cd > 0 ? `Активка (${Math.ceil(cd)}с)` : 'Активка';
+  }
 }
 
 function renderCrateIcon(level){
   if (!ui.crateIcon) return;
   const iconCtx = ui.crateIcon.getContext('2d');
   if (!iconCtx) return;
+  iconCtx.imageSmoothingEnabled = false;
   iconCtx.clearRect(0, 0, ui.crateIcon.width, ui.crateIcon.height);
   drawTankIconTo(
     iconCtx,
@@ -1747,14 +1992,14 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
   if (body && cannon){
     ctx.save();
     ctx.translate(x,y);
-    ctx.rotate(rotation);
+    ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
     ctx.globalAlpha = ghost ? 0.78 : 1;
     if (muted){
       ctx.filter = 'grayscale(1) brightness(0.75)';
       ctx.globalAlpha *= 0.6;
     }
 
-    const baseScale = (compact ? 0.065 : 0.085) * balScale;            // tuned for typical PNG sizes
+    const baseScale = (compact ? 0.065 : 0.085) * balScale * (BAL.tankSpriteScaleMul ?? 1);            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale;
 
@@ -1827,7 +2072,7 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
 
   ctx.save();
   ctx.translate(x,y);
-  ctx.rotate(rotation);
+  ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
   ctx.scale(scale, scale);
   ctx.globalAlpha = ghost ? 0.78 : 1;
   if (muted){
@@ -1983,14 +2228,6 @@ function drawZombieSprite(x,y,z){
     ctx.restore();
   }
 
-  // HP bar (not rotated)
-  const hp01 = clamp(z.hp / z.maxHp, 0, 1);
-  const topY = (y + bob + groundOffset) - h * a.y;
-  const bw = 26, bh = 4;
-  ctx.fillStyle = 'rgba(0,0,0,.45)';
-  ctx.fillRect(x - bw/2, topY - 10, bw, bh);
-  ctx.fillStyle = hp01 > 0.45 ? '#7dffb2' : '#ff7a6b';
-  ctx.fillRect(x - bw/2, topY - 10, bw*hp01, bh);
 }
 
 function drawZombieFallback(x,y,z){
@@ -2044,13 +2281,6 @@ function drawZombieFallback(x,y,z){
 
   ctx.restore();
 
-  // HP bar
-  const hp01 = clamp(z.hp / z.maxHp, 0, 1);
-  const bw = 24, bh = 4;
-  ctx.fillStyle = 'rgba(0,0,0,.45)';
-  ctx.fillRect(x - bw/2, (y + bob + groundOffset) - 26*s, bw, bh);
-  ctx.fillStyle = hp01 > 0.45 ? '#7dffb2' : '#ff7a6b';
-  ctx.fillRect(x - bw/2, (y + bob + groundOffset) - 26*s, bw*hp01, bh);
 }
 
 function drawProjectiles(){
@@ -2278,9 +2508,17 @@ function stepImpacts(dt){
 
 // ---------- Main loop ----------
 let last = performance.now();
+let fpsAvg = 60;
+let lastProgressSave = 0;
 function loop(now){
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
+  fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
+  BAL.maxParticles = fpsAvg < 45 ? 900 : 1600;
+  if (nowSec() - lastProgressSave > 3){
+    saveProgress();
+    lastProgressSave = nowSec();
+  }
 
   ensureZombieCount();
   maybeSpawnCrate();
@@ -2304,6 +2542,16 @@ async function boot(){
   const savedLang = localStorage.getItem('lang');
   if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
   applyTranslations();
+  ensureProgressUI();
+  ensureTalentUI();
+  try{
+    const raw = localStorage.getItem('progress');
+    if (raw){
+      const d = JSON.parse(raw);
+      Object.assign(state.player, d);
+      state.player.xpToNext = xpNeededForLevel(state.player.level);
+    }
+  }catch(e){}
   if (ui.langRu && ui.langEn){
     ui.langRu.addEventListener('click', () => setLanguage('ru'));
     ui.langEn.addEventListener('click', () => setLanguage('en'));
