@@ -20,6 +20,7 @@ const ui = {
   buyCost: document.getElementById('buyCost'),
   boost: document.getElementById('boost'),
   boostState: document.getElementById('boostState'),
+  talentsBtn: document.getElementById('talentsBtn'),
   tankInfo: document.getElementById('tankInfo'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
@@ -152,17 +153,28 @@ let state = {
   dragging: null,
   boostUntil: 0,
   empUntil: 0,
+  activeEffects: {
+    attackUntil: 0,
+    speedUntil: 0,
+    economyUntil: 0,
+  },
   player: {
     level: 1,
     xp: 0,
-    xpToNext: 50,
+    xpToNext: 500,
     maxLevel: 60,
     talentPoints: 0,
-    talents: Array(18).fill(0),
-    activeAbility: null,
-    abilityCooldownUntil: 0,
+    talentsApplied: [],
+    talentsPending: [],
+    activeCooldowns: [0, 0, 0],
+    mods: null,
+    modsDirty: true,
   },
   maxTankLevelAchieved: 1,
+  ui: {
+    talentsOpen: false,
+    talentBranch: 0,
+  },
 };
 
 let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
@@ -199,6 +211,17 @@ const STRINGS = {
     crateModalText: 'Посмотреть рекламу и получить танк',
     crateGet: 'Получить',
     crateAdLoading: 'Просмотр рекламы...',
+    talentsBtn: 'Таланты',
+    talentTreeTitle: 'Древо талантов',
+    talentPoints: 'Очки талантов',
+    talentApply: 'Применить',
+    talentReset: 'Сбросить выбор',
+    talentPending: 'Выбрано',
+    talentNeedPoints: 'Не хватает очков',
+    talentActive: 'Использовать активку',
+    talentActiveCooldown: 'Активка ({sec}с)',
+    talentActiveLocked: 'Активка недоступна',
+    levelLabel: 'Уровень',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
     statusOn: 'OK',
@@ -234,6 +257,17 @@ const STRINGS = {
     crateModalText: 'Watch an ad to get a tank',
     crateGet: 'Claim',
     crateAdLoading: 'Watching ad...',
+    talentsBtn: 'Talents',
+    talentTreeTitle: 'Talent Tree',
+    talentPoints: 'Talent points',
+    talentApply: 'Apply',
+    talentReset: 'Reset selection',
+    talentPending: 'Selected',
+    talentNeedPoints: 'Not enough points',
+    talentActive: 'Use active',
+    talentActiveCooldown: 'Active ({sec}s)',
+    talentActiveLocked: 'Active unavailable',
+    levelLabel: 'Level',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
     statusOn: 'OK',
@@ -273,10 +307,20 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-html]').forEach(el => {
     el.innerHTML = t(el.dataset.i18nHtml);
   });
+  const overlay = document.getElementById('talentOverlay');
+  if (overlay){
+    const title = overlay.querySelector('.modalTitle');
+    if (title) title.textContent = t('talentTreeTitle');
+    const resetBtn = overlay.querySelector('#talentReset');
+    if (resetBtn) resetBtn.textContent = t('talentReset');
+    const applyBtn = overlay.querySelector('#talentApply');
+    if (applyBtn) applyBtn.textContent = t('talentApply');
+  }
   if (ui.langRu && ui.langEn){
     ui.langRu.classList.toggle('active', currentLang === 'ru');
     ui.langEn.classList.toggle('active', currentLang === 'en');
   }
+  updateTalentUI();
 }
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
@@ -568,8 +612,9 @@ function buyTankLevel(){
 }
 
 function buyTankCost(level){
-  if (level <= 1) return BAL.buyCostLv1;
-  return Math.round(BAL.buyCostLv1 * 2.25);
+  const mods = getMods();
+  const base = level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25;
+  return Math.max(1, Math.round(base * mods.buyCostMul));
 }
 
 function tryBuyTank(){
@@ -611,29 +656,43 @@ function speedMult(){
 }
 
 function coinsForShot(level){
+  const mods = getMods();
   const base = BAL.coinsPerShotBase + BAL.coinsPerShotLevelMul * Math.max(0, level - 1);
-  return base * incomeMult();
+  const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
+  return base * incomeMult() * mods.coinsMul * activeMul;
 }
 
 function coinsForKill(level, rewardMul=1){
+  const mods = getMods();
   const base = BAL.coinsPerKillBase + BAL.coinsPerKillLevelMul * Math.max(0, level - 1);
-  const m = talentMul();
-  return base * rewardMul * incomeMult() * (1 + m.eco);
+  const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
+  return base * rewardMul * incomeMult() * mods.coinsMul * activeMul;
 }
 
 function tankStats(level){
-  const m = talentMul();
+  const mods = getMods();
   const dmg = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
   const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
   const range = BAL.rangeBase + BAL.rangePerLevel*(level-1);
   const prof = projectileProfile(level);
   // Tie AOE to profile but also allow slight growth with level.
   const aoe = clamp(prof.aoeBase + prof.aoePerLevel*(level-1), prof.aoeMin, prof.aoeMax);
-  return { dmg: dmg * (1 + m.atk), fr, range, aoe: aoe * (1 + m.ctl), prof };
+  const activeAttack = nowSec() < state.activeEffects.attackUntil ? 1.5 : 1;
+  const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+  return {
+    dmg: dmg * mods.dmgMul * activeAttack,
+    fr: fr * mods.fireRateMul * activeSpeed,
+    range: range * mods.rangeMul,
+    aoe: aoe * mods.aoeMul * (activeAttack > 1 ? 1.2 : 1),
+    prof,
+  };
 }
 
 function xpNeededForLevel(level){
-  return 50 + (level - 1) * 100;
+  const growth = 3 ** (level - 1);
+  const correction = level >= 4 ? (10 / 9) : 1;
+  const decadeBoost = 2 ** Math.floor((level - 1) / 10);
+  return Math.round(500 * growth * correction * decadeBoost);
 }
 
 function grantXP(amount){
@@ -656,94 +715,252 @@ function grantXP(amount){
   if (leveled) saveProgress();
 }
 
-function talentIndex(branch,row){ return row*3 + branch; }
+const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика'];
+const TALENT_DEFS = [];
+const ACTIVE_TALENT_INDEX = [null, null, null];
 
-function talentLabel(i){
-  const branch = i % 3;
-  const row = Math.floor(i/3);
-  const b = ['Атака','Контроль','Экономика'][branch];
-  return (row === 5) ? `${b}: Активка` : `${b}: ${row+1}`;
+function addTalent(branch, name, desc, maxRank, kind, apply){
+  const id = `${branch}-${TALENT_DEFS.length}`;
+  const prev = ACTIVE_TALENT_INDEX[branch];
+  const def = { id, branch, name, desc, maxRank, prev, kind, apply };
+  TALENT_DEFS.push(def);
+  ACTIVE_TALENT_INDEX[branch] = TALENT_DEFS.length - 1;
 }
 
-function talentMul(){
-  const p = state.player;
-  const t = p?.talents || [];
+function initTalentDefs(){
+  if (TALENT_DEFS.length) return;
+  const addMul = (mods, key, perRank, rank) => { mods[key] *= 1 + perRank * rank; };
+  const addChance = (mods, key, perRank, rank) => { mods[key] += perRank * rank; };
+  const addCooldown = (mods, perRank, rank) => { mods.activeCooldownMul *= 1 - perRank * rank; };
 
-  const atk =
-    (t[talentIndex(0,0)]?0.08:0) + (t[talentIndex(0,1)]?0.10:0) +
-    (t[talentIndex(0,2)]?0.12:0) + (t[talentIndex(0,3)]?0.14:0) +
-    (t[talentIndex(0,4)]?0.16:0);
+  // Attack branch (17)
+  addTalent(0, 'Калибр', 'Урон +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.07, r));
+  addTalent(0, 'Бронебойные', 'Урон +30%.', 1, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.30, r));
+  addTalent(0, 'Фокусировка', 'Дальность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.07, r));
+  addTalent(0, 'Дальний выстрел', 'Дальность +30%.', 1, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.30, r));
+  addTalent(0, 'Разрывные боеприпасы', 'AOE +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.07, r));
+  addTalent(0, 'Широкий взрыв', 'AOE +30%.', 1, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.30, r));
+  addTalent(0, 'Отравляющие осколки', 'Шанс DOT +6% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'dotChance', 0.06, r));
+  addTalent(0, 'Токсичная волна', 'Шанс DOT +25%.', 1, 'passive', (mods, r) => addChance(mods, 'dotChance', 0.25, r));
+  addTalent(0, 'Кислотный урон', 'DOT-урон +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dotDpsMul', 0.07, r));
+  addTalent(0, 'Горящий яд', 'DOT-урон +30%.', 1, 'passive', (mods, r) => addMul(mods, 'dotDpsMul', 0.30, r));
+  addTalent(0, 'Контроль зоны', 'AOE +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.06, r));
+  addTalent(0, 'Разгон урона', 'Урон +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.06, r));
+  addTalent(0, 'Смертоносный заряд', 'Урон +35%.', 1, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.35, r));
+  addTalent(0, 'Шрапнель', 'AOE +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.07, r));
+  addTalent(0, 'Огневой поток', 'Урон +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.08, r));
+  addTalent(0, 'Снайперский финал', 'Дальность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.35, r));
+  addTalent(0, 'Активка: Шквал', 'На 6с усиливает урон и AOE.', 1, 'active', (mods) => {
+    mods.activeBranches.add(0);
+  });
 
-  const ctl =
-    (t[talentIndex(1,0)]?0.06:0) + (t[talentIndex(1,1)]?0.08:0) +
-    (t[talentIndex(1,2)]?0.10:0) + (t[talentIndex(1,3)]?0.12:0) +
-    (t[talentIndex(1,4)]?0.14:0);
+  // Speed branch (17)
+  addTalent(1, 'Калибровка затвора', 'Скорострельность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.07, r));
+  addTalent(1, 'Турбозатвор', 'Скорострельность +30%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.30, r));
+  addTalent(1, 'Двойной выстрел', 'Шанс двойного выстрела +5% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.05, r));
+  addTalent(1, 'Дуплет', 'Шанс двойного выстрела +20%.', 1, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.20, r));
+  addTalent(1, 'Стабильная орбита', 'Скорость орбиты +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.07, r));
+  addTalent(1, 'Рывок орбиты', 'Скорость орбиты +30%.', 1, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.30, r));
+  addTalent(1, 'Синхронизация', 'Скорострельность +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.06, r));
+  addTalent(1, 'Механизм спарки', 'Шанс двойного выстрела +4% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.04, r));
+  addTalent(1, 'Импульс', 'Скорострельность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.35, r));
+  addTalent(1, 'Реактивный контур', 'Скорость орбиты +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.08, r));
+  addTalent(1, 'Сокращение перезарядки', 'Кулдауны активки -8% за ранг.', 5, 'passive', (mods, r) => addCooldown(mods, 0.08, r));
+  addTalent(1, 'Молниеносность', 'Кулдауны активки -30%.', 1, 'passive', (mods, r) => addCooldown(mods, 0.30, r));
+  addTalent(1, 'Сверхскорострельность', 'Скорострельность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.07, r));
+  addTalent(1, 'Серия', 'Шанс двойного выстрела +22%.', 1, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.22, r));
+  addTalent(1, 'Разгон орбиты', 'Скорость орбиты +9% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.09, r));
+  addTalent(1, 'Стартовый импульс', 'Скорострельность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.35, r));
+  addTalent(1, 'Активка: Перегрев', 'На 6с резко ускоряет стрельбу и орбиту.', 1, 'active', (mods) => {
+    mods.activeBranches.add(1);
+  });
 
-  const eco =
-    (t[talentIndex(2,0)]?0.08:0) + (t[talentIndex(2,1)]?0.10:0) +
-    (t[talentIndex(2,2)]?0.12:0) + (t[talentIndex(2,3)]?0.14:0) +
-    (t[talentIndex(2,4)]?0.16:0);
-
-  return { atk, ctl, eco };
+  // Economy branch (17)
+  addTalent(2, 'Скидки', 'Стоимость покупки -6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.06, r));
+  addTalent(2, 'Оптовые закупки', 'Стоимость покупки -25%.', 1, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.25, r));
+  addTalent(2, 'Увеличенный выкуп', 'Награда монетами +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.07, r));
+  addTalent(2, 'Премия за убийство', 'Награда монетами +30%.', 1, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.30, r));
+  addTalent(2, 'Копилка опыта', 'Опыт +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.07, r));
+  addTalent(2, 'Ускоренное обучение', 'Опыт +30%.', 1, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.30, r));
+  addTalent(2, 'Снабжение', 'Награда монетами +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.06, r));
+  addTalent(2, 'Казначей', 'Награда монетами +35%.', 1, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.35, r));
+  addTalent(2, 'Экономия топлива', 'Стоимость покупки -5% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.05, r));
+  addTalent(2, 'Инвестор', 'Опыт +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.08, r));
+  addTalent(2, 'Бонус за выстрел', 'Награда за выстрел +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.06, r));
+  addTalent(2, 'Золотая лихорадка', 'Опыт +35%.', 1, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.35, r));
+  addTalent(2, 'Скидка на снаряды', 'Стоимость покупки -6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.06, r));
+  addTalent(2, 'Программа лояльности', 'Награда монетами +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.08, r));
+  addTalent(2, 'Стимул обучения', 'Опыт +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.06, r));
+  addTalent(2, 'Контракт века', 'Стоимость покупки -35%.', 1, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.35, r));
+  addTalent(2, 'Активка: Золотой час', 'На 6с увеличивает монеты и опыт.', 1, 'active', (mods) => {
+    mods.activeBranches.add(2);
+  });
 }
 
-function canBuyTalent(i){
+function baseMods(){
+  return {
+    dmgMul: 1,
+    rangeMul: 1,
+    aoeMul: 1,
+    fireRateMul: 1,
+    doubleShotChance: 0,
+    dotChance: 0,
+    dotDpsMul: 1,
+    orbitSpeedMul: 1,
+    buyCostMul: 1,
+    coinsMul: 1,
+    xpMul: 1,
+    activeCooldownMul: 1,
+    activeBranches: new Set(),
+  };
+}
+
+function computeModsFromApplied(applied){
+  initTalentDefs();
+  const mods = baseMods();
+  TALENT_DEFS.forEach((def, i) => {
+    const rank = applied[i] || 0;
+    if (rank <= 0) return;
+    def.apply(mods, rank);
+  });
+  mods.doubleShotChance = clamp(mods.doubleShotChance, 0, 0.9);
+  mods.dotChance = clamp(mods.dotChance, 0, 0.9);
+  return mods;
+}
+
+function getMods(){
   const p = state.player;
-  const branch = i % 3;
-  const row = Math.floor(i/3);
+  if (!p.mods || p.modsDirty){
+    p.mods = computeModsFromApplied(p.talentsApplied);
+    p.modsDirty = false;
+  }
+  return p.mods;
+}
 
-  if (!p || p.talentPoints <= 0) return false;
-  if (p.talents[i]) return false;
+function pendingCost(){
+  const p = state.player;
+  return p.talentsPending.reduce((sum, r) => sum + r, 0);
+}
 
-  if (row === 5 && p.level < 40) return false;
+function resetTalentSelections(){
+  const p = state.player;
+  p.talentsPending.fill(0);
+  updateTalentUI();
+}
 
-  if (row > 0){
-    const prev = talentIndex(branch, row-1);
-    if (!p.talents[prev]) return false;
+function applyTalentSelections(){
+  const p = state.player;
+  const cost = pendingCost();
+  if (cost <= 0 || cost > p.talentPoints) return;
+  TALENT_DEFS.forEach((def, i) => {
+    const pending = p.talentsPending[i] || 0;
+    if (!pending) return;
+    const next = Math.min(def.maxRank, (p.talentsApplied[i] || 0) + pending);
+    p.talentsApplied[i] = next;
+  });
+  p.talentPoints -= cost;
+  p.talentsPending.fill(0);
+  p.modsDirty = true;
+  saveProgress();
+  updateTalentUI();
+}
+
+function canSelectTalent(i){
+  const p = state.player;
+  const def = TALENT_DEFS[i];
+  if (!def) return false;
+  if (def.kind === 'active' && p.level < 40) return false;
+  const appliedRank = p.talentsApplied[i] || 0;
+  const pendingRank = p.talentsPending[i] || 0;
+  if (appliedRank + pendingRank >= def.maxRank) return false;
+  if (def.prev !== null && def.prev !== undefined){
+    if ((p.talentsApplied[def.prev] || 0) < 1) return false;
   }
   return true;
 }
 
-function tryBuyTalent(i){
+function adjustTalentPending(i, delta){
   const p = state.player;
-  if (!canBuyTalent(i)) return;
+  if (!p) return;
+  const def = TALENT_DEFS[i];
+  if (!def) return;
+  if (delta > 0){
+    if (!canSelectTalent(i)) return;
+    p.talentsPending[i] += 1;
+  } else if (delta < 0){
+    p.talentsPending[i] = Math.max(0, p.talentsPending[i] - 1);
+  }
+  state.ui.talentBranch = def.branch;
+  updateTalentUI();
+}
 
-  p.talentPoints -= 1;
-  p.talents[i] = 1;
+function activeTalentIndex(branch){
+  for (let i = TALENT_DEFS.length - 1; i >= 0; i--){
+    if (TALENT_DEFS[i].branch === branch) return i;
+  }
+  return -1;
+}
 
-  const row = Math.floor(i/3);
-  const branch = i % 3;
-  if (row === 5){
-    p.activeAbility = branch; // 0/1/2
+function canUseActive(branch){
+  const p = state.player;
+  if (!p) return false;
+  if (p.level < 40) return false;
+  const activeIndex = activeTalentIndex(branch);
+  if (activeIndex < 0) return false;
+  if ((p.talentsApplied[activeIndex] || 0) < 1) return false;
+  const now = nowSec();
+  const cooldownUntil = p.activeCooldowns[branch] || 0;
+  return now >= cooldownUntil;
+}
+
+function useActiveAbility(branch){
+  const p = state.player;
+  if (!canUseActive(branch)) return;
+  const now = nowSec();
+  const mods = getMods();
+  const baseCooldown = 30;
+  p.activeCooldowns[branch] = now + baseCooldown * mods.activeCooldownMul;
+
+  if (branch === 0){
+    state.activeEffects.attackUntil = now + 6;
+    burst(center.x, center.y, 60, 'rgba(255,120,90,.2)');
+  } else if (branch === 1){
+    state.activeEffects.speedUntil = now + 6;
+    burst(center.x, center.y, 60, 'rgba(125,255,178,.22)');
+  } else if (branch === 2){
+    state.activeEffects.economyUntil = now + 6;
+    burst(center.x, center.y, 60, 'rgba(255,215,125,.22)');
   }
   saveProgress();
 }
 
-function useActiveAbility(){
+function openTalents(){
+  state.ui.talentsOpen = true;
+  ensureTalentUI();
+  updateTalentUI();
+  const overlay = document.getElementById('talentOverlay');
+  if (overlay) overlay.classList.remove('hidden');
+}
+
+function closeTalents(){
+  state.ui.talentsOpen = false;
+  const overlay = document.getElementById('talentOverlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+function ensureTalentState(){
+  initTalentDefs();
   const p = state.player;
-  if (!p || p.activeAbility === null) return;
-
-  const now = nowSec();
-  if (now < (p.abilityCooldownUntil || 0)) return;
-
-  p.abilityCooldownUntil = now + 30;
-
-  if (p.activeAbility === 0){
-    state.boostUntil = Math.max(state.boostUntil, now + 6);
-    return;
+  if (!Array.isArray(p.talentsApplied) || p.talentsApplied.length !== TALENT_DEFS.length){
+    p.talentsApplied = Array(TALENT_DEFS.length).fill(0);
   }
-
-  if (p.activeAbility === 1){
-    state.empUntil = now + 5;
-    return;
+  if (!Array.isArray(p.talentsPending) || p.talentsPending.length !== TALENT_DEFS.length){
+    p.talentsPending = Array(TALENT_DEFS.length).fill(0);
   }
-
-  if (p.activeAbility === 2){
-    for (const z of state.zombies){
-      z.hp -= 999999;
-    }
-    burst(center.x, center.y, 90, 'rgba(255,122,107,.25)');
+  if (!Array.isArray(p.activeCooldowns) || p.activeCooldowns.length !== 3){
+    p.activeCooldowns = [0, 0, 0];
   }
+  p.modsDirty = true;
 }
 
 function saveProgress(){
@@ -753,8 +970,9 @@ function saveProgress(){
       level: p.level,
       xp: p.xp,
       talentPoints: p.talentPoints,
-      talents: p.talents,
-      activeAbility: p.activeAbility,
+      talentsApplied: p.talentsApplied,
+      talentsPending: p.talentsPending,
+      activeCooldowns: p.activeCooldowns,
     }));
   }catch(e){}
 }
@@ -1027,6 +1245,15 @@ function stepZombies(dt){
     const speed = Math.abs(z.omega);
     const animMul = z.type?.animSpeed ?? 1.0;
     z.anim += dt * animMul * (1.4 + speed * 6.0) * slow;
+
+    if (z.dotUntil){
+      if (nowSec() < z.dotUntil){
+        z.hp -= (z.dotDps || 0) * dt;
+      } else {
+        z.dotUntil = 0;
+        z.dotDps = 0;
+      }
+    }
   }
 }
 
@@ -1044,6 +1271,7 @@ function stepTanks(dt){
     }
 
     const s = tankStats(tank.level);
+    const mods = getMods();
 
     // pick nearest zombie in range
     let best = null;
@@ -1075,22 +1303,7 @@ function stepTanks(dt){
           const mx = sx + Math.cos(pos.heading) * muzzle.x - Math.sin(pos.heading) * muzzle.y;
           const my = sy + Math.sin(pos.heading) * muzzle.x + Math.cos(pos.heading) * muzzle.y;
 
-          const tp = zombiePos(best);
-          spawnProjectile({
-            fromX: mx,
-            fromY: my,
-            toZombieId: best.id,
-            toX: tp.x,
-            toY: tp.y,
-            level: tank.level,
-            dmg: s.dmg,
-            aoe: s.aoe,
-            prof: s.prof,
-          });
-
-          tank.cooldown = 1 / (s.fr * speedMult());
-          state.coins += coinsForShot(tank.level);
-          burst(mx, my, 5, 'rgba(255,255,255,.55)');
+          fireTankProjectile({sx: mx, sy: my, target: best, tank, stats: s, mods});
         }
       }
 
@@ -1102,31 +1315,40 @@ function stepTanks(dt){
     }
 
     if (tank.cooldown > 0 || !best) continue;
+    fireTankProjectile({sx, sy, target: best, tank, stats: s, mods});
+  }
+}
 
-    tank.cooldown = 1 / (s.fr * speedMult());
-
-    const tp = zombiePos(best);
+function fireTankProjectile({sx, sy, target, tank, stats, mods}){
+  const tp = zombiePos(target);
+  const spawn = () => {
     spawnProjectile({
       fromX: sx,
       fromY: sy,
-      toZombieId: best.id,
+      toZombieId: target.id,
       toX: tp.x,
       toY: tp.y,
       level: tank.level,
-      dmg: s.dmg,
-      aoe: s.aoe,
-      prof: s.prof,
+      dmg: stats.dmg,
+      aoe: stats.aoe,
+      prof: stats.prof,
     });
-
     state.coins += coinsForShot(tank.level);
-    burst(sx, sy, 5, 'rgba(255,255,255,.55)');
+  };
+  spawn();
+  if (Math.random() < mods.doubleShotChance){
+    spawn();
   }
+  tank.cooldown = 1 / (stats.fr * speedMult());
+  burst(sx, sy, 5, 'rgba(255,255,255,.55)');
 }
 
 function tankOrbitState(cell, timeSec){
   const total = BAL.rows * BAL.cols;
   const offset = (cell.i / total) * Math.PI * 2;
-  const angle = timeSec * BAL.tankOrbitSpeed * speedMult() + offset;
+  const mods = getMods();
+  const activeSpeed = timeSec < state.activeEffects.speedUntil ? 1.35 : 1;
+  const angle = timeSec * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed + offset;
   const orbitR = getTankOrbitRadius();
   return {
     x: center.x + Math.cos(angle) * orbitR,
@@ -1183,7 +1405,8 @@ function stepProjectiles(dt){
     b.y += vy * b.speed * dt;
 
     // trail particles
-    particle(b.x - vx*8, b.y - vy*8, Math.max(1.5, b.r*0.55), b.trail, 0.25);
+    const trailColor = b.level >= 12 ? 'rgba(186,140,255,.18)' : b.trail;
+    particle(b.x - vx*8, b.y - vy*8, Math.max(1.5, b.r*0.55), trailColor, 0.25);
 
     if (dist < Math.max(10, b.r*2.2)){
       impactAt(b.x, b.y, b);
@@ -1197,6 +1420,7 @@ function stepProjectiles(dt){
 }
 
 function impactAt(x,y,b){
+  const mods = getMods();
   // Base AOE damage
   for (const z of state.zombies){
     const p = zombiePos(z);
@@ -1204,6 +1428,10 @@ function impactAt(x,y,b){
     if (d <= b.aoe){
       const falloff = 0.55 + 0.45*(1 - d/b.aoe);
       z.hp -= b.dmg * falloff;
+      if (Math.random() < mods.dotChance){
+        z.dotUntil = nowSec() + 4;
+        z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
+      }
     }
   }
 
@@ -1226,6 +1454,9 @@ function impactAt(x,y,b){
   // Visual impact rings
   state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
   burst(x,y, (b.kind==='he'?30:22), b.glow);
+  if (b.dmg > 80){
+    state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
+  }
 }
 
 function chainLightning(x,y,b){
@@ -1361,7 +1592,11 @@ function cleanupKills(){
     if (z.hp <= 0){
       state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
       state.kills += 1;
-      grantXP(1);
+      const mods = getMods();
+      const base = 5 + Math.random() * 5;
+      const levelMul = 1.1 ** Math.max(0, (z.level ?? 1) - 1);
+      const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
+      grantXP(base * levelMul * mods.xpMul * activeMul);
       const p = zombiePos(z);
       burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
     } else alive.push(z);
@@ -1409,8 +1644,8 @@ function updateUI(){
   ui.coins.textContent = Math.floor(state.coins);
   ui.zcount.textContent = state.kills;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
-  if (buyLabel) buyLabel.textContent = `${t('buyTank', {level})} ${cost}`;
-  ui.buyCost.innerHTML = `<span class="coinIcon">🪙</span>`;
+  if (buyLabel) buyLabel.textContent = t('buyTank', {level});
+  ui.buyCost.innerHTML = `${cost}<span class="coinIcon">🪙</span>`;
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0
@@ -1440,14 +1675,14 @@ function ensureProgressUI(){
 
   const wrap = document.createElement('div');
   wrap.id = 'xpWrap';
-  wrap.style.cssText = 'display:flex;align-items:center;gap:10px;margin-left:12px;';
+  wrap.className = 'xpPanel';
 
   wrap.innerHTML = `
-    <div id="lvlText" style="color:#eaf1ff;font:12px system-ui;">Уровень: 1</div>
-    <div style="width:180px;height:10px;background:rgba(255,255,255,.12);border-radius:8px;overflow:hidden;">
-      <div id="xpBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7dffb2,#6ea8ff);"></div>
+    <div class="xpLabel" id="lvlText">${t('levelLabel')}: 1</div>
+    <div class="xpBar">
+      <div id="xpBar" class="xpFill"></div>
     </div>
-    <div id="xpText" style="color:rgba(234,241,255,.85);font:12px system-ui;">0/50</div>
+    <div class="xpValue" id="xpText">0/0</div>
   `;
   topbar.appendChild(wrap);
 }
@@ -1461,67 +1696,154 @@ function updateProgressUI(){
 
   const need = Math.max(1, p.xpToNext);
   const pct = clamp(p.xp / need, 0, 1) * 100;
-  lvlText.textContent = `Уровень: ${p.level}`;
+  lvlText.textContent = `${t('levelLabel')}: ${p.level}`;
   xpText.textContent = `${Math.floor(p.xp)}/${need}`;
   xpBar.style.width = `${pct}%`;
 }
 
 function ensureTalentUI(){
-  if (document.getElementById('talentWrap')) return;
+  if (document.getElementById('talentOverlay')) return;
+  initTalentDefs();
 
-  const panel = document.createElement('div');
-  panel.id = 'talentWrap';
-  panel.style.cssText =
-    'position:fixed;right:14px;top:74px;width:320px;padding:10px;border-radius:12px;' +
-    'background:rgba(0,0,0,.35);backdrop-filter:blur(6px);color:#eaf1ff;font:12px system-ui;z-index:50;';
-
-  panel.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div><b>Таланты</b> • Очки: <span id="tp">0</span></div>
-      <button id="useAbility" style="padding:6px 10px;border-radius:10px;border:0;cursor:pointer;">Активка</button>
+  const overlay = document.createElement('div');
+  overlay.id = 'talentOverlay';
+  overlay.className = 'overlay hidden';
+  overlay.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modalHeader">
+        <div class="modalTitle">${t('talentTreeTitle')}</div>
+        <button class="modalClose" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modalBody">
+        <div class="talentBranches" id="talentBranches"></div>
+      </div>
+      <div class="talentFooter">
+        <div class="talentSummary" id="talentSummary"></div>
+        <div class="talentActions">
+          <button id="talentReset" class="btn btnSecondary" type="button">${t('talentReset')}</button>
+          <button id="talentApply" class="btn btnPrimary" type="button">${t('talentApply')}</button>
+          <button id="talentActive" class="btn btnSecondary" type="button">${t('talentActive')}</button>
+        </div>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="talentGrid"></div>
   `;
 
-  document.body.appendChild(panel);
+  document.body.appendChild(overlay);
 
-  const grid = panel.querySelector('#talentGrid');
-  for (let i=0;i<18;i++){
-    const btn = document.createElement('button');
-    btn.dataset.talent = String(i);
-    btn.style.cssText = 'height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eaf1ff;cursor:pointer;';
-    btn.textContent = talentLabel(i);
-    btn.addEventListener('click', ()=> tryBuyTalent(i));
-    grid.appendChild(btn);
-  }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeTalents();
+  });
+  overlay.querySelector('.modalClose')?.addEventListener('click', () => closeTalents());
+  overlay.querySelector('#talentReset')?.addEventListener('click', () => resetTalentSelections());
+  overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
+  overlay.querySelector('#talentActive')?.addEventListener('click', () => useActiveAbility(state.ui.talentBranch));
 
-  panel.querySelector('#useAbility').addEventListener('click', ()=> useActiveAbility());
+  const branches = overlay.querySelector('#talentBranches');
+  TALENT_BRANCHES.forEach((branchName, branch) => {
+    const column = document.createElement('div');
+    column.className = 'talentBranch';
+    column.dataset.branch = String(branch);
+    column.innerHTML = `
+      <div class="talentBranchTitle">
+        <span>${branchName}</span>
+        <span class="talentBranchPoints" id="branchPoints-${branch}"></span>
+      </div>
+      <div class="talentList"></div>
+    `;
+    column.querySelector('.talentBranchTitle')?.addEventListener('click', () => {
+      state.ui.talentBranch = branch;
+      updateTalentUI();
+    });
+
+    const list = column.querySelector('.talentList');
+    TALENT_DEFS.forEach((def, i) => {
+      if (def.branch !== branch) return;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'talentBtn';
+      btn.dataset.talent = String(i);
+      btn.innerHTML = `
+        <strong><span class="talentName">${def.name}</span><span class="talentRank"></span></strong>
+        <small class="talentDesc">${def.desc}</small>
+      `;
+      btn.addEventListener('click', (event) => {
+        adjustTalentPending(i, event.shiftKey ? -1 : 1);
+      });
+      btn.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        adjustTalentPending(i, -1);
+      });
+      list.appendChild(btn);
+    });
+    branches.appendChild(column);
+  });
 }
 
 function updateTalentUI(){
+  if (!state.ui.talentsOpen) return;
   const p = state.player;
-  const tp = document.getElementById('tp');
-  const wrap = document.getElementById('talentWrap');
-  if (!p || !wrap || !tp) return;
+  const overlay = document.getElementById('talentOverlay');
+  if (!p || !overlay) return;
 
-  tp.textContent = String(p.talentPoints);
+  const cost = pendingCost();
+  const summary = overlay.querySelector('#talentSummary');
+  if (summary){
+    const note = cost > p.talentPoints ? ` • ${t('talentNeedPoints')}` : '';
+    summary.textContent = `${t('talentPoints')}: ${p.talentPoints} • ${t('talentPending')}: ${cost}${note}`;
+  }
 
-  wrap.querySelectorAll('button[data-talent]').forEach(btn=>{
-    const i = parseInt(btn.dataset.talent, 10);
-    const owned = !!p.talents[i];
-    btn.style.opacity = owned ? '1' : (canBuyTalent(i) ? '1' : '0.45');
-    btn.style.borderColor = owned ? 'rgba(125,255,178,.55)' : 'rgba(255,255,255,.12)';
-    btn.style.background = owned ? 'rgba(125,255,178,.12)' : 'rgba(255,255,255,.06)';
+  overlay.querySelectorAll('.talentBtn').forEach(btn => {
+    const i = Number(btn.dataset.talent);
+    const def = TALENT_DEFS[i];
+    const applied = p.talentsApplied[i] || 0;
+    const pending = p.talentsPending[i] || 0;
+    const rankText = `${applied + pending}/${def.maxRank}`;
+    const rankEl = btn.querySelector('.talentRank');
+    if (rankEl) rankEl.textContent = rankText;
+
+    btn.classList.toggle('applied', applied > 0);
+    btn.classList.toggle('pending', pending > 0);
+    btn.disabled = !canSelectTalent(i) && pending === 0;
+    btn.style.opacity = canSelectTalent(i) || pending > 0 || applied > 0 ? '1' : '0.45';
+    btn.title = `${def.name}\n${def.desc}`;
   });
 
-  const useBtn = document.getElementById('useAbility');
-  if (useBtn){
+  overlay.querySelectorAll('.talentBranch').forEach(column => {
+    const branch = Number(column.dataset.branch);
+    column.classList.toggle('selected', branch === state.ui.talentBranch);
+  });
+
+  TALENT_BRANCHES.forEach((_, branch) => {
+    const el = overlay.querySelector(`#branchPoints-${branch}`);
+    if (!el) return;
+    const applied = TALENT_DEFS.reduce((sum, def, i) => {
+      if (def.branch !== branch) return sum;
+      return sum + (p.talentsApplied[i] || 0);
+    }, 0);
+    el.textContent = `⭐ ${applied}`;
+  });
+
+  const applyBtn = overlay.querySelector('#talentApply');
+  if (applyBtn){
+    applyBtn.disabled = cost <= 0 || cost > p.talentPoints;
+  }
+  const resetBtn = overlay.querySelector('#talentReset');
+  if (resetBtn) resetBtn.disabled = cost <= 0;
+
+  const activeBtn = overlay.querySelector('#talentActive');
+  if (activeBtn){
+    const branch = state.ui.talentBranch;
+    const cdUntil = p.activeCooldowns[branch] || 0;
     const now = nowSec();
-    const cd = Math.max(0, (p.abilityCooldownUntil || 0) - now);
-    useBtn.disabled = (p.activeAbility === null) || cd > 0;
-    useBtn.textContent = p.activeAbility === null
-      ? 'Активка (нет)'
-      : cd > 0 ? `Активка (${Math.ceil(cd)}с)` : 'Активка';
+    const cdLeft = Math.max(0, cdUntil - now);
+    const canUse = canUseActive(branch);
+    const label = canUse
+      ? t('talentActive')
+      : cdLeft > 0
+        ? t('talentActiveCooldown', {sec: Math.ceil(cdLeft)})
+        : t('talentActiveLocked');
+    activeBtn.textContent = `${label} • ${TALENT_BRANCHES[branch]}`;
+    activeBtn.disabled = !canUse;
   }
 }
 
@@ -1986,6 +2308,17 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
 
 function drawTank(x,y,tank,ghost=false,rotation=0){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
+  if (level >= 10){
+    const auraSize = 18 + Math.min(18, level * 0.8);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.arc(0, 0, auraSize, 0, Math.PI * 2);
+    ctx.fillStyle = level >= 25 ? 'rgba(186,140,255,.25)' : 'rgba(125,255,178,.22)';
+    ctx.fill();
+    ctx.restore();
+  }
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.();
   const cannon = TankSprites?.pickCannon?.(level);
@@ -1999,7 +2332,8 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
       ctx.globalAlpha *= 0.6;
     }
 
-    const baseScale = (compact ? 0.065 : 0.085) * balScale * (BAL.tankSpriteScaleMul ?? 1);            // tuned for typical PNG sizes
+    const configScale = TankSprites?.config?.tankScale ?? 1;
+    const baseScale = (compact ? 0.065 : 0.085) * balScale * (BAL.tankSpriteScaleMul ?? 1) * configScale;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale;
 
@@ -2007,8 +2341,9 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
     const bodyH = body.cfg.frame?.h ?? body.img.height;
     const bodyFrame = Math.floor(tank?.bodyAnim ?? 0) % (body.cfg.frames || 1);
     const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
-    const drawBodyW = bodyW * s;
-    const drawBodyH = bodyH * s;
+    const bodyScale = body.cfg.scale ?? 1;
+    const drawBodyW = bodyW * s * bodyScale;
+    const drawBodyH = bodyH * s * bodyScale;
 
     ctx.drawImage(
       body.img,
@@ -2027,8 +2362,9 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
     const cannonFrames = cannon.cfg.frames || 1;
     const cannonFrame = Math.floor(tank?.cannonAnim ?? 0) % cannonFrames;
     const cannonAnchor = cannon.cfg.anchor || {x:0.35, y:0.5};
-    const drawCannonW = cannonW * s;
-    const drawCannonH = cannonH * s;
+    const cannonScale = cannon.cfg.scale ?? 1;
+    const drawCannonW = cannonW * s * cannonScale;
+    const drawCannonH = cannonH * s * cannonScale;
     const recoil = cannon.cfg.recoil ?? 0;
     const kick = recoil ? Math.sin(Math.min(1, tank?.cannonAnim ?? 0) * Math.PI) * recoil : 0;
 
@@ -2066,7 +2402,8 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
   }
 
   // Fallback: vector tank (smaller)
-  const baseScale = (compact ? 0.56 : 0.72) * balScale;
+  const configScale = TankSprites?.config?.tankScale ?? 1;
+  const baseScale = (compact ? 0.56 : 0.72) * balScale * configScale;
   const levelScale = 1.0 + Math.min(0.20, level*0.010);
   const scale = baseScale * levelScale;
 
@@ -2190,19 +2527,21 @@ function drawZombieSprite(x,y,z){
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
 
-  // shadow (without rotation)
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,.20)';
-  ctx.beginPath();
-  ctx.ellipse(
-    x,
-    y + BAL.zombieShadowY + groundOffset,
-    BAL.zombieShadowW * scale,
-    BAL.zombieShadowH * scale,
-    0, 0, Math.PI * 2
-  );
-  ctx.fill();
-  ctx.restore();
+  if (!qualityLow){
+    // shadow (without rotation)
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
+    ctx.beginPath();
+    ctx.ellipse(
+      x,
+      y + BAL.zombieShadowY + groundOffset,
+      BAL.zombieShadowW * scale,
+      BAL.zombieShadowH * scale,
+      0, 0, Math.PI * 2
+    );
+    ctx.fill();
+    ctx.restore();
+  }
 
   // body
   ctx.save();
@@ -2238,13 +2577,15 @@ function drawZombieFallback(x,y,z){
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
   const skinTone = shade('#3cbe78', levelBoost * 10);
 
-  // shadow
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,.20)';
-  ctx.beginPath();
-  ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.restore();
+  if (!qualityLow){
+    // shadow
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.20)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
@@ -2327,7 +2668,10 @@ function drawImpacts(){
   for (const fx of state.impacts){
     const t = fx.life / fx.max;
 
+    if (qualityLow && fx.kind === 'overflow') continue;
+
     if (fx.kind === 'bolt'){
+      if (qualityLow) continue;
       ctx.save();
       ctx.globalAlpha = t;
       ctx.strokeStyle = 'rgba(139,211,255,.65)';
@@ -2346,7 +2690,13 @@ function drawImpacts(){
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    const col = fx.kind === 'toxic' ? 'rgba(184,255,59,' : (fx.kind === 'he' ? 'rgba(255,122,107,' : 'rgba(255,211,107,');
+    const col = fx.kind === 'toxic'
+      ? 'rgba(184,255,59,'
+      : (fx.kind === 'he'
+        ? 'rgba(255,122,107,'
+        : (fx.kind === 'overflow'
+          ? 'rgba(255,240,160,'
+          : 'rgba(255,211,107,'));
 
     ctx.strokeStyle = `${col}${0.22*t})`;
     ctx.lineWidth = 3;
@@ -2354,11 +2704,13 @@ function drawImpacts(){
     ctx.arc(fx.x, fx.y, fx.r, 0, Math.PI*2);
     ctx.stroke();
 
-    ctx.strokeStyle = `${col}${0.10*t})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(fx.x, fx.y, fx.r*0.72, 0, Math.PI*2);
-    ctx.stroke();
+    if (!qualityLow){
+      ctx.strokeStyle = `${col}${0.10*t})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, fx.r*0.72, 0, Math.PI*2);
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
@@ -2510,12 +2862,15 @@ function stepImpacts(dt){
 let last = performance.now();
 let fpsAvg = 60;
 let lastProgressSave = 0;
+let qualityLow = false;
 function loop(now){
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
   fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
-  BAL.maxParticles = fpsAvg < 45 ? 900 : 1600;
-  if (nowSec() - lastProgressSave > 3){
+  qualityLow = fpsAvg < 45;
+  BAL.maxParticles = qualityLow ? 900 : 1600;
+  BAL.maxDecals = qualityLow ? 70 : 120;
+  if (nowSec() - lastProgressSave > 7){
     saveProgress();
     lastProgressSave = nowSec();
   }
@@ -2543,19 +2898,22 @@ async function boot(){
   if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
   applyTranslations();
   ensureProgressUI();
-  ensureTalentUI();
+  initTalentDefs();
   try{
     const raw = localStorage.getItem('progress');
     if (raw){
       const d = JSON.parse(raw);
       Object.assign(state.player, d);
-      state.player.xpToNext = xpNeededForLevel(state.player.level);
     }
   }catch(e){}
+  ensureTalentState();
+  state.player.xpToNext = xpNeededForLevel(state.player.level);
+  state.player.modsDirty = true;
   if (ui.langRu && ui.langEn){
     ui.langRu.addEventListener('click', () => setLanguage('ru'));
     ui.langEn.addEventListener('click', () => setLanguage('en'));
   }
+  ui.talentsBtn?.addEventListener('click', () => openTalents());
   window.addEventListener('resize', resizeCanvas);
   if (window.visualViewport){
     window.visualViewport.addEventListener('resize', resizeCanvas);
