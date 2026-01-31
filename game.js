@@ -15,13 +15,11 @@ ctx.imageSmoothingEnabled = false;
 const ui = {
   coins: document.getElementById('coins'),
   zcount: document.getElementById('zcount'),
-  spr: document.getElementById('spr'),
   buy: document.getElementById('buy'),
   buyCost: document.getElementById('buyCost'),
   boost: document.getElementById('boost'),
   boostState: document.getElementById('boostState'),
   talentsBtn: document.getElementById('talentsBtn'),
-  tankInfo: document.getElementById('tankInfo'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
   crateModal: document.getElementById('crateModal'),
@@ -29,6 +27,11 @@ const ui = {
   crateGet: document.getElementById('crateGet'),
   crateIcon: document.getElementById('crateTankIcon'),
   crateText: document.getElementById('crateText'),
+  levelModal: document.getElementById('levelModal'),
+  levelTitle: document.getElementById('levelTitle'),
+  levelTalent: document.getElementById('levelTalent'),
+  levelGold: document.getElementById('levelGold'),
+  levelAccept: document.getElementById('levelAccept'),
 };
 
 const BAL = {
@@ -76,7 +79,7 @@ const BAL = {
   zombieShadowH: 5,
   zombieShadowY: 8,
   zombieGroundOffset: 6,
-  zombieLevelHpMul: 0.38,
+  zombieHpExtraPerLevel: 0.12,
   zombieLevelOmegaMul: 0.08,
 
   // Spawn from edge
@@ -88,6 +91,9 @@ const BAL = {
   coinsPerKillLevelMul: 0.35,
   coinsPerShotBase: 1,
   coinsPerShotLevelMul: 0.55,
+  levelGoldBase: 60,
+  levelGoldPerLevel: 18,
+  levelRewardAutoCloseSec: 4.5,
 
   // Boost
   boostDurationSec: 60,
@@ -171,9 +177,12 @@ let state = {
     modsDirty: true,
   },
   maxTankLevelAchieved: 1,
+  buyCounts: {},
   ui: {
     talentsOpen: false,
     talentBranch: 0,
+    levelReward: null,
+    levelRewardTimer: 0,
   },
 };
 
@@ -224,6 +233,10 @@ const STRINGS = {
     levelLabel: 'Уровень',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
+    levelModalTitle: 'Вы достигли {level} уровень',
+    levelModalTalent: 'Вы получили {points} {talent}',
+    levelModalGold: 'Вы получили {gold} золота',
+    levelUpAccept: 'Принять награду',
     statusOn: 'OK',
     statusOff: 'OFF',
     zombieShort: 'З',
@@ -270,6 +283,10 @@ const STRINGS = {
     levelLabel: 'Level',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
+    levelModalTitle: 'You reached level {level}',
+    levelModalTalent: 'You received {points} {talent}',
+    levelModalGold: 'You received {gold} gold',
+    levelUpAccept: 'Claim reward',
     statusOn: 'OK',
     statusOff: 'OFF',
     zombieShort: 'Z',
@@ -286,6 +303,17 @@ function t(key, vars = {}){
     text = text.replaceAll(`{${k}}`, String(v));
   }
   return text;
+}
+
+function talentWord(points){
+  if (currentLang === 'ru'){
+    const mod10 = points % 10;
+    const mod100 = points % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'талант';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'таланта';
+    return 'талантов';
+  }
+  return points === 1 ? 'talent' : 'talents';
 }
 
 function setLanguage(lang){
@@ -321,6 +349,7 @@ function applyTranslations(){
     ui.langEn.classList.toggle('active', currentLang === 'en');
   }
   updateTalentUI();
+  updateLevelModal();
 }
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
@@ -477,12 +506,6 @@ function resizeCanvas(){
   const stage = document.querySelector('.stageCanvas');
   if (!stage) return;
 
-  const topbar = document.querySelector('.topbar');
-  if (topbar){
-    const topbarH = topbar.getBoundingClientRect().height;
-    document.documentElement.style.setProperty('--topbar-h', `${topbarH}px`);
-  }
-
   const rect = stage.getBoundingClientRect();
   const maxW = Math.max(200, rect.width);
   const maxH = Math.max(200, rect.height);
@@ -614,7 +637,9 @@ function buyTankLevel(){
 function buyTankCost(level){
   const mods = getMods();
   const base = level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25;
-  return Math.max(1, Math.round(base * mods.buyCostMul));
+  const count = state.buyCounts?.[level] ?? 0;
+  const scaling = 1 + count * 0.001;
+  return Math.max(1, Math.round(base * mods.buyCostMul * scaling));
 }
 
 function tryBuyTank(){
@@ -626,6 +651,7 @@ function tryBuyTank(){
   state.coins -= cost;
   empty.tank = makeTank(level, false);
   recordTankLevel(level);
+  state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
 }
 
@@ -695,12 +721,79 @@ function xpNeededForLevel(level){
   return Math.round(500 * growth * correction * decadeBoost);
 }
 
+function levelGoldReward(level){
+  return Math.max(0, Math.round(BAL.levelGoldBase + BAL.levelGoldPerLevel * Math.max(0, level - 1)));
+}
+
+function updateLevelModal(){
+  const reward = state.ui.levelReward;
+  if (!reward || !ui.levelModal) return;
+  if (ui.levelTitle) ui.levelTitle.textContent = t('levelModalTitle', {level: reward.level});
+  if (ui.levelTalent){
+    ui.levelTalent.textContent = t('levelModalTalent', {
+      points: reward.points,
+      talent: talentWord(reward.points),
+    });
+  }
+  if (ui.levelGold) ui.levelGold.textContent = t('levelModalGold', {gold: reward.gold});
+  if (ui.levelAccept) ui.levelAccept.textContent = t('levelUpAccept');
+}
+
+function openLevelModal(){
+  if (!ui.levelModal) return;
+  ui.levelModal.classList.remove('hidden');
+  ui.levelModal.setAttribute('aria-hidden', 'false');
+  updateLevelModal();
+  if (state.ui.levelRewardTimer){
+    window.clearTimeout(state.ui.levelRewardTimer);
+  }
+  state.ui.levelRewardTimer = window.setTimeout(() => {
+    acceptLevelReward();
+  }, BAL.levelRewardAutoCloseSec * 1000);
+}
+
+function closeLevelModal(){
+  if (!ui.levelModal) return;
+  ui.levelModal.classList.add('hidden');
+  ui.levelModal.setAttribute('aria-hidden', 'true');
+  if (state.ui.levelRewardTimer){
+    window.clearTimeout(state.ui.levelRewardTimer);
+    state.ui.levelRewardTimer = 0;
+  }
+}
+
+function queueLevelReward(level, points, gold){
+  if (!points && !gold) return;
+  const reward = state.ui.levelReward;
+  if (reward){
+    reward.level = Math.max(reward.level, level);
+    reward.points += points;
+    reward.gold += gold;
+  } else {
+    state.ui.levelReward = { level, points, gold };
+  }
+  openLevelModal();
+}
+
+function acceptLevelReward(){
+  const reward = state.ui.levelReward;
+  if (!reward) return;
+  state.player.talentPoints += reward.points;
+  state.coins += reward.gold;
+  state.ui.levelReward = null;
+  closeLevelModal();
+  saveProgress();
+  updateUI();
+}
+
 function grantXP(amount){
   const p = state.player;
   if (!p || p.level >= p.maxLevel) return;
 
   p.xp += amount;
   let leveled = false;
+  let gainedLevels = 0;
+  let rewardGold = 0;
 
   while (p.level < p.maxLevel){
     p.xpToNext = xpNeededForLevel(p.level);
@@ -708,11 +801,15 @@ function grantXP(amount){
 
     p.xp -= p.xpToNext;
     p.level += 1;
-    p.talentPoints += 1;
     leveled = true;
+    gainedLevels += 1;
+    rewardGold += levelGoldReward(p.level);
   }
   p.xpToNext = xpNeededForLevel(p.level);
-  if (leveled) saveProgress();
+  if (leveled){
+    queueLevelReward(p.level, gainedLevels, rewardGold);
+    saveProgress();
+  }
 }
 
 const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика'];
@@ -973,6 +1070,7 @@ function saveProgress(){
       talentsApplied: p.talentsApplied,
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
+      buyCounts: state.buyCounts,
     }));
   }catch(e){}
 }
@@ -1130,7 +1228,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     : Math.random() * Math.PI*2;
   const dir = Math.random() < 0.5 ? -1 : 1;
 
-  const levelHpMul = 1 + BAL.zombieLevelHpMul * (level - 1);
+  const levelHpMul = zombieHpMultiplier(level);
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
   const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul;
@@ -1205,6 +1303,13 @@ function zombiePos(z){
 function zombieLevelScale(z){
   const level = z.level ?? 1;
   return 1 + BAL.zombieLevelScaleAdd * Math.max(0, level - 1);
+}
+
+function zombieHpMultiplier(level){
+  const lvl = Math.max(1, level);
+  const dmgScale = Math.pow(BAL.dmgMultPerLevel, lvl - 1);
+  const extra = 1 + BAL.zombieHpExtraPerLevel * Math.max(0, lvl - 1);
+  return dmgScale * extra;
 }
 
 function zombieCollisionRadius(z){
@@ -1531,10 +1636,12 @@ function stepDecals(dt){
 // ---------- Crates ----------
 function pickCrateRewardLevel(){
   const levels = state.cells.map(c => c.tank?.level).filter(Boolean);
-  const maxLevel = levels.length ? Math.max(...levels) : 1;
+  const maxLevel = Math.max(state.maxTankLevelAchieved || 1, levels.length ? Math.max(...levels) : 1);
   if (maxLevel <= 1) return 1;
-  const minLevel = Math.max(1, maxLevel - 1);
-  return minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
+  const minLevel = Math.max(1, maxLevel - 4);
+  const maxReward = Math.max(1, maxLevel - 3);
+  const upper = Math.max(minLevel, maxReward);
+  return minLevel + Math.floor(Math.random() * (upper - minLevel + 1));
 }
 
 function pickEmptyCell(){
@@ -1652,25 +1759,13 @@ function updateUI(){
     ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
     : '—';
 
-  // show both sprite systems status
-  const zStatus = ZombieSprites.ready ? t('statusOn') : t('statusOff');
-  const tStatus = TankSprites?.ready ? t('statusOn') : t('statusOff');
-  ui.spr.textContent = `${t('zombieShort')}:${zStatus} ${t('tankShort')}:${tStatus}`;
-
-  const tanks = state.cells.filter(c=>c.tank).map(c=>c.tank.level).sort((a,b)=>a-b);
-  const maxL = tanks.length ? Math.max(...tanks) : 0;
-  ui.tankInfo.textContent =
-    `${t('tankInfoCount')}: ${tanks.length}/${BAL.rows*BAL.cols}\n` +
-    `${t('tankInfoMax')}: ${maxL}\n` +
-    `${t('tankInfoLevels')}: ${tanks.join(', ') || '-'}`;
-
   ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
   updateProgressUI();
   updateTalentUI();
 }
 
 function ensureProgressUI(){
-  const topbar = document.querySelector('.topbar') || document.body;
+  const topbar = document.querySelector('.stageUiRight') || document.querySelector('.stageCanvas') || document.body;
   if (document.getElementById('xpWrap')) return;
 
   const wrap = document.createElement('div');
@@ -2511,6 +2606,7 @@ function drawZombieSprite(x,y,z){
   const t = z.type;
   const f = t.frame;
   const a = t.anchor;
+  const facing = x >= center.x ? 1 : -1;
 
   const frames = t.frames || 1;
   const frameIndex = Math.floor(z.anim) % frames;
@@ -2546,7 +2642,8 @@ function drawZombieSprite(x,y,z){
   // body
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.rotate(rot);
+  ctx.scale(facing, 1);
+  ctx.rotate(rot * facing);
   ctx.drawImage(
     img,
     fx, fy, f.w, f.h,
@@ -2573,6 +2670,7 @@ function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
+  const facing = x >= center.x ? 1 : -1;
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
   const skinTone = shade('#3cbe78', levelBoost * 10);
@@ -2589,8 +2687,8 @@ function drawZombieFallback(x,y,z){
 
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.rotate(face);
-  ctx.scale(s, s);
+  ctx.rotate(face * facing);
+  ctx.scale(s * facing, s);
 
   // ragged head
   ctx.globalAlpha = 0.95;
@@ -2903,7 +3001,11 @@ async function boot(){
     const raw = localStorage.getItem('progress');
     if (raw){
       const d = JSON.parse(raw);
-      Object.assign(state.player, d);
+      const { buyCounts, ...playerData } = d;
+      Object.assign(state.player, playerData);
+      if (buyCounts && typeof buyCounts === 'object'){
+        state.buyCounts = buyCounts;
+      }
     }
   }catch(e){}
   ensureTalentState();
@@ -2914,6 +3016,7 @@ async function boot(){
     ui.langEn.addEventListener('click', () => setLanguage('en'));
   }
   ui.talentsBtn?.addEventListener('click', () => openTalents());
+  ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
   if (window.visualViewport){
     window.visualViewport.addEventListener('resize', resizeCanvas);

@@ -8,54 +8,49 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbarMain">
-      <div class="brand">
-        <div class="logo"></div>
-        <div>
-          <div class="title" data-i18n="title">Tank Merger: Zombie Orbit</div>
-          <div class="subtitle" data-i18n="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
-        </div>
-      </div>
-
-      <div class="topbarStats">
-        <div class="hud">
-          <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
-          <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
-          <div class="hudItem"><div class="k" data-i18n="hudSprites">Sprites</div><div class="v" id="spr">…</div></div>
-          <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
-        </div>
-
-        <div class="xpPanel" id="xpWrap">
-          <div class="xpLabel" id="lvlText">Уровень: 1</div>
-          <div class="xpBar">
-            <div id="xpBar" class="xpFill"></div>
-          </div>
-          <div class="xpValue" id="xpText">0/0</div>
-        </div>
-      </div>
-
-      <div class="topbarActions">
-        <button id="buy" class="btn btnPrimary">
-          <span data-i18n="buyTank">Купить танк Lv1</span>
-          <span class="price">(<span id="buyCost">50</span>)</span>
-        </button>
-        <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
-        <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
-      </div>
-    </div>
-
-    <div class="langSwitch" aria-label="Language switcher">
-      <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
-      <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
-    </div>
-
-  </header>
-
   <main class="layout">
     <section class="stage">
       <div class="stageCanvas">
         <canvas id="c" width="1100" height="650"></canvas>
+        <div class="stageUi stageUiLeft">
+          <div class="langSwitch" aria-label="Language switcher">
+            <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
+            <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
+          </div>
+        </div>
+        <div class="stageUi stageUiRight">
+          <div class="hud">
+            <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
+            <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
+            <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
+          </div>
+
+          <div class="xpPanel" id="xpWrap">
+            <div class="xpLabel" id="lvlText">Уровень: 1</div>
+            <div class="xpBar">
+              <div id="xpBar" class="xpFill"></div>
+            </div>
+            <div class="xpValue" id="xpText">0/0</div>
+          </div>
+
+          <div class="stageActions">
+            <button id="buy" class="btn btnPrimary">
+              <span data-i18n="buyTank">Купить танк Lv1</span>
+              <span class="price">(<span id="buyCost">50</span>)</span>
+            </button>
+            <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
+            <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="levelModal" aria-hidden="true">
+          <div class="levelModal__backdrop"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true">
+            <div class="levelModal__title" id="levelTitle">Вы достигли 1 уровень</div>
+            <div class="levelModal__line" id="levelTalent">Вы получили 1 талант</div>
+            <div class="levelModal__line" id="levelGold">Вы получили 0 золота</div>
+            <button id="levelAccept" class="btn btnPrimary" type="button" data-i18n="levelUpAccept">Принять награду</button>
+          </div>
+        </div>
         <div class="crateModal hidden" id="crateModal" aria-hidden="true">
           <div class="crateModal__backdrop" data-crate-close="true"></div>
           <div class="crateModal__panel" role="dialog" aria-modal="true">
@@ -67,37 +62,6 @@
             </div>
           </div>
         </div>
-        <div class="infoPanels">
-          <div class="card">
-            <div class="cardTitle" data-i18n="armyTitle">Армия</div>
-            <div id="tankInfo" class="mono"></div>
-          </div>
-
-          <div class="card">
-            <div class="cardTitle" data-i18n="zombieSpritesTitle">Зомби-спрайты</div>
-            <div class="small">
-              <span data-i18n="filesLabel">Файлы:</span>
-              <div class="mono">assets/zombies.json</div>
-              <div class="mono">assets/zombie_atlas.png</div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="cardTitle" data-i18n="tankSpritesTitle">Танки-спрайты (опционально)</div>
-            <div class="small">
-              <span data-i18n="addLabel">Добавь:</span>
-              <div class="mono">assets/tanks.json</div>
-              <div class="mono">assets/tanks/*.png</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tip" data-i18n="tipZombies">
-        Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.
-      </div>
-      <div class="tip" data-i18n-html="tipTanks">
-        Танки-спрайты: добавь <span class="mono">assets/tanks.json</span> и PNG в <span class="mono">assets/tanks/</span>.
       </div>
     </section>
   </main>

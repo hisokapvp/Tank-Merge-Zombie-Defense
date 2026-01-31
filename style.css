@@ -13,7 +13,6 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --ui-scale: clamp(0.95, 0.92 + 0.65vw, 1.22);
-  --topbar-h: 72px;
 }
 *{box-sizing:border-box}
 body{
@@ -30,52 +29,6 @@ body{
   padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
 }
 
-.topbar{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:clamp(10px, 1.6vw, 16px) clamp(12px, 2vw, 18px);
-  background:linear-gradient(120deg, rgba(20,30,80,.72), rgba(10,18,46,.6));
-  border-bottom:2px solid rgba(0,0,0,.25);
-  position:sticky;
-  top:0;
-  z-index:5;
-  backdrop-filter: blur(6px);
-}
-.topbarMain{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:16px;
-  flex-wrap:wrap;
-}
-.topbarStats{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  align-items:flex-start;
-}
-.topbarStats .hud{
-  justify-content:flex-start;
-}
-.topbarActions{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:center;
-  justify-content:flex-end;
-}
-
-.brand{display:flex;gap:12px;align-items:center}
-.logo{
-  width:36px;height:36px;border-radius:14px;
-  background:radial-gradient(circle at 30% 30%, #fff, rgba(255,255,255,.15) 35%, transparent 36%),
-             linear-gradient(135deg,var(--accent2),var(--accent));
-  border:2px solid rgba(0,0,0,.22);
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
-}
-.title{font-weight:900;letter-spacing:.2px;font-size:clamp(14px, 1.3vw, 18px)}
-.subtitle{font-size:clamp(10px, 1.05vw, 12px);color:var(--muted)}
 
 .hud{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .hudItem{
@@ -94,7 +47,7 @@ body{
   grid-template-columns:1fr;
   gap:clamp(10px, 1.4vw, 16px);
   padding:clamp(10px, 1.6vw, 16px);
-  height:calc(100dvh - var(--topbar-h));
+  height:100dvh;
 }
 .stage{display:flex;flex-direction:column;gap:10px;min-height:0}
 .stageCanvas{
@@ -104,30 +57,42 @@ body{
   align-items:stretch;
   position:relative;
 }
+.stageUi{
+  position:absolute;
+  top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  z-index:3;
+  pointer-events:none;
+}
+.stageUiLeft{
+  left:12px;
+  align-items:flex-start;
+}
+.stageUiRight{
+  right:12px;
+  align-items:flex-end;
+  width:min(420px, 40vw);
+}
+.stageUi .btn,
+.stageUi .langSwitch,
+.stageUi .hudItem,
+.stageUi .xpPanel{
+  pointer-events:auto;
+}
+.stageActions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:stretch;
+}
 #c{
   width:100%;height:100%;
   border-radius:18px;
   border:2px solid rgba(0,0,0,.25);
   background:rgba(0,0,0,.10);
   box-shadow:0 14px 0 rgba(0,0,0,.16);
-}
-.tip{font-size:clamp(10px, 1.05vw, 12px);color:var(--muted)}
-
-.infoPanels{
-  position:absolute;
-  top:12px;
-  right:12px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  width:min(320px, 38vw);
-  max-height:calc(100% - 24px);
-  overflow:auto;
-  padding:4px;
-}
-.infoPanels .card{
-  box-shadow:0 10px 0 rgba(0,0,0,.2), 0 12px 22px rgba(0,0,0,.22);
-  backdrop-filter: blur(6px);
 }
 .crateModal{
   position:absolute;
@@ -196,6 +161,48 @@ body{
 .crateModal__text{
   font-weight:700;
   color:var(--text);
+}
+#levelAccept{
+  min-width:180px;
+}
+.levelModal{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:5;
+}
+.levelModal.hidden{
+  display:none;
+}
+.levelModal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(5, 10, 18, 0.45);
+  backdrop-filter: blur(2px);
+}
+.levelModal__panel{
+  position:relative;
+  z-index:1;
+  width:min(360px, 86%);
+  padding:18px 18px 20px;
+  border-radius:18px;
+  border:2px solid rgba(0,0,0,.25);
+  background:linear-gradient(160deg, rgba(17, 30, 55, 0.96), rgba(9, 18, 36, 0.96));
+  box-shadow:0 14px 0 rgba(0,0,0,.22), 0 20px 35px rgba(0,0,0,.35);
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.levelModal__title{
+  font-weight:900;
+  font-size:16px;
+}
+.levelModal__line{
+  font-size:13px;
+  color:var(--muted);
 }
 .btn{
   position:relative;
@@ -472,22 +479,22 @@ body{
   .layout{
     grid-template-columns:1fr;
     grid-template-rows:minmax(220px, 1fr) auto;
-    height:calc(100dvh - var(--topbar-h));
-  }
-  .infoPanels{
-    position:static;
-    width:100%;
-    max-height:none;
-    padding:0;
+    height:100dvh;
   }
   .stageCanvas{
     flex-direction:column;
     gap:12px;
   }
+  .stageUi{
+    position:static;
+    width:100%;
+    align-items:center;
+  }
+  .stageUiRight{
+    width:100%;
+    align-items:center;
+  }
   .hud{justify-content:center}
-  .topbarMain{justify-content:center}
-  .topbarStats{align-items:center}
-  .topbarActions{justify-content:center}
   .talentBranches{
     grid-template-columns:1fr;
   }
@@ -495,9 +502,8 @@ body{
 
 @media (max-width: 600px){
   .hudItem{min-width:72px}
-  .infoPanels{gap:8px}
   .xpBar{width:140px}
-  .topbarActions .btn{width:100%}
+  .stageActions .btn{width:100%}
 }
 
 @media (prefers-reduced-motion: reduce){
