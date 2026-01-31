@@ -1,7 +1,7 @@
 {
   "body": {
     "src": "tanks/body.png",
-    "frame": { "w": 64, "h": 64 },
+    "frame": { "w": 128, "h": 128 },
     "frames": 2,
     "anchor": { "x": 0.5, "y": 0.6 },
     "animSpeed": 2.0
@@ -11,11 +11,11 @@
       "id": "cannon_basic",
       "minLevel": 1,
       "src": "tanks/cannon_lvl1.png",
-      "frame": { "w": 64, "h": 64 },
-      "frames": 5,
+      "frame": { "w": 128, "h": 128 },
+      "frames": 8,
       "animSpeed": 10.0,
       "fireFrame": 1,
-      "anchor": { "x": 0.35, "y": 0.5 },
+      "anchor": { "x": 0.5, "y": 0.5 },
       "muzzle": { "x": 28, "y": -2 },
       "recoil": 4
     },
@@ -23,11 +23,11 @@
       "id": "cannon_heavy",
       "minLevel": 4,
       "src": "tanks/cannon_lvl4.png",
-      "frame": { "w": 64, "h": 64 },
-      "frames": 7,
+      "frame": { "w": 128, "h": 128 },
+      "frames": 8,
       "animSpeed": 10.0,
       "fireFrame": 1,
-      "anchor": { "x": 0.35, "y": 0.5 },
+      "anchor": { "x": 0.5, "y": 0.5 },
       "muzzle": { "x": 30, "y": -2 },
       "recoil": 6
     },
@@ -35,11 +35,11 @@
       "id": "cannon_tesla",
       "minLevel": 7,
       "src": "tanks/cannon_lvl7.png",
-      "frame": { "w": 64, "h": 64 },
-      "frames": 10,
+      "frame": { "w": 128, "h": 128 },
+      "frames": 8,
       "animSpeed": 12.0,
       "fireFrame": 1,
-      "anchor": { "x": 0.32, "y": 0.5 },
+      "anchor": { "x": 0.5, "y": 0.5 },
       "muzzle": { "x": 32, "y": -1 },
       "recoil": 5
     }
