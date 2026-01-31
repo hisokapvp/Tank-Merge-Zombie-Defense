@@ -2,11 +2,35 @@
   "atlas": "zombie_atlas.png",
   "types": [
     {
-      "id": "zombie",
-      "frame": {"x": 0, "y": 0, "w": 64, "h": 64},
+      "id": "zombie_lvl1",
+      "frame": {"x": 0, "y": 0, "w": 96, "h": 96},
       "frames": 10,
       "anchor": {"x": 0.5, "y": 0.75},
-      "scale": 1.1,
+      "scale": 0.7,
+      "hpMul": 1.0,
+      "omegaMul": 1.0,
+      "rewardMul": 1.0,
+      "weight": 1.0,
+      "hitbox": {"r": 18}
+    },
+    {
+      "id": "zombie_lvl2",
+      "frame": {"x": 0, "y": 96, "w": 96, "h": 96},
+      "frames": 8,
+      "anchor": {"x": 0.5, "y": 0.75},
+      "scale": 0.7,
+      "hpMul": 1.0,
+      "omegaMul": 1.0,
+      "rewardMul": 1.0,
+      "weight": 1.0,
+      "hitbox": {"r": 18}
+    },
+    {
+      "id": "zombie_lvl3",
+      "frame": {"x": 0, "y": 192, "w": 96, "h": 96},
+      "frames": 7,
+      "anchor": {"x": 0.5, "y": 0.75},
+      "scale": 0.7,
       "hpMul": 1.0,
       "omegaMul": 1.0,
       "rewardMul": 1.0,
