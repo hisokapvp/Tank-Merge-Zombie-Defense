@@ -9,11 +9,39 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <div class="logo"></div>
-      <div>
-        <div class="title" data-i18n="title">Tank Merger: Zombie Orbit</div>
-        <div class="subtitle" data-i18n="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
+    <div class="topbarMain">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <div class="title" data-i18n="title">Tank Merger: Zombie Orbit</div>
+          <div class="subtitle" data-i18n="subtitle">Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported</div>
+        </div>
+      </div>
+
+      <div class="topbarStats">
+        <div class="hud">
+          <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
+          <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
+          <div class="hudItem"><div class="k" data-i18n="hudSprites">Sprites</div><div class="v" id="spr">…</div></div>
+          <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
+        </div>
+
+        <div class="xpPanel" id="xpWrap">
+          <div class="xpLabel" id="lvlText">Уровень: 1</div>
+          <div class="xpBar">
+            <div id="xpBar" class="xpFill"></div>
+          </div>
+          <div class="xpValue" id="xpText">0/0</div>
+        </div>
+      </div>
+
+      <div class="topbarActions">
+        <button id="buy" class="btn btnPrimary">
+          <span data-i18n="buyTank">Купить танк Lv1</span>
+          <span class="price">(<span id="buyCost">50</span>)</span>
+        </button>
+        <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
+        <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
       </div>
     </div>
 
@@ -35,24 +63,11 @@
             <div class="crateModal__content">
               <canvas id="crateTankIcon" width="80" height="80"></canvas>
               <div class="crateModal__text" id="crateText" data-i18n="crateModalText">Посмотреть рекламу и получить танк</div>
-              <button id="crateGet" class="btn primary" type="button" data-i18n="crateGet">Получить</button>
+              <button id="crateGet" class="btn btnPrimary" type="button" data-i18n="crateGet">Получить</button>
             </div>
           </div>
         </div>
-        <div class="hudPanels">
-          <div class="hud">
-            <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
-            <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
-            <div class="hudItem"><div class="k" data-i18n="hudSprites">Sprites</div><div class="v" id="spr">…</div></div>
-            <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
-          </div>
-
-          <button id="buy" class="btn primary">
-            <span data-i18n="buyTank">Купить танк Lv1</span>
-            <span class="price">(<span id="buyCost">50</span>)</span>
-          </button>
-          <button id="boost" class="btn"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
-
+        <div class="infoPanels">
           <div class="card">
             <div class="cardTitle" data-i18n="armyTitle">Армия</div>
             <div id="tankInfo" class="mono"></div>

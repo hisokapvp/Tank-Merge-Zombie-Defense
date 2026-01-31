@@ -1,9 +1,11 @@
 {
+  "tankScale": 1.0,
   "body": {
     "src": "tanks/body.png",
     "frame": { "w": 128, "h": 128 },
     "frames": 2,
     "anchor": { "x": 0.5, "y": 0.6 },
+    "scale": 1.0,
     "animSpeed": 2.0
   },
   "cannons": [
@@ -16,6 +18,7 @@
       "animSpeed": 10.0,
       "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
       "muzzle": { "x": 28, "y": -2 },
       "recoil": 4
     },
@@ -28,6 +31,7 @@
       "animSpeed": 10.0,
       "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
       "muzzle": { "x": 28, "y": -2 },
       "recoil": 6
     },
@@ -40,6 +44,7 @@
       "animSpeed": 12.0,
       "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
       "muzzle": { "x": 28, "y": -1 },
       "recoil": 5
     }
