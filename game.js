@@ -332,10 +332,9 @@ const TankSprites = {
       this.config = cfg;
 
       const srcs = new Set();
-      if (cfg?.default?.src) srcs.add('assets/' + cfg.default.src);
-      for (const k of Object.keys(cfg?.levels || {})){
-        const s = cfg.levels[k]?.src;
-        if (s) srcs.add('assets/' + s);
+      if (cfg?.body?.src) srcs.add('assets/' + cfg.body.src);
+      for (const cannon of cfg?.cannons || []){
+        if (cannon?.src) srcs.add('assets/' + cannon.src);
       }
 
       for (const s of srcs){
@@ -352,31 +351,26 @@ const TankSprites = {
       this.cache.clear();
     }
   },
-  pick(level){
-    if (!this.ready || !this.config) return null;
-    const cfg = this.config;
-
-    const keys = Object.keys(cfg.levels || {})
-      .map(n=>parseInt(n,10))
-      .filter(n=>Number.isFinite(n))
-      .sort((a,b)=>a-b);
-
+  pickBody(){
+    if (!this.ready || !this.config?.body?.src) return null;
+    const cfg = this.config.body;
+    const full = 'assets/' + cfg.src;
+    const img = this.cache.get(full);
+    if (!img) return null;
+    return { img, cfg };
+  },
+  pickCannon(level){
+    if (!this.ready || !this.config?.cannons?.length) return null;
+    const cannons = [...this.config.cannons].sort((a,b)=>a.minLevel - b.minLevel);
     let chosen = null;
-    for (const k of keys){
-      if (k <= level) chosen = cfg.levels[String(k)];
+    for (const cannon of cannons){
+      if (cannon.minLevel <= level) chosen = cannon;
     }
-    if (!chosen) chosen = cfg.default || null;
     if (!chosen?.src) return null;
-
     const full = 'assets/' + chosen.src;
     const img = this.cache.get(full);
     if (!img) return null;
-
-    return {
-      img,
-      anchor: chosen.anchor || cfg.default?.anchor || {x:0.5,y:0.55},
-      scale: chosen.scale ?? cfg.default?.scale ?? 1.0,
-    };
+    return { img, cfg: chosen };
   }
 };
 
@@ -537,7 +531,15 @@ function buildBackground(){
 }
 
 function makeTank(level, onTrack = false){
-  return { id: crypto.randomUUID(), level, cooldown: 0, onTrack };
+  return {
+    id: crypto.randomUUID(),
+    level,
+    cooldown: 0,
+    onTrack,
+    bodyAnim: Math.random() * 2,
+    cannonAnim: 0,
+    firedThisCycle: false,
+  };
 }
 
 function recordTankLevel(level){
@@ -885,7 +887,11 @@ function stepTanks(dt){
     if (!tank || !tank.onTrack) continue;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
-    if (tank.cooldown > 0) continue;
+    const hasSpriteConfig = TankSprites?.ready && TankSprites?.config?.body && (TankSprites?.config?.cannons?.length || 0) > 0;
+    if (hasSpriteConfig){
+      const bodyCfg = TankSprites.config.body;
+      tank.bodyAnim += dt * (bodyCfg.animSpeed ?? 2.0);
+    }
 
     const s = tankStats(tank.level);
 
@@ -901,7 +907,51 @@ function stepTanks(dt){
       const d = Math.hypot(p.x - sx, p.y - sy);
       if (d <= s.range && d < bestD){ best = z; bestD = d; }
     }
-    if (!best) continue;
+
+    if (hasSpriteConfig){
+      const cannon = TankSprites.pickCannon(tank.level);
+      const cannonCfg = cannon?.cfg;
+
+      if (best && tank.cooldown <= 0 && cannonCfg){
+        tank.cannonAnim += dt * (cannonCfg.animSpeed ?? 10.0);
+        const frames = cannonCfg.frames || 1;
+        const fireFrame = cannonCfg.fireFrame ?? 1;
+        const frameIndex = Math.floor(tank.cannonAnim) % frames;
+
+        if (frameIndex === fireFrame && !tank.firedThisCycle){
+          tank.firedThisCycle = true;
+
+          const muzzle = cannonCfg.muzzle || {x: 28, y: 0};
+          const mx = sx + Math.cos(pos.heading) * muzzle.x - Math.sin(pos.heading) * muzzle.y;
+          const my = sy + Math.sin(pos.heading) * muzzle.x + Math.cos(pos.heading) * muzzle.y;
+
+          const tp = zombiePos(best);
+          spawnProjectile({
+            fromX: mx,
+            fromY: my,
+            toZombieId: best.id,
+            toX: tp.x,
+            toY: tp.y,
+            level: tank.level,
+            dmg: s.dmg,
+            aoe: s.aoe,
+            prof: s.prof,
+          });
+
+          tank.cooldown = 1 / s.fr;
+          state.coins += coinsForShot(tank.level);
+          burst(mx, my, 5, 'rgba(255,255,255,.55)');
+        }
+      }
+
+      if (tank.cooldown > 0 || !best){
+        tank.cannonAnim = 0;
+        tank.firedThisCycle = false;
+      }
+      continue;
+    }
+
+    if (tank.cooldown > 0 || !best) continue;
 
     tank.cooldown = 1 / s.fr;
 
@@ -1587,7 +1637,7 @@ function drawBoard(){
     drawTank(
       state.dragging.x - state.dragging.dx,
       state.dragging.y - state.dragging.dy,
-      state.dragging.tank.level,
+      state.dragging.tank,
       true
     );
   }
@@ -1612,7 +1662,7 @@ function drawOrbitingTanks(){
     if (!c.tank || !c.tank.onTrack) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
     const pos = tankOrbitState(c, t);
-    drawTank(pos.x, pos.y, c.tank.level, false, pos.heading);
+    drawTank(pos.x, pos.y, c.tank, false, pos.heading);
   }
 }
 
@@ -1621,21 +1671,47 @@ function drawTankIcon(x,y,level,mutedSlot=false){
 }
 
 function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
-  const spr = TankSprites?.pick?.(level);
-  if (spr){
+  const body = TankSprites?.pickBody?.();
+  const cannon = TankSprites?.pickCannon?.(level);
+  if (body && cannon){
+    const bodyW = body.cfg.frame?.w ?? body.img.width;
+    const bodyH = body.cfg.frame?.h ?? body.img.height;
     const maxW = 22 * balScale * scaleMul;
     const maxH = 16 * balScale * scaleMul;
-    const scale = Math.min(maxW / spr.img.width, maxH / spr.img.height) * (spr.scale ?? 1.0);
+    const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
     targetCtx.globalAlpha = mutedSlot ? 0.6 : 0.92;
-    const w = spr.img.width * scale;
-    const h = spr.img.height * scale;
+    const drawW = bodyW * scale;
+    const drawH = bodyH * scale;
+    const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
     targetCtx.drawImage(
-      spr.img,
-      -w * (spr.anchor?.x ?? 0.5),
-      -h * (spr.anchor?.y ?? 0.55),
-      w, h
+      body.img,
+      0,
+      0,
+      bodyW,
+      bodyH,
+      -drawW * bodyAnchor.x,
+      -drawH * bodyAnchor.y,
+      drawW,
+      drawH
+    );
+
+    const cannonW = cannon.cfg.frame?.w ?? cannon.img.width;
+    const cannonH = cannon.cfg.frame?.h ?? cannon.img.height;
+    const cannonAnchor = cannon.cfg.anchor || {x:0.35, y:0.5};
+    const cannonDrawW = cannonW * scale;
+    const cannonDrawH = cannonH * scale;
+    targetCtx.drawImage(
+      cannon.img,
+      0,
+      0,
+      cannonW,
+      cannonH,
+      -cannonDrawW * cannonAnchor.x,
+      -cannonDrawH * cannonAnchor.y,
+      cannonDrawW,
+      cannonDrawH
     );
     targetCtx.restore();
     return;
@@ -1663,10 +1739,12 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.restore();
 }
 
-function drawTank(x,y,level,ghost=false,rotation=0){
+function drawTank(x,y,tank,ghost=false,rotation=0){
+  const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
   // Try sprite-based tanks if assets/tanks.json exists
-  const spr = TankSprites?.pick?.(level);
-  if (spr){
+  const body = TankSprites?.pickBody?.();
+  const cannon = TankSprites?.pickCannon?.(level);
+  if (body && cannon){
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(rotation);
@@ -1678,17 +1756,53 @@ function drawTank(x,y,level,ghost=false,rotation=0){
 
     const baseScale = (compact ? 0.065 : 0.085) * balScale;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
-    const s = baseScale * levelScale * (spr.scale ?? 1.0);
+    const s = baseScale * levelScale;
 
-    const w = spr.img.width * s;
-    const h = spr.img.height * s;
+    const bodyW = body.cfg.frame?.w ?? body.img.width;
+    const bodyH = body.cfg.frame?.h ?? body.img.height;
+    const bodyFrame = Math.floor(tank?.bodyAnim ?? 0) % (body.cfg.frames || 1);
+    const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
+    const drawBodyW = bodyW * s;
+    const drawBodyH = bodyH * s;
 
     ctx.drawImage(
-      spr.img,
-      -w * (spr.anchor?.x ?? 0.5),
-      -h * (spr.anchor?.y ?? 0.55),
-      w, h
+      body.img,
+      bodyFrame * bodyW,
+      0,
+      bodyW,
+      bodyH,
+      -drawBodyW * bodyAnchor.x,
+      -drawBodyH * bodyAnchor.y,
+      drawBodyW,
+      drawBodyH
     );
+
+    const cannonW = cannon.cfg.frame?.w ?? cannon.img.width;
+    const cannonH = cannon.cfg.frame?.h ?? cannon.img.height;
+    const cannonFrames = cannon.cfg.frames || 1;
+    const cannonFrame = Math.floor(tank?.cannonAnim ?? 0) % cannonFrames;
+    const cannonAnchor = cannon.cfg.anchor || {x:0.35, y:0.5};
+    const drawCannonW = cannonW * s;
+    const drawCannonH = cannonH * s;
+    const recoil = cannon.cfg.recoil ?? 0;
+    const kick = recoil ? Math.sin(Math.min(1, tank?.cannonAnim ?? 0) * Math.PI) * recoil : 0;
+
+    ctx.save();
+    if (kick){
+      ctx.translate(-kick * s, 0);
+    }
+    ctx.drawImage(
+      cannon.img,
+      cannonFrame * cannonW,
+      0,
+      cannonW,
+      cannonH,
+      -drawCannonW * cannonAnchor.x,
+      -drawCannonH * cannonAnchor.y,
+      drawCannonW,
+      drawCannonH
+    );
+    ctx.restore();
 
     // level badge (same as vector)
     const tier = Math.floor((level-1)/3);
