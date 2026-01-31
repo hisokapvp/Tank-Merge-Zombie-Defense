@@ -14,7 +14,7 @@
       "frame": { "w": 128, "h": 128 },
       "frames": 8,
       "animSpeed": 10.0,
-      "fireFrame": 1,
+      "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
       "muzzle": { "x": 28, "y": -2 },
       "recoil": 4
@@ -26,9 +26,9 @@
       "frame": { "w": 128, "h": 128 },
       "frames": 8,
       "animSpeed": 10.0,
-      "fireFrame": 1,
+      "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
-      "muzzle": { "x": 30, "y": -2 },
+      "muzzle": { "x": 28, "y": -2 },
       "recoil": 6
     },
     {
@@ -38,9 +38,9 @@
       "frame": { "w": 128, "h": 128 },
       "frames": 8,
       "animSpeed": 12.0,
-      "fireFrame": 1,
+      "fireFrame": 2,
       "anchor": { "x": 0.5, "y": 0.5 },
-      "muzzle": { "x": 32, "y": -1 },
+      "muzzle": { "x": 28, "y": -1 },
       "recoil": 5
     }
   ]
