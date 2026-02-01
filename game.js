@@ -1,4 +1,4 @@
-// game.js.txt
+// game.js.txt1
 // Tank Merger: Zombie Orbit (v3)
 // Fixes requested:
 // 1) If zombies look like simple blobs -> sprites not loaded; show status in HUD.
