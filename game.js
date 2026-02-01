@@ -2675,11 +2675,11 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
 
 function drawTank(x,y,tank,ghost=false,rotation=0){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  const powerTier = getPowerTier();
-  if (!ghost && powerTier > 0){
-    const col = tierColor(powerTier);
-    const pulse = 1 + Math.sin(nowSec()*3.2) * (0.03 + powerTier*0.005);
-    const r = (18 + powerTier*6) * balScale * pulse;
+  const tier = getPowerTier();
+  if (!ghost && tier > 0){
+    const col = tierColor(tier);
+    const pulse = 1 + Math.sin(nowSec()*3.2) * (0.03 + tier*0.005);
+    const r = (18 + tier*6) * balScale * pulse;
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -2688,8 +2688,8 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
     ctx.arc(x, y, r, 0, Math.PI*2);
     ctx.fill();
 
-    if (powerTier >= 3){
-      ctx.strokeStyle = powerTier >= 5 ? 'rgba(255,244,210,.28)' : 'rgba(185,139,255,.22)';
+    if (tier >= 3){
+      ctx.strokeStyle = tier >= 5 ? 'rgba(255,244,210,.28)' : 'rgba(185,139,255,.22)';
       ctx.lineWidth = 2 * balScale;
       ctx.beginPath();
       ctx.arc(x, y, r*1.15, 0, Math.PI*2);
