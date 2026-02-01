@@ -110,6 +110,7 @@ const BAL = {
   crateIntervalSec: 60,
   crateDropSpeed: 220,
   crateSize: 34,
+  hangarIconScaleMul: 1.9,
 };
 
 const BASE_BAL = {
@@ -144,6 +145,8 @@ const backgroundLayer = {
   ready: false,
 };
 
+let gameStarted = false;
+
 let state = {
   coins: 120,
   kills: 0,
@@ -164,9 +167,15 @@ let state = {
     speedUntil: 0,
     economyUntil: 0,
   },
+  paused: true,
+  tanksBought: 0,
+  lastBuyCost: 0,
+  timeScale: 1,
+  slowmoUntil: 0,
   player: {
     level: 1,
     xp: 0,
+    xpTotal: 0,
     xpToNext: 500,
     maxLevel: 60,
     talentPoints: 0,
@@ -180,6 +189,7 @@ let state = {
   buyCounts: {},
   ui: {
     talentsOpen: false,
+    menuOpen: true,
     talentBranch: 0,
     levelReward: null,
     levelRewardTimer: 0,
@@ -190,6 +200,25 @@ let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
 let center = { x: viewSize.w/2, y: viewSize.h/2 };
 const nowSec = ()=>performance.now()/1000;
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+const AudioSettings = {
+  sfx: 1.0,
+  music: 0.6,
+  load(){
+    try{
+      const raw = localStorage.getItem('audio');
+      if (!raw) return;
+      const a = JSON.parse(raw);
+      if (typeof a.sfx === 'number') this.sfx = clamp(a.sfx, 0, 1);
+      if (typeof a.music === 'number') this.music = clamp(a.music, 0, 1);
+    }catch{}
+  },
+  save(){
+    try{
+      localStorage.setItem('audio', JSON.stringify({sfx:this.sfx, music:this.music}));
+    }catch{}
+  }
+};
 
 const STRINGS = {
   ru: {
@@ -350,6 +379,164 @@ function applyTranslations(){
   }
   updateTalentUI();
   updateLevelModal();
+  const menuTitle = document.querySelector('#mainMenu .modalTitle');
+  if (menuTitle) menuTitle.textContent = t('title');
+  refreshMenuLangButtons();
+}
+
+function ensureMainMenu(){
+  if (document.getElementById('mainMenu')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'mainMenu';
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal menuModal" role="dialog" aria-modal="true">
+      <div class="modalHeader">
+        <div class="modalTitle">${t('title')}</div>
+      </div>
+
+      <div class="modalBody">
+        <div class="menuButtons">
+          <button id="btnContinue" class="btnPrimary">Продолжить</button>
+          <button id="btnNewGame" class="btnSecondary">Новая игра</button>
+        </div>
+
+        <div class="menuRow">
+          <div class="menuLabel">Язык</div>
+          <div class="menuLang">
+            <button id="btnRU" class="btnSecondary">РУ</button>
+            <button id="btnEN" class="btnSecondary">АНГ</button>
+          </div>
+        </div>
+
+        <div class="menuRow">
+          <div class="menuLabel">Громкость эффектов</div>
+          <input id="sfxVol" type="range" min="0" max="1" step="0.01" />
+          <div id="sfxVal" class="menuVal"></div>
+        </div>
+
+        <div class="menuRow">
+          <div class="menuLabel">Громкость музыки</div>
+          <input id="musicVol" type="range" min="0" max="1" step="0.01" />
+          <div id="musicVal" class="menuVal"></div>
+        </div>
+
+        <div class="menuHint">Постапокалипсис. Собирай танки, держи круг, прокачивай таланты.</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const sfx = document.getElementById('sfxVol');
+  const mus = document.getElementById('musicVol');
+  sfx.value = String(AudioSettings.sfx);
+  mus.value = String(AudioSettings.music);
+  const syncLabels = ()=>{
+    document.getElementById('sfxVal').textContent = `${Math.round(AudioSettings.sfx*100)}%`;
+    document.getElementById('musicVal').textContent = `${Math.round(AudioSettings.music*100)}%`;
+  };
+  syncLabels();
+
+  sfx.addEventListener('input', ()=>{
+    AudioSettings.sfx = clamp(parseFloat(sfx.value),0,1);
+    AudioSettings.save();
+    syncLabels();
+  });
+  mus.addEventListener('input', ()=>{
+    AudioSettings.music = clamp(parseFloat(mus.value),0,1);
+    AudioSettings.save();
+    syncLabels();
+  });
+
+  document.getElementById('btnRU').addEventListener('click', ()=>{ setLanguage('ru'); refreshMenuLangButtons(); });
+  document.getElementById('btnEN').addEventListener('click', ()=>{ setLanguage('en'); refreshMenuLangButtons(); });
+
+  document.getElementById('btnContinue').addEventListener('click', ()=>{ startGameFromSave(); });
+  document.getElementById('btnNewGame').addEventListener('click', ()=>{ startNewGame(); });
+
+  refreshMenuLangButtons();
+}
+
+function refreshMenuLangButtons(){
+  const ru = document.getElementById('btnRU');
+  const en = document.getElementById('btnEN');
+  if (!ru || !en) return;
+  ru.classList.toggle('active', currentLang==='ru');
+  en.classList.toggle('active', currentLang==='en');
+}
+
+function showMenu(){
+  state.ui.menuOpen = true;
+  state.paused = true;
+  document.getElementById('mainMenu')?.classList.remove('hidden');
+}
+
+function hideMenu(){
+  state.ui.menuOpen = false;
+  state.paused = false;
+  document.getElementById('mainMenu')?.classList.add('hidden');
+}
+
+function startGameFromSave(){
+  hideMenu();
+  gameStarted = true;
+}
+
+function startNewGame(){
+  localStorage.removeItem('progress');
+  resetGameStateHard();
+  hideMenu();
+  gameStarted = true;
+}
+
+function resetGameStateHard(){
+  state.coins = 120;
+  state.kills = 0;
+  state.projectiles = [];
+  state.impacts = [];
+  state.decals = [];
+  state.particles = [];
+  state.crate = null;
+  state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+  state.maxTankLevelAchieved = 1;
+  state.tanksBought = 0;
+  state.lastBuyCost = 0;
+  state.buyCounts = {};
+  state.boostUntil = 0;
+  state.empUntil = 0;
+  state.activeEffects = {
+    attackUntil: 0,
+    speedUntil: 0,
+    economyUntil: 0,
+  };
+  state.timeScale = 1;
+  state.slowmoUntil = 0;
+  state.ui.levelReward = null;
+  state.ui.levelRewardTimer = 0;
+
+  for (const c of state.cells) c.tank = null;
+
+  if (state.cells[0] && state.cells[1]){
+    state.cells[0].tank = makeTank(1, true);
+    state.cells[1].tank = makeTank(1, true);
+    recordTankLevel(1);
+  }
+
+  if (state.player){
+    state.player.level = 1;
+    state.player.xp = 0;
+    state.player.xpTotal = 0;
+    state.player.talentPoints = 0;
+    state.player.talentsApplied = Array(TALENT_DEFS.length).fill(0);
+    state.player.talentsPending = Array(TALENT_DEFS.length).fill(0);
+    state.player.activeCooldowns = [0, 0, 0];
+    state.player.xpToNext = xpNeededForLevel(1);
+    state.player.modsDirty = true;
+  }
+
+  state.zombies = [];
+  ensureZombieCount();
 }
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
@@ -525,6 +712,7 @@ function resizeCanvas(){
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
   applyBalScale(scale);
   initBoard();
+  state.dragging = null;
 }
 
 // ---------- Board ----------
@@ -547,11 +735,12 @@ function initBoard(){
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
-  const hangarRadius = Math.max(totalW, totalH) / 2 + 22;
-  BAL.tankOrbitRadius = Math.max(120, hangarRadius + 26);
-  BAL.fenceRadius = BAL.tankOrbitRadius + 32;
-  BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + 24;
-  BAL.zombieTrackWidth = 16;
+  const minDim = Math.min(viewSize.w, viewSize.h);
+  BAL.tankOrbitRadius = minDim * 0.18;
+  BAL.fenceRadius = BAL.tankOrbitRadius + 40;
+  BAL.zombieTrackRadius = minDim * 0.28;
+  BAL.zombieTrackWidth = Math.max(14, minDim * 0.02);
+  BAL.fenceWidth = Math.max(16, minDim * 0.025);
 
   buildBackground();
 }
@@ -635,11 +824,16 @@ function buyTankLevel(){
 }
 
 function buyTankCost(level){
-  const mods = getMods();
-  const base = level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25;
-  const count = state.buyCounts?.[level] ?? 0;
-  const scaling = 1 + count * 0.001;
-  return Math.max(1, Math.round(base * mods.buyCostMul * scaling));
+  let base = (level <= 1) ? BAL.buyCostLv1 : Math.round(BAL.buyCostLv1 * 2.25);
+
+  const mult = Math.pow(1.001, state.tanksBought || 0);
+  let cost = Math.ceil(base * mult);
+
+  if ((state.lastBuyCost || 0) > 0){
+    cost = Math.max(cost, state.lastBuyCost + 1);
+  }
+
+  return Math.max(1, cost);
 }
 
 function tryBuyTank(){
@@ -652,6 +846,8 @@ function tryBuyTank(){
   empty.tank = makeTank(level, false);
   recordTankLevel(level);
   state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
+  state.tanksBought = (state.tanksBought || 0) + 1;
+  state.lastBuyCost = cost;
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
 }
 
@@ -790,6 +986,7 @@ function grantXP(amount){
   const p = state.player;
   if (!p || p.level >= p.maxLevel) return;
 
+  p.xpTotal = (p.xpTotal || 0) + amount;
   p.xp += amount;
   let leveled = false;
   let gainedLevels = 0;
@@ -804,6 +1001,11 @@ function grantXP(amount){
     leveled = true;
     gainedLevels += 1;
     rewardGold += levelGoldReward(p.level);
+    const tier = getPowerTier();
+    SFX.levelUp(tier);
+    showLevelUpUx(p.level);
+    triggerSlowmo(0.15, 0.35);
+    DebugPace.onLevelUp(p.level);
   }
   p.xpToNext = xpNeededForLevel(p.level);
   if (leveled){
@@ -945,21 +1147,48 @@ function resetTalentSelections(){
   updateTalentUI();
 }
 
+function animateTalentApply(){
+  const overlay = document.getElementById('talentOverlay');
+  const modal = overlay?.querySelector('.modal');
+  if (!modal) return;
+
+  modal.classList.remove('talentApplyPulse');
+  void modal.offsetWidth;
+  modal.classList.add('talentApplyPulse');
+
+  overlay.querySelectorAll('.talentBtn').forEach(btn=>{
+    const i = parseInt(btn.dataset.talent,10);
+    const pend = state.player?.talentsPending?.[i] || 0;
+    btn.classList.toggle('selectedPending', pend > 0);
+  });
+
+  setTimeout(()=>{
+    overlay?.querySelectorAll('.talentBtn.selectedPending').forEach(b=>b.classList.remove('selectedPending'));
+  }, 520);
+}
+
 function applyTalentSelections(){
   const p = state.player;
   const cost = pendingCost();
-  if (cost <= 0 || cost > p.talentPoints) return;
-  TALENT_DEFS.forEach((def, i) => {
-    const pending = p.talentsPending[i] || 0;
-    if (!pending) return;
-    const next = Math.min(def.maxRank, (p.talentsApplied[i] || 0) + pending);
-    p.talentsApplied[i] = next;
-  });
-  p.talentPoints -= cost;
-  p.talentsPending.fill(0);
-  p.modsDirty = true;
-  saveProgress();
-  updateTalentUI();
+  if (cost <= 0) return;
+  if (p.talentPoints < cost) return;
+
+  animateTalentApply();
+
+  setTimeout(()=>{
+    TALENT_DEFS.forEach((def, i) => {
+      const pending = p.talentsPending[i] || 0;
+      if (!pending) return;
+      const next = Math.min(def.maxRank, (p.talentsApplied[i] || 0) + pending);
+      p.talentsApplied[i] = next;
+    });
+    p.talentPoints -= cost;
+    p.talentsPending.fill(0);
+    p.modsDirty = true;
+    SFX.talentApply();
+    saveProgress();
+    updateTalentUI();
+  }, 180);
 }
 
 function canSelectTalent(i){
@@ -1013,6 +1242,7 @@ function canUseActive(branch){
 function useActiveAbility(branch){
   const p = state.player;
   if (!canUseActive(branch)) return;
+  SFX.activeAbility(getPowerTier());
   const now = nowSec();
   const mods = getMods();
   const baseCooldown = 30;
@@ -1066,11 +1296,14 @@ function saveProgress(){
     localStorage.setItem('progress', JSON.stringify({
       level: p.level,
       xp: p.xp,
+      xpTotal: p.xpTotal,
       talentPoints: p.talentPoints,
       talentsApplied: p.talentsApplied,
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
       buyCounts: state.buyCounts,
+      tanksBought: state.tanksBought,
+      lastBuyCost: state.lastBuyCost,
     }));
   }catch(e){}
 }
@@ -1252,6 +1485,9 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     maxHp: baseHp * (t?.hpMul ?? 1.0),
     rewardMul: (t?.rewardMul ?? 1.0),
     anim: Math.random() * (t?.frames ?? 1),
+    dying: false,
+    deathT: 0,
+    deathDur: 0.45,
   };
 
   const fenceLimit = zombieFenceLimit(z);
@@ -1330,6 +1566,12 @@ function stepZombies(dt){
   for (const z of state.zombies){
     const prevTheta = z.theta;
 
+    if (z.dying){
+      z.deathT += dt;
+      z.anim += dt * 6;
+      continue;
+    }
+
     z.swayPhase += dt * z.swaySpeed * slow;
     z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
@@ -1384,11 +1626,33 @@ function stepTanks(dt){
     const pos = tankOrbitState(cell, nowSec());
     const sx = pos.x;
     const sy = pos.y;
+    const heading = pos.heading;
+    const fx = Math.cos(heading);
+    const fy = Math.sin(heading);
+    const FOV = Math.cos((120 * Math.PI/180)/2);
 
     for (const z of state.zombies){
+      if (z.dying) continue;
       const p = zombiePos(z);
       const d = Math.hypot(p.x - sx, p.y - sy);
-      if (d <= s.range && d < bestD){ best = z; bestD = d; }
+      if (d > s.range) continue;
+
+      const inv = 1 / (d || 1);
+      const ux = (p.x - sx) * inv;
+      const uy = (p.y - sy) * inv;
+      const dot = ux*fx + uy*fy;
+      if (dot < FOV) continue;
+
+      if (d < bestD){ best = z; bestD = d; }
+    }
+
+    if (!best){
+      for (const z of state.zombies){
+        if (z.dying) continue;
+        const p = zombiePos(z);
+        const d = Math.hypot(p.x - sx, p.y - sy);
+        if (d <= s.range && d < bestD){ best = z; bestD = d; }
+      }
     }
 
     if (hasSpriteConfig){
@@ -1439,13 +1703,15 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
       prof: stats.prof,
     });
     state.coins += coinsForShot(tank.level);
+    SFX.shot(getPowerTier());
   };
   spawn();
   if (Math.random() < mods.doubleShotChance){
     spawn();
   }
   tank.cooldown = 1 / (stats.fr * speedMult());
-  burst(sx, sy, 5, 'rgba(255,255,255,.55)');
+  const ei = getEffectIntensity();
+  burst(sx, sy, Math.round(5 * ei), 'rgba(255,255,255,.55)');
 }
 
 function tankOrbitState(cell, timeSec){
@@ -1558,7 +1824,8 @@ function impactAt(x,y,b){
 
   // Visual impact rings
   state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
-  burst(x,y, (b.kind==='he'?30:22), b.glow);
+  const ei = getEffectIntensity();
+  burst(x,y, Math.round((b.kind==='he'?30:22) * ei), b.glow);
   if (b.dmg > 80){
     state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
   }
@@ -1694,9 +1961,8 @@ function crateHitTest(x,y){
 
 // ---------- Kills / respawn ----------
 function cleanupKills(){
-  const alive = [];
   for (const z of state.zombies){
-    if (z.hp <= 0){
+    if (!z.dying && z.hp <= 0){
       state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
       state.kills += 1;
       const mods = getMods();
@@ -1706,9 +1972,11 @@ function cleanupKills(){
       grantXP(base * levelMul * mods.xpMul * activeMul);
       const p = zombiePos(z);
       burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
-    } else alive.push(z);
+      z.dying = true;
+      z.deathT = 0;
+    }
   }
-  state.zombies = alive;
+  state.zombies = state.zombies.filter(z => !(z.dying && z.deathT >= z.deathDur));
   ensureZombieCount();
 }
 
@@ -2312,7 +2580,9 @@ function drawTankSlot(cell){
   const cy = cell.y + cell.h/2;
   ctx.save();
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
-  rr(ctx, cx-14, cy-10, 28, 20, 8);
+  const sw = Math.min(cell.w, cell.h) * 0.78;
+  const sh = Math.min(cell.w, cell.h) * 0.55;
+  rr(ctx, cx - sw/2, cy - sh/2, sw, sh, Math.min(10, sh*0.45));
   ctx.fill();
   drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
   ctx.restore();
@@ -2338,8 +2608,9 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
-    const maxW = 22 * balScale * scaleMul;
-    const maxH = 16 * balScale * scaleMul;
+    const mul = (BAL.hangarIconScaleMul ?? 1);
+    const maxW = 22 * balScale * scaleMul * mul;
+    const maxH = 16 * balScale * scaleMul * mul;
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
@@ -2381,9 +2652,10 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
 
   const tier = Math.floor((level-1)/3);
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
+  const mul = (BAL.hangarIconScaleMul ?? 1);
   targetCtx.save();
   targetCtx.translate(x, y);
-  targetCtx.scale(0.35 * balScale * scaleMul, 0.35 * balScale * scaleMul);
+  targetCtx.scale(0.35 * balScale * scaleMul * mul, 0.35 * balScale * scaleMul * mul);
   targetCtx.globalAlpha = mutedSlot ? 0.65 : 0.95;
   targetCtx.fillStyle = 'rgba(0,0,0,.35)';
   rr(targetCtx, -22, -8, 44, 10, 5);
@@ -2403,15 +2675,26 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
 
 function drawTank(x,y,tank,ghost=false,rotation=0){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  if (level >= 10){
-    const auraSize = 18 + Math.min(18, level * 0.8);
+  const powerTier = getPowerTier();
+  if (!ghost && powerTier > 0){
+    const col = tierColor(powerTier);
+    const pulse = 1 + Math.sin(nowSec()*3.2) * (0.03 + powerTier*0.005);
+    const r = (18 + powerTier*6) * balScale * pulse;
+
     ctx.save();
-    ctx.translate(x, y);
-    ctx.globalAlpha = 0.18;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.arc(0, 0, auraSize, 0, Math.PI * 2);
-    ctx.fillStyle = level >= 25 ? 'rgba(186,140,255,.25)' : 'rgba(125,255,178,.22)';
+    ctx.arc(x, y, r, 0, Math.PI*2);
     ctx.fill();
+
+    if (powerTier >= 3){
+      ctx.strokeStyle = powerTier >= 5 ? 'rgba(255,244,210,.28)' : 'rgba(185,139,255,.22)';
+      ctx.lineWidth = 2 * balScale;
+      ctx.beginPath();
+      ctx.arc(x, y, r*1.15, 0, Math.PI*2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
   // Try sprite-based tanks if assets/tanks.json exists
@@ -2620,8 +2903,13 @@ function drawZombieSprite(x,y,z){
 
   const bob = Math.sin(z.anim) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
-  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
+  const face = z.heading ?? (z.theta + (z.omega >= 0 ? -Math.PI/2 : Math.PI/2));
   const rot = face + (t.rotation ?? 0);
+  const dying = !!z.dying;
+  const k = dying ? clamp(z.deathT / z.deathDur, 0, 1) : 0;
+  const alpha = dying ? (1 - k) : 1;
+  const deathRot = dying ? (k * 1.2) : 0;
+  const squash = dying ? (1 - k*0.25) : 1;
 
   if (!qualityLow){
     // shadow (without rotation)
@@ -2643,7 +2931,9 @@ function drawZombieSprite(x,y,z){
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
   ctx.scale(facing, 1);
-  ctx.rotate(rot * facing);
+  ctx.rotate((rot + deathRot) * facing);
+  ctx.globalAlpha = alpha;
+  ctx.scale(1, squash);
   ctx.drawImage(
     img,
     fx, fy, f.w, f.h,
@@ -2656,6 +2946,7 @@ function drawZombieSprite(x,y,z){
   if ((z.level ?? 1) > 1){
     const ring = clamp((z.level ?? 1) - 1, 1, 6);
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.strokeStyle = `rgba(185,139,255,${0.08 + ring * 0.02})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -2669,11 +2960,16 @@ function drawZombieSprite(x,y,z){
 function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
-  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
+  const face = z.heading ?? (z.theta + (z.omega >= 0 ? -Math.PI/2 : Math.PI/2));
   const facing = x >= center.x ? 1 : -1;
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
   const skinTone = shade('#3cbe78', levelBoost * 10);
+  const dying = !!z.dying;
+  const k = dying ? clamp(z.deathT / z.deathDur, 0, 1) : 0;
+  const alpha = dying ? (1 - k) : 1;
+  const deathRot = dying ? (k * 1.2) : 0;
+  const squash = dying ? (1 - k*0.25) : 1;
 
   if (!qualityLow){
     // shadow
@@ -2687,8 +2983,9 @@ function drawZombieFallback(x,y,z){
 
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.rotate(face * facing);
-  ctx.scale(s * facing, s);
+  ctx.rotate((face + deathRot) * facing);
+  ctx.globalAlpha = alpha;
+  ctx.scale(s * facing, s * squash);
 
   // ragged head
   ctx.globalAlpha = 0.95;
@@ -2941,6 +3238,186 @@ function seededNoise(x, y){
   return s - Math.floor(s);
 }
 
+// ===== Power fantasy tiers (10/20/30/40/50/60) =====
+function getPowerTier(){
+  const lvl = state.player?.level ?? 1;
+  if (lvl >= 50) return 5;
+  if (lvl >= 40) return 4;
+  if (lvl >= 30) return 3;
+  if (lvl >= 20) return 2;
+  if (lvl >= 10) return 1;
+  return 0;
+}
+
+function getEffectIntensity(){
+  const tier = getPowerTier();
+  let ei = 1 + tier * 0.25;
+  const lvl = state.player?.level ?? 1;
+  if (lvl >= 40) ei += 0.20;
+  if (lvl >= 60) ei += 0.20;
+  return ei;
+}
+
+function tierColor(tier){
+  switch (tier){
+    case 1: return 'rgba(125,255,178,.28)';
+    case 2: return 'rgba(110,168,255,.28)';
+    case 3: return 'rgba(110,168,255,.34)';
+    case 4: return 'rgba(185,139,255,.34)';
+    case 5: return 'rgba(255,244,210,.32)';
+    default: return 'rgba(0,0,0,0)';
+  }
+}
+
+// ===== Simple WebAudio SFX (no assets needed) =====
+const SFX = {
+  ctx: null,
+  master: null,
+  init(){
+    if (this.ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    this.ctx = new Ctx();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 1.0;
+    this.master.connect(this.ctx.destination);
+  },
+  ensure(){
+    this.init();
+    if (!this.ctx) return false;
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(()=>{});
+    return true;
+  },
+  playTone({freq=440, dur=0.08, type='sine', gain=0.12, sweep=0, noise=false}){
+    if (!this.ensure()) return;
+    const vol = (AudioSettings?.sfx ?? 1) * gain;
+    if (vol <= 0.0001) return;
+
+    const t0 = this.ctx.currentTime;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    g.connect(this.master);
+
+    if (noise){
+      const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * dur), this.ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * 0.6;
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(g);
+      src.start(t0);
+      src.stop(t0 + dur);
+      return;
+    }
+
+    const o = this.ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    if (sweep){
+      o.frequency.exponentialRampToValueAtTime(Math.max(40, freq * sweep), t0 + dur);
+    }
+    o.connect(g);
+    o.start(t0);
+    o.stop(t0 + dur);
+  },
+  levelUp(tier){
+    const base = 520 + tier*120;
+    this.playTone({freq: base, dur: 0.10, type:'triangle', gain: 0.12 + tier*0.02, sweep: 0.65});
+    this.playTone({freq: base*1.5, dur: 0.08, type:'sine', gain: 0.08 + tier*0.015, sweep: 0.8});
+  },
+  talentApply(){
+    this.playTone({freq: 380, dur: 0.07, type:'square', gain: 0.10, sweep: 1.6});
+    this.playTone({freq: 620, dur: 0.06, type:'triangle', gain: 0.08, sweep: 1.3});
+  },
+  activeAbility(tier){
+    this.playTone({freq: 180 + tier*35, dur: 0.12, type:'sawtooth', gain: 0.14 + tier*0.02, sweep: 0.55});
+    this.playTone({dur: 0.06, noise:true, gain: 0.10});
+  },
+  shot(tier){
+    const f = 720 + tier*160;
+    this.playTone({freq: f, dur: 0.03, type:'square', gain: 0.05 + tier*0.01, sweep: 0.65});
+  }
+};
+
+// ===== UX helpers: toasts, ring FX, slowmo =====
+function ensureUxOverlays(){
+  if (!document.getElementById('levelToast')){
+    const toast = document.createElement('div');
+    toast.id = 'levelToast';
+    document.body.appendChild(toast);
+  }
+  if (!document.getElementById('levelRingFx')){
+    const ring = document.createElement('div');
+    ring.id = 'levelRingFx';
+    document.body.appendChild(ring);
+  }
+}
+
+function showLevelUpUx(level){
+  ensureUxOverlays();
+  const toast = document.getElementById('levelToast');
+  const ring = document.getElementById('levelRingFx');
+  if (toast){
+    toast.textContent = `Уровень ${level}!`;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 850);
+  }
+  if (ring){
+    ring.classList.add('show');
+    setTimeout(()=>ring.classList.remove('show'), 560);
+  }
+}
+
+function triggerSlowmo(seconds=0.15, scale=0.35){
+  state.slowmoUntil = nowSec() + seconds;
+  state.timeScale = scale;
+}
+
+function updateTimeScale(){
+  if (state.slowmoUntil && nowSec() < state.slowmoUntil){
+    return;
+  }
+  state.timeScale = 1;
+}
+
+// ===== Debug pace logging (optional) =====
+const DebugPace = {
+  enabled: true,
+  t: nowSec(),
+  kills0: 0,
+  xp0: 0,
+  lvl0: 1,
+  lastLevelAt: nowSec(),
+  tick(){
+    if (!this.enabled) return;
+    const now = nowSec();
+    if (now - this.t < 10) return;
+
+    const p = state.player;
+    const kills = state.kills || 0;
+    const xp = p?.xpTotal ?? 0;
+    const dt = now - this.t || 1;
+
+    const kpm = (kills - this.kills0) / (dt/60);
+    const xpm = (xp - this.xp0) / (dt/60);
+
+    console.log(`[PACE] L=${p?.level ?? 1} KPM=${kpm.toFixed(1)} XPM=${xpm.toFixed(1)}`);
+
+    this.t = now;
+    this.kills0 = kills;
+    this.xp0 = xp;
+  },
+  onLevelUp(newLevel){
+    if (!this.enabled) return;
+    const now = nowSec();
+    const dt = now - this.lastLevelAt;
+    console.log(`[LEVEL-UP] -> ${newLevel} in ${(dt).toFixed(1)}s`);
+    this.lastLevelAt = now;
+  }
+};
+
 // ---------- Impacts tick ----------
 function stepImpacts(dt){
   const next = [];
@@ -2962,8 +3439,17 @@ let fpsAvg = 60;
 let lastProgressSave = 0;
 let qualityLow = false;
 function loop(now){
-  const dt = Math.min(0.033, (now - last) / 1000);
+  if (state.paused){
+    last = now;
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  let dt = Math.min(0.033, (now - last) / 1000);
   last = now;
+  updateTimeScale();
+  dt *= (state.timeScale || 1);
   fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
   qualityLow = fpsAvg < 45;
   BAL.maxParticles = qualityLow ? 900 : 1600;
@@ -2986,6 +3472,7 @@ function loop(now){
 
   updateUI();
   draw();
+  DebugPace.tick();
 
   requestAnimationFrame(loop);
 }
@@ -2995,26 +3482,29 @@ async function boot(){
   const savedLang = localStorage.getItem('lang');
   if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
   applyTranslations();
+  AudioSettings.load();
+  ensureMainMenu();
+  showMenu();
+  ensureUxOverlays();
   ensureProgressUI();
   initTalentDefs();
+  window.addEventListener('pointerdown', ()=>{ SFX.init(); }, {once:true});
   try{
     const raw = localStorage.getItem('progress');
     if (raw){
       const d = JSON.parse(raw);
-      const { buyCounts, ...playerData } = d;
+      const { buyCounts, tanksBought, lastBuyCost, ...playerData } = d;
       Object.assign(state.player, playerData);
       if (buyCounts && typeof buyCounts === 'object'){
         state.buyCounts = buyCounts;
       }
+      if (typeof tanksBought === 'number') state.tanksBought = tanksBought;
+      if (typeof lastBuyCost === 'number') state.lastBuyCost = lastBuyCost;
     }
   }catch(e){}
   ensureTalentState();
   state.player.xpToNext = xpNeededForLevel(state.player.level);
   state.player.modsDirty = true;
-  if (ui.langRu && ui.langEn){
-    ui.langRu.addEventListener('click', () => setLanguage('ru'));
-    ui.langEn.addEventListener('click', () => setLanguage('en'));
-  }
   ui.talentsBtn?.addEventListener('click', () => openTalents());
   ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
