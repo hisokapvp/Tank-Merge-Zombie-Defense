@@ -22,6 +22,13 @@ const ui = {
   talentsBtn: document.getElementById('talentsBtn'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
+  menuOverlay: document.getElementById('menuOverlay'),
+  menuContinue: document.getElementById('menuContinue'),
+  menuNew: document.getElementById('menuNew'),
+  menuSfx: document.getElementById('menuSfx'),
+  menuMusic: document.getElementById('menuMusic'),
+  menuSfxValue: document.getElementById('menuSfxValue'),
+  menuMusicValue: document.getElementById('menuMusicValue'),
   crateModal: document.getElementById('crateModal'),
   crateClose: document.getElementById('crateClose'),
   crateGet: document.getElementById('crateGet'),
@@ -144,47 +151,60 @@ const backgroundLayer = {
   ready: false,
 };
 
-let state = {
-  coins: 120,
-  kills: 0,
-  cells: [],
-  boardRect: {x:0,y:0,w:0,h:0},
-  zombies: [],
-  projectiles: [],
-  impacts: [],     // rings + bolts
-  decals: [],      // e.g., toxic pools
-  particles: [],
-  crate: null,
-  nextCrateAt: 0,
-  dragging: null,
-  boostUntil: 0,
-  empUntil: 0,
-  activeEffects: {
-    attackUntil: 0,
-    speedUntil: 0,
-    economyUntil: 0,
-  },
-  player: {
-    level: 1,
-    xp: 0,
-    xpToNext: 500,
-    maxLevel: 60,
-    talentPoints: 0,
-    talentsApplied: [],
-    talentsPending: [],
-    activeCooldowns: [0, 0, 0],
-    mods: null,
-    modsDirty: true,
-  },
-  maxTankLevelAchieved: 1,
-  buyCounts: {},
-  ui: {
-    talentsOpen: false,
-    talentBranch: 0,
-    levelReward: null,
-    levelRewardTimer: 0,
-  },
+const DEFAULT_SETTINGS = {
+  sfxVolume: 0.75,
+  musicVolume: 0.6,
 };
+
+let settings = { ...DEFAULT_SETTINGS };
+
+function createInitialState(){
+  return {
+    coins: 120,
+    kills: 0,
+    cells: [],
+    boardRect: {x:0,y:0,w:0,h:0},
+    zombies: [],
+    projectiles: [],
+    impacts: [],     // rings + bolts
+    decals: [],      // e.g., toxic pools
+    particles: [],
+    crate: null,
+    nextCrateAt: 0,
+    dragging: null,
+    boostUntil: 0,
+    empUntil: 0,
+    activeEffects: {
+      attackUntil: 0,
+      speedUntil: 0,
+      economyUntil: 0,
+    },
+    player: {
+      level: 1,
+      xp: 0,
+      xpToNext: 500,
+      maxLevel: 60,
+      talentPoints: 0,
+      talentsApplied: [],
+      talentsPending: [],
+      activeCooldowns: [0, 0, 0],
+      mods: null,
+      modsDirty: true,
+    },
+    maxTankLevelAchieved: 1,
+    buyCounts: {},
+    buyPrices: {},
+    ui: {
+      talentsOpen: false,
+      talentBranch: 0,
+      levelReward: null,
+      levelRewardTimer: 0,
+      menuOpen: true,
+    },
+  };
+}
+
+let state = createInitialState();
 
 let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
 let center = { x: viewSize.w/2, y: viewSize.h/2 };
@@ -195,6 +215,13 @@ const STRINGS = {
   ru: {
     title: 'Tank Merger: Zombie Orbit',
     subtitle: 'В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков',
+    menuTitle: 'Tank Merger: Zombie Orbit',
+    menuSubtitle: 'Главное меню выживших',
+    menuContinue: 'Продолжить',
+    menuNew: 'Новая игра',
+    menuLanguage: 'Язык',
+    menuSfx: 'Громкость эффектов',
+    menuMusic: 'Громкость музыки',
     hudCoins: 'Монеты',
     hudKills: 'Убито монстров',
     hudSprites: 'Спрайты',
@@ -245,6 +272,13 @@ const STRINGS = {
   en: {
     title: 'Tank Merger: Zombie Orbit',
     subtitle: 'Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported',
+    menuTitle: 'Tank Merger: Zombie Orbit',
+    menuSubtitle: 'Survivor main menu',
+    menuContinue: 'Continue',
+    menuNew: 'New game',
+    menuLanguage: 'Language',
+    menuSfx: 'SFX volume',
+    menuMusic: 'Music volume',
     hudCoins: 'Coins',
     hudKills: 'Monsters defeated',
     hudSprites: 'Sprites',
@@ -323,6 +357,56 @@ function setLanguage(lang){
   document.documentElement.lang = lang;
   applyTranslations();
   updateUI();
+}
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem('settings');
+    if (raw){
+      const parsed = JSON.parse(raw);
+      settings = {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+      };
+    }
+  }catch(e){}
+  applyAudioSettings();
+  updateMenuVolumes();
+}
+
+function saveSettings(){
+  try{
+    localStorage.setItem('settings', JSON.stringify(settings));
+  }catch(e){}
+}
+
+function applyAudioSettings(){
+  const musicVolume = clamp(settings.musicVolume ?? DEFAULT_SETTINGS.musicVolume, 0, 1);
+  const sfxVolume = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  settings.musicVolume = musicVolume;
+  settings.sfxVolume = sfxVolume;
+
+  document.querySelectorAll('audio[data-audio="music"]').forEach(el => {
+    el.volume = musicVolume;
+  });
+  document.querySelectorAll('audio[data-audio="sfx"]').forEach(el => {
+    el.volume = sfxVolume;
+  });
+}
+
+function updateMenuVolumes(){
+  if (ui.menuMusic){
+    ui.menuMusic.value = Math.round((settings.musicVolume ?? 0) * 100);
+  }
+  if (ui.menuSfx){
+    ui.menuSfx.value = Math.round((settings.sfxVolume ?? 0) * 100);
+  }
+  if (ui.menuMusicValue){
+    ui.menuMusicValue.textContent = `${Math.round((settings.musicVolume ?? 0) * 100)}%`;
+  }
+  if (ui.menuSfxValue){
+    ui.menuSfxValue.textContent = `${Math.round((settings.sfxVolume ?? 0) * 100)}%`;
+  }
 }
 
 function applyTranslations(){
@@ -547,11 +631,36 @@ function initBoard(){
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
-  const hangarRadius = Math.max(totalW, totalH) / 2 + 22;
-  BAL.tankOrbitRadius = Math.max(120, hangarRadius + 26);
-  BAL.fenceRadius = BAL.tankOrbitRadius + 32;
-  BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + 24;
-  BAL.zombieTrackWidth = 16;
+  const hangarRadius = Math.max(totalW, totalH) / 2 + 12;
+  const orbitPad = 10;
+  const fencePad = 24;
+  const trackPad = 18;
+  BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
+  BAL.fenceRadius = BAL.tankOrbitRadius + fencePad;
+  BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + trackPad;
+  BAL.zombieTrackWidth = Math.max(12, 14 * balScale);
+
+  if (state.crate){
+    const cell = state.cells[state.crate.cellIndex];
+    if (cell){
+      state.crate.x = cell.x + cell.w / 2;
+      state.crate.targetY = cell.y + cell.h / 2;
+      state.crate.y = Math.min(state.crate.y, state.crate.targetY);
+    }
+  }
+  if (state.dragging){
+    const cell = state.cells[state.dragging.cellIndex];
+    if (cell){
+      const cx = cell.x + cell.w / 2;
+      const cy = cell.y + cell.h / 2;
+      state.dragging.x = cx;
+      state.dragging.y = cy;
+      state.dragging.dx = 0;
+      state.dragging.dy = 0;
+      state.dragging.startX = cx;
+      state.dragging.startY = cy;
+    }
+  }
 
   buildBackground();
 }
@@ -568,9 +677,9 @@ function buildBackground(){
   bctx.imageSmoothingEnabled = false;
 
   const grad = bctx.createLinearGradient(0, 0, 0, bg.height);
-  grad.addColorStop(0, '#2f7a3d');
-  grad.addColorStop(0.5, '#266f36');
-  grad.addColorStop(1, '#6b4a2c');
+  grad.addColorStop(0, '#1a140f');
+  grad.addColorStop(0.5, '#2e1f14');
+  grad.addColorStop(1, '#4a2a16');
   bctx.fillStyle = grad;
   bctx.fillRect(0, 0, bg.width, bg.height);
 
@@ -634,12 +743,28 @@ function buyTankLevel(){
   return 1 + Math.floor(maxLevel / 5);
 }
 
+function baseBuyPrice(level){
+  return Math.round(level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25);
+}
+
+function ensureBuyPrice(level){
+  if (!state.buyPrices) state.buyPrices = {};
+  if (!state.buyPrices[level]){
+    state.buyPrices[level] = baseBuyPrice(level);
+  }
+  return state.buyPrices[level];
+}
+
 function buyTankCost(level){
   const mods = getMods();
-  const base = level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25;
-  const count = state.buyCounts?.[level] ?? 0;
-  const scaling = 1 + count * 0.001;
-  return Math.max(1, Math.round(base * mods.buyCostMul * scaling));
+  const base = ensureBuyPrice(level);
+  return Math.max(1, Math.round(base * mods.buyCostMul));
+}
+
+function bumpBuyPrice(level){
+  const current = ensureBuyPrice(level);
+  const delta = Math.max(1, Math.ceil(current * 0.001));
+  state.buyPrices[level] = current + delta;
 }
 
 function tryBuyTank(){
@@ -652,6 +777,7 @@ function tryBuyTank(){
   empty.tank = makeTank(level, false);
   recordTankLevel(level);
   state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
+  bumpBuyPrice(level);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
 }
 
@@ -1071,8 +1197,48 @@ function saveProgress(){
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
       buyCounts: state.buyCounts,
+      buyPrices: state.buyPrices,
     }));
   }catch(e){}
+}
+
+function getSavedProgress(){
+  try{
+    const raw = localStorage.getItem('progress');
+    if (raw) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+
+function inflateBuyPrice(price, count){
+  let current = price;
+  for (let i=0;i<count;i++){
+    const delta = Math.max(1, Math.ceil(current * 0.001));
+    current += delta;
+  }
+  return current;
+}
+
+function applySavedProgress(data){
+  if (!data) return false;
+  const { buyCounts, buyPrices, ...playerData } = data;
+  Object.assign(state.player, playerData);
+  if (buyCounts && typeof buyCounts === 'object'){
+    state.buyCounts = buyCounts;
+  }
+  if (buyPrices && typeof buyPrices === 'object'){
+    state.buyPrices = buyPrices;
+  } else if (buyCounts && typeof buyCounts === 'object'){
+    const prices = {};
+    for (const [levelKey, count] of Object.entries(buyCounts)){
+      const level = Number(levelKey);
+      if (!Number.isFinite(level)) continue;
+      const base = baseBuyPrice(level);
+      prices[level] = inflateBuyPrice(base, Math.max(0, Number(count) || 0));
+    }
+    state.buyPrices = prices;
+  }
+  return true;
 }
 
 function projectileProfile(level){
@@ -1325,9 +1491,34 @@ function zombieFenceLimit(z){
   return BAL.fenceRadius + BAL.fenceKeepout + zombieCollisionRadius(z);
 }
 
+function startZombieDying(z){
+  if (z.state === 'dying') return;
+  z.state = 'dying';
+  z.deathDuration = 0.65;
+  z.deathTimer = z.deathDuration;
+  z.deathProgress = 0;
+  z.hp = 0;
+
+  state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
+  state.kills += 1;
+  const mods = getMods();
+  const base = 5 + Math.random() * 5;
+  const levelMul = 1.1 ** Math.max(0, (z.level ?? 1) - 1);
+  const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
+  grantXP(base * levelMul * mods.xpMul * activeMul);
+  const p = zombiePos(z);
+  burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
+}
+
 function stepZombies(dt){
   const slow = (state.empUntil && nowSec() < state.empUntil) ? 0.5 : 1;
   for (const z of state.zombies){
+    if (z.state === 'dying'){
+      z.deathTimer -= dt;
+      z.deathProgress = clamp(1 - z.deathTimer / (z.deathDuration || 0.65), 0, 1);
+      z.anim += dt * 4.5;
+      continue;
+    }
     const prevTheta = z.theta;
 
     z.swayPhase += dt * z.swaySpeed * slow;
@@ -1378,17 +1569,26 @@ function stepTanks(dt){
     const s = tankStats(tank.level);
     const mods = getMods();
 
-    // pick nearest zombie in range
+    // pick nearest zombie in range + forward sector
     let best = null;
     let bestD = Infinity;
     const pos = tankOrbitState(cell, nowSec());
     const sx = pos.x;
     const sy = pos.y;
+    const fwdX = Math.cos(pos.heading);
+    const fwdY = Math.sin(pos.heading);
 
     for (const z of state.zombies){
+      if (z.state === 'dying') continue;
       const p = zombiePos(z);
-      const d = Math.hypot(p.x - sx, p.y - sy);
-      if (d <= s.range && d < bestD){ best = z; bestD = d; }
+      const dx = p.x - sx;
+      const dy = p.y - sy;
+      const d = Math.hypot(dx, dy);
+      if (!d || d > s.range || d >= bestD) continue;
+      const dot = (dx * fwdX + dy * fwdY) / d;
+      if (dot <= 0) continue;
+      best = z;
+      bestD = d;
     }
 
     if (hasSpriteConfig){
@@ -1528,6 +1728,7 @@ function impactAt(x,y,b){
   const mods = getMods();
   // Base AOE damage
   for (const z of state.zombies){
+    if (z.state === 'dying') continue;
     const p = zombiePos(z);
     const d = Math.hypot(p.x-x, p.y-y);
     if (d <= b.aoe){
@@ -1577,6 +1778,7 @@ function chainLightning(x,y,b){
     let bestD = Infinity;
 
     for (const z of state.zombies){
+      if (z.state === 'dying') continue;
       if (hit.has(z.id)) continue;
       const p = zombiePos(z);
       const d = Math.hypot(p.x-curX, p.y-curY);
@@ -1696,17 +1898,18 @@ function crateHitTest(x,y){
 function cleanupKills(){
   const alive = [];
   for (const z of state.zombies){
+    if (z.state === 'dying'){
+      if (z.deathTimer > 0){
+        alive.push(z);
+      }
+      continue;
+    }
     if (z.hp <= 0){
-      state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
-      state.kills += 1;
-      const mods = getMods();
-      const base = 5 + Math.random() * 5;
-      const levelMul = 1.1 ** Math.max(0, (z.level ?? 1) - 1);
-      const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
-      grantXP(base * levelMul * mods.xpMul * activeMul);
-      const p = zombiePos(z);
-      burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
-    } else alive.push(z);
+      startZombieDying(z);
+      alive.push(z);
+      continue;
+    }
+    alive.push(z);
   }
   state.zombies = alive;
   ensureZombieCount();
@@ -1742,6 +1945,38 @@ function stepParticles(dt){
     next.push(p);
   }
   state.particles = next;
+}
+
+function setMenuOpen(open){
+  state.ui.menuOpen = open;
+  document.body.classList.toggle('menu-open', open);
+  if (ui.menuOverlay){
+    ui.menuOverlay.classList.toggle('hidden', !open);
+    ui.menuOverlay.setAttribute('aria-hidden', (!open).toString());
+  }
+  updateMenuState();
+}
+
+function updateMenuState(){
+  if (ui.menuContinue){
+    const hasSave = !!getSavedProgress();
+    ui.menuContinue.disabled = !hasSave;
+  }
+  updateMenuVolumes();
+}
+
+function resetGameState(){
+  state = createInitialState();
+  ensureTalentState();
+  state.player.xpToNext = xpNeededForLevel(state.player.level);
+  state.player.modsDirty = true;
+  resizeCanvas();
+  state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+  if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
+    state.cells[0].tank = makeTank(1, true);
+    state.cells[1].tank = makeTank(1, true);
+    recordTankLevel(1);
+  }
 }
 
 // ---------- UI ----------
@@ -2338,8 +2573,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
-    const maxW = 22 * balScale * scaleMul;
-    const maxH = 16 * balScale * scaleMul;
+    const maxW = 34 * balScale * scaleMul;
+    const maxH = 26 * balScale * scaleMul;
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
@@ -2383,7 +2618,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
   targetCtx.save();
   targetCtx.translate(x, y);
-  targetCtx.scale(0.35 * balScale * scaleMul, 0.35 * balScale * scaleMul);
+  targetCtx.scale(0.52 * balScale * scaleMul, 0.52 * balScale * scaleMul);
   targetCtx.globalAlpha = mutedSlot ? 0.65 : 0.95;
   targetCtx.fillStyle = 'rgba(0,0,0,.35)';
   rr(targetCtx, -22, -8, 44, 10, 5);
@@ -2606,7 +2841,7 @@ function drawZombieSprite(x,y,z){
   const t = z.type;
   const f = t.frame;
   const a = t.anchor;
-  const facing = x >= center.x ? 1 : -1;
+  const facing = x >= center.x ? -1 : 1;
 
   const frames = t.frames || 1;
   const frameIndex = Math.floor(z.anim) % frames;
@@ -2622,6 +2857,9 @@ function drawZombieSprite(x,y,z){
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
+  const death = z.state === 'dying' ? (z.deathProgress ?? 0) : 0;
+  const deathScale = 1 - death * 0.22;
+  const deathTilt = death * 1.1;
 
   if (!qualityLow){
     // shadow (without rotation)
@@ -2642,8 +2880,9 @@ function drawZombieSprite(x,y,z){
   // body
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.scale(facing, 1);
-  ctx.rotate(rot * facing);
+  ctx.globalAlpha = 1 - death;
+  ctx.scale(facing * deathScale, deathScale);
+  ctx.rotate(rot * facing + deathTilt * facing);
   ctx.drawImage(
     img,
     fx, fy, f.w, f.h,
@@ -2670,10 +2909,13 @@ function drawZombieFallback(x,y,z){
   const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
-  const facing = x >= center.x ? 1 : -1;
+  const facing = x >= center.x ? -1 : 1;
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
   const skinTone = shade('#3cbe78', levelBoost * 10);
+  const death = z.state === 'dying' ? (z.deathProgress ?? 0) : 0;
+  const deathScale = 1 - death * 0.22;
+  const deathTilt = death * 1.1;
 
   if (!qualityLow){
     // shadow
@@ -2687,8 +2929,9 @@ function drawZombieFallback(x,y,z){
 
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.rotate(face * facing);
-  ctx.scale(s * facing, s);
+  ctx.globalAlpha = 1 - death;
+  ctx.rotate(face * facing + deathTilt * facing);
+  ctx.scale(s * facing * deathScale, s * deathScale);
 
   // ragged head
   ctx.globalAlpha = 0.95;
@@ -2973,16 +3216,18 @@ function loop(now){
     lastProgressSave = nowSec();
   }
 
-  ensureZombieCount();
-  maybeSpawnCrate();
-  stepZombies(dt);
-  stepTanks(dt);
-  stepProjectiles(dt);
-  stepDecals(dt);
-  stepCrate(dt);
-  cleanupKills();
-  stepImpacts(dt);
-  stepParticles(dt);
+  if (!state.ui.menuOpen){
+    ensureZombieCount();
+    maybeSpawnCrate();
+    stepZombies(dt);
+    stepTanks(dt);
+    stepProjectiles(dt);
+    stepDecals(dt);
+    stepCrate(dt);
+    cleanupKills();
+    stepImpacts(dt);
+    stepParticles(dt);
+  }
 
   updateUI();
   draw();
@@ -2992,22 +3237,13 @@ function loop(now){
 
 // ---------- Boot ----------
 async function boot(){
+  loadSettings();
   const savedLang = localStorage.getItem('lang');
   if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
   applyTranslations();
   ensureProgressUI();
   initTalentDefs();
-  try{
-    const raw = localStorage.getItem('progress');
-    if (raw){
-      const d = JSON.parse(raw);
-      const { buyCounts, ...playerData } = d;
-      Object.assign(state.player, playerData);
-      if (buyCounts && typeof buyCounts === 'object'){
-        state.buyCounts = buyCounts;
-      }
-    }
-  }catch(e){}
+  applySavedProgress(getSavedProgress());
   ensureTalentState();
   state.player.xpToNext = xpNeededForLevel(state.player.level);
   state.player.modsDirty = true;
@@ -3015,6 +3251,29 @@ async function boot(){
     ui.langRu.addEventListener('click', () => setLanguage('ru'));
     ui.langEn.addEventListener('click', () => setLanguage('en'));
   }
+  ui.menuContinue?.addEventListener('click', () => {
+    setMenuOpen(false);
+  });
+  ui.menuNew?.addEventListener('click', () => {
+    localStorage.removeItem('progress');
+    resetGameState();
+    saveProgress();
+    setMenuOpen(false);
+  });
+  ui.menuSfx?.addEventListener('input', (e) => {
+    const value = Number(e.target.value) / 100;
+    settings.sfxVolume = clamp(value, 0, 1);
+    applyAudioSettings();
+    updateMenuVolumes();
+    saveSettings();
+  });
+  ui.menuMusic?.addEventListener('input', (e) => {
+    const value = Number(e.target.value) / 100;
+    settings.musicVolume = clamp(value, 0, 1);
+    applyAudioSettings();
+    updateMenuVolumes();
+    saveSettings();
+  });
   ui.talentsBtn?.addEventListener('click', () => openTalents());
   ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
@@ -3037,6 +3296,7 @@ async function boot(){
 
   ensureZombieCount();
   updateUI();
+  setMenuOpen(true);
   requestAnimationFrame(loop);
 }
 
