@@ -12,12 +12,6 @@
     <section class="stage">
       <div class="stageCanvas">
         <canvas id="c" width="1100" height="650"></canvas>
-        <div class="stageUi stageUiLeft">
-          <div class="langSwitch" aria-label="Language switcher">
-            <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
-            <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
-          </div>
-        </div>
         <div class="stageUi stageUiRight">
           <div class="hud">
             <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
@@ -40,6 +34,42 @@
             </button>
             <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
             <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
+          </div>
+        </div>
+        <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
+          <div class="menuBackdrop"></div>
+          <div class="menuPanel">
+            <div class="menuHeader">
+              <div class="menuTitle" data-i18n="menuTitle">Tank Merger: Zombie Orbit</div>
+              <div class="menuSubtitle" data-i18n="menuSubtitle">Главное меню выживших</div>
+            </div>
+            <div class="menuActions">
+              <button id="menuContinue" class="btn btnPrimary" type="button" data-i18n="menuContinue">Продолжить</button>
+              <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
+            </div>
+            <div class="menuSettings">
+              <div class="menuRow">
+                <div class="menuLabel" data-i18n="menuLanguage">Язык</div>
+                <div class="langSwitch" aria-label="Language switcher">
+                  <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
+                  <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
+                </div>
+              </div>
+              <div class="menuRow">
+                <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
+                <div class="menuSlider">
+                  <input id="menuSfx" type="range" min="0" max="100" step="1" value="75" />
+                  <span class="menuValue" id="menuSfxValue">75%</span>
+                </div>
+              </div>
+              <div class="menuRow">
+                <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">Громкость музыки</label>
+                <div class="menuSlider">
+                  <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
+                  <span class="menuValue" id="menuMusicValue">60%</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="levelModal hidden" id="levelModal" aria-hidden="true">
