@@ -699,6 +699,130 @@ body.menu-open .stageUi .hudItem{
   .stageActions .btn{width:100%}
 }
 
+/* ---------- Debug panel (only when ?debug=1) ---------- */
+.layout.debugLayout{
+  grid-template-columns: minmax(200px, 280px) 1fr;
+}
+.layout.debugLayout .stage{ min-width: 0; }
+
+.debugPanel{
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  background: linear-gradient(160deg, rgba(28,18,12,.96), rgba(14,10,8,.98));
+  border: 2px solid rgba(255, 184, 114, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 0 rgba(0,0,0,.25);
+}
+.debugPanel.collapsed{
+  width: 44px;
+  min-width: 44px;
+}
+.debugPanel.collapsed .debugPanelBody,
+.debugPanel.collapsed .debugTabs,
+.debugPanel.collapsed .debugLogWrap{ display: none !important; }
+
+.debugPanelHeader{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255,184,114,.12);
+  flex-shrink: 0;
+  background: rgba(0,0,0,.2);
+}
+.debugPanelTitle{ font-size: 12px; font-weight: 700; color: var(--accent); }
+.debugCollapseBtn{
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(255,184,114,.15);
+  border: 1px solid rgba(255,184,114,.25);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+.debugCollapseBtn:hover{ background: rgba(255,184,114,.25); }
+
+.debugTabs{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,184,114,.1);
+  flex-shrink: 0;
+}
+.debugTab{
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.debugTab.active{ background: rgba(255,184,114,.2); color: var(--accent); border-color: rgba(255,184,114,.35); }
+
+.debugPanelBody{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+}
+.debugSection{ display: none; }
+.debugSection.active{ display: block; }
+
+.debugLogWrap{
+  flex-shrink: 0;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  border-top: 1px solid rgba(255,184,114,.1);
+  background: rgba(0,0,0,.3);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.debugLogEntry{ margin: 2px 0; word-break: break-word; }
+.debugLogEntry.info{ color: rgba(200,220,255,.9); }
+.debugLogEntry.warn{ color: rgba(255,200,120,.95); }
+.debugLogEntry.error{ color: rgba(255,120,100,.95); }
+
+.debugTools{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0;
+}
+.debugBtn{
+  padding: 4px 10px;
+  font-size: 11px;
+  background: rgba(255,184,114,.18);
+  border: 1px solid rgba(255,184,114,.28);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+.debugBtn:hover{ background: rgba(255,184,114,.28); }
+.debugBtn.danger{ background: rgba(255,100,80,.2); border-color: rgba(255,100,80,.4); }
+.debugBtn.active{ background: rgba(255,184,114,.35); border-color: rgba(255,184,114,.5); }
+
+.debugSelect, .debugInput{
+  width: 100%;
+  max-width: 100%;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.debugLabel{ font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; }
+.debugRow{ margin-bottom: 8px; }
+
 @media (prefers-reduced-motion: reduce){
   .btn,
   .btn::after,

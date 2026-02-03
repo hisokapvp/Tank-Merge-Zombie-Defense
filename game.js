@@ -229,6 +229,17 @@ function createInitialState(){
 
 let state = createInitialState();
 
+// Debug panel: enabled only via URL param (?debug=1 or ?debug=true)
+const DEBUG_PARAM = 'debug';
+function isDebugPanelEnabled(){
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get(DEBUG_PARAM);
+    return v === '1' || v === 'true' || v === 'yes';
+  } catch (_) { return false; }
+}
+const DebugPanelEnabled = isDebugPanelEnabled();
+
 let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
 let center = { x: viewSize.w/2, y: viewSize.h/2 };
 const nowSec = ()=>performance.now()/1000;
@@ -1139,11 +1150,15 @@ function baseMods(){
   };
 }
 
-function computeModsFromApplied(applied){
+function computeModsFromApplied(applied, debugOverrides){
   initTalentDefs();
   const mods = baseMods();
   TALENT_DEFS.forEach((def, i) => {
-    const rank = applied[i] || 0;
+    let rank = applied[i] || 0;
+    if (debugOverrides && debugOverrides[i]) {
+      if (debugOverrides[i] === 'off') return;
+      if (debugOverrides[i] === 'on') rank = def.kind === 'active' ? 1 : def.maxRank;
+    }
     if (rank <= 0) return;
     def.apply(mods, rank);
   });
@@ -1154,6 +1169,8 @@ function computeModsFromApplied(applied){
 
 function getMods(){
   const p = state.player;
+  const overrides = DebugPanelEnabled && state.debug?.talentOverrides ? state.debug.talentOverrides : null;
+  if (overrides) return computeModsFromApplied(p.talentsApplied, overrides);
   if (!p.mods || p.modsDirty){
     p.mods = computeModsFromApplied(p.talentsApplied);
     p.modsDirty = false;
@@ -2144,7 +2161,18 @@ function updateMenuState(){
 }
 
 function resetGameState(){
+  const wasCollapsed = state.debug?.collapsed;
   state = createInitialState();
+  if (DebugPanelEnabled) {
+    state.debug = {
+      log: [],
+      targetCellIndex: null,
+      talentOverrides: {},
+      collapsed: wasCollapsed ?? false,
+      previewParticles: [],
+      debugStatusActive: false,
+    };
+  }
   ensureTalentState();
   state.player.xpToNext = xpNeededForLevel(state.player.level);
   state.player.modsDirty = true;
@@ -3526,6 +3554,393 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
+// ---------- Debug Panel (?debug=1) ----------
+const DEBUG_MAX_TANK_LEVEL = 20;
+const DEBUG_LOG_MAX = 100;
+
+function debugLog(level, msg){
+  if (!DebugPanelEnabled || !state.debug) return;
+  const entry = { level: level || 'info', msg: String(msg), t: nowSec() };
+  state.debug.log.push(entry);
+  if (state.debug.log.length > DEBUG_LOG_MAX) state.debug.log.shift();
+  const el = document.getElementById('debugLog');
+  if (el){
+    const line = document.createElement('div');
+    line.className = `debugLogEntry ${entry.level}`;
+    line.textContent = `[${entry.level}] ${entry.msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function debugReset(){
+  if (!DebugPanelEnabled || !state.debug) return;
+  try {
+    state.debug.talentOverrides = {};
+    state.debug.targetCellIndex = null;
+    state.debug.debugStatusActive = false;
+    state.activeEffects.attackUntil = 0;
+    state.activeEffects.speedUntil = 0;
+    state.activeEffects.economyUntil = 0;
+    if (state.debug.previewParticles) state.debug.previewParticles = [];
+    state.particles = state.particles.filter(p => !p.debugPreview);
+    state.impacts = state.impacts.filter(fx => !fx.debugPreview);
+    state.decals = state.decals.filter(d => !d.debugPreview);
+    if (state.player?.mods) state.player.modsDirty = true;
+    debugLog('info', 'Reset: overrides, target, statuses, preview VFX cleared.');
+  } catch (e) {
+    debugLog('error', 'Reset failed: ' + (e && e.message));
+  }
+}
+
+function safeDebug(fn, fallbackMsg){
+  try {
+    return fn();
+  } catch (e) {
+    debugLog('error', fallbackMsg + (e && e.message ? ': ' + e.message : ''));
+    return undefined;
+  }
+}
+
+function initDebugPanel(){
+  if (!DebugPanelEnabled) return;
+  state.debug = state.debug || {
+    log: [],
+    targetCellIndex: null,
+    talentOverrides: {},
+    collapsed: false,
+    previewParticles: [],
+    debugStatusActive: false,
+  };
+
+  const main = document.querySelector('.layout');
+  if (!main || document.getElementById('debugPanel')) return;
+
+  main.classList.add('debugLayout');
+
+  const panel = document.createElement('div');
+  panel.id = 'debugPanel';
+  panel.className = 'debugPanel';
+
+  const activeNames = ['Шквал (Attack)', 'Перегрев (Speed)', 'Золотой час (Economy)'];
+  const effectCategories = [
+    { id: 'vfx', label: 'VFX' },
+    { id: 'status', label: 'Status' },
+  ];
+  const vfxList = [
+    { id: 'burst', label: 'Burst center' },
+    { id: 'particle_burst', label: 'Particle burst' },
+    { id: 'impact_ring', label: 'Impact ring' },
+    { id: 'decal_pool', label: 'Decal pool' },
+  ];
+  const statusList = [
+    { id: 'attack', key: 'attackUntil', label: 'Attack +50%' },
+    { id: 'speed', key: 'speedUntil', label: 'Speed +35%' },
+    { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
+  ];
+
+  panel.innerHTML = `
+    <div class="debugPanelHeader">
+      <span class="debugPanelTitle">Debug (?debug=1)</span>
+      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>
+    </div>
+    <div class="debugTabs">
+      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>
+      <button type="button" class="debugTab" data-tab="effects">Effects</button>
+      <button type="button" class="debugTab" data-tab="actives">Actives</button>
+      <button type="button" class="debugTab" data-tab="talents">Talents</button>
+      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>
+    </div>
+    <div class="debugPanelBody">
+      <div id="debugSectionTanks" class="debugSection active">
+        <div class="debugRow">
+          <label class="debugLabel">Tank level (1–${DEBUG_MAX_TANK_LEVEL})</label>
+          <select id="debugTankLevel" class="debugSelect"></select>
+        </div>
+        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>
+        <div class="debugRow" style="margin-top:8px">
+          <label class="debugLabel">Hangar — select target</label>
+          <div id="debugHangarList"></div>
+        </div>
+      </div>
+      <div id="debugSectionEffects" class="debugSection">
+        <div class="debugRow">
+          <label class="debugLabel">Category</label>
+          <select id="debugEffectCategory" class="debugSelect">
+            <option value="all">All</option>
+            <option value="vfx">VFX</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+        <div id="debugEffectList"></div>
+        <div class="debugTools" style="margin-top:8px">
+          <button type="button" class="debugBtn" id="debugStopAllVfx">Stop all preview VFX</button>
+          <button type="button" class="debugBtn danger" id="debugClearStatuses">Clear debug statuses</button>
+        </div>
+      </div>
+      <div id="debugSectionActives" class="debugSection">
+        <div class="debugRow">
+          <label class="debugLabel">Target: selected tank (info only)</label>
+        </div>
+        <div class="debugRow">
+          <label><input type="checkbox" id="debugBypass" checked /> Bypass cooldown/cost</label>
+        </div>
+        <div id="debugActivesList"></div>
+      </div>
+      <div id="debugSectionTalents" class="debugSection">
+        <div id="debugTalentsList"></div>
+        <button type="button" class="debugBtn" id="debugClearOverrides">Clear talent overrides</button>
+      </div>
+      <div id="debugSectionLogs" class="debugSection">
+        <button type="button" class="debugBtn" id="debugResetBtn">Reset (overrides + statuses + VFX)</button>
+        <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>
+      </div>
+    </div>
+    <div class="debugLogWrap">
+      <div id="debugLog"></div>
+    </div>
+  `;
+
+  const tankLevelSelect = panel.querySelector('#debugTankLevel');
+  for (let l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) tankLevelSelect.appendChild(new Option('Lv' + l, l));
+
+  panel.querySelectorAll('.debugTab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      panel.querySelectorAll('.debugTab').forEach(b => b.classList.remove('active'));
+      panel.querySelectorAll('.debugSection').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      const section = document.getElementById('debugSection' + tab.charAt(0).toUpperCase() + tab.slice(1));
+      if (section) section.classList.add('active');
+      if (tab === 'tanks') refreshDebugHangarList();
+      if (tab === 'effects') refreshDebugEffectList();
+      if (tab === 'actives') refreshDebugActivesList();
+      if (tab === 'talents') refreshDebugTalentsList();
+    });
+  });
+
+  document.getElementById('debugCollapse').addEventListener('click', () => {
+    state.debug.collapsed = !state.debug.collapsed;
+    panel.classList.toggle('collapsed', state.debug.collapsed);
+    document.getElementById('debugCollapse').textContent = state.debug.collapsed ? 'Expand' : 'Collapse';
+  });
+
+  document.getElementById('debugSpawnTank').addEventListener('click', () => {
+    safeDebug(() => {
+      const level = Math.max(1, Math.min(DEBUG_MAX_TANK_LEVEL, Number(panel.querySelector('#debugTankLevel').value) || 1));
+      const empty = state.cells.find(c => !c.tank);
+      if (!empty) {
+        debugLog('warn', 'No free hangar slot.');
+        return;
+      }
+      empty.tank = makeTank(level, false);
+      recordTankLevel(level);
+      debugLog('info', `Spawned tank Lv${level} in slot ${empty.i}.`);
+      refreshDebugHangarList();
+    }, 'Spawn failed ');
+  });
+
+  document.getElementById('debugStopAllVfx').addEventListener('click', () => {
+    safeDebug(() => {
+      state.particles = state.particles.filter(p => !p.debugPreview);
+      state.impacts = state.impacts.filter(fx => !fx.debugPreview);
+      state.decals = state.decals.filter(d => !d.debugPreview);
+      debugLog('info', 'Stopped all preview VFX.');
+    }, 'Stop VFX failed ');
+  });
+
+  document.getElementById('debugClearStatuses').addEventListener('click', () => {
+    safeDebug(() => {
+      state.debug.debugStatusActive = false;
+      state.activeEffects.attackUntil = 0;
+      state.activeEffects.speedUntil = 0;
+      state.activeEffects.economyUntil = 0;
+      debugLog('info', 'Cleared debug statuses.');
+    }, 'Clear statuses failed ');
+  });
+
+  document.getElementById('debugClearOverrides').addEventListener('click', () => {
+    safeDebug(() => {
+      state.debug.talentOverrides = {};
+      state.player.modsDirty = true;
+      debugLog('info', 'Cleared talent overrides.');
+      refreshDebugTalentsList();
+    }, 'Clear overrides failed ');
+  });
+
+  document.getElementById('debugResetBtn').addEventListener('click', () => debugReset());
+  document.getElementById('debugClearLog').addEventListener('click', () => {
+    state.debug.log = [];
+    const el = document.getElementById('debugLog');
+    if (el) el.innerHTML = '';
+    debugLog('info', 'Log cleared.');
+  });
+
+  function refreshDebugHangarList(){
+    const container = document.getElementById('debugHangarList');
+    if (!container) return;
+    container.innerHTML = '';
+    (state.cells || []).forEach((cell, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'debugBtn';
+      btn.style.marginRight = '4px';
+      btn.style.marginBottom = '4px';
+      if (cell.tank) {
+        btn.textContent = `#${i} Lv${cell.tank.level}`;
+        btn.addEventListener('click', () => {
+          state.debug.targetCellIndex = i;
+          debugLog('info', `Target tank: slot ${i} Lv${cell.tank.level}.`);
+          panel.querySelectorAll('#debugHangarList button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+        if (state.debug.targetCellIndex === i) btn.classList.add('active');
+      } else {
+        btn.textContent = `#${i} empty`;
+        btn.disabled = true;
+      }
+      container.appendChild(btn);
+    });
+  }
+
+  function refreshDebugEffectList(){
+    const container = document.getElementById('debugEffectList');
+    if (!container) return;
+    container.innerHTML = '';
+    const cat = document.getElementById('debugEffectCategory').value;
+    const showVfx = cat === 'all' || cat === 'vfx';
+    const showStatus = cat === 'all' || cat === 'status';
+    if (showVfx) {
+      vfxList.forEach(ef => {
+        const row = document.createElement('div');
+        row.className = 'debugRow';
+        row.innerHTML = `<span class="debugLabel">${ef.label}</span>
+          <button type="button" class="debugBtn debugPlayVfx" data-id="${ef.id}">Play once</button>`;
+        row.querySelector('button').addEventListener('click', () => {
+          safeDebug(() => {
+            const x = center.x + (Math.random() - 0.5) * 80;
+            const y = center.y + (Math.random() - 0.5) * 80;
+            if (ef.id === 'burst') {
+              burst(x, y, 12, 'rgba(255,180,120,.25)');
+              debugLog('info', 'VFX: Burst at center.');
+            } else if (ef.id === 'particle_burst') {
+              for (let i = 0; i < 8; i++) {
+                const p = { x, y, r: 2, color: 'rgba(200,255,180,.4)', life: 0.4, max: 0.4, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, debugPreview: true };
+                state.particles.push(p);
+              }
+              debugLog('info', 'VFX: Particle burst.');
+            } else if (ef.id === 'impact_ring') {
+              state.impacts.push({ x, y, r: 0, maxR: 40, life: 0.3, max: 0.3, kind: 'he', debugPreview: true });
+              debugLog('info', 'VFX: Impact ring.');
+            } else if (ef.id === 'decal_pool') {
+              state.decals.push({ kind: 'pool', x, y, r: 25, life: 5, max: 5, dps: 0, color: 'rgba(125,255,178,.14)', debugPreview: true });
+              debugLog('info', 'VFX: Decal pool.');
+            }
+          }, 'VFX failed ');
+        });
+        container.appendChild(row);
+      });
+    }
+    if (showStatus) {
+      statusList.forEach(ef => {
+        const row = document.createElement('div');
+        row.className = 'debugRow';
+        const dur = 6;
+        row.innerHTML = `<span class="debugLabel">${ef.label}</span>
+          <button type="button" class="debugBtn debugApplyStatus" data-key="${ef.key}">Apply ${dur}s</button>
+          <button type="button" class="debugBtn debugRemoveStatus" data-key="${ef.key}">Remove</button>`;
+        row.querySelector('.debugApplyStatus').addEventListener('click', () => {
+          safeDebug(() => {
+            state.activeEffects[ef.key] = nowSec() + dur;
+            state.debug.debugStatusActive = true;
+            debugLog('info', `Status: ${ef.label} applied ${dur}s.`);
+          }, 'Apply status failed ');
+        });
+        row.querySelector('.debugRemoveStatus').addEventListener('click', () => {
+          safeDebug(() => {
+            state.activeEffects[ef.key] = 0;
+            debugLog('info', `Status: ${ef.label} removed.`);
+          }, 'Remove status failed ');
+        });
+        container.appendChild(row);
+      });
+    }
+  }
+
+  document.getElementById('debugEffectCategory').addEventListener('change', refreshDebugEffectList);
+
+  function refreshDebugActivesList(){
+    const container = document.getElementById('debugActivesList');
+    if (!container) return;
+    container.innerHTML = '';
+    initTalentDefs();
+    [0, 1, 2].forEach(branch => {
+      const row = document.createElement('div');
+      row.className = 'debugRow';
+      const name = activeNames[branch] || 'Active ' + branch;
+      row.innerHTML = `<span class="debugLabel">${name}</span>
+        <button type="button" class="debugBtn debugActivateActive" data-branch="${branch}">Activate</button>`;
+      row.querySelector('button').addEventListener('click', () => {
+        safeDebug(() => {
+          const bypass = document.getElementById('debugBypass') && document.getElementById('debugBypass').checked;
+          if (bypass) {
+            const now = nowSec();
+            state.player.activeCooldowns[branch] = now;
+            if (branch === 0) state.activeEffects.attackUntil = now + 6;
+            else if (branch === 1) state.activeEffects.speedUntil = now + 6;
+            else if (branch === 2) state.activeEffects.economyUntil = now + 6;
+            playSfx('activeAbility');
+            burst(center.x, center.y, 60, branch === 0 ? 'rgba(255,120,90,.2)' : branch === 1 ? 'rgba(125,255,178,.22)' : 'rgba(255,215,125,.22)');
+            state.debug.debugStatusActive = true;
+            debugLog('info', `Active ${name} (bypass) activated.`);
+          } else {
+            if (!canUseActive(branch)) {
+              debugLog('warn', `Active ${name}: cannot use (cooldown or not unlocked).`);
+              return;
+            }
+            useActiveAbility(branch);
+            debugLog('info', `Active ${name} activated.`);
+          }
+        }, 'Activate failed ');
+      });
+      container.appendChild(row);
+    });
+  }
+
+  function refreshDebugTalentsList(){
+    const container = document.getElementById('debugTalentsList');
+    if (!container) return;
+    container.innerHTML = '';
+    initTalentDefs();
+    TALENT_DEFS.forEach((def, i) => {
+      const row = document.createElement('div');
+      row.className = 'debugRow';
+      const current = state.debug.talentOverrides[i] || 'normal';
+      row.innerHTML = `<span class="debugLabel" title="${def.desc}">${def.name}</span>
+        <select class="debugSelect debugTalentOverride" data-talent="${i}" style="width:auto;display:inline-block;margin-left:4px">
+          <option value="normal" ${current === 'normal' ? 'selected' : ''}>Normal</option>
+          <option value="on" ${current === 'on' ? 'selected' : ''}>Force ON</option>
+          <option value="off" ${current === 'off' ? 'selected' : ''}>Force OFF</option>
+        </select>`;
+      row.querySelector('select').addEventListener('change', (e) => {
+        const v = e.target.value;
+        if (v === 'normal') delete state.debug.talentOverrides[i];
+        else state.debug.talentOverrides[i] = v;
+        state.player.modsDirty = true;
+        debugLog('info', `Talent ${def.name}: ${v}.`);
+      });
+      container.appendChild(row);
+    });
+  }
+
+  main.insertBefore(panel, main.firstChild);
+  refreshDebugHangarList();
+  refreshDebugEffectList();
+  refreshDebugActivesList();
+  refreshDebugTalentsList();
+  debugLog('info', 'Debug panel ready. URL param: ' + DEBUG_PARAM + '=1');
+}
+
 // ---------- Boot ----------
 async function boot(){
   loadSettings();
@@ -3573,6 +3988,8 @@ async function boot(){
   }
   resizeCanvas();
   state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+
+  if (DebugPanelEnabled) initDebugPanel();
 
   // starter tanks
   if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
