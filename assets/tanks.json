@@ -2,7 +2,7 @@
   "_readme": "=== КОНФИГУРАЦИЯ ТАНКОВ (tanks.json) === Как добавить новый танк: 1) КОРПУС (bodies): добавьте запись в объект bodies с уникальным ключом (например body_lvl2). Укажите src - путь к PNG относительно папки assets (например tanks/body_lvl2.png). frame - размер одного кадра в спрайте (w, h). frames - количество кадров анимации. anchor - точка привязки спрайта (0.5, 0.6 = центр по X, 60% по Y). 2) ПУШКА (cannons): добавьте объект в массив cannons. Обязательно укажите id (уникальный, например cannon_my), minLevel (минимальный уровень для fallback), src - путь к PNG. muzzle - смещение точки вылета снаряда от якоря. fireFrame - номер кадра, на котором происходит выстрел. 3) УРОВНИ (levels): массив из 60 элементов (индекс 0 = уровень 1, индекс 59 = уровень 60). В каждом элементе укажите bodyVariant (ключ из bodies), cannonVariant (id из cannons), auraVariant (1-6 или null), bulletVariant (ap/he/toxic/tesla), impactVfxVariant (ap/he/toxic/tesla). Если поле опустить - используется значение с предыдущего уровня или дефолт.",
   "tankScale": 2.5,
   "body": {
-    "src": "tanks/body_all.png",
+    "src": "tanks/body.png",
     "frame": { "w": 128, "h": 128 },
     "frames": 2,
     "anchor": { "x": 0.5, "y": 0.6 },
@@ -18,26 +18,26 @@
       "scale": 1.0,
       "animSpeed": 2.0
     },
-    "_comment_bodies": "Ниже шаблонные корпуса для уровней 1, 2, 3. Замените src на свои PNG (например body_lvl1.png, body_lvl2.png, body_lvl3.png) в папке assets/tanks/.",
+    "_comment_bodies": "АТЛАС: один PNG (body_all.png), каждый вариант — свой ряд. frame: x,y — левый верх угла ряда в атласе, w,h — размер одного кадра. Кадры анимации идут по горизонтали (рядом).",
     "body_lvl1": {
-      "src": "tanks/body.png",
-      "frame": { "w": 128, "h": 128 },
+      "src": "tanks/body_all.png",
+      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
       "frames": 2,
       "anchor": { "x": 0.5, "y": 0.6 },
       "scale": 1.0,
       "animSpeed": 2.0
     },
     "body_lvl2": {
-      "src": "tanks/body.png",
-      "frame": { "w": 128, "h": 128 },
+      "src": "tanks/body_all.png",
+      "frame": { "x": 0, "y": 128, "w": 128, "h": 128 },
       "frames": 2,
       "anchor": { "x": 0.5, "y": 0.6 },
       "scale": 1.0,
       "animSpeed": 2.0
     },
     "body_lvl3": {
-      "src": "tanks/body.png",
-      "frame": { "w": 128, "h": 128 },
+      "src": "tanks/body_all.png",
+      "frame": { "x": 0, "y": 256, "w": 128, "h": 128 },
       "frames": 2,
       "anchor": { "x": 0.5, "y": 0.6 },
       "scale": 1.0,

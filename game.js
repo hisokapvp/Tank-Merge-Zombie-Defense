@@ -2918,6 +2918,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
+    const bodyFrameX = body.cfg.frame?.x ?? 0;
+    const bodyFrameY = body.cfg.frame?.y ?? 0;
     const maxW = 51 * balScale * scaleMul;
     const maxH = 39 * balScale * scaleMul;
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
@@ -2929,8 +2931,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
     const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
     targetCtx.drawImage(
       body.img,
-      0,
-      0,
+      bodyFrameX,
+      bodyFrameY,
       bodyW,
       bodyH,
       -drawW * bodyAnchor.x,
@@ -3086,6 +3088,8 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true){
 
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
+    const bodyFrameX = (body.cfg.frame?.x ?? 0);
+    const bodyFrameY = (body.cfg.frame?.y ?? 0);
     const bodyFrame = Math.floor(tank?.bodyAnim ?? 0) % (body.cfg.frames || 1);
     const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
     const bodyScale = body.cfg.scale ?? 1;
@@ -3094,8 +3098,8 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true){
 
     ctx.drawImage(
       body.img,
-      bodyFrame * bodyW,
-      0,
+      bodyFrameX + bodyFrame * bodyW,
+      bodyFrameY,
       bodyW,
       bodyH,
       -drawBodyW * bodyAnchor.x,
