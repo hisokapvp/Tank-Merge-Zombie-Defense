@@ -143,25 +143,25 @@
   "_comment_auras": "Аура-спрайты под танком. В levels укажите auraVariant строкой (id из auras). frame: x,y — ряд в атласе, w,h — размер кадра. Кадры анимации по горизонтали. Файл tanks/aura_all.png положите в assets/tanks/ (или укажите src на существующий PNG для проверки).",
   "auras": {
     "aura_1": {
-      "src": "tanks/body.png",
+      "src": "tanks/aura_all.png",
       "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 2,
+      "frames": 3,
       "anchor": { "x": 0.5, "y": 0.5 },
       "scale": 1.0,
       "animSpeed": 3.0
     },
     "aura_2": {
-      "src": "tanks/body.png",
+      "src": "tanks/aura_all.png",
       "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 2,
+      "frames": 3,
       "anchor": { "x": 0.5, "y": 0.5 },
       "scale": 1.0,
       "animSpeed": 3.0
     },
     "aura_3": {
-      "src": "tanks/body.png",
+      "src": "tanks/aura_all.png",
       "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 2,
+      "frames": 3,
       "anchor": { "x": 0.5, "y": 0.5 },
       "scale": 1.0,
       "animSpeed": 3.0
