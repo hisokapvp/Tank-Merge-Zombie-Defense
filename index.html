@@ -32,8 +32,10 @@
               <span data-i18n="buyTank">Купить танк Lv1</span>
               <span class="price">(<span id="buyCost">50</span>)</span>
             </button>
+            <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
             <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст x2 на 60с (симуляция рекламы)</span></button>
             <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
+            <button id="settingsBtn" class="btn btnSecondary" type="button" data-i18n="menuSettings">Настройки</button>
           </div>
         </div>
         <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
@@ -89,6 +91,16 @@
               <canvas id="crateTankIcon" width="80" height="80"></canvas>
               <div class="crateModal__text" id="crateText" data-i18n="crateModalText">Посмотреть рекламу и получить танк</div>
               <button id="crateGet" class="btn btnPrimary" type="button" data-i18n="crateGet">Получить</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="dismantleModal" aria-hidden="true">
+          <div class="levelModal__backdrop" data-dismantle-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true">
+            <div class="levelModal__title" id="dismantleConfirmText">Вы действительно хотите разобрать танк 1 уровня?</div>
+            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+              <button id="dismantleYes" class="btn btnPrimary" type="button" data-i18n="dismantleYes">Да</button>
+              <button id="dismantleNo" class="btn btnSecondary" type="button" data-i18n="dismantleNo">Нет</button>
             </div>
           </div>
         </div>

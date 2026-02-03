@@ -20,6 +20,7 @@ const ui = {
   boost: document.getElementById('boost'),
   boostState: document.getElementById('boostState'),
   talentsBtn: document.getElementById('talentsBtn'),
+  settingsBtn: document.getElementById('settingsBtn'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
   menuOverlay: document.getElementById('menuOverlay'),
@@ -39,8 +40,14 @@ const ui = {
   levelTalent: document.getElementById('levelTalent'),
   levelGold: document.getElementById('levelGold'),
   levelAccept: document.getElementById('levelAccept'),
+  dismantleBtn: document.getElementById('dismantleBtn'),
+  dismantleModal: document.getElementById('dismantleModal'),
+  dismantleConfirmText: document.getElementById('dismantleConfirmText'),
+  dismantleYes: document.getElementById('dismantleYes'),
+  dismantleNo: document.getElementById('dismantleNo'),
 };
 
+const MAX_TANK_LEVEL = 60;
 // Power tier from player level (0–5): thresholds 10,20,30,40,50,60
 const POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
 function computePowerTier(playerLevel){
@@ -61,13 +68,13 @@ function refreshTanksPowerTier(){
 }
 
 const BAL = {
-  // Board 4x4 (smaller cells)
+  // Board 4x4
   rows: 4,
   cols: 4,
-  cellW: 39,
-  cellH: 30,
-  cellGap: 4,
-  boardPad: 6,
+  cellW: 48,
+  cellH: 38,
+  cellGap: 5,
+  boardPad: 8,
 
   buyCostLv1: 50,
 
@@ -80,15 +87,15 @@ const BAL = {
   rangePerLevel: 10,
 
   // Zombie ring
-  zombieTrackRadius: 295,
-  zombieTrackWidth: 18,
+  zombieTrackRadius: 340,
+  zombieTrackWidth: 22,
   fenceRadius: 0,
   fenceWidth: 20,
   fenceKeepout: 12,
   zombieFencePush: 24,
-  tankOrbitRadius: 210,
+  tankOrbitRadius: 250,
   tankOrbitSpeed: 0.55,
-  tankTrackWidth: 12,
+  tankTrackWidth: 16,
   zombieCountTarget: 150,
   zombieHpBase: 88,
   zombieHpVar: 0.22,
@@ -139,17 +146,17 @@ const BAL = {
 };
 
 const BASE_BAL = {
-  cellW: 39,
-  cellH: 30,
-  cellGap: 4,
-  boardPad: 6,
-  zombieTrackRadius: 295,
-  zombieTrackWidth: 18,
+  cellW: 48,
+  cellH: 38,
+  cellGap: 5,
+  boardPad: 8,
+  zombieTrackRadius: 340,
+  zombieTrackWidth: 22,
   fenceWidth: 20,
   fenceKeepout: 12,
   zombieFencePush: 24,
-  tankOrbitRadius: 210,
-  tankTrackWidth: 12,
+  tankOrbitRadius: 250,
+  tankTrackWidth: 16,
   zombieScaleMul: 0.72,
   zombieBobAmp: 1.2,
   zombieShadowW: 11,
@@ -224,6 +231,7 @@ function createInitialState(){
       levelRewardTimer: 0,
       menuOpen: true,
     },
+    selectedHangarCellIndex: null,
   };
 }
 
@@ -234,8 +242,7 @@ const DEBUG_PARAM = 'debug';
 function isDebugPanelEnabled(){
   try {
     const params = new URLSearchParams(window.location.search);
-    const v = params.get(DEBUG_PARAM);
-    return v === '1' || v === 'true' || v === 'yes';
+    return params.get(DEBUG_PARAM) === '1';
   } catch (_) { return false; }
 }
 const DebugPanelEnabled = isDebugPanelEnabled();
@@ -305,6 +312,11 @@ const STRINGS = {
     statusOff: 'OFF',
     zombieShort: 'З',
     tankShort: 'Т',
+    dismantleBtn: 'Разобрать танк',
+    dismantleConfirm: 'Вы действительно хотите разобрать танк {level} уровня?',
+    dismantleYes: 'Да',
+    dismantleNo: 'Нет',
+    menuSettings: 'Настройки',
   },
   en: {
     title: 'Tank Merger: Zombie Orbit',
@@ -365,6 +377,11 @@ const STRINGS = {
     statusOff: 'OFF',
     zombieShort: 'Z',
     tankShort: 'T',
+    dismantleBtn: 'Dismantle tank',
+    dismantleConfirm: 'Do you really want to dismantle tank level {level}?',
+    dismantleYes: 'Yes',
+    dismantleNo: 'No',
+    menuSettings: 'Settings',
   }
 };
 
@@ -552,6 +569,15 @@ const ZombieSprites = {
       if (r <= 0) return t;
     }
     return this.types[this.types.length-1];
+  },
+  pickTypeByLevel(level){
+    if (!this.ready || !this.types.length) return null;
+    const lvl = Math.max(1, Math.min(60, Math.floor(level)));
+    const id = 'zombie_lvl' + lvl;
+    const found = this.types.find(t => t.id === id);
+    if (found) return found;
+    const idx = (lvl - 1) % this.types.length;
+    return this.types[idx] || this.types[0];
   }
 };
 
@@ -806,7 +832,7 @@ function recordTankLevel(level){
 
 function buyTankLevel(){
   const maxLevel = Math.max(1, state.maxTankLevelAchieved || 1);
-  return 1 + Math.floor(maxLevel / 5);
+  return Math.min(MAX_TANK_LEVEL, 1 + Math.floor(maxLevel / 5));
 }
 
 function baseBuyPrice(level){
@@ -853,8 +879,10 @@ function mergeCells(fromIdx, toIdx){
   const b = state.cells[toIdx];
   if (!a.tank || !b.tank) return false;
   if (a.tank.level !== b.tank.level) return false;
+  if (a.tank.level >= MAX_TANK_LEVEL) return false;
 
   const lvl = a.tank.level + 1;
+  if (lvl > MAX_TANK_LEVEL) return false;
   b.tank = makeTank(lvl, false);
   a.tank = null;
   recordTankLevel(lvl);
@@ -1491,45 +1519,17 @@ function tankLevelCounts(){
   return counts;
 }
 
+// Weights proportional to tank counts in hangar (excludes unopened crates — they have no cell yet)
 function zombieLevelWeights(){
   const counts = tankLevelCounts();
   const levels = Array.from(counts.keys()).sort((a,b)=>a-b);
   if (!levels.length) return [{level: 1, weight: 1}];
-  if (levels.length === 1) return [{level: levels[0], weight: 1}];
-
-  const minLevel = levels[0];
-  const remaining = 0.15;
-  const minWeightBase = 0.85;
-  const otherLevels = levels.slice(1);
-  const nonMinTotal = otherLevels.reduce((sum, lvl)=>sum + (counts.get(lvl) || 0), 0) || 1;
-  const snap = 0.05;
-
-  const weights = [];
-  let snappedSum = 0;
-  for (const lvl of otherLevels){
-    const raw = remaining * ((counts.get(lvl) || 0) / nonMinTotal);
-    let snapped = Math.round(raw / snap) * snap;
-    if (snapped < snap / 2) snapped = 0;
-    weights.push({level: lvl, weight: snapped, raw});
-    snappedSum += snapped;
-  }
-
-  if (snappedSum > remaining){
-    const scale = remaining / snappedSum;
-    snappedSum = 0;
-    for (const w of weights){
-      w.weight *= scale;
-      snappedSum += w.weight;
-    }
-  } else if (snappedSum === 0){
-    for (const w of weights){
-      w.weight = w.raw;
-      snappedSum += w.weight;
-    }
-  }
-
-  const minWeight = Math.max(0, 1 - snappedSum);
-  return [{level: minLevel, weight: minWeight}, ...weights.map(w=>({level:w.level, weight:w.weight}))];
+  const total = levels.reduce((sum, lvl)=>sum + (counts.get(lvl) || 0), 0);
+  if (total <= 0) return [{level: 1, weight: 1}];
+  return levels.map(lvl => ({
+    level: lvl,
+    weight: (counts.get(lvl) || 0) / total,
+  }));
 }
 
 function pickZombieLevel(){
@@ -1564,9 +1564,11 @@ function assignZombieSlot(z, slotIndex, slotCount){
   z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
 }
 
+const MAX_ZOMBIE_LEVEL = 60;
+
 function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
-  const t = ZombieSprites.pickType();
   const level = pickZombieLevel();
+  const t = ZombieSprites.pickTypeByLevel ? ZombieSprites.pickTypeByLevel(level) : ZombieSprites.pickType();
 
   const theta = Number.isFinite(slotIndex)
     ? zombieSlotTheta(slotIndex, slotCount)
@@ -2204,6 +2206,47 @@ function updateUI(){
   ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
   updateProgressUI();
   updateTalentUI();
+  updateDismantleButton();
+}
+
+function updateDismantleButton(){
+  const cell = state.selectedHangarCellIndex != null && state.cells[state.selectedHangarCellIndex] ? state.cells[state.selectedHangarCellIndex] : null;
+  const hasTank = cell?.tank && !cell.tank.onTrack;
+  if (ui.dismantleBtn){
+    ui.dismantleBtn.disabled = !hasTank;
+    ui.dismantleBtn.textContent = t('dismantleBtn');
+  }
+}
+
+function openDismantleModal(){
+  const idx = state.selectedHangarCellIndex;
+  const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
+  if (!cell?.tank || !ui.dismantleModal) return;
+  if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirm', { level: cell.tank.level });
+  if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
+  if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+  ui.dismantleModal.classList.remove('hidden');
+  ui.dismantleModal.setAttribute('aria-hidden', 'false');
+}
+
+function closeDismantleModal(){
+  if (!ui.dismantleModal) return;
+  ui.dismantleModal.classList.add('hidden');
+  ui.dismantleModal.setAttribute('aria-hidden', 'true');
+}
+
+function confirmDismantle(){
+  const idx = state.selectedHangarCellIndex;
+  const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
+  if (!cell?.tank) return;
+  cell.tank = null;
+  state.selectedHangarCellIndex = null;
+  closeDismantleModal();
+  updateDismantleButton();
+  updateUI();
+  if (state.debug?.refreshHangarList) state.debug.refreshHangarList();
+  if (state.debug?.refreshTankExtras) state.debug.refreshTankExtras();
+  if (state.debug?.refreshZombieWeights) state.debug.refreshZombieWeights();
 }
 
 function ensureProgressUI(){
@@ -2518,14 +2561,17 @@ canvas.addEventListener('pointerup', (e)=>{
   if (!state.dragging.moved){
     from.tank.onTrack = true;
     popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
+    state.selectedHangarCellIndex = from.i;
   } else if (target){
     const merged = mergeCells(from.i, target.i);
     if (!merged && !target.tank){
       target.tank = from.tank;
       from.tank = null;
     }
+    state.selectedHangarCellIndex = target.i;
   }
   state.dragging = null;
+  updateDismantleButton();
 });
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
@@ -2536,6 +2582,12 @@ ui.crateModal?.addEventListener('click', (e) => {
   if (e.target?.dataset?.crateClose){
     closeCrateModal();
   }
+});
+ui.dismantleBtn?.addEventListener('click', () => openDismantleModal());
+ui.dismantleYes?.addEventListener('click', () => confirmDismantle());
+ui.dismantleNo?.addEventListener('click', () => closeDismantleModal());
+ui.dismantleModal?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.dismantleClose === 'true') closeDismantleModal();
 });
 
 // ---------- Render ----------
@@ -2785,7 +2837,7 @@ function drawTankSlot(cell){
   const cy = cell.y + cell.h/2;
   ctx.save();
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
-  rr(ctx, cx-14, cy-10, 28, 20, 8);
+  rr(ctx, cx-18, cy-12, 36, 26, 8);
   ctx.fill();
   drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
   ctx.restore();
@@ -2811,8 +2863,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
-    const maxW = 34 * balScale * scaleMul;
-    const maxH = 26 * balScale * scaleMul;
+    const maxW = 51 * balScale * scaleMul;
+    const maxH = 39 * balScale * scaleMul;
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
@@ -2874,29 +2926,39 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.restore();
 }
 
-const AuraStyleByTier = [
+// Aura by tank level band: 1–9 none, 10–19 band 1, 20–29 band 2, … 50–59 band 5, 60 band 6
+function computeAuraBand(level){
+  const lvl = Math.max(1, Math.floor(level));
+  if (lvl < 10) return null;
+  if (lvl >= 60) return 6;
+  return 1 + Math.floor((lvl - 10) / 10);
+}
+
+const AuraStyleByBand = [
   null,
-  { color: 'rgba(180,255,200,.22)', radius: 20, alpha: 0.14, effect: 'glow' },
-  { color: 'rgba(140,230,255,.24)', radius: 24, alpha: 0.18, effect: 'pulse' },
-  { color: 'rgba(100,180,255,.26)', radius: 28, alpha: 0.20, effect: 'doubleOutline' },
-  { color: 'rgba(186,140,255,.28)', radius: 32, alpha: 0.22, effect: 'particles' },
-  { color: 'rgba(255,248,220,.35)', radius: 38, alpha: 0.32, effect: 'intenseGlow' },
+  { color: 'rgba(180,255,200,.22)', radius: 20, alpha: 0.14, effect: 'glow', pulseSpeed: 4 },
+  { color: 'rgba(140,230,255,.24)', radius: 24, alpha: 0.18, effect: 'pulse', pulseSpeed: 4 },
+  { color: 'rgba(100,180,255,.26)', radius: 28, alpha: 0.20, effect: 'doubleOutline', pulseSpeed: 3 },
+  { color: 'rgba(186,140,255,.28)', radius: 32, alpha: 0.22, effect: 'particles', pulseSpeed: 3 },
+  { color: 'rgba(255,230,140,.30)', radius: 36, alpha: 0.26, effect: 'pulse', pulseSpeed: 2.5 },
+  { color: 'rgba(255,248,220,.35)', radius: 40, alpha: 0.32, effect: 'intenseGlow', pulseSpeed: 2 },
 ];
 
-function drawTankAura(x, y, tier){
-  if (tier < 1 || tier > 5) return;
-  const style = AuraStyleByTier[tier];
+function drawTankAura(x, y, band){
+  if (band == null || band < 1 || band > 6) return;
+  const style = AuraStyleByBand[band];
   if (!style) return;
   const t = nowSec();
   ctx.save();
   ctx.translate(x, y);
   let alpha = style.alpha;
   let scale = 1;
+  const speed = style.pulseSpeed ?? 4;
   if (style.effect === 'pulse'){
-    alpha *= 0.7 + 0.3 * Math.sin(t * 4);
-    scale = 0.92 + 0.08 * Math.sin(t * 4);
+    alpha *= 0.7 + 0.3 * Math.sin(t * speed);
+    scale = 0.92 + 0.08 * Math.sin(t * speed);
   } else if (style.effect === 'intenseGlow'){
-    alpha *= 0.85 + 0.15 * Math.sin(t * 2);
+    alpha *= 0.85 + 0.15 * Math.sin(t * (speed * 0.5));
   }
   const r = style.radius * scale;
   if (style.effect === 'doubleOutline'){
@@ -2930,8 +2992,8 @@ function drawTankAura(x, y, tier){
 
 function drawTank(x,y,tank,ghost=false,rotation=0){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  const powerTier = (tank && typeof tank === 'object' && tank.powerTier != null) ? tank.powerTier : computePowerTier(state.player?.level ?? 1);
-  drawTankAura(x, y, powerTier);
+  const auraBand = computeAuraBand(level);
+  if (auraBand != null) drawTankAura(x, y, auraBand);
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.();
   const cannon = TankSprites?.pickCannon?.(level);
@@ -3555,7 +3617,7 @@ function loop(now){
 }
 
 // ---------- Debug Panel (?debug=1) ----------
-const DEBUG_MAX_TANK_LEVEL = 20;
+const DEBUG_MAX_TANK_LEVEL = MAX_TANK_LEVEL;
 const DEBUG_LOG_MAX = 100;
 
 function debugLog(level, msg){
@@ -3646,6 +3708,8 @@ function initDebugPanel(){
     </div>
     <div class="debugTabs">
       <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>
+      <button type="button" class="debugTab" data-tab="zombies">Zombies</button>
+      <button type="button" class="debugTab" data-tab="roads">Roads/Hangar</button>
       <button type="button" class="debugTab" data-tab="effects">Effects</button>
       <button type="button" class="debugTab" data-tab="actives">Actives</button>
       <button type="button" class="debugTab" data-tab="talents">Talents</button>
@@ -3662,6 +3726,30 @@ function initDebugPanel(){
           <label class="debugLabel">Hangar — select target</label>
           <div id="debugHangarList"></div>
         </div>
+        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>
+        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>
+        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>
+        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>
+        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>
+      </div>
+      <div id="debugSectionZombies" class="debugSection">
+        <div id="debugZombieWeights" class="debugRow" style="font-size:11px;margin-bottom:6px"></div>
+        <div class="debugRow">
+          <button type="button" class="debugBtn debugSimSpawns" data-n="100">Simulate 100 spawns</button>
+          <button type="button" class="debugBtn debugSimSpawns" data-n="1000">Simulate 1000 spawns</button>
+        </div>
+        <div id="debugSimResults" class="debugRow" style="font-size:11px;margin-top:6px;white-space:pre-wrap;max-height:120px;overflow:auto"></div>
+      </div>
+      <div id="debugSectionRoads" class="debugSection">
+        <div class="debugRow"><label class="debugLabel">Zombie track radius</label><input type="range" id="debugZombieRadius" min="200" max="450" step="5" /><span id="debugZombieRadiusVal"></span></div>
+        <div class="debugRow"><label class="debugLabel">Tank orbit radius</label><input type="range" id="debugTankRadius" min="150" max="320" step="5" /><span id="debugTankRadiusVal"></span></div>
+        <div class="debugRow"><label class="debugLabel">Cell width</label><input type="range" id="debugCellW" min="30" max="70" step="2" /><span id="debugCellWVal"></span></div>
+        <div class="debugRow"><label class="debugLabel">Cell height</label><input type="range" id="debugCellH" min="22" max="50" step="2" /><span id="debugCellHVal"></span></div>
+        <div class="debugRow" style="margin-top:8px">
+          <button type="button" class="debugBtn" id="debugApplyRoads">Apply</button>
+          <button type="button" class="debugBtn" id="debugResetRoads">Reset to defaults</button>
+        </div>
+        <div id="debugRoadsNote" class="debugRow" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
       </div>
       <div id="debugSectionEffects" class="debugSection">
         <div class="debugRow">
@@ -3713,8 +3801,10 @@ function initDebugPanel(){
       const sectionId = 'debugSection' + tab.charAt(0).toUpperCase() + tab.slice(1);
       const section = panel.querySelector('#' + sectionId);
       if (section) section.classList.add('active');
-      if (tab === 'tanks') refreshDebugHangarList();
+      if (tab === 'tanks') { refreshDebugHangarList(); refreshDebugTankExtras(); }
       if (tab === 'effects') refreshDebugEffectList();
+      if (tab === 'zombies') refreshDebugZombieWeights();
+      if (tab === 'roads') refreshDebugRoadsSliders();
       if (tab === 'actives') refreshDebugActivesList();
       if (tab === 'talents') refreshDebugTalentsList();
     });
@@ -3740,8 +3830,23 @@ function initDebugPanel(){
       recordTankLevel(level);
       debugLog('info', `Spawned tank Lv${level} in slot ${empty.i}.`);
       refreshDebugHangarList();
+      refreshDebugTankExtras();
     }, 'Spawn failed ');
   });
+
+  const dismantleDebugBtn = panel.querySelector('#debugDismantleBtn');
+  if (dismantleDebugBtn) dismantleDebugBtn.addEventListener('click', () => {
+    safeDebug(() => {
+      const idx = state.debug.targetCellIndex;
+      const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
+      if (!cell?.tank) { debugLog('warn', 'Select a slot with a tank first.'); return; }
+      state.selectedHangarCellIndex = idx;
+      openDismantleModal();
+    }, 'Dismantle failed ');
+  });
+
+  const openSettingsBtn = panel.querySelector('#debugOpenSettings');
+  if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => setMenuOpen(true));
 
   const stopVfxBtn = panel.querySelector('#debugStopAllVfx');
   if (stopVfxBtn) stopVfxBtn.addEventListener('click', () => {
@@ -3801,6 +3906,7 @@ function initDebugPanel(){
           debugLog('info', `Target tank: slot ${i} Lv${cell.tank.level}.`);
           panel.querySelectorAll('#debugHangarList button').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
+          refreshDebugTankExtras();
         });
         if (state.debug.targetCellIndex === i) btn.classList.add('active');
       } else {
@@ -3809,7 +3915,120 @@ function initDebugPanel(){
       }
       container.appendChild(btn);
     });
+    refreshDebugTankExtras();
   }
+
+  function refreshDebugTankExtras(){
+    const compEl = panel.querySelector('#debugTankComposition');
+    const mergeEl = panel.querySelector('#debugMergePossible');
+    const auraEl = panel.querySelector('#debugAuraBand');
+    const dismantleBtn = panel.querySelector('#debugDismantleBtn');
+    const counts = tankLevelCounts();
+    const levels = Array.from(counts.keys()).sort((a,b)=>a-b);
+    const total = levels.reduce((s,l)=>s+(counts.get(l)||0),0);
+    if (compEl) compEl.textContent = total ? 'By level: ' + levels.map(l=>`Lv${l}:${counts.get(l)}`).join(', ') : 'No tanks (excl. unopened crates).';
+    const idx = state.debug.targetCellIndex;
+    const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
+    const tank = cell?.tank;
+    if (mergeEl) {
+      if (!tank) mergeEl.textContent = 'Merge possible: — (select a tank)';
+      else {
+        const sameLevel = state.cells.some(c=>c !== cell && c.tank && c.tank.level === tank.level);
+        const atMax = tank.level >= MAX_TANK_LEVEL;
+        mergeEl.textContent = 'Merge possible: ' + (sameLevel && !atMax ? 'Yes' : (atMax ? 'No (max level)' : 'No (no same-level tank)'));
+      }
+    }
+    if (auraEl) {
+      if (!tank) auraEl.textContent = 'Aura band: —';
+      else {
+        const band = computeAuraBand(tank.level);
+        auraEl.textContent = 'Level ' + tank.level + ' → Aura band: ' + (band == null ? 'none (<10)' : band);
+      }
+    }
+    if (dismantleBtn) dismantleBtn.disabled = !tank || (tank.onTrack === true);
+  }
+
+  function refreshDebugZombieWeights(){
+    const el = panel.querySelector('#debugZombieWeights');
+    if (!el) return;
+    const weights = zombieLevelWeights();
+    el.textContent = weights.length ? 'Weights: ' + weights.map(w=>`Lv${w.level} ${(w.weight*100).toFixed(1)}%`).join(', ') : 'No tanks → fallback Lv1 100%';
+  }
+
+  function refreshDebugRoadsSliders(){
+    const rZ = panel.querySelector('#debugZombieRadius');
+    const rT = panel.querySelector('#debugTankRadius');
+    const cW = panel.querySelector('#debugCellW');
+    const cH = panel.querySelector('#debugCellH');
+    const vZ = panel.querySelector('#debugZombieRadiusVal');
+    const vT = panel.querySelector('#debugTankRadiusVal');
+    const vW = panel.querySelector('#debugCellWVal');
+    const vH = panel.querySelector('#debugCellHVal');
+    if (rZ) { rZ.value = BAL.zombieTrackRadius; if (vZ) vZ.textContent = BAL.zombieTrackRadius; }
+    if (rT) { rT.value = BAL.tankOrbitRadius; if (vT) vT.textContent = BAL.tankOrbitRadius; }
+    if (cW) { cW.value = BAL.cellW; if (vW) vW.textContent = BAL.cellW; }
+    if (cH) { cH.value = BAL.cellH; if (vH) vH.textContent = BAL.cellH; }
+  }
+
+  panel.querySelectorAll('.debugSimSpawns').forEach(btn => {
+    btn.addEventListener('click', () => {
+      safeDebug(() => {
+        const n = Number(btn.dataset.n) || 100;
+        const counts = {};
+        for (let i = 0; i < n; i++) {
+          const lvl = pickZombieLevel();
+          counts[lvl] = (counts[lvl] || 0) + 1;
+        }
+        const levels = Object.keys(counts).map(Number).sort((a,b)=>a-b);
+        const lines = levels.map(l=>`Lv${l}: ${counts[l]} (${(counts[l]/n*100).toFixed(1)}%)`);
+        const el = panel.querySelector('#debugSimResults');
+        if (el) el.textContent = `Simulated ${n} spawns:\n` + lines.join('\n');
+        debugLog('info', `Simulated ${n} zombie spawns.`);
+      }, 'Simulate failed ');
+    });
+  });
+
+  ['debugZombieRadius','debugTankRadius','debugCellW','debugCellH'].forEach(id => {
+    const input = panel.querySelector('#' + id);
+    const valId = id + 'Val';
+    const valEl = panel.querySelector('#' + valId);
+    if (input && valEl) input.addEventListener('input', () => { valEl.textContent = input.value; });
+  });
+
+  const applyRoadsBtn = panel.querySelector('#debugApplyRoads');
+  if (applyRoadsBtn) applyRoadsBtn.addEventListener('click', () => {
+    safeDebug(() => {
+      const rZ = panel.querySelector('#debugZombieRadius');
+      const rT = panel.querySelector('#debugTankRadius');
+      const cW = panel.querySelector('#debugCellW');
+      const cH = panel.querySelector('#debugCellH');
+      if (rZ) BAL.zombieTrackRadius = Number(rZ.value);
+      if (rT) BAL.tankOrbitRadius = Number(rT.value);
+      if (cW) BAL.cellW = Number(cW.value);
+      if (cH) BAL.cellH = Number(cH.value);
+      initBoard();
+      const note = panel.querySelector('#debugRoadsNote');
+      if (note) note.textContent = 'Applied. Resize may override; reload for persistent defaults.';
+      debugLog('info', 'Roads/hangar applied.');
+    }, 'Apply failed ');
+  });
+
+  const resetRoadsBtn = panel.querySelector('#debugResetRoads');
+  if (resetRoadsBtn) resetRoadsBtn.addEventListener('click', () => {
+    safeDebug(() => {
+      BAL.zombieTrackRadius = BASE_BAL.zombieTrackRadius;
+      BAL.tankOrbitRadius = BASE_BAL.tankOrbitRadius;
+      BAL.cellW = BASE_BAL.cellW;
+      BAL.cellH = BASE_BAL.cellH;
+      BAL.cellGap = BASE_BAL.cellGap;
+      BAL.boardPad = BASE_BAL.boardPad;
+      initBoard();
+      refreshDebugRoadsSliders();
+      const note = panel.querySelector('#debugRoadsNote');
+      if (note) note.textContent = '';
+      debugLog('info', 'Roads/hangar reset to defaults.');
+    }, 'Reset failed ');
+  });
 
   function refreshDebugEffectList(){
     const container = panel.querySelector('#debugEffectList');
@@ -3944,6 +4163,10 @@ function initDebugPanel(){
     });
   }
 
+  state.debug.refreshHangarList = refreshDebugHangarList;
+  state.debug.refreshTankExtras = refreshDebugTankExtras;
+  state.debug.refreshZombieWeights = refreshDebugZombieWeights;
+  state.debug.refreshRoadsSliders = refreshDebugRoadsSliders;
   main.insertBefore(panel, main.firstChild);
   refreshDebugHangarList();
   refreshDebugEffectList();
@@ -3992,6 +4215,7 @@ async function boot(){
     saveSettings();
   });
   ui.talentsBtn?.addEventListener('click', () => openTalents());
+  ui.settingsBtn?.addEventListener('click', () => setMenuOpen(true));
   ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
   if (window.visualViewport){

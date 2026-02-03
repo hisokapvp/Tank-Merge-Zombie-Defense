@@ -47,6 +47,19 @@
       "scale": 1.0,
       "muzzle": { "x": 28, "y": -1 },
       "recoil": 5
+    },
+    {
+      "id": "cannon_endgame",
+      "minLevel": 51,
+      "src": "tanks/cannon_lvl7.png",
+      "frame": { "w": 128, "h": 128 },
+      "frames": 8,
+      "animSpeed": 12.0,
+      "fireFrame": 2,
+      "anchor": { "x": 0.5, "y": 0.7 },
+      "scale": 1.0,
+      "muzzle": { "x": 28, "y": -1 },
+      "recoil": 5
     }
   ]
 }
