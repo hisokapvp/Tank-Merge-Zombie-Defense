@@ -1,7 +1,7 @@
 {
   "tankScale": 2.5,
   "body": {
-    "src": "tanks/body.png",
+    "src": "tanks/body_all.png",
     "frame": { "w": 128, "h": 128 },
     "frames": 2,
     "anchor": { "x": 0.5, "y": 0.6 },
