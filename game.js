@@ -103,9 +103,9 @@ const BAL = {
   omegaVar: 0.18,
   zombieSwayAmp: 0.14,
 
-  // Zombie visuals (walk + size)
+  // Zombie visuals (walk + size) — fixed size, no level scaling
   zombieScaleMul: 0.72,
-  zombieLevelScaleAdd: 0.08,
+  zombieLevelScaleAdd: 0,
   zombieBobAmp: 1.2,
   zombieBobSpeedMul: 7.0,
   zombieShadowW: 11,
@@ -195,6 +195,7 @@ function createInitialState(){
     impacts: [],     // rings + bolts
     decals: [],      // e.g., toxic pools
     particles: [],
+    damageNumbers: [],
     crate: null,
     nextCrateAt: 0,
     dragging: null,
@@ -613,9 +614,22 @@ const TankSprites = {
       this.cache.clear();
     }
   },
-  pickBody(){
+  resolveVariant(level, key){
+    const levels = this.config?.levels;
+    if (!levels || !Array.isArray(levels)) return null;
+    const lvl = Math.max(1, Math.min(60, Math.floor(level)));
+    for (let L = lvl; L >= 1; L--){
+      const entry = levels[L - 1];
+      if (entry && entry[key] != null) return entry[key];
+    }
+    return null;
+  },
+  pickBody(level){
     if (!this.ready || !this.config?.body?.src) return null;
-    const cfg = this.config.body;
+    const bodyVariant = level != null ? this.resolveVariant(level, 'bodyVariant') : null;
+    const bodies = this.config?.bodies;
+    const cfg = (bodies && bodyVariant && bodies[bodyVariant]) ? bodies[bodyVariant] : this.config.body;
+    if (!cfg?.src) return null;
     const full = 'assets/' + cfg.src;
     const img = this.cache.get(full);
     if (!img) return null;
@@ -623,10 +637,18 @@ const TankSprites = {
   },
   pickCannon(level){
     if (!this.ready || !this.config?.cannons?.length) return null;
-    const cannons = [...this.config.cannons].sort((a,b)=>a.minLevel - b.minLevel);
+    const cannonVariant = level != null ? this.resolveVariant(level, 'cannonVariant') : null;
+    const cannons = this.config.cannons;
     let chosen = null;
-    for (const cannon of cannons){
-      if (cannon.minLevel <= level) chosen = cannon;
+    if (cannonVariant){
+      chosen = cannons.find(c => c.id === cannonVariant);
+      if (!chosen && typeof console !== 'undefined' && console.warn) console.warn('TankSprites: unknown cannonVariant', cannonVariant);
+    }
+    if (!chosen){
+      const sorted = [...cannons].sort((a,b)=>a.minLevel - b.minLevel);
+      for (const cannon of sorted){
+        if (cannon.minLevel <= level) chosen = cannon;
+      }
     }
     if (!chosen?.src) return null;
     const full = 'assets/' + chosen.src;
@@ -648,12 +670,19 @@ function loadImage(url){
 const BASE_CANVAS = { w: 1100, h: 650 };
 let balScale = 1;
 
+const DESKTOP_BREAKPOINT = 768;
+
 function applyBalScale(scale){
   const clamped = clamp(scale, 1, 1.35);
   balScale = clamped;
 
-  BAL.cellW = BASE_BAL.cellW * clamped;
-  BAL.cellH = BASE_BAL.cellH * clamped;
+  if (viewSize && viewSize.w >= DESKTOP_BREAKPOINT) {
+    BAL.cellW = 70;
+    BAL.cellH = 70;
+  } else {
+    BAL.cellW = BASE_BAL.cellW * clamped;
+    BAL.cellH = BASE_BAL.cellH * clamped;
+  }
   BAL.cellGap = BASE_BAL.cellGap * clamped;
   BAL.boardPad = BASE_BAL.boardPad * clamped;
 
@@ -723,7 +752,7 @@ function initBoard(){
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
   const hangarRadius = Math.max(totalW, totalH) / 2 + 12;
-  const orbitPad = 10;
+  const orbitPad = Math.max(10, 24 + BAL.tankTrackWidth);
   const fencePad = 24;
   const trackPad = 18;
   BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
@@ -1448,12 +1477,17 @@ function applySavedProgress(data){
   return true;
 }
 
+const PROJECTILE_KINDS = {
+  ap: { kind:'ap', speed: 820, r: 4.0, color:'#ffd36b', glow:'rgba(255,211,107,.25)', trail:'rgba(255,211,107,.12)', aoeBase: 18, aoePerLevel: 2.4, aoeMin: 16, aoeMax: 40 },
+  he: { kind:'he', speed: 740, r: 5.6, color:'#ff7a6b', glow:'rgba(255,122,107,.26)', trail:'rgba(255,122,107,.12)', aoeBase: 28, aoePerLevel: 3.2, aoeMin: 24, aoeMax: 58 },
+  toxic: { kind:'toxic', speed: 700, r: 5.0, color:'#b8ff3b', glow:'rgba(184,255,59,.22)', trail:'rgba(184,255,59,.10)', aoeBase: 30, aoePerLevel: 3.4, aoeMin: 26, aoeMax: 64, poolLife: 3.6, poolDpsMul: 0.20 },
+  tesla: { kind:'tesla', speed: 900, r: 4.6, color:'#8bd3ff', glow:'rgba(139,211,255,.25)', trail:'rgba(139,211,255,.10)', aoeBase: 26, aoePerLevel: 2.8, aoeMin: 26, aoeMax: 66, chainRange: 84, chainJumps: 3, chainMul: 0.45 },
+};
+
 function projectileProfile(level){
-  // Different projectile & impact styles by level bands.
-  // 1-3: AP shell (small aoe)
-  // 4-6: HE (bigger aoe + bright explosion)
-  // 7-9: Toxic (aoe + poison pool DOT)
-  // 10+: Tesla (aoe + chain lightning)
+  const bulletVariant = TankSprites?.resolveVariant?.(level, 'bulletVariant');
+  if (bulletVariant && PROJECTILE_KINDS[bulletVariant]) return PROJECTILE_KINDS[bulletVariant];
+  // Level bands: 1-3 AP, 4-6 HE, 7-9 Toxic, 10+ Tesla
   if (level <= 3) return {
     kind:'ap',
     speed: 820,
@@ -1492,21 +1526,7 @@ function projectileProfile(level){
     poolLife: 3.6,
     poolDpsMul: 0.20,
   };
-  return {
-    kind:'tesla',
-    speed: 900,
-    r: 4.6,
-    color:'#8bd3ff',
-    glow:'rgba(139,211,255,.25)',
-    trail:'rgba(139,211,255,.10)',
-    aoeBase: 26,
-    aoePerLevel: 2.8,
-    aoeMin: 26,
-    aoeMax: 66,
-    chainRange: 84,
-    chainJumps: 3,
-    chainMul: 0.45,
-  };
+  return PROJECTILE_KINDS.tesla;
 }
 
 function tankLevelCounts(){
@@ -1647,9 +1667,9 @@ function zombiePos(z){
   };
 }
 
+// All zombies use fixed visual size (no scaling by level).
 function zombieLevelScale(z){
-  const level = z.level ?? 1;
-  return 1 + BAL.zombieLevelScaleAdd * Math.max(0, level - 1);
+  return 1;
 }
 
 function zombieHpMultiplier(level){
@@ -1767,7 +1787,7 @@ function stepTanks(dt){
       const d = Math.hypot(dx, dy);
       if (!d || d > s.range || d >= bestD) continue;
       const dot = (dx * fwdX + dy * fwdY) / d;
-      if (dot <= 0) continue;
+      if (dot <= 0.1) continue;
       best = z;
       bestD = d;
     }
@@ -1928,7 +1948,9 @@ function impactAt(x,y,b){
     const d = Math.hypot(p.x-x, p.y-y);
     if (d <= b.aoe){
       const falloff = 0.55 + 0.45*(1 - d/b.aoe);
-      z.hp -= b.dmg * falloff;
+      const dmg = b.dmg * falloff;
+      z.hp -= dmg;
+      addDamageNumber(p.x, p.y, Math.round(dmg));
       if (Math.random() < mods.dotChance){
         z.dotUntil = nowSec() + 4;
         z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
@@ -1989,10 +2011,38 @@ function chainLightning(x,y,b){
     // visual bolt
     state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
 
-    best.hp -= b.dmg * mul;
+    const chainDmg = b.dmg * mul;
+    best.hp -= chainDmg;
+    addDamageNumber(p.x, p.y, Math.round(chainDmg));
     curX = p.x;
     curY = p.y;
   }
+}
+
+const MAX_DAMAGE_NUMBERS = 24;
+
+function addDamageNumber(x, y, value){
+  if (state.damageNumbers.length >= MAX_DAMAGE_NUMBERS) state.damageNumbers.shift();
+  const jitter = 8;
+  state.damageNumbers.push({
+    x: x + (Math.random() * 2 - 1) * jitter,
+    y: y + (Math.random() * 2 - 1) * jitter,
+    value: String(value),
+    life: 1,
+    max: 1,
+    vy: -28,
+  });
+}
+
+function stepDamageNumbers(dt){
+  const next = [];
+  for (const d of state.damageNumbers){
+    d.life -= dt;
+    if (d.life <= 0) continue;
+    d.y += d.vy * dt;
+    next.push(d);
+  }
+  state.damageNumbers = next;
 }
 
 // ---------- Decals (persistent effects) ----------
@@ -2606,6 +2656,7 @@ function draw(){
   drawProjectiles();
   drawImpacts();
   drawParticles();
+  drawDamageNumbers();
   drawLevelUpVfx();
 
   // If sprites failed to load, show a small hint on canvas
@@ -2849,7 +2900,7 @@ function drawOrbitingTanks(){
     if (!c.tank || !c.tank.onTrack) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
     const pos = tankOrbitState(c, t);
-    drawTank(pos.x, pos.y, c.tank, false, pos.heading);
+    drawTank(pos.x, pos.y, c.tank, false, pos.heading, false);
   }
 }
 
@@ -2858,7 +2909,7 @@ function drawTankIcon(x,y,level,mutedSlot=false){
 }
 
 function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
-  const body = TankSprites?.pickBody?.();
+  const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
@@ -2900,6 +2951,13 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
       cannonDrawW,
       cannonDrawH
     );
+    if (!mutedSlot && level != null) {
+      targetCtx.fillStyle = '#eaf1ff';
+      targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      targetCtx.textAlign = 'center';
+      targetCtx.textBaseline = 'top';
+      targetCtx.fillText(`${t('levelShort')}${level}`, 0, drawH * 0.5 + 4);
+    }
     targetCtx.restore();
     return;
   }
@@ -2923,11 +2981,21 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.fillStyle = shade(hull, -30);
   rr(targetCtx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
   targetCtx.fill();
+  if (!mutedSlot && level != null) {
+    targetCtx.fillStyle = '#eaf1ff';
+    targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'top';
+    targetCtx.fillText(`${t('levelShort')}${level}`, 0, 10);
+  }
   targetCtx.restore();
 }
 
-// Aura by tank level band: 1–9 none, 10–19 band 1, 20–29 band 2, … 50–59 band 5, 60 band 6
+// Aura by tank level band: per-level auraVariant > 1–9 none, 10–19 band 1, … 60 band 6
 function computeAuraBand(level){
+  const v = TankSprites?.resolveVariant?.(level, 'auraVariant');
+  if (v != null && typeof v === 'number' && v >= 1 && v <= 6) return v;
+  if (v != null && v === false) return null;
   const lvl = Math.max(1, Math.floor(level));
   if (lvl < 10) return null;
   if (lvl >= 60) return 6;
@@ -2990,12 +3058,12 @@ function drawTankAura(x, y, band){
   ctx.restore();
 }
 
-function drawTank(x,y,tank,ghost=false,rotation=0){
+function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
   const auraBand = computeAuraBand(level);
   if (auraBand != null) drawTankAura(x, y, auraBand);
   // Try sprite-based tanks if assets/tanks.json exists
-  const body = TankSprites?.pickBody?.();
+  const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
   if (body && cannon){
     ctx.save();
@@ -3060,17 +3128,18 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
     );
     ctx.restore();
 
-    // level badge (same as vector)
-    const tier = Math.floor((level-1)/3);
-    const badge = ['rgba(0,0,0,.35)','rgba(0,0,0,.35)','rgba(110,168,255,.22)','rgba(125,255,178,.22)','rgba(185,139,255,.22)'][clamp(tier,0,4)];
-    ctx.fillStyle = badge;
-    rr(ctx, -16, 6, 32, 16, 8);
-    ctx.fill();
-    ctx.fillStyle = '#eaf1ff';
-    ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${t('levelShort')}${level}`, 0, 14);
+    if (showLevelLabel) {
+      const tier = Math.floor((level-1)/3);
+      const badge = ['rgba(0,0,0,.35)','rgba(0,0,0,.35)','rgba(110,168,255,.22)','rgba(125,255,178,.22)','rgba(185,139,255,.22)'][clamp(tier,0,4)];
+      ctx.fillStyle = badge;
+      rr(ctx, -16, 6, 32, 16, 8);
+      ctx.fill();
+      ctx.fillStyle = '#eaf1ff';
+      ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${t('levelShort')}${level}`, 0, 14);
+    }
 
     ctx.restore();
     return;
@@ -3144,17 +3213,17 @@ function drawTank(x,y,tank,ghost=false,rotation=0){
   ctx.fill();
   ctx.restore();
 
-  // level badge
-  const badge = ['rgba(0,0,0,.35)','rgba(0,0,0,.35)','rgba(110,168,255,.22)','rgba(125,255,178,.22)','rgba(185,139,255,.22)'][clamp(tier,0,4)];
-  ctx.fillStyle = badge;
-  rr(ctx, -16, 1, 32, 16, 8);
-  ctx.fill();
-
-  ctx.fillStyle = '#eaf1ff';
-  ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${t('levelShort')}${level}`, 0, 9);
+  if (showLevelLabel) {
+    const badge = ['rgba(0,0,0,.35)','rgba(0,0,0,.35)','rgba(110,168,255,.22)','rgba(125,255,178,.22)','rgba(185,139,255,.22)'][clamp(tier,0,4)];
+    ctx.fillStyle = badge;
+    rr(ctx, -16, 1, 32, 16, 8);
+    ctx.fill();
+    ctx.fillStyle = '#eaf1ff';
+    ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${t('levelShort')}${level}`, 0, 9);
+  }
 
   // glow for high tier
   if (tier >= 3){
@@ -3479,6 +3548,21 @@ function drawDecals(){
   }
 }
 
+function drawDamageNumbers(){
+  for (const d of state.damageNumbers){
+    const t = d.life / d.max;
+    const alpha = t <= 0.2 ? t / 0.2 : (t >= 0.6 ? 1 : (t - 0.2) / 0.4);
+    ctx.save();
+    ctx.globalAlpha = clamp(alpha, 0, 1) * (0.5 + 0.5 * t);
+    ctx.fillStyle = '#fff8e0';
+    ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(d.value, d.x, d.y);
+    ctx.restore();
+  }
+}
+
 function drawParticles(){
   for (const p of state.particles){
     const t = p.life / p.max;
@@ -3608,6 +3692,7 @@ function loop(now){
     cleanupKills();
     stepImpacts(effDt);
     stepParticles(effDt);
+    stepDamageNumbers(effDt);
   }
 
   updateUI();

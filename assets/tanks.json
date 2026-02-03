@@ -1,5 +1,6 @@
 {
   "tankScale": 2.5,
+  "levels": [],
   "body": {
     "src": "tanks/body.png",
     "frame": { "w": 128, "h": 128 },
