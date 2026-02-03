@@ -41,6 +41,25 @@ const ui = {
   levelAccept: document.getElementById('levelAccept'),
 };
 
+// Power tier from player level (0–5): thresholds 10,20,30,40,50,60
+const POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
+function computePowerTier(playerLevel){
+  const lvl = Math.max(1, Math.floor(playerLevel));
+  if (lvl < 10) return 0;
+  if (lvl < 20) return 1;
+  if (lvl < 30) return 2;
+  if (lvl < 40) return 3;
+  if (lvl < 50) return 4;
+  return 5;
+}
+
+function refreshTanksPowerTier(){
+  const tier = computePowerTier(state.player?.level ?? 1);
+  for (const cell of state.cells || []){
+    if (cell.tank) cell.tank.powerTier = tier;
+  }
+}
+
 const BAL = {
   // Board 4x4 (smaller cells)
   rows: 4,
@@ -190,7 +209,11 @@ function createInitialState(){
       activeCooldowns: [0, 0, 0],
       mods: null,
       modsDirty: true,
+      eventShown40: false,
+      eventShown50: false,
+      eventShown60: false,
     },
+    endgameVisuals: false,
     maxTankLevelAchieved: 1,
     buyCounts: {},
     buyPrices: {},
@@ -264,6 +287,9 @@ const STRINGS = {
     levelModalTalent: 'Вы получили {points} {talent}',
     levelModalGold: 'Вы получили {gold} золота',
     levelUpAccept: 'Принять награду',
+    powerMoment40: 'Открыты активные способности!',
+    powerMoment50: 'Максимальная мощь танков.',
+    powerMoment60: 'Режим эндгейма — враги усилены.',
     statusOn: 'OK',
     statusOff: 'OFF',
     zombieShort: 'З',
@@ -321,6 +347,9 @@ const STRINGS = {
     levelModalTalent: 'You received {points} {talent}',
     levelModalGold: 'You received {gold} gold',
     levelUpAccept: 'Claim reward',
+    powerMoment40: 'Active abilities unlocked!',
+    powerMoment50: 'Maximum tank power.',
+    powerMoment60: 'Endgame mode — enemies enhanced.',
     statusOn: 'OK',
     statusOff: 'OFF',
     zombieShort: 'Z',
@@ -393,6 +422,31 @@ function applyAudioSettings(){
     el.volume = sfxVolume;
   });
 }
+
+// SFX playback: volume from settings.sfxVolume; dedup by event id
+const SFX_LAST_PLAYED = {};
+const SFX_DEDUP_MS = 80;
+function playSfx(id){
+  const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  const now = performance.now();
+  if (SFX_LAST_PLAYED[id] != null && now - SFX_LAST_PLAYED[id] < SFX_DEDUP_MS) return;
+  SFX_LAST_PLAYED[id] = now;
+  try{
+    const src = SFX_SOURCES[id];
+    if (!src) return;
+    const a = new Audio(src);
+    a.volume = vol;
+    a.play().catch(() => {});
+  }catch(e){}
+}
+const SFX_SOURCES = {
+  shootNormal: 'assets/sfx/shoot_normal.ogg',
+  shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+  shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
+  levelUp: 'assets/sfx/level_up.ogg',
+  applyTalents: 'assets/sfx/apply_talents.ogg',
+  activeAbility: 'assets/sfx/active_ability.ogg',
+};
 
 function updateMenuVolumes(){
   if (ui.menuMusic){
@@ -726,6 +780,7 @@ function makeTank(level, onTrack = false){
   return {
     id: crypto.randomUUID(),
     level,
+    powerTier: computePowerTier(state.player?.level ?? 1),
     cooldown: 0,
     onTrack,
     bodyAnim: Math.random() * 2,
@@ -933,8 +988,54 @@ function grantXP(amount){
   }
   p.xpToNext = xpNeededForLevel(p.level);
   if (leveled){
+    refreshTanksPowerTier();
+    triggerLevelUpVfx(p.level);
+    checkPowerMomentEvents(p.level);
     queueLevelReward(p.level, gainedLevels, rewardGold);
     saveProgress();
+  }
+}
+
+function triggerLevelUpVfx(level){
+  const now = nowSec();
+  state.levelUpVfxUntil = now + 0.15;
+  state.levelUpText = { level, until: now + 2.2 };
+  state.timeScale = 0.7;
+  playSfx('levelUp');
+}
+
+function checkPowerMomentEvents(level){
+  const p = state.player;
+  if (!p) return;
+  if (level >= 40 && !p.eventShown40){
+    p.eventShown40 = true;
+    showCenterNotification(t('powerMoment40'));
+  }
+  if (level >= 50) p.eventShown50 = true;
+  if (level >= 60){
+    p.eventShown60 = true;
+    state.endgameVisuals = true;
+  }
+}
+
+let centerNotificationEl = null;
+let centerNotificationHideAt = 0;
+function showCenterNotification(text){
+  if (!centerNotificationEl){
+    centerNotificationEl = document.createElement('div');
+    centerNotificationEl.className = 'centerNotification';
+    centerNotificationEl.setAttribute('aria-live', 'polite');
+    document.body.appendChild(centerNotificationEl);
+  }
+  centerNotificationEl.textContent = text;
+  centerNotificationEl.classList.remove('hidden');
+  centerNotificationHideAt = nowSec() + 3;
+}
+function updateCenterNotification(){
+  if (!centerNotificationEl || !centerNotificationEl.textContent) return;
+  if (nowSec() >= centerNotificationHideAt){
+    centerNotificationEl.classList.add('hidden');
+    centerNotificationEl.textContent = '';
   }
 }
 
@@ -1071,7 +1172,7 @@ function resetTalentSelections(){
   updateTalentUI();
 }
 
-function applyTalentSelections(){
+function doApplyTalentSelections(){
   const p = state.player;
   const cost = pendingCost();
   if (cost <= 0 || cost > p.talentPoints) return;
@@ -1086,6 +1187,38 @@ function applyTalentSelections(){
   p.modsDirty = true;
   saveProgress();
   updateTalentUI();
+}
+
+const APPLY_VFX_FLASH_MS = 120;
+const APPLY_VFX_FLOW_MS = 380;
+const APPLY_VFX_TOTAL_MS = 520;
+let applyTalentBusy = false;
+
+function applyTalentSelections(){
+  const p = state.player;
+  const cost = pendingCost();
+  if (cost <= 0 || cost > p.talentPoints) return;
+  if (applyTalentBusy) return;
+  applyTalentBusy = true;
+  const applyBtn = document.querySelector('#talentApply');
+  if (applyBtn) applyBtn.disabled = true;
+
+  playSfx('applyTalents');
+  const overlay = document.getElementById('talentOverlay');
+  const modal = overlay?.querySelector('.modal');
+  if (modal) modal.classList.add('talentApplyFlash');
+  overlay?.querySelectorAll('.talentBtn').forEach(btn => {
+    const i = Number(btn.dataset.talent);
+    if ((p.talentsPending[i] || 0) > 0) btn.classList.add('talentEnergyFlow');
+  });
+
+  setTimeout(() => {
+    if (modal) modal.classList.remove('talentApplyFlash');
+    overlay?.querySelectorAll('.talentBtn').forEach(btn => btn.classList.remove('talentEnergyFlow'));
+    doApplyTalentSelections();
+    applyTalentBusy = false;
+    if (applyBtn) applyBtn.disabled = pendingCost() <= 0 || pendingCost() > state.player.talentPoints;
+  }, APPLY_VFX_TOTAL_MS);
 }
 
 function canSelectTalent(i){
@@ -1143,6 +1276,7 @@ function useActiveAbility(branch){
   const mods = getMods();
   const baseCooldown = 30;
   p.activeCooldowns[branch] = now + baseCooldown * mods.activeCooldownMul;
+  playSfx('activeAbility');
 
   if (branch === 0){
     state.activeEffects.attackUntil = now + 6;
@@ -1157,18 +1291,41 @@ function useActiveAbility(branch){
   saveProgress();
 }
 
+const TALENT_OPEN_ANIM_MS = 180;
 function openTalents(){
   state.ui.talentsOpen = true;
   ensureTalentUI();
   updateTalentUI();
   const overlay = document.getElementById('talentOverlay');
-  if (overlay) overlay.classList.remove('hidden');
+  if (!overlay) return;
+  const modal = overlay.querySelector('.modal');
+  overlay.classList.remove('hidden');
+  if (modal){
+    modal.style.transform = 'scale(0.92)';
+    modal.style.opacity = '0';
+    modal.offsetHeight;
+    modal.style.transition = `transform ${TALENT_OPEN_ANIM_MS}ms ease-out, opacity ${TALENT_OPEN_ANIM_MS}ms ease-out`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        modal.style.transform = 'scale(1)';
+        modal.style.opacity = '1';
+      });
+    });
+  }
 }
 
 function closeTalents(){
   state.ui.talentsOpen = false;
   const overlay = document.getElementById('talentOverlay');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay){
+    const modal = overlay.querySelector('.modal');
+    if (modal){
+      modal.style.transition = '';
+      modal.style.transform = '';
+      modal.style.opacity = '';
+    }
+    overlay.classList.add('hidden');
+  }
 }
 
 function ensureTalentState(){
@@ -1196,6 +1353,9 @@ function saveProgress(){
       talentsApplied: p.talentsApplied,
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
+      eventShown40: p.eventShown40,
+      eventShown50: p.eventShown50,
+      eventShown60: p.eventShown60,
       buyCounts: state.buyCounts,
       buyPrices: state.buyPrices,
     }));
@@ -1223,6 +1383,8 @@ function applySavedProgress(data){
   if (!data) return false;
   const { buyCounts, buyPrices, ...playerData } = data;
   Object.assign(state.player, playerData);
+  refreshTanksPowerTier();
+  if (state.player.level >= 60) state.endgameVisuals = true;
   if (buyCounts && typeof buyCounts === 'object'){
     state.buyCounts = buyCounts;
   }
@@ -1624,7 +1786,12 @@ function stepTanks(dt){
   }
 }
 
+const MAX_BURST_PARTICLES = 14;
+const MAX_TRAIL_ALPHA = 0.45;
+
 function fireTankProjectile({sx, sy, target, tank, stats, mods}){
+  const powerTier = tank.powerTier ?? computePowerTier(state.player?.level ?? 1);
+  const effectIntensity = 1 + powerTier * 0.25;
   const tp = zombiePos(target);
   const spawn = () => {
     spawnProjectile({
@@ -1637,6 +1804,7 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
       dmg: stats.dmg,
       aoe: stats.aoe,
       prof: stats.prof,
+      effectIntensity,
     });
     state.coins += coinsForShot(tank.level);
   };
@@ -1645,7 +1813,11 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
     spawn();
   }
   tank.cooldown = 1 / (stats.fr * speedMult());
-  burst(sx, sy, 5, 'rgba(255,255,255,.55)');
+  const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
+  const burstAlpha = Math.min(0.85, 0.55 * (0.9 + 0.1 * effectIntensity));
+  burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
+  const shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
+  playSfx(shootClip);
 }
 
 function tankOrbitState(cell, timeSec){
@@ -1678,8 +1850,8 @@ function spawnProjectile(p){
     dmg: p.dmg,
     aoe: p.aoe,
     level: p.level,
-    // keep profile so impact can read extra params
     prof: p.prof,
+    effectIntensity: p.effectIntensity ?? 1,
     life: 2.0,
   });
 }
@@ -1709,9 +1881,13 @@ function stepProjectiles(dt){
     b.x += vx * b.speed * dt;
     b.y += vy * b.speed * dt;
 
-    // trail particles
+    // trail particles (scaled by effectIntensity)
     const trailColor = b.level >= 12 ? 'rgba(186,140,255,.18)' : b.trail;
-    particle(b.x - vx*8, b.y - vy*8, Math.max(1.5, b.r*0.55), trailColor, 0.25);
+    const ei = b.effectIntensity ?? 1;
+    const trailR = Math.min(4, Math.max(1.5, b.r * 0.55 * ei));
+    const trailAlpha = Math.min(MAX_TRAIL_ALPHA, 0.25 * (0.9 + 0.1 * ei));
+    const trailColorAdj = trailColor.replace(/,\s*[\d.]+\)\s*$/, `,${trailAlpha})`);
+    particle(b.x - vx*8, b.y - vy*8, trailR, trailColorAdj, 0.25);
 
     if (dist < Math.max(10, b.r*2.2)){
       impactAt(b.x, b.y, b);
@@ -1757,9 +1933,11 @@ function impactAt(x,y,b){
     chainLightning(x,y,b);
   }
 
-  // Visual impact rings
+  // Visual impact rings (scale by effectIntensity)
+  const ei = b.effectIntensity ?? 1;
+  const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
   state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
-  burst(x,y, (b.kind==='he'?30:22), b.glow);
+  burst(x, y, impactCount, b.glow);
   if (b.dmg > 80){
     state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
   }
@@ -1977,6 +2155,7 @@ function resetGameState(){
     state.cells[1].tank = makeTank(1, true);
     recordTankLevel(1);
   }
+  refreshTanksPowerTier();
 }
 
 // ---------- UI ----------
@@ -2347,11 +2526,42 @@ function draw(){
   drawProjectiles();
   drawImpacts();
   drawParticles();
+  drawLevelUpVfx();
 
   // If sprites failed to load, show a small hint on canvas
   if (!ZombieSprites.ready){
     drawHint(t('hintSpritesOff'));
   }
+}
+
+function drawLevelUpVfx(){
+  const txt = state.levelUpText;
+  if (!txt) return;
+  if (nowSec() >= txt.until){
+    state.levelUpText = null;
+    return;
+  }
+  const age = txt.until - nowSec();
+  const ringProgress = Math.min(1, (2.2 - age) / 0.4);
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  if (ringProgress < 1){
+    const r = ringProgress * Math.min(viewSize.w, viewSize.h) * 0.45;
+    const alpha = 0.35 * (1 - ringProgress);
+    ctx.strokeStyle = `rgba(234,241,255,${alpha})`;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  const textAlpha = Math.min(1, age * 3) * Math.min(1, age);
+  ctx.globalAlpha = textAlpha;
+  ctx.fillStyle = '#eaf1ff';
+  ctx.font = 'bold 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(t('levelUp', { level: txt.level }).replace('!', ''), 0, -12);
+  ctx.restore();
 }
 
 function drawBackground(){
@@ -2636,19 +2846,64 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.restore();
 }
 
+const AuraStyleByTier = [
+  null,
+  { color: 'rgba(180,255,200,.22)', radius: 20, alpha: 0.14, effect: 'glow' },
+  { color: 'rgba(140,230,255,.24)', radius: 24, alpha: 0.18, effect: 'pulse' },
+  { color: 'rgba(100,180,255,.26)', radius: 28, alpha: 0.20, effect: 'doubleOutline' },
+  { color: 'rgba(186,140,255,.28)', radius: 32, alpha: 0.22, effect: 'particles' },
+  { color: 'rgba(255,248,220,.35)', radius: 38, alpha: 0.32, effect: 'intenseGlow' },
+];
+
+function drawTankAura(x, y, tier){
+  if (tier < 1 || tier > 5) return;
+  const style = AuraStyleByTier[tier];
+  if (!style) return;
+  const t = nowSec();
+  ctx.save();
+  ctx.translate(x, y);
+  let alpha = style.alpha;
+  let scale = 1;
+  if (style.effect === 'pulse'){
+    alpha *= 0.7 + 0.3 * Math.sin(t * 4);
+    scale = 0.92 + 0.08 * Math.sin(t * 4);
+  } else if (style.effect === 'intenseGlow'){
+    alpha *= 0.85 + 0.15 * Math.sin(t * 2);
+  }
+  const r = style.radius * scale;
+  if (style.effect === 'doubleOutline'){
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = style.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (style.effect === 'particles' && state.particles.length < BAL.maxParticles - 20){
+    const n = Math.floor(2 + Math.sin(t * 3) * 1.5);
+    for (let i = 0; i < n; i++){
+      const a = (t * 2 + i * 2.1) % (Math.PI * 2);
+      const dist = r * (0.4 + 0.4 * Math.sin(t + i));
+      particle(x + Math.cos(a) * dist, y + Math.sin(a) * dist, 2, style.color.replace(/[\d.]+\)$/, '0.5)'), 0.2);
+    }
+  }
+  ctx.restore();
+}
+
 function drawTank(x,y,tank,ghost=false,rotation=0){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  if (level >= 10){
-    const auraSize = 18 + Math.min(18, level * 0.8);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.globalAlpha = 0.18;
-    ctx.beginPath();
-    ctx.arc(0, 0, auraSize, 0, Math.PI * 2);
-    ctx.fillStyle = level >= 25 ? 'rgba(186,140,255,.25)' : 'rgba(125,255,178,.22)';
-    ctx.fill();
-    ctx.restore();
-  }
+  const powerTier = (tank && typeof tank === 'object' && tank.powerTier != null) ? tank.powerTier : computePowerTier(state.player?.level ?? 1);
+  drawTankAura(x, y, powerTier);
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.();
   const cannon = TankSprites?.pickCannon?.(level);
@@ -2861,6 +3116,20 @@ function drawZombieSprite(x,y,z){
   const deathScale = 1 - death * 0.22;
   const deathTilt = death * 1.1;
 
+  if (state.endgameVisuals && z.state !== 'dying'){
+    ctx.save();
+    ctx.translate(x, y + bob + groundOffset);
+    ctx.globalAlpha = 0.2 + 0.08 * Math.sin(nowSec() * 3);
+    ctx.fillStyle = 'rgba(200,80,80,.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w * 0.5, h * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,100,100,.25)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   if (!qualityLow){
     // shadow (without rotation)
     ctx.save();
@@ -2912,10 +3181,24 @@ function drawZombieFallback(x,y,z){
   const facing = x >= center.x ? -1 : 1;
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
-  const skinTone = shade('#3cbe78', levelBoost * 10);
+  const skinTone = state.endgameVisuals && z.state !== 'dying' ? shade('#c85050', levelBoost * 8) : shade('#3cbe78', levelBoost * 10);
   const death = z.state === 'dying' ? (z.deathProgress ?? 0) : 0;
   const deathScale = 1 - death * 0.22;
   const deathTilt = death * 1.1;
+
+  if (state.endgameVisuals && z.state !== 'dying'){
+    ctx.save();
+    ctx.translate(x, y + bob + groundOffset);
+    ctx.globalAlpha = 0.22 + 0.06 * Math.sin(nowSec() * 3);
+    ctx.fillStyle = 'rgba(200,80,80,.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 14 * s, 8 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,100,100,.22)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
 
   if (!qualityLow){
     // shadow
@@ -3216,17 +3499,25 @@ function loop(now){
     lastProgressSave = nowSec();
   }
 
+  if (state.levelUpVfxUntil != null && nowSec() >= state.levelUpVfxUntil){
+    state.timeScale = 1;
+    state.levelUpVfxUntil = null;
+  }
+
+  updateCenterNotification();
+
+  const effDt = dt * (state.timeScale ?? 1);
   if (!state.ui.menuOpen){
     ensureZombieCount();
     maybeSpawnCrate();
-    stepZombies(dt);
-    stepTanks(dt);
-    stepProjectiles(dt);
-    stepDecals(dt);
-    stepCrate(dt);
+    stepZombies(effDt);
+    stepTanks(effDt);
+    stepProjectiles(effDt);
+    stepDecals(effDt);
+    stepCrate(effDt);
     cleanupKills();
-    stepImpacts(dt);
-    stepParticles(dt);
+    stepImpacts(effDt);
+    stepParticles(effDt);
   }
 
   updateUI();
