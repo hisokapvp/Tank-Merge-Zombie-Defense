@@ -596,6 +596,10 @@ const TankSprites = {
 
       const srcs = new Set();
       if (cfg?.body?.src) srcs.add('assets/' + cfg.body.src);
+      for (const id of Object.keys(cfg?.bodies || {})){
+        const b = cfg.bodies[id];
+        if (b?.src) srcs.add('assets/' + b.src);
+      }
       for (const cannon of cfg?.cannons || []){
         if (cannon?.src) srcs.add('assets/' + cannon.src);
       }
@@ -2951,7 +2955,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
       cannonDrawW,
       cannonDrawH
     );
-    if (!mutedSlot && level != null) {
+    if (level != null) {
       targetCtx.fillStyle = '#eaf1ff';
       targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
       targetCtx.textAlign = 'center';
@@ -2981,7 +2985,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.fillStyle = shade(hull, -30);
   rr(targetCtx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
   targetCtx.fill();
-  if (!mutedSlot && level != null) {
+  if (level != null) {
     targetCtx.fillStyle = '#eaf1ff';
     targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
     targetCtx.textAlign = 'center';
