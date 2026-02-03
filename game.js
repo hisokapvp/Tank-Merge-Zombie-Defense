@@ -3710,7 +3710,8 @@ function initDebugPanel(){
       panel.querySelectorAll('.debugSection').forEach(s => s.classList.remove('active'));
       btn.classList.add('active');
       const tab = btn.dataset.tab;
-      const section = document.getElementById('debugSection' + tab.charAt(0).toUpperCase() + tab.slice(1));
+      const sectionId = 'debugSection' + tab.charAt(0).toUpperCase() + tab.slice(1);
+      const section = panel.querySelector('#' + sectionId);
       if (section) section.classList.add('active');
       if (tab === 'tanks') refreshDebugHangarList();
       if (tab === 'effects') refreshDebugEffectList();
@@ -3719,13 +3720,15 @@ function initDebugPanel(){
     });
   });
 
-  document.getElementById('debugCollapse').addEventListener('click', () => {
+  const collapseBtn = panel.querySelector('#debugCollapse');
+  if (collapseBtn) collapseBtn.addEventListener('click', () => {
     state.debug.collapsed = !state.debug.collapsed;
     panel.classList.toggle('collapsed', state.debug.collapsed);
-    document.getElementById('debugCollapse').textContent = state.debug.collapsed ? 'Expand' : 'Collapse';
+    collapseBtn.textContent = state.debug.collapsed ? 'Expand' : 'Collapse';
   });
 
-  document.getElementById('debugSpawnTank').addEventListener('click', () => {
+  const spawnBtn = panel.querySelector('#debugSpawnTank');
+  if (spawnBtn) spawnBtn.addEventListener('click', () => {
     safeDebug(() => {
       const level = Math.max(1, Math.min(DEBUG_MAX_TANK_LEVEL, Number(panel.querySelector('#debugTankLevel').value) || 1));
       const empty = state.cells.find(c => !c.tank);
@@ -3740,7 +3743,8 @@ function initDebugPanel(){
     }, 'Spawn failed ');
   });
 
-  document.getElementById('debugStopAllVfx').addEventListener('click', () => {
+  const stopVfxBtn = panel.querySelector('#debugStopAllVfx');
+  if (stopVfxBtn) stopVfxBtn.addEventListener('click', () => {
     safeDebug(() => {
       state.particles = state.particles.filter(p => !p.debugPreview);
       state.impacts = state.impacts.filter(fx => !fx.debugPreview);
@@ -3749,7 +3753,8 @@ function initDebugPanel(){
     }, 'Stop VFX failed ');
   });
 
-  document.getElementById('debugClearStatuses').addEventListener('click', () => {
+  const clearStatusBtn = panel.querySelector('#debugClearStatuses');
+  if (clearStatusBtn) clearStatusBtn.addEventListener('click', () => {
     safeDebug(() => {
       state.debug.debugStatusActive = false;
       state.activeEffects.attackUntil = 0;
@@ -3759,7 +3764,8 @@ function initDebugPanel(){
     }, 'Clear statuses failed ');
   });
 
-  document.getElementById('debugClearOverrides').addEventListener('click', () => {
+  const clearOverridesBtn = panel.querySelector('#debugClearOverrides');
+  if (clearOverridesBtn) clearOverridesBtn.addEventListener('click', () => {
     safeDebug(() => {
       state.debug.talentOverrides = {};
       state.player.modsDirty = true;
@@ -3768,16 +3774,18 @@ function initDebugPanel(){
     }, 'Clear overrides failed ');
   });
 
-  document.getElementById('debugResetBtn').addEventListener('click', () => debugReset());
-  document.getElementById('debugClearLog').addEventListener('click', () => {
+  const resetBtn = panel.querySelector('#debugResetBtn');
+  if (resetBtn) resetBtn.addEventListener('click', () => debugReset());
+  const clearLogBtn = panel.querySelector('#debugClearLog');
+  if (clearLogBtn) clearLogBtn.addEventListener('click', () => {
     state.debug.log = [];
-    const el = document.getElementById('debugLog');
+    const el = panel.querySelector('#debugLog');
     if (el) el.innerHTML = '';
     debugLog('info', 'Log cleared.');
   });
 
   function refreshDebugHangarList(){
-    const container = document.getElementById('debugHangarList');
+    const container = panel.querySelector('#debugHangarList');
     if (!container) return;
     container.innerHTML = '';
     (state.cells || []).forEach((cell, i) => {
@@ -3804,10 +3812,11 @@ function initDebugPanel(){
   }
 
   function refreshDebugEffectList(){
-    const container = document.getElementById('debugEffectList');
+    const container = panel.querySelector('#debugEffectList');
     if (!container) return;
     container.innerHTML = '';
-    const cat = document.getElementById('debugEffectCategory').value;
+    const catEl = panel.querySelector('#debugEffectCategory');
+    const cat = catEl ? catEl.value : 'all';
     const showVfx = cat === 'all' || cat === 'vfx';
     const showStatus = cat === 'all' || cat === 'status';
     if (showVfx) {
@@ -3867,10 +3876,11 @@ function initDebugPanel(){
     }
   }
 
-  document.getElementById('debugEffectCategory').addEventListener('change', refreshDebugEffectList);
+  const effectCategoryEl = panel.querySelector('#debugEffectCategory');
+  if (effectCategoryEl) effectCategoryEl.addEventListener('change', refreshDebugEffectList);
 
   function refreshDebugActivesList(){
-    const container = document.getElementById('debugActivesList');
+    const container = panel.querySelector('#debugActivesList');
     if (!container) return;
     container.innerHTML = '';
     initTalentDefs();
@@ -3882,7 +3892,8 @@ function initDebugPanel(){
         <button type="button" class="debugBtn debugActivateActive" data-branch="${branch}">Activate</button>`;
       row.querySelector('button').addEventListener('click', () => {
         safeDebug(() => {
-          const bypass = document.getElementById('debugBypass') && document.getElementById('debugBypass').checked;
+          const bypassEl = panel.querySelector('#debugBypass');
+          const bypass = bypassEl && bypassEl.checked;
           if (bypass) {
             const now = nowSec();
             state.player.activeCooldowns[branch] = now;
@@ -3908,7 +3919,7 @@ function initDebugPanel(){
   }
 
   function refreshDebugTalentsList(){
-    const container = document.getElementById('debugTalentsList');
+    const container = panel.querySelector('#debugTalentsList');
     if (!container) return;
     container.innerHTML = '';
     initTalentDefs();
