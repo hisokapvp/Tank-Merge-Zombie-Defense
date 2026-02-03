@@ -603,6 +603,10 @@ const TankSprites = {
       for (const cannon of cfg?.cannons || []){
         if (cannon?.src) srcs.add('assets/' + cannon.src);
       }
+      for (const id of Object.keys(cfg?.auras || {})){
+        const a = cfg.auras[id];
+        if (a && typeof a === 'object' && a.src) srcs.add('assets/' + a.src);
+      }
 
       for (const s of srcs){
         const img = await loadImage(s);
@@ -659,6 +663,18 @@ const TankSprites = {
     const img = this.cache.get(full);
     if (!img) return null;
     return { img, cfg: chosen };
+  },
+  pickAura(level){
+    if (!this.ready) return null;
+    const auraVariant = level != null ? this.resolveVariant(level, 'auraVariant') : null;
+    if (auraVariant == null || typeof auraVariant !== 'string') return null;
+    const auras = this.config?.auras;
+    const cfg = auras?.[auraVariant];
+    if (!cfg?.src) return null;
+    const full = 'assets/' + cfg.src;
+    const img = this.cache.get(full);
+    if (!img) return null;
+    return { img, cfg };
   }
 };
 
@@ -2997,9 +3013,10 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.restore();
 }
 
-// Aura by tank level band: per-level auraVariant > 1–9 none, 10–19 band 1, … 60 band 6
+// Aura: per-level auraVariant. If string — спрайт из auras; если number 1–6 — процедурная полоса; если null/false — нет ауры.
 function computeAuraBand(level){
   const v = TankSprites?.resolveVariant?.(level, 'auraVariant');
+  if (v != null && typeof v === 'string') return null;
   if (v != null && typeof v === 'number' && v >= 1 && v <= 6) return v;
   if (v != null && v === false) return null;
   const lvl = Math.max(1, Math.floor(level));
@@ -3064,10 +3081,45 @@ function drawTankAura(x, y, band){
   ctx.restore();
 }
 
+function drawTankAuraSprite(x, y, aura){
+  const cfg = aura.cfg;
+  const w = cfg.frame?.w ?? aura.img.width;
+  const h = cfg.frame?.h ?? aura.img.height;
+  const frameX = cfg.frame?.x ?? 0;
+  const frameY = cfg.frame?.y ?? 0;
+  const frames = cfg.frames || 1;
+  const animSpeed = cfg.animSpeed ?? 3;
+  const frame = Math.floor(nowSec() * animSpeed) % frames;
+  const anchor = cfg.anchor || { x: 0.5, y: 0.5 };
+  const scale = (cfg.scale ?? 1) * 0.22 * balScale;
+  const drawW = w * scale;
+  const drawH = h * scale;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = 0.85;
+  ctx.drawImage(
+    aura.img,
+    frameX + frame * w,
+    frameY,
+    w,
+    h,
+    -drawW * anchor.x,
+    -drawH * anchor.y,
+    drawW,
+    drawH
+  );
+  ctx.restore();
+}
+
 function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  const auraBand = computeAuraBand(level);
-  if (auraBand != null) drawTankAura(x, y, auraBand);
+  const auraSprite = TankSprites?.pickAura?.(level);
+  if (auraSprite) {
+    drawTankAuraSprite(x, y, auraSprite);
+  } else {
+    const auraBand = computeAuraBand(level);
+    if (auraBand != null) drawTankAura(x, y, auraBand);
+  }
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);

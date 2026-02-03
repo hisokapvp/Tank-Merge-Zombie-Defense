@@ -140,29 +140,56 @@
       "recoil": 5
     }
   ],
+  "_comment_auras": "Аура-спрайты под танком. В levels укажите auraVariant строкой (id из auras). frame: x,y — ряд в атласе, w,h — размер кадра. Кадры анимации по горизонтали. Файл tanks/aura_all.png положите в assets/tanks/ (или укажите src на существующий PNG для проверки).",
+  "auras": {
+    "aura_1": {
+      "src": "tanks/body.png",
+      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "frames": 2,
+      "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
+      "animSpeed": 3.0
+    },
+    "aura_2": {
+      "src": "tanks/body.png",
+      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "frames": 2,
+      "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
+      "animSpeed": 3.0
+    },
+    "aura_3": {
+      "src": "tanks/body.png",
+      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+      "frames": 2,
+      "anchor": { "x": 0.5, "y": 0.5 },
+      "scale": 1.0,
+      "animSpeed": 3.0
+    }
+  },
   "_comment_levels": "Массив levels: 60 элементов. levels[0] = уровень 1, levels[1] = уровень 2, ... levels[59] = уровень 60. bodyVariant - ключ из bodies. cannonVariant - id из cannons. auraVariant: null или 1-6 (стиль ауры). bulletVariant: ap, he, toxic, tesla. impactVfxVariant: ap, he, toxic, tesla (эффект взрыва при попадании).",
   "levels": [
     {
-      "_comment": "Уровень 1: уникальный корпус body_lvl1, пушка cannon_template_1, снаряд ap, аура 1 (зелёное свечение).",
+      "_comment": "Уровень 1: body_lvl1, cannon_template_1, снаряд ap, аура-спрайт aura_1.",
       "bodyVariant": "body_lvl1",
       "cannonVariant": "cannon_template_1",
-      "auraVariant": 1,
+      "auraVariant": "aura_1",
       "bulletVariant": "ap",
       "impactVfxVariant": "ap"
     },
     {
-      "_comment": "Уровень 2: корпус body_lvl2, пушка cannon_template_2, снаряд he (осколочный), аура 2 (голубоватое).",
+      "_comment": "Уровень 2: body_lvl2, cannon_template_2, снаряд he, аура-спрайт aura_2.",
       "bodyVariant": "body_lvl2",
       "cannonVariant": "cannon_template_2",
-      "auraVariant": 2,
+      "auraVariant": "aura_2",
       "bulletVariant": "he",
       "impactVfxVariant": "he"
     },
     {
-      "_comment": "Уровень 3: корпус body_lvl3, пушка cannon_template_3, снаряд toxic (яд), аура 3 (синее).",
+      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
       "bodyVariant": "body_lvl3",
       "cannonVariant": "cannon_template_3",
-      "auraVariant": 3,
+      "auraVariant": "aura_3",
       "bulletVariant": "toxic",
       "impactVfxVariant": "toxic"
     },
