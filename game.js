@@ -2454,7 +2454,7 @@ function updateUI(){
   ui.zcount.textContent = state.kills;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
-  ui.buyCost.innerHTML = `${cost}<span class="coinIcon">$</span>`;
+  ui.buyCost.textContent = cost;
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0

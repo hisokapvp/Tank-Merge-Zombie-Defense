@@ -5,6 +5,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Merge Tank: Zombie invasion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -38,7 +41,7 @@
           <div class="stageActions">
             <button id="buy" class="btn btnPrimary">
               <span data-i18n="buyTank">Купить танк Lv1</span>
-              <span class="price">(<span id="buyCost">50</span>)</span>
+              <span class="price"> — <span id="buyCost">50</span>$</span>
             </button>
             <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
             <button id="boost" class="btn btnSecondary"><span data-i18n="boostBtn">Буст скорости</span></button>
@@ -122,19 +125,19 @@
             </div>
           </div>
         </div>
-        <div class="levelModal hidden" id="resetTalentsModal" aria-hidden="true">
-          <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
-          <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
-            <button class="levelModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__contentWrap">
-              <div class="levelModal__title" id="resetTalentsModalText">Посмотрите видео чтобы сбросить таланты</div>
-              <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Посмотреть и сбросить</button>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
+  <div class="levelModal levelModal_onTop hidden" id="resetTalentsModal" aria-hidden="true">
+    <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
+    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
+      <button class="levelModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
+      <div class="levelModal__contentWrap">
+        <div class="levelModal__title" id="resetTalentsModalText">Посмотрите видео чтобы сбросить таланты</div>
+        <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Посмотреть и сбросить</button>
+      </div>
+    </div>
+  </div>
   <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true">Настройки</div>
 
   <script src="game.js"></script>
