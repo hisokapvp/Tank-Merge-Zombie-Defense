@@ -3366,14 +3366,28 @@ function drawTankAura(x, y, band){
 
 function drawTankAuraSprite(x, y, aura){
   const cfg = aura.cfg;
-  const w = cfg.frame?.w ?? aura.img.width;
-  const h = cfg.frame?.h ?? aura.img.height;
-  const frameX = cfg.frame?.x ?? 0;
-  const frameY = cfg.frame?.y ?? 0;
-  const frames = cfg.frames || 1;
-  const animSpeed = cfg.animSpeed ?? 3;
-  const frame = Math.floor(nowSec() * animSpeed) % frames;
+  const frameList = cfg.frames && Array.isArray(cfg.frames) ? cfg.frames : null;
+  const w = cfg.frameWidth ?? cfg.frame?.w ?? aura.img.width;
+  const h = cfg.frameHeight ?? cfg.frame?.h ?? aura.img.height;
   const anchor = cfg.anchor || { x: 0.5, y: 0.5 };
+  const animSpeed = cfg.animation?.frameRate ?? cfg.animSpeed ?? 8;
+  const frameOrder = cfg.animation?.frameOrder;
+  let sx, sy;
+  if (frameList && frameList.length > 0){
+    const frameCount = frameOrder ? frameOrder.length : frameList.length;
+    const frameIndex = Math.floor(nowSec() * animSpeed) % frameCount;
+    const logicalIndex = frameOrder ? frameOrder[frameIndex] : frameIndex;
+    const pos = frameList[logicalIndex] ?? frameList[0];
+    sx = pos.x ?? (logicalIndex * w);
+    sy = pos.y ?? 0;
+  } else {
+    const frameX = cfg.frame?.x ?? 0;
+    const frameY = cfg.frame?.y ?? 0;
+    const frames = cfg.frames || 1;
+    const frame = Math.floor(nowSec() * animSpeed) % frames;
+    sx = frameX + frame * w;
+    sy = frameY;
+  }
   const scale = (cfg.scale ?? 1) * 0.22 * balScale;
   const drawW = w * scale;
   const drawH = h * scale;
@@ -3382,8 +3396,8 @@ function drawTankAuraSprite(x, y, aura){
   ctx.globalAlpha = 0.85;
   ctx.drawImage(
     aura.img,
-    frameX + frame * w,
-    frameY,
+    sx,
+    sy,
     w,
     h,
     -drawW * anchor.x,

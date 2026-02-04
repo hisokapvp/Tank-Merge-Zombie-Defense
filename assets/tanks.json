@@ -140,31 +140,76 @@
       "recoil": 5
     }
   ],
-  "_comment_auras": "Аура-спрайты под танком. В levels укажите auraVariant строкой (id из auras). frame: x,y — ряд в атласе, w,h — размер кадра. Кадры анимации по горизонтали. Файл tanks/aura_all.png положите в assets/tanks/ (или укажите src на существующий PNG для проверки).",
+  "_comment_auras": "Аура-спрайты под танком. В levels укажите auraVariant строкой (id из auras). Формат: frameWidth/frameHeight — размер кадра; frames — массив { x, y } позиций в атласе; animation — frameOrder (порядок кадров), frameRate (FPS), loop. Либо старый формат: frame { x, y, w, h }, frames (число), animSpeed.",
   "auras": {
     "aura_1": {
-      "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
-      "frames": 4,
+      "src": "tanks/Green_Aura.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": [
+        { "x": 0, "y": 0 },
+        { "x": 128, "y": 0 },
+        { "x": 256, "y": 0 },
+        { "x": 384, "y": 0 },
+        { "x": 0, "y": 128 },
+        { "x": 128, "y": 128 },
+        { "x": 256, "y": 128 },
+        { "x": 384, "y": 128 }
+      ],
+      "animation": {
+        "name": "rotate",
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
+        "frameRate": 8,
+        "loop": true
+      },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5,
-      "animSpeed": 3.0
+      "scale": 1.5
     },
     "aura_2": {
-      "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
-      "frames": 4,
+      "src": "tanks/Green_Aura.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": [
+        { "x": 0, "y": 0 },
+        { "x": 128, "y": 0 },
+        { "x": 256, "y": 0 },
+        { "x": 384, "y": 0 },
+        { "x": 0, "y": 128 },
+        { "x": 128, "y": 128 },
+        { "x": 256, "y": 128 },
+        { "x": 384, "y": 128 }
+      ],
+      "animation": {
+        "name": "rotate",
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
+        "frameRate": 8,
+        "loop": true
+      },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5,
-      "animSpeed": 3.0
+      "scale": 1.5
     },
     "aura_3": {
-      "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
-      "frames": 4,
+      "src": "tanks/Green_Aura.png",
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "frames": [
+        { "x": 0, "y": 0 },
+        { "x": 128, "y": 0 },
+        { "x": 256, "y": 0 },
+        { "x": 384, "y": 0 },
+        { "x": 0, "y": 128 },
+        { "x": 128, "y": 128 },
+        { "x": 256, "y": 128 },
+        { "x": 384, "y": 128 }
+      ],
+      "animation": {
+        "name": "rotate",
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
+        "frameRate": 8,
+        "loop": true
+      },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5,
-      "animSpeed": 3.0
+      "scale": 1.5
     }
   },
   "_comment_levels": "Массив levels: 60 элементов. levels[0] = уровень 1, levels[1] = уровень 2, ... levels[59] = уровень 60. bodyVariant - ключ из bodies. cannonVariant - id из cannons. auraVariant: null или 1-6 (стиль ауры). bulletVariant: ap, he, toxic, tesla. impactVfxVariant: ap, he, toxic, tesla (эффект взрыва при попадании).",
