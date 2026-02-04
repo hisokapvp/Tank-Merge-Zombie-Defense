@@ -144,72 +144,75 @@
   "auras": {
     "aura_1": {
       "src": "tanks/Green_Aura.png",
-      "frameWidth": 128,
-      "frameHeight": 128,
+      "frameWidth": 333,
+      "frameHeight": 333,
       "frames": [
         { "x": 0, "y": 0 },
-        { "x": 128, "y": 0 },
-        { "x": 256, "y": 0 },
-        { "x": 384, "y": 0 },
-        { "x": 0, "y": 128 },
-        { "x": 128, "y": 128 },
-        { "x": 256, "y": 128 },
-        { "x": 384, "y": 128 }
+        { "x": 333, "y": 0 },
+        { "x": 666, "y": 0 },
+        { "x": 0, "y": 333 },
+        { "x": 333, "y": 333 },
+        { "x": 666, "y": 333 },
+        { "x": 0, "y": 666 },
+        { "x": 333, "y": 666 },
+        { "x": 666, "y": 666 }
       ],
       "animation": {
         "name": "rotate",
-        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
-        "frameRate": 8,
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        "frameRate": 14,
         "loop": true
       },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5
+      "scale": 0.8
     },
     "aura_2": {
       "src": "tanks/Green_Aura.png",
-      "frameWidth": 128,
-      "frameHeight": 128,
+      "frameWidth": 333,
+      "frameHeight": 333,
       "frames": [
         { "x": 0, "y": 0 },
-        { "x": 128, "y": 0 },
-        { "x": 256, "y": 0 },
-        { "x": 384, "y": 0 },
-        { "x": 0, "y": 128 },
-        { "x": 128, "y": 128 },
-        { "x": 256, "y": 128 },
-        { "x": 384, "y": 128 }
+        { "x": 333, "y": 0 },
+        { "x": 666, "y": 0 },
+        { "x": 0, "y": 333 },
+        { "x": 333, "y": 333 },
+        { "x": 666, "y": 333 },
+        { "x": 0, "y": 666 },
+        { "x": 333, "y": 666 },
+        { "x": 666, "y": 666 }
       ],
       "animation": {
         "name": "rotate",
-        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
-        "frameRate": 8,
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        "frameRate": 14,
         "loop": true
       },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5
+      "scale": 0.8
     },
     "aura_3": {
       "src": "tanks/Green_Aura.png",
-      "frameWidth": 128,
-      "frameHeight": 128,
+      "frameWidth": 333,
+      "frameHeight": 333,
       "frames": [
         { "x": 0, "y": 0 },
-        { "x": 128, "y": 0 },
-        { "x": 256, "y": 0 },
-        { "x": 384, "y": 0 },
-        { "x": 0, "y": 128 },
-        { "x": 128, "y": 128 },
-        { "x": 256, "y": 128 },
-        { "x": 384, "y": 128 }
+        { "x": 333, "y": 0 },
+        { "x": 666, "y": 0 },
+        { "x": 0, "y": 333 },
+        { "x": 333, "y": 333 },
+        { "x": 666, "y": 333 },
+        { "x": 0, "y": 666 },
+        { "x": 333, "y": 666 },
+        { "x": 666, "y": 666 }
       ],
       "animation": {
         "name": "rotate",
-        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7],
-        "frameRate": 8,
+        "frameOrder": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        "frameRate": 14,
         "loop": true
       },
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 1.5
+      "scale": 0.8
     }
   },
   "_comment_levels": "Массив levels: 60 элементов. levels[0] = уровень 1, levels[1] = уровень 2, ... levels[59] = уровень 60. bodyVariant - ключ из bodies. cannonVariant - id из cannons. auraVariant: null или 1-6 (стиль ауры). bulletVariant: ap, he, toxic, tesla. impactVfxVariant: ap, he, toxic, tesla (эффект взрыва при попадании).",
