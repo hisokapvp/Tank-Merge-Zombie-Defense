@@ -277,7 +277,7 @@ const STRINGS = {
     menuLanguage: 'Язык',
     menuSfx: 'Громкость эффектов',
     menuMusic: 'Громкость музыки',
-    hudCoins: 'Монеты',
+    hudCoins: 'Деньги',
     hudKills: 'Убито монстров',
     hudSprites: 'Спрайты',
     hudBoost: 'Буст',
@@ -310,6 +310,8 @@ const STRINGS = {
     talentApply: 'Применить',
     talentReset: 'Сбросить выбор',
     talentResetAll: 'Сбросить таланты',
+    talentResetModalText: 'Посмотрите видео чтобы сбросить таланты',
+    talentResetModalWatchBtn: 'Посмотреть и сбросить',
     talentPending: 'Выбрано',
     talentNeedPoints: 'Не хватает очков',
     talentActive: 'Использовать активку',
@@ -350,7 +352,7 @@ const STRINGS = {
     menuLanguage: 'Language',
     menuSfx: 'SFX volume',
     menuMusic: 'Music volume',
-    hudCoins: 'Coins',
+    hudCoins: 'Money',
     hudKills: 'Monsters defeated',
     hudSprites: 'Sprites',
     hudBoost: 'Boost',
@@ -383,6 +385,8 @@ const STRINGS = {
     talentApply: 'Apply',
     talentReset: 'Reset selection',
     talentResetAll: 'Reset talents',
+    talentResetModalText: 'Watch a video to reset talents',
+    talentResetModalWatchBtn: 'Watch and reset',
     talentPending: 'Selected',
     talentNeedPoints: 'Not enough points',
     talentActive: 'Use active',
@@ -1458,6 +1462,7 @@ function canSelectTalent(i){
   const p = state.player;
   const def = TALENT_DEFS[i];
   if (!def) return false;
+  if (p.talentPoints <= pendingCost()) return false;
   if (def.kind === 'active' && p.level < 40) return false;
   const appliedRank = p.talentsApplied[i] || 0;
   const pendingRank = p.talentsPending[i] || 0;
@@ -2449,7 +2454,7 @@ function updateUI(){
   ui.zcount.textContent = state.kills;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
-  ui.buyCost.innerHTML = `${cost}<span class="coinIcon">🪙</span>`;
+  ui.buyCost.innerHTML = `${cost}<span class="coinIcon">$</span>`;
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0
@@ -2459,6 +2464,7 @@ function updateUI(){
   ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
   updateProgressUI();
   updateTalentUI();
+  updateStageAbilitySlots();
   updateDismantleButton();
 }
 
@@ -2633,7 +2639,7 @@ function ensureTalentUI(){
   });
   overlay.querySelector('.modalClose')?.addEventListener('click', () => closeTalents());
   overlay.querySelector('#talentReset')?.addEventListener('click', () => resetTalentSelections());
-  overlay.querySelector('#talentResetAll')?.addEventListener('click', () => resetAllTalents());
+  overlay.querySelector('#talentResetAll')?.addEventListener('click', () => openResetTalentsModal());
   overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
   overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2752,6 +2758,26 @@ function updateTalentUI(){
   });
 }
 
+function updateStageAbilitySlots(){
+  const p = state.player;
+  const container = document.getElementById('stageAbilitySlots');
+  if (!p || !container) return;
+  container.querySelectorAll('.talentAbilitySlot').forEach(btn => {
+    const branch = Number(btn.dataset.branch);
+    const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
+    const canUse = canUseActive(branch);
+    const cdUntil = p.activeCooldowns[branch] || 0;
+    const cdLeft = Math.max(0, cdUntil - nowSec());
+    btn.classList.toggle('talentAbilityLocked', !unlocked);
+    btn.classList.toggle('talentAbilityUnlocked', unlocked);
+    btn.disabled = !unlocked || !canUse;
+    btn.title = unlocked
+      ? (canUse ? TALENT_BRANCHES[branch] : t('talentActiveCooldown', {sec: Math.ceil(cdLeft)}))
+      : TALENT_BRANCHES[branch];
+    btn.textContent = unlocked && canUse ? '' : (cdLeft > 0 ? Math.ceil(cdLeft) : '');
+  });
+}
+
 function renderCrateIcon(level){
   if (!ui.crateIcon) return;
   const iconCtx = ui.crateIcon.getContext('2d');
@@ -2780,6 +2806,23 @@ function openBoostModal(){
 }
 function closeBoostModal(){
   const modal = document.getElementById('boostModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function openResetTalentsModal(){
+  const modal = document.getElementById('resetTalentsModal');
+  if (!modal) return;
+  const textEl = document.getElementById('resetTalentsModalText');
+  const watchEl = document.getElementById('resetTalentsModalWatch');
+  if (textEl) textEl.textContent = t('talentResetModalText');
+  if (watchEl) watchEl.textContent = t('talentResetModalWatchBtn');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+function closeResetTalentsModal(){
+  const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden', 'true');
@@ -2940,6 +2983,21 @@ document.getElementById('boostModalWatch')?.addEventListener('click', () => {
 document.getElementById('boostModalClose')?.addEventListener('click', () => closeBoostModal());
 document.getElementById('boostModal')?.addEventListener('click', (e) => {
   if (e.target?.dataset?.boostClose === 'true') closeBoostModal();
+});
+document.getElementById('resetTalentsModalClose')?.addEventListener('click', () => closeResetTalentsModal());
+document.getElementById('resetTalentsModalWatch')?.addEventListener('click', () => {
+  closeResetTalentsModal();
+  setTimeout(() => {
+    resetAllTalents();
+    updateTalentUI();
+    updateUI();
+  }, 100);
+});
+document.getElementById('resetTalentsModal')?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.resetTalentsClose === 'true') closeResetTalentsModal();
+});
+[0, 1, 2].forEach(branch => {
+  document.getElementById(`stageActive${branch}`)?.addEventListener('click', () => useActiveAbility(branch));
 });
 ui.crateGet?.addEventListener('click', () => claimCrateReward());
 ui.crateClose?.addEventListener('click', () => closeCrateModal());
@@ -3415,14 +3473,18 @@ function drawTankAura(x, y, band){
   const t = nowSec();
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(t * 0.8);
   let alpha = style.alpha;
   let scale = 1;
   const speed = style.pulseSpeed ?? 4;
   if (style.effect === 'pulse'){
     alpha *= 0.7 + 0.3 * Math.sin(t * speed);
-    scale = 0.92 + 0.08 * Math.sin(t * speed);
+    scale = 0.8 + 0.2 * Math.sin(t * speed);
   } else if (style.effect === 'intenseGlow'){
     alpha *= 0.85 + 0.15 * Math.sin(t * (speed * 0.5));
+    scale = 0.8 + 0.2 * Math.sin(t * speed);
+  } else {
+    scale = 0.8 + 0.2 * Math.sin(t * speed);
   }
   const r = style.radius * scale;
   if (style.effect === 'doubleOutline'){
@@ -3478,11 +3540,15 @@ function drawTankAuraSprite(x, y, aura){
     sx = frameX + frame * w;
     sy = frameY;
   }
-  const scale = (cfg.scale ?? 1) * 0.22 * balScale;
+  const baseScale = (cfg.scale ?? 1) * 0.22 * balScale;
+  const t = nowSec();
+  const pulseScale = 1 + 0.2 * Math.sin(t * 2.5);
+  const scale = baseScale * pulseScale;
   const drawW = w * scale;
   const drawH = h * scale;
   ctx.save();
   ctx.translate(x, y);
+  ctx.rotate(t * 0.8);
   ctx.globalAlpha = 0.85;
   ctx.drawImage(
     aura.img,

@@ -16,7 +16,7 @@
           <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
           <div class="hudBelow">
           <div class="hud">
-            <div class="hudItem"><div class="k" data-i18n="hudCoins">Coins</div><div class="v" id="coins">0</div></div>
+            <div class="hudItem"><div class="k" data-i18n="hudCoins">Money</div><div class="v" id="coins">0</div></div>
             <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
             <div class="hudItem"><div class="k" data-i18n="hudBoost">Boost</div><div class="v" id="boostState">—</div></div>
           </div>
@@ -30,6 +30,11 @@
           </div>
 
           <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
+          <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
+            <button id="stageActive0" class="btn talentAbilitySlot" type="button" data-branch="0" title="" aria-label="Active 0"></button>
+            <button id="stageActive1" class="btn talentAbilitySlot" type="button" data-branch="1" title="" aria-label="Active 1"></button>
+            <button id="stageActive2" class="btn talentAbilitySlot" type="button" data-branch="2" title="" aria-label="Active 2"></button>
+          </div>
           <div class="stageActions">
             <button id="buy" class="btn btnPrimary">
               <span data-i18n="buyTank">Купить танк Lv1</span>
@@ -109,10 +114,22 @@
         </div>
         <div class="levelModal hidden" id="boostModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-boost-close="true"></div>
-          <div class="levelModal__panel" role="dialog" aria-modal="true">
+          <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
             <button class="levelModal__close" id="boostModalClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="boostModalText" data-i18n="boostModalText">Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу</div>
-            <button id="boostModalWatch" class="btn btnPrimary" type="button" data-i18n="boostModalWatch">Посмотреть</button>
+            <div class="levelModal__contentWrap">
+              <div class="levelModal__title" id="boostModalText" data-i18n="boostModalText">Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу</div>
+              <button id="boostModalWatch" class="btn btnPrimary" type="button" data-i18n="boostModalWatch">Посмотреть</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="resetTalentsModal" aria-hidden="true">
+          <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
+          <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
+            <button class="levelModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__contentWrap">
+              <div class="levelModal__title" id="resetTalentsModalText">Посмотрите видео чтобы сбросить таланты</div>
+              <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Посмотреть и сбросить</button>
+            </div>
           </div>
         </div>
       </div>
