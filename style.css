@@ -102,6 +102,9 @@ body::after{
   right:12px;
   align-items:flex-end;
   width:min(420px, 40vw);
+  padding-top:40px;
+  padding-right:40px;
+  box-sizing:border-box;
 }
 .settingsGear{
   position:absolute !important;
