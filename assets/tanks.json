@@ -144,26 +144,26 @@
   "auras": {
     "aura_1": {
       "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 3,
+      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
+      "frames": 4,
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 2.0,
+      "scale": 1.5,
       "animSpeed": 3.0
     },
     "aura_2": {
       "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 3,
+      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
+      "frames": 4,
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 2.0,
+      "scale": 1.5,
       "animSpeed": 3.0
     },
     "aura_3": {
       "src": "tanks/aura_all.png",
-      "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
-      "frames": 3,
+      "frame": { "x": 0, "y": 0, "w": 181, "h": 181 },
+      "frames": 4,
       "anchor": { "x": 0.5, "y": 0.5 },
-      "scale": 2.0,
+      "scale": 1.5,
       "animSpeed": 3.0
     }
   },
