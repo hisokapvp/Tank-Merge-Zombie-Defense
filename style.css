@@ -51,7 +51,7 @@ body::after{
 }
 
 
-.hud{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end;align-items:stretch}
+.hud{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end;align-items:stretch;width:100%}
 .hudItem{
   min-width:0;
   width:auto;
@@ -103,13 +103,14 @@ body::after{
   position:absolute !important;
   top:12px;
   right:12px;
-  width:28px;
-  height:28px;
-  min-width:28px;
-  min-height:28px;
-  padding:0;
+  width:auto;
+  height:auto;
+  min-width:24px;
+  min-height:24px;
+  padding:4px;
   font-size:16px;
-  display:flex;
+  line-height:1;
+  display:inline-flex;
   align-items:center;
   justify-content:center;
   z-index:4;
@@ -119,7 +120,6 @@ body::after{
   flex-direction:column;
   gap:10px;
   margin-top:0;
-  padding-right:38px;
   width:100%;
   align-items:stretch;
 }
@@ -753,11 +753,26 @@ body.menu-open .stageUi .hudItem{
   display:flex;
   gap:8px;
 }
+.stageAbilitySlots{
+  justify-content:center;
+}
 .stageAbilitySlots .talentAbilitySlot{
   width:44px;
   height:44px;
   min-width:44px;
   min-height:44px;
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center;
+}
+.talentAbilitySlot_attack{
+  background-image:url(assets/active_attack.png);
+}
+.talentAbilitySlot_defense{
+  background-image:url(assets/active_defense.png);
+}
+.talentAbilitySlot_economy{
+  background-image:url(assets/active_economy.png);
 }
 .modal .talentFooter .talentAbilitySlots{
   display:none;

@@ -15,8 +15,8 @@
     <section class="stage">
       <div class="stageCanvas">
         <canvas id="c" width="1100" height="650"></canvas>
+        <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
         <div class="stageUi stageUiRight">
-          <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" aria-label="Настройки" title="Настройки">⚙</button>
           <div class="hudBelow">
           <div class="hud">
             <div class="hudItem"><div class="k" data-i18n="hudCoins">Money</div><div class="v" id="coins">0</div></div>
@@ -32,11 +32,11 @@
             <div class="xpValue" id="xpText">0/0</div>
           </div>
 
-          <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Таланты</button>
+          <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Древо талантов</button>
           <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
-            <button id="stageActive0" class="btn talentAbilitySlot" type="button" data-branch="0" title="" aria-label="Active 0"></button>
-            <button id="stageActive1" class="btn talentAbilitySlot" type="button" data-branch="1" title="" aria-label="Active 1"></button>
-            <button id="stageActive2" class="btn talentAbilitySlot" type="button" data-branch="2" title="" aria-label="Active 2"></button>
+            <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
+            <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="Защита"></button>
+            <button id="stageActive2" class="btn talentAbilitySlot talentAbilitySlot_economy" type="button" data-branch="2" title="" aria-label="Экономика"></button>
           </div>
           <div class="stageActions">
             <button id="buy" class="btn btnPrimary">
