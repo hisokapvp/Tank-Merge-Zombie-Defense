@@ -250,6 +250,7 @@ function createInitialState(){
 }
 
 let state = createInitialState();
+let meta = { lastSeenAt: null };
 
 // Debug panel: enabled only via URL param (?debug=1 or ?debug=true)
 const DEBUG_PARAM = 'debug';
@@ -1013,7 +1014,7 @@ function buyTankLevel(){
 }
 
 function baseBuyPrice(level){
-  return Math.round(level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25);
+  return window.Game && window.Game.Economy ? window.Game.Economy.getTankBaseCost(level) : Math.round(level <= 1 ? BAL.buyCostLv1 : BAL.buyCostLv1 * 2.25);
 }
 
 function ensureBuyPrice(level){
@@ -1039,9 +1040,11 @@ function bumpBuyPrice(level){
 function tryBuyTank(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
-  if (state.coins < cost) return;
-  const empty = state.cells.find(c=>!c.tank);
-  if (!empty) return;
+  const Garage = window.Game && window.Game.Garage;
+  const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c=>!c.tank)?.i ?? null);
+  if (freeIdx == null || state.coins < cost) return;
+  const empty = state.cells[freeIdx];
+  if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return;
   state.coins -= cost;
   empty.tank = makeTank(level, false);
   recordTankLevel(level);
@@ -1096,7 +1099,8 @@ function tankStats(level){
   const mods = getMods();
   const dmg = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
   const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
-  const range = BAL.rangeBase + BAL.rangePerLevel*(level-1);
+  const Combat = window.Game && window.Game.Combat;
+  const range = Combat ? Combat.getShootRange({ level }, state) : (BAL.rangeBase + BAL.rangePerLevel*(level-1));
   const prof = projectileProfile(level);
   // Tie AOE to profile but also allow slight growth with level.
   const aoe = clamp(prof.aoeBase + prof.aoePerLevel*(level-1), prof.aoeMin, prof.aoeMax);
@@ -1132,7 +1136,8 @@ function updateLevelModal(){
       talent: talentWord(reward.points),
     });
   }
-  if (ui.levelGold) ui.levelGold.textContent = t('levelModalGold', {gold: reward.gold});
+  const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
+  if (ui.levelGold) ui.levelGold.textContent = t('levelModalGold', {gold: fmt(reward.gold)});
   if (ui.levelAccept) ui.levelAccept.textContent = t('levelUpAccept');
 }
 
@@ -1582,6 +1587,10 @@ function ensureTalentState(){
 }
 
 function saveProgress(){
+  if (window.Game && window.Game.Storage) {
+    window.Game.Storage.saveGame(state, meta);
+    return;
+  }
   try{
     const p = state.player;
     localStorage.setItem('progress', JSON.stringify({
@@ -1601,11 +1610,54 @@ function saveProgress(){
 }
 
 function getSavedProgress(){
+  if (window.Game && window.Game.Storage) {
+    const loaded = window.Game.Storage.loadGame();
+    if (loaded && loaded.legacyProgress) return loaded.legacyProgress;
+    if (loaded && loaded.state) return loaded.state;
+    return null;
+  }
   try{
     const raw = localStorage.getItem('progress');
     if (raw) return JSON.parse(raw);
   }catch(e){}
   return null;
+}
+
+function restoreFullState(saved){
+  if (!saved || !Array.isArray(saved.cells)) return;
+  state.coins = saved.coins != null ? saved.coins : state.coins;
+  state.kills = saved.kills != null ? saved.kills : state.kills;
+  if (saved.player) Object.assign(state.player, saved.player);
+  if (saved.buyCounts) state.buyCounts = saved.buyCounts;
+  if (saved.buyPrices) state.buyPrices = saved.buyPrices;
+  if (saved.maxTankLevelAchieved != null) state.maxTankLevelAchieved = saved.maxTankLevelAchieved;
+  if (saved.boostUntil != null) state.boostUntil = saved.boostUntil;
+  if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects };
+  if (saved.nextCrateAt != null) state.nextCrateAt = saved.nextCrateAt;
+  for (let i = 0; i < saved.cells.length; i++) {
+    const sc = saved.cells[i];
+    const cell = state.cells[sc.i];
+    if (!cell) continue;
+    if (sc.orbitPhase !== undefined) cell.orbitPhase = sc.orbitPhase;
+    if (sc.tank) {
+      cell.tank = makeTank(sc.tank.level, !!sc.tank.onTrack);
+      if (sc.tank.powerTier != null) cell.tank.powerTier = sc.tank.powerTier;
+    } else cell.tank = null;
+  }
+  if (saved.crate && state.cells[saved.crate.cellIndex]) {
+    const cell = state.cells[saved.crate.cellIndex];
+    state.crate = {
+      x: cell.x + cell.w / 2,
+      y: cell.y + cell.h / 2,
+      targetY: cell.y + cell.h / 2,
+      size: BAL.crateSize,
+      pulse: 0,
+      rewardLevel: saved.crate.rewardLevel ?? 1,
+      cellIndex: saved.crate.cellIndex,
+      claiming: false,
+    };
+  } else state.crate = null;
+  refreshTanksPowerTier();
 }
 
 function inflateBuyPrice(price, count){
@@ -2218,6 +2270,7 @@ function chainLightning(x,y,b){
 const MAX_DAMAGE_NUMBERS = 24;
 
 function formatDamageNumber(value){
+  if (window.Game && window.Game.NumberFormat) return window.Game.NumberFormat.formatCompactRu(Math.round(value));
   const v = Math.round(value);
   if (v < 10000) return String(v);
   if (v < 1000000) {
@@ -2302,7 +2355,10 @@ function pickCrateRewardLevel(){
 }
 
 function pickEmptyCell(){
-  const empty = state.cells.filter(c => !c.tank);
+  const Garage = window.Game && window.Game.Garage;
+  const empty = Garage
+    ? state.cells.filter(c => Garage.isCellAvailableForTank(c, state))
+    : state.cells.filter(c => !c.tank);
   if (!empty.length) return null;
   return empty[Math.floor(Math.random() * empty.length)];
 }
@@ -2450,18 +2506,21 @@ function resetGameState(){
 function updateUI(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
-  ui.coins.textContent = Math.floor(state.coins);
+  const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
+  ui.coins.textContent = fmt(state.coins);
   ui.zcount.textContent = state.kills;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
-  ui.buyCost.textContent = cost;
+  ui.buyCost.textContent = fmt(cost);
 
   const left = state.boostUntil - nowSec();
   ui.boostState.textContent = left > 0
     ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
     : '—';
 
-  ui.buy.disabled = state.coins < cost || !state.cells.some(c=>!c.tank);
+  const Garage = window.Game && window.Game.Garage;
+  const hasFree = Garage ? Garage.hasFreeCell(state) : state.cells.some(c=>!c.tank);
+  ui.buy.disabled = state.coins < cost || !hasFree;
   updateProgressUI();
   updateTalentUI();
   updateStageAbilitySlots();
@@ -2595,8 +2654,9 @@ function updateProgressUI(){
 
   const need = Math.max(1, p.xpToNext);
   const pct = clamp(p.xp / need, 0, 1) * 100;
+  const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   lvlText.textContent = `${t('levelLabel')}: ${p.level}`;
-  xpText.textContent = `${Math.floor(p.xp)}/${need}`;
+  xpText.textContent = `${fmt(p.xp)}/${fmt(need)}`;
   xpBar.style.width = `${pct}%`;
 }
 
@@ -2847,13 +2907,16 @@ function closeCrateModal(){
 }
 
 function grantCrateTank(level, preferredIndex = null){
+  const Garage = window.Game && window.Game.Garage;
   let cell = null;
-  if (Number.isFinite(preferredIndex)){
-    const candidate = state.cells[preferredIndex];
-    if (candidate && !candidate.tank) cell = candidate;
+  if (Number.isFinite(preferredIndex) && Garage && Garage.isCellAvailableForTank(state.cells[preferredIndex], state))
+    cell = state.cells[preferredIndex];
+  if (!cell && Garage) {
+    const idx = Garage.findFreeCell(state);
+    if (idx != null) cell = state.cells[idx];
   }
   if (!cell) cell = pickEmptyCell();
-  if (!cell) return false;
+  if (!cell || (Garage && !Garage.isCellAvailableForTank(cell, state))) return false;
   cell.tank = makeTank(level, false);
   recordTankLevel(level);
   return true;
@@ -2892,6 +2955,7 @@ function cellAt(x,y){
 
 canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
+  if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
   if (crateHitTest(p.x, p.y)){
     openCrateModal();
     return;
@@ -3036,6 +3100,10 @@ function draw(){
   // If sprites failed to load, show a small hint on canvas
   if (!ZombieSprites.ready){
     drawHint(t('hintSpritesOff'));
+  }
+
+  if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.isVisible()){
+    window.Game.OfflineModal.render(ctx, viewSize);
   }
 }
 
@@ -4783,7 +4851,16 @@ async function boot(){
   applyTranslations();
   ensureProgressUI();
   initTalentDefs();
-  applySavedProgress(getSavedProgress());
+  let loaded = null;
+  if (window.Game && window.Game.Storage) {
+    loaded = window.Game.Storage.loadGame();
+    if (loaded) {
+      if (loaded.legacyProgress) applySavedProgress(loaded.legacyProgress);
+      if (loaded.meta && loaded.meta.lastSeenAt != null) meta.lastSeenAt = loaded.meta.lastSeenAt;
+    }
+  } else {
+    applySavedProgress(getSavedProgress());
+  }
   ensureTalentState();
   state.player.xpToNext = xpNeededForLevel(state.player.level);
   state.player.modsDirty = true;
@@ -4792,11 +4869,40 @@ async function boot(){
     ui.langEn.addEventListener('click', () => setLanguage('en'));
   }
   ui.menuContinue?.addEventListener('click', () => {
+    const ContinueFlow = window.Game && window.Game.ContinueFlow;
+    const OfflineModal = window.Game && window.Game.OfflineModal;
+    const AdService = window.Game && window.Game.AdService;
+    if (ContinueFlow && OfflineModal && AdService) {
+      ContinueFlow.onContinueClick(state, meta, () => setMenuOpen(false), (rewards) => {
+        if (!rewards || (rewards.coins === 0 && rewards.xp === 0)) return;
+        OfflineModal.showOfflineRewardsModal({
+          coins: rewards.coins,
+          xp: rewards.xp,
+          onConfirm() {
+            OfflineModal.setClaiming(true);
+            AdService.requestRewardedAd().then((result) => {
+              if (result && result.success) {
+                state.coins += rewards.coins;
+                state.player.xp += rewards.xp;
+                grantXP(0);
+                meta.lastSeenAt = Date.now();
+                saveProgress();
+                OfflineModal.hideModal();
+                updateUI();
+              }
+              OfflineModal.setClaiming(false);
+            });
+          },
+        });
+      });
+      return;
+    }
     setMenuOpen(false);
   });
   ui.menuNew?.addEventListener('click', () => {
     localStorage.removeItem('progress');
     resetGameState();
+    meta.lastSeenAt = Date.now();
     saveProgress();
     setMenuOpen(false);
   });
@@ -4839,7 +4945,8 @@ async function boot(){
     window.visualViewport.addEventListener('resize', resizeCanvas);
   }
   resizeCanvas();
-  state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+  if (loaded && loaded.state) restoreFullState(loaded.state);
+  state.nextCrateAt = state.nextCrateAt || nowSec() + BAL.crateIntervalSec;
 
   if (DebugPanelEnabled) initDebugPanel();
 
@@ -4849,6 +4956,19 @@ async function boot(){
     state.cells[1].tank = makeTank(1, true);
     recordTankLevel(1);
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && window.Game && window.Game.Storage) {
+      meta.lastSeenAt = Date.now();
+      window.Game.Storage.saveGame(state, meta);
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    if (window.Game && window.Game.Storage) {
+      meta.lastSeenAt = Date.now();
+      window.Game.Storage.saveGame(state, meta);
+    }
+  });
 
   await ZombieSprites.load();
   // optional tanks (won't break if missing)
