@@ -268,9 +268,9 @@ const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 
 const STRINGS = {
   ru: {
-    title: 'Tank Merger: Zombie Orbit',
+    title: 'Merge Tank: Zombie invasion',
     subtitle: 'В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков',
-    menuTitle: 'Tank Merger: Zombie Orbit',
+    menuTitle: 'Merge Tank: Zombie invasion',
     menuSubtitle: 'Главное меню выживших',
     menuContinue: 'Продолжить',
     menuNew: 'Новая игра',
@@ -282,7 +282,9 @@ const STRINGS = {
     hudSprites: 'Спрайты',
     hudBoost: 'Буст',
     buyTank: 'Купить танк {level} уровня',
-    boostBtn: 'Буст x2 на 60с (симуляция рекламы)',
+    boostBtn: 'Буст скорости',
+    boostModalText: 'Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу',
+    boostModalWatch: 'Посмотреть',
     armyTitle: 'Армия',
     zombieSpritesTitle: 'Зомби-спрайты',
     tankSpritesTitle: 'Танки-спрайты (опционально)',
@@ -307,11 +309,11 @@ const STRINGS = {
     talentPoints: 'Очки талантов',
     talentApply: 'Применить',
     talentReset: 'Сбросить выбор',
+    talentResetAll: 'Сбросить таланты',
     talentPending: 'Выбрано',
     talentNeedPoints: 'Не хватает очков',
     talentActive: 'Использовать активку',
     talentActiveCooldown: 'Активка ({sec}с)',
-    talentActiveLocked: 'Активка недоступна',
     levelLabel: 'Уровень',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
@@ -335,13 +337,13 @@ const STRINGS = {
     dismantleNoneSelected: 'Не выбрано ни одного танка',
     dismantleCount: 'танков',
     dismantleMore: 'ещё',
-    dropOnCrateReject: 'Нельзя поставить танк на коробку',
+    dropOnCrateReject: 'Место занято',
     menuSettings: 'Настройки',
   },
   en: {
-    title: 'Tank Merger: Zombie Orbit',
+    title: 'Merge Tank: Zombie invasion',
     subtitle: 'Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported',
-    menuTitle: 'Tank Merger: Zombie Orbit',
+    menuTitle: 'Merge Tank: Zombie invasion',
     menuSubtitle: 'Survivor main menu',
     menuContinue: 'Continue',
     menuNew: 'New game',
@@ -353,7 +355,9 @@ const STRINGS = {
     hudSprites: 'Sprites',
     hudBoost: 'Boost',
     buyTank: 'Buy tank Lv{level}',
-    boostBtn: 'Boost x2 for 60s (ad simulation)',
+    boostBtn: 'Speed boost',
+    boostModalText: 'Get 2x speed boost for 60 seconds by watching an ad',
+    boostModalWatch: 'Watch',
     armyTitle: 'Army',
     zombieSpritesTitle: 'Zombie sprites',
     tankSpritesTitle: 'Tank sprites (optional)',
@@ -378,11 +382,11 @@ const STRINGS = {
     talentPoints: 'Talent points',
     talentApply: 'Apply',
     talentReset: 'Reset selection',
+    talentResetAll: 'Reset talents',
     talentPending: 'Selected',
     talentNeedPoints: 'Not enough points',
     talentActive: 'Use active',
     talentActiveCooldown: 'Active ({sec}s)',
-    talentActiveLocked: 'Active unavailable',
     levelLabel: 'Level',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
@@ -406,7 +410,7 @@ const STRINGS = {
     dismantleNoneSelected: 'No tanks selected',
     dismantleCount: 'tanks',
     dismantleMore: 'more',
-    dropOnCrateReject: 'Cannot place tank on crate',
+    dropOnCrateReject: 'Place occupied',
     menuSettings: 'Settings',
   }
 };
@@ -842,7 +846,7 @@ function resizeCanvas(){
 
 // ---------- Board ----------
 function initBoard(){
-  const existing = state.cells.map(c=>c.tank);
+  const existing = state.cells.slice();
   const totalW = BAL.cols*BAL.cellW + (BAL.cols-1)*BAL.cellGap + BAL.boardPad*2;
   const totalH = BAL.rows*BAL.cellH + (BAL.rows-1)*BAL.cellGap + BAL.boardPad*2;
   const x0 = center.x - totalW/2;
@@ -854,7 +858,8 @@ function initBoard(){
     for (let c=0;c<BAL.cols;c++){
       const x = x0 + BAL.boardPad + c*(BAL.cellW+BAL.cellGap);
       const y = y0 + BAL.boardPad + r*(BAL.cellH+BAL.cellGap);
-      state.cells.push({ i, r, c, x, y, w:BAL.cellW, h:BAL.cellH, tank: existing[i] ?? null });
+      const old = existing[i];
+      state.cells.push({ i, r, c, x, y, w:BAL.cellW, h:BAL.cellH, tank: old?.tank ?? null, orbitPhase: old?.orbitPhase });
       i++;
     }
   }
@@ -1385,6 +1390,21 @@ function resetTalentSelections(){
   updateTalentUI();
 }
 
+function resetAllTalents(){
+  const p = state.player;
+  let refund = 0;
+  TALENT_DEFS.forEach((def, i) => {
+    const applied = p.talentsApplied[i] || 0;
+    refund += applied;
+    p.talentsApplied[i] = 0;
+  });
+  p.talentsPending.fill(0);
+  p.talentPoints += refund;
+  p.modsDirty = true;
+  saveProgress();
+  updateTalentUI();
+}
+
 function doApplyTalentSelections(){
   const p = state.player;
   const cost = pendingCost();
@@ -1842,10 +1862,10 @@ function startZombieDying(z){
   state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
   state.kills += 1;
   const mods = getMods();
-  const base = 5 + Math.random() * 5;
-  const levelMul = 1.1 ** Math.max(0, (z.level ?? 1) - 1);
+  const lvl = z.level ?? 1;
+  const baseXp = 9 * Math.pow(2, lvl - 1);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
-  grantXP(base * levelMul * mods.xpMul * activeMul);
+  grantXP(Math.floor(baseXp * mods.xpMul * activeMul));
   const p = zombiePos(z);
   burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
 }
@@ -1895,9 +1915,13 @@ function stepZombies(dt){
 
 // ---------- Combat: visible projectiles ----------
 function stepTanks(dt){
+  const mods = getMods();
+  const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+  const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
   for (const cell of state.cells){
     const tank = cell.tank;
     if (!tank || !tank.onTrack) continue;
+    if (cell.orbitPhase !== undefined) cell.orbitPhase += dt * angularSpeed;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
     const hasSpriteConfig = TankSprites?.ready && TankSprites?.config?.body && (TankSprites?.config?.cannons?.length || 0) > 0;
@@ -1909,27 +1933,32 @@ function stepTanks(dt){
     const s = tankStats(tank.level);
     const mods = getMods();
 
-    // pick nearest zombie in range + forward sector
-    let best = null;
-    let bestD = Infinity;
+    // pick target far ahead in movement direction (no shooting "backward")
     const pos = tankOrbitState(cell, nowSec());
     const sx = pos.x;
     const sy = pos.y;
     const fwdX = Math.cos(pos.heading);
     const fwdY = Math.sin(pos.heading);
+    const forwardMin = 0;
 
+    const candidates = [];
     for (const z of state.zombies){
       if (z.state === 'dying') continue;
       const p = zombiePos(z);
       const dx = p.x - sx;
       const dy = p.y - sy;
       const d = Math.hypot(dx, dy);
-      if (!d || d > s.range || d >= bestD) continue;
-      const dot = (dx * fwdX + dy * fwdY) / d;
-      if (dot <= 0.1) continue;
-      best = z;
-      bestD = d;
+      if (!d || d > s.range) continue;
+      const forwardDist = dx * fwdX + dy * fwdY;
+      if (forwardDist <= forwardMin) continue;
+      const sideDist = Math.hypot(dx - fwdX * forwardDist, dy - fwdY * forwardDist);
+      candidates.push({ z, d, forwardDist, sideDist });
     }
+    candidates.sort((a, b) => {
+      if (b.forwardDist !== a.forwardDist) return b.forwardDist - a.forwardDist;
+      return a.sideDist - b.sideDist;
+    });
+    const best = candidates.length ? candidates[0].z : null;
 
     if (hasSpriteConfig){
       const cannon = TankSprites.pickCannon(tank.level);
@@ -2003,11 +2032,19 @@ function tankOrbitState(cell, timeSec){
   const offset = (cell.i / total) * Math.PI * 2;
   const mods = getMods();
   const activeSpeed = timeSec < state.activeEffects.speedUntil ? 1.35 : 1;
-  const angle = timeSec * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed + offset;
-  const orbitR = getTankOrbitRadius();
+  const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
+  if (cell.tank?.onTrack && cell.orbitPhase !== undefined) {
+    const angle = cell.orbitPhase + offset;
+    return {
+      x: center.x + Math.cos(angle) * getTankOrbitRadius(),
+      y: center.y + Math.sin(angle) * getTankOrbitRadius(),
+      heading: angle + Math.PI/2,
+    };
+  }
+  const angle = timeSec * angularSpeed + offset;
   return {
-    x: center.x + Math.cos(angle) * orbitR,
-    y: center.y + Math.sin(angle) * orbitR,
+    x: center.x + Math.cos(angle) * getTankOrbitRadius(),
+    y: center.y + Math.sin(angle) * getTankOrbitRadius(),
     heading: angle + Math.PI/2,
   };
 }
@@ -2175,13 +2212,24 @@ function chainLightning(x,y,b){
 
 const MAX_DAMAGE_NUMBERS = 24;
 
+function formatDamageNumber(value){
+  const v = Math.round(value);
+  if (v < 10000) return String(v);
+  if (v < 1000000) {
+    const k = v / 1000;
+    return (k === Math.floor(k) ? k : k.toFixed(1).replace('.', ',')) + 'к';
+  }
+  const m = v / 1000000;
+  return (m === Math.floor(m) ? m : m.toFixed(1).replace('.', ',')) + 'м';
+}
+
 function addDamageNumber(x, y, value, isCrit = false){
   if (state.damageNumbers.length >= MAX_DAMAGE_NUMBERS) state.damageNumbers.shift();
   const jitter = 8;
   state.damageNumbers.push({
     x: x + (Math.random() * 2 - 1) * jitter,
     y: y + (Math.random() * 2 - 1) * jitter,
-    value: String(value),
+    value: formatDamageNumber(value),
     life: 1,
     max: 1,
     vy: -28,
@@ -2430,7 +2478,9 @@ function openDismantleModal(){
   }
   const selected = (state.selectedTankIds || []).filter(id => state.cells.some(c => c.tank?.id === id));
   if (selected.length === 0){
-    popText(center.x, center.y - 80, t('dismantleNoneSelected'), '#ffaa44');
+    state.isDismantleMode = false;
+    state.selectedTankIds = [];
+    updateDismantleButton();
     return;
   }
   fillDismantleConfirmModal(selected);
@@ -2562,10 +2612,15 @@ function ensureTalentUI(){
       </div>
       <div class="talentFooter">
         <div class="talentSummary" id="talentSummary"></div>
+        <div class="talentAbilitySlots" id="talentAbilitySlots">
+          <button id="talentActive0" class="btn talentAbilitySlot" type="button" data-branch="0" title="" aria-label="Active 0"></button>
+          <button id="talentActive1" class="btn talentAbilitySlot" type="button" data-branch="1" title="" aria-label="Active 1"></button>
+          <button id="talentActive2" class="btn talentAbilitySlot" type="button" data-branch="2" title="" aria-label="Active 2"></button>
+        </div>
         <div class="talentActions">
           <button id="talentReset" class="btn btnSecondary" type="button">${t('talentReset')}</button>
+          <button id="talentResetAll" class="btn btnSecondary" type="button">${t('talentResetAll')}</button>
           <button id="talentApply" class="btn btnPrimary" type="button">${t('talentApply')}</button>
-          <button id="talentActive" class="btn btnSecondary" type="button">${t('talentActive')}</button>
         </div>
       </div>
     </div>
@@ -2578,8 +2633,14 @@ function ensureTalentUI(){
   });
   overlay.querySelector('.modalClose')?.addEventListener('click', () => closeTalents());
   overlay.querySelector('#talentReset')?.addEventListener('click', () => resetTalentSelections());
+  overlay.querySelector('#talentResetAll')?.addEventListener('click', () => resetAllTalents());
   overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
-  overlay.querySelector('#talentActive')?.addEventListener('click', () => useActiveAbility(state.ui.talentBranch));
+  overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const branch = Number(btn.dataset.branch);
+      useActiveAbility(branch);
+    });
+  });
 
   const branches = overlay.querySelector('#talentBranches');
   TALENT_BRANCHES.forEach((branchName, branch) => {
@@ -2672,22 +2733,23 @@ function updateTalentUI(){
   }
   const resetBtn = overlay.querySelector('#talentReset');
   if (resetBtn) resetBtn.disabled = cost <= 0;
+  const resetAllBtn = overlay.querySelector('#talentResetAll');
+  if (resetAllBtn) resetAllBtn.disabled = !p.talentsApplied.some((r, i) => (r || 0) > 0);
 
-  const activeBtn = overlay.querySelector('#talentActive');
-  if (activeBtn){
-    const branch = state.ui.talentBranch;
-    const cdUntil = p.activeCooldowns[branch] || 0;
-    const now = nowSec();
-    const cdLeft = Math.max(0, cdUntil - now);
+  overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
+    const branch = Number(btn.dataset.branch);
+    const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
     const canUse = canUseActive(branch);
-    const label = canUse
-      ? t('talentActive')
-      : cdLeft > 0
-        ? t('talentActiveCooldown', {sec: Math.ceil(cdLeft)})
-        : t('talentActiveLocked');
-    activeBtn.textContent = `${label} • ${TALENT_BRANCHES[branch]}`;
-    activeBtn.disabled = !canUse;
-  }
+    const cdUntil = p.activeCooldowns[branch] || 0;
+    const cdLeft = Math.max(0, cdUntil - nowSec());
+    btn.classList.toggle('talentAbilityLocked', !unlocked);
+    btn.classList.toggle('talentAbilityUnlocked', unlocked);
+    btn.disabled = !unlocked || !canUse;
+    btn.title = unlocked
+      ? (canUse ? TALENT_BRANCHES[branch] : t('talentActiveCooldown', {sec: Math.ceil(cdLeft)}))
+      : TALENT_BRANCHES[branch];
+    btn.textContent = unlocked && canUse ? '' : (cdLeft > 0 ? Math.ceil(cdLeft) : '');
+  });
 }
 
 function renderCrateIcon(level){
@@ -2704,6 +2766,23 @@ function renderCrateIcon(level){
     false,
     1.8
   );
+}
+
+function openBoostModal(){
+  const modal = document.getElementById('boostModal');
+  if (!modal) return;
+  const textEl = document.getElementById('boostModalText');
+  const watchEl = document.getElementById('boostModalWatch');
+  if (textEl) textEl.textContent = t('boostModalText');
+  if (watchEl) watchEl.textContent = t('boostModalWatch');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+function closeBoostModal(){
+  const modal = document.getElementById('boostModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
 }
 
 function openCrateModal(){
@@ -2830,6 +2909,9 @@ canvas.addEventListener('pointerup', (e)=>{
 
   if (!state.dragging.moved){
     from.tank.onTrack = true;
+    const mods = getMods();
+    const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+    from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
     popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
     state.selectedHangarCellIndex = from.i;
   } else if (target){
@@ -2850,7 +2932,15 @@ canvas.addEventListener('pointerup', (e)=>{
 });
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
-ui.boost.addEventListener('click', ()=> { state.boostUntil = nowSec() + BAL.boostDurationSec; });
+ui.boost.addEventListener('click', () => openBoostModal());
+document.getElementById('boostModalWatch')?.addEventListener('click', () => {
+  state.boostUntil = nowSec() + BAL.boostDurationSec;
+  closeBoostModal();
+});
+document.getElementById('boostModalClose')?.addEventListener('click', () => closeBoostModal());
+document.getElementById('boostModal')?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.boostClose === 'true') closeBoostModal();
+});
 ui.crateGet?.addEventListener('click', () => claimCrateReward());
 ui.crateClose?.addEventListener('click', () => closeCrateModal());
 ui.crateModal?.addEventListener('click', (e) => {
@@ -4660,6 +4750,23 @@ async function boot(){
   });
   ui.talentsBtn?.addEventListener('click', () => openTalents());
   ui.settingsBtn?.addEventListener('click', () => setMenuOpen(true));
+  const settingsTooltip = document.getElementById('settingsTooltip');
+  if (ui.settingsBtn && settingsTooltip){
+    ui.settingsBtn.addEventListener('mouseenter', () => {
+      settingsTooltip.textContent = t('menuSettings');
+      settingsTooltip.classList.remove('hidden');
+      settingsTooltip.setAttribute('aria-hidden', 'false');
+    });
+    ui.settingsBtn.addEventListener('mousemove', (e) => {
+      settingsTooltip.style.left = e.clientX + 'px';
+      settingsTooltip.style.top = (e.clientY + 12) + 'px';
+      settingsTooltip.style.transform = 'translate(-50%, 0)';
+    });
+    ui.settingsBtn.addEventListener('mouseleave', () => {
+      settingsTooltip.classList.add('hidden');
+      settingsTooltip.setAttribute('aria-hidden', 'true');
+    });
+  }
   ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
   if (window.visualViewport){
