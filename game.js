@@ -143,6 +143,15 @@ const BAL = {
   crateIntervalSec: 60,
   crateDropSpeed: 220,
   crateSize: 34,
+
+  // Fence (configurable sprites; empty = procedural)
+  fenceSpriteIds: [],
+
+  // Decor (random placement, no-spawn zones)
+  decorSpriteIds: [],
+  decorCount: 24,
+  decorNoSpawnZones: [],
+  decorMaxAttempts: 400,
 };
 
 const BASE_BAL = {
@@ -196,6 +205,8 @@ function createInitialState(){
     decals: [],      // e.g., toxic pools
     particles: [],
     damageNumbers: [],
+    decors: [],
+    fenceSegments: [],
     crate: null,
     nextCrateAt: 0,
     dragging: null,
@@ -233,6 +244,8 @@ function createInitialState(){
       menuOpen: true,
     },
     selectedHangarCellIndex: null,
+    isDismantleMode: false,
+    selectedTankIds: [],
   };
 }
 
@@ -314,9 +327,15 @@ const STRINGS = {
     zombieShort: 'З',
     tankShort: 'Т',
     dismantleBtn: 'Разобрать танк',
+    dismantleBtnConfirm: 'Подтвердить разбор',
     dismantleConfirm: 'Вы действительно хотите разобрать танк {level} уровня?',
+    dismantleConfirmMulti: 'Вы действительно хотите разбить выбранные танки?',
     dismantleYes: 'Да',
     dismantleNo: 'Нет',
+    dismantleNoneSelected: 'Не выбрано ни одного танка',
+    dismantleCount: 'танков',
+    dismantleMore: 'ещё',
+    dropOnCrateReject: 'Нельзя поставить танк на коробку',
     menuSettings: 'Настройки',
   },
   en: {
@@ -379,9 +398,15 @@ const STRINGS = {
     zombieShort: 'Z',
     tankShort: 'T',
     dismantleBtn: 'Dismantle tank',
+    dismantleBtnConfirm: 'Confirm dismantle',
     dismantleConfirm: 'Do you really want to dismantle tank level {level}?',
+    dismantleConfirmMulti: 'Do you really want to dismantle the selected tanks?',
     dismantleYes: 'Yes',
     dismantleNo: 'No',
+    dismantleNoneSelected: 'No tanks selected',
+    dismantleCount: 'tanks',
+    dismantleMore: 'more',
+    dropOnCrateReject: 'Cannot place tank on crate',
     menuSettings: 'Settings',
   }
 };
@@ -678,6 +703,70 @@ const TankSprites = {
   }
 };
 
+const FenceSprites = {
+  ready: false,
+  error: '',
+  atlasImg: null,
+  framesById: new Map(),
+  async load(){
+    try{
+      const res = await fetch('assets/fence.json', {cache:'no-store'});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const atlasPath = 'assets/' + (data.atlas || 'fence.png');
+      const img = await loadImage(atlasPath);
+      this.atlasImg = img;
+      this.framesById.clear();
+      for (const f of (data.frames || [])){
+        const id = f.id || String(this.framesById.size);
+        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.w ?? 32, h: f.h ?? 32, anchor: f.anchor || { x: 0.5, y: 0.5 } });
+      }
+      this.ready = true;
+      this.error = '';
+    }catch(e){
+      this.ready = false;
+      this.atlasImg = null;
+      this.framesById.clear();
+      this.error = String(e);
+    }
+  },
+  pickFrame(spriteId){
+    return this.framesById.get(spriteId) || this.framesById.values().next().value;
+  }
+};
+
+const DecorSprites = {
+  ready: false,
+  error: '',
+  atlasImg: null,
+  framesById: new Map(),
+  async load(){
+    try{
+      const res = await fetch('assets/decor.json', {cache:'no-store'});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const atlasPath = 'assets/' + (data.atlas || 'decor.png');
+      const img = await loadImage(atlasPath);
+      this.atlasImg = img;
+      this.framesById.clear();
+      for (const f of (data.frames || [])){
+        const id = f.id || String(this.framesById.size);
+        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.w ?? 24, h: f.h ?? 24, anchor: f.anchor || { x: 0.5, y: 0.8 } });
+      }
+      this.ready = true;
+      this.error = '';
+    }catch(e){
+      this.ready = false;
+      this.atlasImg = null;
+      this.framesById.clear();
+      this.error = String(e);
+    }
+  },
+  pickFrame(spriteId){
+    return this.framesById.get(spriteId) || this.framesById.values().next().value;
+  }
+};
+
 function loadImage(url){
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -803,6 +892,36 @@ function initBoard(){
   }
 
   buildBackground();
+  initDecors();
+}
+
+function initDecors(){
+  state.decors = [];
+  const ids = BAL.decorSpriteIds || [];
+  const count = Math.min(Math.max(0, BAL.decorCount || 0), 200);
+  if (!ids.length || count <= 0) return;
+  const zones = BAL.decorNoSpawnZones || [];
+  const maxAttempts = BAL.decorMaxAttempts || 400;
+  const innerR = (BAL.tankOrbitRadius || 200) + 50;
+  const outerR = Math.min(viewSize.w, viewSize.h) / 2 - 30;
+  if (outerR <= innerR) return;
+  for (let n = 0; n < count; n++){
+    for (let attempt = 0; attempt < maxAttempts; attempt++){
+      const angle = Math.random() * Math.PI * 2;
+      const r = innerR + Math.random() * (outerR - innerR);
+      const x = center.x + Math.cos(angle) * r;
+      const y = center.y + Math.sin(angle) * r;
+      let inZone = false;
+      for (const z of zones){
+        if (z.r != null && Math.hypot(x - (z.cx ?? z.x ?? 0), y - (z.cy ?? z.y ?? 0)) <= z.r) inZone = true;
+        if (z.w != null && z.h != null && x >= (z.x ?? 0) && x <= (z.x ?? 0) + z.w && y >= (z.y ?? 0) && y <= (z.y ?? 0) + z.h) inZone = true;
+      }
+      if (!inZone){
+        state.decors.push({ x, y, spriteId: ids[Math.floor(Math.random() * ids.length)] });
+        break;
+      }
+    }
+  }
 }
 
 function getTankOrbitRadius(){
@@ -1959,18 +2078,28 @@ function stepProjectiles(dt){
   state.projectiles = next;
 }
 
+function critChanceFromTankLevel(level){
+  const lvl = Math.max(1, level);
+  const percent = 1.0 + (lvl - 1) * 0.25;
+  return percent / 100;
+}
+
 function impactAt(x,y,b){
   const mods = getMods();
-  // Base AOE damage
+  const tankLevel = b.level ?? 1;
+  const critChance = critChanceFromTankLevel(tankLevel);
   for (const z of state.zombies){
     if (z.state === 'dying') continue;
     const p = zombiePos(z);
     const d = Math.hypot(p.x-x, p.y-y);
     if (d <= b.aoe){
       const falloff = 0.55 + 0.45*(1 - d/b.aoe);
-      const dmg = b.dmg * falloff;
-      z.hp -= dmg;
-      addDamageNumber(p.x, p.y, Math.round(dmg));
+      const baseDmg = b.dmg * falloff;
+      const isCrit = Math.random() < critChance;
+      const finalDmg = baseDmg * (isCrit ? 1.5 : 1);
+      const dmgRounded = Math.round(finalDmg);
+      z.hp -= dmgRounded;
+      addDamageNumber(p.x, p.y, dmgRounded, isCrit);
       if (Math.random() < mods.dotChance){
         z.dotUntil = nowSec() + 4;
         z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
@@ -2031,9 +2160,14 @@ function chainLightning(x,y,b){
     // visual bolt
     state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
 
-    const chainDmg = b.dmg * mul;
-    best.hp -= chainDmg;
-    addDamageNumber(p.x, p.y, Math.round(chainDmg));
+    const baseChainDmg = b.dmg * mul;
+    const tankLevel = b.level ?? 1;
+    const critChance = critChanceFromTankLevel(tankLevel);
+    const isCrit = Math.random() < critChance;
+    const finalChainDmg = baseChainDmg * (isCrit ? 1.5 : 1);
+    const dmgRounded = Math.round(finalChainDmg);
+    best.hp -= dmgRounded;
+    addDamageNumber(p.x, p.y, dmgRounded, isCrit);
     curX = p.x;
     curY = p.y;
   }
@@ -2041,7 +2175,7 @@ function chainLightning(x,y,b){
 
 const MAX_DAMAGE_NUMBERS = 24;
 
-function addDamageNumber(x, y, value){
+function addDamageNumber(x, y, value, isCrit = false){
   if (state.damageNumbers.length >= MAX_DAMAGE_NUMBERS) state.damageNumbers.shift();
   const jitter = 8;
   state.damageNumbers.push({
@@ -2051,6 +2185,7 @@ function addDamageNumber(x, y, value){
     life: 1,
     max: 1,
     vy: -28,
+    isCrit: !!isCrit,
   });
 }
 
@@ -2280,23 +2415,56 @@ function updateUI(){
 }
 
 function updateDismantleButton(){
-  const cell = state.selectedHangarCellIndex != null && state.cells[state.selectedHangarCellIndex] ? state.cells[state.selectedHangarCellIndex] : null;
-  const hasTank = cell?.tank && !cell.tank.onTrack;
-  if (ui.dismantleBtn){
-    ui.dismantleBtn.disabled = !hasTank;
-    ui.dismantleBtn.textContent = t('dismantleBtn');
-  }
+  if (!ui.dismantleBtn) return;
+  ui.dismantleBtn.disabled = false;
+  ui.dismantleBtn.textContent = state.isDismantleMode ? t('dismantleBtnConfirm') : t('dismantleBtn');
 }
 
 function openDismantleModal(){
-  const idx = state.selectedHangarCellIndex;
-  const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
-  if (!cell?.tank || !ui.dismantleModal) return;
-  if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirm', { level: cell.tank.level });
-  if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
-  if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+  if (!ui.dismantleModal) return;
+  if (!state.isDismantleMode){
+    state.isDismantleMode = true;
+    state.selectedTankIds = [];
+    updateDismantleButton();
+    return;
+  }
+  const selected = (state.selectedTankIds || []).filter(id => state.cells.some(c => c.tank?.id === id));
+  if (selected.length === 0){
+    popText(center.x, center.y - 80, t('dismantleNoneSelected'), '#ffaa44');
+    return;
+  }
+  fillDismantleConfirmModal(selected);
   ui.dismantleModal.classList.remove('hidden');
   ui.dismantleModal.setAttribute('aria-hidden', 'false');
+}
+
+function fillDismantleConfirmModal(selectedTankIds){
+  if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirmMulti');
+  if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
+  if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+  const wrap = document.getElementById('dismantleIconsWrap');
+  if (wrap){
+    const maxIcons = 12;
+    const ids = selectedTankIds.slice(0, maxIcons);
+    const rest = Math.max(0, selectedTankIds.length - maxIcons);
+    wrap.innerHTML = '';
+    for (const id of ids){
+      const cell = state.cells.find(c => c.tank?.id === id);
+      if (!cell?.tank) continue;
+      const can = document.createElement('canvas');
+      can.width = 36;
+      can.height = 28;
+      can.style.verticalAlign = 'middle';
+      can.style.marginRight = '4px';
+      const cctx = can.getContext('2d');
+      drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7);
+      wrap.appendChild(can);
+    }
+    const span = document.createElement('span');
+    span.style.marginLeft = '8px';
+    span.textContent = rest > 0 ? t('dismantleMore') + ' ' + rest + ' · ' + selectedTankIds.length + ' ' + t('dismantleCount') : selectedTankIds.length + ' ' + t('dismantleCount');
+    wrap.appendChild(span);
+  }
 }
 
 function closeDismantleModal(){
@@ -2306,10 +2474,14 @@ function closeDismantleModal(){
 }
 
 function confirmDismantle(){
-  const idx = state.selectedHangarCellIndex;
-  const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
-  if (!cell?.tank) return;
-  cell.tank = null;
+  const ids = state.selectedTankIds || [];
+  for (const id of ids){
+    const cell = state.cells.find(c => c.tank?.id === id);
+    if (!cell) continue;
+    cell.tank = null;
+  }
+  state.selectedTankIds = [];
+  state.isDismantleMode = false;
   state.selectedHangarCellIndex = null;
   closeDismantleModal();
   updateDismantleButton();
@@ -2317,6 +2489,27 @@ function confirmDismantle(){
   if (state.debug?.refreshHangarList) state.debug.refreshHangarList();
   if (state.debug?.refreshTankExtras) state.debug.refreshTankExtras();
   if (state.debug?.refreshZombieWeights) state.debug.refreshZombieWeights();
+}
+
+function toggleDismantleSelection(tankId){
+  if (!state.selectedTankIds) state.selectedTankIds = [];
+  const i = state.selectedTankIds.indexOf(tankId);
+  if (i >= 0) state.selectedTankIds.splice(i, 1);
+  else state.selectedTankIds.push(tankId);
+}
+
+function dismantleCheckboxRect(cell){
+  const size = 14;
+  return { x: cell.x + cell.w - size - 4, y: cell.y + 4, w: size, h: size };
+}
+
+function hitDismantleCheckbox(cell, px, py){
+  const r = dismantleCheckboxRect(cell);
+  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
+function isTankSelectedForDismantle(tankId){
+  return (state.selectedTankIds || []).indexOf(tankId) >= 0;
 }
 
 function ensureProgressUI(){
@@ -2590,6 +2783,13 @@ canvas.addEventListener('pointerdown', (e)=>{
     return;
   }
   const c = cellAt(p.x, p.y);
+  if (state.isDismantleMode){
+    if (c && c.tank && hitDismantleCheckbox(c, p.x, p.y)){
+      toggleDismantleSelection(c.tank.id);
+      return;
+    }
+    return;
+  }
   if (!c || !c.tank) return;
   if (c.tank.onTrack){
     c.tank.onTrack = false;
@@ -2633,12 +2833,17 @@ canvas.addEventListener('pointerup', (e)=>{
     popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
     state.selectedHangarCellIndex = from.i;
   } else if (target){
-    const merged = mergeCells(from.i, target.i);
-    if (!merged && !target.tank){
-      target.tank = from.tank;
-      from.tank = null;
+    const targetHasBox = state.crate && state.crate.cellIndex === target.i;
+    if (targetHasBox){
+      popText(target.x + target.w/2, target.y + target.h/2, t('dropOnCrateReject'), '#ffaa44');
+    } else {
+      const merged = mergeCells(from.i, target.i);
+      if (!merged && !target.tank){
+        target.tank = from.tank;
+        from.tank = null;
+      }
+      state.selectedHangarCellIndex = target.i;
     }
-    state.selectedHangarCellIndex = target.i;
   }
   state.dragging = null;
   updateDismantleButton();
@@ -2665,6 +2870,7 @@ function draw(){
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
   drawBackground();
+  drawDecors();
   drawTrack();
   drawZombieFence();
   drawTankTrack();
@@ -2725,6 +2931,27 @@ function drawBackground(){
   g.addColorStop(1, '#6b4a2c');
   ctx.fillStyle = g;
   ctx.fillRect(0,0,viewSize.w,viewSize.h);
+}
+
+function drawDecors(){
+  if (!state.decors || !state.decors.length) return;
+  if (!DecorSprites.ready || !DecorSprites.atlasImg) return;
+  for (const d of state.decors){
+    const frame = DecorSprites.pickFrame(d.spriteId);
+    if (!frame) continue;
+    const scale = 0.5 * balScale;
+    const ax = frame.anchor?.x ?? 0.5;
+    const ay = frame.anchor?.y ?? 0.8;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(
+      DecorSprites.atlasImg,
+      frame.x, frame.y, frame.w, frame.h,
+      d.x - frame.w * scale * ax, d.y - frame.h * scale * ay,
+      frame.w * scale, frame.h * scale
+    );
+    ctx.restore();
+  }
 }
 
 function drawTrack(){
@@ -2792,37 +3019,72 @@ function drawTankTrack(){
 
 function drawZombieFence(){
   const r = BAL.fenceRadius;
+  const ids = BAL.fenceSpriteIds || [];
+  const useSprites = FenceSprites.ready && ids.length > 0;
+
   ctx.save();
   ctx.translate(center.x, center.y);
 
-  ctx.strokeStyle = 'rgba(161, 110, 64, .55)';
-  ctx.lineWidth = BAL.fenceWidth;
-  ctx.beginPath();
-  ctx.arc(0,0,r,0,Math.PI*2);
-  ctx.stroke();
+  if (useSprites){
+    if (!state.fenceSegments || state.fenceSegments.length === 0){
+      state.fenceSegments = [];
+      const segments = 40;
+      for (let i = 0; i < segments; i++){
+        const a = (i / segments) * Math.PI * 2;
+        const sid = ids[Math.floor(Math.random() * ids.length)];
+        state.fenceSegments.push({ a, spriteId: sid });
+      }
+    }
+    for (const seg of state.fenceSegments){
+      const frame = FenceSprites.pickFrame(seg.spriteId);
+      if (!frame || !FenceSprites.atlasImg) continue;
+      const px = Math.cos(seg.a) * r;
+      const py = Math.sin(seg.a) * r;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(seg.a);
+      const scale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2;
+      const ax = frame.anchor?.x ?? 0.5;
+      const ay = frame.anchor?.y ?? 0.5;
+      ctx.drawImage(
+        FenceSprites.atlasImg,
+        frame.x, frame.y, frame.w, frame.h,
+        -frame.w * scale * ax, -frame.h * scale * ay,
+        frame.w * scale, frame.h * scale
+      );
+      ctx.restore();
+    }
+  } else {
+    state.fenceSegments = [];
+    ctx.strokeStyle = 'rgba(161, 110, 64, .55)';
+    ctx.lineWidth = BAL.fenceWidth;
+    ctx.beginPath();
+    ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(59, 35, 19, .38)';
-  ctx.lineWidth = BAL.fenceWidth * 0.4;
-  ctx.beginPath();
-  ctx.arc(0,0,r-5,0,Math.PI*2);
-  ctx.stroke();
+    ctx.strokeStyle = 'rgba(59, 35, 19, .38)';
+    ctx.lineWidth = BAL.fenceWidth * 0.4;
+    ctx.beginPath();
+    ctx.arc(0,0,r-5,0,Math.PI*2);
+    ctx.stroke();
 
-  const posts = 40;
-  const postScale = BAL.fenceWidth / 4;
-  for (let i=0;i<posts;i++){
-    const a = (i/posts) * Math.PI*2;
-    const px = Math.cos(a) * r;
-    const py = Math.sin(a) * r;
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(a);
-    ctx.fillStyle = 'rgba(188, 126, 74, .55)';
+    const posts = 40;
+    const postScale = BAL.fenceWidth / 4;
+    for (let i=0;i<posts;i++){
+      const a = (i/posts) * Math.PI*2;
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(a);
+      ctx.fillStyle = 'rgba(188, 126, 74, .55)';
     ctx.strokeStyle = 'rgba(45, 26, 14, .3)';
     ctx.lineWidth = 1.5 * postScale;
     rr(ctx, -3 * postScale, -10 * postScale, 6 * postScale, 18 * postScale, 2 * postScale);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
   }
 
   ctx.restore();
@@ -2888,6 +3150,24 @@ function drawBoard(){
 
     if (c.tank){
       drawTankSlot(c);
+      if (state.isDismantleMode){
+        const r = dismantleCheckboxRect(c);
+        ctx.fillStyle = 'rgba(0,0,0,.4)';
+        ctx.strokeStyle = isTankSelectedForDismantle(c.tank.id) ? 'rgba(110,168,255,.9)' : 'rgba(255,255,255,.5)';
+        ctx.lineWidth = 1.5;
+        rr(ctx, r.x, r.y, r.w, r.h, 3);
+        ctx.fill();
+        ctx.stroke();
+        if (isTankSelectedForDismantle(c.tank.id)){
+          ctx.strokeStyle = '#eaf1ff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(r.x + 3, r.y + r.h/2);
+          ctx.lineTo(r.x + r.w/2 - 2, r.y + r.h - 4);
+          ctx.lineTo(r.x + r.w - 3, r.y + 4);
+          ctx.stroke();
+        }
+      }
     }
   }
 
@@ -2896,6 +3176,9 @@ function drawBoard(){
       state.dragging.x - state.dragging.dx,
       state.dragging.y - state.dragging.dy,
       state.dragging.tank,
+      true,
+      Math.PI/2,
+      true,
       true
     );
   }
@@ -3111,14 +3394,16 @@ function drawTankAuraSprite(x, y, aura){
   ctx.restore();
 }
 
-function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true){
+function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPreview=false){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
-  const auraSprite = TankSprites?.pickAura?.(level);
-  if (auraSprite) {
-    drawTankAuraSprite(x, y, auraSprite);
-  } else {
-    const auraBand = computeAuraBand(level);
-    if (auraBand != null) drawTankAura(x, y, auraBand);
+  if (!isDragPreview){
+    const auraSprite = TankSprites?.pickAura?.(level);
+    if (auraSprite) {
+      drawTankAuraSprite(x, y, auraSprite);
+    } else {
+      const auraBand = computeAuraBand(level);
+      if (auraBand != null) drawTankAura(x, y, auraBand);
+    }
   }
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.(level);
@@ -3614,7 +3899,7 @@ function drawDamageNumbers(){
     const alpha = t <= 0.2 ? t / 0.2 : (t >= 0.6 ? 1 : (t - 0.2) / 0.4);
     ctx.save();
     ctx.globalAlpha = clamp(alpha, 0, 1) * (0.5 + 0.5 * t);
-    ctx.fillStyle = '#fff8e0';
+    ctx.fillStyle = d.isCrit ? '#c03030' : '#fff8e0';
     ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -4381,6 +4666,8 @@ async function boot(){
   await ZombieSprites.load();
   // optional tanks (won't break if missing)
   await TankSprites.load();
+  FenceSprites.load().catch(() => {});
+  DecorSprites.load().catch(() => {});
 
   ensureZombieCount();
   updateUI();
