@@ -28,9 +28,39 @@
     return true;
   }
 
+  /**
+   * Монеты за выстрел по уровню танка: 2^(level-1), cap = 2^20.
+   * @param {number} level — уровень танка (>= 1)
+   * @returns {number}
+   */
+  var MAX_COIN_PER_SHOT = Math.pow(2, 20);
+  function coinsForShot(level) {
+    if (level == null || level < 1) return 0;
+    var L = Math.max(1, Math.floor(level));
+    return Math.min(Math.pow(2, L - 1), MAX_COIN_PER_SHOT);
+  }
+
+  // Максимальный уровень покупаемого танка
+  const MAX_BUY_TANK_LEVEL = 50;
+
+  /**
+   * Вычисляет уровень покупаемого танка по формуле: max-5, минимум 1, максимум 50.
+   * @param {number} maxLevel — максимальный достигнутый уровень танка
+   * @returns {number} — уровень покупаемого танка
+   */
+  function computeBuyTankLevel(maxLevel) {
+    const maxL = Math.max(1, Math.floor(maxLevel || 1));
+    const buy = Math.max(1, maxL - 5);
+    return Math.min(MAX_BUY_TANK_LEVEL, buy);
+  }
+
   global.Game = global.Game || {};
   global.Game.Economy = {
     getTankBaseCost,
     canBuyTank,
+    coinsForShot,
+    MAX_COIN_PER_SHOT,
+    MAX_BUY_TANK_LEVEL,
+    computeBuyTankLevel,
   };
 })(typeof window !== 'undefined' ? window : this);

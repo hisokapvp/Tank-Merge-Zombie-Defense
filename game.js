@@ -1,4 +1,3 @@
-// game.js.txt1
 // Tank Merger: Zombie Orbit (v3)
 // Fixes requested:
 // 1) If zombies look like simple blobs -> sprites not loaded; show status in HUD.
@@ -726,9 +725,19 @@ const FenceSprites = {
       const img = await loadImage(atlasPath);
       this.atlasImg = img;
       this.framesById.clear();
+      const autoIds = [];
       for (const f of (data.frames || [])){
         const id = f.id || String(this.framesById.size);
-        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.w ?? 32, h: f.h ?? 32, anchor: f.anchor || { x: 0.5, y: 0.5 } });
+        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.h ?? 32, h: f.h ?? 32, anchor: f.anchor || { x: 0.5, y: 0.5 } });
+        autoIds.push(id);
+      }
+      // Авто-инициализация BAL.fenceSpriteIds, если пустой
+      if ((BAL.fenceSpriteIds || []).length === 0 && autoIds.length > 0) {
+        BAL.fenceSpriteIds = autoIds;
+        // Сбросить сегменты забора для пересборки
+        if (state && Array.isArray(state.fenceSegments)) {
+          state.fenceSegments = [];
+        }
       }
       this.ready = true;
       this.error = '';
@@ -828,12 +837,8 @@ function resizeCanvas(){
   const stage = document.querySelector('.stageCanvas');
   if (!stage) return;
 
-  const rect = stage.getBoundingClientRect();
-  const maxW = Math.max(200, rect.width);
-  const maxH = Math.max(200, rect.height);
-  const scale = Math.min(maxW / BASE_CANVAS.w, maxH / BASE_CANVAS.h);
-  const displayW = Math.max(200, Math.floor(BASE_CANVAS.w * scale));
-  const displayH = Math.max(200, Math.floor(BASE_CANVAS.h * scale));
+  const displayW = Math.max(200, window.innerWidth);
+  const displayH = Math.max(200, window.innerHeight);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
   canvas.style.width = `${displayW}px`;
@@ -845,6 +850,7 @@ function resizeCanvas(){
   ctx.imageSmoothingEnabled = false;
   viewSize = { w: displayW, h: displayH, dpr };
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
+  const scale = Math.min(displayW / BASE_CANVAS.w, displayH / BASE_CANVAS.h);
   applyBalScale(scale);
   initBoard();
 }
@@ -1010,7 +1016,8 @@ function recordTankLevel(level){
 
 function buyTankLevel(){
   const maxLevel = Math.max(1, state.maxTankLevelAchieved || 1);
-  return Math.min(MAX_TANK_LEVEL, 1 + Math.floor(maxLevel / 5));
+  const Econ = window.Game && window.Game.Economy;
+  return Econ ? Econ.computeBuyTankLevel(maxLevel) : 1;
 }
 
 function baseBuyPrice(level){
@@ -1082,8 +1089,13 @@ function speedMult(){
 }
 
 function coinsForShot(level){
+  if (level <= 0) {
+    console.warn('[coinsForShot] Invalid level:', level);
+    return 0;
+  }
+  const MAX_COIN_PER_SHOT = Math.pow(2, 20);
   const mods = getMods();
-  const base = BAL.coinsPerShotBase + BAL.coinsPerShotLevelMul * Math.max(0, level - 1);
+  const base = Math.min(Math.pow(2, level - 1), MAX_COIN_PER_SHOT);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
   return base * incomeMult() * mods.coinsMul * activeMul;
 }

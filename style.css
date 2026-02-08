@@ -21,11 +21,13 @@ body{
   font-size:calc(14px * var(--ui-scale));
   color:var(--text);
   background:
-    radial-gradient(900px 600px at 20% 15%, rgba(110,72,40,.35), transparent 60%),
-    radial-gradient(900px 600px at 80% 20%, rgba(48,72,52,.32), transparent 60%),
-    radial-gradient(800px 520px at 55% 85%, rgba(60,36,22,.35), transparent 60%),
+    radial-gradient(50vw 40vh at 20% 15%, rgba(110,72,40,.35), transparent 60%),
+    radial-gradient(50vw 40vh at 80% 20%, rgba(48,72,52,.32), transparent 60%),
+    radial-gradient(45vw 35vh at 55% 85%, rgba(60,36,22,.35), transparent 60%),
     linear-gradient(180deg,#1a130d 0%, #2a1b12 45%, #3b2617 100%);
   min-height:100dvh;
+  background-attachment:fixed;
+  background-size:cover;
   padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
 }
 body::before{
@@ -77,13 +79,14 @@ body::after{
   position:relative;
   z-index:1;
 }
-.stage{display:flex;flex-direction:column;gap:10px;min-height:0}
+.stage{position:fixed;inset:0;width:100vw;height:100vh;margin:0;padding:0;box-sizing:border-box;z-index:9999;display:flex;flex-direction:column;gap:0;min-height:0}
 .stageCanvas{
-  flex:1;
-  min-height:0;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
   display:flex;
   align-items:stretch;
-  position:relative;
 }
 .stageUi{
   position:absolute;
@@ -107,9 +110,10 @@ body::after{
   box-sizing:border-box;
 }
 .settingsGear{
-  position:absolute !important;
-  top:12px;
-  right:12px;
+  position:fixed !important;
+  top:8px;
+  left:8px;
+  top:env(safe-area-inset-top, 8px);
   width:auto;
   height:auto;
   min-width:24px;
@@ -120,7 +124,7 @@ body::after{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  z-index:4;
+  z-index:10000;
 }
 .hudBelow{
   display:flex;
@@ -277,10 +281,12 @@ body.menu-open .stageUi .hudItem{
 }
 #c{
   width:100%;height:100%;
-  border-radius:20px;
-  border:2px solid rgba(255, 192, 128, 0.14);
-  background:rgba(7, 6, 5, 0.55);
-  box-shadow:0 16px 0 rgba(0,0,0,.35), inset 0 0 40px rgba(0,0,0,.45);
+  border-radius:0;
+  border:none;
+  background:transparent;
+  position:absolute;
+  inset:0;
+  z-index:0;
 }
 .crateModal{
   position:absolute;
@@ -880,10 +886,15 @@ body.menu-open .stageUi .hudItem{
 .layout.debugLayout .stage{ min-width: 0; }
 
 .debugPanel{
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 99999;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: 100%;
+  max-height: calc(100vh - 20px);
+  width: 280px;
   background: linear-gradient(160deg, rgba(28,18,12,.96), rgba(14,10,8,.98));
   border: 2px solid rgba(255, 184, 114, 0.2);
   border-radius: 12px;
@@ -1006,4 +1017,14 @@ body.menu-open .stageUi .hudItem{
     animation:none !important;
     transition:none !important;
   }
+}
+
+/* Sync modal (created dynamically by continueFlow.js) */
+#syncModal{
+  position:fixed;
+  inset:0;
+  z-index:10001;
+}
+#syncModal .levelModal__panel{
+  max-width:420px;
 }
