@@ -1,5 +1,12 @@
 {
   "atlas": "zombie_atlas.png",
+  "deathCommon": {
+    "x": 0,
+    "y": 384,
+    "w": 96,
+    "h": 96,
+    "frames": 8
+  },
   "types": [
     {
       "id": "zombie_lvl1",
@@ -10,6 +17,13 @@
         "h": 96
       },
       "frames": 10,
+      "death": {
+        "x": 960,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 6
+      },
       "anchor": {
         "x": 0.5,
         "y": 0.75
@@ -32,6 +46,13 @@
         "h": 96
       },
       "frames": 8,
+      "death": {
+        "x": 768,
+        "y": 96,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
       "anchor": {
         "x": 0.5,
         "y": 0.75
@@ -54,6 +75,13 @@
         "h": 96
       },
       "frames": 7,
+      "death": {
+        "x": 672,
+        "y": 192,
+        "w": 96,
+        "h": 96,
+        "frames": 7
+      },
       "anchor": {
         "x": 0.5,
         "y": 0.75

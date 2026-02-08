@@ -558,6 +558,7 @@ const ZombieSprites = {
   error: '',
   atlasImg: null,
   types: [],
+  deathCommon: null,
   async load(){
     try{
       const res = await fetch('assets/zombies.json', {cache:'no-store'});
@@ -565,6 +566,19 @@ const ZombieSprites = {
       const data = await res.json();
       const atlasPath = 'assets/' + (data.atlas || 'zombie_atlas.png');
       const img = await loadImage(atlasPath);
+
+      // Parse common death animation
+      if (data.deathCommon) {
+        this.deathCommon = {
+          x: data.deathCommon.x ?? 0,
+          y: data.deathCommon.y ?? 0,
+          w: data.deathCommon.w ?? 96,
+          h: data.deathCommon.h ?? 96,
+          frames: data.deathCommon.frames ?? 1
+        };
+      } else {
+        this.deathCommon = null;
+      }
 
       this.types = (data.types || []).map(t => ({
         id: t.id || 'zombie',
@@ -579,6 +593,14 @@ const ZombieSprites = {
         rewardMul: t.rewardMul ?? 1.0,
         weight: t.weight ?? 1.0,
         hitbox: t.hitbox ?? null,
+        // Personal death animation (optional)
+        death: t.death ? {
+          x: t.death.x ?? 0,
+          y: t.death.y ?? 0,
+          w: t.death.w ?? t.frame?.w ?? 96,
+          h: t.death.h ?? t.frame?.h ?? 96,
+          frames: t.death.frames ?? 1
+        } : null,
       }));
       if (!this.types.length) throw new Error('types[] empty');
 
@@ -589,6 +611,7 @@ const ZombieSprites = {
       this.ready = false;
       this.atlasImg = null;
       this.types = [];
+      this.deathCommon = null;
       this.error = String(e);
     }
   },
@@ -1074,6 +1097,11 @@ function mergeCells(fromIdx, toIdx){
   a.tank = null;
   recordTankLevel(lvl);
 
+  // Show merge popup for first time achieving this level
+  if (window.Game && window.Game.MergePopup) {
+    window.Game.MergePopup.show(lvl);
+  }
+
   burst(b.x+b.w/2, b.y+b.h/2, 20, 'rgba(125,255,178,.85)');
   popText(b.x+b.w/2, b.y+b.h/2-16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
@@ -1276,10 +1304,50 @@ const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика']
 const TALENT_DEFS = [];
 const ACTIVE_TALENT_INDEX = [null, null, null];
 
+// Talent tree layout: row, slot (column 0-2), parents (indices within branch)
+// Pattern: 3+3+3+3+2+2+1 = 17 talents per branch
+// Row gating: row N requires N*5 points spent in branch
+const TALENT_LAYOUT = [
+  // Row 0 (0 pts): 3 talents
+  { row: 0, slot: 0, parents: [] },
+  { row: 0, slot: 1, parents: [] },
+  { row: 0, slot: 2, parents: [] },
+  // Row 1 (5 pts): 3 talents
+  { row: 1, slot: 0, parents: [0] },
+  { row: 1, slot: 1, parents: [0, 1, 2] },
+  { row: 1, slot: 2, parents: [2] },
+  // Row 2 (10 pts): 3 talents
+  { row: 2, slot: 0, parents: [3] },
+  { row: 2, slot: 1, parents: [3, 4, 5] },
+  { row: 2, slot: 2, parents: [5] },
+  // Row 3 (15 pts): 3 talents
+  { row: 3, slot: 0, parents: [6] },
+  { row: 3, slot: 1, parents: [6, 7, 8] },
+  { row: 3, slot: 2, parents: [8] },
+  // Row 4 (20 pts): 2 talents
+  { row: 4, slot: 0, parents: [9, 10] },
+  { row: 4, slot: 2, parents: [10, 11] },
+  // Row 5 (25 pts): 2 talents
+  { row: 5, slot: 0, parents: [12] },
+  { row: 5, slot: 2, parents: [13] },
+  // Row 6 (30 pts): 1 talent (active)
+  { row: 6, slot: 1, parents: [14, 15] },
+];
+
+// Build edges for SVG lines: { from: idx, to: idx }
+const TALENT_EDGES = [];
+TALENT_LAYOUT.forEach((node, i) => {
+  node.parents.forEach(p => TALENT_EDGES.push({ from: p, to: i }));
+});
+
+const TALENT_ROW_POINTS = 5; // points needed per row tier
+
 function addTalent(branch, name, desc, maxRank, kind, apply){
   const id = `${branch}-${TALENT_DEFS.length}`;
   const prev = ACTIVE_TALENT_INDEX[branch];
-  const def = { id, branch, name, desc, maxRank, prev, kind, apply };
+  const idx = TALENT_DEFS.filter(d => d.branch === branch).length;
+  const layout = TALENT_LAYOUT[idx] || { row: 0, slot: 1, parents: [] };
+  const def = { id, branch, name, desc, maxRank, prev, kind, apply, row: layout.row, slot: layout.slot, parents: layout.parents };
   TALENT_DEFS.push(def);
   ACTIVE_TALENT_INDEX[branch] = TALENT_DEFS.length - 1;
 }
@@ -1461,14 +1529,14 @@ function applyTalentSelections(){
   const overlay = document.getElementById('talentOverlay');
   const modal = overlay?.querySelector('.modal');
   if (modal) modal.classList.add('talentApplyFlash');
-  overlay?.querySelectorAll('.talentBtn').forEach(btn => {
+  overlay?.querySelectorAll('.talentNode').forEach(btn => {
     const i = Number(btn.dataset.talent);
     if ((p.talentsPending[i] || 0) > 0) btn.classList.add('talentEnergyFlow');
   });
 
   setTimeout(() => {
     if (modal) modal.classList.remove('talentApplyFlash');
-    overlay?.querySelectorAll('.talentBtn').forEach(btn => btn.classList.remove('talentEnergyFlow'));
+    overlay?.querySelectorAll('.talentNode').forEach(btn => btn.classList.remove('talentEnergyFlow'));
     doApplyTalentSelections();
     applyTalentBusy = false;
     if (applyBtn) applyBtn.disabled = pendingCost() <= 0 || pendingCost() > state.player.talentPoints;
@@ -1484,9 +1552,24 @@ function canSelectTalent(i){
   const appliedRank = p.talentsApplied[i] || 0;
   const pendingRank = p.talentsPending[i] || 0;
   if (appliedRank + pendingRank >= def.maxRank) return false;
-  if (def.prev !== null && def.prev !== undefined){
-    if ((p.talentsApplied[def.prev] || 0) < 1) return false;
+  
+  // Row gating: need row * 5 points spent in this branch
+  const branchIndices = TALENT_DEFS.map((d, idx) => d.branch === def.branch ? idx : -1).filter(x => x >= 0);
+  const pointsInBranch = branchIndices.reduce((sum, idx) => sum + (p.talentsApplied[idx] || 0) + (p.talentsPending[idx] || 0), 0);
+  const requiredPoints = def.row * TALENT_ROW_POINTS;
+  if (pointsInBranch < requiredPoints) return false;
+  
+  // Parent gating: need at least one parent with rank > 0 (OR logic), skip for row 0
+  if (def.row > 0 && def.parents && def.parents.length > 0) {
+    // Convert relative parents (within branch) to absolute indices
+    const branchOffset = branchIndices[0];
+    const hasParent = def.parents.some(relIdx => {
+      const absIdx = branchOffset + relIdx;
+      return (p.talentsApplied[absIdx] || 0) + (p.talentsPending[absIdx] || 0) > 0;
+    });
+    if (!hasParent) return false;
   }
+  
   return true;
 }
 
@@ -1928,6 +2011,24 @@ function startZombieDying(z){
   z.deathProgress = 0;
   z.hp = 0;
 
+  // Select death animation: 70% personal, 30% common (if both available)
+  const personalDeath = z.type?.death || null;
+  const commonDeath = ZombieSprites.deathCommon || null;
+  
+  if (personalDeath && commonDeath) {
+    // Both available: 70% personal, 30% common
+    z.deathAnim = Math.random() < 0.7 ? personalDeath : commonDeath;
+  } else if (personalDeath) {
+    z.deathAnim = personalDeath;
+  } else if (commonDeath) {
+    z.deathAnim = commonDeath;
+  } else {
+    z.deathAnim = null; // fallback to fade/tilt
+  }
+  
+  z.deathFrame = 0; // current frame of death animation
+  z.deathAnimSpeed = 10; // frames per second for death animation
+
   state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
   state.kills += 1;
   const mods = getMods();
@@ -1945,6 +2046,13 @@ function stepZombies(dt){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
       z.deathProgress = clamp(1 - z.deathTimer / (z.deathDuration || 0.65), 0, 1);
+      
+      // Advance death animation frame (non-loop: clamp to last frame)
+      if (z.deathAnim) {
+        const maxFrame = (z.deathAnim.frames || 1) - 1;
+        z.deathFrame = Math.min((z.deathFrame || 0) + dt * (z.deathAnimSpeed || 10), maxFrame);
+      }
+      
       z.anim += dt * 4.5;
       continue;
     }
@@ -2680,12 +2788,12 @@ function ensureTalentUI(){
   overlay.id = 'talentOverlay';
   overlay.className = 'overlay hidden';
   overlay.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal talentTreeModal" role="dialog" aria-modal="true">
       <div class="modalHeader">
         <div class="modalTitle">${t('talentTreeTitle')}</div>
         <button class="modalClose" type="button" aria-label="Close">✕</button>
       </div>
-      <div class="modalBody">
+      <div class="modalBody talentTreeBody">
         <div class="talentBranches" id="talentBranches"></div>
       </div>
       <div class="talentFooter">
@@ -2696,9 +2804,8 @@ function ensureTalentUI(){
           <button id="talentActive2" class="btn talentAbilitySlot" type="button" data-branch="2" title="" aria-label="Active 2"></button>
         </div>
         <div class="talentActions">
-          <button id="talentReset" class="btn btnSecondary" type="button">${t('talentReset')}</button>
-          <button id="talentResetAll" class="btn btnSecondary" type="button">${t('talentResetAll')}</button>
           <button id="talentApply" class="btn btnPrimary" type="button">${t('talentApply')}</button>
+          <button id="talentResetAll" class="btn btnSecondary" type="button">${t('talentResetAll')}</button>
         </div>
       </div>
     </div>
@@ -2710,7 +2817,6 @@ function ensureTalentUI(){
     if (e.target === overlay) closeTalents();
   });
   overlay.querySelector('.modalClose')?.addEventListener('click', () => closeTalents());
-  overlay.querySelector('#talentReset')?.addEventListener('click', () => resetTalentSelections());
   overlay.querySelector('#talentResetAll')?.addEventListener('click', () => openResetTalentsModal());
   overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
   overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
@@ -2725,39 +2831,121 @@ function ensureTalentUI(){
     const column = document.createElement('div');
     column.className = 'talentBranch';
     column.dataset.branch = String(branch);
+    
+    // Calculate max rows for this branch
+    const branchTalents = TALENT_DEFS.filter(d => d.branch === branch);
+    const maxRow = Math.max(...branchTalents.map(d => d.row));
+    
     column.innerHTML = `
-      <div class="talentBranchTitle">
-        <span>${branchName}</span>
-        <span class="talentBranchPoints" id="branchPoints-${branch}"></span>
+      <div class="talentBranchHeader">
+        <span class="talentBranchTitle">${branchName}</span>
+        <span class="talentBranchPoints" id="branchPoints-${branch}">0</span>
       </div>
-      <div class="talentList"></div>
+      <div class="talentTreeContainer">
+        <svg class="talentTreeSvg" id="talentSvg-${branch}"></svg>
+        <div class="talentTreeGrid" id="talentGrid-${branch}" style="--rows: ${maxRow + 1}"></div>
+      </div>
+      <button class="btn btnSecondary talentBranchReset" data-branch="${branch}" type="button">${t('talentReset')}</button>
     `;
-    column.querySelector('.talentBranchTitle')?.addEventListener('click', () => {
-      state.ui.talentBranch = branch;
-      updateTalentUI();
+    
+    // Branch reset button (pending only for this branch)
+    column.querySelector('.talentBranchReset')?.addEventListener('click', () => {
+      resetBranchPending(branch);
     });
 
-    const list = column.querySelector('.talentList');
-    TALENT_DEFS.forEach((def, i) => {
-      if (def.branch !== branch) return;
+    const grid = column.querySelector('.talentTreeGrid');
+    branchTalents.forEach((def, localIdx) => {
+      const globalIdx = TALENT_DEFS.findIndex(d => d === def);
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'talentBtn';
-      btn.dataset.talent = String(i);
+      btn.className = 'talentNode';
+      btn.dataset.talent = String(globalIdx);
+      btn.dataset.row = String(def.row);
+      btn.dataset.slot = String(def.slot);
+      btn.style.setProperty('--row', def.row);
+      btn.style.setProperty('--slot', def.slot);
       btn.innerHTML = `
-        <strong><span class="talentName">${def.name}</span><span class="talentRank"></span></strong>
-        <small class="talentDesc">${def.desc}</small>
+        <span class="talentNodeIcon">${def.kind === 'active' ? '⚡' : '◆'}</span>
+        <span class="talentNodeRank" id="rank-${globalIdx}">0/${def.maxRank}</span>
       `;
+      btn.title = `${def.name}\n${def.desc}`;
       btn.addEventListener('click', (event) => {
-        adjustTalentPending(i, event.shiftKey ? -1 : 1);
+        adjustTalentPending(globalIdx, event.shiftKey ? -1 : 1);
       });
       btn.addEventListener('contextmenu', (event) => {
         event.preventDefault();
-        adjustTalentPending(i, -1);
+        adjustTalentPending(globalIdx, -1);
       });
-      list.appendChild(btn);
+      grid.appendChild(btn);
     });
     branches.appendChild(column);
+  });
+  
+  // Draw SVG edges on open/resize
+  let resizeTimeout = null;
+  const redrawEdges = () => {
+    TALENT_BRANCHES.forEach((_, branch) => drawTalentEdges(branch));
+  };
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(redrawEdges, 100);
+  });
+}
+
+function resetBranchPending(branch){
+  const p = state.player;
+  TALENT_DEFS.forEach((def, i) => {
+    if (def.branch === branch) p.talentsPending[i] = 0;
+  });
+  updateTalentUI();
+}
+
+function drawTalentEdges(branch){
+  const svg = document.getElementById(`talentSvg-${branch}`);
+  const grid = document.getElementById(`talentGrid-${branch}`);
+  if (!svg || !grid) return;
+  
+  svg.innerHTML = '';
+  const gridRect = grid.getBoundingClientRect();
+  svg.setAttribute('width', gridRect.width);
+  svg.setAttribute('height', gridRect.height);
+  svg.setAttribute('viewBox', `0 0 ${gridRect.width} ${gridRect.height}`);
+  
+  const branchTalents = TALENT_DEFS.filter(d => d.branch === branch);
+  const branchOffset = TALENT_DEFS.findIndex(d => d.branch === branch);
+  const p = state.player;
+  
+  branchTalents.forEach((def, localIdx) => {
+    if (!def.parents || def.parents.length === 0) return;
+    const toBtn = grid.querySelector(`[data-talent="${branchOffset + localIdx}"]`);
+    if (!toBtn) return;
+    const toRect = toBtn.getBoundingClientRect();
+    const toX = toRect.left + toRect.width / 2 - gridRect.left;
+    const toY = toRect.top - gridRect.top;
+    
+    def.parents.forEach(parentLocalIdx => {
+      const fromBtn = grid.querySelector(`[data-talent="${branchOffset + parentLocalIdx}"]`);
+      if (!fromBtn) return;
+      const fromRect = fromBtn.getBoundingClientRect();
+      const fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
+      const fromY = fromRect.bottom - gridRect.top;
+      
+      // Determine edge state
+      const parentAbsIdx = branchOffset + parentLocalIdx;
+      const childAbsIdx = branchOffset + localIdx;
+      const parentActive = (p.talentsApplied[parentAbsIdx] || 0) + (p.talentsPending[parentAbsIdx] || 0) > 0;
+      const childActive = (p.talentsApplied[childAbsIdx] || 0) + (p.talentsPending[childAbsIdx] || 0) > 0;
+      
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', fromX);
+      line.setAttribute('y1', fromY);
+      line.setAttribute('x2', toX);
+      line.setAttribute('y2', toY);
+      line.classList.add('talentEdge');
+      if (parentActive && childActive) line.classList.add('talentEdgeActive');
+      else if (parentActive) line.classList.add('talentEdgeReady');
+      svg.appendChild(line);
+    });
   });
 }
 
@@ -2774,27 +2962,29 @@ function updateTalentUI(){
     summary.textContent = `${t('talentPoints')}: ${p.talentPoints} • ${t('talentPending')}: ${cost}${note}`;
   }
 
-  overlay.querySelectorAll('.talentBtn').forEach(btn => {
+  // Update talent nodes
+  overlay.querySelectorAll('.talentNode').forEach(btn => {
     const i = Number(btn.dataset.talent);
     const def = TALENT_DEFS[i];
     const applied = p.talentsApplied[i] || 0;
     const pending = p.talentsPending[i] || 0;
     const rankText = `${applied + pending}/${def.maxRank}`;
-    const rankEl = btn.querySelector('.talentRank');
+    const rankEl = btn.querySelector('.talentNodeRank');
     if (rankEl) rankEl.textContent = rankText;
 
+    const canSelect = canSelectTalent(i);
+    const isMaxed = applied + pending >= def.maxRank;
+    const isLocked = !canSelect && pending === 0 && applied === 0;
+    
     btn.classList.toggle('applied', applied > 0);
     btn.classList.toggle('pending', pending > 0);
-    btn.disabled = !canSelectTalent(i) && pending === 0;
-    btn.style.opacity = canSelectTalent(i) || pending > 0 || applied > 0 ? '1' : '0.45';
+    btn.classList.toggle('maxed', isMaxed && applied > 0);
+    btn.classList.toggle('locked', isLocked);
+    btn.disabled = !canSelect && pending === 0;
     btn.title = `${def.name}\n${def.desc}`;
   });
 
-  overlay.querySelectorAll('.talentBranch').forEach(column => {
-    const branch = Number(column.dataset.branch);
-    column.classList.toggle('selected', branch === state.ui.talentBranch);
-  });
-
+  // Update branch points
   TALENT_BRANCHES.forEach((_, branch) => {
     const el = overlay.querySelector(`#branchPoints-${branch}`);
     if (!el) return;
@@ -2802,15 +2992,24 @@ function updateTalentUI(){
       if (def.branch !== branch) return sum;
       return sum + (p.talentsApplied[i] || 0);
     }, 0);
-    el.textContent = `⭐ ${applied}`;
+    const pending = TALENT_DEFS.reduce((sum, def, i) => {
+      if (def.branch !== branch) return sum;
+      return sum + (p.talentsPending[i] || 0);
+    }, 0);
+    el.textContent = pending > 0 ? `${applied}+${pending}` : `${applied}`;
+    
+    // Update branch reset button
+    const resetBtn = overlay.querySelector(`.talentBranchReset[data-branch="${branch}"]`);
+    if (resetBtn) resetBtn.disabled = pending <= 0;
   });
+
+  // Redraw SVG edges
+  TALENT_BRANCHES.forEach((_, branch) => drawTalentEdges(branch));
 
   const applyBtn = overlay.querySelector('#talentApply');
   if (applyBtn){
     applyBtn.disabled = cost <= 0 || cost > p.talentPoints;
   }
-  const resetBtn = overlay.querySelector('#talentReset');
-  if (resetBtn) resetBtn.disabled = cost <= 0;
   const resetAllBtn = overlay.querySelector('#talentResetAll');
   if (resetAllBtn) resetAllBtn.disabled = !p.talentsApplied.some((r, i) => (r || 0) > 0);
 
@@ -3852,25 +4051,45 @@ function drawZombieSprite(x,y,z){
   const a = t.anchor;
   const facing = x >= center.x ? -1 : 1;
 
-  const frames = t.frames || 1;
-  const frameIndex = Math.floor(z.anim) % frames;
-
-  const fx = f.x + frameIndex * f.w;
-  const fy = f.y;
+  const isDying = z.state === 'dying';
+  const hasDeathAnim = isDying && z.deathAnim;
+  
+  // Determine which frame to draw
+  let fx, fy, fw, fh;
+  if (hasDeathAnim) {
+    // Use death animation frame
+    const da = z.deathAnim;
+    const frameIndex = Math.floor(z.deathFrame || 0);
+    fx = da.x + frameIndex * da.w;
+    fy = da.y;
+    fw = da.w;
+    fh = da.h;
+  } else {
+    // Use walk animation frame
+    const frames = t.frames || 1;
+    const frameIndex = Math.floor(z.anim) % frames;
+    fx = f.x + frameIndex * f.w;
+    fy = f.y;
+    fw = f.w;
+    fh = f.h;
+  }
 
   const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
-  const w = f.w * scale;
-  const h = f.h * scale;
+  const w = (hasDeathAnim ? z.deathAnim.w : f.w) * scale;
+  const h = (hasDeathAnim ? z.deathAnim.h : f.h) * scale;
 
-  const bob = Math.sin(z.anim) * BAL.zombieBobAmp;
+  const bob = hasDeathAnim ? 0 : Math.sin(z.anim) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
-  const death = z.state === 'dying' ? (z.deathProgress ?? 0) : 0;
-  const deathScale = 1 - death * 0.22;
-  const deathTilt = death * 1.1;
+  
+  // Death effects: only apply fade/tilt if no death animation
+  const death = isDying ? (z.deathProgress ?? 0) : 0;
+  const deathScale = hasDeathAnim ? 1 : (1 - death * 0.22);
+  const deathTilt = hasDeathAnim ? 0 : (death * 1.1);
+  const deathAlpha = hasDeathAnim ? (1 - death * 0.5) : (1 - death); // slower fade with death anim
 
-  if (state.endgameVisuals && z.state !== 'dying'){
+  if (state.endgameVisuals && !isDying){
     ctx.save();
     ctx.translate(x, y + bob + groundOffset);
     ctx.globalAlpha = 0.2 + 0.08 * Math.sin(nowSec() * 3);
@@ -3903,19 +4122,19 @@ function drawZombieSprite(x,y,z){
   // body
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.globalAlpha = 1 - death;
+  ctx.globalAlpha = deathAlpha;
   ctx.scale(facing * deathScale, deathScale);
   ctx.rotate(rot * facing + deathTilt * facing);
   ctx.drawImage(
     img,
-    fx, fy, f.w, f.h,
+    fx, fy, fw, fh,
     -w * a.x,
     -h * a.y,
     w, h
   );
   ctx.restore();
 
-  if ((z.level ?? 1) > 1){
+  if ((z.level ?? 1) > 1 && !isDying){
     const ring = clamp((z.level ?? 1) - 1, 1, 6);
     ctx.save();
     ctx.strokeStyle = `rgba(185,139,255,${0.08 + ring * 0.02})`;
@@ -4987,6 +5206,11 @@ async function boot(){
   await TankSprites.load();
   FenceSprites.load().catch(() => {});
   DecorSprites.load().catch(() => {});
+
+  // Initialize merge popup
+  if (window.Game && window.Game.MergePopup) {
+    window.Game.MergePopup.init();
+  }
 
   ensureZombieCount();
   updateUI();

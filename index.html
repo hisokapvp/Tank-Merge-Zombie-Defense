@@ -138,6 +138,17 @@
   </div>
   <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true">Настройки</div>
 
+  <!-- Merge Popup Modal -->
+  <div class="mergePopupModal hidden" id="mergePopupModal" aria-hidden="true">
+    <div class="mergePopupModal__backdrop"></div>
+    <div class="mergePopupModal__panel">
+      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle">Открыт новый уровень!</div>
+      <canvas id="mergePopupCanvas" width="200" height="120"></canvas>
+      <div class="mergePopupModal__title" id="mergePopupTitle">Новый танк Lv2</div>
+      <div class="mergePopupModal__hint">Нажмите чтобы закрыть</div>
+    </div>
+  </div>
+
   <script src="src/utils/numberFormat.js"></script>
   <script src="src/mechanics/trackQuery.js"></script>
   <script src="src/mechanics/garage.js"></script>
@@ -151,6 +162,7 @@
   <script src="src/ui/offlineModal.js"></script>
   <script src="src/ui/continueFlow.js"></script>
   <script src="src/ui/shopUI.js"></script>
+  <script src="src/ui/mergePopup.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

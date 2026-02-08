@@ -670,69 +670,162 @@ body.menu-open .stageUi .hudItem{
 .talentBranches{
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:12px;
+  gap:16px;
+  width:100%;
 }
 .talentBranch{
   border-radius:16px;
   border:1px solid rgba(255,255,255,.08);
-  background:rgba(255,255,255,.04);
-  padding:10px;
+  background:rgba(0,0,0,.25);
+  padding:12px;
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:10px;
 }
-.talentBranch.selected{
-  border-color:rgba(166,212,255,.45);
-  box-shadow:0 0 0 2px rgba(166,212,255,.12);
-}
-.talentBranchTitle{
-  font-weight:800;
+.talentBranchHeader{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  font-size:13px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.talentBranchTitle{
+  font-weight:800;
+  font-size:14px;
   color:var(--accent2);
-  cursor:pointer;
 }
-.talentList{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+.talentBranchPoints{
+  font-weight:700;
+  font-size:12px;
+  color:var(--accent);
+  background:rgba(255,184,114,.15);
+  padding:2px 8px;
+  border-radius:8px;
 }
-.talentBtn{
-  text-align:left;
-  padding:8px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.06);
+
+/* Tree container with SVG overlay */
+.talentTreeContainer{
+  position:relative;
+  width:100%;
+  min-height:320px;
+}
+.talentTreeSvg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:0;
+}
+.talentEdge{
+  stroke:rgba(255,255,255,.15);
+  stroke-width:2;
+  stroke-linecap:round;
+}
+.talentEdge.talentEdgeReady{
+  stroke:rgba(166,212,255,.4);
+}
+.talentEdge.talentEdgeActive{
+  stroke:rgba(125,255,178,.6);
+  stroke-width:3;
+}
+
+/* Tree grid: 3 columns, dynamic rows */
+.talentTreeGrid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  grid-template-rows:repeat(var(--rows, 7), 1fr);
+  gap:8px 6px;
+  min-height:320px;
+}
+
+/* Talent node (square, WoW-style) */
+.talentNode{
+  grid-column:calc(var(--slot) + 1);
+  grid-row:calc(var(--row) + 1);
+  width:44px;
+  height:44px;
+  justify-self:center;
+  padding:0;
+  border-radius:8px;
+  border:2px solid rgba(255,255,255,.2);
+  background:linear-gradient(145deg, rgba(40,30,20,.9), rgba(20,15,10,.95));
   color:var(--text);
   cursor:pointer;
   display:flex;
   flex-direction:column;
-  gap:4px;
-}
-.talentBtn:disabled{
-  cursor:not-allowed;
-  opacity:0.45;
-}
-.talentBtn strong{
-  display:flex;
-  justify-content:space-between;
   align-items:center;
-  font-size:12px;
+  justify-content:center;
+  gap:2px;
+  transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  position:relative;
 }
-.talentBtn small{
-  font-size:11px;
+.talentNode:hover:not(:disabled){
+  transform:scale(1.08);
+  border-color:rgba(255,184,114,.5);
+  box-shadow:0 0 12px rgba(255,184,114,.25);
+  z-index:2;
+}
+.talentNode:disabled{
+  cursor:not-allowed;
+}
+.talentNodeIcon{
+  font-size:14px;
+  line-height:1;
+}
+.talentNodeRank{
+  font-size:9px;
+  font-weight:700;
   color:var(--muted);
 }
-.talentBtn.applied{
-  border-color:rgba(125,255,178,.5);
-  background:rgba(125,255,178,.12);
+
+/* Talent node states */
+.talentNode.locked{
+  opacity:0.4;
+  filter:grayscale(0.6);
 }
-.talentBtn.pending{
+.talentNode.applied{
+  border-color:rgba(125,255,178,.6);
+  background:linear-gradient(145deg, rgba(30,60,40,.9), rgba(20,40,25,.95));
+  box-shadow:0 0 8px rgba(125,255,178,.2);
+}
+.talentNode.applied .talentNodeIcon{
+  color:#7dffb2;
+}
+.talentNode.applied .talentNodeRank{
+  color:#9fffca;
+}
+.talentNode.pending{
   border-color:rgba(166,212,255,.6);
-  background:rgba(166,212,255,.16);
+  background:linear-gradient(145deg, rgba(30,40,60,.9), rgba(20,30,50,.95));
+  box-shadow:0 0 8px rgba(166,212,255,.2);
 }
+.talentNode.pending .talentNodeIcon{
+  color:#a6d4ff;
+}
+.talentNode.pending .talentNodeRank{
+  color:#c4e4ff;
+}
+.talentNode.maxed{
+  border-color:rgba(255,215,0,.6);
+  box-shadow:0 0 10px rgba(255,215,0,.25);
+}
+.talentNode.maxed .talentNodeRank{
+  color:#ffd700;
+}
+
+/* Branch reset button */
+.talentBranchReset{
+  margin-top:auto;
+  padding:6px 10px;
+  font-size:11px;
+}
+.talentBranchReset:disabled{
+  opacity:0.5;
+}
+
 .modal.talentApplyFlash{
   animation:talentApplyFlash 0.12s ease-out;
 }
@@ -741,7 +834,7 @@ body.menu-open .stageUi .hudItem{
   50%{ box-shadow:0 0 0 4px rgba(125,255,178,.5), 0 16px 0 rgba(0,0,0,.22); }
   100%{ box-shadow:0 16px 0 rgba(0,0,0,.22), 0 24px 40px rgba(0,0,0,.35); }
 }
-.talentBtn.talentEnergyFlow{
+.talentNode.talentEnergyFlow{
   animation:talentEnergyFlow 0.38s ease-out;
 }
 @keyframes talentEnergyFlow{
@@ -749,6 +842,15 @@ body.menu-open .stageUi .hudItem{
   40%{ box-shadow:inset 0 0 12px 2px rgba(125,255,178,.35); }
   100%{ box-shadow:inset 0 0 0 0 rgba(125,255,178,0); }
 }
+
+/* Talent tree modal adjustments */
+.talentTreeModal{
+  width:min(980px, 95vw);
+}
+.talentTreeBody{
+  padding:10px 14px 14px;
+}
+
 .talentFooter{
   display:flex;
   flex-wrap:wrap;
@@ -870,6 +972,22 @@ body.menu-open .stageUi .hudItem{
   .hud{justify-content:center}
   .talentBranches{
     grid-template-columns:1fr;
+  }
+  .talentTreeContainer{
+    min-height:220px;
+  }
+  .talentTreeGrid{
+    min-height:220px;
+  }
+  .talentNode{
+    width:38px;
+    height:38px;
+  }
+  .talentNodeIcon{
+    font-size:12px;
+  }
+  .talentNodeRank{
+    font-size:8px;
   }
 }
 
@@ -1027,4 +1145,76 @@ body.menu-open .stageUi .hudItem{
 }
 #syncModal .levelModal__panel{
   max-width:420px;
+}
+
+/* Merge Popup Modal */
+.mergePopupModal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+  cursor:pointer;
+}
+.mergePopupModal.hidden{
+  display:none;
+}
+.mergePopupModal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(5,10,18,0.65);
+  backdrop-filter:blur(4px);
+}
+.mergePopupModal__panel{
+  position:relative;
+  z-index:1;
+  width:min(280px,90%);
+  padding:20px 16px 16px;
+  border-radius:18px;
+  border:2px solid rgba(125,255,178,.35);
+  background:linear-gradient(160deg, rgba(17,30,55,0.98), rgba(9,18,36,0.98));
+  box-shadow:0 0 40px rgba(125,255,178,.25), 0 14px 0 rgba(0,0,0,.22), 0 20px 35px rgba(0,0,0,.35);
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  animation:mergePopupAppear 0.3s ease-out;
+}
+@keyframes mergePopupAppear{
+  0%{
+    opacity:0;
+    transform:scale(0.7);
+  }
+  60%{
+    transform:scale(1.05);
+  }
+  100%{
+    opacity:1;
+    transform:scale(1);
+  }
+}
+.mergePopupModal__subtitle{
+  font-size:12px;
+  color:#7dffb2;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+.mergePopupModal__title{
+  font-weight:900;
+  font-size:20px;
+  color:#eaf1ff;
+  text-shadow:0 2px 8px rgba(125,255,178,.3);
+}
+#mergePopupCanvas{
+  background:transparent;
+  display:block;
+}
+.mergePopupModal__hint{
+  font-size:10px;
+  color:var(--muted);
+  opacity:0.7;
+  margin-top:4px;
 }
