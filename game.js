@@ -4756,6 +4756,7 @@ function initDebugPanel(){
       <div id="debugSectionLogs" class="debugSection">
         <button type="button" class="debugBtn" id="debugResetBtn">Reset (overrides + statuses + VFX)</button>
         <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>
+        <button type="button" class="debugBtn" id="lessonProgressBtn">Lesson Progress</button>
         <div id="debugTelemetryMount"></div>
       </div>
     </div>
