@@ -3,9 +3,9 @@
   "deathCommon": {
     "x": 0,
     "y": 384,
-    "w": 96,
-    "h": 96,
-    "frames": 8
+    "w": 191,
+    "h": 204,
+    "frames": 15
   },
   "types": [
     {
