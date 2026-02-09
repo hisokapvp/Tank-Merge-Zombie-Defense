@@ -630,7 +630,7 @@
   "_comment_levels": "Массив levels: 60 элементов. levels[0] = уровень 1, levels[1] = уровень 2, ... levels[59] = уровень 60. bodyVariant - ключ из bodies. cannonVariant - id из cannons. auraVariant: null или 1-6 (стиль ауры). bulletVariant: ap, he, toxic, tesla. impactVfxVariant: ap, he, toxic, tesla (эффект взрыва при попадании).",
   "levels": [
     {
-      "_comment": "Уровень 1: body_lvl1, cannon_template_1_red, снаряд ap, аура-спрайт aura_1.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 1",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_1_desert",
       "auraVariant": "aura_1",
@@ -638,7 +638,7 @@
       "impactVfxVariant": "ap"
     },
     {
-      "_comment": "Уровень 2: body_lvl2, cannon_template_2, снаряд he, аура-спрайт aura_2.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 2",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_1_green",
       "auraVariant": "aura_2",
@@ -646,7 +646,7 @@
       "impactVfxVariant": "he"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 3",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_1_blue",
       "auraVariant": "aura_3",
@@ -654,7 +654,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 4: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 4",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_1_red",
       "auraVariant": "aura_3",
@@ -662,7 +662,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 5",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_1_purple",
       "auraVariant": "aura_3",
@@ -670,7 +670,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 6",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_2_desert",
       "auraVariant": "aura_3",
@@ -678,7 +678,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 7",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_2_green",
       "auraVariant": "aura_3",
@@ -686,7 +686,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 8",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_2_blue",
       "auraVariant": "aura_3",
@@ -694,7 +694,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 9",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_2_red",
       "auraVariant": "aura_3",
@@ -702,7 +702,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 10",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_2_purple",
       "auraVariant": "aura_3",
@@ -710,7 +710,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 11",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_3_desert",
       "auraVariant": "aura_3",
@@ -718,7 +718,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 12",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_3_green",
       "auraVariant": "aura_3",
@@ -726,7 +726,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 13",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_3_blue",
       "auraVariant": "aura_3",
@@ -734,7 +734,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 14",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_3_red",
       "auraVariant": "aura_3",
@@ -742,7 +742,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_3, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 15",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_3_purple",
       "auraVariant": "aura_3",
@@ -750,7 +750,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_4, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 16",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_4_desert",
       "auraVariant": "aura_3",
@@ -758,7 +758,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_4, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 17",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_4_green",
       "auraVariant": "aura_3",
@@ -766,7 +766,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_4, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 18",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_4_blue",
       "auraVariant": "aura_3",
@@ -774,7 +774,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_4, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 19",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_4_red",
       "auraVariant": "aura_3",
@@ -782,7 +782,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_4, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 20",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_4_purple",
       "auraVariant": "aura_3",
@@ -790,7 +790,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_5, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 21",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_5_desert",
       "auraVariant": "aura_3",
@@ -798,7 +798,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_5, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 22",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_5_green",
       "auraVariant": "aura_3",
@@ -806,7 +806,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_5, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 23",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_5_blue",
       "auraVariant": "aura_3",
@@ -814,7 +814,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_5, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 24",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_5_red",
       "auraVariant": "aura_3",
@@ -822,7 +822,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_5, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 25",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_5_purple",
       "auraVariant": "aura_3",
@@ -830,7 +830,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_6, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 26",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_6_desert",
       "auraVariant": "aura_3",
@@ -838,7 +838,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_6, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 27",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_6_green",
       "auraVariant": "aura_3",
@@ -846,7 +846,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_6, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 28",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_6_blue",
       "auraVariant": "aura_3",
@@ -854,7 +854,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_6, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 29",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_6_red",
       "auraVariant": "aura_3",
@@ -862,7 +862,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_6, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 30",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_6_purple",
       "auraVariant": "aura_3",
@@ -870,7 +870,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_7, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 31",
       "bodyVariant": "body_desert",
       "cannonVariant": "cannon_template_7_desert",
       "auraVariant": "aura_3",
@@ -878,7 +878,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_7, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 32",
       "bodyVariant": "body_green",
       "cannonVariant": "cannon_template_7_green",
       "auraVariant": "aura_3",
@@ -886,7 +886,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_7, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 33",
       "bodyVariant": "body_blue",
       "cannonVariant": "cannon_template_7_blue",
       "auraVariant": "aura_3",
@@ -894,7 +894,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_7, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 34",
       "bodyVariant": "body_red",
       "cannonVariant": "cannon_template_7_red",
       "auraVariant": "aura_3",
@@ -902,7 +902,7 @@
       "impactVfxVariant": "toxic"
     },
     {
-      "_comment": "Уровень 3: body_lvl3, cannon_template_7, снаряд toxic, аура-спрайт aura_3.",
+      "_comment": "Информация об спрайтах испоьзуемых для танков Уровень 35",
       "bodyVariant": "body_purple",
       "cannonVariant": "cannon_template_7_purple",
       "auraVariant": "aura_3",
