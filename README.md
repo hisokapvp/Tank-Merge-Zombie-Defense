@@ -29,6 +29,14 @@ Merge-механика с башенной защитой против зомб�
 node Test/tests.js
 ```
 
+### Pack 2 тесты
+
+```bash
+node Test/pack2/mergeAnimRegression.test.js
+node Test/pack2/fireLogicRegression.test.js
+node Test/pack2/telemetryExport.test.js
+```
+
 Ожидаемый результат: все тесты ✓ (PASSED).
 
 ### Regression Checklist (5 систем)
@@ -104,12 +112,24 @@ node Test/tests.js
 │   │   └── ...
 │   ├── persistence/    # Сохранение/загрузка
 │   ├── render/         # Canvas rendering
+│   ├── telemetry/      # Pack 2: расширенная телеметрия
+│   │   └── telemetry.js
+│   ├── tools/
+│   │   └── anki/       # Pack 2: Anki export
+│   │       └── anki_export.js
 │   ├── ui/             # UI-компоненты
-│   │   ├── zombieAnimPreview.js  # Debug preview анимаций
+│   │   ├── lessonProgress.js    # Pack 2: панель уроков
+│   │   ├── zombieAnimPreview.js # Debug preview анимаций
 │   │   └── ...
 │   └── utils/          # Утилиты
+│       └── telemetry.js # Базовая телеметрия (debug)
 └── Test/
-    └── tests.js        # Unit-тесты
+    ├── tests.js        # Unit-тесты (Pack 1)
+    ├── pack1/          # Pack 1 тесты
+    └── pack2/          # Pack 2 тесты
+        ├── mergeAnimRegression.test.js
+        ├── fireLogicRegression.test.js
+        └── telemetryExport.test.js
 ```
 
 ## API (для тестирования)
@@ -132,6 +152,13 @@ node Test/tests.js
 - `.cycleVariant()` — cycle walk/death/deathCommon
 
 ## Changelog
+
+### v4.x (Pack 2 — Telemetry, Anki, Lesson Progress)
+- **TelemetryLogger** (`src/telemetry/telemetry.js`) — расширенное логирование с lesson-тегами, flush, export (JSON/CSV), ротация (max 2000 записей)
+- **Anki Exporter** (`src/tools/anki/anki_export.js`) — генерация CSV/JSON карточек для Anki из telemetry и lesson progress; кнопка `#export-anki`
+- **LessonProgress** (`src/ui/lessonProgress.js`) — панель прогресса уроков: список, score, кнопки Repeat и Export Anki
+- Интеграция TelemetryLogger в merge popup, fire logic, buy/merge/kill events
+- Pack 2 тесты: `Test/pack2/mergeAnimRegression.test.js`, `fireLogicRegression.test.js`, `telemetryExport.test.js`
 
 ### v3.x (QA/Tools)
 - Добавлен `pickDeathAnim` для детерминированного выбора death-анимации

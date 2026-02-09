@@ -1082,6 +1082,7 @@ function tryBuyTank(){
   bumpBuyPrice(level);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level });
 }
 
 function mergeCells(fromIdx, toIdx){
@@ -1098,6 +1099,7 @@ function mergeCells(fromIdx, toIdx){
   a.tank = null;
   recordTankLevel(lvl);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: a.tank ? a.tank.level : lvl - 1, toLevel: lvl });
 
   // Show merge popup for first time achieving this level
   if (window.Game && window.Game.MergePopup) {
@@ -2029,6 +2031,7 @@ function startZombieDying(z){
   state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
   state.kills += 1;
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill', { level: z.level });
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
@@ -2170,30 +2173,71 @@ function stepTanks(dt){
 
 const MAX_BURST_PARTICLES = 14;
 const MAX_TRAIL_ALPHA = 0.45;
+let _nextShotId = 1;
 
 function fireTankProjectile({sx, sy, target, tank, stats, mods}){
   const powerTier = tank.powerTier ?? computePowerTier(state.player?.level ?? 1);
   const effectIntensity = 1 + powerTier * 0.25;
   const tp = zombiePos(target);
-  const spawn = () => {
-    spawnProjectile({
-      fromX: sx,
-      fromY: sy,
-      toZombieId: target.id,
-      toX: tp.x,
-      toY: tp.y,
-      level: tank.level,
-      dmg: stats.dmg,
-      aoe: stats.aoe,
-      prof: stats.prof,
-      effectIntensity,
-    });
+
+  // Multi-barrel: N projectiles with damage split (T3)
+  const Combat = window.Game && window.Game.Combat;
+  const N = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
+  const splitDmg = stats.dmg / N;
+  const shotId = _nextShotId++;
+
+  // Barrel spread perpendicular to heading
+  const heading = Math.atan2(tp.y - sy, tp.x - sx);
+  const perpX = -Math.sin(heading);
+  const perpY = Math.cos(heading);
+  const BARREL_SPREAD = 6;
+
+  // Check for explicit barrel positions from cannon config (tanks.json)
+  let cannonBarrels = null;
+  if (window.TankSprites && window.TankSprites.pickCannon) {
+    const cannonData = window.TankSprites.pickCannon(tank.level);
+    if (cannonData && cannonData.cfg && Array.isArray(cannonData.cfg.barrels)) {
+      cannonBarrels = cannonData.cfg.barrels;
+    }
+  }
+
+  const spawnBurst = () => {
+    if (cannonBarrels && cannonBarrels.length >= N) {
+      // Use explicit barrel positions from tanks.json
+      for (let i = 0; i < N; i++) {
+        const b = cannonBarrels[i];
+        const bx = sx + Math.cos(heading) * (b.x || 0) - Math.sin(heading) * (b.y || 0);
+        const by = sy + Math.sin(heading) * (b.x || 0) + Math.cos(heading) * (b.y || 0);
+        spawnProjectile({
+          fromX: bx, fromY: by,
+          toZombieId: target.id, toX: tp.x, toY: tp.y,
+          level: tank.level, dmg: splitDmg,
+          aoe: stats.aoe, prof: stats.prof,
+          effectIntensity, shotId,
+        });
+      }
+    } else {
+      // Default: spread perpendicular to heading
+      const offsets = N === 1 ? [0] : N === 2 ? [-BARREL_SPREAD / 2, BARREL_SPREAD / 2] : [-BARREL_SPREAD, 0, BARREL_SPREAD];
+      for (let i = 0; i < N; i++) {
+        spawnProjectile({
+          fromX: sx + perpX * offsets[i],
+          fromY: sy + perpY * offsets[i],
+          toZombieId: target.id, toX: tp.x, toY: tp.y,
+          level: tank.level, dmg: splitDmg,
+          aoe: stats.aoe, prof: stats.prof,
+          effectIntensity, shotId,
+        });
+      }
+    }
     state.coins += coinsForShot(tank.level);
     if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('shotFired');
+    if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('shotFired', { level: tank.level });
   };
-  spawn();
+
+  spawnBurst();
   if (Math.random() < mods.doubleShotChance){
-    spawn();
+    spawnBurst();
   }
   tank.cooldown = 1 / (stats.fr * speedMult());
   const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
@@ -2243,6 +2287,7 @@ function spawnProjectile(p){
     level: p.level,
     prof: p.prof,
     effectIntensity: p.effectIntensity ?? 1,
+    shotId: p.shotId ?? 0,
     life: 2.0,
   });
 }
@@ -2598,6 +2643,10 @@ function updateMenuState(){
 function resetGameState(){
   const wasCollapsed = state.debug?.collapsed;
   state = createInitialState();
+  // Clear popup seen-levels on New Game (T5)
+  if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
+    window.Game.MergePopup.resetSeenLevels();
+  }
   if (DebugPanelEnabled) {
     state.debug = {
       log: [],
@@ -3525,6 +3574,11 @@ function drawZombieFence(){
 function drawFence(br){
   // simple fence around hangar (visual only)
   ctx.save();
+
+  // Clip to board rect so corner posts don't overlap the road (T2)
+  ctx.beginPath();
+  rr(ctx, br.x, br.y, br.w, br.h, 16);
+  ctx.clip();
 
   const pad = 8;
   const x0 = br.x + pad, y0 = br.y + pad;
@@ -5196,6 +5250,22 @@ async function boot(){
       settingsTooltip.classList.add('hidden');
       settingsTooltip.setAttribute('aria-hidden', 'true');
     });
+    // Touch: show tooltip immediately on tap, no delay (T4)
+    ui.settingsBtn.addEventListener('touchstart', (e) => {
+      settingsTooltip.textContent = t('menuSettings');
+      settingsTooltip.classList.remove('hidden');
+      settingsTooltip.setAttribute('aria-hidden', 'false');
+      const touch = e.touches[0];
+      if (touch) {
+        settingsTooltip.style.left = touch.clientX + 'px';
+        settingsTooltip.style.top = (touch.clientY + 24) + 'px';
+        settingsTooltip.style.transform = 'translate(-50%, 0)';
+      }
+    }, { passive: true });
+    ui.settingsBtn.addEventListener('touchend', () => {
+      settingsTooltip.classList.add('hidden');
+      settingsTooltip.setAttribute('aria-hidden', 'true');
+    });
   }
   ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
   window.addEventListener('resize', resizeCanvas);
@@ -5242,6 +5312,21 @@ async function boot(){
   // Initialize merge popup
   if (window.Game && window.Game.MergePopup) {
     window.Game.MergePopup.init();
+  }
+
+  // Pack 2: Initialize TelemetryLogger
+  if (window.Game && window.Game.TelemetryLogger) {
+    window.Game.TelemetryLogger.init();
+  }
+
+  // Pack 2: Initialize LessonProgress
+  if (window.Game && window.Game.LessonProgress) {
+    window.Game.LessonProgress.init();
+  }
+
+  // Pack 2: Hook Anki export button
+  if (window.Game && window.Game.AnkiExport) {
+    window.Game.AnkiExport.hookUI();
   }
 
   // Initialize debug-only zombie animation preview

@@ -1218,3 +1218,134 @@ body.menu-open .stageUi .hudItem{
   opacity:0.7;
   margin-top:4px;
 }
+.mergePopupModal__stats{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  width:100%;
+  padding:6px 10px;
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(125,255,178,.15);
+}
+.mergePopupModal__stat{
+  font-size:12px;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.mergePopupModal__statLabel{
+  color:var(--muted);
+  font-weight:700;
+}
+.mergePopupModal__stat small{
+  color:var(--muted);
+  font-size:10px;
+}
+.mergePopupModal__actions{
+  display:flex;
+  gap:8px;
+  width:100%;
+  margin-top:4px;
+}
+.mergePopupModal__actions .btn{
+  flex:1;
+  min-width:0;
+}
+
+/* ═══════════ Lesson Progress Panel ═══════════ */
+.lessonProgressPanel{
+  position:fixed;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:1100;
+  width:320px;
+  max-height:80vh;
+  background:rgba(24,28,36,.95);
+  border:1px solid rgba(125,255,178,.25);
+  border-radius:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  font-family:'Roboto',sans-serif;
+  color:#eaf1ff;
+}
+.lessonProgressPanel.hidden{
+  display:none;
+}
+.lessonProgressPanel__header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 14px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.lessonProgressPanel__title{
+  font-weight:700;
+  font-size:15px;
+}
+.lessonProgress__close{
+  background:none;
+  border:none;
+  color:#eaf1ff;
+  font-size:22px;
+  cursor:pointer;
+  line-height:1;
+  padding:0 4px;
+}
+.lessonProgress__list{
+  flex:1;
+  overflow-y:auto;
+  padding:8px 12px;
+}
+.lessonProgress__item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);
+  gap:8px;
+}
+.lessonProgress__item_done .lessonProgress__name{
+  color:#7dffb2;
+}
+.lessonProgress__info{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  flex:1;
+  min-width:0;
+}
+.lessonProgress__name{
+  font-size:13px;
+  font-weight:500;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.lessonProgress__score{
+  font-size:11px;
+  color:rgba(234,241,255,.55);
+}
+.lessonProgress__actions{
+  display:flex;
+  gap:4px;
+  flex-shrink:0;
+}
+.lessonProgress__repeatBtn,
+.lessonProgress__exportBtn{
+  font-size:11px!important;
+  padding:3px 8px!important;
+  min-width:0!important;
+}
+.lessonProgressPanel__footer{
+  padding:8px 14px;
+  border-top:1px solid rgba(255,255,255,.08);
+  text-align:center;
+}
+.lessonProgressPanel__footer .btn{
+  width:100%;
+}

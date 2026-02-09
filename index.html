@@ -32,6 +32,7 @@
           </div>
 
           <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Древо талантов</button>
+          <button id="lessonProgressBtn" class="btn btnSecondary" type="button">Lesson Progress</button>
           <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
             <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
             <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="Защита"></button>
@@ -145,7 +146,23 @@
       <div class="mergePopupModal__subtitle" id="mergePopupSubtitle">Открыт новый уровень!</div>
       <canvas id="mergePopupCanvas" width="200" height="120"></canvas>
       <div class="mergePopupModal__title" id="mergePopupTitle">Новый танк Lv2</div>
-      <div class="mergePopupModal__hint">Нажмите чтобы закрыть</div>
+      <div class="mergePopupModal__stats" id="mergePopupStats"></div>
+      <div class="mergePopupModal__actions">
+        <button id="btn-fight" class="btn btnPrimary" type="button">В бой!</button>
+        <button id="btn-close" class="btn btnSecondary" type="button">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lesson Progress Panel -->
+  <div class="lessonProgressPanel hidden" id="lessonProgressPanel" aria-hidden="true">
+    <div class="lessonProgressPanel__header">
+      <span class="lessonProgressPanel__title">Lesson Progress</span>
+      <button class="lessonProgress__close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="lessonProgress__list"></div>
+    <div class="lessonProgressPanel__footer">
+      <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv">Export Anki</button>
     </div>
   </div>
 
@@ -165,6 +182,9 @@
   <script src="src/ui/shopUI.js"></script>
   <script src="src/ui/mergePopup.js"></script>
   <script src="src/ui/zombieAnimPreview.js"></script>
+  <script src="src/telemetry/telemetry.js"></script>
+  <script src="src/tools/anki/anki_export.js"></script>
+  <script src="src/ui/lessonProgress.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -1,46 +1,46 @@
 /**
- * MergePopup — модальное окно при успешном merge с анимацией 2→1,
- * стрельбой по cooldown и persist "увиденных уровней".
+ * MergePopup — state-machine merge popup with asset display, stats and manual close.
+ * States: IDLE → MERGE_ANIM (3 s, plays once) → SHOWCASE (loop, fire) → IDLE (on close).
+ * Assets loaded from TankSprites (tanks.json). Stats computed from BAL constants.
+ * Buttons: #btn-fight / #btn-close — the only way to dismiss the popup.
  */
 (function (global) {
   'use strict';
 
-  var POPUP_DURATION_MS = 1500;
+  /* ── constants ── */
+  var MERGE_ANIM_MS = 3000;
   var SEEN_LEVELS_KEY = 'seenMergeLevels';
+  var STATE = { IDLE: 0, MERGE_ANIM: 1, SHOWCASE: 2 };
 
-  // Internal state
+  /* ── internal state ── */
   var seenLevels = {};
-  var isOpen = false;
-  var animationFrame = null;
+  var currentState = STATE.IDLE;
+  var animFrame = null;
   var shootTimer = null;
-  var closeTimeout = null;
+  var mergeTimeout = null;
   var currentLevel = 1;
   var animStartTime = 0;
 
-  // DOM refs (cached on init)
-  var modal = null;
-  var canvas = null;
-  var ctxPopup = null;
-  var titleEl = null;
-  var subtitleEl = null;
+  /* ── DOM refs ── */
+  var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose;
 
-  // Loaded from storage on init
+  /* ── particles / flashes ── */
+  var particles = [];
+  var muzzleFlashes = [];
+
+  /* ═══════════════ Persistence ═══════════════ */
   function loadSeenLevels() {
     try {
       var raw = global.localStorage && global.localStorage.getItem(SEEN_LEVELS_KEY);
       if (!raw) return {};
       var data = JSON.parse(raw);
       return typeof data === 'object' && data !== null ? data : {};
-    } catch (e) {
-      return {};
-    }
+    } catch (e) { return {}; }
   }
 
   function saveSeenLevels() {
     try {
-      if (global.localStorage) {
-        global.localStorage.setItem(SEEN_LEVELS_KEY, JSON.stringify(seenLevels));
-      }
+      if (global.localStorage) global.localStorage.setItem(SEEN_LEVELS_KEY, JSON.stringify(seenLevels));
     } catch (e) {}
   }
 
@@ -53,49 +53,59 @@
     return !!seenLevels[level];
   }
 
-  /**
-   * Initialize DOM references. Called once on game load.
-   */
+  /** Clear all seen-level flags (called on New Game). */
+  function resetSeenLevels() {
+    seenLevels = {};
+    try {
+      if (global.localStorage) global.localStorage.removeItem(SEEN_LEVELS_KEY);
+    } catch (e) {}
+  }
+
+  /* ═══════════════ Init ═══════════════ */
   function init() {
     seenLevels = loadSeenLevels();
-    modal = document.getElementById('mergePopupModal');
-    canvas = document.getElementById('mergePopupCanvas');
-    titleEl = document.getElementById('mergePopupTitle');
+    modal      = document.getElementById('mergePopupModal');
+    canvas     = document.getElementById('mergePopupCanvas');
+    titleEl    = document.getElementById('mergePopupTitle');
     subtitleEl = document.getElementById('mergePopupSubtitle');
+    statsEl    = document.getElementById('mergePopupStats');
+    btnFight   = document.getElementById('btn-fight');
+    btnClose   = document.getElementById('btn-close');
+
     if (canvas) {
       ctxPopup = canvas.getContext('2d');
       ctxPopup.imageSmoothingEnabled = false;
     }
-    // Click/tap to close
-    if (modal) {
-      modal.addEventListener('click', close);
-      modal.addEventListener('touchend', function (e) {
-        e.preventDefault();
-        close();
-      });
+
+    // Buttons — the only way to close (manual close)
+    if (btnFight) {
+      btnFight.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnFight.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
     }
+    if (btnClose) {
+      btnClose.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnClose.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+    }
+    // NO global click-to-close — manual close only via buttons
   }
 
-  /**
-   * Show merge popup for the given level (only if not seen before).
-   * @param {number} level - New tank level after merge
-   * @returns {boolean} - true if popup was shown
-   */
+  /* ═══════════════ Show / Close ═══════════════ */
   function show(level) {
     if (!modal || !canvas) {
       console.warn('[MergePopup] DOM not initialized');
       return false;
     }
-    if (hasSeenLevel(level)) {
-      return false;
-    }
+    if (hasSeenLevel(level)) return false;
+
     markLevelSeen(level);
     currentLevel = level;
-    isOpen = true;
-    animStartTime = performance.now();
 
-    // Update text
-    var lang = (global.currentLang || 'ru');
+    // Pack 2: telemetry logging
+    if (global.Game && global.Game.TelemetryLogger) {
+      global.Game.TelemetryLogger.log('mergePopupShow', { level: level });
+    }
+
+    var lang = global.currentLang || 'ru';
     if (titleEl) {
       titleEl.textContent = lang === 'ru'
         ? 'Новый танк Lv' + level
@@ -107,93 +117,123 @@
         : 'New level unlocked!';
     }
 
-    // Show modal
+    updateStats(level, lang);
+
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
 
-    // Start animation
-    startAnimation(level);
-
-    // Auto-close after duration
-    if (closeTimeout) clearTimeout(closeTimeout);
-    closeTimeout = setTimeout(function () {
-      close();
-    }, POPUP_DURATION_MS);
-
+    enterMergeAnim();
     return true;
   }
 
   function close() {
-    if (!isOpen) return;
-    isOpen = false;
-
-    if (animationFrame) {
-      cancelAnimationFrame(animationFrame);
-      animationFrame = null;
-    }
-    if (shootTimer) {
-      clearInterval(shootTimer);
-      shootTimer = null;
-    }
-    if (closeTimeout) {
-      clearTimeout(closeTimeout);
-      closeTimeout = null;
-    }
-
+    if (currentState === STATE.IDLE) return;
+    stopAll();
+    currentState = STATE.IDLE;
     if (modal) {
       modal.classList.add('hidden');
       modal.setAttribute('aria-hidden', 'true');
     }
+    // Pack 2: telemetry logging
+    if (global.Game && global.Game.TelemetryLogger) {
+      global.Game.TelemetryLogger.log('mergePopupClose', { level: currentLevel });
+    }
   }
 
-  // Animation state
-  var particles = [];
-  var muzzleFlashes = [];
-
-  function startAnimation(level) {
+  /* ═══════════════ State transitions ═══════════════ */
+  function enterMergeAnim() {
+    currentState = STATE.MERGE_ANIM;
+    animStartTime = performance.now();
     particles = [];
     muzzleFlashes = [];
+    startRenderLoop();
 
-    // Calculate fire rate (shots per second) based on level
+    if (mergeTimeout) clearTimeout(mergeTimeout);
+    mergeTimeout = setTimeout(function () {
+      mergeTimeout = null;
+      enterShowcase();
+    }, MERGE_ANIM_MS);
+  }
+
+  function enterShowcase() {
+    currentState = STATE.SHOWCASE;
+    animStartTime = performance.now();
+    startFireLoop();
+    // render loop continues from merge phase
+  }
+
+  /* ═══════════════ Stats display ═══════════════ */
+  function updateStats(level, lang) {
+    if (!statsEl) return;
     var BAL = global.BAL || {};
-    var fireRateBase = BAL.fireRateBase || 0.85;
-    var fireRateAdd = BAL.fireRateAddPerLevel || 0.075;
-    var fireRate = fireRateBase + fireRateAdd * (level - 1);
-    var cooldownMs = Math.max(80, 1000 / fireRate);
+    var dmg = (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1.48, level - 1);
+    var fr  = (BAL.fireRateBase || 0.85) + (BAL.fireRateAddPerLevel || 0.075) * (level - 1);
+    var range = 315;
+    var N = level <= 5 ? 1 : level <= 10 ? 2 : 3;
+    var fmt = function (n) { return n < 10 ? n.toFixed(1) : Math.round(n).toString(); };
 
-    // Fire immediately, then at cooldown intervals
-    fireShotEffect(level);
+    var rows;
+    if (lang === 'ru') {
+      rows =
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Урон:</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Скорострельность:</span> ' + fr.toFixed(2) + '/с</div>' +
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Дальность:</span> ' + range + '</div>';
+    } else {
+      rows =
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Damage:</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Fire rate:</span> ' + fr.toFixed(2) + '/s</div>' +
+        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Range:</span> ' + range + '</div>';
+    }
+    if (N > 1) {
+      rows += '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' +
+        (lang === 'ru' ? 'Стволы:' : 'Barrels:') + '</span> ' + N + '</div>';
+    }
+    statsEl.innerHTML = rows;
+  }
 
-    if (shootTimer) clearInterval(shootTimer);
-    shootTimer = setInterval(function () {
-      if (!isOpen) return;
-      fireShotEffect(level);
-    }, cooldownMs);
-
-    // Start render loop
-    animationFrame = requestAnimationFrame(function loop() {
-      if (!isOpen) return;
+  /* ═══════════════ Animation loops ═══════════════ */
+  function startRenderLoop() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = requestAnimationFrame(function loop() {
+      if (currentState === STATE.IDLE) return;
       renderFrame();
-      animationFrame = requestAnimationFrame(loop);
+      animFrame = requestAnimationFrame(loop);
     });
   }
 
+  function startFireLoop() {
+    var BAL = global.BAL || {};
+    var fireRateBase = BAL.fireRateBase || 0.85;
+    var fireRateAdd  = BAL.fireRateAddPerLevel || 0.075;
+    var fireRate = fireRateBase + fireRateAdd * (currentLevel - 1);
+    var cooldownMs = Math.max(80, 1000 / fireRate);
+
+    fireShotEffect(currentLevel);
+    if (shootTimer) clearInterval(shootTimer);
+    shootTimer = setInterval(function () {
+      if (currentState !== STATE.SHOWCASE) return;
+      fireShotEffect(currentLevel);
+    }, cooldownMs);
+  }
+
+  function stopAll() {
+    if (animFrame)    { cancelAnimationFrame(animFrame); animFrame = null; }
+    if (shootTimer)   { clearInterval(shootTimer); shootTimer = null; }
+    if (mergeTimeout) { clearTimeout(mergeTimeout); mergeTimeout = null; }
+  }
+
+  /* ═══════════════ Shot FX ═══════════════ */
   function fireShotEffect(level) {
-    // Play sound
     if (global.playSfx) {
       var sfxId = level >= 20 ? 'shootHeavy' : 'shootNormal';
       global.playSfx(sfxId);
     }
-
-    // Add muzzle flash
     muzzleFlashes.push({
       x: canvas.width / 2 + 20,
       y: canvas.height / 2 - 10,
       life: 0.15,
       maxLife: 0.15
     });
-
-    // Add particles (bullet trail effect)
     for (var i = 0; i < 6; i++) {
       particles.push({
         x: canvas.width / 2 + 25,
@@ -207,23 +247,27 @@
     }
   }
 
+  /* ═══════════════ Render ═══════════════ */
   function renderFrame() {
     if (!ctxPopup || !canvas) return;
     var w = canvas.width;
     var h = canvas.height;
-    var elapsed = (performance.now() - animStartTime) / 1000;
-    var dt = 1 / 60; // Approximate frame time
+    var dt = 1 / 60;
 
-    // Clear
     ctxPopup.clearRect(0, 0, w, h);
 
-    // Phase 1: Two tanks merging (0 - 0.4s)
-    // Phase 2: Combined tank revealed (0.4s+)
-    var mergePhase = Math.min(1, elapsed / 0.4);
+    if (currentState === STATE.MERGE_ANIM) {
+      var elapsed = (performance.now() - animStartTime) / 1000;
+      var totalSec = MERGE_ANIM_MS / 1000;
+      // Merge phase occupies first 35 % of the 3 s window
+      var mergePhase = Math.min(1, elapsed / (totalSec * 0.35));
+      drawMergeScene(mergePhase, elapsed);
+    } else if (currentState === STATE.SHOWCASE) {
+      var showcaseElapsed = (performance.now() - animStartTime) / 1000;
+      drawShowcaseScene(showcaseElapsed);
+    }
 
-    drawMergeAnimation(mergePhase, elapsed);
-
-    // Update and draw muzzle flashes
+    // Muzzle flashes
     var nextFlashes = [];
     for (var i = 0; i < muzzleFlashes.length; i++) {
       var f = muzzleFlashes[i];
@@ -246,7 +290,7 @@
     }
     muzzleFlashes = nextFlashes;
 
-    // Update and draw particles
+    // Particles
     var nextParticles = [];
     for (var j = 0; j < particles.length; j++) {
       var p = particles[j];
@@ -269,34 +313,26 @@
     particles = nextParticles;
   }
 
-  function drawMergeAnimation(phase, elapsed) {
-    var w = canvas.width;
-    var h = canvas.height;
-    var cx = w / 2;
-    var cy = h / 2;
-
-    // Ease function
+  /* ═══════════════ Scene drawing ═══════════════ */
+  function drawMergeScene(phase, elapsed) {
+    var w = canvas.width, h = canvas.height;
+    var cx = w / 2, cy = h / 2;
     var ease = function (t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
     var eased = ease(phase);
 
     if (phase < 1) {
-      // Two tanks moving toward center
+      // Two tanks converging
       var offset = 40 * (1 - eased);
-      var alpha = 0.7 + 0.3 * (1 - eased);
+      var alphaVal = 0.7 + 0.3 * (1 - eased);
 
-      // Left tank
-      ctxPopup.save();
-      ctxPopup.globalAlpha = alpha;
-      drawSimpleTank(ctxPopup, cx - offset - 15, cy, currentLevel - 1, 0.7);
+      ctxPopup.save(); ctxPopup.globalAlpha = alphaVal;
+      drawTankSprite(ctxPopup, cx - offset - 15, cy, Math.max(1, currentLevel - 1), 0.7);
       ctxPopup.restore();
 
-      // Right tank
-      ctxPopup.save();
-      ctxPopup.globalAlpha = alpha;
-      drawSimpleTank(ctxPopup, cx + offset + 15, cy, currentLevel - 1, 0.7);
+      ctxPopup.save(); ctxPopup.globalAlpha = alphaVal;
+      drawTankSprite(ctxPopup, cx + offset + 15, cy, Math.max(1, currentLevel - 1), 0.7);
       ctxPopup.restore();
 
-      // Merge flash at center when nearing completion
       if (phase > 0.7) {
         var flashAlpha = (phase - 0.7) / 0.3;
         ctxPopup.save();
@@ -310,10 +346,8 @@
         ctxPopup.restore();
       }
     } else {
-      // Single merged tank with pulse effect
+      // Post-merge: reveal new tank with pulse
       var pulse = 1 + 0.05 * Math.sin(elapsed * 8);
-
-      // Glow behind tank
       ctxPopup.save();
       ctxPopup.globalAlpha = 0.4;
       var glow = ctxPopup.createRadialGradient(cx, cy, 0, cx, cy, 45);
@@ -322,21 +356,34 @@
       ctxPopup.fillStyle = glow;
       ctxPopup.fillRect(cx - 50, cy - 50, 100, 100);
       ctxPopup.restore();
-
-      // Draw merged tank
-      drawSimpleTank(ctxPopup, cx, cy, currentLevel, pulse);
+      drawTankSprite(ctxPopup, cx, cy, currentLevel, pulse);
     }
   }
 
-  /**
-   * Draw a simple tank representation (fallback if TankSprites not available)
-   */
-  function drawSimpleTank(targetCtx, x, y, level, scale) {
+  function drawShowcaseScene(elapsed) {
+    var w = canvas.width, h = canvas.height;
+    var cx = w / 2, cy = h / 2;
+    var pulse = 1 + 0.03 * Math.sin(elapsed * 4);
+
+    ctxPopup.save();
+    ctxPopup.globalAlpha = 0.3;
+    var glow = ctxPopup.createRadialGradient(cx, cy, 0, cx, cy, 50);
+    glow.addColorStop(0, '#7dffb2');
+    glow.addColorStop(1, 'transparent');
+    ctxPopup.fillStyle = glow;
+    ctxPopup.fillRect(cx - 55, cy - 55, 110, 110);
+    ctxPopup.restore();
+
+    drawTankSprite(ctxPopup, cx, cy, currentLevel, pulse);
+  }
+
+  /* ═══════════════ Tank sprite ═══════════════ */
+  function drawTankSprite(targetCtx, x, y, level, scale) {
     scale = scale || 1;
 
-    // Try to use TankSprites if available
+    // Try TankSprites (tanks.json assets)
     if (global.TankSprites && global.TankSprites.pickBody && global.TankSprites.pickCannon) {
-      var body = global.TankSprites.pickBody(level);
+      var body   = global.TankSprites.pickBody(level);
       var cannon = global.TankSprites.pickCannon(level);
       if (body && cannon) {
         var bodyW = (body.cfg.frame && body.cfg.frame.w) || body.img.width;
@@ -368,12 +415,13 @@
           0, 0, cannonW, cannonH,
           -cannonDrawW * cannonAnchor.x, -cannonDrawH * cannonAnchor.y, cannonDrawW, cannonDrawH
         );
+
         targetCtx.restore();
         return;
       }
     }
 
-    // Fallback: simple geometric tank
+    // Fallback: geometric tank
     var tier = Math.floor((level - 1) / 3);
     var colors = ['#b83232', '#c63a3a', '#d14646', '#e05a5a', '#f07171'];
     var hull = colors[Math.min(tier, colors.length - 1)];
@@ -413,6 +461,7 @@
     targetCtx.restore();
   }
 
+  /* ── helpers ── */
   function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -439,23 +488,23 @@
     return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
   }
 
-  // Expose module
+  /* ═══════════════ Public API ═══════════════ */
   global.Game = global.Game || {};
   global.Game.MergePopup = {
     init: init,
     show: show,
     close: close,
     hasSeenLevel: hasSeenLevel,
+    resetSeenLevels: resetSeenLevels,
     getSeenLevels: function () { return Object.assign({}, seenLevels); },
-    // For storage integration
     loadSeenLevels: function (data) {
-      if (data && typeof data === 'object') {
-        seenLevels = data;
-      }
+      if (data && typeof data === 'object') seenLevels = data;
     },
-    exportSeenLevels: function () {
-      return Object.assign({}, seenLevels);
-    }
+    exportSeenLevels: function () { return Object.assign({}, seenLevels); },
+    // Expose for testing
+    _getState: function () { return currentState; },
+    _STATE: STATE,
+    _MERGE_ANIM_MS: MERGE_ANIM_MS,
   };
 
 })(typeof window !== 'undefined' ? window : this);

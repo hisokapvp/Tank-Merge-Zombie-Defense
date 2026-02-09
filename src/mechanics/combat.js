@@ -22,6 +22,19 @@
   }
 
   /**
+   * Number of projectiles per shot based on tank level.
+   * Levels 1-5: 1, 6-10: 2, 11+: 3. Damage is split evenly.
+   * @param {number} level
+   * @returns {number}
+   */
+  function getProjectileCount(level) {
+    var lvl = Math.max(1, Math.floor(level || 1));
+    if (lvl <= 5) return 1;
+    if (lvl <= 10) return 2;
+    return 3;
+  }
+
+  /**
    * Детерминированный выбор анимации смерти зомби.
    * 70% personal, 30% common (если оба доступны).
    * 
@@ -60,5 +73,6 @@
     getShootRange,
     getFixedShootRange,
     pickDeathAnim,
+    getProjectileCount,
   };
 })(typeof window !== 'undefined' ? window : this);
