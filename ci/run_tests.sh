@@ -29,6 +29,10 @@ run_test "Pack 3 (Anki importer)" "Test/pack3/ankiImporter.test.js"
 run_test "Pack 4 (calendar)" "Test/pack4/calendar.test.js"
 run_test "Pack 4 (profiler)" "Test/pack4/perf_stress.test.js"
 run_test "Pack 5 (perf regression)" "Test/pack5/perf_regression.test.js"
+run_test "Pack 7 (adminFlags visibility)" "Test/pack7/adminFlags_visibility.test.js"
+run_test "Pack 7 (release integrity)" "Test/pack7/release_integrity.test.js"
+run_test "Pack 7 (analytics aggregation)" "Test/pack7/analytics_aggregation.test.js"
+run_test "Pack 7 (feedback storage)" "Test/pack7/feedback_storage.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

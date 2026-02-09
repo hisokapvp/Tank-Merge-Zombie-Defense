@@ -117,6 +117,9 @@
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('mergePopupShow', { level: level });
     }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('mergePopupShow', { level: level });
+    }
 
     if (titleEl) titleEl.textContent = t('mergePopupTitle', { level: level });
     if (subtitleEl) subtitleEl.textContent = t('mergePopupSubtitle');
@@ -145,6 +148,9 @@
     // Pack 2: telemetry logging
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('mergePopupClose', { level: currentLevel });
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('mergePopupClose', { level: currentLevel });
     }
   }
 

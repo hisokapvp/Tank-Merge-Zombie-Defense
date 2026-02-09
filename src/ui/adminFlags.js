@@ -14,8 +14,22 @@
     }
   }
 
+  function isDevOnly() {
+    try {
+      var loc = global.location || {};
+      var host = String(loc.hostname || '');
+      var protocol = String(loc.protocol || '');
+      if (protocol === 'file:') return true;
+      if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '0.0.0.0') return true;
+      if (host.slice(-6) === '.local') return true;
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function init() {
-    if (!isDebugMode()) return;
+    if (!isDebugMode() || !isDevOnly()) return;
     if (!global.document || !global.Game || !global.Game.Flags) return;
 
     var panel = global.document.getElementById('debugSectionLogs');
@@ -131,5 +145,9 @@
   }
 
   global.Game = global.Game || {};
-  global.Game.AdminFlags = { init: init };
+  global.Game.AdminFlags = {
+    init: init,
+    isDebugMode: isDebugMode,
+    isDevOnly: isDevOnly,
+  };
 })(typeof window !== 'undefined' ? window : this);

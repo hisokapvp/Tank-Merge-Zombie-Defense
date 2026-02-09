@@ -227,6 +227,9 @@
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('lessonUpdate', { lesson: name, score: score });
     }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('lessonUpdate', { lesson: name, score: score });
+    }
   }
 
   function completeLesson(name, score) {
@@ -246,6 +249,9 @@
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('lessonComplete', { lesson: name, score: score });
     }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('lessonComplete', { lesson: name, score: score });
+    }
   }
 
   function repeatLesson(name) {
@@ -257,6 +263,9 @@
     }
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('lessonRepeat', { lesson: lessonName });
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('lessonRepeat', { lesson: lessonName });
     }
   }
 
@@ -485,6 +494,9 @@
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleExport', { format: 'json' });
     }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('scheduleExport', { format: 'json' });
+    }
     updateCalendar();
   }
 
@@ -495,6 +507,9 @@
     setScheduleStatus(t('lessonScheduleImported', { count: count }));
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleImport', { count: count });
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track('scheduleImport', { count: count });
     }
     renderList();
     updateCalendar();

@@ -28,4 +28,6 @@ else
   powershell.exe -NoProfile -Command "Compress-Archive -Path '$STAGING_DIR\\*' -DestinationPath '$ZIP_PATH' -Force" >/dev/null
 fi
 
+"$ROOT_DIR/ops/release/check_release_integrity.sh" "$ZIP_PATH"
+
 echo "Release created: $ZIP_PATH"
