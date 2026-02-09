@@ -341,6 +341,41 @@ const STRINGS = {
     dismantleMore: 'ещё',
     dropOnCrateReject: 'Место занято',
     menuSettings: 'Настройки',
+    mergePopupTitle: 'Новый танк Lv{level}',
+    mergePopupSubtitle: 'Открыт новый уровень!',
+    mergePopupFight: 'В бой!',
+    mergePopupClose: 'Закрыть',
+    mergePopupDamageLabel: 'Урон',
+    mergePopupFireRateLabel: 'Скорострельность',
+    mergePopupRateUnit: '/с',
+    mergePopupRangeLabel: 'Дальность',
+    mergePopupBarrelsLabel: 'Стволы',
+    lessonProgressTitle: 'Прогресс уроков',
+    lessonRepeatNow: 'Повторить сейчас',
+    lessonExportSchedule: 'Экспорт расписания',
+    lessonImportSchedule: 'Импорт расписания',
+    lessonPreviewAnki: 'Предпросмотр Anki',
+    lessonHidePreview: 'Скрыть предпросмотр',
+    lessonExportAnki: 'Экспорт Anki',
+    lessonScoreLabel: 'Результат: {score}',
+    lessonRepeat: 'Повторить',
+    lessonAnki: 'Anki',
+    lessonNextNotScheduled: 'Следующее: не запланировано',
+    lessonNextDueNow: 'Следующее: сейчас',
+    lessonNextIn: 'Следующее: через {time}',
+    lessonNextReviewLabel: 'Следующее повторение: {text}',
+    lessonNextReviewNone: 'Следующее повторение: нет',
+    lessonDueNotScheduled: 'не запланировано',
+    lessonDueNow: 'сейчас',
+    lessonDueIn: 'через {time}',
+    lessonScheduleExported: 'Расписание экспортировано',
+    lessonScheduleImported: 'Импортировано элементов: {count}',
+    lessonPreviewUnavailable: 'Предпросмотр недоступен.',
+    lessonBasics: 'Основы: Слияние танков',
+    lessonCombat: 'Бой: Паттерны стрельбы',
+    lessonEconomy: 'Экономика: Стратегия монет',
+    lessonDefense: 'Оборона: Волны зомби',
+    lessonAdvanced: 'Продвинутое: Мультиствол',
   },
   en: {
     title: 'Merge Tank: Zombie invasion',
@@ -416,12 +451,62 @@ const STRINGS = {
     dismantleMore: 'more',
     dropOnCrateReject: 'Place occupied',
     menuSettings: 'Settings',
+    mergePopupTitle: 'New tank Lv{level}',
+    mergePopupSubtitle: 'New level unlocked!',
+    mergePopupFight: 'Fight!',
+    mergePopupClose: 'Close',
+    mergePopupDamageLabel: 'Damage',
+    mergePopupFireRateLabel: 'Fire rate',
+    mergePopupRateUnit: '/s',
+    mergePopupRangeLabel: 'Range',
+    mergePopupBarrelsLabel: 'Barrels',
+    lessonProgressTitle: 'Lesson Progress',
+    lessonRepeatNow: 'Repeat now',
+    lessonExportSchedule: 'Export schedule',
+    lessonImportSchedule: 'Import schedule',
+    lessonPreviewAnki: 'Preview Anki',
+    lessonHidePreview: 'Hide Preview',
+    lessonExportAnki: 'Export Anki',
+    lessonScoreLabel: 'Score: {score}',
+    lessonRepeat: 'Repeat',
+    lessonAnki: 'Anki',
+    lessonNextNotScheduled: 'Next: not scheduled',
+    lessonNextDueNow: 'Next: due now',
+    lessonNextIn: 'Next: in {time}',
+    lessonNextReviewLabel: 'Next review: {text}',
+    lessonNextReviewNone: 'Next review: none',
+    lessonDueNotScheduled: 'not scheduled',
+    lessonDueNow: 'due now',
+    lessonDueIn: 'in {time}',
+    lessonScheduleExported: 'Schedule exported',
+    lessonScheduleImported: 'Imported schedule items: {count}',
+    lessonPreviewUnavailable: 'Preview unavailable.',
+    lessonBasics: 'Basics: Merge Tanks',
+    lessonCombat: 'Combat: Fire Patterns',
+    lessonEconomy: 'Economy: Coin Strategy',
+    lessonDefense: 'Defense: Zombie Waves',
+    lessonAdvanced: 'Advanced: Multi-Barrel',
   }
 };
 
+if (window.Game && window.Game.I18n && window.Game.I18n.setFallback) {
+  window.Game.I18n.setFallback(STRINGS);
+}
+
 let currentLang = 'ru';
 
+function getI18n(){
+  return window.Game && window.Game.I18n ? window.Game.I18n : null;
+}
+
+function getCurrentLang(){
+  const i18n = getI18n();
+  return (i18n && i18n.getLanguage) ? i18n.getLanguage() : currentLang;
+}
+
 function t(key, vars = {}){
+  const i18n = getI18n();
+  if (i18n && typeof i18n.t === 'function') return i18n.t(key, vars);
   const dict = STRINGS[currentLang] || STRINGS.ru;
   let text = dict[key] ?? STRINGS.ru[key] ?? key;
   for (const [k, v] of Object.entries(vars)){
@@ -431,7 +516,7 @@ function t(key, vars = {}){
 }
 
 function talentWord(points){
-  if (currentLang === 'ru'){
+  if (getCurrentLang() === 'ru'){
     const mod10 = points % 10;
     const mod100 = points % 100;
     if (mod10 === 1 && mod100 !== 11) return 'талант';
@@ -442,10 +527,16 @@ function talentWord(points){
 }
 
 function setLanguage(lang){
-  if (!STRINGS[lang]) return;
-  currentLang = lang;
-  localStorage.setItem('lang', lang);
-  document.documentElement.lang = lang;
+  const i18n = getI18n();
+  if (i18n && typeof i18n.setLanguage === 'function') {
+    if (!i18n.setLanguage(lang)) return;
+    currentLang = i18n.getLanguage ? i18n.getLanguage() : lang;
+  } else {
+    if (!STRINGS[lang]) return;
+    currentLang = lang;
+    localStorage.setItem('lang', lang);
+    document.documentElement.lang = lang;
+  }
   applyTranslations();
   updateUI();
 }
@@ -545,8 +636,19 @@ function applyTranslations(){
     if (applyBtn) applyBtn.textContent = t('talentApply');
   }
   if (ui.langRu && ui.langEn){
-    ui.langRu.classList.toggle('active', currentLang === 'ru');
-    ui.langEn.classList.toggle('active', currentLang === 'en');
+    const lang = getCurrentLang();
+    ui.langRu.classList.toggle('active', lang === 'ru');
+    ui.langEn.classList.toggle('active', lang === 'en');
+    ui.langRu.setAttribute('aria-pressed', lang === 'ru');
+    ui.langEn.setAttribute('aria-pressed', lang === 'en');
+  }
+  if (ui.settingsBtn){
+    ui.settingsBtn.setAttribute('aria-label', t('menuSettings'));
+    ui.settingsBtn.setAttribute('title', t('menuSettings'));
+  }
+  const langSwitch = document.querySelector('.langSwitch');
+  if (langSwitch){
+    langSwitch.setAttribute('aria-label', t('menuLanguage'));
   }
   updateTalentUI();
   updateLevelModal();
@@ -1189,6 +1291,7 @@ function openLevelModal(){
   if (!ui.levelModal) return;
   ui.levelModal.classList.remove('hidden');
   ui.levelModal.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
   updateLevelModal();
   if (state.ui.levelRewardTimer){
     window.clearTimeout(state.ui.levelRewardTimer);
@@ -1202,6 +1305,7 @@ function closeLevelModal(){
   if (!ui.levelModal) return;
   ui.levelModal.classList.add('hidden');
   ui.levelModal.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.levelModal);
   if (state.ui.levelRewardTimer){
     window.clearTimeout(state.ui.levelRewardTimer);
     state.ui.levelRewardTimer = 0;
@@ -1642,6 +1746,7 @@ function openTalents(){
   if (!overlay) return;
   const modal = overlay.querySelector('.modal');
   overlay.classList.remove('hidden');
+  a11yOpen(overlay, { initialFocus: overlay.querySelector('#talentApply'), onClose: closeTalents });
   if (modal){
     modal.style.transform = 'scale(0.92)';
     modal.style.opacity = '0';
@@ -1667,6 +1772,7 @@ function closeTalents(){
       modal.style.opacity = '';
     }
     overlay.classList.add('hidden');
+    a11yClose(overlay);
   }
 }
 
@@ -2174,6 +2280,36 @@ function stepTanks(dt){
 const MAX_BURST_PARTICLES = 14;
 const MAX_TRAIL_ALPHA = 0.45;
 let _nextShotId = 1;
+let projectilesNext = [];
+
+function resetProjectile(p){
+  p.x = 0;
+  p.y = 0;
+  p.toX = 0;
+  p.toY = 0;
+  p.toZombieId = null;
+  p.speed = 0;
+  p.r = 0;
+  p.color = '';
+  p.glow = '';
+  p.trail = '';
+  p.kind = '';
+  p.dmg = 0;
+  p.aoe = 0;
+  p.level = 0;
+  p.prof = null;
+  p.effectIntensity = 1;
+  p.shotId = 0;
+  p.life = 0;
+}
+
+const projectilePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
+  ? window.Game.ObjectPool.create({ max: 600, reset: resetProjectile })
+  : null;
+
+function releaseProjectile(p){
+  if (projectilePool) projectilePool.release(p);
+}
 
 function fireTankProjectile({sx, sy, target, tank, stats, mods}){
   const powerTier = tank.powerTier ?? computePowerTier(state.player?.level ?? 1);
@@ -2270,35 +2406,41 @@ function tankOrbitState(cell, timeSec){
 }
 
 function spawnProjectile(p){
-  state.projectiles.push({
-    x: p.fromX,
-    y: p.fromY,
-    toX: p.toX,
-    toY: p.toY,
-    toZombieId: p.toZombieId,
-    speed: p.prof.speed,
-    r: p.prof.r,
-    color: p.prof.color,
-    glow: p.prof.glow,
-    trail: p.prof.trail,
-    kind: p.prof.kind,
-    dmg: p.dmg,
-    aoe: p.aoe,
-    level: p.level,
-    prof: p.prof,
-    effectIntensity: p.effectIntensity ?? 1,
-    shotId: p.shotId ?? 0,
-    life: 2.0,
-  });
+  const b = projectilePool ? projectilePool.acquire() : {};
+  b.x = p.fromX;
+  b.y = p.fromY;
+  b.toX = p.toX;
+  b.toY = p.toY;
+  b.toZombieId = p.toZombieId;
+  b.speed = p.prof.speed;
+  b.r = p.prof.r;
+  b.color = p.prof.color;
+  b.glow = p.prof.glow;
+  b.trail = p.prof.trail;
+  b.kind = p.prof.kind;
+  b.dmg = p.dmg;
+  b.aoe = p.aoe;
+  b.level = p.level;
+  b.prof = p.prof;
+  b.effectIntensity = p.effectIntensity ?? 1;
+  b.shotId = p.shotId ?? 0;
+  b.life = 2.0;
+  state.projectiles.push(b);
 }
 
 function stepProjectiles(dt){
   const zmap = new Map(state.zombies.map(z => [z.id, z]));
-  const next = [];
+  const prev = state.projectiles;
+  const next = projectilesNext;
+  next.length = 0;
 
-  for (const b of state.projectiles){
+  for (let i = 0; i < prev.length; i++){
+    const b = prev[i];
     b.life -= dt;
-    if (b.life <= 0) continue;
+    if (b.life <= 0){
+      releaseProjectile(b);
+      continue;
+    }
 
     // update target point (moving zombie)
     const z = zmap.get(b.toZombieId);
@@ -2327,12 +2469,14 @@ function stepProjectiles(dt){
 
     if (dist < Math.max(10, b.r*2.2)){
       impactAt(b.x, b.y, b);
+      releaseProjectile(b);
       continue;
     }
 
     next.push(b);
   }
 
+  projectilesNext = prev;
   state.projectiles = next;
 }
 
@@ -2628,6 +2772,8 @@ function setMenuOpen(open){
   if (ui.menuOverlay){
     ui.menuOverlay.classList.toggle('hidden', !open);
     ui.menuOverlay.setAttribute('aria-hidden', (!open).toString());
+    if (open) a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: () => setMenuOpen(false) });
+    else a11yClose(ui.menuOverlay);
   }
   updateMenuState();
 }
@@ -2642,6 +2788,9 @@ function updateMenuState(){
 
 function resetGameState(){
   const wasCollapsed = state.debug?.collapsed;
+  if (state.projectiles && state.projectiles.length){
+    for (const p of state.projectiles) releaseProjectile(p);
+  }
   state = createInitialState();
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
@@ -2671,6 +2820,20 @@ function resetGameState(){
 }
 
 // ---------- UI ----------
+function a11yOpen(modalEl, opts){
+  const A11y = window.Game && window.Game.A11y;
+  if (A11y && typeof A11y.openModal === 'function') {
+    A11y.openModal(modalEl, opts || {});
+  }
+}
+
+function a11yClose(modalEl){
+  const A11y = window.Game && window.Game.A11y;
+  if (A11y && typeof A11y.closeModal === 'function') {
+    A11y.closeModal(modalEl);
+  }
+}
+
 function updateUI(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
@@ -2719,6 +2882,7 @@ function openDismantleModal(){
   fillDismantleConfirmModal(selected);
   ui.dismantleModal.classList.remove('hidden');
   ui.dismantleModal.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.dismantleModal, { initialFocus: ui.dismantleYes, onClose: closeDismantleModal });
 }
 
 function fillDismantleConfirmModal(selectedTankIds){
@@ -2754,6 +2918,7 @@ function closeDismantleModal(){
   if (!ui.dismantleModal) return;
   ui.dismantleModal.classList.add('hidden');
   ui.dismantleModal.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.dismantleModal);
 }
 
 function confirmDismantle(){
@@ -3122,12 +3287,14 @@ function openBoostModal(){
   if (watchEl) watchEl.textContent = t('boostModalWatch');
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
+  a11yOpen(modal, { initialFocus: watchEl, onClose: closeBoostModal });
 }
 function closeBoostModal(){
   const modal = document.getElementById('boostModal');
   if (!modal) return;
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden', 'true');
+  a11yClose(modal);
 }
 
 function openResetTalentsModal(){
@@ -3139,12 +3306,14 @@ function openResetTalentsModal(){
   if (watchEl) watchEl.textContent = t('talentResetModalWatchBtn');
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
+  a11yOpen(modal, { initialFocus: watchEl, onClose: closeResetTalentsModal });
 }
 function closeResetTalentsModal(){
   const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   modal.classList.add('hidden');
   modal.setAttribute('aria-hidden', 'true');
+  a11yClose(modal);
 }
 
 function openCrateModal(){
@@ -3156,6 +3325,7 @@ function openCrateModal(){
     ui.crateGet.disabled = false;
     ui.crateGet.textContent = t('crateGet');
   }
+  a11yOpen(ui.crateModal, { initialFocus: ui.crateGet, onClose: closeCrateModal });
   renderCrateIcon(state.crate.rewardLevel ?? 1);
 }
 
@@ -3163,6 +3333,7 @@ function closeCrateModal(){
   if (!ui.crateModal) return;
   ui.crateModal.classList.add('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.crateModal);
 }
 
 function grantCrateTank(level, preferredIndex = null){
@@ -4281,40 +4452,43 @@ function drawZombieFallback(x,y,z){
 }
 
 function drawProjectiles(){
+  if (!state.projectiles.length) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
   for (const b of state.projectiles){
-    // glow
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = b.glow;
     ctx.beginPath();
-    ctx.arc(b.x,b.y,b.r*2.2,0,Math.PI*2);
+    ctx.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
+  }
+  ctx.restore();
 
+  for (const b of state.projectiles){
     // core
     ctx.fillStyle = b.color;
     ctx.beginPath();
-    ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
 
     // small shape hint by kind
     if (b.kind === 'ap'){
       ctx.fillStyle = 'rgba(255,255,255,.25)';
-      ctx.fillRect(b.x-1, b.y-4, 2, 8);
+      ctx.fillRect(b.x - 1, b.y - 4, 2, 8);
     }
     if (b.kind === 'he'){
       ctx.strokeStyle = 'rgba(255,255,255,.22)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(b.x,b.y,b.r+2,0,Math.PI*2);
+      ctx.arc(b.x, b.y, b.r + 2, 0, Math.PI * 2);
       ctx.stroke();
     }
     if (b.kind === 'tesla'){
       ctx.strokeStyle = 'rgba(139,211,255,.35)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(b.x-6, b.y);
-      ctx.lineTo(b.x+6, b.y);
+      ctx.moveTo(b.x - 6, b.y);
+      ctx.lineTo(b.x + 6, b.y);
       ctx.stroke();
     }
   }
@@ -5160,8 +5334,18 @@ function initDebugPanel(){
 async function boot(){
   loadSettings();
   const savedLang = localStorage.getItem('lang');
-  if (savedLang && STRINGS[savedLang]) currentLang = savedLang;
-  applyTranslations();
+  if (savedLang) setLanguage(savedLang);
+  else setLanguage(currentLang);
+  const i18n = getI18n();
+  if (i18n && typeof i18n.onReady === 'function') {
+    i18n.onReady(() => {
+      applyTranslations();
+      updateUI();
+      if (window.Game && window.Game.LessonProgress && window.Game.LessonProgress.renderList) {
+        window.Game.LessonProgress.renderList();
+      }
+    });
+  }
   ensureProgressUI();
   initTalentDefs();
   let loaded = null;

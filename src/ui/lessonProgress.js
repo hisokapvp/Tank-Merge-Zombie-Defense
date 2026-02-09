@@ -21,13 +21,23 @@
 
   var STORAGE_KEY = 'lesson_progress';
 
+  function getI18n() {
+    return global.Game && global.Game.I18n ? global.Game.I18n : null;
+  }
+
+  function t(key, vars) {
+    var i18n = getI18n();
+    if (i18n && typeof i18n.t === 'function') return i18n.t(key, vars || {});
+    return key;
+  }
+
   // Default lessons (расширяемые через setLessons)
   var DEFAULT_LESSONS = [
-    { id: 'basics_merge_tanks', name: 'Basics: Merge Tanks', completed: false, lastScore: null },
-    { id: 'combat_fire_patterns', name: 'Combat: Fire Patterns', completed: false, lastScore: null },
-    { id: 'economy_coin_strategy', name: 'Economy: Coin Strategy', completed: false, lastScore: null },
-    { id: 'defense_zombie_waves', name: 'Defense: Zombie Waves', completed: false, lastScore: null },
-    { id: 'advanced_multi_barrel', name: 'Advanced: Multi-Barrel', completed: false, lastScore: null },
+    { id: 'basics_merge_tanks', nameKey: 'lessonBasics', name: 'Basics: Merge Tanks', completed: false, lastScore: null },
+    { id: 'combat_fire_patterns', nameKey: 'lessonCombat', name: 'Combat: Fire Patterns', completed: false, lastScore: null },
+    { id: 'economy_coin_strategy', nameKey: 'lessonEconomy', name: 'Economy: Coin Strategy', completed: false, lastScore: null },
+    { id: 'defense_zombie_waves', nameKey: 'lessonDefense', name: 'Defense: Zombie Waves', completed: false, lastScore: null },
+    { id: 'advanced_multi_barrel', nameKey: 'lessonAdvanced', name: 'Advanced: Multi-Barrel', completed: false, lastScore: null },
   ];
 
   var lessons = [];
@@ -55,6 +65,7 @@
     for (var i = 0; i < arr.length; i++) {
       out.push({
         id: arr[i].id || null,
+        nameKey: arr[i].nameKey || null,
         name: arr[i].name,
         completed: !!arr[i].completed,
         lastScore: arr[i].lastScore != null ? arr[i].lastScore : null,
@@ -162,7 +173,9 @@
 
   function getLessonDisplayName(id) {
     var lesson = findLesson(id);
-    return lesson ? lesson.name : String(id);
+    if (!lesson) return String(id);
+    if (lesson.nameKey) return t(lesson.nameKey);
+    return lesson.name;
   }
 
   function getScheduler() {
@@ -190,9 +203,15 @@
   }
 
   function formatDueText(dueAt, now) {
-    if (!Number.isFinite(dueAt)) return 'Next: not scheduled';
-    if (dueAt <= now) return 'Next: due now';
-    return 'Next: in ' + formatRelativeMs(dueAt - now);
+    if (!Number.isFinite(dueAt)) return t('lessonNextNotScheduled');
+    if (dueAt <= now) return t('lessonNextDueNow');
+    return t('lessonNextIn', { time: formatRelativeMs(dueAt - now) });
+  }
+
+  function formatDueLabel(dueAt, now) {
+    if (!Number.isFinite(dueAt)) return t('lessonDueNotScheduled');
+    if (dueAt <= now) return t('lessonDueNow');
+    return t('lessonDueIn', { time: formatRelativeMs(dueAt - now) });
   }
 
   function updateLesson(name, score) {
@@ -297,12 +316,14 @@
     }
 
     if (repeatNextBtn) {
+      repeatNextBtn.textContent = t('lessonRepeatNow');
       repeatNextBtn.addEventListener('click', function () {
         repeatNextDue();
       });
     }
 
     if (exportScheduleBtn) {
+      exportScheduleBtn.textContent = t('lessonExportSchedule');
       exportScheduleBtn.addEventListener('click', function () {
         exportSchedule();
       });
@@ -322,6 +343,7 @@
     }
 
     if (previewBtn) {
+      previewBtn.textContent = t('lessonPreviewAnki');
       previewBtn.addEventListener('click', function () {
         togglePreview();
       });
@@ -348,13 +370,13 @@
 
         var nameSpan = document.createElement('span');
         nameSpan.className = 'lessonProgress__name';
-        nameSpan.textContent = (lesson.completed ? '✓ ' : '') + lesson.name;
+        nameSpan.textContent = (lesson.completed ? '✓ ' : '') + getLessonDisplayName(lesson.id || lesson.name);
         info.appendChild(nameSpan);
 
         var scoreSpan = document.createElement('span');
         scoreSpan.className = 'lessonProgress__score';
         scoreSpan.textContent = lesson.lastScore != null
-          ? 'Score: ' + lesson.lastScore
+          ? t('lessonScoreLabel', { score: lesson.lastScore })
           : '—';
         info.appendChild(scoreSpan);
 
@@ -368,10 +390,10 @@
               nextSpan.className += ' lessonProgress__nextReview_due';
             }
           } else {
-            nextSpan.textContent = 'Next: not scheduled';
+            nextSpan.textContent = t('lessonNextNotScheduled');
           }
         } else {
-          nextSpan.textContent = 'Next: —';
+          nextSpan.textContent = t('lessonNextNotScheduled');
         }
         info.appendChild(nextSpan);
 
@@ -383,7 +405,7 @@
         var repeatBtn = document.createElement('button');
         repeatBtn.type = 'button';
         repeatBtn.className = 'btn btnSecondary lessonProgress__repeatBtn';
-        repeatBtn.textContent = 'Repeat';
+        repeatBtn.textContent = t('lessonRepeat');
         repeatBtn.addEventListener('click', function () {
           repeatLesson(lesson.name);
         });
@@ -392,7 +414,7 @@
         var exportBtn = document.createElement('button');
         exportBtn.type = 'button';
         exportBtn.className = 'btn btnSecondary lessonProgress__exportBtn';
-        exportBtn.textContent = 'Anki';
+        exportBtn.textContent = t('lessonAnki');
         exportBtn.addEventListener('click', function () {
           if (global.Game && global.Game.AnkiExport) {
             global.Game.AnkiExport.download('csv', { tagFilter: 'lesson' });
@@ -413,18 +435,18 @@
     if (!nextReviewEl) return;
     var srs = getScheduler();
     if (!srs || !srs.getNextReview) {
-      nextReviewEl.textContent = 'Next review: —';
+      nextReviewEl.textContent = t('lessonNextReviewNone');
       return;
     }
     var now = Date.now();
     var next = srs.getNextReview(now);
     if (!next) {
-      nextReviewEl.textContent = 'Next review: none';
+      nextReviewEl.textContent = t('lessonNextReviewNone');
       return;
     }
     var name = getLessonDisplayName(next.id);
-    var label = formatDueText(next.dueAt, now).replace('Next: ', '');
-    nextReviewEl.textContent = 'Next review: ' + name + ' (' + label + ')';
+    var label = formatDueLabel(next.dueAt, now);
+    nextReviewEl.textContent = t('lessonNextReviewLabel', { text: name + ' (' + label + ')' });
   }
 
   function repeatNextDue() {
@@ -459,7 +481,7 @@
     var content = srs.exportSchedule();
     var filename = 'srs_schedule_' + new Date().toISOString().slice(0, 10) + '.json';
     downloadText(content, filename, 'application/json');
-    setScheduleStatus('Schedule exported');
+    setScheduleStatus(t('lessonScheduleExported'));
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleExport', { format: 'json' });
     }
@@ -470,7 +492,7 @@
     var srs = getScheduler();
     if (!srs || !srs.importSchedule) return;
     var count = srs.importSchedule(raw);
-    setScheduleStatus('Imported schedule items: ' + count);
+    setScheduleStatus(t('lessonScheduleImported', { count: count }));
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleImport', { count: count });
     }
@@ -486,12 +508,12 @@
       var importer = global.Game && global.Game.AnkiImporter;
       previewEl.textContent = importer && importer.preview
         ? importer.preview('csv', { limit: 8 })
-        : 'Preview unavailable.';
+        : t('lessonPreviewUnavailable');
       previewEl.classList.remove('hidden');
-      previewBtn.textContent = 'Hide Preview';
+      previewBtn.textContent = t('lessonHidePreview');
     } else {
       previewEl.classList.add('hidden');
-      previewBtn.textContent = 'Preview Anki';
+      previewBtn.textContent = t('lessonPreviewAnki');
     }
   }
 
@@ -499,6 +521,12 @@
     if (panelEl) {
       panelEl.classList.remove('hidden');
       panelEl.setAttribute('aria-hidden', 'false');
+      if (global.Game && global.Game.A11y) {
+        global.Game.A11y.openModal(panelEl, {
+          initialFocus: panelEl.querySelector('.lessonProgress__close'),
+          onClose: hide
+        });
+      }
     }
     visible = true;
   }
@@ -507,6 +535,9 @@
     if (panelEl) {
       panelEl.classList.add('hidden');
       panelEl.setAttribute('aria-hidden', 'true');
+      if (global.Game && global.Game.A11y) {
+        global.Game.A11y.closeModal(panelEl);
+      }
     }
     visible = false;
   }

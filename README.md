@@ -7,6 +7,11 @@ Merge-механика с башенной защитой против зомб�
 1. Открыть `index.html` в браузере
 2. Или запустить локальный сервер: `npx serve .` и открыть `http://localhost:3000`
 
+## Документация для контрибьюторов
+
+- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
+- [docs/CODE_STYLE.md](docs/CODE_STYLE.md)
+
 ## Debug режим
 
 Добавьте `?debug=1` к URL для включения debug-панели и дополнительных инструментов:
@@ -46,11 +51,23 @@ node Test/pack4/calendar.test.js
 node Test/pack4/perf_stress.test.js
 ```
 
+### Pack 5 тесты
+
+```bash
+node Test/pack5/perf_regression.test.js
+```
+
 ### Локальный CI
 
 ```bash
 bash ci/check_style.sh
 bash ci/run_tests.sh
+```
+
+### Release checklist
+
+```bash
+bash ci/release_checklist.sh
 ```
 
 ### Pre-commit hook
@@ -122,15 +139,24 @@ chmod +x hooks/pre-commit
 ├── index.html          # Entry point
 ├── game.js             # Основной игровой код
 ├── style.css           # Стили
+├── docs/
+│   ├── CONTRIBUTING.md
+│   └── CODE_STYLE.md
 ├── assets/             # Спрайты, JSON-конфиги
 │   ├── zombies.json    # Конфиг зомби-типов и анимаций
 │   ├── tanks.json      # Конфиг танков
 │   └── ...
+├── ci/
+│   ├── check_style.sh
+│   ├── run_tests.sh
+│   └── release_checklist.sh
 ├── src/
+│   ├── accessibility/  # A11y helpers
 │   ├── mechanics/      # Игровая логика
 │   │   ├── combat.js   # Дальность стрельбы, pickDeathAnim
 │   │   ├── economy.js  # Цены, монеты
 │   │   └── ...
+│   ├── i18n/            # Локализация RU/EN
 │   ├── persistence/    # Сохранение/загрузка
 │   ├── render/         # Canvas rendering
 │   ├── telemetry/      # Pack 2: расширенная телеметрия
@@ -147,10 +173,15 @@ chmod +x hooks/pre-commit
 └── Test/
     ├── tests.js        # Unit-тесты (Pack 1)
     ├── pack1/          # Pack 1 тесты
-    └── pack2/          # Pack 2 тесты
-        ├── mergeAnimRegression.test.js
-        ├── fireLogicRegression.test.js
-        └── telemetryExport.test.js
+    ├── pack2/          # Pack 2 тесты
+    │   ├── mergeAnimRegression.test.js
+    │   ├── fireLogicRegression.test.js
+    │   └── telemetryExport.test.js
+    ├── pack4/          # Pack 4 тесты
+    │   ├── calendar.test.js
+    │   └── perf_stress.test.js
+    └── pack5/          # Pack 5 тесты
+        └── perf_regression.test.js
 ```
 
 ## API (для тестирования)
@@ -187,6 +218,14 @@ chmod +x hooks/pre-commit
 - **Profiler** (`src/perf/profiler.js`) — lightweight метрики исполнения (count/avg/min/max)
 - **Lesson Calendar UI** (`src/ui/calendar/calendar.js`) — список ближайших повторений и экспорт расписания
 - Pack 4 тесты: `Test/pack4/calendar.test.js`, `perf_stress.test.js`
+
+### v6.x (Pack 5 — Docs, Perf, i18n, A11y)
+- **Contributor docs** (`docs/CONTRIBUTING.md`, `docs/CODE_STYLE.md`)
+- **Release checklist** (`ci/release_checklist.sh`)
+- **i18n** (`src/i18n/*.json`, `src/i18n/index.js`) — RU/EN strings
+- **A11y helpers** (`src/accessibility/a11y.js`) — focus trap and ESC handling
+- **Projectile pooling** (game.js + `src/perf/objectPool.js`) — reduced allocations
+- Pack 5 тесты: `Test/pack5/perf_regression.test.js`
 
 ### v3.x (QA/Tools)
 - Добавлен `pickDeathAnim` для детерминированного выбора death-анимации

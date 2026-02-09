@@ -28,6 +28,7 @@ run_test "Pack 3 (SRS)" "Test/pack3/srs.test.js"
 run_test "Pack 3 (Anki importer)" "Test/pack3/ankiImporter.test.js"
 run_test "Pack 4 (calendar)" "Test/pack4/calendar.test.js"
 run_test "Pack 4 (profiler)" "Test/pack4/perf_stress.test.js"
+run_test "Pack 5 (perf regression)" "Test/pack5/perf_regression.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

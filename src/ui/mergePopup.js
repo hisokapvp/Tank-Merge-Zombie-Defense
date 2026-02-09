@@ -24,6 +24,16 @@
   /* ── DOM refs ── */
   var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose;
 
+  function getI18n() {
+    return global.Game && global.Game.I18n ? global.Game.I18n : null;
+  }
+
+  function t(key, vars) {
+    var i18n = getI18n();
+    if (i18n && typeof i18n.t === 'function') return i18n.t(key, vars || {});
+    return key;
+  }
+
   /* ── particles / flashes ── */
   var particles = [];
   var muzzleFlashes = [];
@@ -87,6 +97,9 @@
       btnClose.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
     }
     // NO global click-to-close — manual close only via buttons
+    if (global.Game && global.Game.A11y && modal) {
+      global.Game.A11y.registerModal(modal, { onClose: close, initialFocus: btnFight });
+    }
   }
 
   /* ═══════════════ Show / Close ═══════════════ */
@@ -105,22 +118,16 @@
       global.Game.TelemetryLogger.log('mergePopupShow', { level: level });
     }
 
-    var lang = global.currentLang || 'ru';
-    if (titleEl) {
-      titleEl.textContent = lang === 'ru'
-        ? 'Новый танк Lv' + level
-        : 'New tank Lv' + level;
-    }
-    if (subtitleEl) {
-      subtitleEl.textContent = lang === 'ru'
-        ? 'Открыт новый уровень!'
-        : 'New level unlocked!';
-    }
+    if (titleEl) titleEl.textContent = t('mergePopupTitle', { level: level });
+    if (subtitleEl) subtitleEl.textContent = t('mergePopupSubtitle');
 
-    updateStats(level, lang);
+    updateStats(level);
 
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
+    if (global.Game && global.Game.A11y) {
+      global.Game.A11y.openModal(modal, { onClose: close, initialFocus: btnFight });
+    }
 
     enterMergeAnim();
     return true;
@@ -133,6 +140,7 @@
     if (modal) {
       modal.classList.add('hidden');
       modal.setAttribute('aria-hidden', 'true');
+      if (global.Game && global.Game.A11y) global.Game.A11y.closeModal(modal);
     }
     // Pack 2: telemetry logging
     if (global.Game && global.Game.TelemetryLogger) {
@@ -163,7 +171,7 @@
   }
 
   /* ═══════════════ Stats display ═══════════════ */
-  function updateStats(level, lang) {
+  function updateStats(level) {
     if (!statsEl) return;
     var BAL = global.BAL || {};
     var dmg = (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1.48, level - 1);
@@ -172,21 +180,13 @@
     var N = level <= 5 ? 1 : level <= 10 ? 2 : 3;
     var fmt = function (n) { return n < 10 ? n.toFixed(1) : Math.round(n).toString(); };
 
-    var rows;
-    if (lang === 'ru') {
-      rows =
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Урон:</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Скорострельность:</span> ' + fr.toFixed(2) + '/с</div>' +
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Дальность:</span> ' + range + '</div>';
-    } else {
-      rows =
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Damage:</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Fire rate:</span> ' + fr.toFixed(2) + '/s</div>' +
-        '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">Range:</span> ' + range + '</div>';
-    }
+    var rows =
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupDamageLabel') + ':</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupFireRateLabel') + ':</span> ' + fr.toFixed(2) + t('mergePopupRateUnit') + '</div>' +
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupRangeLabel') + ':</span> ' + range + '</div>';
     if (N > 1) {
       rows += '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' +
-        (lang === 'ru' ? 'Стволы:' : 'Barrels:') + '</span> ' + N + '</div>';
+        t('mergePopupBarrelsLabel') + ':</span> ' + N + '</div>';
     }
     statsEl.innerHTML = rows;
   }

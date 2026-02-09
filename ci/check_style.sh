@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = process.env.ROOT_DIR || process.cwd();
-const targets = ['src', 'Test', 'ci'];
+const targets = ['src', 'Test', 'ci', 'docs', '.github'];
 const ignoreDirs = new Set(['node_modules', '.git']);
 const bad = [];
 

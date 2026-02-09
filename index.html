@@ -49,9 +49,9 @@
         </div>
         <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
           <div class="menuBackdrop"></div>
-          <div class="menuPanel">
+          <div class="menuPanel" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
             <div class="menuHeader">
-              <div class="menuTitle" data-i18n="menuTitle">Merge Tank: Zombie invasion</div>
+              <div class="menuTitle" id="menuTitle" data-i18n="menuTitle">Merge Tank: Zombie invasion</div>
             </div>
             <div class="menuActions">
               <button id="menuContinue" class="btn btnPrimary" type="button" data-i18n="menuContinue">Продолжить</button>
@@ -84,7 +84,7 @@
         </div>
         <div class="levelModal hidden" id="levelModal" aria-hidden="true">
           <div class="levelModal__backdrop"></div>
-          <div class="levelModal__panel" role="dialog" aria-modal="true">
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="levelTitle" tabindex="-1">
             <div class="levelModal__title" id="levelTitle">Вы достигли 1 уровень</div>
             <div class="levelModal__line" id="levelTalent">Вы получили 1 талант</div>
             <div class="levelModal__line" id="levelGold">Вы получили 0 золота</div>
@@ -93,7 +93,7 @@
         </div>
         <div class="crateModal hidden" id="crateModal" aria-hidden="true">
           <div class="crateModal__backdrop" data-crate-close="true"></div>
-          <div class="crateModal__panel" role="dialog" aria-modal="true">
+          <div class="crateModal__panel" role="dialog" aria-modal="true" aria-labelledby="crateText" tabindex="-1">
             <button class="crateModal__close" id="crateClose" type="button" aria-label="Close">×</button>
             <div class="crateModal__content">
               <canvas id="crateTankIcon" width="80" height="80"></canvas>
@@ -104,7 +104,7 @@
         </div>
         <div class="levelModal hidden" id="dismantleModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-dismantle-close="true"></div>
-          <div class="levelModal__panel" role="dialog" aria-modal="true">
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="dismantleConfirmText" tabindex="-1">
             <div class="levelModal__title" id="dismantleConfirmText">Вы действительно хотите разобрать танк 1 уровня?</div>
             <div id="dismantleIconsWrap" class="levelModal__line" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 0;"></div>
             <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
@@ -115,7 +115,7 @@
         </div>
         <div class="levelModal hidden" id="boostModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-boost-close="true"></div>
-          <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
+          <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="boostModalText" tabindex="-1">
             <button class="levelModal__close" id="boostModalClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__contentWrap">
               <div class="levelModal__title" id="boostModalText" data-i18n="boostModalText">Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу</div>
@@ -128,7 +128,7 @@
   </main>
   <div class="levelModal levelModal_onTop hidden" id="resetTalentsModal" aria-hidden="true">
     <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
-    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true">
+    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="resetTalentsModalText" tabindex="-1">
       <button class="levelModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
       <div class="levelModal__contentWrap">
         <div class="levelModal__title" id="resetTalentsModalText">Посмотрите видео чтобы сбросить таланты</div>
@@ -136,47 +136,47 @@
       </div>
     </div>
   </div>
-  <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true">Настройки</div>
+  <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true" data-i18n="menuSettings">Настройки</div>
 
   <!-- Merge Popup Modal -->
   <div class="mergePopupModal hidden" id="mergePopupModal" aria-hidden="true">
     <div class="mergePopupModal__backdrop"></div>
-    <div class="mergePopupModal__panel">
-      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle">Открыт новый уровень!</div>
+    <div class="mergePopupModal__panel" role="dialog" aria-modal="true" aria-labelledby="mergePopupTitle" aria-describedby="mergePopupSubtitle" tabindex="-1">
+      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle" data-i18n="mergePopupSubtitle">Открыт новый уровень!</div>
       <canvas id="mergePopupCanvas" width="200" height="120"></canvas>
       <div class="mergePopupModal__title" id="mergePopupTitle">Новый танк Lv2</div>
       <div class="mergePopupModal__stats" id="mergePopupStats"></div>
       <div class="mergePopupModal__actions">
-        <button id="btn-fight" class="btn btnPrimary" type="button">В бой!</button>
-        <button id="btn-close" class="btn btnSecondary" type="button">Закрыть</button>
+        <button id="btn-fight" class="btn btnPrimary" type="button" data-i18n="mergePopupFight">В бой!</button>
+        <button id="btn-close" class="btn btnSecondary" type="button" data-i18n="mergePopupClose">Закрыть</button>
       </div>
     </div>
   </div>
 
   <!-- Lesson Progress Panel -->
-  <div class="lessonProgressPanel hidden" id="lessonProgressPanel" aria-hidden="true">
+  <div class="lessonProgressPanel hidden" id="lessonProgressPanel" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lessonProgressTitle" tabindex="-1">
     <div class="lessonProgressPanel__header">
-      <span class="lessonProgressPanel__title">Lesson Progress</span>
+      <span class="lessonProgressPanel__title" id="lessonProgressTitle" data-i18n="lessonProgressTitle">Lesson Progress</span>
       <button class="lessonProgress__close" type="button" aria-label="Close">&times;</button>
     </div>
     <div class="lessonProgress__list"></div>
     <div class="lessonProgressPanel__footer">
       <div class="lessonProgress__schedule">
-        <div class="lessonProgress__next" id="lessonNextReviewText">Next review: —</div>
+        <div class="lessonProgress__next" id="lessonNextReviewText" data-i18n="lessonNextReviewNone">Next review: —</div>
         <div class="lessonProgress__scheduleActions">
-          <button id="lessonRepeatNextBtn" class="btn btnSecondary" type="button">Repeat now</button>
-          <button id="lessonExportScheduleBtn" class="btn btnSecondary" type="button">Export schedule</button>
+          <button id="lessonRepeatNextBtn" class="btn btnSecondary" type="button" data-i18n="lessonRepeatNow">Repeat now</button>
+          <button id="lessonExportScheduleBtn" class="btn btnSecondary" type="button" data-i18n="lessonExportSchedule">Export schedule</button>
           <label class="btn btnSecondary lessonProgress__fileBtn" for="lessonImportScheduleInput">
-            Import schedule
+            <span data-i18n="lessonImportSchedule">Import schedule</span>
           </label>
           <input id="lessonImportScheduleInput" class="lessonProgress__fileInput" type="file" accept="application/json" />
         </div>
         <div class="lessonProgress__ankiActions">
-          <button id="lessonAnkiPreviewBtn" class="btn btnSecondary" type="button">Preview Anki</button>
-          <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv">Export Anki</button>
+          <button id="lessonAnkiPreviewBtn" class="btn btnSecondary" type="button" data-i18n="lessonPreviewAnki">Preview Anki</button>
+          <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv" data-i18n="lessonExportAnki">Export Anki</button>
         </div>
         <pre id="lessonAnkiPreview" class="lessonProgress__preview hidden"></pre>
-        <div id="lessonScheduleStatus" class="lessonProgress__status"></div>
+        <div id="lessonScheduleStatus" class="lessonProgress__status" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -202,6 +202,9 @@
   <script src="src/telemetry/telemetry.js"></script>
   <script src="src/tools/anki/importer.js"></script>
   <script src="src/tools/anki/anki_export.js"></script>
+  <script src="src/i18n/index.js"></script>
+  <script src="src/perf/objectPool.js"></script>
+  <script src="src/accessibility/a11y.js"></script>
   <script src="src/ui/lessonProgress.js"></script>
   <script src="game.js"></script>
 </body>
