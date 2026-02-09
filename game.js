@@ -376,6 +376,41 @@ const STRINGS = {
     lessonEconomy: 'Экономика: Стратегия монет',
     lessonDefense: 'Оборона: Волны зомби',
     lessonAdvanced: 'Продвинутое: Мультиствол',
+    experimentsTitle: 'Эксперименты',
+    experimentsRefresh: 'Обновить',
+    experimentsClear: 'Сбросить назначения',
+    experimentsReset: 'Сбросить конфиг',
+    experimentsEmpty: 'Эксперименты не заданы.',
+    experimentsEnabled: 'Включено',
+    experimentsRollout: 'Роллаут %',
+    experimentsForce: 'Форс',
+    experimentsAuto: 'auto',
+    funnelTitle: 'Воронка',
+    funnelRefresh: 'Обновить',
+    funnelExport: 'Экспорт JSON',
+    funnelReset: 'Сбросить воронку',
+    funnelCompleted: 'готово',
+    funnelPending: 'ожидание',
+    funnelDrop: 'drop-off',
+    funnelFirstLaunch: 'Первый запуск',
+    funnelFirstMerge: 'Первый merge',
+    funnelFirstBattle: 'Первый бой',
+    funnelFirstUpgrade: 'Первый апгрейд',
+    funnelReturnVisit: 'Повторный вход',
+    triageTitle: 'Триаж багов',
+    triageExport: 'Экспорт JSON',
+    triageClear: 'Очистить',
+    triageTitleLabel: 'Заголовок',
+    triageNotesLabel: 'Заметки',
+    triageStatusLabel: 'Статус',
+    triagePriorityLabel: 'Приоритет',
+    triageReproLabel: 'Воспроизведение',
+    triageSystemLabel: 'Система',
+    triageAdd: 'Добавить баг',
+    triageEmpty: 'Баги не заведены.',
+    triageAttachTelemetry: 'Привязать телеметрию',
+    triageRemove: 'Удалить',
+    triageTelemetryAttached: 'Телеметрия привязана',
   },
   en: {
     title: 'Merge Tank: Zombie invasion',
@@ -486,6 +521,41 @@ const STRINGS = {
     lessonEconomy: 'Economy: Coin Strategy',
     lessonDefense: 'Defense: Zombie Waves',
     lessonAdvanced: 'Advanced: Multi-Barrel',
+    experimentsTitle: 'Experiments',
+    experimentsRefresh: 'Refresh',
+    experimentsClear: 'Clear assignments',
+    experimentsReset: 'Reset config',
+    experimentsEmpty: 'No experiments defined.',
+    experimentsEnabled: 'Enabled',
+    experimentsRollout: 'Rollout %',
+    experimentsForce: 'Force',
+    experimentsAuto: 'auto',
+    funnelTitle: 'Funnel',
+    funnelRefresh: 'Refresh',
+    funnelExport: 'Export JSON',
+    funnelReset: 'Reset funnel',
+    funnelCompleted: 'done',
+    funnelPending: 'pending',
+    funnelDrop: 'drop-off',
+    funnelFirstLaunch: 'First launch',
+    funnelFirstMerge: 'First merge',
+    funnelFirstBattle: 'First battle',
+    funnelFirstUpgrade: 'First upgrade',
+    funnelReturnVisit: 'Return visit',
+    triageTitle: 'Bug triage',
+    triageExport: 'Export JSON',
+    triageClear: 'Clear all',
+    triageTitleLabel: 'Title',
+    triageNotesLabel: 'Notes',
+    triageStatusLabel: 'Status',
+    triagePriorityLabel: 'Priority',
+    triageReproLabel: 'Repro',
+    triageSystemLabel: 'System',
+    triageAdd: 'Add bug',
+    triageEmpty: 'No bugs tracked.',
+    triageAttachTelemetry: 'Attach telemetry',
+    triageRemove: 'Remove',
+    triageTelemetryAttached: 'Telemetry attached',
   }
 };
 
@@ -1160,7 +1230,9 @@ function ensureBuyPrice(level){
 function buyTankCost(level){
   const mods = getMods();
   const base = ensureBuyPrice(level);
-  return Math.max(1, Math.round(base * mods.buyCostMul));
+  const exp = window.Game && window.Game.Experiments ? window.Game.Experiments.getVariant('economy_curve') : 'control';
+  const expMul = exp === 'soft' ? 0.92 : 1;
+  return Math.max(1, Math.round(base * mods.buyCostMul * expMul));
 }
 
 function bumpBuyPrice(level){
@@ -1194,14 +1266,15 @@ function mergeCells(fromIdx, toIdx){
   if (!a.tank || !b.tank) return false;
   if (a.tank.level !== b.tank.level) return false;
   if (a.tank.level >= MAX_TANK_LEVEL) return false;
-
-  const lvl = a.tank.level + 1;
+  const fromLevel = a.tank.level;
+  const lvl = fromLevel + 1;
   if (lvl > MAX_TANK_LEVEL) return false;
   b.tank = makeTank(lvl, false);
   a.tank = null;
   recordTankLevel(lvl);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
-  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: a.tank ? a.tank.level : lvl - 1, toLevel: lvl });
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: fromLevel, toLevel: lvl });
+  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_merge', { level: lvl });
 
   // Show merge popup for first time achieving this level
   if (window.Game && window.Game.MergePopup) {
@@ -1615,6 +1688,7 @@ function doApplyTalentSelections(){
   p.talentPoints -= cost;
   p.talentsPending.fill(0);
   p.modsDirty = true;
+  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_upgrade', { cost: cost });
   saveProgress();
   updateTalentUI();
 }
@@ -2138,6 +2212,7 @@ function startZombieDying(z){
   state.kills += 1;
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill', { level: z.level });
+  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_battle', { level: z.level });
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
@@ -2741,7 +2816,9 @@ function particle(x,y,r,color,life){
 }
 
 function burst(x,y,count,color){
-  for (let i=0;i<count;i++) particle(x,y,Math.random()*2.6+1.0,color,Math.random()*0.30+0.14);
+  const scale = getFxScale();
+  const scaledCount = Math.max(1, Math.round(count * scale));
+  for (let i=0;i<scaledCount;i++) particle(x,y,Math.random()*2.6+1.0,color,Math.random()*0.30+0.14);
 }
 
 function popText(x,y,text,color){
@@ -4014,7 +4091,7 @@ function drawTankAura(x, y, band){
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.fill();
   }
-  if (style.effect === 'particles' && state.particles.length < BAL.maxParticles - 20){
+  if (!isFxLite() && style.effect === 'particles' && state.particles.length < BAL.maxParticles - 20){
     const n = Math.floor(2 + Math.sin(t * 3) * 1.5);
     for (let i = 0; i < n; i++){
       const a = (t * 2 + i * 2.1) % (Math.PI * 2);
@@ -4454,15 +4531,17 @@ function drawZombieFallback(x,y,z){
 function drawProjectiles(){
   if (!state.projectiles.length) return;
 
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (const b of state.projectiles){
-    ctx.fillStyle = b.glow;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2);
-    ctx.fill();
+  if (!isFxLite()){
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const b of state.projectiles){
+      ctx.fillStyle = b.glow;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
-  ctx.restore();
 
   for (const b of state.projectiles){
     // core
@@ -4498,10 +4577,10 @@ function drawImpacts(){
   for (const fx of state.impacts){
     const t = fx.life / fx.max;
 
-    if (qualityLow && fx.kind === 'overflow') continue;
+    if ((qualityLow || isFxLite()) && fx.kind === 'overflow') continue;
 
     if (fx.kind === 'bolt'){
-      if (qualityLow) continue;
+      if (qualityLow || isFxLite()) continue;
       ctx.save();
       ctx.globalAlpha = t;
       ctx.strokeStyle = 'rgba(139,211,255,.65)';
@@ -4660,6 +4739,28 @@ function tankOnTrackAt(x,y,timeSec){
 }
 
 // ---------- Helpers ----------
+function getMobileMode(){
+  return window.Game && window.Game.MobileMode ? window.Game.MobileMode : null;
+}
+
+function getFxLevel(){
+  const mm = getMobileMode();
+  return mm && mm.getFxLevel ? mm.getFxLevel() : 0;
+}
+
+function getFxScale(){
+  const mm = getMobileMode();
+  return mm && mm.getFxScale ? mm.getFxScale() : 1;
+}
+
+function isFxLite(){
+  return getFxLevel() >= 1;
+}
+
+function isFxUltraLite(){
+  return getFxLevel() >= 2;
+}
+
 function smoothAngle(current, target, amt){
   const diff = Math.atan2(Math.sin(target - current), Math.cos(target - current));
   return current + diff * clamp(amt, 0, 1);
@@ -4705,16 +4806,30 @@ function stepImpacts(dt){
 
 // ---------- Main loop ----------
 let last = performance.now();
+let lastFrameTs = last;
 let fpsAvg = 60;
 let lastProgressSave = 0;
 let qualityLow = false;
 function loop(now){
+  const mm = getMobileMode();
+  const fpsCap = mm && mm.getFpsCap ? mm.getFpsCap() : 0;
+  if (fpsCap > 0 && (now - lastFrameTs) < (1000 / fpsCap)){
+    requestAnimationFrame(loop);
+    return;
+  }
+  lastFrameTs = now;
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
   fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
-  qualityLow = fpsAvg < 45;
-  BAL.maxParticles = qualityLow ? 900 : 1600;
-  BAL.maxDecals = qualityLow ? 70 : 120;
+  const fxLevel = getFxLevel();
+  qualityLow = fpsAvg < 45 || fxLevel >= 1;
+  if (isFxUltraLite()){
+    BAL.maxParticles = 520;
+    BAL.maxDecals = 50;
+  } else {
+    BAL.maxParticles = qualityLow ? 900 : 1600;
+    BAL.maxDecals = qualityLow ? 70 : 120;
+  }
   if (nowSec() - lastProgressSave > 7){
     saveProgress();
     lastProgressSave = nowSec();
@@ -5470,6 +5585,18 @@ async function boot(){
     window.Game.Flags.init();
   }
 
+  if (window.Game && window.Game.MobileMode) {
+    window.Game.MobileMode.init();
+  }
+
+  if (window.Game && window.Game.Experiments) {
+    window.Game.Experiments.init();
+  }
+
+  if (window.Game && window.Game.Funnel) {
+    window.Game.Funnel.init();
+  }
+
   if (DebugPanelEnabled) initDebugPanel();
 
   if (DebugPanelEnabled && window.Game && window.Game.AdminFlags) {
@@ -5510,6 +5637,17 @@ async function boot(){
   // Pack 2: Initialize TelemetryLogger
   if (window.Game && window.Game.TelemetryLogger) {
     window.Game.TelemetryLogger.init();
+  }
+
+  if (window.Game && window.Game.Experiments) {
+    window.Game.Experiments.attachTelemetry();
+  }
+
+  if (window.Game && window.Game.Funnel) {
+    window.Game.Funnel.trackStep('first_launch', { hasSave: !!(loaded && loaded.state) });
+    if (meta && meta.lastSeenAt != null) {
+      window.Game.Funnel.maybeTrackReturn(meta.lastSeenAt);
+    }
   }
 
   // Pack 2: Initialize LessonProgress

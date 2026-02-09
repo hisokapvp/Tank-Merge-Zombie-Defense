@@ -1110,6 +1110,7 @@ body.menu-open .stageUi .hudItem{
 }
 .debugBtn:hover{ background: rgba(255,184,114,.28); }
 .debugBtn.danger{ background: rgba(255,100,80,.2); border-color: rgba(255,100,80,.4); }
+.debugBtn.secondary{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
 .debugBtn.active{ background: rgba(255,184,114,.35); border-color: rgba(255,184,114,.5); }
 
 .debugSelect, .debugInput{
@@ -1125,6 +1126,70 @@ body.menu-open .stageUi .hudItem{
 }
 .debugLabel{ font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; }
 .debugRow{ margin-bottom: 8px; }
+
+/* Pack 8 debug panels */
+.expRow{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(0,0,0,.2);
+}
+.expMeta{ font-size: 10px; color: var(--muted); }
+.expControls{ display: flex; flex-wrap: wrap; gap: 6px; }
+.expField{ display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); }
+.expSelect{ width: auto; }
+.expInput{ width: 70px; }
+.expToggle{ font-size: 10px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+
+.funnelRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+.funnelMeta{ font-size: 10px; color: var(--muted); }
+
+.triageForm{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+.triageForm .debugBtn{ grid-column: 1 / -1; }
+.triageField{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.triageField input,
+.triageField textarea,
+.triageField select{
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  color: var(--text);
+}
+.triageRow{
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(0,0,0,.2);
+  margin-bottom: 8px;
+}
+.triageTitle{ font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+.triageMeta{ font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+.triageControls{ display: flex; flex-wrap: wrap; gap: 6px; }
+.triageTelemetry{ margin-top: 4px; }
 
 @media (prefers-reduced-motion: reduce){
   .btn,
