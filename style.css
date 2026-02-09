@@ -1349,3 +1349,50 @@ body.menu-open .stageUi .hudItem{
 .lessonProgressPanel__footer .btn{
   width:100%;
 }
+.lessonProgress__schedule{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  text-align:left;
+}
+.lessonProgress__next{
+  font-size:12px;
+  color:rgba(234,241,255,.75);
+}
+.lessonProgress__scheduleActions,
+.lessonProgress__ankiActions{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:6px;
+}
+.lessonProgress__scheduleActions .btn,
+.lessonProgress__ankiActions .btn{
+  font-size:11px!important;
+  padding:6px 8px!important;
+}
+.lessonProgress__fileInput{
+  display:none;
+}
+.lessonProgress__preview{
+  background:rgba(10,14,20,.85);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:8px;
+  padding:8px;
+  font-size:11px;
+  color:rgba(234,241,255,.85);
+  max-height:140px;
+  overflow:auto;
+  margin:0;
+  white-space:pre-wrap;
+}
+.lessonProgress__status{
+  font-size:11px;
+  color:rgba(125,255,178,.85);
+}
+.lessonProgress__nextReview{
+  font-size:11px;
+  color:rgba(234,241,255,.55);
+}
+.lessonProgress__nextReview_due{
+  color:#ffcf7a;
+}

@@ -161,12 +161,30 @@
     </div>
     <div class="lessonProgress__list"></div>
     <div class="lessonProgressPanel__footer">
-      <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv">Export Anki</button>
+      <div class="lessonProgress__schedule">
+        <div class="lessonProgress__next" id="lessonNextReviewText">Next review: —</div>
+        <div class="lessonProgress__scheduleActions">
+          <button id="lessonRepeatNextBtn" class="btn btnSecondary" type="button">Repeat now</button>
+          <button id="lessonExportScheduleBtn" class="btn btnSecondary" type="button">Export schedule</button>
+          <label class="btn btnSecondary lessonProgress__fileBtn" for="lessonImportScheduleInput">
+            Import schedule
+          </label>
+          <input id="lessonImportScheduleInput" class="lessonProgress__fileInput" type="file" accept="application/json" />
+        </div>
+        <div class="lessonProgress__ankiActions">
+          <button id="lessonAnkiPreviewBtn" class="btn btnSecondary" type="button">Preview Anki</button>
+          <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv">Export Anki</button>
+        </div>
+        <pre id="lessonAnkiPreview" class="lessonProgress__preview hidden"></pre>
+        <div id="lessonScheduleStatus" class="lessonProgress__status"></div>
+      </div>
     </div>
   </div>
 
   <script src="src/utils/numberFormat.js"></script>
   <script src="src/utils/telemetry.js"></script>
+  <script src="src/lessons/catalog.js"></script>
+  <script src="src/scheduler/srs.js"></script>
   <script src="src/mechanics/trackQuery.js"></script>
   <script src="src/mechanics/garage.js"></script>
   <script src="src/mechanics/economy.js"></script>
@@ -182,6 +200,7 @@
   <script src="src/ui/mergePopup.js"></script>
   <script src="src/ui/zombieAnimPreview.js"></script>
   <script src="src/telemetry/telemetry.js"></script>
+  <script src="src/tools/anki/importer.js"></script>
   <script src="src/tools/anki/anki_export.js"></script>
   <script src="src/ui/lessonProgress.js"></script>
   <script src="game.js"></script>
