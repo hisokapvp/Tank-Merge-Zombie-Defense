@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+bash "$ROOT_DIR/ci/check_style.sh"
+bash "$ROOT_DIR/ci/run_tests.sh"

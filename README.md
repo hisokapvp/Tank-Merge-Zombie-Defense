@@ -39,6 +39,27 @@ node Test/pack2/telemetryExport.test.js
 
 Ожидаемый результат: все тесты ✓ (PASSED).
 
+### Pack 4 тесты
+
+```bash
+node Test/pack4/calendar.test.js
+node Test/pack4/perf_stress.test.js
+```
+
+### Локальный CI
+
+```bash
+bash ci/check_style.sh
+bash ci/run_tests.sh
+```
+
+### Pre-commit hook
+
+```bash
+git config core.hooksPath hooks
+chmod +x hooks/pre-commit
+```
+
 ### Regression Checklist (5 систем)
 
 Перед каждым релизом проверить следующие системы вручную:
@@ -159,6 +180,13 @@ node Test/pack2/telemetryExport.test.js
 - **LessonProgress** (`src/ui/lessonProgress.js`) — панель прогресса уроков: список, score, кнопки Repeat и Export Anki
 - Интеграция TelemetryLogger в merge popup, fire logic, buy/merge/kill events
 - Pack 2 тесты: `Test/pack2/mergeAnimRegression.test.js`, `fireLogicRegression.test.js`, `telemetryExport.test.js`
+
+### v5.x (Pack 4 — CI, Profiler, Calendar)
+- **Local CI scripts** (`ci/run_tests.sh`, `ci/check_style.sh`) — запуск тестов и базовая проверка стиля
+- **Pre-commit hook** (`hooks/pre-commit`) — локальная проверка стиля и тестов
+- **Profiler** (`src/perf/profiler.js`) — lightweight метрики исполнения (count/avg/min/max)
+- **Lesson Calendar UI** (`src/ui/calendar/calendar.js`) — список ближайших повторений и экспорт расписания
+- Pack 4 тесты: `Test/pack4/calendar.test.js`, `perf_stress.test.js`
 
 ### v3.x (QA/Tools)
 - Добавлен `pickDeathAnim` для детерминированного выбора death-анимации

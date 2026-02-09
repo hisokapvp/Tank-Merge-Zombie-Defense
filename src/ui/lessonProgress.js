@@ -41,6 +41,8 @@
   var previewBtn = null;
   var previewEl = null;
   var statusEl = null;
+  var calendarInstance = null;
+  var calendarScriptLoading = false;
 
   /* ── Helpers ── */
   function safeParse(raw, fb) {
@@ -108,6 +110,46 @@
       }
     } catch (_) {}
     lessons = getCatalogDefaults();
+  }
+
+  function setScheduleStatus(text) {
+    if (statusEl && text) statusEl.textContent = text;
+  }
+
+  function ensureCalendarUI() {
+    if (!panelEl || !global.document || calendarInstance) return;
+    if (global.Game && global.Game.CalendarUI && global.Game.CalendarUI.create) {
+      calendarInstance = global.Game.CalendarUI.create({
+        panelEl: panelEl,
+        srs: getScheduler(),
+        getLessonName: getLessonDisplayName,
+        onExport: exportSchedule,
+        onImport: importSchedule
+      });
+      if (calendarInstance.init) calendarInstance.init();
+      if (calendarInstance.render) calendarInstance.render();
+      return;
+    }
+    if (calendarScriptLoading) return;
+    calendarScriptLoading = true;
+    var script = document.createElement('script');
+    script.src = 'src/ui/calendar/calendar.js';
+    script.async = true;
+    script.onload = function () {
+      calendarScriptLoading = false;
+      ensureCalendarUI();
+    };
+    script.onerror = function () {
+      calendarScriptLoading = false;
+    };
+    var host = document.head || document.body || panelEl;
+    if (host && host.appendChild) host.appendChild(script);
+  }
+
+  function updateCalendar() {
+    if (calendarInstance && calendarInstance.render) {
+      calendarInstance.render();
+    }
   }
 
   /* ── Lesson manipulation ── */
@@ -285,6 +327,8 @@
       });
     }
 
+    ensureCalendarUI();
+
     renderList();
   }
 
@@ -361,6 +405,8 @@
       })(lessons[i], i);
     }
     refreshScheduleSummary();
+    ensureCalendarUI();
+    updateCalendar();
   }
 
   function refreshScheduleSummary() {
@@ -413,22 +459,24 @@
     var content = srs.exportSchedule();
     var filename = 'srs_schedule_' + new Date().toISOString().slice(0, 10) + '.json';
     downloadText(content, filename, 'application/json');
+    setScheduleStatus('Schedule exported');
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleExport', { format: 'json' });
     }
+    updateCalendar();
   }
 
   function importSchedule(raw) {
     var srs = getScheduler();
     if (!srs || !srs.importSchedule) return;
     var count = srs.importSchedule(raw);
-    if (statusEl) {
-      statusEl.textContent = 'Imported schedule items: ' + count;
-    }
+    setScheduleStatus('Imported schedule items: ' + count);
     if (global.Game && global.Game.TelemetryLogger) {
       global.Game.TelemetryLogger.log('scheduleImport', { count: count });
     }
     renderList();
+    updateCalendar();
+    return count;
   }
 
   function togglePreview() {
