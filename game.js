@@ -1081,6 +1081,7 @@ function tryBuyTank(){
   state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
   bumpBuyPrice(level);
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
+  if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
 }
 
 function mergeCells(fromIdx, toIdx){
@@ -1096,6 +1097,7 @@ function mergeCells(fromIdx, toIdx){
   b.tank = makeTank(lvl, false);
   a.tank = null;
   recordTankLevel(lvl);
+  if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
 
   // Show merge popup for first time achieving this level
   if (window.Game && window.Game.MergePopup) {
@@ -2011,26 +2013,22 @@ function startZombieDying(z){
   z.deathProgress = 0;
   z.hp = 0;
 
-  // Select death animation: 70% personal, 30% common (if both available)
+  // Select death animation using deterministic helper (70% personal, 30% common)
   const personalDeath = z.type?.death || null;
   const commonDeath = ZombieSprites.deathCommon || null;
-  
-  if (personalDeath && commonDeath) {
-    // Both available: 70% personal, 30% common
-    z.deathAnim = Math.random() < 0.7 ? personalDeath : commonDeath;
-  } else if (personalDeath) {
-    z.deathAnim = personalDeath;
-  } else if (commonDeath) {
-    z.deathAnim = commonDeath;
-  } else {
-    z.deathAnim = null; // fallback to fade/tilt
-  }
+  const pickDeathAnim = Game?.Combat?.pickDeathAnim || function(c, p, r) {
+    // Inline fallback if Combat module not loaded
+    if (p && c) return r < 0.7 ? p : c;
+    return p || c || null;
+  };
+  z.deathAnim = pickDeathAnim(commonDeath, personalDeath, Math.random());
   
   z.deathFrame = 0; // current frame of death animation
   z.deathAnimSpeed = 10; // frames per second for death animation
 
   state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
   state.kills += 1;
+  if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
@@ -2191,6 +2189,7 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
       effectIntensity,
     });
     state.coins += coinsForShot(tank.level);
+    if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('shotFired');
   };
   spawn();
   if (Math.random() < mods.doubleShotChance){
@@ -3315,6 +3314,12 @@ function draw(){
 
   if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.isVisible()){
     window.Game.OfflineModal.render(ctx, viewSize);
+  }
+
+  // Debug-only zombie animation preview
+  if (window.Game && window.Game.ZombieAnimPreview && window.Game.ZombieAnimPreview.isActive()){
+    const previewDt = Math.min(0.033, 1/60);
+    window.Game.ZombieAnimPreview.renderPreview(ctx, viewSize.w, viewSize.h, previewDt);
   }
 }
 
@@ -4485,6 +4490,22 @@ function loop(now){
   if (nowSec() - lastProgressSave > 7){
     saveProgress();
     lastProgressSave = nowSec();
+    // Refresh telemetry debug widget (throttled to save interval)
+    if (DebugPanelEnabled && window.Game && window.Game.Telemetry) window.Game.Telemetry.refreshUI();
+  }
+  // Telemetry: update gauges every frame (cheap)
+  if (window.Game && window.Game.Telemetry) {
+    var T = window.Game.Telemetry;
+    T.gauge('coins', state.coins);
+    T.gauge('kills', state.kills);
+    T.gauge('playerLevel', state.player ? state.player.level : 1);
+    T.gauge('fps', Math.round(fpsAvg));
+    T.max('maxCoins', state.coins);
+    T.max('maxPlayerLevel', state.player ? state.player.level : 1);
+    var tankCount = 0;
+    for (var ci = 0; ci < state.cells.length; ci++) { if (state.cells[ci] && state.cells[ci].tank) tankCount++; }
+    T.gauge('tanksOnBoard', tankCount);
+    T.gauge('zombieCount', state.zombies ? state.zombies.length : 0);
   }
 
   if (state.levelUpVfxUntil != null && nowSec() >= state.levelUpVfxUntil){
@@ -4681,6 +4702,7 @@ function initDebugPanel(){
       <div id="debugSectionLogs" class="debugSection">
         <button type="button" class="debugBtn" id="debugResetBtn">Reset (overrides + statuses + VFX)</button>
         <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>
+        <div id="debugTelemetryMount"></div>
       </div>
     </div>
     <div class="debugLogWrap">
@@ -5071,6 +5093,11 @@ function initDebugPanel(){
   refreshDebugEffectList();
   refreshDebugActivesList();
   refreshDebugTalentsList();
+  // Init telemetry debug widget
+  if (window.Game && window.Game.Telemetry) {
+    var telMount = panel.querySelector('#debugTelemetryMount');
+    if (telMount) window.Game.Telemetry.initUI(telMount);
+  }
   debugLog('info', 'Debug panel ready. URL param: ' + DEBUG_PARAM + '=1');
 }
 
@@ -5179,6 +5206,11 @@ async function boot(){
   if (loaded && loaded.state) restoreFullState(loaded.state);
   state.nextCrateAt = state.nextCrateAt || nowSec() + BAL.crateIntervalSec;
 
+  // Load telemetry lifetime data (before debug panel init)
+  if (window.Game && window.Game.Telemetry) {
+    window.Game.Telemetry.loadLifetime();
+  }
+
   if (DebugPanelEnabled) initDebugPanel();
 
   // starter tanks
@@ -5210,6 +5242,11 @@ async function boot(){
   // Initialize merge popup
   if (window.Game && window.Game.MergePopup) {
     window.Game.MergePopup.init();
+  }
+
+  // Initialize debug-only zombie animation preview
+  if (window.Game && window.Game.ZombieAnimPreview) {
+    window.Game.ZombieAnimPreview.init();
   }
 
   ensureZombieCount();

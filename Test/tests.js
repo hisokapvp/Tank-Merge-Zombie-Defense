@@ -59,6 +59,8 @@ function loadModule(relPath) {
 
 // Load number format first
 loadModule('src/utils/numberFormat.js');
+// Load telemetry
+loadModule('src/utils/telemetry.js');
 // Load economy
 loadModule('src/mechanics/economy.js');
 // Load combat
@@ -194,6 +196,76 @@ test('T4-11: level=null → 0 (invalid)', () => {
 
 test('T4-12: MAX_COIN_PER_SHOT = 2^20', () => {
   assertEqual(MAX_COIN_PER_SHOT, 1048576);
+});
+
+// ═══════════════════════════════════════════════
+// T-DA: pickDeathAnim — детерминированный выбор death-анимации
+// ═══════════════════════════════════════════════
+console.log('\n── T-DA: pickDeathAnim (deterministic death animation) ──');
+
+const { pickDeathAnim } = Game.Combat;
+
+const mockCommon = { id: 'common', frames: 8 };
+const mockPersonal = { id: 'personal', frames: 6 };
+
+test('T-DA-1: both available, rand=0.0 → personal', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, 0.0);
+  assertEqual(result.id, 'personal');
+});
+
+test('T-DA-2: both available, rand=0.69 → personal', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, 0.69);
+  assertEqual(result.id, 'personal');
+});
+
+test('T-DA-3: both available, rand=0.70 → common (boundary)', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, 0.70);
+  assertEqual(result.id, 'common');
+});
+
+test('T-DA-4: both available, rand=0.99 → common', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, 0.99);
+  assertEqual(result.id, 'common');
+});
+
+test('T-DA-5: only personal → personal (any rand)', () => {
+  const result = pickDeathAnim(null, mockPersonal, 0.5);
+  assertEqual(result.id, 'personal');
+});
+
+test('T-DA-6: only common → common (any rand)', () => {
+  const result = pickDeathAnim(mockCommon, null, 0.3);
+  assertEqual(result.id, 'common');
+});
+
+test('T-DA-7: neither available → null', () => {
+  const result = pickDeathAnim(null, null, 0.5);
+  assertEqual(result, null);
+});
+
+test('T-DA-8: undefined values also return null', () => {
+  const result = pickDeathAnim(undefined, undefined, 0.5);
+  assertEqual(result, null);
+});
+
+test('T-DA-9: rand=NaN treated as 0 → personal (boundary safe)', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, NaN);
+  assertEqual(result.id, 'personal');
+});
+
+test('T-DA-10: rand=-0.1 clamped to 0 → personal', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, -0.1);
+  assertEqual(result.id, 'personal');
+});
+
+test('T-DA-11: rand=1.5 clamped to <1 → common', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, 1.5);
+  assertEqual(result.id, 'common');
+});
+
+test('T-DA-12: rand=Infinity clamped → common', () => {
+  const result = pickDeathAnim(mockCommon, mockPersonal, Infinity);
+  assertEqual(result.id, 'common');
 });
 
 // ═══════════════════════════════════════════════
@@ -507,6 +579,90 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
   test('T5-4: HTML settings button has tabindex="0"', () => {
     const html = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf-8');
     assert(html.indexOf('tabindex="0"') !== -1, 'settingsBtn has tabindex');
+  });
+
+  // ═══════════════════════════════════════════════
+  // T7: Telemetry module
+  // ═══════════════════════════════════════════════
+  console.log('\n── T7: Telemetry ──');
+
+  test('T7-1: Game.Telemetry exists', () => {
+    assert(Game.Telemetry, 'Game.Telemetry should exist');
+  });
+
+  test('T7-2: event() increments session counter', () => {
+    Game.Telemetry.reset();
+    Game.Telemetry.event('testEvent');
+    Game.Telemetry.event('testEvent');
+    Game.Telemetry.event('testEvent');
+    assertEqual(Game.Telemetry._session().testEvent, 3, 'session counter');
+  });
+
+  test('T7-3: event() increments lifetime counter', () => {
+    Game.Telemetry.reset();
+    // Lifetime persists across resets — simulate some events
+    const before = Game.Telemetry._lifetime().lifetimeTest || 0;
+    Game.Telemetry.event('lifetimeTest');
+    Game.Telemetry.event('lifetimeTest');
+    assertEqual(Game.Telemetry._lifetime().lifetimeTest, before + 2, 'lifetime counter');
+  });
+
+  test('T7-4: gauge() records last value', () => {
+    Game.Telemetry.reset();
+    Game.Telemetry.gauge('coins', 100);
+    Game.Telemetry.gauge('coins', 250);
+    assertEqual(Game.Telemetry._gauges().coins, 250, 'gauge should be last-write');
+  });
+
+  test('T7-5: max() records peak value', () => {
+    Game.Telemetry.reset();
+    Game.Telemetry.max('peak', 10);
+    Game.Telemetry.max('peak', 5);
+    Game.Telemetry.max('peak', 20);
+    Game.Telemetry.max('peak', 15);
+    assertEqual(Game.Telemetry._maxes().peak, 20, 'max should keep peak');
+  });
+
+  test('T7-6: snapshot() returns valid structure', () => {
+    Game.Telemetry.reset();
+    Game.Telemetry.event('snap');
+    Game.Telemetry.gauge('g', 42);
+    const s = Game.Telemetry.snapshot();
+    assert(s.meta && s.meta.sessionStartIso, 'meta.sessionStartIso');
+    assert(typeof s.meta.durationSec === 'number', 'meta.durationSec is number');
+    assert(s.session && s.session.snap === 1, 'session.snap === 1');
+    assert(s.gauges && s.gauges.g === 42, 'gauges.g === 42');
+    assert(s.lifetime, 'lifetime section exists');
+    // Ensure snapshot is a copy, not reference
+    s.session.snap = 999;
+    assertEqual(Game.Telemetry._session().snap, 1, 'snapshot is a copy');
+  });
+
+  test('T7-7: reset() clears session but not lifetime', () => {
+    Game.Telemetry.event('persistTest');
+    const ltBefore = Game.Telemetry._lifetime().persistTest;
+    Game.Telemetry.reset();
+    assertEqual(Game.Telemetry._session().persistTest, undefined, 'session cleared');
+    assertEqual(Game.Telemetry._lifetime().persistTest, ltBefore, 'lifetime preserved');
+  });
+
+  test('T7-8: JSON.stringify(snapshot()) is valid JSON', () => {
+    const json = JSON.stringify(Game.Telemetry.snapshot());
+    const parsed = JSON.parse(json);
+    assert(parsed && parsed.meta, 'parsed snapshot has meta');
+  });
+
+  test('T7-9: telemetry.js is included in index.html', () => {
+    const html = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf-8');
+    assert(html.indexOf('src/utils/telemetry.js') !== -1, 'index.html includes telemetry.js');
+  });
+
+  test('T7-10: game.js emits telemetry events', () => {
+    const js = fs.readFileSync(path.resolve(__dirname, '..', 'game.js'), 'utf-8');
+    assert(js.indexOf("Telemetry.event('buyTank')") !== -1, 'buyTank event');
+    assert(js.indexOf("Telemetry.event('merge')") !== -1, 'merge event');
+    assert(js.indexOf("Telemetry.event('zombieKill')") !== -1, 'zombieKill event');
+    assert(js.indexOf("Telemetry.event('shotFired')") !== -1, 'shotFired event');
   });
 
   // ═══════════════════════════════════════════════

@@ -91,6 +91,10 @@
       payload.version = SAVE_VERSION;
       if (global.localStorage) global.localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
     } catch (e) {}
+    // Persist telemetry lifetime together with game save
+    if (global.Game && global.Game.Telemetry && global.Game.Telemetry.saveLifetime) {
+      try { global.Game.Telemetry.saveLifetime(); } catch (_) {}
+    }
   }
 
   global.Game = global.Game || {};
