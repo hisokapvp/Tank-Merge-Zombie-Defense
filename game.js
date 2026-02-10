@@ -96,6 +96,7 @@ const BAL = {
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 16,
   zombieCountTarget: 150,
+  corpseMaxCount: 150,
   zombieHpBase: 44,
   zombieHpVar: 0.22,
   omegaBase: 0.72,
@@ -2134,8 +2135,11 @@ function ensureZombieCount(){
   const target = BAL.zombieCountTarget;
   const slotCount = Math.max(1, target);
   const taken = new Set();
+  let aliveCount = 0;
 
   for (const z of state.zombies){
+    if (z.state === 'dying') continue;
+    aliveCount++;
     if (Number.isFinite(z.slotIndex)){
       const idx = ((z.slotIndex % slotCount) + slotCount) % slotCount;
       z.slotIndex = idx;
@@ -2149,6 +2153,7 @@ function ensureZombieCount(){
   }
 
   for (const z of state.zombies){
+    if (z.state === 'dying') continue;
     if (!Number.isFinite(z.slotIndex)){
       const idx = missing.shift();
       if (idx === undefined) break;
@@ -2156,11 +2161,11 @@ function ensureZombieCount(){
     }
   }
 
-  while (state.zombies.length < target){
+  while (aliveCount < target){
     const idx = missing.shift();
-    state.zombies.push(makeZombie(true, idx ?? state.zombies.length, slotCount));
+    state.zombies.push(makeZombie(true, idx ?? aliveCount, slotCount));
+    aliveCount++;
   }
-  if (state.zombies.length > target) state.zombies.length = target;
 }
 
 function zombiePos(z){
@@ -2863,12 +2868,26 @@ function crateHitTest(x,y){
 
 // ---------- Kills / respawn ----------
 function cleanupKills(){
+  const corpseMax = BAL.corpseMaxCount;
+  let dyingCount = 0;
+  if (Number.isFinite(corpseMax)){
+    for (const z of state.zombies){
+      if (z.state !== 'dying') continue;
+      const ttl = Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer;
+      if (ttl > 0) dyingCount++;
+    }
+  }
+  const limitCorpses = Number.isFinite(corpseMax) && dyingCount > corpseMax;
+  let keptDying = 0;
   const alive = [];
   for (const z of state.zombies){
     if (z.state === 'dying'){
       const ttl = Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer;
       if (ttl > 0){
-        alive.push(z);
+        if (!limitCorpses || keptDying < corpseMax){
+          alive.push(z);
+          keptDying++;
+        }
       }
       continue;
     }
@@ -4483,7 +4502,7 @@ function drawZombieSprite(x,y,z){
     ctx.restore();
   }
 
-  if (!qualityLow){
+  if (!qualityLow && !isDying){
     // shadow (without rotation)
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,.20)';
@@ -4534,8 +4553,9 @@ function drawZombieFallback(x,y,z){
   const facing = x >= center.x ? -1 : 1;
   const s = BAL.zombieScaleMul * zombieLevelScale(z);
   const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
-  const skinTone = state.endgameVisuals && z.state !== 'dying' ? shade('#c85050', levelBoost * 8) : shade('#3cbe78', levelBoost * 10);
-  const death = z.state === 'dying' ? (z.deathProgress ?? 0) : 0;
+  const isDying = z.state === 'dying';
+  const skinTone = state.endgameVisuals && !isDying ? shade('#c85050', levelBoost * 8) : shade('#3cbe78', levelBoost * 10);
+  const death = isDying ? (z.deathProgress ?? 0) : 0;
   const deathScale = 1 - death * 0.22;
   const deathTilt = death * 1.1;
 
@@ -4553,7 +4573,7 @@ function drawZombieFallback(x,y,z){
     ctx.restore();
   }
 
-  if (!qualityLow){
+  if (!qualityLow && !isDying){
     // shadow
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,.20)';
