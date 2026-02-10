@@ -67,13 +67,14 @@ loadModule('src/mechanics/economy.js');
 loadModule('src/mechanics/combat.js');
 
 // ═══════════════════════════════════════════════
-// T2: Формат чисел "к","кк","ккк"
+// T2: Формат чисел K/M/B/T/...
 // ═══════════════════════════════════════════════
 // T1: computeBuyTankLevel (max-5, cap=50)
 // ═══════════════════════════════════════════════
 console.log('\n── T1: computeBuyTankLevel (max-5, cap=50) ──');
 
 const { computeBuyTankLevel, MAX_BUY_TANK_LEVEL } = Game.Economy;
+const { formatShortNumber, formatCompactRu } = Game.NumberFormat;
 
 test('T1-1: max=6 → 1', () => {
   assertEqual(computeBuyTankLevel(6), 1);
@@ -94,53 +95,48 @@ test('T1-6: max=55 → 50', () => {
   assertEqual(computeBuyTankLevel(55), 50);
 });
 
-test('T2-3: 1500, precision=0 → "1к"', () => {
-  assertEqual(formatShortNumber(1500, { precision: 0 }), '1к');
+test('T2-1: 9999 → "9999"', () => {
+  assertEqual(formatShortNumber(9999), '9999');
 });
 
-test('T2-4: 1500, precision=1 → "1.5к"', () => {
-  assertEqual(formatShortNumber(1500, { precision: 1 }), '1.5к');
+test('T2-2: 10000 → "10K"', () => {
+  assertEqual(formatShortNumber(10000), '10K');
 });
 
-test('T2-5: 1_000_000 → "1кк"', () => {
-  assertEqual(formatShortNumber(1000000), '1кк');
+test('T2-3: 999999 → "999K"', () => {
+  assertEqual(formatShortNumber(999999), '999K');
 });
 
-test('T2-6: 1_250_000, precision=1 → "1.2кк"', () => {
-  // Округление вниз: 1.25 floor(1) → 1.2
-  assertEqual(formatShortNumber(1250000, { precision: 1 }), '1.2кк');
+test('T2-4: 1_000_000 → "1M"', () => {
+  assertEqual(formatShortNumber(1000000), '1M');
 });
 
-test('T2-7: 1_000_000_000 → "1ккк"', () => {
-  assertEqual(formatShortNumber(1000000000), '1ккк');
+test('T2-5: 1_234_567 → "1M"', () => {
+  assertEqual(formatShortNumber(1234567), '1M');
 });
 
-test('T2-8: 0 → "0"', () => {
+test('T2-6: 1_000_000_000 → "1B"', () => {
+  assertEqual(formatShortNumber(1000000000), '1B');
+});
+
+test('T2-7: 0 → "0"', () => {
   assertEqual(formatShortNumber(0), '0');
 });
 
-test('T2-9: NaN → "0"', () => {
+test('T2-8: NaN → "0"', () => {
   assertEqual(formatShortNumber(NaN), '0');
 });
 
-test('T2-10: Infinity → "0"', () => {
+test('T2-9: Infinity → "0"', () => {
   assertEqual(formatShortNumber(Infinity), '0');
 });
 
-test('T2-11: negative -1500 → "-1к"', () => {
-  assertEqual(formatShortNumber(-1500), '-1к');
+test('T2-10: negative -15000 → "-15K"', () => {
+  assertEqual(formatShortNumber(-15000), '-15K');
 });
 
-test('T2-12: formatCompactRu is alias of formatShortNumber', () => {
+test('T2-11: formatCompactRu is alias of formatShortNumber', () => {
   assertEqual(formatCompactRu(5000), formatShortNumber(5000));
-});
-
-test('T2-13: floorTo(1.99, 1) = 1.9', () => {
-  assertEqual(floorTo(1.99, 1), 1.9);
-});
-
-test('T2-14: 2_500_000_000, precision=1 → "2.5ккк"', () => {
-  assertEqual(formatShortNumber(2500000000, { precision: 1 }), '2.5ккк');
 });
 
 // ═══════════════════════════════════════════════

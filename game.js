@@ -319,7 +319,7 @@ const STRINGS = {
     levelLabel: 'Уровень',
     levelShort: 'Ур.',
     levelUp: 'Ур.{level}!',
-    levelModalTitle: 'Вы достигли {level} уровень',
+    levelModalTitle: 'Вы достигли {level} уровня!',
     levelModalTalent: 'Вы получили {points} {talent}',
     levelModalGold: 'Вы получили {gold} золота',
     levelUpAccept: 'Принять награду',
@@ -341,8 +341,8 @@ const STRINGS = {
     dismantleMore: 'ещё',
     dropOnCrateReject: 'Место занято',
     menuSettings: 'Настройки',
-    mergePopupTitle: 'Новый танк Lv{level}',
-    mergePopupSubtitle: 'Открыт новый уровень!',
+    mergePopupTitle: 'Новый танк уровень {level}',
+    mergePopupSubtitle: 'ОТКРЫТ НОВЫЙ УРОВЕНЬ ТАНКА!',
     mergePopupFight: 'В бой!',
     mergePopupClose: 'Закрыть',
     mergePopupDamageLabel: 'Урон',
@@ -464,7 +464,7 @@ const STRINGS = {
     levelLabel: 'Level',
     levelShort: 'Lv',
     levelUp: 'Lv{level}!',
-    levelModalTitle: 'You reached level {level}',
+    levelModalTitle: 'You reached level {level}!',
     levelModalTalent: 'You received {points} {talent}',
     levelModalGold: 'You received {gold} gold',
     levelUpAccept: 'Claim reward',
@@ -486,8 +486,8 @@ const STRINGS = {
     dismantleMore: 'more',
     dropOnCrateReject: 'Place occupied',
     menuSettings: 'Settings',
-    mergePopupTitle: 'New tank Lv{level}',
-    mergePopupSubtitle: 'New level unlocked!',
+    mergePopupTitle: 'New tank level {level}',
+    mergePopupSubtitle: 'NEW TANK LEVEL UNLOCKED!',
     mergePopupFight: 'Fight!',
     mergePopupClose: 'Close',
     mergePopupDamageLabel: 'Damage',
@@ -3718,7 +3718,6 @@ function drawLevelUpVfx(){
   ctx.font = 'bold 28px system-ui, -apple-system, Segoe UI, Roboto, Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(t('levelUp', { level: txt.level }).replace('!', ''), 0, -12);
   ctx.restore();
 }
 

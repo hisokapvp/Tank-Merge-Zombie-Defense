@@ -1,7 +1,7 @@
 /**
  * Единый формат чисел для UI: опыт, цены, урон.
- * Пороги: 1 000 → "к", 1 000 000 → "кк", 1 000 000 000 → "ккк".
- * Округление вниз (floor) по умолчанию; опция precision для десятичных.
+ * Формат: 1..9999 без суффикса, далее K/M/B/T/Q/Qi/Sx/Sp/Oc/No/Dc.
+ * Только целые значения; fallback на e-нотацию.
  */
 (function (global) {
   'use strict';
@@ -19,44 +19,36 @@
   }
 
   /**
-   * Форматирование числа с суффиксами к/кк/ккк.
+   * Форматирование числа с суффиксами K/M/B/T/Q/Qi/Sx/Sp/Oc/No/Dc.
    * @param {number} value
-   * @param {{ precision?: number }} [opts]
    * @returns {string}
    */
-  function formatShortNumber(value, opts) {
+  function formatShortNumber(value) {
     var n = Number(value);
     if (n !== n || !Number.isFinite(n)) return '0';
-    var precision = (opts && typeof opts.precision === 'number') ? opts.precision : 0;
     var negative = n < 0;
     var v = Math.abs(n);
+    var intVal = Math.floor(v);
 
-    if (v < 1000) {
-      return (negative ? '-' : '') + String(Math.floor(v));
+    if (intVal < 10000) {
+      return (negative ? '-' : '') + String(intVal);
     }
 
-    var suffix, scaled;
-    if (v < 1e6) {
-      suffix = 'к';
-      scaled = v / 1e3;
-    } else if (v < 1e9) {
-      suffix = 'кк';
-      scaled = v / 1e6;
-    } else {
-      suffix = 'ккк';
-      scaled = v / 1e9;
+    var suffixes = ['K', 'M', 'B', 'T', 'Q', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+    var suffixIndex = 0;
+    var divisor = 1000;
+
+    while (suffixIndex < suffixes.length && intVal >= divisor * 1000) {
+      divisor *= 1000;
+      suffixIndex++;
     }
 
-    var rounded = floorTo(scaled, precision);
-    var str;
-    if (precision > 0) {
-      str = rounded.toFixed(precision);
-      // убрать trailing zeros после точки, но оставить precision знаков
-    } else {
-      str = String(Math.floor(scaled));
+    if (suffixIndex >= suffixes.length) {
+      return (negative ? '-' : '') + intVal.toExponential(0);
     }
 
-    return (negative ? '-' : '') + str + suffix;
+    var scaled = Math.floor(intVal / divisor);
+    return (negative ? '-' : '') + String(scaled) + suffixes[suffixIndex];
   }
 
   /**
