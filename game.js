@@ -906,6 +906,12 @@ const TankSprites = {
   }
 };
 
+if (typeof window !== 'undefined') {
+  window.TankSprites = TankSprites;
+  window.Game = window.Game || {};
+  window.Game.TankSprites = TankSprites;
+}
+
 const FenceSprites = {
   ready: false,
   error: '',

@@ -20,6 +20,11 @@
   var mergeTimeout = null;
   var currentLevel = 1;
   var animStartTime = 0;
+  var previewModel = null;
+  var usePreview = false;
+  var lastFrameTime = 0;
+  var lastCanvasW = 0;
+  var lastCanvasH = 0;
 
   /* ── DOM refs ── */
   var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose;
@@ -100,6 +105,52 @@
     if (global.Game && global.Game.A11y && modal) {
       global.Game.A11y.registerModal(modal, { onClose: close, initialFocus: btnFight });
     }
+
+    initPreview();
+  }
+
+  function initPreview() {
+    var MPModel = global.Game && global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.createModel === 'function') {
+      previewModel = MPModel.createModel();
+    }
+    usePreview = !!(previewModel && global.Game && global.Game.MergePreviewRenderer && global.Game.TankPortrait && global.Game.TankConfig);
+  }
+
+  function refreshPreview(level) {
+    if (!usePreview || !previewModel) return;
+    var MPModel = global.Game.MergePreviewModel;
+    if (!MPModel || typeof MPModel.reset !== 'function') return;
+    MPModel.reset(previewModel, { level: level });
+    updatePreviewLayout();
+    lastFrameTime = performance.now();
+  }
+
+  function updatePreviewLayout() {
+    if (!usePreview || !previewModel || !canvas) return;
+    var w = canvas.width || 0;
+    var h = canvas.height || 0;
+    if (!w || !h) return;
+    if (w === lastCanvasW && h === lastCanvasH) return;
+    lastCanvasW = w;
+    lastCanvasH = h;
+    var MPModel = global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.setLayout === 'function') {
+      MPModel.setLayout(previewModel, w, h);
+    }
+  }
+
+  function applyPreviewPositions(phase) {
+    if (!usePreview || !previewModel) return;
+    var layout = previewModel.layout;
+    if (!layout || !layout.w) return;
+    var offset = Math.max(8, (layout.rightX - layout.leftX) * (1 - phase));
+    var leftX = currentState === STATE.MERGE_ANIM ? (layout.centerX - offset) : layout.leftX;
+    var rightX = currentState === STATE.MERGE_ANIM ? (layout.centerX + offset) : layout.rightX;
+    var MPModel = global.Game && global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.setTankPositions === 'function') {
+      MPModel.setTankPositions(previewModel, leftX, rightX, layout.centerX, layout.centerY);
+    }
   }
 
   /* ═══════════════ Show / Close ═══════════════ */
@@ -125,6 +176,7 @@
     if (subtitleEl) subtitleEl.textContent = t('mergePopupSubtitle');
 
     updateStats(level);
+    refreshPreview(level);
 
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
@@ -158,6 +210,7 @@
   function enterMergeAnim() {
     currentState = STATE.MERGE_ANIM;
     animStartTime = performance.now();
+    lastFrameTime = animStartTime;
     particles = [];
     muzzleFlashes = [];
     startRenderLoop();
@@ -172,7 +225,7 @@
   function enterShowcase() {
     currentState = STATE.SHOWCASE;
     animStartTime = performance.now();
-    startFireLoop();
+    if (!usePreview) startFireLoop();
     // render loop continues from merge phase
   }
 
@@ -226,6 +279,7 @@
     if (animFrame)    { cancelAnimationFrame(animFrame); animFrame = null; }
     if (shootTimer)   { clearInterval(shootTimer); shootTimer = null; }
     if (mergeTimeout) { clearTimeout(mergeTimeout); mergeTimeout = null; }
+    lastFrameTime = 0;
   }
 
   /* ═══════════════ Shot FX ═══════════════ */
@@ -258,9 +312,30 @@
     if (!ctxPopup || !canvas) return;
     var w = canvas.width;
     var h = canvas.height;
-    var dt = 1 / 60;
+    var now = performance.now();
+    var dt = (now - lastFrameTime) / 1000;
+    if (!Number.isFinite(dt) || dt <= 0) dt = 1 / 60;
+    if (dt > 0.05) dt = 0.05;
+    lastFrameTime = now;
 
     ctxPopup.clearRect(0, 0, w, h);
+
+    if (usePreview && previewModel && global.Game && global.Game.MergePreviewModel && global.Game.MergePreviewRenderer) {
+      updatePreviewLayout();
+      if (currentState === STATE.MERGE_ANIM) {
+        var elapsedPreview = (now - animStartTime) / 1000;
+        var totalPreviewSec = MERGE_ANIM_MS / 1000;
+        var phasePreview = Math.min(1, elapsedPreview / (totalPreviewSec * 0.35));
+        applyPreviewPositions(phasePreview);
+        global.Game.MergePreviewModel.update(previewModel, dt);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, phasePreview);
+      } else if (currentState === STATE.SHOWCASE) {
+        applyPreviewPositions(1);
+        global.Game.MergePreviewModel.update(previewModel, dt);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, 1);
+      }
+      return;
+    }
 
     if (currentState === STATE.MERGE_ANIM) {
       var elapsed = (performance.now() - animStartTime) / 1000;
