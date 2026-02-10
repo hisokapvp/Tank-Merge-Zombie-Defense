@@ -96,7 +96,7 @@ const BAL = {
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 16,
   zombieCountTarget: 150,
-  zombieHpBase: 88,
+  zombieHpBase: 44,
   zombieHpVar: 0.22,
   omegaBase: 0.72,
   omegaVar: 0.18,
@@ -121,6 +121,8 @@ const BAL = {
   // Economy
   coinsPerKillBase: 1,
   coinsPerKillLevelMul: 0.35,
+  zombieKillCoinsMul: 0.5,
+  zombieKillXpMul: 0.5,
   coinsPerShotBase: 1,
   coinsPerShotLevelMul: 0.55,
   levelGoldBase: 60,
@@ -2236,7 +2238,7 @@ function startZombieDying(z){
     z.corpseTimer = (Number.isFinite(animDuration) ? animDuration : (z.deathDuration || 0)) + 5;
   }
 
-  state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
+  state.coins += Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
   state.kills += 1;
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill', { level: z.level });
@@ -2245,7 +2247,7 @@ function startZombieDying(z){
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
-  grantXP(Math.floor(baseXp * mods.xpMul * activeMul));
+  grantXP(Math.floor(baseXp * mods.xpMul * activeMul * BAL.zombieKillXpMul));
   const p = zombiePos(z);
   burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
 }
