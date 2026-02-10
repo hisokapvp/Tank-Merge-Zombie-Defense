@@ -42,7 +42,7 @@ node Test/pack2/fireLogicRegression.test.js
 node Test/pack2/telemetryExport.test.js
 ```
 
-### Pack 3 tests
+### Pack 3 тесты
 
 ```bash
 node Test/pack3/zombieSpawnAliveOnly.test.js
@@ -183,6 +183,8 @@ chmod +x hooks/pre-commit
     │   ├── mergeAnimRegression.test.js
     │   ├── fireLogicRegression.test.js
     │   └── telemetryExport.test.js
+    ├── pack3/          # Pack 3 тесты
+    │   └── zombieSpawnAliveOnly.test.js
     ├── pack4/          # Pack 4 тесты
     │   ├── calendar.test.js
     │   └── perf_stress.test.js

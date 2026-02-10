@@ -30,6 +30,7 @@ run_test "Pack 3 (zombie spawn alive-only)" "Test/pack3/zombieSpawnAliveOnly.tes
 run_test "Pack 4 (calendar)" "Test/pack4/calendar.test.js"
 run_test "Pack 4 (profiler)" "Test/pack4/perf_stress.test.js"
 run_test "Pack 5 (perf regression)" "Test/pack5/perf_regression.test.js"
+run_test "Pack 5 (CI guard: Pack 3 included)" "Test/pack5/ci_includes_pack3.test.js"
 run_test "Pack 7 (adminFlags visibility)" "Test/pack7/adminFlags_visibility.test.js"
 run_test "Pack 7 (release integrity)" "Test/pack7/release_integrity.test.js"
 run_test "Pack 7 (analytics aggregation)" "Test/pack7/analytics_aggregation.test.js"
