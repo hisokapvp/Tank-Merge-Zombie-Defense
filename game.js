@@ -2208,6 +2208,28 @@ function startZombieDying(z){
   z.deathFrame = 0; // current frame of death animation
   z.deathAnimSpeed = 10; // frames per second for death animation
 
+  const corpseHelper = Game?.CorpseDespawn;
+  let animDuration = null;
+  if (corpseHelper && corpseHelper.computeDeathAnimDuration) {
+    animDuration = corpseHelper.computeDeathAnimDuration(z.deathAnim, z.deathAnimSpeed, z.deathDuration);
+  } else {
+    const frames = z.deathAnim && Number.isFinite(z.deathAnim.frames) ? Math.max(1, z.deathAnim.frames) : null;
+    animDuration = frames ? Math.max(0, frames - 1) / (z.deathAnimSpeed || 10) : (z.deathDuration || 0);
+  }
+  if (Number.isFinite(animDuration) && animDuration > 0) {
+    z.deathDuration = animDuration;
+    z.deathTimer = z.deathDuration;
+  }
+  if (corpseHelper && corpseHelper.computeCorpseDespawnTimer) {
+    z.corpseTimer = corpseHelper.computeCorpseDespawnTimer({
+      deathAnim: z.deathAnim,
+      deathAnimSpeed: z.deathAnimSpeed,
+      deathDuration: z.deathDuration,
+    });
+  } else {
+    z.corpseTimer = (Number.isFinite(animDuration) ? animDuration : (z.deathDuration || 0)) + 5;
+  }
+
   state.coins += coinsForKill(z.level ?? 1, z.rewardMul);
   state.kills += 1;
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
@@ -2228,6 +2250,7 @@ function stepZombies(dt){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
       z.deathProgress = clamp(1 - z.deathTimer / (z.deathDuration || 0.65), 0, 1);
+      if (Number.isFinite(z.corpseTimer)) z.corpseTimer -= dt;
       
       // Advance death animation frame (non-loop: clamp to last frame)
       if (z.deathAnim) {
@@ -2270,6 +2293,18 @@ function stepZombies(dt){
       }
     }
   }
+}
+
+function pickBurstTargetsFallback(candidates, count){
+  const list = Array.isArray(candidates) ? candidates : [];
+  const total = list.length;
+  const n = Math.max(0, Math.floor(count || 0));
+  const result = [];
+  if (!total || !n) return result;
+  for (let i = 0; i < n; i++) {
+    result.push(list[i % total]);
+  }
+  return result;
 }
 
 // ---------- Combat: visible projectiles ----------
@@ -2318,6 +2353,7 @@ function stepTanks(dt){
       return a.sideDist - b.sideDist;
     });
     const best = candidates.length ? candidates[0].z : null;
+    const targetPool = candidates.map(c => c.z);
 
     if (hasSpriteConfig){
       const cannon = TankSprites.pickCannon(tank.level);
@@ -2336,7 +2372,15 @@ function stepTanks(dt){
           const mx = sx + Math.cos(pos.heading) * muzzle.x - Math.sin(pos.heading) * muzzle.y;
           const my = sy + Math.sin(pos.heading) * muzzle.x + Math.cos(pos.heading) * muzzle.y;
 
-          fireTankProjectile({sx: mx, sy: my, target: best, tank, stats: s, mods});
+          const Combat = window.Game && window.Game.Combat;
+          const count = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
+          const targeting = window.Game && window.Game.Targeting;
+          const targets = targeting && targeting.pickBurstTargetsBySide
+            ? targeting.pickBurstTargetsBySide(targetPool, count, { sx: mx, sy: my, heading: pos.heading, getPos: zombiePos })
+            : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
+          const primaryTarget = targets.length ? targets[0] : best;
+
+          fireTankProjectile({sx: mx, sy: my, target: primaryTarget, targets, tank, stats: s, mods});
         }
       }
 
@@ -2348,7 +2392,14 @@ function stepTanks(dt){
     }
 
     if (tank.cooldown > 0 || !best) continue;
-    fireTankProjectile({sx, sy, target: best, tank, stats: s, mods});
+    const Combat = window.Game && window.Game.Combat;
+    const count = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
+    const targeting = window.Game && window.Game.Targeting;
+    const targets = targeting && targeting.pickBurstTargetsBySide
+      ? targeting.pickBurstTargetsBySide(targetPool, count, { sx: sx, sy: sy, heading: pos.heading, getPos: zombiePos })
+      : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
+    const primaryTarget = targets.length ? targets[0] : best;
+    fireTankProjectile({sx, sy, target: primaryTarget, targets, tank, stats: s, mods});
   }
 }
 
@@ -2386,16 +2437,21 @@ function releaseProjectile(p){
   if (projectilePool) projectilePool.release(p);
 }
 
-function fireTankProjectile({sx, sy, target, tank, stats, mods}){
+function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
   const powerTier = tank.powerTier ?? computePowerTier(state.player?.level ?? 1);
   const effectIntensity = 1 + powerTier * 0.25;
-  const tp = zombiePos(target);
+  const baseTargets = Array.isArray(targets) && targets.length ? targets : (target ? [target] : []);
+  if (!baseTargets.length) return;
+  const tp = zombiePos(baseTargets[0]);
 
   // Multi-barrel: N projectiles with damage split (T3)
   const Combat = window.Game && window.Game.Combat;
   const N = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
   const splitDmg = stats.dmg / N;
   const shotId = _nextShotId++;
+  const targeting = window.Game && window.Game.Targeting;
+  const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, N) : pickBurstTargetsFallback(baseTargets, N);
+  if (!burstTargets.length) return;
 
   // Barrel spread perpendicular to heading
   const heading = Math.atan2(tp.y - sy, tp.x - sx);
@@ -2419,9 +2475,11 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
         const b = cannonBarrels[i];
         const bx = sx + Math.cos(heading) * (b.x || 0) - Math.sin(heading) * (b.y || 0);
         const by = sy + Math.sin(heading) * (b.x || 0) + Math.cos(heading) * (b.y || 0);
+        const t = burstTargets[i % burstTargets.length];
+        const tpos = zombiePos(t);
         spawnProjectile({
           fromX: bx, fromY: by,
-          toZombieId: target.id, toX: tp.x, toY: tp.y,
+          toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
           effectIntensity, shotId,
@@ -2431,10 +2489,12 @@ function fireTankProjectile({sx, sy, target, tank, stats, mods}){
       // Default: spread perpendicular to heading
       const offsets = N === 1 ? [0] : N === 2 ? [-BARREL_SPREAD / 2, BARREL_SPREAD / 2] : [-BARREL_SPREAD, 0, BARREL_SPREAD];
       for (let i = 0; i < N; i++) {
+        const t = burstTargets[i % burstTargets.length];
+        const tpos = zombiePos(t);
         spawnProjectile({
           fromX: sx + perpX * offsets[i],
           fromY: sy + perpY * offsets[i],
-          toZombieId: target.id, toX: tp.x, toY: tp.y,
+          toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
           effectIntensity, shotId,
@@ -2519,10 +2579,15 @@ function stepProjectiles(dt){
 
     // update target point (moving zombie)
     const z = zmap.get(b.toZombieId);
-    if (z){
+    const targeting = window.Game && window.Game.Targeting;
+    if (targeting && targeting.updateProjectileAim) {
+      targeting.updateProjectileAim(b, z, zombiePos);
+    } else if (z && z.state !== 'dying') {
       const p = zombiePos(z);
       b.toX = p.x;
       b.toY = p.y;
+    } else if (z && z.state === 'dying') {
+      b.toZombieId = null;
     }
 
     const dx = b.toX - b.x;
@@ -2793,7 +2858,8 @@ function cleanupKills(){
   const alive = [];
   for (const z of state.zombies){
     if (z.state === 'dying'){
-      if (z.deathTimer > 0){
+      const ttl = Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer;
+      if (ttl > 0){
         alive.push(z);
       }
       continue;
