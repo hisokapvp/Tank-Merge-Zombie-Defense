@@ -42,6 +42,12 @@ node Test/pack2/fireLogicRegression.test.js
 node Test/pack2/telemetryExport.test.js
 ```
 
+### Pack 3 tests
+
+```bash
+node Test/pack3/zombieSpawnAliveOnly.test.js
+```
+
 Ожидаемый результат: все тесты ✓ (PASSED).
 
 ### Pack 4 тесты

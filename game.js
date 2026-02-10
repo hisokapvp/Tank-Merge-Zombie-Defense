@@ -2974,6 +2974,7 @@ function resetGameState(){
       collapsed: wasCollapsed ?? false,
       previewParticles: [],
       debugStatusActive: false,
+      zombieCountCache: { at: 0, text: '' },
     };
   }
   ensureTalentState();
@@ -3026,6 +3027,7 @@ function updateUI(){
   updateTalentUI();
   updateStageAbilitySlots();
   updateDismantleButton();
+  if (DebugPanelEnabled && state.debug?.refreshZombieCounts) state.debug.refreshZombieCounts();
 }
 
 function updateDismantleButton(){
@@ -5029,6 +5031,7 @@ function initDebugPanel(){
     collapsed: false,
     previewParticles: [],
     debugStatusActive: false,
+    zombieCountCache: { at: 0, text: '' },
   };
 
   const main = document.querySelector('.layout');
@@ -5089,6 +5092,7 @@ function initDebugPanel(){
         <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>
       </div>
       <div id="debugSectionZombies" class="debugSection">
+        <div id="debugZombieCounts" class="debugRow" style="font-size:11px;margin-bottom:6px"></div>
         <div id="debugZombieWeights" class="debugRow" style="font-size:11px;margin-bottom:6px"></div>
         <div class="debugRow">
           <button type="button" class="debugBtn debugSimSpawns" data-n="100">Simulate 100 spawns</button>
@@ -5161,7 +5165,7 @@ function initDebugPanel(){
       if (section) section.classList.add('active');
       if (tab === 'tanks') { refreshDebugHangarList(); refreshDebugTankExtras(); }
       if (tab === 'effects') refreshDebugEffectList();
-      if (tab === 'zombies') refreshDebugZombieWeights();
+      if (tab === 'zombies') { refreshDebugZombieWeights(); refreshDebugZombieCounts(); }
       if (tab === 'roads') refreshDebugRoadsSliders();
       if (tab === 'actives') refreshDebugActivesList();
       if (tab === 'talents') refreshDebugTalentsList();
@@ -5311,6 +5315,29 @@ function initDebugPanel(){
     if (!el) return;
     const weights = zombieLevelWeights();
     el.textContent = weights.length ? 'Weights: ' + weights.map(w=>`Lv${w.level} ${(w.weight*100).toFixed(1)}%`).join(', ') : 'No tanks → fallback Lv1 100%';
+  }
+
+  function refreshDebugZombieCounts(){
+    const el = panel.querySelector('#debugZombieCounts');
+    if (!el) return;
+    const now = nowSec();
+    const cache = state.debug.zombieCountCache || { at: 0, text: '' };
+    if (!cache.at || (now - cache.at) >= 0.5) {
+      const zombies = state.zombies || [];
+      let dying = 0;
+      for (const z of zombies) { if (z.state === 'dying') dying++; }
+      const total = zombies.length;
+      const alive = total - dying;
+      const target = BAL.zombieCountTarget;
+      cache.at = now;
+      cache.text = 'Alive: ' + alive + ' | Dying: ' + dying + ' | Target: ' + target + ' | Total: ' + total;
+      cache.alive = alive;
+      cache.dying = dying;
+      cache.target = target;
+      cache.total = total;
+      state.debug.zombieCountCache = cache;
+    }
+    el.textContent = cache.text || 'Alive: 0 | Dying: 0 | Target: ' + BAL.zombieCountTarget + ' | Total: 0';
   }
 
   function refreshDebugRoadsSliders(){
@@ -5524,6 +5551,7 @@ function initDebugPanel(){
   state.debug.refreshHangarList = refreshDebugHangarList;
   state.debug.refreshTankExtras = refreshDebugTankExtras;
   state.debug.refreshZombieWeights = refreshDebugZombieWeights;
+  state.debug.refreshZombieCounts = refreshDebugZombieCounts;
   state.debug.refreshRoadsSliders = refreshDebugRoadsSliders;
   main.insertBefore(panel, main.firstChild);
   refreshDebugHangarList();
