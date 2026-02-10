@@ -4482,11 +4482,11 @@ function drawZombieSprite(x,y,z){
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
   
-  // Death effects: only apply fade/tilt if no death animation
+  // Death effects: keep opacity to avoid transparent corpses
   const death = isDying ? (z.deathProgress ?? 0) : 0;
   const deathScale = hasDeathAnim ? 1 : (1 - death * 0.22);
   const deathTilt = hasDeathAnim ? 0 : (death * 1.1);
-  const deathAlpha = hasDeathAnim ? (1 - death * 0.5) : (1 - death); // slower fade with death anim
+  const deathAlpha = 1;
 
   if (state.endgameVisuals && !isDying){
     ctx.save();
@@ -4585,7 +4585,7 @@ function drawZombieFallback(x,y,z){
 
   ctx.save();
   ctx.translate(x, y + bob + groundOffset);
-  ctx.globalAlpha = 1 - death;
+  ctx.globalAlpha = 1;
   ctx.rotate(face * facing + deathTilt * facing);
   ctx.scale(s * facing * deathScale, s * deathScale);
 
