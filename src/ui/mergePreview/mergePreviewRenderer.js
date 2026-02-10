@@ -4,16 +4,6 @@
 (function (global) {
 	'use strict';
 
-	function renderLabel(ctx, text, x, y) {
-		ctx.save();
-		ctx.fillStyle = 'rgba(255,255,255,0.9)';
-		ctx.font = 'bold 11px Roboto, Arial, sans-serif';
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-		ctx.fillText(text, x, y);
-		ctx.restore();
-	}
-
 	function drawShots(ctx, model, showA, showB, showR) {
 		for (var i = 0; i < model.shots.length; i++) {
 			var shot = model.shots[i];
@@ -72,8 +62,6 @@
 				frameIdx: { body: model.tanks[1].bodyFrame, cannon: model.tanks[1].cannonFrame, aura: model.tanks[1].auraFrame },
 				timeSec: model.time
 			});
-			renderLabel(ctx, 'A', leftX, layout.labelY);
-			renderLabel(ctx, 'B', rightX, layout.labelY);
 		}
 
 		if (showResult) {
@@ -85,7 +73,6 @@
 				frameIdx: { body: model.tanks[2].bodyFrame, cannon: model.tanks[2].cannonFrame, aura: model.tanks[2].auraFrame },
 				timeSec: model.time
 			});
-			renderLabel(ctx, 'RESULT', centerX, layout.labelY);
 		}
 
 		drawShots(ctx, model, showSides, showSides, showResult);
