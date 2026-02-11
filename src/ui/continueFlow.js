@@ -184,6 +184,7 @@
       }
       var rewards = computeOfflineRewards(state, elapsed);
       onCloseMenu();
+      if (!rewards || (rewards.coins <= 0 && rewards.xp <= 0)) return;
       if (onShowOfflineModal) onShowOfflineModal({ coins: rewards.coins, xp: rewards.xp });
       return;
     }
@@ -213,6 +214,7 @@
           }
           var rewards = computeOfflineRewards(state, elapsed);
           onCloseMenu();
+          if (!rewards || (rewards.coins <= 0 && rewards.xp <= 0)) return;
           if (onShowOfflineModal) onShowOfflineModal({ coins: rewards.coins, xp: rewards.xp });
           return;
         }

@@ -39,6 +39,7 @@ run_test "Pack 7 (feedback storage)" "Test/pack7/feedback_storage.test.js"
 run_test "Pack 7 (fence square geometry)" "Test/pack7/fenceSquareGeometry.test.js"
 run_test "Pack 7 (fence corner slots)" "Test/pack7/fenceCornerSlots.test.js"
 run_test "Pack 7 (fence asset keys)" "Test/pack7/fenceAssetsCornersSides.test.js"
+run_test "Pack 8 (offline progress)" "Test/pack8/offlineProgress.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."
