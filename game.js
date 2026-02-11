@@ -3778,28 +3778,7 @@ function drawDecors(){
 }
 
 function drawTrack(){
-  ctx.save();
-  ctx.translate(center.x, center.y);
-
-  ctx.beginPath();
-  ctx.arc(0,0,BAL.zombieTrackRadius,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(110,168,255,.18)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(0,0,BAL.zombieTrackRadius + BAL.zombieTrackWidth,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(125,255,178,.07)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(0,0,BAL.zombieTrackRadius - BAL.zombieTrackWidth,0,Math.PI*2);
-  ctx.strokeStyle = 'rgba(125,255,178,.06)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.restore();
+  // Zombie track visuals intentionally disabled.
 }
 
 function drawTankTrack(){

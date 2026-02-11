@@ -63,6 +63,12 @@ node Test/pack4/perf_stress.test.js
 node Test/pack5/perf_regression.test.js
 ```
 
+### Pack 6 тесты
+
+```bash
+node Test/pack6/zombieRoad_visuals_removed.test.js
+```
+
 ### Локальный CI
 
 ```bash
