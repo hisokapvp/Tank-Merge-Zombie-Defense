@@ -36,6 +36,9 @@ run_test "Pack 7 (adminFlags visibility)" "Test/pack7/adminFlags_visibility.test
 run_test "Pack 7 (release integrity)" "Test/pack7/release_integrity.test.js"
 run_test "Pack 7 (analytics aggregation)" "Test/pack7/analytics_aggregation.test.js"
 run_test "Pack 7 (feedback storage)" "Test/pack7/feedback_storage.test.js"
+run_test "Pack 7 (fence square geometry)" "Test/pack7/fenceSquareGeometry.test.js"
+run_test "Pack 7 (fence corner slots)" "Test/pack7/fenceCornerSlots.test.js"
+run_test "Pack 7 (fence asset keys)" "Test/pack7/fenceAssetsCornersSides.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

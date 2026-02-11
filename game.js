@@ -2197,7 +2197,11 @@ function zombieCollisionRadius(z){
 }
 
 function zombieFenceLimit(z){
-  return BAL.fenceRadius + BAL.fenceKeepout + zombieCollisionRadius(z);
+  const halfSide = BAL.fenceRadius;
+  const dx = Math.cos(z.theta ?? 0);
+  const dy = Math.sin(z.theta ?? 0);
+  const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+  return halfSide / denom + BAL.fenceKeepout + zombieCollisionRadius(z);
 }
 
 function startZombieDying(z){
@@ -3820,31 +3824,22 @@ function drawTankTrack(){
 }
 
 function drawZombieFence(){
-  const r = BAL.fenceRadius;
-  const ids = BAL.fenceSpriteIds || [];
-  const useSprites = FenceSprites.ready && ids.length > 0;
+  const halfSide = BAL.fenceRadius;
+  const spriteKeys = resolveFenceSpriteKeys();
+  const useSprites = FenceSprites.ready && !!spriteKeys;
 
   ctx.save();
   ctx.translate(center.x, center.y);
 
   if (useSprites){
-    if (!state.fenceSegments || state.fenceSegments.length === 0){
-      state.fenceSegments = [];
-      const segments = 40;
-      for (let i = 0; i < segments; i++){
-        const a = (i / segments) * Math.PI * 2;
-        const sid = ids[Math.floor(Math.random() * ids.length)];
-        state.fenceSegments.push({ a, spriteId: sid });
-      }
+    if (!state.fenceSegments || state.fenceSegments.length === 0 || state.fenceSegments[0].x == null || state.fenceSegments[0].y == null){
+      state.fenceSegments = buildSquareFenceSegments(halfSide, BAL.fenceWidth, spriteKeys);
     }
     for (const seg of state.fenceSegments){
       const frame = FenceSprites.pickFrame(seg.spriteId);
       if (!frame || !FenceSprites.atlasImg) continue;
-      const px = Math.cos(seg.a) * r;
-      const py = Math.sin(seg.a) * r;
       ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(seg.a);
+      ctx.translate(seg.x, seg.y);
       const scale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2;
       const ax = frame.anchor?.x ?? 0.5;
       const ay = frame.anchor?.y ?? 0.5;
@@ -3858,38 +3853,91 @@ function drawZombieFence(){
     }
   } else {
     state.fenceSegments = [];
+    const size = halfSide * 2;
+    ctx.lineJoin = 'miter';
+    ctx.miterLimit = 4;
     ctx.strokeStyle = 'rgba(161, 110, 64, .55)';
     ctx.lineWidth = BAL.fenceWidth;
     ctx.beginPath();
-    ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.rect(-halfSide, -halfSide, size, size);
     ctx.stroke();
 
     ctx.strokeStyle = 'rgba(59, 35, 19, .38)';
-    ctx.lineWidth = BAL.fenceWidth * 0.4;
+    ctx.lineWidth = Math.max(1, BAL.fenceWidth * 0.4);
     ctx.beginPath();
-    ctx.arc(0,0,r-5,0,Math.PI*2);
+    ctx.rect(-halfSide + 5, -halfSide + 5, size - 10, size - 10);
     ctx.stroke();
-
-    const posts = 40;
-    const postScale = BAL.fenceWidth / 4;
-    for (let i=0;i<posts;i++){
-      const a = (i/posts) * Math.PI*2;
-      const px = Math.cos(a) * r;
-      const py = Math.sin(a) * r;
-      ctx.save();
-      ctx.translate(px, py);
-      ctx.rotate(a);
-      ctx.fillStyle = 'rgba(188, 126, 74, .55)';
-    ctx.strokeStyle = 'rgba(45, 26, 14, .3)';
-    ctx.lineWidth = 1.5 * postScale;
-    rr(ctx, -3 * postScale, -10 * postScale, 6 * postScale, 18 * postScale, 2 * postScale);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  }
   }
 
   ctx.restore();
+}
+
+function resolveFenceSpriteKeys(){
+  const required = ['cornerTL', 'cornerTR', 'cornerBR', 'cornerBL', 'sideTop', 'sideRight', 'sideBottom', 'sideLeft'];
+  const hasNamed = required.every((id) => FenceSprites.framesById.has(id));
+  if (hasNamed){
+    return {
+      cornerTL: 'cornerTL',
+      cornerTR: 'cornerTR',
+      cornerBR: 'cornerBR',
+      cornerBL: 'cornerBL',
+      sideTop: 'sideTop',
+      sideRight: 'sideRight',
+      sideBottom: 'sideBottom',
+      sideLeft: 'sideLeft',
+    };
+  }
+  const ids = BAL.fenceSpriteIds || [];
+  if (!ids.length) return null;
+  const fallbackId = ids[0];
+  return {
+    cornerTL: fallbackId,
+    cornerTR: fallbackId,
+    cornerBR: fallbackId,
+    cornerBL: fallbackId,
+    sideTop: fallbackId,
+    sideRight: fallbackId,
+    sideBottom: fallbackId,
+    sideLeft: fallbackId,
+  };
+}
+
+function buildSquareFenceSegments(halfSide, fenceWidth, spriteKeys){
+  const segments = [];
+  if (!spriteKeys || !Number.isFinite(halfSide) || !Number.isFinite(fenceWidth)) return segments;
+
+  segments.push({ x: -halfSide, y: -halfSide, spriteId: spriteKeys.cornerTL, isCorner: true });
+  segments.push({ x: halfSide, y: -halfSide, spriteId: spriteKeys.cornerTR, isCorner: true });
+  segments.push({ x: halfSide, y: halfSide, spriteId: spriteKeys.cornerBR, isCorner: true });
+  segments.push({ x: -halfSide, y: halfSide, spriteId: spriteKeys.cornerBL, isCorner: true });
+
+  const cornerInset = Math.max(4, fenceWidth * 0.65);
+  const sideStart = -halfSide + cornerInset;
+  const sideEnd = halfSide - cornerInset;
+  const span = Math.max(0, sideEnd - sideStart);
+  const step = Math.max(6, fenceWidth * 1.15);
+
+  const addSide = (spriteId, fixedValue, start, end, isHorizontal) => {
+    const localSpan = Math.max(0, end - start);
+    const count = Math.max(1, Math.floor(localSpan / step) + 1);
+    for (let i = 0; i < count; i++){
+      const t = count === 1 ? 0.5 : i / (count - 1);
+      const v = start + localSpan * t;
+      segments.push({
+        x: isHorizontal ? v : fixedValue,
+        y: isHorizontal ? fixedValue : v,
+        spriteId,
+        isCorner: false,
+      });
+    }
+  };
+
+  addSide(spriteKeys.sideTop, -halfSide, sideStart, sideEnd, true);
+  addSide(spriteKeys.sideBottom, halfSide, sideStart, sideEnd, true);
+  addSide(spriteKeys.sideLeft, -halfSide, sideStart, sideEnd, false);
+  addSide(spriteKeys.sideRight, halfSide, sideStart, sideEnd, false);
+
+  return segments;
 }
 
 function drawFence(br){
