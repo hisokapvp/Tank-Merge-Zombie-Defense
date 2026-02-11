@@ -5628,32 +5628,50 @@ async function boot(){
     ui.langRu.addEventListener('click', () => setLanguage('ru'));
     ui.langEn.addEventListener('click', () => setLanguage('en'));
   }
+  function presentOfflineRewards(rewards) {
+    const OfflineModal = window.Game && window.Game.OfflineModal;
+    const AdService = window.Game && window.Game.AdService;
+    if (!OfflineModal || !AdService) return;
+    if (!rewards || (rewards.coins === 0 && rewards.xp === 0)) return;
+    OfflineModal.showOfflineRewardsModal({
+      coins: rewards.coins,
+      xp: rewards.xp,
+      onConfirm() {
+        OfflineModal.setClaiming(true);
+        AdService.requestRewardedAd().then((result) => {
+          if (result && result.success) {
+            state.coins += rewards.coins;
+            state.player.xp += rewards.xp;
+            grantXP(0);
+            meta.lastSeenAt = Date.now();
+            saveProgress();
+            OfflineModal.hideModal();
+            updateUI();
+          }
+          OfflineModal.setClaiming(false);
+        });
+      },
+    });
+  }
+
+  function maybeShowOfflineRewardsFromMeta() {
+    const ContinueFlow = window.Game && window.Game.ContinueFlow;
+    const OfflineModal = window.Game && window.Game.OfflineModal;
+    const OfflineProgress = window.Game && window.Game.OfflineProgress;
+    if (!ContinueFlow || !OfflineModal || !OfflineProgress) return;
+    if (OfflineModal.isVisible && OfflineModal.isVisible()) return;
+    if (!ContinueFlow.shouldShowOfflineModal(meta && meta.lastSeenAt)) return;
+    const elapsed = ContinueFlow.getElapsedMs(meta && meta.lastSeenAt);
+    const rewards = OfflineProgress.computeOfflineRewards(state, elapsed);
+    presentOfflineRewards(rewards);
+  }
   ui.menuContinue?.addEventListener('click', () => {
     const ContinueFlow = window.Game && window.Game.ContinueFlow;
     const OfflineModal = window.Game && window.Game.OfflineModal;
     const AdService = window.Game && window.Game.AdService;
     if (ContinueFlow && OfflineModal && AdService) {
       ContinueFlow.onContinueClick(state, meta, () => setMenuOpen(false), (rewards) => {
-        if (!rewards || (rewards.coins === 0 && rewards.xp === 0)) return;
-        OfflineModal.showOfflineRewardsModal({
-          coins: rewards.coins,
-          xp: rewards.xp,
-          onConfirm() {
-            OfflineModal.setClaiming(true);
-            AdService.requestRewardedAd().then((result) => {
-              if (result && result.success) {
-                state.coins += rewards.coins;
-                state.player.xp += rewards.xp;
-                grantXP(0);
-                meta.lastSeenAt = Date.now();
-                saveProgress();
-                OfflineModal.hideModal();
-                updateUI();
-              }
-              OfflineModal.setClaiming(false);
-            });
-          },
-        });
+        presentOfflineRewards(rewards);
       });
       return;
     }
@@ -5762,6 +5780,10 @@ async function boot(){
     if (document.visibilityState === 'hidden' && window.Game && window.Game.Storage) {
       meta.lastSeenAt = Date.now();
       window.Game.Storage.saveGame(state, meta);
+      return;
+    }
+    if (document.visibilityState === 'visible') {
+      maybeShowOfflineRewardsFromMeta();
     }
   });
   window.addEventListener('pagehide', () => {
