@@ -29,7 +29,12 @@
 ## Data & config
 
 - `tanks.json`: `body/bodies/cannons/levels`.
-- `zombies.json`: `atlas/deathCommon/types[]`.
+- `zombies.json`: `atlas/deathCommon/types[]` + `spawn`.
+- `zombies.json.spawn`:
+   - `targetAlive` — целевой alive-cap (например, `240`);
+   - `sideCount` — число сторон кольца/квот (обычно `4`);
+   - `perSideTarget` — целевой alive на сторону (например, `60`);
+   - `perSideTolerance` — допустимое отклонение на сторону (например, `5`).
 - `fence.json`: `frames[].scale` поддерживается без clamp (например `0.75`).
 - `fence.json`: обязательные `corner*` и `side*` ids используются для квадратного забора.
 - Обязательна валидная JSON структура; health check проверяет parse.
@@ -42,12 +47,17 @@
 2. **Добавить/изменить death-анимацию зомби**
    - Править `assets/zombies.json` (`deathCommon` и/или `types[].death`).
 
-3. **Изменить декор/забор**
+3. **Изменить лимиты спавна зомби (data-driven)**
+   - Править `assets/zombies.json.spawn`.
+   - Сохранять согласованность: `targetAlive ≈ sideCount * perSideTarget`.
+   - Для цели `240` использовать профиль `4 x 60` с допуском `±5`.
+
+4. **Изменить декор/забор**
    - Обновить `assets/decor.json` или `assets/fence.json`.
    - Проверить fallback в `game.js` при пустых списках.
    - Для fence визуальный `scale` влияет и на рендер, и на bounds/avoid зомби.
 
-4. **Переключить визуал по флагу**
+5. **Переключить визуал по флагу**
    - Использовать `flag`-зависимые ветки в `src/utils/tankConfig.js`.
 
 ## Don’t touch / risks
@@ -60,4 +70,5 @@
 
 - `node ops/monitoring/health_check.js --root .`
 - Ручной: старт игры без ошибок загрузки ассетов в консоли.
+- Ручной: после стабилизации волны alive ≈ `targetAlive`, распределение по 4 сторонам в пределах `perSideTarget ± perSideTolerance`.
 - Регресс: `node Test/pack7/fenceAssetsCornersSides.test.js`, `node Test/pack7/fenceCornerSlots.test.js`, `node Test/pack7/fenceSquareGeometry.test.js`.

@@ -772,23 +772,40 @@ body.menu-open .stageUi .hudItem{
   cursor:not-allowed;
 }
 .talentNodeIcon{
-  width:22px;
-  height:22px;
+  position:absolute;
+  inset:2px;
+  border-radius:6px;
+  overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
   line-height:1;
+  background:rgba(0,0,0,.16);
 }
 .talentNodeIcon img{
-  width:22px;
-  height:22px;
-  object-fit:contain;
+  width:100%;
+  height:100%;
+  object-fit:cover;
   image-rendering:pixelated;
 }
+.talentNodeGlyph{
+  font-size:15px;
+  font-weight:800;
+}
 .talentNodeRank{
+  position:absolute;
+  right:3px;
+  bottom:3px;
+  min-width:18px;
+  padding:1px 4px;
+  border-radius:10px;
   font-size:9px;
-  font-weight:700;
-  color:var(--muted);
+  line-height:1.2;
+  font-weight:800;
+  color:#eaf1ff;
+  background:rgba(8,10,14,.82);
+  border:1px solid rgba(255,255,255,.18);
+  text-align:center;
 }
 
 /* Talent node states */

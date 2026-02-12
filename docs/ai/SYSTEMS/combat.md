@@ -29,6 +29,9 @@
 
 - Базовые боевые параметры в `BAL` (`game.js`).
 - Множители HP/скорости/награды зомби в `assets/zombies.json`.
+- SFX огня/level-up/абилок в `game.js`:
+   - источники `SFX_SOURCES`;
+   - воспроизведение через `playSfx()` + переиспользуемые `SFX_POOLS` (без `new Audio()` на каждый выстрел).
 
 ## Common edits
 
@@ -44,11 +47,16 @@
 4. **Изменить тайминг despawn трупов**
    - Редактировать `CORPSE_DESPAWN_DELAY`.
 
+5. **Править shot SFX без деградации в длинной сессии**
+   - Изменять только pool-based логику (`SFX_POOLS`, `SFX_POOL_SIZE`, `playSfx`).
+   - Не возвращаться к созданию нового `Audio` на каждый шот.
+
 ## Don’t touch / risks
 
 - Не убирай deterministic ветки в `pickDeathAnim` (сломает регресс-тесты).
 - Изменение формулы урона/шотов влияет на экономику и offline model.
 - Сильные изменения targeting могут ломать projectile fallback.
+- Создание `Audio` на каждый выстрел приводит к росту давления на GC/медиа-пайплайн и риску пропадания SFX.
 
 ## Checks
 
@@ -56,3 +64,4 @@
 - `node Test/pack2/fireLogicRegression.test.js`
 - `node Test/pack6/burstTargeting.test.js`
 - `node Test/pack6/projectileAimFallback.test.js`
+- Ручной smoke: после 10+ level-up подряд shot SFX продолжает стабильно играть.

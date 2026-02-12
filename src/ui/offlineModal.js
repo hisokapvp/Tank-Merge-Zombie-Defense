@@ -99,7 +99,7 @@
     } else {
       ctx.fillStyle = 'rgba(24, 16, 12, 0.97)';
     }
-    roundRect(ctx, x0, y0, panelW, panelH, 18);
+    roundRect(ctx, x0, y0, panelW, panelH, 22);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 184, 114, 0.2)';
     ctx.lineWidth = 2;
@@ -115,7 +115,7 @@
     ctx.fillStyle = 'rgba(234,241,255,0.8)';
     ctx.fillText(ui.sub, x0 + panelW / 2, y);
 
-    ctx.fillStyle = 'rgba(13, 9, 6, 0.72)';
+    ctx.fillStyle = 'rgba(13, 9, 6, 0.7)';
     roundRect(ctx, ui.accRect.x, ui.accRect.y, ui.accRect.w, ui.accRect.h, 14);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 184, 114, 0.12)';
@@ -129,7 +129,18 @@
 
     state.buttonRect = ui.claimRect;
 
-    ctx.fillStyle = state.claiming ? 'rgba(100,100,120,0.9)' : 'rgba(255, 184, 114, 0.95)';
+    var claimGradient = !state.claiming && typeof ctx.createLinearGradient === 'function'
+      ? ctx.createLinearGradient(ui.claimRect.x, ui.claimRect.y, ui.claimRect.x + ui.claimRect.w, ui.claimRect.y + ui.claimRect.h)
+      : null;
+    if (state.claiming) {
+      ctx.fillStyle = 'rgba(100,100,120,0.9)';
+    } else if (claimGradient) {
+      claimGradient.addColorStop(0, 'rgba(255,211,158,0.96)');
+      claimGradient.addColorStop(1, 'rgba(255,140,90,0.96)');
+      ctx.fillStyle = claimGradient;
+    } else {
+      ctx.fillStyle = 'rgba(255, 184, 114, 0.95)';
+    }
     roundRect(ctx, ui.claimRect.x, ui.claimRect.y, ui.claimRect.w, ui.claimRect.h, 12);
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
@@ -154,21 +165,22 @@
   function getUiModel(viewport) {
     var w = viewport && viewport.w ? viewport.w : 800;
     var h = viewport && viewport.h ? viewport.h : 600;
-    var panelW = Math.min(420, w - PAD * 2);
-    var panelH = 272;
+    var panelW = Math.min(520, Math.max(320, w * 0.86));
+    panelW = Math.min(panelW, w - PAD * 2);
+    var panelH = Math.min(306, Math.max(264, h - PAD * 2));
     var x0 = (w - panelW) / 2;
     var y0 = (h - panelH) / 2;
     var formatNumber = resolveFormat();
     var coinsValue = formatNumber(state.coins);
     var xpValue = formatNumber(state.xp);
-    var btnW = Math.min(280, panelW - 32);
+    var btnW = Math.min(320, panelW - 32);
     var btnH = 42;
     var btnX = x0 + (panelW - btnW) / 2;
-    var btnY = y0 + panelH - btnH - 20;
-    var accW = panelW - 56;
+    var btnY = y0 + panelH - btnH - 16;
+    var accW = panelW - 48;
     var accH = 86;
     var accX = x0 + (panelW - accW) / 2;
-    var accY = y0 + Math.round((panelH - accH) / 2) - 2;
+    var accY = y0 + Math.round((panelH - accH) / 2) - 4;
     var closeSize = 22;
     var closePad = 10;
 

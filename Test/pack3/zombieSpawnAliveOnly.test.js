@@ -22,7 +22,7 @@ const code = fs.readFileSync(path.resolve(__dirname, '../..', 'game.js'), 'utf-8
 console.log('\n\u2500\u2500 Pack 3: Zombie spawn alive-only \u2500\u2500');
 
 function getEnsureBlock() {
-  const match = code.match(/function ensureZombieCount\(\)[\s\S]*?\n}\n/);
+  const match = code.match(/function ensureZombieCount\(\)[\s\S]*?\r?\n}\r?\n/);
   return match ? match[0] : null;
 }
 
@@ -33,7 +33,7 @@ test('ZSA-1: ensureZombieCount exists', () => {
 });
 
 test('ZSA-2: ensureZombieCount uses BAL.zombieCountTarget', () => {
-  assert(/\bBAL\.zombieCountTarget\b/.test(ensureBlock), 'uses BAL.zombieCountTarget');
+  assert(/\bBAL\.zombieCountTarget\b|\bgetZombieSpawnBalanceConfig\b/.test(ensureBlock), 'uses BAL.zombieCountTarget or data-driven spawn config');
 });
 
 test('ZSA-3: ensureZombieCount does not use state.zombies.length', () => {

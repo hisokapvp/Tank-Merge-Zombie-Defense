@@ -97,6 +97,9 @@ const BAL = {
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 16,
   zombieCountTarget: 150,
+  zombieSideCount: 4,
+  zombiePerSideTarget: 38,
+  zombiePerSideTolerance: 5,
   corpseMaxCount: 150,
   zombieHpBase: 44,
   zombieHpVar: 0.22,
@@ -649,22 +652,63 @@ function applyAudioSettings(){
   document.querySelectorAll('audio[data-audio="sfx"]').forEach(el => {
     el.volume = sfxVolume;
   });
+  Object.keys(SFX_POOLS).forEach(id => {
+    const pool = SFX_POOLS[id];
+    if (!pool || !pool.players) return;
+    for (const player of pool.players) {
+      player.volume = sfxVolume;
+    }
+  });
 }
 
 // SFX playback: volume from settings.sfxVolume; dedup by event id
 const SFX_LAST_PLAYED = {};
 const SFX_DEDUP_MS = 80;
+const SFX_POOL_SIZE = 6;
+const SFX_POOLS = {};
+
+function getSfxPool(id){
+  if (!SFX_POOLS[id]) {
+    const src = SFX_SOURCES[id];
+    if (!src) return null;
+    const players = [];
+    const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+    for (let i = 0; i < SFX_POOL_SIZE; i++) {
+      const player = new Audio(src);
+      player.preload = 'auto';
+      player.volume = vol;
+      players.push(player);
+    }
+    SFX_POOLS[id] = { players, cursor: 0 };
+  }
+  return SFX_POOLS[id];
+}
+
 function playSfx(id){
   const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
   const now = performance.now();
   if (SFX_LAST_PLAYED[id] != null && now - SFX_LAST_PLAYED[id] < SFX_DEDUP_MS) return;
   SFX_LAST_PLAYED[id] = now;
   try{
-    const src = SFX_SOURCES[id];
-    if (!src) return;
-    const a = new Audio(src);
-    a.volume = vol;
-    a.play().catch(() => {});
+    const pool = getSfxPool(id);
+    if (!pool || !pool.players || !pool.players.length) return;
+    let player = null;
+    for (let i = 0; i < pool.players.length; i++) {
+      const idx = (pool.cursor + i) % pool.players.length;
+      const candidate = pool.players[idx];
+      if (candidate.ended || candidate.paused) {
+        player = candidate;
+        pool.cursor = (idx + 1) % pool.players.length;
+        break;
+      }
+    }
+    if (!player) {
+      player = pool.players[pool.cursor];
+      pool.cursor = (pool.cursor + 1) % pool.players.length;
+    }
+    player.volume = vol;
+    try { player.currentTime = 0; } catch (e) {}
+    player.play().catch(() => {});
   }catch(e){}
 }
 const SFX_SOURCES = {
@@ -736,6 +780,7 @@ const ZombieSprites = {
   atlasImg: null,
   types: [],
   deathCommon: null,
+  spawnConfig: null,
   async load(){
     try{
       const res = await fetch('assets/zombies.json', {cache:'no-store'});
@@ -755,6 +800,17 @@ const ZombieSprites = {
         };
       } else {
         this.deathCommon = null;
+      }
+
+      if (data.spawn && typeof data.spawn === 'object') {
+        this.spawnConfig = {
+          targetAlive: Number(data.spawn.targetAlive),
+          sideCount: Number(data.spawn.sideCount),
+          perSideTarget: Number(data.spawn.perSideTarget),
+          perSideTolerance: Number(data.spawn.perSideTolerance),
+        };
+      } else {
+        this.spawnConfig = null;
       }
 
       this.types = (data.types || []).map(t => ({
@@ -789,6 +845,7 @@ const ZombieSprites = {
       this.atlasImg = null;
       this.types = [];
       this.deathCommon = null;
+      this.spawnConfig = null;
       this.error = String(e);
     }
   },
@@ -2145,6 +2202,61 @@ function assignZombieSlot(z, slotIndex, slotCount){
 
 const MAX_ZOMBIE_LEVEL = 60;
 
+function toSafeInt(value, fallback){
+  if (!Number.isFinite(value)) return fallback;
+  const n = Math.floor(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getZombieSpawnBalanceConfig(){
+  const cfg = ZombieSprites && ZombieSprites.spawnConfig ? ZombieSprites.spawnConfig : null;
+  const targetAlive = Math.max(1, toSafeInt(cfg?.targetAlive, BAL.zombieCountTarget));
+  const sideCount = Math.max(1, toSafeInt(cfg?.sideCount, BAL.zombieSideCount || 4));
+  const defaultPerSide = Math.max(1, Math.round(targetAlive / sideCount));
+  const perSideTarget = Math.max(1, toSafeInt(cfg?.perSideTarget, BAL.zombiePerSideTarget || defaultPerSide));
+  const perSideTolerance = Math.max(0, toSafeInt(cfg?.perSideTolerance, BAL.zombiePerSideTolerance || 5));
+  return {
+    targetAlive,
+    sideCount,
+    perSideTarget,
+    perSideMin: Math.max(0, perSideTarget - perSideTolerance),
+    perSideMax: perSideTarget + perSideTolerance,
+  };
+}
+
+function zombieSideForSlot(slotIndex, slotCount, sideCount){
+  const normalized = ((slotIndex % slotCount) + slotCount) % slotCount;
+  const ratio = normalized / Math.max(1, slotCount);
+  return Math.max(0, Math.min(sideCount - 1, Math.floor(ratio * sideCount)));
+}
+
+function pickMissingSlotBySide(missingBySide, aliveBySide, cfg){
+  const sideCount = cfg.sideCount;
+  let bestSide = -1;
+  let bestScore = -Infinity;
+  for (let side = 0; side < sideCount; side++){
+    const slots = missingBySide[side];
+    if (!slots || !slots.length) continue;
+    const alive = aliveBySide[side] || 0;
+    let score = cfg.perSideTarget - alive;
+    if (alive < cfg.perSideMin) score += 1000;
+    else if (alive > cfg.perSideMax) score -= 1000;
+    if (score > bestScore){
+      bestScore = score;
+      bestSide = side;
+    }
+  }
+  if (bestSide >= 0){
+    const slotIndex = missingBySide[bestSide].shift();
+    return { slotIndex, side: bestSide };
+  }
+  for (let side = 0; side < sideCount; side++){
+    const slots = missingBySide[side];
+    if (slots && slots.length) return { slotIndex: slots.shift(), side };
+  }
+  return { slotIndex: null, side: null };
+}
+
 function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const level = pickZombieLevel();
   const t = ZombieSprites.pickTypeByLevel ? ZombieSprites.pickTypeByLevel(level) : ZombieSprites.pickType();
@@ -2187,9 +2299,11 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
 }
 
 function ensureZombieCount(){
-  const target = BAL.zombieCountTarget;
+  const spawnCfg = getZombieSpawnBalanceConfig();
+  const target = spawnCfg.targetAlive;
   const slotCount = Math.max(1, target);
   const taken = new Set();
+  const aliveBySide = new Array(spawnCfg.sideCount).fill(0);
   let aliveCount = 0;
 
   for (const z of state.zombies){
@@ -2199,26 +2313,34 @@ function ensureZombieCount(){
       const idx = ((z.slotIndex % slotCount) + slotCount) % slotCount;
       z.slotIndex = idx;
       taken.add(idx);
+      const side = zombieSideForSlot(idx, slotCount, spawnCfg.sideCount);
+      aliveBySide[side] = (aliveBySide[side] || 0) + 1;
     }
   }
 
-  const missing = [];
+  const missingBySide = Array.from({ length: spawnCfg.sideCount }, () => []);
   for (let i=0;i<slotCount;i++){
-    if (!taken.has(i)) missing.push(i);
+    if (!taken.has(i)) {
+      const side = zombieSideForSlot(i, slotCount, spawnCfg.sideCount);
+      missingBySide[side].push(i);
+    }
   }
 
   for (const z of state.zombies){
     if (z.state === 'dying') continue;
     if (!Number.isFinite(z.slotIndex)){
-      const idx = missing.shift();
-      if (idx === undefined) break;
-      assignZombieSlot(z, idx, slotCount);
+      const nextSlot = pickMissingSlotBySide(missingBySide, aliveBySide, spawnCfg);
+      if (!Number.isFinite(nextSlot.slotIndex)) break;
+      assignZombieSlot(z, nextSlot.slotIndex, slotCount);
+      if (nextSlot.side != null) aliveBySide[nextSlot.side] = (aliveBySide[nextSlot.side] || 0) + 1;
     }
   }
 
   while (aliveCount < target){
-    const idx = missing.shift();
-    state.zombies.push(makeZombie(true, idx ?? aliveCount, slotCount));
+    const nextSlot = pickMissingSlotBySide(missingBySide, aliveBySide, spawnCfg);
+    const spawnIndex = Number.isFinite(nextSlot.slotIndex) ? nextSlot.slotIndex : aliveCount;
+    state.zombies.push(makeZombie(true, spawnIndex, slotCount));
+    if (nextSlot.side != null) aliveBySide[nextSlot.side] = (aliveBySide[nextSlot.side] || 0) + 1;
     aliveCount++;
   }
 }
@@ -3353,7 +3475,7 @@ function ensureTalentUI(){
       btn.style.setProperty('--row', def.row);
       btn.style.setProperty('--slot', def.slot);
       btn.innerHTML = `
-        <span class="talentNodeIcon" aria-hidden="true">${def.icon ? `<img src="${def.icon}" alt="" loading="lazy">` : (def.kind === 'active' ? '⚡' : '◆')}</span>
+        <span class="talentNodeIcon" aria-hidden="true">${def.icon ? `<img src="${def.icon}" alt="" loading="lazy">` : `<span class="talentNodeGlyph">${def.kind === 'active' ? '⚡' : '◆'}</span>`}</span>
         <span class="talentNodeRank" id="rank-${globalIdx}">0/${def.maxRank}</span>
       `;
       btn.title = `${def.name}\n${def.desc}`;
@@ -5920,6 +6042,14 @@ async function boot(){
   });
 
   await ZombieSprites.load();
+  if (ZombieSprites.spawnConfig) {
+    const spawnCfg = getZombieSpawnBalanceConfig();
+    BAL.zombieCountTarget = spawnCfg.targetAlive;
+    BAL.zombieSideCount = spawnCfg.sideCount;
+    BAL.zombiePerSideTarget = spawnCfg.perSideTarget;
+    BAL.zombiePerSideTolerance = Math.max(0, spawnCfg.perSideTarget - spawnCfg.perSideMin);
+    BAL.corpseMaxCount = Math.max(BAL.corpseMaxCount, spawnCfg.targetAlive);
+  }
   // optional tanks (won't break if missing)
   await TankSprites.load();
   FenceSprites.load().catch(() => {});

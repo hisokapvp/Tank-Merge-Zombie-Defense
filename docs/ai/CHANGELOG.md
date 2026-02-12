@@ -2,6 +2,20 @@
 
 ## 2026-02-12
 
+- PACK 1 (T1): спавн зомби переведён в data-driven режим через `assets/zombies.json.spawn`.
+	- добавлены поля `targetAlive`, `sideCount`, `perSideTarget`, `perSideTolerance`;
+	- `game.js` читает spawn-конфиг в `ZombieSprites.load()` и применяет в `BAL`;
+	- `ensureZombieCount()` балансирует слоты по сторонам (для 240: около 60 на сторону, допуск ±5).
+- PACK 1 (T2): offline modal в `src/ui/offlineModal.js` приведена к визуальному паттерну settings modal.
+	- сохранены и проверены правила: `Money/Деньги`, `$` и `⭐`, центр накопительного блока, кнопка claim внизу панели;
+	- RU/EN-ключи офлайн-модалки оставлены синхронными в `src/i18n/ru.json` и `src/i18n/en.json`.
+- PACK 1 (T3): talent tile UI обновлён.
+	- иконка таланта теперь заполняет плитку;
+	- счётчик ранга показан оверлеем в правом нижнем углу (readable badge).
+- PACK 1 (T4): исправлен риск пропадания shot SFX после длинной сессии/серии level-up.
+	- `playSfx()` переведён с `new Audio()` на переиспользуемые пулы (`SFX_POOLS`),
+	- добавлена синхронизация громкости для уже созданных SFX-плееров.
+
 - Создан базовый пакет `docs/ai/*` для навигации агента.
 - Добавлены карты: `README.md`, `INDEX.md`, `ARCHITECTURE.md`, `STYLE.md`.
 - Добавлены системные страницы (`SYSTEMS/*`): render/input/ui/assets/combat/save/telemetry/perf.

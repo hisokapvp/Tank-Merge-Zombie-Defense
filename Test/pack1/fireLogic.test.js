@@ -142,7 +142,7 @@ test('FL-22: game.js has _nextShotId', () => {
 
 test('FL-23: game.js has shotId in spawnProjectile', () => {
   const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
-  assert(gameJs.indexOf('shotId: p.shotId') !== -1, 'shotId passed through spawnProjectile');
+  assert(/shotId\s*=\s*p\.shotId|shotId:\s*p\.shotId/.test(gameJs), 'shotId passed through spawnProjectile');
 });
 
 test('FL-24: game.js has BARREL_SPREAD constant', () => {

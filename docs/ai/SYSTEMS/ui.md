@@ -53,9 +53,15 @@
 4. **Привести offline modal к текущему UI-стилю**
    - Эталон: settings modal (`menuPanel`, `menuSettings`, `menuRow`).
    - Проверить структуру offline modal в `src/ui/offlineModal.js`: центрированный блок накоплений и кнопка claim снизу.
+   - Для EN использовать `Money` (правило Money everywhere), суммы форматировать с `$` и `⭐` рядом с числом.
 
 5. **Обновить состояние кнопки покупки**
    - `src/ui/shopUI.js` + проверка с `Game.Garage.hasFreeCell`.
+
+6. **Обновить плитку таланта (talent tree)**
+   - Разметка узла в `game.js` (`ensureTalentUI`) + стили в `style.css`.
+   - Иконка должна заполнять tile, счётчик ранга — overlay в правом нижнем углу.
+   - Проверить читаемость счётчика для locked/applied/pending/maxed состояний.
 
 ## Don’t touch / risks
 
@@ -72,3 +78,6 @@
    - стиль панели соответствует settings modal палитре/рамке;
    - тексты `Money/Деньги`, иконки `$` и `⭐` рядом с числами;
    - кнопка claim расположена в нижней части панели.
+- Для talent tree дополнительно проверить:
+   - icon fill действительно заполняет tile;
+   - rank badge расположен bottom-right и остаётся читаемым на всех состояниях узла.
