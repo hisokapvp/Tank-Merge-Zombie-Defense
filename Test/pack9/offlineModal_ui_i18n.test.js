@@ -108,8 +108,8 @@ test('OM-4: fallback strings and formatter used when no i18n', () => {
   const model = OfflineModal.getUiModel({ w: 800, h: 600 });
 
   assertEqual(model.title, 'Посмотри рекламу и получи упущенное');
-  assertEqual(model.coinsText, 'Монет - N1200');
-  assertEqual(model.xpText, 'Опыта - N3400');
+  assertEqual(model.coinsText, 'Деньги: $ N1200');
+  assertEqual(model.xpText, 'Опыт: ⭐ N3400');
 });
 
 test('OM-5: close button closes without rewards; overlay click blocks', () => {
@@ -153,6 +153,20 @@ test('OM-5: close button closes without rewards; overlay click blocks', () => {
   };
   OfflineModal.handleInput(claimPoint);
   assertEqual(confirmed, 1, 'confirm on claim');
+});
+
+test('OM-6: accumulated block is centered and claim button is at bottom', () => {
+  OfflineModal.showOfflineRewardsModal({ coins: 500, xp: 250 });
+  const model = OfflineModal.getUiModel({ w: 900, h: 700 });
+
+  const panelCenterX = model.panel.x + model.panel.w / 2;
+  const accCenterX = model.accRect.x + model.accRect.w / 2;
+  const claimCenterX = model.claimRect.x + model.claimRect.w / 2;
+
+  assert(Math.abs(panelCenterX - accCenterX) < 0.01, 'accumulated block centered');
+  assert(Math.abs(panelCenterX - claimCenterX) < 0.01, 'claim button centered');
+  assert(model.claimRect.y > model.accRect.y + model.accRect.h, 'claim button below accumulated block');
+  assert(model.claimRect.y + model.claimRect.h <= model.panel.y + model.panel.h, 'claim button inside panel bottom');
 });
 
 console.log('\n═══════════════════════════');

@@ -27,6 +27,7 @@
 1. `docs/ai/SYSTEMS/ui.md`
 2. `index.html`, `style.css`
 3. `src/ui/*`, `src/accessibility/a11y.js`
+4. Для offline modal визуальный эталон: settings modal (`menuPanel`/`menuSettings` в `index.html` + `style.css`)
 
 ### combat, damage, projectiles
 
@@ -39,6 +40,7 @@
 1. `docs/ai/SYSTEMS/save.md`
 2. `src/persistence/storage.js`, `src/persistence/offlineProgress.js`
 3. `src/ui/continueFlow.js`, `src/ui/offlineModal.js`
+4. Любой текст offline modal синхронно править в `src/i18n/ru.json` и `src/i18n/en.json`
 
 ### assets, sprites, json configs
 

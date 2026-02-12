@@ -144,7 +144,7 @@
   ,"triageTelemetryAttached": "Телеметрия привязана"
   ,"offlineOfferTitle": "Посмотри рекламу и получи упущенное"
   ,"offlineOfferSub": "Накопилось:"
-  ,"offlineOfferCoins": "Монет - {value}"
-  ,"offlineOfferXp": "Опыта - {value}"
+  ,"offlineOfferCoins": "Деньги: $ {value}"
+  ,"offlineOfferXp": "Опыт: ⭐ {value}"
   ,"offlineOfferClaim": "Посмотреть и получить"
 }

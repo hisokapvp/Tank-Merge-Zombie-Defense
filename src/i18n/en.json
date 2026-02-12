@@ -144,7 +144,7 @@
   ,"triageTelemetryAttached": "Telemetry attached"
   ,"offlineOfferTitle": "Watch an ad and get missed rewards"
   ,"offlineOfferSub": "Accumulated:"
-  ,"offlineOfferCoins": "Coins - {value}"
-  ,"offlineOfferXp": "XP - {value}"
+  ,"offlineOfferCoins": "Money: $ {value}"
+  ,"offlineOfferXp": "XP: ⭐ {value}"
   ,"offlineOfferClaim": "Watch and claim"
 }

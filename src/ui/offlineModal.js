@@ -8,8 +8,8 @@
   var FALLBACK_STRINGS = {
     offlineOfferTitle: 'Посмотри рекламу и получи упущенное',
     offlineOfferSub: 'Накопилось:',
-    offlineOfferCoins: 'Монет - {value}',
-    offlineOfferXp: 'Опыта - {value}',
+    offlineOfferCoins: 'Деньги: $ {value}',
+    offlineOfferXp: 'Опыт: ⭐ {value}',
     offlineOfferClaim: 'Посмотреть и получить',
   };
 
@@ -89,27 +89,43 @@
     ctx.fillStyle = 'rgba(5, 10, 18, 0.7)';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = 'rgba(17, 30, 55, 0.96)';
+    var panelGradient = typeof ctx.createLinearGradient === 'function'
+      ? ctx.createLinearGradient(x0, y0, x0 + panelW, y0 + panelH)
+      : null;
+    if (panelGradient) {
+      panelGradient.addColorStop(0, 'rgba(30,20,14,.96)');
+      panelGradient.addColorStop(1, 'rgba(12,9,7,.98)');
+      ctx.fillStyle = panelGradient;
+    } else {
+      ctx.fillStyle = 'rgba(24, 16, 12, 0.97)';
+    }
     roundRect(ctx, x0, y0, panelW, panelH, 18);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.strokeStyle = 'rgba(255, 184, 114, 0.2)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    var y = y0 + 20;
+    var y = y0 + 34;
     ctx.fillStyle = '#eaf1ff';
-    ctx.font = 'bold 14px system-ui, Roboto, Arial';
+    ctx.font = '900 18px Roboto, system-ui, Arial';
     ctx.textAlign = 'center';
     ctx.fillText(ui.title, x0 + panelW / 2, y);
     y += 22;
-    ctx.font = '12px system-ui, Roboto, Arial';
+    ctx.font = '12px Roboto, system-ui, Arial';
     ctx.fillStyle = 'rgba(234,241,255,0.8)';
     ctx.fillText(ui.sub, x0 + panelW / 2, y);
-    y += 18;
-    ctx.fillText(ui.coinsText, x0 + panelW / 2, y);
-    y += 16;
-    ctx.fillText(ui.xpText, x0 + panelW / 2, y);
-    y += 28;
+
+    ctx.fillStyle = 'rgba(13, 9, 6, 0.72)';
+    roundRect(ctx, ui.accRect.x, ui.accRect.y, ui.accRect.w, ui.accRect.h, 14);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 184, 114, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(234,241,255,0.95)';
+    ctx.font = '700 13px Roboto, system-ui, Arial';
+    ctx.fillText(ui.coinsText, x0 + panelW / 2, ui.coinsY);
+    ctx.fillText(ui.xpText, x0 + panelW / 2, ui.xpY);
 
     state.buttonRect = ui.claimRect;
 
@@ -121,7 +137,7 @@
     ctx.stroke();
     ctx.fillStyle = '#1b1008';
     ctx.font = 'bold 12px system-ui, Roboto, Arial';
-    ctx.fillText(ui.claimText, x0 + panelW / 2, ui.claimRect.y + ui.claimRect.h / 2 + 1);
+    ctx.fillText(ui.claimText, x0 + panelW / 2, ui.claimRect.y + ui.claimRect.h / 2 + 4);
 
     ctx.strokeStyle = 'rgba(234,241,255,0.7)';
     ctx.lineWidth = 2;
@@ -138,17 +154,21 @@
   function getUiModel(viewport) {
     var w = viewport && viewport.w ? viewport.w : 800;
     var h = viewport && viewport.h ? viewport.h : 600;
-    var panelW = Math.min(360, w - PAD * 2);
-    var panelH = 220;
+    var panelW = Math.min(420, w - PAD * 2);
+    var panelH = 272;
     var x0 = (w - panelW) / 2;
     var y0 = (h - panelH) / 2;
     var formatNumber = resolveFormat();
     var coinsValue = formatNumber(state.coins);
     var xpValue = formatNumber(state.xp);
-    var btnW = Math.min(260, panelW - 32);
-    var btnH = 40;
+    var btnW = Math.min(280, panelW - 32);
+    var btnH = 42;
     var btnX = x0 + (panelW - btnW) / 2;
-    var btnY = y0 + 20 + 22 + 18 + 16 + 28;
+    var btnY = y0 + panelH - btnH - 20;
+    var accW = panelW - 56;
+    var accH = 86;
+    var accX = x0 + (panelW - accW) / 2;
+    var accY = y0 + Math.round((panelH - accH) / 2) - 2;
     var closeSize = 22;
     var closePad = 10;
 
@@ -160,6 +180,9 @@
       coinsText: resolveT('offlineOfferCoins', { value: coinsValue }),
       xpText: resolveT('offlineOfferXp', { value: xpValue }),
       claimText: state.claiming ? '...' : resolveT('offlineOfferClaim'),
+      accRect: { x: accX, y: accY, w: accW, h: accH },
+      coinsY: accY + 33,
+      xpY: accY + 62,
       claimRect: { x: btnX, y: btnY, w: btnW, h: btnH },
       closeRect: { x: x0 + panelW - closeSize - closePad, y: y0 + closePad, w: closeSize, h: closeSize },
     };

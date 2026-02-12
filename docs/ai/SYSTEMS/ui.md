@@ -48,8 +48,13 @@
 
 3. **Изменить тексты UI**
    - Править `src/i18n/ru.json` и `src/i18n/en.json` синхронно.
+   - Для offline modal обязательно поддерживать пару RU/EN (правило RU/EN always).
 
-4. **Обновить состояние кнопки покупки**
+4. **Привести offline modal к текущему UI-стилю**
+   - Эталон: settings modal (`menuPanel`, `menuSettings`, `menuRow`).
+   - Проверить структуру offline modal в `src/ui/offlineModal.js`: центрированный блок накоплений и кнопка claim снизу.
+
+5. **Обновить состояние кнопки покупки**
    - `src/ui/shopUI.js` + проверка с `Game.Garage.hasFreeCell`.
 
 ## Don’t touch / risks
@@ -63,3 +68,7 @@
 - Ручной: открыть/закрыть все модалки, проверить Escape/Tab.
 - Локализация: переключение RU/EN обновляет текст.
 - Тесты: `node Test/pack1/mergePopup.test.js`, `node Test/pack9/offlineModal_ui_i18n.test.js`.
+- Для offline modal дополнительно проверить:
+   - стиль панели соответствует settings modal палитре/рамке;
+   - тексты `Money/Деньги`, иконки `$` и `⭐` рядом с числами;
+   - кнопка claim расположена в нижней части панели.

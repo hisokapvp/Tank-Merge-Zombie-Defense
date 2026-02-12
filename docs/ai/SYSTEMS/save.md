@@ -48,6 +48,8 @@
 
 4. **Обновить текст/рендер offline modal**
    - `src/ui/offlineModal.js` + i18n ключи.
+   - Визуальный reference брать из settings modal (`menuPanel/menuSettings`).
+   - Тексты править только парой RU/EN (`Деньги/Money`), иконки `$`/`⭐` держать рядом с числами.
 
 ## Don’t touch / risks
 
@@ -60,3 +62,4 @@
 - `node Test/pack8/offlineProgress.test.js`
 - `node Test/pack9/offlineModal_ui_i18n.test.js`
 - Ручной сценарий: свернуть вкладку > 5 мин, вернуться, получить офлайн-награду.
+- UI-check offline modal: накопительный блок по центру, кнопка claim снизу.
