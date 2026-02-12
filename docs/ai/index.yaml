@@ -1,0 +1,85 @@
+version: 1
+updated_at: 2026-02-12
+entrypoints:
+  boot:
+    file: game.js
+    symbol: boot
+  loop:
+    file: game.js
+    symbol: loop
+  draw:
+    file: game.js
+    symbol: draw
+systems:
+  render:
+    doc: docs/ai/SYSTEMS/render.md
+    tags: [render, canvas, fps]
+    files:
+      - game.js
+      - src/render/canvasRoot.js
+      - src/perf/mobileMode.js
+  input:
+    doc: docs/ai/SYSTEMS/input.md
+    tags: [input, pointer, dragdrop]
+    files:
+      - game.js
+      - src/render/input.js
+      - src/mechanics/trackQuery.js
+  ui:
+    doc: docs/ai/SYSTEMS/ui.md
+    tags: [ui, modal, hud, a11y]
+    files:
+      - index.html
+      - style.css
+      - src/ui
+      - src/accessibility/a11y.js
+  assets:
+    doc: docs/ai/SYSTEMS/assets.md
+    tags: [assets, sprites, config]
+    files:
+      - assets/tanks.json
+      - assets/zombies.json
+      - assets/fence.json
+      - assets/decor.json
+      - game.js
+  combat:
+    doc: docs/ai/SYSTEMS/combat.md
+    tags: [combat, projectile, damage]
+    files:
+      - src/mechanics/combat.js
+      - src/mechanics/targeting.js
+      - src/mechanics/corpseDespawn.js
+      - game.js
+  save:
+    doc: docs/ai/SYSTEMS/save.md
+    tags: [save, offline, persistence]
+    files:
+      - src/persistence/storage.js
+      - src/persistence/offlineRewardModel.js
+      - src/persistence/offlineProgress.js
+      - src/ui/continueFlow.js
+      - src/ui/offlineModal.js
+      - game.js
+  telemetry:
+    doc: docs/ai/SYSTEMS/telemetry.md
+    tags: [telemetry, analytics, flags, experiments]
+    files:
+      - src/utils/telemetry.js
+      - src/telemetry/telemetry.js
+      - src/analytics/collector.js
+      - src/analytics/funnel.js
+      - src/flags/flags.js
+      - src/experiments/experiments.js
+  perf:
+    doc: docs/ai/SYSTEMS/perf.md
+    tags: [perf, profiling, mobile]
+    files:
+      - src/perf/mobileMode.js
+      - src/perf/objectPool.js
+      - src/perf/profiler.js
+playbooks:
+  - docs/ai/PLAYBOOKS/add-ui-widget.md
+  - docs/ai/PLAYBOOKS/change-input-control.md
+  - docs/ai/PLAYBOOKS/add-asset-variant.md
+  - docs/ai/PLAYBOOKS/change-combat-balance.md
+  - docs/ai/PLAYBOOKS/debug-lag.md
