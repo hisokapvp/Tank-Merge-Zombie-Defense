@@ -11,6 +11,10 @@
 	- для offline modal добавлен reference на settings modal как UI-эталон;
 	- зафиксировано правило RU/EN always для UI-текстов;
 	- добавлены проверки для `Money/Деньги`, иконок `$` и `⭐`, и layout (центр блока + кнопка снизу).
+- PACK 2: добавлен `src/render/layout/hangarLayout.js` для track-safe расчёта радиусов ангара/треков с `marginRatio` от canvas.
+- PACK 2: `drawFence()` использует `clipRoundedRect()` с fallback clip скруглённого прямоугольника.
+- PACK 2: в `assets/fence.json` добавлено поле `frames[].scale` (включая `0.75` для side-кадров), scale применяется в рендере без clamp.
+- PACK 2: учёт fence scale добавлен в `zombieFenceLimit()`, сегменты забора пересобираются при изменении геометрии.
 
 ## Формат записей
 

@@ -88,6 +88,7 @@ const BAL = {
   // Zombie ring
   zombieTrackRadius: 340,
   zombieTrackWidth: 22,
+  hangarMarginRatio: 0.06,
   fenceRadius: 0,
   fenceWidth: 20,
   fenceKeepout: 12,
@@ -163,6 +164,7 @@ const BASE_BAL = {
   boardPad: 8,
   zombieTrackRadius: 340,
   zombieTrackWidth: 22,
+  hangarMarginRatio: 0.06,
   fenceWidth: 20,
   fenceKeepout: 12,
   zombieFencePush: 24,
@@ -919,6 +921,7 @@ const FenceSprites = {
   ready: false,
   error: '',
   atlasImg: null,
+  maxFrameScale: 1,
   framesById: new Map(),
   async load(){
     try{
@@ -929,10 +932,20 @@ const FenceSprites = {
       const img = await loadImage(atlasPath);
       this.atlasImg = img;
       this.framesById.clear();
+      this.maxFrameScale = 1;
       const autoIds = [];
       for (const f of (data.frames || [])){
         const id = f.id || String(this.framesById.size);
-        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.h ?? 32, h: f.h ?? 32, anchor: f.anchor || { x: 0.5, y: 0.5 } });
+        const frameScale = Number.isFinite(f.scale) ? f.scale : 1;
+        this.framesById.set(id, {
+          x: f.x ?? 0,
+          y: f.y ?? 0,
+          w: f.w ?? 32,
+          h: f.h ?? 32,
+          scale: frameScale,
+          anchor: f.anchor || { x: 0.5, y: 0.5 }
+        });
+        if (Number.isFinite(frameScale)) this.maxFrameScale = Math.max(this.maxFrameScale, frameScale);
         autoIds.push(id);
       }
       // Авто-инициализация BAL.fenceSpriteIds, если пустой
@@ -948,6 +961,7 @@ const FenceSprites = {
     }catch(e){
       this.ready = false;
       this.atlasImg = null;
+      this.maxFrameScale = 1;
       this.framesById.clear();
       this.error = String(e);
     }
@@ -1080,14 +1094,39 @@ function initBoard(){
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
-  const hangarRadius = Math.max(totalW, totalH) / 2 + 12;
-  const orbitPad = Math.max(10, 24 + BAL.tankTrackWidth);
-  const fencePad = 24;
-  const trackPad = 18;
-  BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
-  BAL.fenceRadius = BAL.tankOrbitRadius + fencePad;
-  BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + trackPad;
   BAL.zombieTrackWidth = Math.max(12, 14 * balScale);
+  const layoutApi = window.Game && window.Game.HangarLayout;
+  const computeLayout = layoutApi && layoutApi.computeHangarTrackLayout;
+  if (typeof computeLayout === 'function') {
+    const layout = computeLayout({
+      boardW: totalW,
+      boardH: totalH,
+      viewW: viewSize.w,
+      viewH: viewSize.h,
+      tankTrackWidth: BAL.tankTrackWidth,
+      fenceWidth: BAL.fenceWidth,
+      zombieTrackWidth: BAL.zombieTrackWidth,
+      marginRatio: BAL.hangarMarginRatio,
+      hangarPad: 12,
+      orbitPad: Math.max(10, 24 + BAL.tankTrackWidth),
+      fencePad: 24,
+      trackPad: 18,
+      minTankOrbitRadius: 110,
+    });
+    BAL.tankOrbitRadius = layout.tankOrbitRadius;
+    BAL.fenceRadius = layout.fenceRadius;
+    BAL.zombieTrackRadius = layout.zombieTrackRadius;
+  } else {
+    const hangarRadius = Math.hypot(totalW * 0.5, totalH * 0.5) + 12;
+    const orbitPad = Math.max(10, 24 + BAL.tankTrackWidth);
+    const fencePad = 24;
+    const trackPad = 18;
+    BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
+    BAL.fenceRadius = BAL.tankOrbitRadius + fencePad;
+    BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + trackPad;
+  }
+  state.fenceSegments = [];
+  state.fenceSegmentsMeta = null;
 
   if (state.crate){
     const cell = state.cells[state.crate.cellIndex];
@@ -2212,12 +2251,56 @@ function zombieCollisionRadius(z){
   return baseSize * scale * 0.28;
 }
 
+function resolveFenceFrameScale(frame){
+  return Number.isFinite(frame?.scale) ? frame.scale : 1;
+}
+
+function getFenceCollisionPadding(){
+  const spriteKeys = resolveFenceSpriteKeys();
+  if (!FenceSprites.ready || !spriteKeys) return 0;
+
+  const entries = [
+    { id: spriteKeys.cornerTL, kind: 'cornerTL' },
+    { id: spriteKeys.cornerTR, kind: 'cornerTR' },
+    { id: spriteKeys.cornerBR, kind: 'cornerBR' },
+    { id: spriteKeys.cornerBL, kind: 'cornerBL' },
+    { id: spriteKeys.sideTop, kind: 'sideTop' },
+    { id: spriteKeys.sideRight, kind: 'sideRight' },
+    { id: spriteKeys.sideBottom, kind: 'sideBottom' },
+    { id: spriteKeys.sideLeft, kind: 'sideLeft' },
+  ];
+
+  let maxOutward = 0;
+  for (const entry of entries){
+    const frame = FenceSprites.pickFrame(entry.id);
+    if (!frame) continue;
+
+    const drawScale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2 * resolveFenceFrameScale(frame);
+    const drawW = frame.w * drawScale;
+    const drawH = frame.h * drawScale;
+    const ax = frame.anchor?.x ?? 0.5;
+    const ay = frame.anchor?.y ?? 0.5;
+
+    if (entry.kind === 'sideTop') maxOutward = Math.max(maxOutward, drawH * ay);
+    else if (entry.kind === 'sideBottom') maxOutward = Math.max(maxOutward, drawH * (1 - ay));
+    else if (entry.kind === 'sideLeft') maxOutward = Math.max(maxOutward, drawW * ax);
+    else if (entry.kind === 'sideRight') maxOutward = Math.max(maxOutward, drawW * (1 - ax));
+    else if (entry.kind === 'cornerTL') maxOutward = Math.max(maxOutward, drawW * ax, drawH * ay);
+    else if (entry.kind === 'cornerTR') maxOutward = Math.max(maxOutward, drawW * (1 - ax), drawH * ay);
+    else if (entry.kind === 'cornerBR') maxOutward = Math.max(maxOutward, drawW * (1 - ax), drawH * (1 - ay));
+    else if (entry.kind === 'cornerBL') maxOutward = Math.max(maxOutward, drawW * ax, drawH * (1 - ay));
+  }
+
+  return maxOutward;
+}
+
 function zombieFenceLimit(z){
   const halfSide = BAL.fenceRadius;
+  const collisionPad = typeof getFenceCollisionPadding === 'function' ? getFenceCollisionPadding() : 0;
   const dx = Math.cos(z.theta ?? 0);
   const dy = Math.sin(z.theta ?? 0);
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-  return halfSide / denom + BAL.fenceKeepout + zombieCollisionRadius(z);
+  return halfSide / denom + BAL.fenceKeepout + collisionPad + zombieCollisionRadius(z);
 }
 
 function startZombieDying(z){
@@ -3848,15 +3931,26 @@ function drawZombieFence(){
   ctx.translate(center.x, center.y);
 
   if (useSprites){
-    if (!state.fenceSegments || state.fenceSegments.length === 0 || state.fenceSegments[0].x == null || state.fenceSegments[0].y == null){
+    const spriteHash = Object.values(spriteKeys).join('|');
+    const needRebuild =
+      !state.fenceSegments ||
+      state.fenceSegments.length === 0 ||
+      state.fenceSegments[0].x == null ||
+      state.fenceSegments[0].y == null ||
+      !state.fenceSegmentsMeta ||
+      state.fenceSegmentsMeta.halfSide !== halfSide ||
+      state.fenceSegmentsMeta.fenceWidth !== BAL.fenceWidth ||
+      state.fenceSegmentsMeta.spriteHash !== spriteHash;
+    if (needRebuild){
       state.fenceSegments = buildSquareFenceSegments(halfSide, BAL.fenceWidth, spriteKeys);
+      state.fenceSegmentsMeta = { halfSide, fenceWidth: BAL.fenceWidth, spriteHash };
     }
     for (const seg of state.fenceSegments){
       const frame = FenceSprites.pickFrame(seg.spriteId);
       if (!frame || !FenceSprites.atlasImg) continue;
       ctx.save();
       ctx.translate(seg.x, seg.y);
-      const scale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2;
+      const scale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2 * resolveFenceFrameScale(frame);
       const ax = frame.anchor?.x ?? 0.5;
       const ay = frame.anchor?.y ?? 0.5;
       ctx.drawImage(
@@ -3869,6 +3963,7 @@ function drawZombieFence(){
     }
   } else {
     state.fenceSegments = [];
+    state.fenceSegmentsMeta = null;
     const size = halfSide * 2;
     ctx.lineJoin = 'miter';
     ctx.miterLimit = 4;
@@ -3961,8 +4056,7 @@ function drawFence(br){
   ctx.save();
 
   // Clip to board rect so corner posts don't overlap the road (T2)
-  ctx.beginPath();
-  rr(ctx, br.x, br.y, br.w, br.h, 16);
+  clipRoundedRect(ctx, br.x, br.y, br.w, br.h, 16);
   ctx.clip();
 
   const pad = 8;
@@ -3995,6 +4089,22 @@ function drawFence(br){
   ctx.beginPath(); ctx.moveTo(x1, y0); ctx.lineTo(x1, y1); ctx.stroke();
 
   ctx.restore();
+}
+
+function clipRoundedRect(targetCtx, x, y, w, h, r){
+  if (!targetCtx) return;
+  if (typeof rr === 'function'){
+    rr(targetCtx, x, y, w, h, r);
+    return;
+  }
+  const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+  targetCtx.beginPath();
+  targetCtx.moveTo(x + radius, y);
+  targetCtx.arcTo(x + w, y, x + w, y + h, radius);
+  targetCtx.arcTo(x + w, y + h, x, y + h, radius);
+  targetCtx.arcTo(x, y + h, x, y, radius);
+  targetCtx.arcTo(x, y, x + w, y, radius);
+  targetCtx.closePath();
 }
 
 function drawBoard(){

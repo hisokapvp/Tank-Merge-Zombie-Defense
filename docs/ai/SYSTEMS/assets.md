@@ -30,6 +30,8 @@
 
 - `tanks.json`: `body/bodies/cannons/levels`.
 - `zombies.json`: `atlas/deathCommon/types[]`.
+- `fence.json`: `frames[].scale` поддерживается без clamp (например `0.75`).
+- `fence.json`: обязательные `corner*` и `side*` ids используются для квадратного забора.
 - Обязательна валидная JSON структура; health check проверяет parse.
 
 ## Common edits
@@ -43,6 +45,7 @@
 3. **Изменить декор/забор**
    - Обновить `assets/decor.json` или `assets/fence.json`.
    - Проверить fallback в `game.js` при пустых списках.
+   - Для fence визуальный `scale` влияет и на рендер, и на bounds/avoid зомби.
 
 4. **Переключить визуал по флагу**
    - Использовать `flag`-зависимые ветки в `src/utils/tankConfig.js`.
@@ -57,4 +60,4 @@
 
 - `node ops/monitoring/health_check.js --root .`
 - Ручной: старт игры без ошибок загрузки ассетов в консоли.
-- Регресс: `node Test/pack7/fenceAssetsCornersSides.test.js` и смежные визуальные тесты fence.
+- Регресс: `node Test/pack7/fenceAssetsCornersSides.test.js`, `node Test/pack7/fenceCornerSlots.test.js`, `node Test/pack7/fenceSquareGeometry.test.js`.

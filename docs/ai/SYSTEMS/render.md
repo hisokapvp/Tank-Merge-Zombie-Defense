@@ -14,6 +14,7 @@
 
 - `game.js`
 - `src/render/canvasRoot.js`
+- `src/render/layout/hangarLayout.js`
 - `src/render/tankPortrait.js`
 - `src/perf/mobileMode.js`
 - `style.css` (layout контейнера canvas)
@@ -27,6 +28,8 @@
 ## Data & config
 
 - Баланс и визуальные параметры в `BAL` внутри `game.js`.
+- Геометрия ангара/треков считается через `Game.HangarLayout.computeHangarTrackLayout`.
+- Для safe-zone используется `BAL.hangarMarginRatio` (доля от меньшей стороны canvas).
 - Лимиты качества (`maxParticles`, `maxDecals`) вычисляются в `loop()` по FPS/mobile mode.
 - Mobile настройки: `Game.MobileMode` (`getFpsCap`, `getFxLevel`, `getFxScale`).
 
@@ -42,8 +45,13 @@
 3. **Подправить масштаб/адаптив canvas**
    - Редактировать `resizeCanvas()` в `game.js`.
    - Если нужен общий helper — синхронизировать с `src/render/canvasRoot.js`.
+   - Геометрию ангара и радиусов треков менять в `src/render/layout/hangarLayout.js`.
 
-4. **Снизить нагрузку на слабых устройствах**
+4. **Клип и скругление ангара**
+   - Основной helper пути: `rr()` в `game.js`.
+   - Для clip используется `clipRoundedRect()` (имеет fallback через `arcTo`, если `rr` недоступен).
+
+5. **Снизить нагрузку на слабых устройствах**
    - Изменять `src/perf/mobileMode.js` и ветку quality в `loop()`.
 
 ## Don’t touch / risks

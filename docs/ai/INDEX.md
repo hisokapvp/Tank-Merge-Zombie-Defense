@@ -14,7 +14,7 @@
 
 1. `docs/ai/SYSTEMS/render.md`
 2. `game.js` (`draw`, `loop`, `resizeCanvas`)
-3. `src/render/canvasRoot.js`, `src/perf/mobileMode.js`
+3. `src/render/canvasRoot.js`, `src/render/layout/hangarLayout.js`, `src/perf/mobileMode.js`
 
 ### input, drag-drop, управление
 
