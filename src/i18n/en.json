@@ -142,4 +142,9 @@
   ,"triageAttachTelemetry": "Attach telemetry"
   ,"triageRemove": "Remove"
   ,"triageTelemetryAttached": "Telemetry attached"
+  ,"offlineOfferTitle": "Watch an ad and get missed rewards"
+  ,"offlineOfferSub": "Accumulated:"
+  ,"offlineOfferCoins": "Coins - {value}"
+  ,"offlineOfferXp": "XP - {value}"
+  ,"offlineOfferClaim": "Watch and claim"
 }

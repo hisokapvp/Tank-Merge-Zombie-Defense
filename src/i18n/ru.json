@@ -142,4 +142,9 @@
   ,"triageAttachTelemetry": "Привязать телеметрию"
   ,"triageRemove": "Удалить"
   ,"triageTelemetryAttached": "Телеметрия привязана"
+  ,"offlineOfferTitle": "Посмотри рекламу и получи упущенное"
+  ,"offlineOfferSub": "Накопилось:"
+  ,"offlineOfferCoins": "Монет - {value}"
+  ,"offlineOfferXp": "Опыта - {value}"
+  ,"offlineOfferClaim": "Посмотреть и получить"
 }
