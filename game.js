@@ -1494,6 +1494,22 @@ const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика']
 const TALENT_DEFS = [];
 const ACTIVE_TALENT_INDEX = [null, null, null];
 
+function sanitizeTalentIconBaseName(name){
+  // Keep it stable and filesystem-safe (Windows + web servers)
+  return String(name || '')
+    .trim()
+    .replace(/[:\\/]/g, ' ')
+    .replace(/[<>"|?*]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 80) || 'talent';
+}
+
+function talentIconPath(name){
+  return `assets/Telent_icon/${sanitizeTalentIconBaseName(name)}.png`;
+}
+
 // Talent tree layout: row, slot (column 0-2), parents (indices within branch)
 // Pattern: 3+3+3+3+2+2+1 = 17 talents per branch
 // Row gating: row N requires N*5 points spent in branch
@@ -1537,7 +1553,7 @@ function addTalent(branch, name, desc, maxRank, kind, apply){
   const prev = ACTIVE_TALENT_INDEX[branch];
   const idx = TALENT_DEFS.filter(d => d.branch === branch).length;
   const layout = TALENT_LAYOUT[idx] || { row: 0, slot: 1, parents: [] };
-  const def = { id, branch, name, desc, maxRank, prev, kind, apply, row: layout.row, slot: layout.slot, parents: layout.parents };
+  const def = { id, branch, name, desc, maxRank, prev, kind, apply, row: layout.row, slot: layout.slot, parents: layout.parents, icon: talentIconPath(name) };
   TALENT_DEFS.push(def);
   ACTIVE_TALENT_INDEX[branch] = TALENT_DEFS.length - 1;
 }
@@ -3254,7 +3270,7 @@ function ensureTalentUI(){
       btn.style.setProperty('--row', def.row);
       btn.style.setProperty('--slot', def.slot);
       btn.innerHTML = `
-        <span class="talentNodeIcon">${def.kind === 'active' ? '⚡' : '◆'}</span>
+        <span class="talentNodeIcon" aria-hidden="true">${def.icon ? `<img src="${def.icon}" alt="" loading="lazy">` : (def.kind === 'active' ? '⚡' : '◆')}</span>
         <span class="talentNodeRank" id="rank-${globalIdx}">0/${def.maxRank}</span>
       `;
       btn.title = `${def.name}\n${def.desc}`;
