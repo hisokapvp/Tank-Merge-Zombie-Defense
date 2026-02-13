@@ -13,6 +13,8 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --ui-scale: clamp(0.95, 0.92 + 0.65vw, 1.22);
+  --ui-btn-transition: .2s;
+  --ui-btn-press-shift: 2px;
 }
 *{box-sizing:border-box}
 body{
@@ -761,6 +763,7 @@ body.menu-open .stageUi .hudItem{
   gap:2px;
   transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
   position:relative;
+  overflow:visible;
 }
 .talentNode:hover:not(:disabled){
   transform:scale(1.08);
@@ -794,8 +797,8 @@ body.menu-open .stageUi .hudItem{
 }
 .talentNodeRank{
   position:absolute;
-  right:3px;
-  bottom:3px;
+  right:-2px;
+  bottom:-2px;
   min-width:18px;
   padding:1px 4px;
   border-radius:10px;
@@ -806,6 +809,7 @@ body.menu-open .stageUi .hudItem{
   background:rgba(8,10,14,.82);
   border:1px solid rgba(255,255,255,.18);
   text-align:center;
+  z-index:3;
 }
 
 /* Talent node states */
@@ -1140,6 +1144,50 @@ body.menu-open .stageUi .hudItem{
 .debugBtn.secondary{ background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
 .debugBtn.active{ background: rgba(255,184,114,.35); border-color: rgba(255,184,114,.5); }
 
+/* Unified button behavior layer (skins can differ, behavior is shared) */
+.uiButtonBehavior{
+  transition:
+    transform var(--ui-btn-transition) ease,
+    box-shadow var(--ui-btn-transition) ease,
+    filter var(--ui-btn-transition) ease,
+    background-color var(--ui-btn-transition) ease,
+    border-color var(--ui-btn-transition) ease,
+    opacity var(--ui-btn-transition) ease;
+  touch-action: manipulation;
+}
+.uiButtonBehavior:focus-visible{
+  outline: 2px solid rgba(166, 212, 255, 0.92);
+  outline-offset: 2px;
+}
+.uiButtonBehavior:disabled,
+.uiButtonBehavior[aria-disabled="true"]{
+  transform: none !important;
+  filter: saturate(0.6);
+}
+@media (hover: hover) and (pointer: fine){
+  .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover{
+    filter: brightness(1.12);
+    transform: translateY(-2px) scale(1.01);
+  }
+  .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after{
+    transform: translateX(120%) rotate(8deg);
+    opacity: 1;
+  }
+}
+@media (hover: none), (pointer: coarse){
+  .uiButtonBehavior:hover,
+  .uiButtonBehavior:hover::after{
+    filter: none;
+    transform: none;
+    opacity: 0;
+  }
+}
+.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed{
+  transform: translateY(var(--ui-btn-press-shift)) !important;
+  box-shadow: 0 6px 0 rgba(0,0,0,.18) !important;
+}
+
 .debugSelect, .debugInput{
   width: 100%;
   max-width: 100%;
@@ -1223,6 +1271,7 @@ body.menu-open .stageUi .hudItem{
   .btn::after,
   .btnPrimary,
   .menuPanel,
+  .uiButtonBehavior,
   body::before{
     animation:none !important;
     transition:none !important;

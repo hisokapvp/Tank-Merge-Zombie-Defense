@@ -15,6 +15,7 @@
 1. `docs/ai/SYSTEMS/render.md`
 2. `game.js` (`draw`, `loop`, `resizeCanvas`)
 3. `src/render/canvasRoot.js`, `src/render/layout/hangarLayout.js`, `src/perf/mobileMode.js`
+4. Centerline + road↔fence gap: `game.js` (`getTankOrbitRadius`, `tankOrbitState`, `initBoard`, `drawTankTrack`, `drawZombieFence`)
 
 ### input, drag-drop, управление
 
@@ -28,6 +29,8 @@
 2. `index.html`, `style.css`
 3. `src/ui/*`, `src/accessibility/a11y.js`
 4. Для offline modal визуальный эталон: settings modal (`menuPanel`/`menuSettings` в `index.html` + `style.css`)
+5. Единый button behavior: `src/ui/buttonBehavior.js` + `.uiButtonBehavior` в `style.css`
+6. Talent badge: `style.css` (`.talentNode`, `.talentNodeRank`) + `game.js` (`ensureTalentUI`)
 
 ### combat, damage, projectiles
 

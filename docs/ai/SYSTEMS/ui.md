@@ -14,6 +14,7 @@
 
 - `index.html`
 - `style.css`
+- `src/ui/buttonBehavior.js`
 - `src/ui/mergePopup.js`
 - `src/ui/offlineModal.js`
 - `src/ui/continueFlow.js`
@@ -39,6 +40,7 @@
 1. **Добавить кнопку в HUD/меню**
    - Разметка: `index.html`.
    - Стили: `style.css`.
+   - Поведение (hover/pressed/focus/disabled): `src/ui/buttonBehavior.js` + `.uiButtonBehavior` в `style.css`.
    - Обработчик: `boot()` в `game.js` или отдельный `src/ui/*.js` модуль.
 
 2. **Добавить новую модалку**
@@ -61,7 +63,33 @@
 6. **Обновить плитку таланта (talent tree)**
    - Разметка узла в `game.js` (`ensureTalentUI`) + стили в `style.css`.
    - Иконка должна заполнять tile, счётчик ранга — overlay в правом нижнем углу.
+    - Для badge использовать bottom-right c offset `right:-2px`, `bottom:-2px` (допустим 1–2px), `overflow:visible` у `.talentNode`.
    - Проверить читаемость счётчика для locked/applied/pending/maxed состояний.
+
+## Unified button behavior (PACK 1)
+
+- Базовый behavior-layer: `src/ui/buttonBehavior.js`.
+   - Авто-декорирует все `button` и динамически добавленные кнопки (через `MutationObserver`) классом `.uiButtonBehavior`.
+   - Добавляет touch/pointer pressed-класс `.is-pressed` на `pointerdown` и снимает на `pointerup/pointercancel`.
+- Базовые стили состояний: `style.css` (`.uiButtonBehavior`).
+   - `hover` применяется только для pointer-устройств (`@media (hover: hover) and (pointer: fine)`).
+   - `pressed` обязателен для touch и pointer (`:active` + `.is-pressed`).
+   - `focus-visible` имеет явный outline.
+   - `disabled` блокирует hover/pressed-transform.
+- Правило: **скины кнопок могут отличаться (цвет/фон/иконка), но поведение и анимация одинаковые**.
+
+## Overlay/popup map
+
+- Main menu overlay: `index.html` (`#menuOverlay`), управление в `game.js` (`setMenuOpen`).
+- Level-up modal: `index.html` (`#levelModal`), управление в `game.js` (`showLevelModal`, `acceptLevelReward`).
+- Boost modal: `index.html` (`#boostModal`), управление в `game.js`.
+- Dismantle modal: `index.html` (`#dismantleModal`), управление в `game.js`.
+- Reset talents modal: `index.html` (`#resetTalentsModal`), управление в `game.js`.
+- Crate modal: `index.html` (`#crateModal`), управление в `game.js`.
+- Talent tree overlay/modal: создаётся в `game.js` (`ensureTalentUI`).
+- Merge popup modal: `index.html` + логика в `src/ui/mergePopup.js`.
+- Offline rewards modal: `src/ui/offlineModal.js`.
+- Lesson progress panel (dialog-like): `index.html` + `src/ui/lessonProgress.js`.
 
 ## Don’t touch / risks
 
@@ -80,4 +108,14 @@
    - кнопка claim расположена в нижней части панели.
 - Для talent tree дополнительно проверить:
    - icon fill действительно заполняет tile;
-   - rank badge расположен bottom-right и остаётся читаемым на всех состояниях узла.
+   - rank badge расположен bottom-right с выступом 1–2px и остаётся читаемым на всех состояниях узла.
+
+### PACK 1 visual checklist
+
+- [ ] Все кнопки в HUD/меню и в overlay/popup имеют одинаковые transition/состояния.
+- [ ] На desktop hover есть только на pointer-устройствах.
+- [ ] На touch есть явный pressed-отклик без hover.
+- [ ] `focus-visible` у кнопок видим и читаем.
+- [ ] `disabled` не получает hover/pressed-эффекты.
+- [ ] Talent rank badge выступает на 1–2px (bottom-right).
+- [ ] Значения `0/1`, `0/5`, `10/10` не обрезаются в talent badge.

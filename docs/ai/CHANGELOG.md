@@ -2,6 +2,22 @@
 
 ## 2026-02-12
 
+- PACK 1 (UI parity): добавлен единый behavior-layer для всех UI-кнопок.
+	- `src/ui/buttonBehavior.js`: авто-декорирование `button` (+ динамические через MutationObserver), touch/pointer pressed (`.is-pressed`);
+	- `style.css`: `.uiButtonBehavior` с общими состояниями `hover` (pointer-only), `pressed`, `focus-visible`, `disabled`.
+	- `index.html`: подключён `src/ui/buttonBehavior.js`.
+- PACK 1 (Talents badge): `style.css`
+	- `.talentNode` переведён в `overflow:visible`;
+	- `.talentNodeRank` смещён в bottom-right с выступом `right:-2px`, `bottom:-2px`.
+- PACK 1 (Centerline + fence gap): `game.js`
+	- движение танков по centerline (`getTankOrbitRadius()` возвращает `BAL.tankOrbitRadius`);
+	- добавлен `BAL.roadFenceGap` (world-scale clamp 6–12px);
+	- `initBoard()` считает `fencePad` с учётом дорожного зазора;
+	- `drawTankTrack()` клипуется внутри fence с отступом;
+	- порядок `draw()` изменён: `drawTankTrack()` перед `drawZombieFence()`.
+
+- Обновлены docs: `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`.
+
 - PACK 1 (T1): спавн зомби переведён в data-driven режим через `assets/zombies.json.spawn`.
 	- добавлены поля `targetAlive`, `sideCount`, `perSideTarget`, `perSideTolerance`;
 	- `game.js` читает spawn-конфиг в `ZombieSprites.load()` и применяет в `BAL`;

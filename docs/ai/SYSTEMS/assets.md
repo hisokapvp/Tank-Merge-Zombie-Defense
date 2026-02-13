@@ -56,6 +56,7 @@
    - Обновить `assets/decor.json` или `assets/fence.json`.
    - Проверить fallback в `game.js` при пустых списках.
    - Для fence визуальный `scale` влияет и на рендер, и на bounds/avoid зомби.
+   - Для зазора дорога↔fence (6–12px world-scale) правки в геометрии/клипе делать в `game.js` (`initBoard`, `drawTankTrack`), не в `fence.json`.
 
 5. **Переключить визуал по флагу**
    - Использовать `flag`-зависимые ветки в `src/utils/tankConfig.js`.

@@ -19,6 +19,17 @@
 - `src/perf/mobileMode.js`
 - `style.css` (layout контейнера canvas)
 
+## Centerline & fence gap (PACK 1)
+
+- Центр трассы танков: `game.js` → `getTankOrbitRadius()` и `tankOrbitState()`.
+   - Движение по centerline: используется радиус `BAL.tankOrbitRadius` (без смещения к краю).
+- Геометрия зазора дорога↔fence: `game.js` → `initBoard()`.
+   - `fencePad` считается как `max(24, BAL.tankTrackWidth * 1.1 + BAL.roadFenceGap)`.
+   - `BAL.roadFenceGap` масштабируется с миром в диапазоне 6–12px.
+- Визуальный клип дороги от fence: `game.js` → `drawTankTrack()`.
+   - Трек клипуется внутри квадрата `BAL.fenceRadius - BAL.roadFenceGap`.
+- Порядок слоёв: `draw()` рисует `drawTankTrack()` до `drawZombieFence()`, чтобы дорога не наезжала на fence-спрайты.
+
 ## Entrypoints
 
 - `boot()` запускает `requestAnimationFrame(loop)`.

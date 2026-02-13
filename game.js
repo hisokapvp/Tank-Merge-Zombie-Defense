@@ -96,6 +96,7 @@ const BAL = {
   tankOrbitRadius: 250,
   tankOrbitSpeed: 0.55,
   tankTrackWidth: 16,
+  roadFenceGap: 8,
   zombieCountTarget: 150,
   zombieSideCount: 4,
   zombiePerSideTarget: 38,
@@ -173,6 +174,7 @@ const BASE_BAL = {
   zombieFencePush: 24,
   tankOrbitRadius: 250,
   tankTrackWidth: 16,
+  roadFenceGap: 8,
   zombieScaleMul: 0.72,
   zombieBobAmp: 1.2,
   zombieShadowW: 11,
@@ -1095,6 +1097,7 @@ function applyBalScale(scale){
   BAL.zombieFencePush = BASE_BAL.zombieFencePush * clamped;
   BAL.tankOrbitRadius = BASE_BAL.tankOrbitRadius * clamped;
   BAL.tankTrackWidth = BASE_BAL.tankTrackWidth * clamped;
+  BAL.roadFenceGap = clamp(BASE_BAL.roadFenceGap * clamped, 6, 12);
 
   BAL.zombieScaleMul = BASE_BAL.zombieScaleMul * clamped;
   BAL.zombieBobAmp = BASE_BAL.zombieBobAmp * clamped;
@@ -1166,7 +1169,7 @@ function initBoard(){
       marginRatio: BAL.hangarMarginRatio,
       hangarPad: 12,
       orbitPad: Math.max(10, 24 + BAL.tankTrackWidth),
-      fencePad: 24,
+      fencePad: Math.max(24, BAL.tankTrackWidth * 1.1 + BAL.roadFenceGap),
       trackPad: 18,
       minTankOrbitRadius: 110,
     });
@@ -1176,7 +1179,7 @@ function initBoard(){
   } else {
     const hangarRadius = Math.hypot(totalW * 0.5, totalH * 0.5) + 12;
     const orbitPad = Math.max(10, 24 + BAL.tankTrackWidth);
-    const fencePad = 24;
+    const fencePad = Math.max(24, BAL.tankTrackWidth * 1.1 + BAL.roadFenceGap);
     const trackPad = 18;
     BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
     BAL.fenceRadius = BAL.tankOrbitRadius + fencePad;
@@ -1241,7 +1244,7 @@ function initDecors(){
 }
 
 function getTankOrbitRadius(){
-  return BAL.tankOrbitRadius - BAL.tankTrackWidth * BAL.tankTrackCenterOffset;
+  return BAL.tankOrbitRadius;
 }
 
 function buildBackground(){
@@ -3911,8 +3914,8 @@ function draw(){
   drawBackground();
   drawDecors();
   drawTrack();
-  drawZombieFence();
   drawTankTrack();
+  drawZombieFence();
   drawBoard();
   drawOrbitingTanks();
   drawCrate();
@@ -4009,6 +4012,15 @@ function drawTrack(){
 function drawTankTrack(){
   ctx.save();
   ctx.translate(center.x, center.y);
+
+  if (Number.isFinite(BAL.fenceRadius) && Number.isFinite(BAL.roadFenceGap)) {
+    const clipHalf = Math.max(0, BAL.fenceRadius - BAL.roadFenceGap);
+    if (clipHalf > 0) {
+      ctx.beginPath();
+      ctx.rect(-clipHalf, -clipHalf, clipHalf * 2, clipHalf * 2);
+      ctx.clip();
+    }
+  }
 
   ctx.beginPath();
   ctx.arc(0,0,BAL.tankOrbitRadius,0,Math.PI*2);
