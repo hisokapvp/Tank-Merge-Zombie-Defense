@@ -1,68 +1,24 @@
 # SYSTEM: Telemetry / Analytics / Flags
 
-## Purpose
+## Где искать
 
-Собирает локальные метрики, журнал событий, funnel/analytics, а также управляет фичами через flags и experiments.
+- Базовая телеметрия: `src/utils/telemetry.js`
+- Лог/экспорт: `src/telemetry/telemetry.js`
+- Funnel: `src/analytics/funnel.js`
+- Flags/experiments: `src/flags/flags.js`, `src/experiments/experiments.js`
 
-## Быстрый ответ (куда идти)
+## Что править
 
-- Базовая телеметрия с debug widget: `src/utils/telemetry.js`.
-- Event log/export: `src/telemetry/telemetry.js`.
-- Funnel и агрегация: `src/analytics/funnel.js`, `src/analytics/collector.js`.
-- Rollout/AB: `src/flags/flags.js`, `src/experiments/experiments.js`.
+- Новая метрика: добавить emit в runtime и при необходимости в logger/export.
+- Новый flag/experiment: `DEFAULT_FLAGS` или `DEFAULT_EXPERIMENTS` + чтение через API.
 
-## Key files
+## Риски
 
-- `src/utils/telemetry.js`
-- `src/telemetry/telemetry.js`
-- `src/analytics/funnel.js`
-- `src/analytics/collector.js`
-- `src/flags/flags.js`
-- `src/experiments/experiments.js`
-- `ops/monitoring/telemetry_retention.js`
+- Не ломать форматы export.
+- Не удалять существующие storage-ключи без миграции.
+- Не писать тяжёлые логи в каждом кадре.
 
-## Entrypoints
-
-- В `boot()` вызываются `Flags.init`, `Experiments.init`, `Funnel.init`, `TelemetryLogger.init`.
-- В `loop()` обновляются gauges (`coins`, `kills`, `fps`, ...).
-- Эксперименты патчат `TelemetryLogger.log` через `attachTelemetry()`.
-
-## Data & config
-
-- localStorage ключи:
-  - `telemetry_lifetime`
-  - `telemetry_log`
-  - `analytics_summary_v1`
-  - `funnel_progress_v1`
-  - `feature_flag_overrides`
-  - `experiments_assignments_v1`
-
-## Common edits
-
-1. **Добавить новую бизнес-метрику**
-   - `Telemetry.event/gauge/max` в нужном runtime месте.
-   - При необходимости продублировать в `TelemetryLogger.log`.
-
-2. **Добавить новый funnel step**
-   - `STEPS` + вызов `trackStep` в нужном событии.
-
-3. **Добавить feature flag**
-   - `DEFAULT_FLAGS` в `flags.js`.
-   - Проверка через `Game.Flags.get(flagName)` в логике.
-
-4. **Добавить A/B эксперимент**
-   - `DEFAULT_EXPERIMENTS` в `experiments.js`.
-   - Использовать `Game.Experiments.getVariant(id)`.
-
-## Don’t touch / risks
-
-- Не ломай форматы export (`json/csv`) без обновления потребителей.
-- Не удаляй существующие localStorage ключи без миграции.
-- Не включай high-frequency heavy logs в hot loop.
-
-## Checks
+## Мини-проверка
 
 - `node Test/pack2/telemetryExport.test.js`
-- `node Test/pack7/analytics_aggregation.test.js`
 - `node Test/pack6/flags.test.js`
-- `node Test/pack6/telemetryRetention.test.js`

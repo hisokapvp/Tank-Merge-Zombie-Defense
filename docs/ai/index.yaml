@@ -1,5 +1,5 @@
-version: 1
-updated_at: 2026-02-12
+version: 2
+updated_at: 2026-02-13
 entrypoints:
   boot:
     file: game.js
@@ -17,6 +17,7 @@ systems:
     files:
       - game.js
       - src/render/canvasRoot.js
+      - src/render/layout/hangarLayout.js
       - src/perf/mobileMode.js
   input:
     doc: docs/ai/SYSTEMS/input.md
@@ -27,7 +28,7 @@ systems:
       - src/mechanics/trackQuery.js
   ui:
     doc: docs/ai/SYSTEMS/ui.md
-    tags: [ui, modal, hud, a11y]
+    tags: [ui, modal, hud, a11y, i18n]
     files:
       - index.html
       - style.css
@@ -41,7 +42,7 @@ systems:
       - assets/zombies.json
       - assets/fence.json
       - assets/decor.json
-      - game.js
+      - src/render/spriteLoaders.js
   combat:
     doc: docs/ai/SYSTEMS/combat.md
     tags: [combat, projectile, damage]
@@ -52,7 +53,7 @@ systems:
       - game.js
   save:
     doc: docs/ai/SYSTEMS/save.md
-    tags: [save, offline, persistence]
+    tags: [save, offline, persistence, continue-flow]
     files:
       - src/persistence/storage.js
       - src/persistence/offlineRewardModel.js
@@ -62,7 +63,7 @@ systems:
       - game.js
   telemetry:
     doc: docs/ai/SYSTEMS/telemetry.md
-    tags: [telemetry, analytics, flags, experiments]
+    tags: [telemetry, analytics, flags, experiments, funnel]
     files:
       - src/utils/telemetry.js
       - src/telemetry/telemetry.js

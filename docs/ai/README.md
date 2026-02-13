@@ -1,30 +1,25 @@
-# AI-Agent Doc Pack (A2DP)
+# AI-Agent Doc Pack
 
-Цель этого пакета: дать агенту ответ за секунды на 3 вопроса.
+Краткий пакет документации для ИИ-агентов. Цель: минимум токенов, максимум навигации.
 
-1. Где это лежит?
-2. Какой стиль/правила?
-3. Как править безопасно?
+## Порядок чтения
 
-## Как пользоваться (2 минуты)
+1. `docs/ai/INDEX.md` — куда идти по задаче.
+2. `docs/ai/SYSTEMS/<system>.md` — точные файлы и риски.
+3. `docs/ai/PLAYBOOKS/<task>.md` — пошаговый шаблон изменения.
+4. `docs/ai/STYLE.md` — ограничения и DoD.
 
-1. Открой `docs/ai/INDEX.md`.
-2. Найди систему по тегу (`render`, `input`, `ui`, `assets`, `save`, `combat`, `perf`, `telemetry`).
-3. Перейди в соответствующий файл из `docs/ai/SYSTEMS/`.
-4. Для типовой задачи открой `docs/ai/PLAYBOOKS/`.
+## Что важно помнить
 
-## Быстрые правила
+- Runtime entry: `index.html` → `game.js` (`boot`, `loop`, `draw`).
+- Доменная логика в `src/*`; `game.js` — orchestration.
+- UI-тексты менять синхронно в `src/i18n/ru.json` и `src/i18n/en.json`.
+- `dist/release/staging/*` не редактируется вручную.
 
-- Источник истины по запуску: `index.html` (порядок подключения скриптов) + `game.js` (`boot()` и `loop()`).
-- Новая фича без обновления A2DP считается неполной (см. DoD в `docs/ai/STYLE.md`).
-- Не редактируй `dist/release/staging/*` вручную — это артефакт релиза.
+## Где что лежит
 
-## Что внутри
-
-- `INDEX.md` — главная карта и маршруты правки.
-- `ARCHITECTURE.md` — слои, ownership, потоки.
-- `STYLE.md` — проверяемые правила JS/HTML/CSS/canvas + DoD.
-- `SYSTEMS/` — системные страницы по шаблону.
-- `PLAYBOOKS/` — пошаговые типовые правки.
-- `CHANGELOG.md` — журнал изменений документации для агентов.
-- `index.yaml` — машинно-читаемый индекс.
+- Карта: `docs/ai/INDEX.md`
+- Архитектура: `docs/ai/ARCHITECTURE.md`
+- Системы: `docs/ai/SYSTEMS/*`
+- Типовые операции: `docs/ai/PLAYBOOKS/*`
+- Машинный индекс: `docs/ai/index.yaml`

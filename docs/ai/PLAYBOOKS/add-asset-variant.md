@@ -1,35 +1,13 @@
-# PLAYBOOK: Добавить/изменить ассет-вариант
-
-## Когда использовать
-
-Нужно добавить новый вид танка/пушки/зомби-анимации или обновить существующий JSON-конфиг ассетов.
+# PLAYBOOK: Добавить/изменить ассет
 
 ## Шаги
 
-1. Подготовь PNG/atlas в `assets/`.
-2. Обнови JSON-конфиг:
-   - танки: `assets/tanks.json`
-   - зомби: `assets/zombies.json`
-   - окружение: `assets/fence.json`/`assets/decor.json`
-3. Для танков проверь `levels[]` соответствие `bodyVariant/cannonVariant`.
-4. Для зомби проверь `frame/death/deathCommon` координаты и `frames`.
-5. Убедись, что пути `src` указывают на существующие файлы.
+1. Подготовить файлы в `assets/`.
+2. Обновить нужный JSON (`tanks/zombies/fence/decor`).
+3. Проверить ссылки (`src`, `id`, `levels[]`, `frames`).
+4. Если менялась схема, обновить соответствующий `assets/*_README.md`.
 
-## Какие файлы обычно править
-
-- `assets/tanks.json`
-- `assets/zombies.json`
-- `assets/fence.json`
-- `assets/decor.json`
-- `assets/tanks_README.md` или `assets/zombies_README.md` (если поменялась схема)
-
-## Проверки
+## Проверка
 
 - `node ops/monitoring/health_check.js --root .`
-- Запуск игры без ошибок ассетов в консоли.
-- Визуальный smoke: новый вариант реально отображается.
-
-## Типовые ловушки
-
-- Несовпадение `id` варианта и ссылки на него в `levels[]`.
-- Неверные `frame.w/h` и `frames`, вызывающие обрезку/пустой рендер.
+- Запуск игры без ошибок загрузки ассетов.
