@@ -47,8 +47,11 @@ const ui = {
 };
 
 const MAX_TANK_LEVEL = 60;
-const POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
+const ProgressionApi = window.Game && window.Game.Progression ? window.Game.Progression : null;
 function computePowerTier(playerLevel){
+  if (ProgressionApi && ProgressionApi.computePowerTier) {
+    return ProgressionApi.computePowerTier(playerLevel);
+  }
   const lvl = Math.max(1, Math.floor(playerLevel));
   if (lvl < 10) return 0;
   if (lvl < 20) return 1;
@@ -192,8 +195,12 @@ const DEFAULT_SETTINGS = (window.Game && window.Game.AudioSettings && window.Gam
 
 let settings = { ...DEFAULT_SETTINGS };
 let audioSettingsController = null;
+const InitialStateApi = window.Game && window.Game.InitialState ? window.Game.InitialState : null;
 
 function createInitialState(){
+  if (InitialStateApi && InitialStateApi.createInitialState) {
+    return InitialStateApi.createInitialState({ maxLevel: MAX_TANK_LEVEL });
+  }
   return {
     coins: 120,
     kills: 0,
@@ -268,6 +275,11 @@ const nowSec = ()=>performance.now()/1000;
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const ZombieSpawnApi = window.Game && window.Game.ZombieSpawn ? window.Game.ZombieSpawn : null;
 const UIModals = window.Game && window.Game.UIModals ? window.Game.UIModals : null;
+const CombatProfilesApi = window.Game && window.Game.CombatProfiles ? window.Game.CombatProfiles : null;
+const SpriteLoadersApi = window.Game && window.Game.SpriteLoaders ? window.Game.SpriteLoaders : null;
+const DebugPanelApi = window.Game && window.Game.DebugPanel ? window.Game.DebugPanel : null;
+const LevelFlowApi = window.Game && window.Game.LevelFlow ? window.Game.LevelFlow : null;
+const BootstrapApi = window.Game && window.Game.Bootstrap ? window.Game.Bootstrap : null;
 
 if (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.createAudioSettingsController) {
   audioSettingsController = window.Game.AudioSettings.createAudioSettingsController({
@@ -489,198 +501,32 @@ function applyTranslations(){
 }
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
-const ZombieSprites = {
+const spriteLoaders = SpriteLoadersApi && SpriteLoadersApi.createSpriteLoaders
+  ? SpriteLoadersApi.createSpriteLoaders({ BAL, getState: () => state })
+  : null;
+
+const ZombieSprites = spriteLoaders && spriteLoaders.ZombieSprites ? spriteLoaders.ZombieSprites : {
   ready: false,
-  error: '',
+  error: 'SpriteLoaders module is unavailable',
   atlasImg: null,
   types: [],
   deathCommon: null,
   spawnConfig: null,
-  async load(){
-    try{
-      const res = await fetch('assets/zombies.json', {cache:'no-store'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const atlasPath = 'assets/' + (data.atlas || 'zombie_atlas.png');
-      const img = await loadImage(atlasPath);
-
-      // Parse common death animation
-      if (data.deathCommon) {
-        this.deathCommon = {
-          x: data.deathCommon.x ?? 0,
-          y: data.deathCommon.y ?? 0,
-          w: data.deathCommon.w ?? 96,
-          h: data.deathCommon.h ?? 96,
-          frames: data.deathCommon.frames ?? 1
-        };
-      } else {
-        this.deathCommon = null;
-      }
-
-      if (data.spawn && typeof data.spawn === 'object') {
-        this.spawnConfig = {
-          targetAlive: Number(data.spawn.targetAlive),
-          sideCount: Number(data.spawn.sideCount),
-          perSideTarget: Number(data.spawn.perSideTarget),
-          perSideTolerance: Number(data.spawn.perSideTolerance),
-        };
-      } else {
-        this.spawnConfig = null;
-      }
-
-      this.types = (data.types || []).map(t => ({
-        id: t.id || 'zombie',
-        frame: t.frame || {x:0,y:0,w:64,h:64},
-        frames: t.frames ?? 1,
-        animSpeed: t.animSpeed ?? 1.0,
-        anchor: t.anchor || {x:0.5,y:0.75},
-        scale: t.scale ?? 1.0,
-        rotation: t.rotation ?? 0,
-        hpMul: t.hpMul ?? 1.0,
-        omegaMul: t.omegaMul ?? 1.0,
-        rewardMul: t.rewardMul ?? 1.0,
-        weight: t.weight ?? 1.0,
-        hitbox: t.hitbox ?? null,
-        // Personal death animation (optional)
-        death: t.death ? {
-          x: t.death.x ?? 0,
-          y: t.death.y ?? 0,
-          w: t.death.w ?? t.frame?.w ?? 96,
-          h: t.death.h ?? t.frame?.h ?? 96,
-          frames: t.death.frames ?? 1
-        } : null,
-      }));
-      if (!this.types.length) throw new Error('types[] empty');
-
-      this.atlasImg = img;
-      this.ready = true;
-      this.error = '';
-    }catch(e){
-      this.ready = false;
-      this.atlasImg = null;
-      this.types = [];
-      this.deathCommon = null;
-      this.spawnConfig = null;
-      this.error = String(e);
-    }
-  },
-  pickType(){
-    if (!this.ready || !this.types.length) return null;
-    // weighted random
-    let sum = 0;
-    for (const t of this.types) sum += t.weight;
-    let r = Math.random() * sum;
-    for (const t of this.types){
-      r -= t.weight;
-      if (r <= 0) return t;
-    }
-    return this.types[this.types.length-1];
-  },
-  pickTypeByLevel(level){
-    if (!this.ready || !this.types.length) return null;
-    const lvl = Math.max(1, Math.min(60, Math.floor(level)));
-    const id = 'zombie_lvl' + lvl;
-    const found = this.types.find(t => t.id === id);
-    if (found) return found;
-    const idx = (lvl - 1) % this.types.length;
-    return this.types[idx] || this.types[0];
-  }
+  async load() {},
+  pickType() { return null; },
+  pickTypeByLevel() { return null; },
 };
 
-const TankSprites = {
+const TankSprites = spriteLoaders && spriteLoaders.TankSprites ? spriteLoaders.TankSprites : {
   ready: false,
-  error: '',
+  error: 'SpriteLoaders module is unavailable',
   config: null,
   cache: new Map(),
-  async load(){
-    try{
-      const res = await fetch('assets/tanks.json', {cache:'no-store'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const cfg = await res.json();
-      this.config = cfg;
-
-      const srcs = new Set();
-      if (cfg?.body?.src) srcs.add('assets/' + cfg.body.src);
-      for (const id of Object.keys(cfg?.bodies || {})){
-        const b = cfg.bodies[id];
-        if (b?.src) srcs.add('assets/' + b.src);
-      }
-      for (const cannon of cfg?.cannons || []){
-        if (cannon?.src) srcs.add('assets/' + cannon.src);
-      }
-      for (const id of Object.keys(cfg?.auras || {})){
-        const a = cfg.auras[id];
-        if (a && typeof a === 'object' && a.src) srcs.add('assets/' + a.src);
-      }
-
-      for (const s of srcs){
-        const img = await loadImage(s);
-        this.cache.set(s, img);
-      }
-
-      this.ready = true;
-      this.error = '';
-    }catch(e){
-      this.ready = false;
-      this.error = String(e);
-      this.config = null;
-      this.cache.clear();
-    }
-  },
-  resolveVariant(level, key){
-    const levels = this.config?.levels;
-    if (!levels || !Array.isArray(levels)) return null;
-    const lvl = Math.max(1, Math.min(60, Math.floor(level)));
-    for (let L = lvl; L >= 1; L--){
-      const entry = levels[L - 1];
-      if (entry && entry[key] != null) return entry[key];
-    }
-    return null;
-  },
-  pickBody(level){
-    if (!this.ready || !this.config?.body?.src) return null;
-    const bodyVariant = level != null ? this.resolveVariant(level, 'bodyVariant') : null;
-    const bodies = this.config?.bodies;
-    const cfg = (bodies && bodyVariant && bodies[bodyVariant]) ? bodies[bodyVariant] : this.config.body;
-    if (!cfg?.src) return null;
-    const full = 'assets/' + cfg.src;
-    const img = this.cache.get(full);
-    if (!img) return null;
-    return { img, cfg };
-  },
-  pickCannon(level){
-    if (!this.ready || !this.config?.cannons?.length) return null;
-    const cannonVariant = level != null ? this.resolveVariant(level, 'cannonVariant') : null;
-    const cannons = this.config.cannons;
-    let chosen = null;
-    if (cannonVariant){
-      chosen = cannons.find(c => c.id === cannonVariant);
-      if (!chosen && typeof console !== 'undefined' && console.warn) console.warn('TankSprites: unknown cannonVariant', cannonVariant);
-    }
-    if (!chosen){
-      const sorted = [...cannons].sort((a,b)=>a.minLevel - b.minLevel);
-      for (const cannon of sorted){
-        if (cannon.minLevel <= level) chosen = cannon;
-      }
-    }
-    if (!chosen?.src) return null;
-    const full = 'assets/' + chosen.src;
-    const img = this.cache.get(full);
-    if (!img) return null;
-    return { img, cfg: chosen };
-  },
-  pickAura(level){
-    if (!this.ready) return null;
-    const auraVariant = level != null ? this.resolveVariant(level, 'auraVariant') : null;
-    if (auraVariant == null || typeof auraVariant !== 'string') return null;
-    const auras = this.config?.auras;
-    const cfg = auras?.[auraVariant];
-    if (!cfg?.src) return null;
-    const full = 'assets/' + cfg.src;
-    const img = this.cache.get(full);
-    if (!img) return null;
-    return { img, cfg };
-  }
+  async load() {},
+  resolveVariant() { return null; },
+  pickBody() { return null; },
+  pickCannon() { return null; },
+  pickAura() { return null; },
 };
 
 if (typeof window !== 'undefined') {
@@ -689,100 +535,24 @@ if (typeof window !== 'undefined') {
   window.Game.TankSprites = TankSprites;
 }
 
-const FenceSprites = {
+const FenceSprites = spriteLoaders && spriteLoaders.FenceSprites ? spriteLoaders.FenceSprites : {
   ready: false,
-  error: '',
+  error: 'SpriteLoaders module is unavailable',
   atlasImg: null,
   maxFrameScale: 1,
   framesById: new Map(),
-  async load(){
-    try{
-      const res = await fetch('assets/fence.json', {cache:'no-store'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const atlasPath = 'assets/' + (data.atlas || 'fence.png');
-      const img = await loadImage(atlasPath);
-      this.atlasImg = img;
-      this.framesById.clear();
-      this.maxFrameScale = 1;
-      const autoIds = [];
-      for (const f of (data.frames || [])){
-        const id = f.id || String(this.framesById.size);
-        const frameScale = Number.isFinite(f.scale) ? f.scale : 1;
-        this.framesById.set(id, {
-          x: f.x ?? 0,
-          y: f.y ?? 0,
-          w: f.w ?? 32,
-          h: f.h ?? 32,
-          scale: frameScale,
-          anchor: f.anchor || { x: 0.5, y: 0.5 }
-        });
-        if (Number.isFinite(frameScale)) this.maxFrameScale = Math.max(this.maxFrameScale, frameScale);
-        autoIds.push(id);
-      }
-      // Авто-инициализация BAL.fenceSpriteIds, если пустой
-      if ((BAL.fenceSpriteIds || []).length === 0 && autoIds.length > 0) {
-        BAL.fenceSpriteIds = autoIds;
-        // Сбросить сегменты забора для пересборки
-        if (state && Array.isArray(state.fenceSegments)) {
-          state.fenceSegments = [];
-        }
-      }
-      this.ready = true;
-      this.error = '';
-    }catch(e){
-      this.ready = false;
-      this.atlasImg = null;
-      this.maxFrameScale = 1;
-      this.framesById.clear();
-      this.error = String(e);
-    }
-  },
-  pickFrame(spriteId){
-    return this.framesById.get(spriteId) || this.framesById.values().next().value;
-  }
+  async load() {},
+  pickFrame() { return null; },
 };
 
-const DecorSprites = {
+const DecorSprites = spriteLoaders && spriteLoaders.DecorSprites ? spriteLoaders.DecorSprites : {
   ready: false,
-  error: '',
+  error: 'SpriteLoaders module is unavailable',
   atlasImg: null,
   framesById: new Map(),
-  async load(){
-    try{
-      const res = await fetch('assets/decor.json', {cache:'no-store'});
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const atlasPath = 'assets/' + (data.atlas || 'decor.png');
-      const img = await loadImage(atlasPath);
-      this.atlasImg = img;
-      this.framesById.clear();
-      for (const f of (data.frames || [])){
-        const id = f.id || String(this.framesById.size);
-        this.framesById.set(id, { x: f.x ?? 0, y: f.y ?? 0, w: f.w ?? 24, h: f.h ?? 24, anchor: f.anchor || { x: 0.5, y: 0.8 } });
-      }
-      this.ready = true;
-      this.error = '';
-    }catch(e){
-      this.ready = false;
-      this.atlasImg = null;
-      this.framesById.clear();
-      this.error = String(e);
-    }
-  },
-  pickFrame(spriteId){
-    return this.framesById.get(spriteId) || this.framesById.values().next().value;
-  }
+  async load() {},
+  pickFrame() { return null; },
 };
-
-function loadImage(url){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = ()=>resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
-}
 
 const BASE_CANVAS = { w: 1100, h: 650 };
 let balScale = 1;
@@ -1156,6 +926,9 @@ function tankStats(level){
 }
 
 function xpNeededForLevel(level){
+  if (ProgressionApi && ProgressionApi.xpNeededForLevel) {
+    return ProgressionApi.xpNeededForLevel(level);
+  }
   const growth = 3 ** (level - 1);
   const correction = level >= 4 ? (10 / 9) : 1;
   const decadeBoost = 2 ** Math.floor((level - 1) / 10);
@@ -1163,135 +936,73 @@ function xpNeededForLevel(level){
 }
 
 function levelGoldReward(level){
+  if (ProgressionApi && ProgressionApi.levelGoldReward) {
+    return ProgressionApi.levelGoldReward(level, BAL);
+  }
   return Math.max(0, Math.round(BAL.levelGoldBase + BAL.levelGoldPerLevel * Math.max(0, level - 1)));
 }
 
+function getLevelFlowController(){
+  if (!(LevelFlowApi && typeof LevelFlowApi.createLevelFlow === 'function')) return null;
+  return LevelFlowApi.createLevelFlow({
+    state,
+    ui,
+    BAL,
+    t,
+    talentWord,
+    UIModals,
+    a11yOpen,
+    a11yClose,
+    nowSec,
+    saveProgress,
+    updateUI,
+    refreshTanksPowerTier,
+    playSfx,
+    showCenterNotification,
+    xpNeededForLevel,
+    levelGoldReward,
+    windowObj: window,
+  });
+}
+
 function updateLevelModal(){
-  const reward = state.ui.levelReward;
-  if (!reward || !ui.levelModal) return;
-  if (ui.levelTitle) ui.levelTitle.textContent = t('levelModalTitle', {level: reward.level});
-  if (ui.levelTalent){
-    ui.levelTalent.textContent = t('levelModalTalent', {
-      points: reward.points,
-      talent: talentWord(reward.points),
-    });
-  }
-  const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
-  if (ui.levelGold) ui.levelGold.textContent = t('levelModalGold', {gold: fmt(reward.gold)});
-  if (ui.levelAccept) ui.levelAccept.textContent = t('levelUpAccept');
+  const lf = getLevelFlowController();
+  if (lf && lf.updateLevelModal) return lf.updateLevelModal();
 }
 
 function openLevelModal(){
-  if (UIModals && typeof UIModals.openLevelModal === 'function') {
-    UIModals.openLevelModal({
-      ui,
-      a11yOpen,
-      onClose: closeLevelModal,
-      updateLevelModal,
-    });
-  } else {
-    if (!ui.levelModal) return;
-    ui.levelModal.classList.remove('hidden');
-    ui.levelModal.setAttribute('aria-hidden', 'false');
-    a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
-    updateLevelModal();
-  }
-  if (state.ui.levelRewardTimer){
-    window.clearTimeout(state.ui.levelRewardTimer);
-  }
-  state.ui.levelRewardTimer = window.setTimeout(() => {
-    acceptLevelReward();
-  }, BAL.levelRewardAutoCloseSec * 1000);
+  const lf = getLevelFlowController();
+  if (lf && lf.openLevelModal) return lf.openLevelModal();
 }
 
 function closeLevelModal(){
-  if (UIModals && typeof UIModals.closeLevelModal === 'function') {
-    UIModals.closeLevelModal({ ui, a11yClose });
-  } else {
-    if (!ui.levelModal) return;
-    ui.levelModal.classList.add('hidden');
-    ui.levelModal.setAttribute('aria-hidden', 'true');
-    a11yClose(ui.levelModal);
-  }
-  if (state.ui.levelRewardTimer){
-    window.clearTimeout(state.ui.levelRewardTimer);
-    state.ui.levelRewardTimer = 0;
-  }
+  const lf = getLevelFlowController();
+  if (lf && lf.closeLevelModal) return lf.closeLevelModal();
 }
 
 function queueLevelReward(level, points, gold){
-  if (!points && !gold) return;
-  const reward = state.ui.levelReward;
-  if (reward){
-    reward.level = Math.max(reward.level, level);
-    reward.points += points;
-    reward.gold += gold;
-  } else {
-    state.ui.levelReward = { level, points, gold };
-  }
-  openLevelModal();
+  const lf = getLevelFlowController();
+  if (lf && lf.queueLevelReward) return lf.queueLevelReward(level, points, gold);
 }
 
 function acceptLevelReward(){
-  const reward = state.ui.levelReward;
-  if (!reward) return;
-  state.player.talentPoints += reward.points;
-  state.coins += reward.gold;
-  state.ui.levelReward = null;
-  closeLevelModal();
-  saveProgress();
-  updateUI();
+  const lf = getLevelFlowController();
+  if (lf && lf.acceptLevelReward) return lf.acceptLevelReward();
 }
 
 function grantXP(amount){
-  const p = state.player;
-  if (!p || p.level >= p.maxLevel) return;
-
-  p.xp += amount;
-  let leveled = false;
-  let gainedLevels = 0;
-  let rewardGold = 0;
-
-  while (p.level < p.maxLevel){
-    p.xpToNext = xpNeededForLevel(p.level);
-    if (p.xp < p.xpToNext) break;
-
-    p.xp -= p.xpToNext;
-    p.level += 1;
-    leveled = true;
-    gainedLevels += 1;
-    rewardGold += levelGoldReward(p.level);
-  }
-  p.xpToNext = xpNeededForLevel(p.level);
-  if (leveled){
-    refreshTanksPowerTier();
-    triggerLevelUpVfx(p.level);
-    checkPowerMomentEvents(p.level);
-    queueLevelReward(p.level, gainedLevels, rewardGold);
-    saveProgress();
-  }
+  const lf = getLevelFlowController();
+  if (lf && lf.grantXP) return lf.grantXP(amount);
 }
 
 function triggerLevelUpVfx(level){
-  const now = nowSec();
-  state.levelUpVfxUntil = now + 0.15;
-  state.levelUpText = { level, until: now + 2.2 };
-  state.timeScale = 0.7;
-  playSfx('levelUp');
+  const lf = getLevelFlowController();
+  if (lf && lf.triggerLevelUpVfx) return lf.triggerLevelUpVfx(level);
 }
 
 function checkPowerMomentEvents(level){
-  const p = state.player;
-  if (!p) return;
-  if (level >= 40 && !p.eventShown40){
-    p.eventShown40 = true;
-    showCenterNotification(t('powerMoment40'));
-  }
-  if (level >= 50) p.eventShown50 = true;
-  if (level >= 60){
-    p.eventShown60 = true;
-    state.endgameVisuals = true;
-  }
+  const lf = getLevelFlowController();
+  if (lf && lf.checkPowerMomentEvents) return lf.checkPowerMomentEvents(level);
 }
 
 let centerNotificationEl = null;
@@ -1822,7 +1533,7 @@ function applySavedProgress(data){
   return true;
 }
 
-const PROJECTILE_KINDS = {
+const PROJECTILE_KINDS = CombatProfilesApi && CombatProfilesApi.PROJECTILE_KINDS ? CombatProfilesApi.PROJECTILE_KINDS : {
   ap: { kind:'ap', speed: 820, r: 4.0, color:'#ffd36b', glow:'rgba(255,211,107,.25)', trail:'rgba(255,211,107,.12)', aoeBase: 18, aoePerLevel: 2.4, aoeMin: 16, aoeMax: 40 },
   he: { kind:'he', speed: 740, r: 5.6, color:'#ff7a6b', glow:'rgba(255,122,107,.26)', trail:'rgba(255,122,107,.12)', aoeBase: 28, aoePerLevel: 3.2, aoeMin: 24, aoeMax: 58 },
   toxic: { kind:'toxic', speed: 700, r: 5.0, color:'#b8ff3b', glow:'rgba(184,255,59,.22)', trail:'rgba(184,255,59,.10)', aoeBase: 30, aoePerLevel: 3.4, aoeMin: 26, aoeMax: 64, poolLife: 3.6, poolDpsMul: 0.20 },
@@ -1830,6 +1541,9 @@ const PROJECTILE_KINDS = {
 };
 
 function projectileProfile(level){
+  if (CombatProfilesApi && CombatProfilesApi.projectileProfile) {
+    return CombatProfilesApi.projectileProfile(level, (lvl, key) => TankSprites?.resolveVariant?.(lvl, key));
+  }
   const bulletVariant = TankSprites?.resolveVariant?.(level, 'bulletVariant');
   if (bulletVariant && PROJECTILE_KINDS[bulletVariant]) return PROJECTILE_KINDS[bulletVariant];
   // Level bands: 1-3 AP, 4-6 HE, 7-9 Toxic, 10+ Tesla
@@ -1875,6 +1589,9 @@ function projectileProfile(level){
 }
 
 function tankLevelCounts(){
+  if (CombatProfilesApi && CombatProfilesApi.tankLevelCounts) {
+    return CombatProfilesApi.tankLevelCounts(state.cells);
+  }
   const counts = new Map();
   for (const cell of state.cells){
     if (!cell.tank) continue;
@@ -1886,6 +1603,9 @@ function tankLevelCounts(){
 
 // Weights proportional to tank counts in hangar (excludes unopened crates — they have no cell yet)
 function zombieLevelWeights(){
+  if (CombatProfilesApi && CombatProfilesApi.zombieLevelWeights) {
+    return CombatProfilesApi.zombieLevelWeights(state.cells);
+  }
   const counts = tankLevelCounts();
   const levels = Array.from(counts.keys()).sort((a,b)=>a-b);
   if (!levels.length) return [{level: 1, weight: 1}];
@@ -1898,6 +1618,9 @@ function zombieLevelWeights(){
 }
 
 function pickZombieLevel(){
+  if (CombatProfilesApi && CombatProfilesApi.pickZombieLevel) {
+    return CombatProfilesApi.pickZombieLevel(state.cells, Math.random);
+  }
   const weights = zombieLevelWeights();
   let total = 0;
   for (const w of weights) total += w.weight;
@@ -2965,6 +2688,14 @@ function resetGameState(){
   ensureTalentState();
   state.player.xpToNext = xpNeededForLevel(state.player.level);
   state.player.modsDirty = true;
+
+  const debugPanelEl = document.getElementById('debugPanel');
+  if (debugPanelEl && debugPanelEl.parentNode) {
+    debugPanelEl.parentNode.removeChild(debugPanelEl);
+  }
+  const layoutEl = document.querySelector('.layout');
+  if (layoutEl) layoutEl.classList.remove('debugLayout');
+
   resizeCanvas();
   state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
   if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
@@ -2973,6 +2704,8 @@ function resetGameState(){
     recordTankLevel(1);
   }
   refreshTanksPowerTier();
+
+  if (DebugPanelEnabled) initDebugPanel();
 }
 
 // ---------- UI ----------
@@ -5123,803 +4856,96 @@ function safeDebug(fn, fallbackMsg){
 }
 
 function initDebugPanel(){
-  if (!DebugPanelEnabled) return;
-  state.debug = state.debug || {
-    log: [],
-    targetCellIndex: null,
-    talentOverrides: {},
-    collapsed: false,
-    previewParticles: [],
-    debugStatusActive: false,
-    zombieCountCache: { at: 0, text: '' },
-  };
-
-  const main = document.querySelector('.layout');
-  if (!main || document.getElementById('debugPanel')) return;
-
-  main.classList.add('debugLayout');
-
-  const panel = document.createElement('div');
-  panel.id = 'debugPanel';
-  panel.className = 'debugPanel';
-
-  const activeNames = ['Шквал (Attack)', 'Перегрев (Speed)', 'Золотой час (Economy)'];
-  const effectCategories = [
-    { id: 'vfx', label: 'VFX' },
-    { id: 'status', label: 'Status' },
-  ];
-  const vfxList = [
-    { id: 'burst', label: 'Burst center' },
-    { id: 'particle_burst', label: 'Particle burst' },
-    { id: 'impact_ring', label: 'Impact ring' },
-    { id: 'decal_pool', label: 'Decal pool' },
-  ];
-  const statusList = [
-    { id: 'attack', key: 'attackUntil', label: 'Attack +50%' },
-    { id: 'speed', key: 'speedUntil', label: 'Speed +35%' },
-    { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
-  ];
-
-  panel.innerHTML = `
-    <div class="debugPanelHeader">
-      <span class="debugPanelTitle">Debug (?debug=1)</span>
-      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>
-    </div>
-    <div class="debugTabs">
-      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>
-      <button type="button" class="debugTab" data-tab="zombies">Zombies</button>
-      <button type="button" class="debugTab" data-tab="roads">Roads/Hangar</button>
-      <button type="button" class="debugTab" data-tab="effects">Effects</button>
-      <button type="button" class="debugTab" data-tab="actives">Actives</button>
-      <button type="button" class="debugTab" data-tab="talents">Talents</button>
-      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>
-    </div>
-    <div class="debugPanelBody">
-      <div id="debugSectionTanks" class="debugSection active">
-        <div class="debugRow">
-          <label class="debugLabel">Tank level (1–${DEBUG_MAX_TANK_LEVEL})</label>
-          <select id="debugTankLevel" class="debugSelect"></select>
-        </div>
-        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>
-        <div class="debugRow" style="margin-top:8px">
-          <label class="debugLabel">Hangar — select target</label>
-          <div id="debugHangarList"></div>
-        </div>
-        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>
-        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>
-        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>
-        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>
-        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>
-      </div>
-      <div id="debugSectionZombies" class="debugSection">
-        <div id="debugZombieCounts" class="debugRow" style="font-size:11px;margin-bottom:6px"></div>
-        <div id="debugZombieWeights" class="debugRow" style="font-size:11px;margin-bottom:6px"></div>
-        <div class="debugRow">
-          <button type="button" class="debugBtn debugSimSpawns" data-n="100">Simulate 100 spawns</button>
-          <button type="button" class="debugBtn debugSimSpawns" data-n="1000">Simulate 1000 spawns</button>
-        </div>
-        <div id="debugSimResults" class="debugRow" style="font-size:11px;margin-top:6px;white-space:pre-wrap;max-height:120px;overflow:auto"></div>
-      </div>
-      <div id="debugSectionRoads" class="debugSection">
-        <div class="debugRow"><label class="debugLabel">Zombie track radius</label><input type="range" id="debugZombieRadius" min="200" max="450" step="5" /><span id="debugZombieRadiusVal"></span></div>
-        <div class="debugRow"><label class="debugLabel">Tank orbit radius</label><input type="range" id="debugTankRadius" min="150" max="320" step="5" /><span id="debugTankRadiusVal"></span></div>
-        <div class="debugRow"><label class="debugLabel">Cell width</label><input type="range" id="debugCellW" min="30" max="70" step="2" /><span id="debugCellWVal"></span></div>
-        <div class="debugRow"><label class="debugLabel">Cell height</label><input type="range" id="debugCellH" min="22" max="50" step="2" /><span id="debugCellHVal"></span></div>
-        <div class="debugRow" style="margin-top:8px">
-          <button type="button" class="debugBtn" id="debugApplyRoads">Apply</button>
-          <button type="button" class="debugBtn" id="debugResetRoads">Reset to defaults</button>
-        </div>
-        <div id="debugRoadsNote" class="debugRow" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
-      </div>
-      <div id="debugSectionEffects" class="debugSection">
-        <div class="debugRow">
-          <label class="debugLabel">Category</label>
-          <select id="debugEffectCategory" class="debugSelect">
-            <option value="all">All</option>
-            <option value="vfx">VFX</option>
-            <option value="status">Status</option>
-          </select>
-        </div>
-        <div id="debugEffectList"></div>
-        <div class="debugTools" style="margin-top:8px">
-          <button type="button" class="debugBtn" id="debugStopAllVfx">Stop all preview VFX</button>
-          <button type="button" class="debugBtn danger" id="debugClearStatuses">Clear debug statuses</button>
-        </div>
-      </div>
-      <div id="debugSectionActives" class="debugSection">
-        <div class="debugRow">
-          <label class="debugLabel">Target: selected tank (info only)</label>
-        </div>
-        <div class="debugRow">
-          <label><input type="checkbox" id="debugBypass" checked /> Bypass cooldown/cost</label>
-        </div>
-        <div id="debugActivesList"></div>
-      </div>
-      <div id="debugSectionTalents" class="debugSection">
-        <div id="debugTalentsList"></div>
-        <button type="button" class="debugBtn" id="debugClearOverrides">Clear talent overrides</button>
-      </div>
-      <div id="debugSectionLogs" class="debugSection">
-        <button type="button" class="debugBtn" id="debugResetBtn">Reset (overrides + statuses + VFX)</button>
-        <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>
-        <button type="button" class="debugBtn" id="lessonProgressBtn">Lesson Progress</button>
-        <div id="debugTelemetryMount"></div>
-      </div>
-    </div>
-    <div class="debugLogWrap">
-      <div id="debugLog"></div>
-    </div>
-  `;
-
-  const tankLevelSelect = panel.querySelector('#debugTankLevel');
-  for (let l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) tankLevelSelect.appendChild(new Option('Lv' + l, l));
-
-  panel.querySelectorAll('.debugTab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      panel.querySelectorAll('.debugTab').forEach(b => b.classList.remove('active'));
-      panel.querySelectorAll('.debugSection').forEach(s => s.classList.remove('active'));
-      btn.classList.add('active');
-      const tab = btn.dataset.tab;
-      const sectionId = 'debugSection' + tab.charAt(0).toUpperCase() + tab.slice(1);
-      const section = panel.querySelector('#' + sectionId);
-      if (section) section.classList.add('active');
-      if (tab === 'tanks') { refreshDebugHangarList(); refreshDebugTankExtras(); }
-      if (tab === 'effects') refreshDebugEffectList();
-      if (tab === 'zombies') { refreshDebugZombieWeights(); refreshDebugZombieCounts(); }
-      if (tab === 'roads') refreshDebugRoadsSliders();
-      if (tab === 'actives') refreshDebugActivesList();
-      if (tab === 'talents') refreshDebugTalentsList();
+  if (DebugPanelApi && typeof DebugPanelApi.initDebugPanel === 'function') {
+    DebugPanelApi.initDebugPanel({
+      DebugPanelEnabled,
+      state,
+      document,
+      nowSec,
+      DEBUG_PARAM,
+      MAX_TANK_LEVEL,
+      BAL,
+      BASE_BAL,
+      center,
+      makeTank,
+      recordTankLevel,
+      openDismantleModal,
+      setMenuOpen,
+      tankLevelCounts,
+      computeAuraBand,
+      zombieLevelWeights,
+      pickZombieLevel,
+      initBoard,
+      burst,
+      playSfx,
+      canUseActive,
+      useActiveAbility,
+      initTalentDefs,
+      getTalentDefs: () => TALENT_DEFS,
+      updateUI,
+      debugLog,
+      debugReset,
+      safeDebug,
     });
-  });
-
-  const collapseBtn = panel.querySelector('#debugCollapse');
-  if (collapseBtn) collapseBtn.addEventListener('click', () => {
-    state.debug.collapsed = !state.debug.collapsed;
-    panel.classList.toggle('collapsed', state.debug.collapsed);
-    collapseBtn.textContent = state.debug.collapsed ? 'Expand' : 'Collapse';
-  });
-
-  const spawnBtn = panel.querySelector('#debugSpawnTank');
-  if (spawnBtn) spawnBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      const level = Math.max(1, Math.min(DEBUG_MAX_TANK_LEVEL, Number(panel.querySelector('#debugTankLevel').value) || 1));
-      const empty = state.cells.find(c => !c.tank);
-      if (!empty) {
-        debugLog('warn', 'No free hangar slot.');
-        return;
-      }
-      empty.tank = makeTank(level, false);
-      recordTankLevel(level);
-      debugLog('info', `Spawned tank Lv${level} in slot ${empty.i}.`);
-      refreshDebugHangarList();
-      refreshDebugTankExtras();
-    }, 'Spawn failed ');
-  });
-
-  const dismantleDebugBtn = panel.querySelector('#debugDismantleBtn');
-  if (dismantleDebugBtn) dismantleDebugBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      const idx = state.debug.targetCellIndex;
-      const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
-      if (!cell?.tank) { debugLog('warn', 'Select a slot with a tank first.'); return; }
-      state.selectedHangarCellIndex = idx;
-      openDismantleModal();
-    }, 'Dismantle failed ');
-  });
-
-  const openSettingsBtn = panel.querySelector('#debugOpenSettings');
-  if (openSettingsBtn) openSettingsBtn.addEventListener('click', () => setMenuOpen(true));
-
-  const stopVfxBtn = panel.querySelector('#debugStopAllVfx');
-  if (stopVfxBtn) stopVfxBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      state.particles = state.particles.filter(p => !p.debugPreview);
-      state.impacts = state.impacts.filter(fx => !fx.debugPreview);
-      state.decals = state.decals.filter(d => !d.debugPreview);
-      debugLog('info', 'Stopped all preview VFX.');
-    }, 'Stop VFX failed ');
-  });
-
-  const clearStatusBtn = panel.querySelector('#debugClearStatuses');
-  if (clearStatusBtn) clearStatusBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      state.debug.debugStatusActive = false;
-      state.activeEffects.attackUntil = 0;
-      state.activeEffects.speedUntil = 0;
-      state.activeEffects.economyUntil = 0;
-      debugLog('info', 'Cleared debug statuses.');
-    }, 'Clear statuses failed ');
-  });
-
-  const clearOverridesBtn = panel.querySelector('#debugClearOverrides');
-  if (clearOverridesBtn) clearOverridesBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      state.debug.talentOverrides = {};
-      state.player.modsDirty = true;
-      debugLog('info', 'Cleared talent overrides.');
-      refreshDebugTalentsList();
-    }, 'Clear overrides failed ');
-  });
-
-  const resetBtn = panel.querySelector('#debugResetBtn');
-  if (resetBtn) resetBtn.addEventListener('click', () => debugReset());
-  const clearLogBtn = panel.querySelector('#debugClearLog');
-  if (clearLogBtn) clearLogBtn.addEventListener('click', () => {
-    state.debug.log = [];
-    const el = panel.querySelector('#debugLog');
-    if (el) el.innerHTML = '';
-    debugLog('info', 'Log cleared.');
-  });
-
-  function refreshDebugHangarList(){
-    const container = panel.querySelector('#debugHangarList');
-    if (!container) return;
-    container.innerHTML = '';
-    (state.cells || []).forEach((cell, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'debugBtn';
-      btn.style.marginRight = '4px';
-      btn.style.marginBottom = '4px';
-      if (cell.tank) {
-        btn.textContent = `#${i} Lv${cell.tank.level}`;
-        btn.addEventListener('click', () => {
-          state.debug.targetCellIndex = i;
-          debugLog('info', `Target tank: slot ${i} Lv${cell.tank.level}.`);
-          panel.querySelectorAll('#debugHangarList button').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          refreshDebugTankExtras();
-        });
-        if (state.debug.targetCellIndex === i) btn.classList.add('active');
-      } else {
-        btn.textContent = `#${i} empty`;
-        btn.disabled = true;
-      }
-      container.appendChild(btn);
-    });
-    refreshDebugTankExtras();
+    return;
   }
-
-  function refreshDebugTankExtras(){
-    const compEl = panel.querySelector('#debugTankComposition');
-    const mergeEl = panel.querySelector('#debugMergePossible');
-    const auraEl = panel.querySelector('#debugAuraBand');
-    const dismantleBtn = panel.querySelector('#debugDismantleBtn');
-    const counts = tankLevelCounts();
-    const levels = Array.from(counts.keys()).sort((a,b)=>a-b);
-    const total = levels.reduce((s,l)=>s+(counts.get(l)||0),0);
-    if (compEl) compEl.textContent = total ? 'By level: ' + levels.map(l=>`Lv${l}:${counts.get(l)}`).join(', ') : 'No tanks (excl. unopened crates).';
-    const idx = state.debug.targetCellIndex;
-    const cell = idx != null && state.cells[idx] ? state.cells[idx] : null;
-    const tank = cell?.tank;
-    if (mergeEl) {
-      if (!tank) mergeEl.textContent = 'Merge possible: — (select a tank)';
-      else {
-        const sameLevel = state.cells.some(c=>c !== cell && c.tank && c.tank.level === tank.level);
-        const atMax = tank.level >= MAX_TANK_LEVEL;
-        mergeEl.textContent = 'Merge possible: ' + (sameLevel && !atMax ? 'Yes' : (atMax ? 'No (max level)' : 'No (no same-level tank)'));
-      }
-    }
-    if (auraEl) {
-      if (!tank) auraEl.textContent = 'Aura band: —';
-      else {
-        const band = computeAuraBand(tank.level);
-        auraEl.textContent = 'Level ' + tank.level + ' → Aura band: ' + (band == null ? 'none (<10)' : band);
-      }
-    }
-    if (dismantleBtn) dismantleBtn.disabled = !tank || (tank.onTrack === true);
-  }
-
-  function refreshDebugZombieWeights(){
-    const el = panel.querySelector('#debugZombieWeights');
-    if (!el) return;
-    const weights = zombieLevelWeights();
-    el.textContent = weights.length ? 'Weights: ' + weights.map(w=>`Lv${w.level} ${(w.weight*100).toFixed(1)}%`).join(', ') : 'No tanks → fallback Lv1 100%';
-  }
-
-  function refreshDebugZombieCounts(){
-    const el = panel.querySelector('#debugZombieCounts');
-    if (!el) return;
-    const now = nowSec();
-    const cache = state.debug.zombieCountCache || { at: 0, text: '' };
-    if (!cache.at || (now - cache.at) >= 0.5) {
-      const zombies = state.zombies || [];
-      let dying = 0;
-      for (const z of zombies) { if (z.state === 'dying') dying++; }
-      const total = zombies.length;
-      const alive = total - dying;
-      const target = BAL.zombieCountTarget;
-      cache.at = now;
-      cache.text = 'Alive: ' + alive + ' | Dying: ' + dying + ' | Target: ' + target + ' | Total: ' + total;
-      cache.alive = alive;
-      cache.dying = dying;
-      cache.target = target;
-      cache.total = total;
-      state.debug.zombieCountCache = cache;
-    }
-    el.textContent = cache.text || 'Alive: 0 | Dying: 0 | Target: ' + BAL.zombieCountTarget + ' | Total: 0';
-  }
-
-  function refreshDebugRoadsSliders(){
-    const rZ = panel.querySelector('#debugZombieRadius');
-    const rT = panel.querySelector('#debugTankRadius');
-    const cW = panel.querySelector('#debugCellW');
-    const cH = panel.querySelector('#debugCellH');
-    const vZ = panel.querySelector('#debugZombieRadiusVal');
-    const vT = panel.querySelector('#debugTankRadiusVal');
-    const vW = panel.querySelector('#debugCellWVal');
-    const vH = panel.querySelector('#debugCellHVal');
-    if (rZ) { rZ.value = BAL.zombieTrackRadius; if (vZ) vZ.textContent = BAL.zombieTrackRadius; }
-    if (rT) { rT.value = BAL.tankOrbitRadius; if (vT) vT.textContent = BAL.tankOrbitRadius; }
-    if (cW) { cW.value = BAL.cellW; if (vW) vW.textContent = BAL.cellW; }
-    if (cH) { cH.value = BAL.cellH; if (vH) vH.textContent = BAL.cellH; }
-  }
-
-  panel.querySelectorAll('.debugSimSpawns').forEach(btn => {
-    btn.addEventListener('click', () => {
-      safeDebug(() => {
-        const n = Number(btn.dataset.n) || 100;
-        const counts = {};
-        for (let i = 0; i < n; i++) {
-          const lvl = pickZombieLevel();
-          counts[lvl] = (counts[lvl] || 0) + 1;
-        }
-        const levels = Object.keys(counts).map(Number).sort((a,b)=>a-b);
-        const lines = levels.map(l=>`Lv${l}: ${counts[l]} (${(counts[l]/n*100).toFixed(1)}%)`);
-        const el = panel.querySelector('#debugSimResults');
-        if (el) el.textContent = `Simulated ${n} spawns:\n` + lines.join('\n');
-        debugLog('info', `Simulated ${n} zombie spawns.`);
-      }, 'Simulate failed ');
-    });
-  });
-
-  ['debugZombieRadius','debugTankRadius','debugCellW','debugCellH'].forEach(id => {
-    const input = panel.querySelector('#' + id);
-    const valId = id + 'Val';
-    const valEl = panel.querySelector('#' + valId);
-    if (input && valEl) input.addEventListener('input', () => { valEl.textContent = input.value; });
-  });
-
-  const applyRoadsBtn = panel.querySelector('#debugApplyRoads');
-  if (applyRoadsBtn) applyRoadsBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      const rZ = panel.querySelector('#debugZombieRadius');
-      const rT = panel.querySelector('#debugTankRadius');
-      const cW = panel.querySelector('#debugCellW');
-      const cH = panel.querySelector('#debugCellH');
-      if (rZ) BAL.zombieTrackRadius = Number(rZ.value);
-      if (rT) BAL.tankOrbitRadius = Number(rT.value);
-      if (cW) BAL.cellW = Number(cW.value);
-      if (cH) BAL.cellH = Number(cH.value);
-      initBoard();
-      const note = panel.querySelector('#debugRoadsNote');
-      if (note) note.textContent = 'Applied. Resize may override; reload for persistent defaults.';
-      debugLog('info', 'Roads/hangar applied.');
-    }, 'Apply failed ');
-  });
-
-  const resetRoadsBtn = panel.querySelector('#debugResetRoads');
-  if (resetRoadsBtn) resetRoadsBtn.addEventListener('click', () => {
-    safeDebug(() => {
-      BAL.zombieTrackRadius = BASE_BAL.zombieTrackRadius;
-      BAL.tankOrbitRadius = BASE_BAL.tankOrbitRadius;
-      BAL.cellW = BASE_BAL.cellW;
-      BAL.cellH = BASE_BAL.cellH;
-      BAL.cellGap = BASE_BAL.cellGap;
-      BAL.boardPad = BASE_BAL.boardPad;
-      initBoard();
-      refreshDebugRoadsSliders();
-      const note = panel.querySelector('#debugRoadsNote');
-      if (note) note.textContent = '';
-      debugLog('info', 'Roads/hangar reset to defaults.');
-    }, 'Reset failed ');
-  });
-
-  function refreshDebugEffectList(){
-    const container = panel.querySelector('#debugEffectList');
-    if (!container) return;
-    container.innerHTML = '';
-    const catEl = panel.querySelector('#debugEffectCategory');
-    const cat = catEl ? catEl.value : 'all';
-    const showVfx = cat === 'all' || cat === 'vfx';
-    const showStatus = cat === 'all' || cat === 'status';
-    if (showVfx) {
-      vfxList.forEach(ef => {
-        const row = document.createElement('div');
-        row.className = 'debugRow';
-        row.innerHTML = `<span class="debugLabel">${ef.label}</span>
-          <button type="button" class="debugBtn debugPlayVfx" data-id="${ef.id}">Play once</button>`;
-        row.querySelector('button').addEventListener('click', () => {
-          safeDebug(() => {
-            const x = center.x + (Math.random() - 0.5) * 80;
-            const y = center.y + (Math.random() - 0.5) * 80;
-            if (ef.id === 'burst') {
-              burst(x, y, 12, 'rgba(255,180,120,.25)');
-              debugLog('info', 'VFX: Burst at center.');
-            } else if (ef.id === 'particle_burst') {
-              for (let i = 0; i < 8; i++) {
-                const p = { x, y, r: 2, color: 'rgba(200,255,180,.4)', life: 0.4, max: 0.4, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, debugPreview: true };
-                state.particles.push(p);
-              }
-              debugLog('info', 'VFX: Particle burst.');
-            } else if (ef.id === 'impact_ring') {
-              state.impacts.push({ x, y, r: 0, maxR: 40, life: 0.3, max: 0.3, kind: 'he', debugPreview: true });
-              debugLog('info', 'VFX: Impact ring.');
-            } else if (ef.id === 'decal_pool') {
-              state.decals.push({ kind: 'pool', x, y, r: 25, life: 5, max: 5, dps: 0, color: 'rgba(125,255,178,.14)', debugPreview: true });
-              debugLog('info', 'VFX: Decal pool.');
-            }
-          }, 'VFX failed ');
-        });
-        container.appendChild(row);
-      });
-    }
-    if (showStatus) {
-      statusList.forEach(ef => {
-        const row = document.createElement('div');
-        row.className = 'debugRow';
-        const dur = 6;
-        row.innerHTML = `<span class="debugLabel">${ef.label}</span>
-          <button type="button" class="debugBtn debugApplyStatus" data-key="${ef.key}">Apply ${dur}s</button>
-          <button type="button" class="debugBtn debugRemoveStatus" data-key="${ef.key}">Remove</button>`;
-        row.querySelector('.debugApplyStatus').addEventListener('click', () => {
-          safeDebug(() => {
-            state.activeEffects[ef.key] = nowSec() + dur;
-            state.debug.debugStatusActive = true;
-            debugLog('info', `Status: ${ef.label} applied ${dur}s.`);
-          }, 'Apply status failed ');
-        });
-        row.querySelector('.debugRemoveStatus').addEventListener('click', () => {
-          safeDebug(() => {
-            state.activeEffects[ef.key] = 0;
-            debugLog('info', `Status: ${ef.label} removed.`);
-          }, 'Remove status failed ');
-        });
-        container.appendChild(row);
-      });
-    }
-  }
-
-  const effectCategoryEl = panel.querySelector('#debugEffectCategory');
-  if (effectCategoryEl) effectCategoryEl.addEventListener('change', refreshDebugEffectList);
-
-  function refreshDebugActivesList(){
-    const container = panel.querySelector('#debugActivesList');
-    if (!container) return;
-    container.innerHTML = '';
-    initTalentDefs();
-    [0, 1, 2].forEach(branch => {
-      const row = document.createElement('div');
-      row.className = 'debugRow';
-      const name = activeNames[branch] || 'Active ' + branch;
-      row.innerHTML = `<span class="debugLabel">${name}</span>
-        <button type="button" class="debugBtn debugActivateActive" data-branch="${branch}">Activate</button>`;
-      row.querySelector('button').addEventListener('click', () => {
-        safeDebug(() => {
-          const bypassEl = panel.querySelector('#debugBypass');
-          const bypass = bypassEl && bypassEl.checked;
-          if (bypass) {
-            const now = nowSec();
-            state.player.activeCooldowns[branch] = now;
-            if (branch === 0) state.activeEffects.attackUntil = now + 6;
-            else if (branch === 1) state.activeEffects.speedUntil = now + 6;
-            else if (branch === 2) state.activeEffects.economyUntil = now + 6;
-            playSfx('activeAbility');
-            burst(center.x, center.y, 60, branch === 0 ? 'rgba(255,120,90,.2)' : branch === 1 ? 'rgba(125,255,178,.22)' : 'rgba(255,215,125,.22)');
-            state.debug.debugStatusActive = true;
-            debugLog('info', `Active ${name} (bypass) activated.`);
-          } else {
-            if (!canUseActive(branch)) {
-              debugLog('warn', `Active ${name}: cannot use (cooldown or not unlocked).`);
-              return;
-            }
-            useActiveAbility(branch);
-            debugLog('info', `Active ${name} activated.`);
-          }
-        }, 'Activate failed ');
-      });
-      container.appendChild(row);
-    });
-  }
-
-  function refreshDebugTalentsList(){
-    const container = panel.querySelector('#debugTalentsList');
-    if (!container) return;
-    container.innerHTML = '';
-    initTalentDefs();
-    TALENT_DEFS.forEach((def, i) => {
-      const row = document.createElement('div');
-      row.className = 'debugRow';
-      const current = state.debug.talentOverrides[i] || 'normal';
-      row.innerHTML = `<span class="debugLabel" title="${def.desc}">${def.name}</span>
-        <select class="debugSelect debugTalentOverride" data-talent="${i}" style="width:auto;display:inline-block;margin-left:4px">
-          <option value="normal" ${current === 'normal' ? 'selected' : ''}>Normal</option>
-          <option value="on" ${current === 'on' ? 'selected' : ''}>Force ON</option>
-          <option value="off" ${current === 'off' ? 'selected' : ''}>Force OFF</option>
-        </select>`;
-      row.querySelector('select').addEventListener('change', (e) => {
-        const v = e.target.value;
-        if (v === 'normal') delete state.debug.talentOverrides[i];
-        else state.debug.talentOverrides[i] = v;
-        state.player.modsDirty = true;
-        debugLog('info', `Talent ${def.name}: ${v}.`);
-      });
-      container.appendChild(row);
-    });
-  }
-
-  state.debug.refreshHangarList = refreshDebugHangarList;
-  state.debug.refreshTankExtras = refreshDebugTankExtras;
-  state.debug.refreshZombieWeights = refreshDebugZombieWeights;
-  state.debug.refreshZombieCounts = refreshDebugZombieCounts;
-  state.debug.refreshRoadsSliders = refreshDebugRoadsSliders;
-  main.insertBefore(panel, main.firstChild);
-  refreshDebugHangarList();
-  refreshDebugEffectList();
-  refreshDebugActivesList();
-  refreshDebugTalentsList();
-  // Init telemetry debug widget
-  if (window.Game && window.Game.Telemetry) {
-    var telMount = panel.querySelector('#debugTelemetryMount');
-    if (telMount) window.Game.Telemetry.initUI(telMount);
-  }
-  debugLog('info', 'Debug panel ready. URL param: ' + DEBUG_PARAM + '=1');
+  debugLog('warn', 'DebugPanel module unavailable.');
 }
 
 // ---------- Boot ----------
 async function boot(){
-  loadSettings();
-  const savedLang = localStorage.getItem('lang');
-  if (savedLang) setLanguage(savedLang);
-  else setLanguage(currentLang);
-  const i18n = getI18n();
-  if (i18n && typeof i18n.onReady === 'function') {
-    i18n.onReady(() => {
-      applyTranslations();
-      updateUI();
-      if (window.Game && window.Game.LessonProgress && window.Game.LessonProgress.renderList) {
-        window.Game.LessonProgress.renderList();
-      }
+  if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
+    await BootstrapApi.runBoot({
+      windowObj: window,
+      documentObj: document,
+      localStorageObj: localStorage,
+      getState: () => state,
+      getSettings: () => settings,
+      loadSettings,
+      setLanguage,
+      currentLang,
+      getI18n,
+      applyTranslations,
+      updateUI,
+      ensureProgressUI,
+      initTalentDefs,
+      applySavedProgress,
+      getSavedProgress,
+      ensureTalentState,
+      xpNeededForLevel,
+      ui,
+      meta,
+      grantXP,
+      saveProgress,
+      clamp,
+      settings,
+      applyAudioSettings,
+      updateMenuVolumes,
+      saveSettings,
+      openTalents,
+      setMenuOpen,
+      t,
+      resetGameState,
+      nowSec,
+      BAL,
+      resizeCanvas,
+      restoreFullState,
+      DebugPanelEnabled,
+      initDebugPanel,
+      makeTank,
+      recordTankLevel,
+      ZombieSprites,
+      getZombieSpawnBalanceConfig,
+      TankSprites,
+      FenceSprites,
+      DecorSprites,
+      ensureZombieCount,
+      acceptLevelReward,
+      loop,
     });
+    return;
   }
-  ensureProgressUI();
-  initTalentDefs();
-  let loaded = null;
-  if (window.Game && window.Game.Storage) {
-    loaded = window.Game.Storage.loadGame();
-    if (loaded) {
-      if (loaded.legacyProgress) applySavedProgress(loaded.legacyProgress);
-      if (loaded.meta && loaded.meta.lastSeenAt != null) meta.lastSeenAt = loaded.meta.lastSeenAt;
-    }
-  } else {
-    applySavedProgress(getSavedProgress());
-  }
-  ensureTalentState();
-  state.player.xpToNext = xpNeededForLevel(state.player.level);
-  state.player.modsDirty = true;
-  if (ui.langRu && ui.langEn){
-    ui.langRu.addEventListener('click', () => setLanguage('ru'));
-    ui.langEn.addEventListener('click', () => setLanguage('en'));
-  }
-  function presentOfflineRewards(rewards) {
-    const OfflineModal = window.Game && window.Game.OfflineModal;
-    const AdService = window.Game && window.Game.AdService;
-    if (!OfflineModal || !AdService) return;
-    if (!rewards || (rewards.coins === 0 && rewards.xp === 0)) return;
-    OfflineModal.showOfflineRewardsModal({
-      coins: rewards.coins,
-      xp: rewards.xp,
-      onConfirm() {
-        OfflineModal.setClaiming(true);
-        AdService.requestRewardedAd().then((result) => {
-          if (result && result.success) {
-            state.coins += rewards.coins;
-            state.player.xp += rewards.xp;
-            grantXP(0);
-            meta.lastSeenAt = Date.now();
-            saveProgress();
-            OfflineModal.hideModal();
-            updateUI();
-          }
-          OfflineModal.setClaiming(false);
-        });
-      },
-    });
-  }
-
-  function maybeShowOfflineRewardsFromMeta() {
-    const ContinueFlow = window.Game && window.Game.ContinueFlow;
-    const OfflineModal = window.Game && window.Game.OfflineModal;
-    const OfflineProgress = window.Game && window.Game.OfflineProgress;
-    if (!ContinueFlow || !OfflineModal || !OfflineProgress) return;
-    if (OfflineModal.isVisible && OfflineModal.isVisible()) return;
-    if (!ContinueFlow.shouldShowOfflineModal(meta && meta.lastSeenAt)) return;
-    const elapsed = ContinueFlow.getElapsedMs(meta && meta.lastSeenAt);
-    const rewards = OfflineProgress.computeOfflineRewards(state, elapsed);
-    presentOfflineRewards(rewards);
-  }
-  ui.menuContinue?.addEventListener('click', () => {
-    const ContinueFlow = window.Game && window.Game.ContinueFlow;
-    const OfflineModal = window.Game && window.Game.OfflineModal;
-    const AdService = window.Game && window.Game.AdService;
-    if (ContinueFlow && OfflineModal && AdService) {
-      ContinueFlow.onContinueClick(state, meta, () => setMenuOpen(false), (rewards) => {
-        presentOfflineRewards(rewards);
-      });
-      return;
-    }
-    setMenuOpen(false);
-  });
-  ui.menuNew?.addEventListener('click', () => {
-    localStorage.removeItem('progress');
-    resetGameState();
-    meta.lastSeenAt = Date.now();
-    saveProgress();
-    setMenuOpen(false);
-  });
-  ui.menuSfx?.addEventListener('input', (e) => {
-    const value = Number(e.target.value) / 100;
-    settings.sfxVolume = clamp(value, 0, 1);
-    applyAudioSettings();
-    updateMenuVolumes();
-    saveSettings();
-  });
-  ui.menuMusic?.addEventListener('input', (e) => {
-    const value = Number(e.target.value) / 100;
-    settings.musicVolume = clamp(value, 0, 1);
-    applyAudioSettings();
-    updateMenuVolumes();
-    saveSettings();
-  });
-  ui.talentsBtn?.addEventListener('click', () => openTalents());
-  ui.settingsBtn?.addEventListener('click', () => setMenuOpen(true));
-  const settingsTooltip = document.getElementById('settingsTooltip');
-  if (ui.settingsBtn && settingsTooltip){
-    ui.settingsBtn.addEventListener('mouseenter', () => {
-      settingsTooltip.textContent = t('menuSettings');
-      settingsTooltip.classList.remove('hidden');
-      settingsTooltip.setAttribute('aria-hidden', 'false');
-    });
-    ui.settingsBtn.addEventListener('mousemove', (e) => {
-      settingsTooltip.style.left = e.clientX + 'px';
-      settingsTooltip.style.top = (e.clientY + 12) + 'px';
-      settingsTooltip.style.transform = 'translate(-50%, 0)';
-    });
-    ui.settingsBtn.addEventListener('mouseleave', () => {
-      settingsTooltip.classList.add('hidden');
-      settingsTooltip.setAttribute('aria-hidden', 'true');
-    });
-    // Touch: show tooltip immediately on tap, no delay (T4)
-    ui.settingsBtn.addEventListener('touchstart', (e) => {
-      settingsTooltip.textContent = t('menuSettings');
-      settingsTooltip.classList.remove('hidden');
-      settingsTooltip.setAttribute('aria-hidden', 'false');
-      const touch = e.touches[0];
-      if (touch) {
-        settingsTooltip.style.left = touch.clientX + 'px';
-        settingsTooltip.style.top = (touch.clientY + 24) + 'px';
-        settingsTooltip.style.transform = 'translate(-50%, 0)';
-      }
-    }, { passive: true });
-    ui.settingsBtn.addEventListener('touchend', () => {
-      settingsTooltip.classList.add('hidden');
-      settingsTooltip.setAttribute('aria-hidden', 'true');
-    });
-  }
-  ui.levelAccept?.addEventListener('click', () => acceptLevelReward());
-  window.addEventListener('resize', resizeCanvas);
-  if (window.visualViewport){
-    window.visualViewport.addEventListener('resize', resizeCanvas);
-  }
-  resizeCanvas();
-  if (loaded && loaded.state) restoreFullState(loaded.state);
-  state.nextCrateAt = state.nextCrateAt || nowSec() + BAL.crateIntervalSec;
-
-  // Load telemetry lifetime data (before debug panel init)
-  if (window.Game && window.Game.Telemetry) {
-    window.Game.Telemetry.loadLifetime();
-  }
-
-  if (window.Game && window.Game.Flags) {
-    window.Game.Flags.init();
-  }
-
-  if (window.Game && window.Game.MobileMode) {
-    window.Game.MobileMode.init();
-  }
-
-  if (window.Game && window.Game.Experiments) {
-    window.Game.Experiments.init();
-  }
-
-  if (window.Game && window.Game.Funnel) {
-    window.Game.Funnel.init();
-  }
-
-  if (DebugPanelEnabled) initDebugPanel();
-
-  if (DebugPanelEnabled && window.Game && window.Game.AdminFlags) {
-    window.Game.AdminFlags.init();
-  }
-
-  // starter tanks
-  if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
-    state.cells[0].tank = makeTank(1, true);
-    state.cells[1].tank = makeTank(1, true);
-    recordTankLevel(1);
-  }
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && window.Game && window.Game.Storage) {
-      meta.lastSeenAt = Date.now();
-      window.Game.Storage.saveGame(state, meta);
-      return;
-    }
-    if (document.visibilityState === 'visible') {
-      maybeShowOfflineRewardsFromMeta();
-    }
-  });
-  window.addEventListener('pagehide', () => {
-    if (window.Game && window.Game.Storage) {
-      meta.lastSeenAt = Date.now();
-      window.Game.Storage.saveGame(state, meta);
-    }
-  });
-
-  await ZombieSprites.load();
-  if (ZombieSprites.spawnConfig) {
-    const spawnCfg = getZombieSpawnBalanceConfig();
-    BAL.zombieCountTarget = spawnCfg.targetAlive;
-    BAL.zombieSideCount = spawnCfg.sideCount;
-    BAL.zombiePerSideTarget = spawnCfg.perSideTarget;
-    BAL.zombiePerSideTolerance = Math.max(0, spawnCfg.perSideTarget - spawnCfg.perSideMin);
-    BAL.corpseMaxCount = Math.max(BAL.corpseMaxCount, spawnCfg.targetAlive);
-  }
-  // optional tanks (won't break if missing)
-  await TankSprites.load();
-  FenceSprites.load().catch(() => {});
-  DecorSprites.load().catch(() => {});
-
-  // Initialize merge popup
-  if (window.Game && window.Game.MergePopup) {
-    window.Game.MergePopup.init();
-  }
-
-  // Pack 2: Initialize TelemetryLogger
-  if (window.Game && window.Game.TelemetryLogger) {
-    window.Game.TelemetryLogger.init();
-  }
-
-  if (window.Game && window.Game.Experiments) {
-    window.Game.Experiments.attachTelemetry();
-  }
-
-  if (window.Game && window.Game.Funnel) {
-    window.Game.Funnel.trackStep('first_launch', { hasSave: !!(loaded && loaded.state) });
-    if (meta && meta.lastSeenAt != null) {
-      window.Game.Funnel.maybeTrackReturn(meta.lastSeenAt);
-    }
-  }
-
-  // Pack 2: Initialize LessonProgress
-  if (window.Game && window.Game.LessonProgress) {
-    window.Game.LessonProgress.init();
-  }
-
-  // Pack 2: Hook Anki export button
-  if (window.Game && window.Game.AnkiExport) {
-    window.Game.AnkiExport.hookUI();
-  }
-
-  // Initialize debug-only zombie animation preview
-  if (window.Game && window.Game.ZombieAnimPreview) {
-    window.Game.ZombieAnimPreview.init();
-  }
-
-  ensureZombieCount();
-  updateUI();
-  setMenuOpen(true);
-  requestAnimationFrame(loop);
+  throw new Error('Bootstrap module unavailable');
 }
 
 boot();

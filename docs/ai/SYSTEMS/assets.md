@@ -8,7 +8,7 @@
 
 - Конфиги: `assets/tanks.json`, `assets/zombies.json`, `assets/fence.json`, `assets/decor.json`.
 - Доки по форматам: `assets/tanks_README.md`, `assets/zombies_README.md`.
-- Загрузка в рантайме: `game.js` (`TankSprites.load`, `ZombieSprites.load`, `FenceSprites.load`, `DecorSprites.load`).
+- Загрузка в рантайме: `src/render/spriteLoaders.js` (`Game.SpriteLoaders.createSpriteLoaders`).
 
 ## Key files
 
@@ -18,12 +18,13 @@
 - `assets/decor.json`
 - `assets/tanks/`, `assets/sfx/`, `assets/talent_icon/`
 - `src/utils/tankConfig.js`
+- `src/render/spriteLoaders.js`
 - `game.js`
 
 ## Entrypoints
 
-- `boot()` вызывает загрузчики спрайтов.
-- `window.Game.TankSprites` публикуется из `game.js`.
+- `boot()` вызывает загрузчики спрайтов, созданные через `Game.SpriteLoaders.createSpriteLoaders(...)`.
+- `window.Game.TankSprites` публикуется в `game.js` после инициализации bundle из `src/render/spriteLoaders.js`.
 - `Game.TankConfig.getTankVisualSpec(level)` решает варианты корпуса/пушки/aura/bullet.
 
 ## Data & config

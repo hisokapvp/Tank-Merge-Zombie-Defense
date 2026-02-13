@@ -164,9 +164,14 @@ chmod +x hooks/pre-commit
 │   └── release_checklist.sh
 ├── src/
 │   ├── accessibility/  # A11y helpers
+│   ├── core/
+│   │   └── bootstrap.js # Startup orchestration (boot)
 │   ├── mechanics/      # Игровая логика
 │   │   ├── combat.js   # Дальность стрельбы, pickDeathAnim
+│   │   ├── combatProfiles.js # Профили снарядов и веса уровней зомби
 │   │   ├── economy.js  # Цены, монеты
+│   │   ├── levelFlow.js # XP/level-up, rewards queue, level modal
+│   │   ├── progression.js # Формулы power-tier/XP/level-наград
 │   │   ├── zombieSpawn.js # Баланс спавна и распределение слотов зомби
 │   │   └── ...
 │   ├── audio/          # Подсистемы звука и аудио-настроек
@@ -174,13 +179,16 @@ chmod +x hooks/pre-commit
 │   ├── i18n/            # Локализация RU/EN
 │   │   └── fallbackStrings.js # Fallback-словарь UI-строк
 │   ├── persistence/    # Сохранение/загрузка
+│   │   └── initialState.js # Фабрика стартового состояния
 │   ├── render/         # Canvas rendering
+│   │   └── spriteLoaders.js # Загрузка atlas/json для tank/zombie/fence/decor
 │   ├── telemetry/      # Pack 2: расширенная телеметрия
 │   │   └── telemetry.js
 │   ├── tools/
 │   │   └── anki/       # Pack 2: Anki export
 │   │       └── anki_export.js
 │   ├── ui/             # UI-компоненты
+│   │   ├── debugPanel.js       # Debug panel (?debug=1), вынесена из game.js
 │   │   ├── lessonProgress.js    # Pack 2: панель уроков
 │   │   ├── mergePopup/          # Вынесенные helper-части MergePopup
 │   │   │   ├── mergePopupSeenLevels.js
@@ -253,6 +261,13 @@ chmod +x hooks/pre-commit
 ### v7.x (Refactor game.js)
 - Вынесен модуль `src/audio/settingsAudio.js`: загрузка/сохранение аудио-настроек, применение громкости, SFX pooling и dedup.
 - Вынесен модуль `src/mechanics/zombieSpawn.js`: вычисление spawn-конфига, распределение слотов и side-balance для зомби.
+- Вынесен модуль `src/mechanics/progression.js`: формулы `computePowerTier`, `xpNeededForLevel`, `levelGoldReward`.
+- Вынесен модуль `src/mechanics/combatProfiles.js`: `projectileProfile`, `tankLevelCounts`, `zombieLevelWeights`, `pickZombieLevel`.
+- Вынесен модуль `src/persistence/initialState.js`: фабрика `createInitialState()`.
+- Вынесен модуль `src/render/spriteLoaders.js`: `ZombieSprites`, `TankSprites`, `FenceSprites`, `DecorSprites`.
+- Вынесен модуль `src/ui/debugPanel.js`: `initDebugPanel` и логика вкладок debug UI.
+- Вынесен модуль `src/core/bootstrap.js`: startup flow из `boot()`.
+- Вынесен модуль `src/mechanics/levelFlow.js`: `grantXP`, награды level-up, level modal, power-moment события.
 - Вынесен fallback-словарь в `src/i18n/fallbackStrings.js`.
 - Вынесена логика UI-модалок в `src/ui/modals.js`.
 - `game.js` оставлен как слой orchestration с делегированием доменной логики в `src/*`.

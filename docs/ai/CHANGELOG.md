@@ -2,6 +2,27 @@
 
 ## 2026-02-13
 
+- Fix: debug-panel spawn tank восстановлен после выноса в модуль.
+	- усилены guard-проверки в `src/ui/debugPanel.js` (инициализация board при пустых cells, проверка `makeTank`);
+	- добавлен принудительный `updateUI()` после spawn для мгновенного отображения.
+
+- Decomposition: из `game.js` вынесены дополнительные крупные блоки.
+	- добавлен `src/core/bootstrap.js` (`Game.Bootstrap.runBoot`) и `boot()` в `game.js` переведён на делегирование;
+	- добавлен `src/mechanics/levelFlow.js` (`Game.LevelFlow.createLevelFlow`) и вынесены `update/open/close level modal`, `queue/accept reward`, `grantXP`, level-up VFX/events.
+
+- Decomposition: из `game.js` вынесены sprite-loaders и debug-panel.
+	- добавлен `src/render/spriteLoaders.js` (`Game.SpriteLoaders.createSpriteLoaders`) для `ZombieSprites/TankSprites/FenceSprites/DecorSprites`;
+	- добавлен `src/ui/debugPanel.js` (`Game.DebugPanel.initDebugPanel`) для инициализации debug UI через dependency injection;
+	- `game.js` упрощён: inline-блоки заменены вызовами модулей;
+	- `index.html` обновлён: добавлены `src/render/spriteLoaders.js` и `src/ui/debugPanel.js` перед `game.js`.
+
+- Decomposition: вынесены дополнительные блоки из `game.js` в `src/*` без изменения runtime-поведения.
+	- добавлен `src/mechanics/progression.js` (`Game.Progression`) с формулами `computePowerTier`, `xpNeededForLevel`, `levelGoldReward`;
+	- добавлен `src/mechanics/combatProfiles.js` (`Game.CombatProfiles`) с `PROJECTILE_KINDS`, `projectileProfile`, `tankLevelCounts`, `zombieLevelWeights`, `pickZombieLevel`;
+	- добавлен `src/persistence/initialState.js` (`Game.InitialState.createInitialState`) для фабрики стартового state;
+	- `game.js` переключён на вызовы API модулей через безопасные fallback-ветки;
+	- `index.html` обновлён: подключены новые модули до `game.js`.
+
 - Refactor: удалено дублирование отправки событий в UI-модулях через общий helper.
 	- добавлен `src/utils/eventTelemetry.js` (`Game.EventTelemetry.emit`) — единая отправка в `TelemetryLogger` + `AnalyticsCollector`;
 	- `src/ui/mergePopup.js` и `src/ui/lessonProgress.js` переведены на helper с fallback для изолированной загрузки модулей в тестах.

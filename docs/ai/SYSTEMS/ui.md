@@ -18,6 +18,7 @@
 - `src/ui/mergePopup.js`
 - `src/ui/offlineModal.js`
 - `src/ui/continueFlow.js`
+- `src/ui/debugPanel.js`
 - `src/ui/lessonProgress.js`
 - `src/ui/shopUI.js`
 - `src/accessibility/a11y.js`
@@ -26,6 +27,7 @@
 ## Entrypoints
 
 - В `boot()` (`game.js`) навешиваются обработчики кнопок/модалок.
+- Debug UI инициализируется через `Game.DebugPanel.initDebugPanel(...)` из `src/ui/debugPanel.js`.
 - `Game.MergePopup.init()`, `Game.LessonProgress.init()`, `Game.ZombieAnimPreview.init()` вызываются при старте.
 - `Game.A11y.openModal/closeModal` — обязательный фокус-контур для модалок.
 

@@ -12,7 +12,7 @@
 
 2. **Orchestration/Core**
    - `game.js`
-   - `boot()` инициализирует системы
+   - `boot()` делегирует инициализацию в `src/core/bootstrap.js`
    - `loop(now)` обновляет состояние и рисует кадр
 
 3. **Domain systems (`src/*`)**
@@ -71,15 +71,22 @@ Canvas pointer events:
 
 - `game.js`: orchestration и жизненный цикл; доменные вычисления постепенно выносятся в `src/*`.
 - `src/mechanics/*`: чистые правила и вычисления.
+- `src/mechanics/progression.js`: формулы progression (`computePowerTier`, `xpNeededForLevel`, `levelGoldReward`).
+- `src/mechanics/combatProfiles.js`: профили снарядов и веса уровней зомби (`projectileProfile`, `zombieLevelWeights`, `pickZombieLevel`).
+- `src/mechanics/levelFlow.js`: level-up цикл (`grantXP`, очередь наград, level modal, power-moment события).
 - `src/mechanics/zombieSpawn.js`: логика балансного распределения spawn-слотов по сторонам.
 - `src/ui/*`: модальные окна, панели, интерактив UI.
+- `src/ui/debugPanel.js`: изолированная инициализация debug-panel (`?debug=1`) через DI-параметры.
 - `src/ui/modals.js`: централизованное открытие/закрытие основных игровых модалок (boost/reset/crate/dismantle/level/menu).
 - `src/ui/mergePopup/mergePopupSeenLevels.js`: хранение и сброс seen-levels merge popup.
 - `src/ui/mergePopup/mergePopupStats.js`: расчёт и HTML-рендер строк характеристик merge popup.
 - `src/audio/settingsAudio.js`: аудио-настройки, применение громкости и SFX-пул.
 - `src/i18n/fallbackStrings.js`: fallback-словарь при недоступном JSON i18n.
 - `src/persistence/*`: долговременное состояние и офлайн-модель.
+- `src/persistence/initialState.js`: фабрика стартового состояния `createInitialState()`.
 - `src/perf/*`: ограничители производительности.
+- `src/render/spriteLoaders.js`: загрузка sprite atlas + JSON для zombie/tank/fence/decor и публикация bundle загрузчиков.
+- `src/core/bootstrap.js`: startup flow (bind UI events, restore/save/offline hooks, system init, sprite boot, first frame).
 - `src/analytics/*`, `src/telemetry/*`: метрики и экспорт.
 - `src/utils/eventTelemetry.js`: единая точка отправки UI-событий в `TelemetryLogger` и `AnalyticsCollector`.
 
