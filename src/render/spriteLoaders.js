@@ -314,12 +314,53 @@
       },
     };
 
+    var GroundSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      load: async function () {
+        try {
+          var res = await fetch('assets/ground.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+          var atlasPath = 'assets/' + (data.atlas || 'ground_atlas.png');
+          var img = await loadImage(atlasPath);
+
+          var tile = data && data.tile ? data.tile : {};
+          var tileW = Number.isFinite(tile.w) ? Math.max(1, Math.floor(tile.w)) : 16;
+          var tileH = Number.isFinite(tile.h) ? Math.max(1, Math.floor(tile.h)) : 16;
+          var mode = data && data.mode === 'manual' ? 'manual' : 'procedural';
+          var fillMode = data && data.fillMode === 'stretch' ? 'stretch' : 'repeat';
+
+          this.config = {
+            atlas: data && data.atlas ? data.atlas : 'ground_atlas.png',
+            tile: { w: tileW, h: tileH },
+            mode: mode,
+            fillMode: fillMode,
+            manual: data && data.manual ? data.manual : { anchor: 'center', grid: [] },
+            procedural: data && data.procedural ? data.procedural : { seed: '0', weights: [] },
+          };
+
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          this.ready = false;
+          this.atlasImg = null;
+          this.config = null;
+          this.error = String(e);
+        }
+      },
+    };
+
     return {
       loadImage: loadImage,
       ZombieSprites: ZombieSprites,
       TankSprites: TankSprites,
       FenceSprites: FenceSprites,
       DecorSprites: DecorSprites,
+      GroundSprites: GroundSprites,
     };
   }
 

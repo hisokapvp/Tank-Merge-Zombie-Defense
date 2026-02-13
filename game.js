@@ -282,6 +282,7 @@ const DebugPanelApi = window.Game && window.Game.DebugPanel ? window.Game.DebugP
 const LevelFlowApi = window.Game && window.Game.LevelFlow ? window.Game.LevelFlow : null;
 const BootstrapApi = window.Game && window.Game.Bootstrap ? window.Game.Bootstrap : null;
 const FenceLayoutApi = window.Game && window.Game.FenceLayout ? window.Game.FenceLayout : null;
+const GroundLayerApi = window.Game && window.Game.GroundLayer ? window.Game.GroundLayer : null;
 
 if (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.createAudioSettingsController) {
   audioSettingsController = window.Game.AudioSettings.createAudioSettingsController({
@@ -557,6 +558,24 @@ const DecorSprites = spriteLoaders && spriteLoaders.DecorSprites ? spriteLoaders
   pickFrame() { return null; },
 };
 
+const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoaders.GroundSprites : {
+  ready: false,
+  error: 'SpriteLoaders module is unavailable',
+  atlasImg: null,
+  config: null,
+  async load() {},
+};
+
+const groundLayer = GroundLayerApi && typeof GroundLayerApi.createGroundLayer === 'function'
+  ? GroundLayerApi.createGroundLayer()
+  : {
+      ready: false,
+      error: 'GroundLayer module is unavailable',
+      invalidate() { this.ready = false; },
+      rebuild() {},
+      draw() { return false; },
+    };
+
 const BASE_CANVAS = { w: 1100, h: 650 };
 let balScale = 1;
 
@@ -784,6 +803,27 @@ function buildBackground(){
   backgroundLayer.canvas = bg;
   backgroundLayer.ctx = bctx;
   backgroundLayer.ready = true;
+  rebuildGroundLayer();
+}
+
+function rebuildGroundLayer(){
+  if (!groundLayer || typeof groundLayer.rebuild !== 'function') return false;
+  if (!GroundSprites.ready || !GroundSprites.atlasImg || !GroundSprites.config) {
+    if (typeof groundLayer.invalidate === 'function') groundLayer.invalidate();
+    return false;
+  }
+  try {
+    groundLayer.rebuild({
+      cfg: GroundSprites.config,
+      atlasImg: GroundSprites.atlasImg,
+      width: viewSize.w,
+      height: viewSize.h,
+    });
+    return !!groundLayer.ready;
+  } catch (e) {
+    if (typeof groundLayer.invalidate === 'function') groundLayer.invalidate();
+    return false;
+  }
 }
 
 function makeTank(level, onTrack = false){
@@ -3544,6 +3584,9 @@ function drawLevelUpVfx(){
 }
 
 function drawBackground(){
+  if (groundLayer.ready && groundLayer.draw && groundLayer.draw(ctx)){
+    return;
+  }
   if (backgroundLayer.ready && backgroundLayer.canvas){
     ctx.drawImage(backgroundLayer.canvas, 0, 0);
     return;
@@ -4885,6 +4928,8 @@ function initDebugPanel(){
 
 // ---------- Boot ----------
 async function boot(){
+  await GroundSprites.load().catch(function () {});
+  rebuildGroundLayer();
   if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
     await BootstrapApi.runBoot({
       windowObj: window,
@@ -4930,10 +4975,12 @@ async function boot(){
       TankSprites,
       FenceSprites,
       DecorSprites,
+      GroundSprites,
       ensureZombieCount,
       acceptLevelReward,
       loop,
     });
+    rebuildGroundLayer();
     return;
   }
   throw new Error('Bootstrap module unavailable');

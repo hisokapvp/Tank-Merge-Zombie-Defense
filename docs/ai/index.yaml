@@ -17,6 +17,8 @@ systems:
     files:
       - game.js
       - src/render/canvasRoot.js
+      - src/render/groundGen.js
+      - src/render/groundLayer.js
       - src/render/layout/hangarLayout.js
       - src/perf/mobileMode.js
   input:
@@ -42,6 +44,7 @@ systems:
       - assets/zombies.json
       - assets/fence.json
       - assets/decor.json
+      - assets/ground.json
       - src/render/spriteLoaders.js
   combat:
     doc: docs/ai/SYSTEMS/combat.md

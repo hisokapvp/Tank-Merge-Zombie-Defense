@@ -6,6 +6,7 @@
 - Тюнинг зазоров layout: `src/config/layoutTuning.js`.
 - Геометрия ангара/треков: `src/render/layout/hangarLayout.js`.
 - Геометрия сегментов забора: `src/render/fenceLayout.js`.
+- Генерация и раскладка земли: `src/render/groundGen.js`, `src/render/groundLayer.js`.
 - Canvas helpers: `src/render/canvasRoot.js`.
 - Лимиты качества: `src/perf/mobileMode.js`.
 
@@ -14,6 +15,22 @@
 - Порядок слоёв и `draw*` — в `draw()`.
 - FPS/FX-лимиты — через `Game.MobileMode` и quality-ветки в `loop()`.
 - Centerline / road-fence gap — `initBoard`, `drawTankTrack`, `drawZombieFence`.
+- Фон-земля через atlas: `drawBackground()` + `rebuildGroundLayer()` в `game.js`.
+
+## Ground layer (atlas tile 16x16)
+
+- Source config: `assets/ground.json`.
+- Modes:
+	- `mode: manual` — выбор тайла из `manual.grid` (anchor фиксирован как `center`).
+	- `mode: procedural` — детерминированный выбор по `seed` через `hash2(seed,x,y)`.
+- Fill:
+	- `fillMode: repeat` — отрисовка тайлов 1:1.
+	- `fillMode: stretch` — integer scale по X/Y до полного покрытия viewport (без дыр/blur).
+- Pixel-perfect:
+	- `ctx.imageSmoothingEnabled = false` на основном и offscreen canvas.
+	- Поворот `rotationDeg` применяется вокруг центра клетки (clockwise).
+- Fallback:
+	- Если `ground_atlas.png` или `ground.json` не загрузились, используется старый procedural gradient-фон.
 
 ## Layout tuning (PACK 1)
 
@@ -61,6 +78,14 @@
 
 - `src/config/layoutTuning.js` (новый)
 - `src/render/layout/hangarLayout.js`
+- `game.js`
+
+## Изменённые файлы (GROUND)
+
+- `assets/ground.json` (новый)
+- `src/render/groundGen.js` (новый)
+- `src/render/groundLayer.js` (новый)
+- `src/render/spriteLoaders.js`
 - `game.js`
 
 ## Команды проверки (факт)

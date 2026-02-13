@@ -69,6 +69,9 @@ loadModule('src/mechanics/combat.js');
 loadModule('src/mechanics/levelFlow.js');
 // Load fence layout
 loadModule('src/render/fenceLayout.js');
+// Load ground modules
+loadModule('src/render/groundGen.js');
+loadModule('src/render/groundLayer.js');
 
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...
@@ -805,6 +808,96 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     assertEqual(state.player.talentPoints, pointsAfterGrant, 'accept only closes modal, no extra points');
     assertEqual(state.coins, coinsAfterGrant, 'accept only closes modal, no extra coins');
     assertEqual(state.ui.levelReward, null, 'reward info is cleared on close');
+  });
+
+  // ═══════════════════════════════════════════════
+  // T9: Ground atlas/generation/layer
+  // ═══════════════════════════════════════════════
+  console.log('\n── T9: ground layer deterministic + mapping + stretch coverage ──');
+
+  test('T9-1: procedural getTileAt is deterministic by seed/tile coords', () => {
+    const cfg = {
+      mode: 'procedural',
+      tile: { w: 16, h: 16 },
+      procedural: {
+        seed: 'seed-A',
+        weights: [
+          { frame: { col: 0, row: 0 }, weight: 2 },
+          { frame: { col: 1, row: 0 }, weight: 1, rotationDeg: 90 },
+          { frame: { col: 0, row: 0 }, weight: 1, scale: 1.1 },
+        ],
+      },
+    };
+
+    const a = Game.GroundGen.getTileAt(cfg, 4, -7);
+    const b = Game.GroundGen.getTileAt(cfg, 4, -7);
+    assertEqual(JSON.stringify(a), JSON.stringify(b), 'same seed and coords produce same tile');
+
+    const hA = Game.GroundGen.hash2('seed-A', 4, -7);
+    const hB = Game.GroundGen.hash2('seed-B', 4, -7);
+    assert(hA !== hB, 'different seed changes deterministic hash stream');
+
+    const cfg2 = JSON.parse(JSON.stringify(cfg));
+    cfg2.procedural.seed = 'seed-B';
+    const c = Game.GroundGen.getTileAt(cfg2, 4, -7);
+    assert(c && c.frame, 'procedural tile remains valid with another seed');
+  });
+
+  test('T9-2: getSrcRect maps {col,row} to atlas src rect by tile size', () => {
+    const cfg = { tile: { w: 16, h: 16 } };
+    const src = Game.GroundLayer.getSrcRect(cfg, { col: 3, row: 2 });
+    assertEqual(src.x, 48, 'src.x = col * tile.w');
+    assertEqual(src.y, 32, 'src.y = row * tile.h');
+    assertEqual(src.w, 16, 'src.w = tile.w');
+    assertEqual(src.h, 16, 'src.h = tile.h');
+  });
+
+  test('T9-3: anchor=center stable and stretch fully covers viewport', () => {
+    const cfg = {
+      mode: 'manual',
+      fillMode: 'stretch',
+      tile: { w: 16, h: 16 },
+      manual: {
+        anchor: 'center',
+        grid: [
+          [{ frame: { col: 0, row: 0 } }, { frame: { col: 1, row: 0 } }, { frame: { col: 2, row: 0 } }],
+          [{ frame: { col: 0, row: 1 } }, { frame: { col: 1, row: 1 } }, { frame: { col: 2, row: 1 } }],
+          [{ frame: { col: 0, row: 2 } }, { frame: { col: 1, row: 2 } }, { frame: { col: 2, row: 2 } }],
+        ],
+      },
+      procedural: { seed: 'x', weights: [] },
+    };
+
+    const l1 = Game.GroundLayer.computeLayout(cfg, 1000, 600);
+    const l2 = Game.GroundLayer.computeLayout(cfg, 1200, 700);
+    assert(l1.length > 0 && l2.length > 0, 'layout exists for both canvas sizes');
+
+    function findCenterTile(layout, w, h) {
+      const cx = Math.floor(w / 2);
+      const cy = Math.floor(h / 2);
+      return layout.find(p => cx >= p.x && cx < p.x + p.w && cy >= p.y && cy < p.y + p.h);
+    }
+
+    const c1 = findCenterTile(l1, 1000, 600);
+    const c2 = findCenterTile(l2, 1200, 700);
+    assert(c1 && c2, 'center tile found');
+    assertEqual(c1.tileX, 0, 'center tileX is anchored to 0 at size #1');
+    assertEqual(c1.tileY, 0, 'center tileY is anchored to 0 at size #1');
+    assertEqual(c2.tileX, 0, 'center tileX is anchored to 0 at size #2');
+    assertEqual(c2.tileY, 0, 'center tileY is anchored to 0 at size #2');
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of l1) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x + p.w);
+      maxY = Math.max(maxY, p.y + p.h);
+    }
+    assert(minX <= 0 && minY <= 0, 'stretch layout reaches top-left boundary');
+    assert(maxX >= 1000 && maxY >= 600, 'stretch layout reaches bottom-right boundary');
   });
 
   // ═══════════════════════════════════════════════
