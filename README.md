@@ -182,10 +182,14 @@ chmod +x hooks/pre-commit
 │   │       └── anki_export.js
 │   ├── ui/             # UI-компоненты
 │   │   ├── lessonProgress.js    # Pack 2: панель уроков
+│   │   ├── mergePopup/          # Вынесенные helper-части MergePopup
+│   │   │   ├── mergePopupSeenLevels.js
+│   │   │   └── mergePopupStats.js
 │   │   ├── modals.js            # Управление UI-модалками
 │   │   ├── zombieAnimPreview.js # Debug preview анимаций
 │   │   └── ...
 │   └── utils/          # Утилиты
+│       ├── eventTelemetry.js # Единая отправка событий в TelemetryLogger+AnalyticsCollector
 │       └── telemetry.js # Базовая телеметрия (debug)
 └── Test/
     ├── tests.js        # Unit-тесты (Pack 1)

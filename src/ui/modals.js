@@ -83,8 +83,147 @@
     hideModal(ui.dismantleModal, opts.a11yClose);
   }
 
+  function openDismantleModal(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var state = opts.state;
+    if (!ui || !ui.dismantleModal || !state) return;
+
+    if (!state.isDismantleMode) {
+      state.isDismantleMode = true;
+      state.selectedTankIds = [];
+      if (typeof opts.updateDismantleButton === 'function') {
+        opts.updateDismantleButton();
+      }
+      return;
+    }
+
+    var selected = (state.selectedTankIds || []).filter(function (id) {
+      return (state.cells || []).some(function (c) { return c && c.tank && c.tank.id === id; });
+    });
+
+    if (selected.length === 0) {
+      state.isDismantleMode = false;
+      state.selectedTankIds = [];
+      if (typeof opts.updateDismantleButton === 'function') {
+        opts.updateDismantleButton();
+      }
+      return;
+    }
+
+    if (typeof opts.fillDismantleConfirmModal === 'function') {
+      opts.fillDismantleConfirmModal(selected);
+    } else {
+      fillDismantleConfirmModal({
+        ui: ui,
+        state: state,
+        t: opts.t,
+        selectedTankIds: selected,
+        drawTankIconTo: opts.drawTankIconTo,
+      });
+    }
+    showModal(ui.dismantleModal, opts.a11yOpen, ui.dismantleYes, opts.onClose);
+  }
+
+  function fillDismantleConfirmModal(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var state = opts.state;
+    var t = opts.t || function (k) { return k; };
+    var selectedTankIds = opts.selectedTankIds || [];
+    var drawTankIconTo = opts.drawTankIconTo;
+
+    if (!ui || !state) return;
+    if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirmMulti');
+    if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
+    if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+
+    var wrap = document.getElementById('dismantleIconsWrap');
+    if (!wrap) return;
+
+    var maxIcons = 12;
+    var ids = selectedTankIds.slice(0, maxIcons);
+    var rest = Math.max(0, selectedTankIds.length - maxIcons);
+    wrap.innerHTML = '';
+
+    ids.forEach(function (id) {
+      var cell = (state.cells || []).find(function (c) {
+        return c && c.tank && c.tank.id === id;
+      });
+      if (!cell || !cell.tank) return;
+
+      var can = document.createElement('canvas');
+      can.width = 36;
+      can.height = 28;
+      can.style.verticalAlign = 'middle';
+      can.style.marginRight = '4px';
+      var cctx = can.getContext('2d');
+      if (typeof drawTankIconTo === 'function') {
+        drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7);
+      }
+      wrap.appendChild(can);
+    });
+
+    var span = document.createElement('span');
+    span.style.marginLeft = '8px';
+    if (rest > 0) {
+      span.textContent = t('dismantleMore') + ' ' + rest + ' · ' + selectedTankIds.length + ' ' + t('dismantleCount');
+    } else {
+      span.textContent = selectedTankIds.length + ' ' + t('dismantleCount');
+    }
+    wrap.appendChild(span);
+  }
+
+  function openLevelModal(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    if (!ui || !ui.levelModal) return;
+    showModal(ui.levelModal, opts.a11yOpen, ui.levelAccept, opts.onClose);
+    if (typeof opts.updateLevelModal === 'function') {
+      opts.updateLevelModal();
+    }
+  }
+
+  function closeLevelModal(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    if (!ui || !ui.levelModal) return;
+    hideModal(ui.levelModal, opts.a11yClose);
+  }
+
+  function setMenuOpen(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var open = !!opts.open;
+    var state = opts.state;
+    if (!state || !state.ui) return;
+
+    state.ui.menuOpen = open;
+    if (document && document.body) {
+      document.body.classList.toggle('menu-open', open);
+    }
+
+    if (ui && ui.menuOverlay) {
+      ui.menuOverlay.classList.toggle('hidden', !open);
+      ui.menuOverlay.setAttribute('aria-hidden', (!open).toString());
+      if (open) {
+        if (typeof opts.a11yOpen === 'function') {
+          opts.a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: opts.onClose });
+        }
+      } else if (typeof opts.a11yClose === 'function') {
+        opts.a11yClose(ui.menuOverlay);
+      }
+    }
+
+    if (typeof opts.updateMenuState === 'function') {
+      opts.updateMenuState();
+    }
+  }
+
   global.Game = global.Game || {};
   global.Game.UIModals = {
+    fillDismantleConfirmModal: fillDismantleConfirmModal,
+    openDismantleModal: openDismantleModal,
     openBoostModal: openBoostModal,
     closeBoostModal: closeBoostModal,
     openResetTalentsModal: openResetTalentsModal,
@@ -92,5 +231,8 @@
     openCrateModal: openCrateModal,
     closeCrateModal: closeCrateModal,
     closeDismantleModal: closeDismantleModal,
+    openLevelModal: openLevelModal,
+    closeLevelModal: closeLevelModal,
+    setMenuOpen: setMenuOpen,
   };
 })(typeof window !== 'undefined' ? window : this);

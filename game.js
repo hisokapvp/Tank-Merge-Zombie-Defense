@@ -1182,11 +1182,20 @@ function updateLevelModal(){
 }
 
 function openLevelModal(){
-  if (!ui.levelModal) return;
-  ui.levelModal.classList.remove('hidden');
-  ui.levelModal.setAttribute('aria-hidden', 'false');
-  a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
-  updateLevelModal();
+  if (UIModals && typeof UIModals.openLevelModal === 'function') {
+    UIModals.openLevelModal({
+      ui,
+      a11yOpen,
+      onClose: closeLevelModal,
+      updateLevelModal,
+    });
+  } else {
+    if (!ui.levelModal) return;
+    ui.levelModal.classList.remove('hidden');
+    ui.levelModal.setAttribute('aria-hidden', 'false');
+    a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
+    updateLevelModal();
+  }
   if (state.ui.levelRewardTimer){
     window.clearTimeout(state.ui.levelRewardTimer);
   }
@@ -1196,10 +1205,14 @@ function openLevelModal(){
 }
 
 function closeLevelModal(){
-  if (!ui.levelModal) return;
-  ui.levelModal.classList.add('hidden');
-  ui.levelModal.setAttribute('aria-hidden', 'true');
-  a11yClose(ui.levelModal);
+  if (UIModals && typeof UIModals.closeLevelModal === 'function') {
+    UIModals.closeLevelModal({ ui, a11yClose });
+  } else {
+    if (!ui.levelModal) return;
+    ui.levelModal.classList.add('hidden');
+    ui.levelModal.setAttribute('aria-hidden', 'true');
+    a11yClose(ui.levelModal);
+  }
   if (state.ui.levelRewardTimer){
     window.clearTimeout(state.ui.levelRewardTimer);
     state.ui.levelRewardTimer = 0;
@@ -2897,6 +2910,18 @@ function stepParticles(dt){
 }
 
 function setMenuOpen(open){
+  if (UIModals && typeof UIModals.setMenuOpen === 'function') {
+    UIModals.setMenuOpen({
+      open,
+      state,
+      ui,
+      a11yOpen,
+      a11yClose,
+      onClose: () => setMenuOpen(false),
+      updateMenuState,
+    });
+    return;
+  }
   state.ui.menuOpen = open;
   document.body.classList.toggle('menu-open', open);
   if (ui.menuOverlay){
@@ -2997,6 +3022,17 @@ function updateDismantleButton(){
 }
 
 function openDismantleModal(){
+  if (UIModals && typeof UIModals.openDismantleModal === 'function') {
+    UIModals.openDismantleModal({
+      ui,
+      state,
+      a11yOpen,
+      onClose: closeDismantleModal,
+      updateDismantleButton,
+      fillDismantleConfirmModal,
+    });
+    return;
+  }
   if (!ui.dismantleModal) return;
   if (!state.isDismantleMode){
     state.isDismantleMode = true;
@@ -3018,6 +3054,16 @@ function openDismantleModal(){
 }
 
 function fillDismantleConfirmModal(selectedTankIds){
+  if (UIModals && typeof UIModals.fillDismantleConfirmModal === 'function') {
+    UIModals.fillDismantleConfirmModal({
+      ui,
+      state,
+      t,
+      selectedTankIds,
+      drawTankIconTo,
+    });
+    return;
+  }
   if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirmMulti');
   if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
   if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');

@@ -39,12 +39,29 @@
     return key;
   }
 
+  function emitTelemetry(event, payload) {
+    if (global.Game && global.Game.EventTelemetry && typeof global.Game.EventTelemetry.emit === 'function') {
+      global.Game.EventTelemetry.emit(event, payload);
+      return;
+    }
+    if (global.Game && global.Game.TelemetryLogger) {
+      global.Game.TelemetryLogger.log(event, payload);
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track(event, payload);
+    }
+  }
+
   /* ── particles / flashes ── */
   var particles = [];
   var muzzleFlashes = [];
 
   /* ═══════════════ Persistence ═══════════════ */
   function loadSeenLevels() {
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.load === 'function') {
+      return storage.load(SEEN_LEVELS_KEY);
+    }
     try {
       var raw = global.localStorage && global.localStorage.getItem(SEEN_LEVELS_KEY);
       if (!raw) return {};
@@ -54,6 +71,11 @@
   }
 
   function saveSeenLevels() {
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.save === 'function') {
+      storage.save(SEEN_LEVELS_KEY, seenLevels);
+      return;
+    }
     try {
       if (global.localStorage) global.localStorage.setItem(SEEN_LEVELS_KEY, JSON.stringify(seenLevels));
     } catch (e) {}
@@ -71,6 +93,11 @@
   /** Clear all seen-level flags (called on New Game). */
   function resetSeenLevels() {
     seenLevels = {};
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.reset === 'function') {
+      storage.reset(SEEN_LEVELS_KEY);
+      return;
+    }
     try {
       if (global.localStorage) global.localStorage.removeItem(SEEN_LEVELS_KEY);
     } catch (e) {}
@@ -164,13 +191,7 @@
     markLevelSeen(level);
     currentLevel = level;
 
-    // Pack 2: telemetry logging
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('mergePopupShow', { level: level });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('mergePopupShow', { level: level });
-    }
+    emitTelemetry('mergePopupShow', { level: level });
 
     if (titleEl) titleEl.textContent = t('mergePopupTitle', { level: level });
     if (subtitleEl) subtitleEl.textContent = t('mergePopupSubtitle');
@@ -197,13 +218,7 @@
       modal.setAttribute('aria-hidden', 'true');
       if (global.Game && global.Game.A11y) global.Game.A11y.closeModal(modal);
     }
-    // Pack 2: telemetry logging
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('mergePopupClose', { level: currentLevel });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('mergePopupClose', { level: currentLevel });
-    }
+    emitTelemetry('mergePopupClose', { level: currentLevel });
   }
 
   /* ═══════════════ State transitions ═══════════════ */
@@ -232,6 +247,12 @@
   /* ═══════════════ Stats display ═══════════════ */
   function updateStats(level) {
     if (!statsEl) return;
+    var helper = global.Game && global.Game.MergePopupStats;
+    if (helper && typeof helper.buildRows === 'function') {
+      statsEl.innerHTML = helper.buildRows(level, t, global.BAL || {});
+      return;
+    }
+
     var BAL = global.BAL || {};
     var dmg = (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1.48, level - 1);
     var fr  = (BAL.fireRateBase || 0.85) + (BAL.fireRateAddPerLevel || 0.075) * (level - 1);

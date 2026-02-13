@@ -73,12 +73,15 @@ Canvas pointer events:
 - `src/mechanics/*`: чистые правила и вычисления.
 - `src/mechanics/zombieSpawn.js`: логика балансного распределения spawn-слотов по сторонам.
 - `src/ui/*`: модальные окна, панели, интерактив UI.
-- `src/ui/modals.js`: централизованное открытие/закрытие основных игровых модалок.
+- `src/ui/modals.js`: централизованное открытие/закрытие основных игровых модалок (boost/reset/crate/dismantle/level/menu).
+- `src/ui/mergePopup/mergePopupSeenLevels.js`: хранение и сброс seen-levels merge popup.
+- `src/ui/mergePopup/mergePopupStats.js`: расчёт и HTML-рендер строк характеристик merge popup.
 - `src/audio/settingsAudio.js`: аудио-настройки, применение громкости и SFX-пул.
 - `src/i18n/fallbackStrings.js`: fallback-словарь при недоступном JSON i18n.
 - `src/persistence/*`: долговременное состояние и офлайн-модель.
 - `src/perf/*`: ограничители производительности.
 - `src/analytics/*`, `src/telemetry/*`: метрики и экспорт.
+- `src/utils/eventTelemetry.js`: единая точка отправки UI-событий в `TelemetryLogger` и `AnalyticsCollector`.
 
 ## Не редактировать напрямую
 

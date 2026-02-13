@@ -31,6 +31,20 @@
     return key;
   }
 
+  function emitTelemetry(event, payload) {
+    if (!event) return;
+    if (global.Game && global.Game.EventTelemetry && typeof global.Game.EventTelemetry.emit === 'function') {
+      global.Game.EventTelemetry.emit(event, payload);
+      return;
+    }
+    if (global.Game && global.Game.TelemetryLogger) {
+      global.Game.TelemetryLogger.log(event, payload);
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track(event, payload);
+    }
+  }
+
   // Default lessons (расширяемые через setLessons)
   var DEFAULT_LESSONS = [
     { id: 'basics_merge_tanks', nameKey: 'lessonBasics', name: 'Basics: Merge Tanks', completed: false, lastScore: null },
@@ -223,13 +237,7 @@
     l.lastScore = score;
     save();
     renderList();
-    // Telemetry
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('lessonUpdate', { lesson: name, score: score });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('lessonUpdate', { lesson: name, score: score });
-    }
+    emitTelemetry('lessonUpdate', { lesson: name, score: score });
   }
 
   function completeLesson(name, score) {
@@ -246,12 +254,7 @@
       srs.recordReview(l.id || l.name, scoreToGrade(score));
     }
     renderList();
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('lessonComplete', { lesson: name, score: score });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('lessonComplete', { lesson: name, score: score });
-    }
+    emitTelemetry('lessonComplete', { lesson: name, score: score });
   }
 
   function repeatLesson(name) {
@@ -261,12 +264,7 @@
     if (global.Game && global.Game.LessonManager && global.Game.LessonManager.start) {
       global.Game.LessonManager.start(lessonName);
     }
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('lessonRepeat', { lesson: lessonName });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('lessonRepeat', { lesson: lessonName });
-    }
+    emitTelemetry('lessonRepeat', { lesson: lessonName });
   }
 
   function getLessons() {
@@ -491,12 +489,7 @@
     var filename = 'srs_schedule_' + new Date().toISOString().slice(0, 10) + '.json';
     downloadText(content, filename, 'application/json');
     setScheduleStatus(t('lessonScheduleExported'));
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('scheduleExport', { format: 'json' });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('scheduleExport', { format: 'json' });
-    }
+    emitTelemetry('scheduleExport', { format: 'json' });
     updateCalendar();
   }
 
@@ -505,12 +498,7 @@
     if (!srs || !srs.importSchedule) return;
     var count = srs.importSchedule(raw);
     setScheduleStatus(t('lessonScheduleImported', { count: count }));
-    if (global.Game && global.Game.TelemetryLogger) {
-      global.Game.TelemetryLogger.log('scheduleImport', { count: count });
-    }
-    if (global.Game && global.Game.AnalyticsCollector) {
-      global.Game.AnalyticsCollector.track('scheduleImport', { count: count });
-    }
+    emitTelemetry('scheduleImport', { count: count });
     renderList();
     updateCalendar();
     return count;

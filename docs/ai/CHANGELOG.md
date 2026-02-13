@@ -1,5 +1,18 @@
 # CHANGELOG (A2DP)
 
+## 2026-02-13
+
+- Refactor: удалено дублирование отправки событий в UI-модулях через общий helper.
+	- добавлен `src/utils/eventTelemetry.js` (`Game.EventTelemetry.emit`) — единая отправка в `TelemetryLogger` + `AnalyticsCollector`;
+	- `src/ui/mergePopup.js` и `src/ui/lessonProgress.js` переведены на helper с fallback для изолированной загрузки модулей в тестах.
+- Decomposition: вынесены части `MergePopup` в отдельные файлы без изменения публичного API.
+	- `src/ui/mergePopup/mergePopupSeenLevels.js` — load/save/reset флагов `seenMergeLevels`;
+	- `src/ui/mergePopup/mergePopupStats.js` — вычисление и сборка строк характеристик popup.
+- Runtime wiring:
+	- `index.html` обновлён: подключены `src/utils/eventTelemetry.js`, `src/ui/mergePopup/mergePopupSeenLevels.js`, `src/ui/mergePopup/mergePopupStats.js` до `src/ui/mergePopup.js`.
+- Validation:
+	- пройдены тесты `Test/pack1/mergePopup.test.js`, `Test/pack2/mergeAnimRegression.test.js`, `Test/pack2/telemetryExport.test.js`.
+
 ## 2026-02-12
 
 - PACK 1 (UI parity): добавлен единый behavior-layer для всех UI-кнопок.
