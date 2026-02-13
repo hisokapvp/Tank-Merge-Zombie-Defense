@@ -69,6 +69,7 @@
         windowObj.clearTimeout(state.ui.levelRewardTimer);
         state.ui.levelRewardTimer = 0;
       }
+      state.ui.levelReward = null;
     }
 
     function queueLevelReward(level, points, gold) {
@@ -85,14 +86,7 @@
     }
 
     function acceptLevelReward() {
-      var reward = state.ui.levelReward;
-      if (!reward) return;
-      state.player.talentPoints += reward.points;
-      state.coins += reward.gold;
-      state.ui.levelReward = null;
       closeLevelModal();
-      saveProgress();
-      updateUI();
     }
 
     function triggerLevelUpVfx(level) {
@@ -139,11 +133,14 @@
 
       p.xpToNext = xpNeededForLevel(p.level);
       if (leveled) {
+        p.talentPoints += gainedLevels;
+        state.coins += rewardGold;
         refreshTanksPowerTier();
         triggerLevelUpVfx(p.level);
         checkPowerMomentEvents(p.level);
         queueLevelReward(p.level, gainedLevels, rewardGold);
         saveProgress();
+        updateUI();
       }
     }
 

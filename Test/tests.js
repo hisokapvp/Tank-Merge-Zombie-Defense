@@ -65,6 +65,10 @@ loadModule('src/utils/telemetry.js');
 loadModule('src/mechanics/economy.js');
 // Load combat
 loadModule('src/mechanics/combat.js');
+// Load level flow
+loadModule('src/mechanics/levelFlow.js');
+// Load fence layout
+loadModule('src/render/fenceLayout.js');
 
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...
@@ -659,6 +663,148 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     assert(js.indexOf("Telemetry.event('merge')") !== -1, 'merge event');
     assert(js.indexOf("Telemetry.event('zombieKill')") !== -1, 'zombieKill event');
     assert(js.indexOf("Telemetry.event('shotFired')") !== -1, 'shotFired event');
+  });
+
+  // ═══════════════════════════════════════════════
+  // T8: Fence layout + instant level rewards
+  // ═══════════════════════════════════════════════
+  console.log('\n── T8: Fence layout / LevelFlow instant rewards ──');
+
+  test('T8-1: fence scale=2 uses scaled step/inset and keeps non-overlap', () => {
+    const buildSquareFenceSegments = Game.FenceLayout && Game.FenceLayout.buildSquareFenceSegments;
+    assert(typeof buildSquareFenceSegments === 'function', 'Game.FenceLayout.buildSquareFenceSegments exists');
+
+    const halfSide = 100;
+    const fenceWidth = 20;
+    const spriteKeys = {
+      cornerTL: 'cornerTL',
+      cornerTR: 'cornerTR',
+      cornerBR: 'cornerBR',
+      cornerBL: 'cornerBL',
+      sideTop: 'sideTop',
+      sideRight: 'sideRight',
+      sideBottom: 'sideBottom',
+      sideLeft: 'sideLeft',
+    };
+
+    const segments = buildSquareFenceSegments({
+      halfSide,
+      fenceWidth,
+      spriteKeys,
+      getFrame: function () { return { scale: 2 }; },
+    });
+
+    const top = segments
+      .filter(function (s) { return s.spriteId === 'sideTop' && s.y === -halfSide; })
+      .sort(function (a, b) { return a.x - b.x; });
+
+    const expectedInset = Math.max(4, fenceWidth * 0.65) * 2;
+    const expectedStart = -halfSide + expectedInset;
+    const expectedEnd = halfSide - expectedInset;
+    const expectedStep = Math.max(6, fenceWidth * 1.15) * 2;
+
+    assert(top.length >= 2, 'top side has at least two segments');
+    assert(Math.abs(top[0].x - expectedStart) < 1e-6, 'first top segment touches corner inset boundary');
+    assert(Math.abs(top[top.length - 1].x - expectedEnd) < 1e-6, 'last top segment touches opposite corner inset boundary');
+    for (let i = 1; i < top.length; i++) {
+      const dx = top[i].x - top[i - 1].x;
+      assert(dx + 1e-6 >= expectedStep, 'scaled step prevents overlap between neighbor segments');
+    }
+  });
+
+  test('T8-2: grantXP gives multi-level rewards immediately', () => {
+    const state = {
+      coins: 0,
+      ui: { levelReward: null, levelRewardTimer: 0 },
+      player: {
+        level: 1,
+        xp: 0,
+        xpToNext: 100,
+        maxLevel: 60,
+        talentPoints: 0,
+        eventShown40: false,
+        eventShown50: false,
+        eventShown60: false,
+      },
+    };
+
+    const lf = Game.LevelFlow.createLevelFlow({
+      state: state,
+      ui: {},
+      BAL: {},
+      UIModals: {
+        openLevelModal: function (opts) { if (opts && opts.updateLevelModal) opts.updateLevelModal(); },
+        closeLevelModal: function () {},
+      },
+      xpNeededForLevel: function () { return 100; },
+      levelGoldReward: function (level) { return level * 10; },
+      refreshTanksPowerTier: function () {},
+      triggerLevelUpVfx: function () {},
+      checkPowerMomentEvents: function () {},
+      playSfx: function () {},
+      saveProgress: function () {},
+      updateUI: function () {},
+      showCenterNotification: function () {},
+      nowSec: function () { return 0; },
+      windowObj: { clearTimeout: function () {} },
+    });
+
+    lf.grantXP(250);
+
+    assertEqual(state.player.level, 3, 'leveled up twice');
+    assertEqual(state.player.xp, 50, 'xp remainder kept');
+    assertEqual(state.player.talentPoints, 2, 'talent points added immediately');
+    assertEqual(state.coins, 50, 'coins added immediately for both levels');
+    assert(state.ui.levelReward && state.ui.levelReward.points === 2, 'info modal reward shows aggregated points');
+    assert(state.ui.levelReward && state.ui.levelReward.gold === 50, 'info modal reward shows aggregated gold');
+  });
+
+  test('T8-3: acceptLevelReward does not double-grant', () => {
+    const state = {
+      coins: 0,
+      ui: { levelReward: null, levelRewardTimer: 0 },
+      player: {
+        level: 1,
+        xp: 0,
+        xpToNext: 100,
+        maxLevel: 60,
+        talentPoints: 0,
+        eventShown40: false,
+        eventShown50: false,
+        eventShown60: false,
+      },
+    };
+
+    const lf = Game.LevelFlow.createLevelFlow({
+      state: state,
+      ui: {},
+      BAL: {},
+      UIModals: {
+        openLevelModal: function (opts) { if (opts && opts.updateLevelModal) opts.updateLevelModal(); },
+        closeLevelModal: function () {},
+      },
+      xpNeededForLevel: function () { return 100; },
+      levelGoldReward: function () { return 25; },
+      refreshTanksPowerTier: function () {},
+      triggerLevelUpVfx: function () {},
+      checkPowerMomentEvents: function () {},
+      playSfx: function () {},
+      saveProgress: function () {},
+      updateUI: function () {},
+      showCenterNotification: function () {},
+      nowSec: function () { return 0; },
+      windowObj: { clearTimeout: function () {} },
+    });
+
+    lf.grantXP(100);
+    const pointsAfterGrant = state.player.talentPoints;
+    const coinsAfterGrant = state.coins;
+
+    lf.acceptLevelReward();
+
+    assertEqual(state.player.talentPoints, pointsAfterGrant, 'accept only closes modal, no extra points');
+    assertEqual(state.coins, coinsAfterGrant, 'accept only closes modal, no extra coins');
+    assertEqual(state.ui.levelReward, null, 'reward info is cleared on close');
   });
 
   // ═══════════════════════════════════════════════

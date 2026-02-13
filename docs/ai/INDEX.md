@@ -22,6 +22,7 @@
 - `src/mechanics/` — игровые правила.
 - `src/persistence/` — save/load/offline.
 - `src/render/` — canvas и загрузчики.
+- `src/render/fenceLayout.js` — геометрия сегментов квадратного забора (scale-aware шаг/инсеты).
 - `src/ui/` — UI-модули, модалки, панели.
 - `src/perf/` — профилирование и лимиты.
 - `src/i18n/` — RU/EN строки.

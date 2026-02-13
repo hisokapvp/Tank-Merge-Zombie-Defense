@@ -12,6 +12,12 @@
 - Зомби: `types`, `deathCommon`, `spawn` в `zombies.json`.
 - Окружение: `fence.json`, `decor.json`.
 
+### Fence (`assets/fence.json`)
+
+- Top-level `cornerInsetPx` (optional): override авто-расчёта inset для углов на каждой стороне.
+- `frames[].rotationDeg` (optional, degrees, default `0`): поворот конкретного кадра сегмента при `drawZombieFence()`.
+- `frames[].scale` влияет на геометрию раскладки сегментов (step/inset) и реальный размер спрайта.
+
 ## Риски
 
 - Не менять JSON-схемы без обновления runtime.

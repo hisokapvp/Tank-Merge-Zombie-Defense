@@ -218,12 +218,14 @@
       error: '',
       atlasImg: null,
       maxFrameScale: 1,
+      cornerInsetPx: null,
       framesById: new Map(),
       load: async function () {
         try {
           var res = await fetch('assets/fence.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
+          this.cornerInsetPx = Number.isFinite(data.cornerInsetPx) ? data.cornerInsetPx : null;
           var atlasPath = 'assets/' + (data.atlas || 'fence.png');
           var img = await loadImage(atlasPath);
           this.atlasImg = img;
@@ -241,6 +243,7 @@
               w: f.w != null ? f.w : 32,
               h: f.h != null ? f.h : 32,
               scale: frameScale,
+              rotationDeg: Number.isFinite(f.rotationDeg) ? f.rotationDeg : 0,
               anchor: f.anchor || { x: 0.5, y: 0.5 },
             });
             if (Number.isFinite(frameScale)) this.maxFrameScale = Math.max(this.maxFrameScale, frameScale);
@@ -261,6 +264,7 @@
           this.ready = false;
           this.atlasImg = null;
           this.maxFrameScale = 1;
+          this.cornerInsetPx = null;
           this.framesById.clear();
           this.error = String(e);
         }

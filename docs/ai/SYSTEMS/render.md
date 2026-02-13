@@ -5,6 +5,7 @@
 - Основной рендер и цикл: `game.js` (`draw`, `loop`, `resizeCanvas`).
 - Тюнинг зазоров layout: `src/config/layoutTuning.js`.
 - Геометрия ангара/треков: `src/render/layout/hangarLayout.js`.
+- Геометрия сегментов забора: `src/render/fenceLayout.js`.
 - Canvas helpers: `src/render/canvasRoot.js`.
 - Лимиты качества: `src/perf/mobileMode.js`.
 
@@ -30,6 +31,15 @@
 - Ограничение зомби привязано к визуальной геометрии забора:
 	- `zombieFenceLimit = (fenceRadius + fenceWidth/2)/denom + zombieRadius`
 	- эффект: нет «воздушной стены», зомби доходят до визуального забора и скользят вдоль него.
+	- Дополнительная тонкая настройка стороны: `LayoutTuning.zombieFenceOffsetPxBySide.{top,right,bottom,left}` (в px, масштабируется через `balScale`).
+
+## Fence sprites layout
+
+- `drawZombieFence()` строит сегменты через `Game.FenceLayout.buildSquareFenceSegments({...})`.
+- Базовые формулы шага/инсета: `step=max(6, fenceWidth*1.15)`, `cornerInset=max(4, fenceWidth*0.65)`.
+- Для scale-aware раскладки обе формулы умножаются на `frame.scale` (side/corner); крайние side-сегменты всегда упираются в угловые inset-границы.
+- Если в `assets/fence.json` задан `cornerInsetPx`, он переопределяет автозначение inset.
+- При отрисовке учитывается `frame.rotationDeg` (градусы, default `0`).
 
 ## Риски
 

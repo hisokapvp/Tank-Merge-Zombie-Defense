@@ -7,5 +7,11 @@
   config.LayoutTuning = {
     trackToHangarGapPx: 0,
     trackToFenceGapPx: 25,
+    zombieFenceOffsetPxBySide: {
+      top: 15,
+      right: 10,
+      bottom: 0,
+      left: 10,
+    },
   };
 })(typeof window !== 'undefined' ? window : this);
