@@ -15,6 +15,42 @@
 - Поведение кнопок: `src/ui/buttonBehavior.js` + `.uiButtonBehavior`.
 - Offline modal: эталон — settings modal; текст `Money/Деньги` и суммы с `$`/`⭐`.
 
+## Level-up modal (PACK 1)
+
+- Файлы:
+	- `index.html` — добавлена кнопка `✕` (`#levelModalClose`) в правом верхнем углу level-up модалки.
+	- `game.js` — подключён `ui.levelClose` и обработчик закрытия через `closeLevelModal()`.
+	- `src/mechanics/levelFlow.js` — убран auto-dismiss level-награды.
+- Поведение:
+	- Модалка level-up **не закрывается автоматически**.
+	- Закрытие только вручную: `Принять` или `✕`.
+	- Escape не закрывает level-up (onClose для a11y — no-op).
+	- Клики/инпут по игре под модалкой блокируются, пока level-up открыт.
+
+## Checklist (PACK 1)
+
+- Level-up сценарии:
+	- не закрывается сама;
+	- закрывается по `Принять`;
+	- закрывается по `✕`;
+	- клики по игре под модалкой не проходят;
+	- Chrome desktop.
+- Cross-check с render:
+	- resize 3 размера;
+	- бой с зомби у нижней/боковой/угловой части забора.
+
+## Изменённые файлы (PACK 1)
+
+- `index.html`
+- `game.js`
+- `src/mechanics/levelFlow.js`
+
+## Команды проверки (факт)
+
+- `node Test/tests.js` → PASS (`76 passed, 0 failed`)
+- `bash ci/check_style.sh` → FAIL в текущей среде (`/bin/bash` недоступен)
+- `bash ci/run_tests.sh` → FAIL в текущей среде (`/bin/bash` недоступен)
+
 ## Риски
 
 - Не хранить пользовательские строки в JS.

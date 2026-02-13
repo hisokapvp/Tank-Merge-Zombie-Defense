@@ -39,6 +39,7 @@ const ui = {
   levelTalent: document.getElementById('levelTalent'),
   levelGold: document.getElementById('levelGold'),
   levelAccept: document.getElementById('levelAccept'),
+  levelClose: document.getElementById('levelModalClose'),
   dismantleBtn: document.getElementById('dismantleBtn'),
   dismantleModal: document.getElementById('dismantleModal'),
   dismantleConfirmText: document.getElementById('dismantleConfirmText'),
@@ -638,6 +639,9 @@ function initBoard(){
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
 
   BAL.zombieTrackWidth = Math.max(12, 14 * balScale);
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const trackToHangarGapPx = Number.isFinite(layoutTuning.trackToHangarGapPx) ? Math.max(0, layoutTuning.trackToHangarGapPx) : 5;
+  const trackToFenceGapPx = Number.isFinite(layoutTuning.trackToFenceGapPx) ? Math.max(0, layoutTuning.trackToFenceGapPx) : 5;
   const layoutApi = window.Game && window.Game.HangarLayout;
   const computeLayout = layoutApi && layoutApi.computeHangarTrackLayout;
   if (typeof computeLayout === 'function') {
@@ -651,8 +655,6 @@ function initBoard(){
       zombieTrackWidth: BAL.zombieTrackWidth,
       marginRatio: BAL.hangarMarginRatio,
       hangarPad: 12,
-      orbitPad: Math.max(10, 24 + BAL.tankTrackWidth),
-      fencePad: Math.max(24, BAL.tankTrackWidth * 1.1 + BAL.roadFenceGap),
       trackPad: 18,
       minTankOrbitRadius: 110,
     });
@@ -660,13 +662,12 @@ function initBoard(){
     BAL.fenceRadius = layout.fenceRadius;
     BAL.zombieTrackRadius = layout.zombieTrackRadius;
   } else {
-    const hangarRadius = Math.hypot(totalW * 0.5, totalH * 0.5) + 12;
-    const orbitPad = Math.max(10, 24 + BAL.tankTrackWidth);
-    const fencePad = Math.max(24, BAL.tankTrackWidth * 1.1 + BAL.roadFenceGap);
+    const hangarRadius = Math.hypot(totalW * 0.5, totalH * 0.5);
     const trackPad = 18;
-    BAL.tankOrbitRadius = Math.max(110, hangarRadius + orbitPad);
-    BAL.fenceRadius = BAL.tankOrbitRadius + fencePad;
-    BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth + trackPad;
+    const minSafeTankOrbit = hangarRadius + 12 + BAL.tankTrackWidth * 0.5;
+    BAL.tankOrbitRadius = Math.max(110, minSafeTankOrbit + trackToHangarGapPx);
+    BAL.fenceRadius = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + trackToFenceGapPx + BAL.fenceWidth * 0.5;
+    BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth * 0.5 + trackPad + BAL.zombieTrackWidth * 0.5;
   }
   state.fenceSegments = [];
   state.fenceSegmentsMeta = null;
@@ -1888,12 +1889,11 @@ function getFenceCollisionPadding(){
 }
 
 function zombieFenceLimit(z){
-  const halfSide = BAL.fenceRadius;
-  const collisionPad = typeof getFenceCollisionPadding === 'function' ? getFenceCollisionPadding() : 0;
+  const outerFenceSide = BAL.fenceRadius + BAL.fenceWidth * 0.5;
   const dx = Math.cos(z.theta ?? 0);
   const dy = Math.sin(z.theta ?? 0);
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-  return halfSide / denom + BAL.fenceKeepout + collisionPad + zombieCollisionRadius(z);
+  return outerFenceSide / denom + zombieCollisionRadius(z);
 }
 
 function startZombieDying(z){
@@ -3329,7 +3329,12 @@ function cellAt(x,y){
   return null;
 }
 
+function isLevelModalOpen(){
+  return !!(ui.levelModal && !ui.levelModal.classList.contains('hidden'));
+}
+
 canvas.addEventListener('pointerdown', (e)=>{
+  if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
   if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
   if (crateHitTest(p.x, p.y)){
@@ -3373,6 +3378,10 @@ canvas.addEventListener('pointerdown', (e)=>{
 });
 
 canvas.addEventListener('pointermove', (e)=>{
+  if (isLevelModalOpen()) {
+    state.dragging = null;
+    return;
+  }
   if (!state.dragging) return;
   const p = getPointerPos(e);
   state.dragging.x = p.x;
@@ -3383,6 +3392,10 @@ canvas.addEventListener('pointermove', (e)=>{
 });
 
 canvas.addEventListener('pointerup', (e)=>{
+  if (isLevelModalOpen()) {
+    state.dragging = null;
+    return;
+  }
   if (!state.dragging) return;
   const p = getPointerPos(e);
   const target = cellAt(p.x, p.y);
@@ -3452,6 +3465,9 @@ ui.dismantleNo?.addEventListener('click', () => closeDismantleModal());
 ui.dismantleModal?.addEventListener('click', (e) => {
   if (e.target?.dataset?.dismantleClose === 'true') closeDismantleModal();
 });
+ui.levelClose?.addEventListener('click', () => closeLevelModal());
+ui.levelModal?.addEventListener('pointerdown', (e) => e.stopPropagation());
+ui.levelModal?.addEventListener('click', (e) => e.stopPropagation());
 
 // ---------- Render ----------
 function draw(){
@@ -3558,15 +3574,6 @@ function drawTrack(){
 function drawTankTrack(){
   ctx.save();
   ctx.translate(center.x, center.y);
-
-  if (Number.isFinite(BAL.fenceRadius) && Number.isFinite(BAL.roadFenceGap)) {
-    const clipHalf = Math.max(0, BAL.fenceRadius - BAL.roadFenceGap);
-    if (clipHalf > 0) {
-      ctx.beginPath();
-      ctx.rect(-clipHalf, -clipHalf, clipHalf * 2, clipHalf * 2);
-      ctx.clip();
-    }
-  }
 
   ctx.beginPath();
   ctx.arc(0,0,BAL.tankOrbitRadius,0,Math.PI*2);

@@ -39,26 +39,21 @@
     }
 
     function openLevelModal() {
+      var ignoreClose = function () {};
       if (UIModals && typeof UIModals.openLevelModal === 'function') {
         UIModals.openLevelModal({
           ui: ui,
           a11yOpen: a11yOpen,
-          onClose: closeLevelModal,
+          onClose: ignoreClose,
           updateLevelModal: updateLevelModal,
         });
       } else {
         if (!ui.levelModal) return;
         ui.levelModal.classList.remove('hidden');
         ui.levelModal.setAttribute('aria-hidden', 'false');
-        if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
+        if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: ignoreClose });
         updateLevelModal();
       }
-      if (state.ui.levelRewardTimer) {
-        windowObj.clearTimeout(state.ui.levelRewardTimer);
-      }
-      state.ui.levelRewardTimer = windowObj.setTimeout(function () {
-        acceptLevelReward();
-      }, BAL.levelRewardAutoCloseSec * 1000);
     }
 
     function closeLevelModal() {
