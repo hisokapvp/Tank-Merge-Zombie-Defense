@@ -47,7 +47,6 @@ const ui = {
 };
 
 const MAX_TANK_LEVEL = 60;
-// Power tier from player level (0–5): thresholds 10,20,30,40,50,60
 const POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
 function computePowerTier(playerLevel){
   const lvl = Math.max(1, Math.floor(playerLevel));
@@ -67,7 +66,6 @@ function refreshTanksPowerTier(){
 }
 
 const BAL = {
-  // Board 4x4
   rows: 4,
   cols: 4,
   cellW: 48,
@@ -77,7 +75,6 @@ const BAL = {
 
   buyCostLv1: 50,
 
-  // Tanks
   dmgBase: 7,
   dmgMultPerLevel: 1.48,
   fireRateBase: 0.85,
@@ -85,7 +82,6 @@ const BAL = {
   rangeBase: 315,
   rangePerLevel: 10,
 
-  // Zombie ring
   zombieTrackRadius: 340,
   zombieTrackWidth: 22,
   hangarMarginRatio: 0.06,
@@ -108,7 +104,6 @@ const BAL = {
   omegaVar: 0.18,
   zombieSwayAmp: 0.14,
 
-  // Zombie visuals (walk + size) — fixed size, no level scaling
   zombieScaleMul: 0.72,
   zombieLevelScaleAdd: 0,
   zombieBobAmp: 1.2,
@@ -120,11 +115,9 @@ const BAL = {
   zombieHpExtraPerLevel: 0.12,
   zombieLevelOmegaMul: 0.08,
 
-  // Spawn from edge
   edgeSpawnRadius: 520,
   edgeJoinSpeed: 0.9,
 
-  // Economy
   coinsPerKillBase: 1,
   coinsPerKillLevelMul: 0.35,
   zombieKillCoinsMul: 0.5,
@@ -135,26 +128,21 @@ const BAL = {
   levelGoldPerLevel: 18,
   levelRewardAutoCloseSec: 4.5,
 
-  // Boost
   boostDurationSec: 60,
   boostMult: 2,
-  tankSpriteScaleMul: 2.2,            // tuned 2.0–3.5
-  tankSpriteRotOffset: -Math.PI/2,    // sprite orientation correction
+  tankSpriteScaleMul: 2.2,
+  tankSpriteRotOffset: -Math.PI/2,
 
-  // FX
   maxParticles: 1600,
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
 
-  // Crates
   crateIntervalSec: 60,
   crateDropSpeed: 220,
   crateSize: 34,
 
-  // Fence (configurable sprites; empty = procedural)
   fenceSpriteIds: [],
 
-  // Decor (random placement, no-spawn zones)
   decorSpriteIds: [],
   decorCount: 24,
   decorNoSpawnZones: [],
@@ -195,12 +183,15 @@ const backgroundLayer = {
   ready: false,
 };
 
-const DEFAULT_SETTINGS = {
-  sfxVolume: 0.75,
-  musicVolume: 0.6,
-};
+const DEFAULT_SETTINGS = (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.DEFAULT_SETTINGS)
+  ? { ...window.Game.AudioSettings.DEFAULT_SETTINGS }
+  : {
+      sfxVolume: 0.75,
+      musicVolume: 0.6,
+    };
 
 let settings = { ...DEFAULT_SETTINGS };
+let audioSettingsController = null;
 
 function createInitialState(){
   return {
@@ -275,299 +266,21 @@ let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
 let center = { x: viewSize.w/2, y: viewSize.h/2 };
 const nowSec = ()=>performance.now()/1000;
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const ZombieSpawnApi = window.Game && window.Game.ZombieSpawn ? window.Game.ZombieSpawn : null;
+const UIModals = window.Game && window.Game.UIModals ? window.Game.UIModals : null;
 
-const STRINGS = {
-  ru: {
-    title: 'Merge Tank: Zombie invasion',
-    subtitle: 'В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков',
-    menuTitle: 'Merge Tank: Zombie invasion',
-    menuSubtitle: 'Главное меню выживших',
-    menuContinue: 'Продолжить',
-    menuNew: 'Новая игра',
-    menuLanguage: 'Язык',
-    menuSfx: 'Громкость эффектов',
-    menuMusic: 'Громкость музыки',
-    hudCoins: 'Деньги',
-    hudKills: 'Убито монстров',
-    hudSprites: 'Спрайты',
-    hudBoost: 'Буст',
-    buyTank: 'Купить танк {level} уровня',
-    boostBtn: 'Буст скорости',
-    boostModalText: 'Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу',
-    boostModalWatch: 'Посмотреть',
-    armyTitle: 'Армия',
-    zombieSpritesTitle: 'Зомби-спрайты',
-    tankSpritesTitle: 'Танки-спрайты (опционально)',
-    filesLabel: 'Файлы:',
-    addLabel: 'Добавь:',
-    tipZombies: 'Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.',
-    tipTanks: 'Танки-спрайты: добавь <span class="mono">assets/tanks.json</span> и PNG в <span class="mono">assets/tanks/</span>.',
-    tankInfoCount: 'Кол-во',
-    tankInfoMax: 'Макс. уровень',
-    tankInfoLevels: 'Уровни',
-    boostActive: 'x{mult} {sec}с',
-    hintSpritesOff: 'Спрайты отключены (assets/zombies.json).',
-    popTank: '+Танк',
-    popHangar: 'Ангар',
-    popTrack: 'В бой!',
-    crateMessage: 'Посмотри рекламу и получи танк.',
-    crateModalText: 'Посмотреть рекламу и получить танк',
-    crateGet: 'Получить',
-    crateAdLoading: 'Просмотр рекламы...',
-    talentsBtn: 'Древо талантов',
-    talentTreeTitle: 'Древо талантов',
-    talentPoints: 'Очки талантов',
-    talentApply: 'Применить',
-    talentReset: 'Сбросить выбор',
-    talentResetAll: 'Сбросить таланты',
-    talentResetModalText: 'Посмотрите видео чтобы сбросить таланты',
-    talentResetModalWatchBtn: 'Посмотреть и сбросить',
-    talentPending: 'Выбрано',
-    talentNeedPoints: 'Не хватает очков',
-    talentActive: 'Использовать активку',
-    talentActiveCooldown: 'Активка ({sec}с)',
-    levelLabel: 'Уровень',
-    levelShort: 'Ур.',
-    levelUp: 'Ур.{level}!',
-    levelModalTitle: 'Вы достигли {level} уровня!',
-    levelModalTalent: 'Вы получили {points} {talent}',
-    levelModalGold: 'Вы получили {gold} золота',
-    levelUpAccept: 'Принять награду',
-    powerMoment40: 'Открыты активные способности!',
-    powerMoment50: 'Максимальная мощь танков.',
-    powerMoment60: 'Режим эндгейма — враги усилены.',
-    statusOn: 'OK',
-    statusOff: 'OFF',
-    zombieShort: 'З',
-    tankShort: 'Т',
-    dismantleBtn: 'Разобрать танк',
-    dismantleBtnConfirm: 'Подтвердить разбор',
-    dismantleConfirm: 'Вы действительно хотите разобрать танк {level} уровня?',
-    dismantleConfirmMulti: 'Вы действительно хотите разбить выбранные танки?',
-    dismantleYes: 'Да',
-    dismantleNo: 'Нет',
-    dismantleNoneSelected: 'Не выбрано ни одного танка',
-    dismantleCount: 'танков',
-    dismantleMore: 'ещё',
-    dropOnCrateReject: 'Место занято',
-    menuSettings: 'Настройки',
-    mergePopupTitle: 'Новый танк уровень {level}',
-    mergePopupSubtitle: 'ОТКРЫТ НОВЫЙ УРОВЕНЬ ТАНКА!',
-    mergePopupFight: 'В бой!',
-    mergePopupClose: 'Закрыть',
-    mergePopupDamageLabel: 'Урон',
-    mergePopupFireRateLabel: 'Скорострельность',
-    mergePopupRateUnit: '/с',
-    mergePopupRangeLabel: 'Дальность',
-    mergePopupBarrelsLabel: 'Стволы',
-    lessonProgressTitle: 'Прогресс уроков',
-    lessonRepeatNow: 'Повторить сейчас',
-    lessonExportSchedule: 'Экспорт расписания',
-    lessonImportSchedule: 'Импорт расписания',
-    lessonPreviewAnki: 'Предпросмотр Anki',
-    lessonHidePreview: 'Скрыть предпросмотр',
-    lessonExportAnki: 'Экспорт Anki',
-    lessonScoreLabel: 'Результат: {score}',
-    lessonRepeat: 'Повторить',
-    lessonAnki: 'Anki',
-    lessonNextNotScheduled: 'Следующее: не запланировано',
-    lessonNextDueNow: 'Следующее: сейчас',
-    lessonNextIn: 'Следующее: через {time}',
-    lessonNextReviewLabel: 'Следующее повторение: {text}',
-    lessonNextReviewNone: 'Следующее повторение: нет',
-    lessonDueNotScheduled: 'не запланировано',
-    lessonDueNow: 'сейчас',
-    lessonDueIn: 'через {time}',
-    lessonScheduleExported: 'Расписание экспортировано',
-    lessonScheduleImported: 'Импортировано элементов: {count}',
-    lessonPreviewUnavailable: 'Предпросмотр недоступен.',
-    lessonBasics: 'Основы: Слияние танков',
-    lessonCombat: 'Бой: Паттерны стрельбы',
-    lessonEconomy: 'Экономика: Стратегия монет',
-    lessonDefense: 'Оборона: Волны зомби',
-    lessonAdvanced: 'Продвинутое: Мультиствол',
-    experimentsTitle: 'Эксперименты',
-    experimentsRefresh: 'Обновить',
-    experimentsClear: 'Сбросить назначения',
-    experimentsReset: 'Сбросить конфиг',
-    experimentsEmpty: 'Эксперименты не заданы.',
-    experimentsEnabled: 'Включено',
-    experimentsRollout: 'Роллаут %',
-    experimentsForce: 'Форс',
-    experimentsAuto: 'auto',
-    funnelTitle: 'Воронка',
-    funnelRefresh: 'Обновить',
-    funnelExport: 'Экспорт JSON',
-    funnelReset: 'Сбросить воронку',
-    funnelCompleted: 'готово',
-    funnelPending: 'ожидание',
-    funnelDrop: 'drop-off',
-    funnelFirstLaunch: 'Первый запуск',
-    funnelFirstMerge: 'Первый merge',
-    funnelFirstBattle: 'Первый бой',
-    funnelFirstUpgrade: 'Первый апгрейд',
-    funnelReturnVisit: 'Повторный вход',
-    triageTitle: 'Триаж багов',
-    triageExport: 'Экспорт JSON',
-    triageClear: 'Очистить',
-    triageTitleLabel: 'Заголовок',
-    triageNotesLabel: 'Заметки',
-    triageStatusLabel: 'Статус',
-    triagePriorityLabel: 'Приоритет',
-    triageReproLabel: 'Воспроизведение',
-    triageSystemLabel: 'Система',
-    triageAdd: 'Добавить баг',
-    triageEmpty: 'Баги не заведены.',
-    triageAttachTelemetry: 'Привязать телеметрию',
-    triageRemove: 'Удалить',
-    triageTelemetryAttached: 'Телеметрия привязана',
-  },
-  en: {
-    title: 'Merge Tank: Zombie invasion',
-    subtitle: 'Cut-the-rope-ish • Fence hangar • Walking zombies • Tank sprites supported',
-    menuTitle: 'Merge Tank: Zombie invasion',
-    menuSubtitle: 'Survivor main menu',
-    menuContinue: 'Continue',
-    menuNew: 'New game',
-    menuLanguage: 'Language',
-    menuSfx: 'SFX volume',
-    menuMusic: 'Music volume',
-    hudCoins: 'Money',
-    hudKills: 'Monsters defeated',
-    hudSprites: 'Sprites',
-    hudBoost: 'Boost',
-    buyTank: 'Buy tank Lv{level}',
-    boostBtn: 'Speed boost',
-    boostModalText: 'Get 2x speed boost for 60 seconds by watching an ad',
-    boostModalWatch: 'Watch',
-    armyTitle: 'Army',
-    zombieSpritesTitle: 'Zombie sprites',
-    tankSpritesTitle: 'Tank sprites (optional)',
-    filesLabel: 'Files:',
-    addLabel: 'Add:',
-    tipZombies: 'Zombies visually “walk” (shadow + sway + tangent facing). Tanks fire visible shells.',
-    tipTanks: 'Tank sprites: add <span class="mono">assets/tanks.json</span> and PNGs to <span class="mono">assets/tanks/</span>.',
-    tankInfoCount: 'Count',
-    tankInfoMax: 'Max level',
-    tankInfoLevels: 'Levels',
-    boostActive: 'x{mult} {sec}s',
-    hintSpritesOff: 'Sprites OFF (assets/zombies.json).',
-    popTank: '+Tank',
-    popHangar: 'Hangar',
-    popTrack: 'To battle!',
-    crateMessage: 'Watch an ad to get a tank.',
-    crateModalText: 'Watch an ad to get a tank',
-    crateGet: 'Claim',
-    crateAdLoading: 'Watching ad...',
-    talentsBtn: 'Talent Tree',
-    talentTreeTitle: 'Talent Tree',
-    talentPoints: 'Talent points',
-    talentApply: 'Apply',
-    talentReset: 'Reset selection',
-    talentResetAll: 'Reset talents',
-    talentResetModalText: 'Watch a video to reset talents',
-    talentResetModalWatchBtn: 'Watch and reset',
-    talentPending: 'Selected',
-    talentNeedPoints: 'Not enough points',
-    talentActive: 'Use active',
-    talentActiveCooldown: 'Active ({sec}s)',
-    levelLabel: 'Level',
-    levelShort: 'Lv',
-    levelUp: 'Lv{level}!',
-    levelModalTitle: 'You reached level {level}!',
-    levelModalTalent: 'You received {points} {talent}',
-    levelModalGold: 'You received {gold} gold',
-    levelUpAccept: 'Claim reward',
-    powerMoment40: 'Active abilities unlocked!',
-    powerMoment50: 'Maximum tank power.',
-    powerMoment60: 'Endgame mode — enemies enhanced.',
-    statusOn: 'OK',
-    statusOff: 'OFF',
-    zombieShort: 'Z',
-    tankShort: 'T',
-    dismantleBtn: 'Dismantle tank',
-    dismantleBtnConfirm: 'Confirm dismantle',
-    dismantleConfirm: 'Do you really want to dismantle tank level {level}?',
-    dismantleConfirmMulti: 'Do you really want to dismantle the selected tanks?',
-    dismantleYes: 'Yes',
-    dismantleNo: 'No',
-    dismantleNoneSelected: 'No tanks selected',
-    dismantleCount: 'tanks',
-    dismantleMore: 'more',
-    dropOnCrateReject: 'Place occupied',
-    menuSettings: 'Settings',
-    mergePopupTitle: 'New tank level {level}',
-    mergePopupSubtitle: 'NEW TANK LEVEL UNLOCKED!',
-    mergePopupFight: 'Fight!',
-    mergePopupClose: 'Close',
-    mergePopupDamageLabel: 'Damage',
-    mergePopupFireRateLabel: 'Fire rate',
-    mergePopupRateUnit: '/s',
-    mergePopupRangeLabel: 'Range',
-    mergePopupBarrelsLabel: 'Barrels',
-    lessonProgressTitle: 'Lesson Progress',
-    lessonRepeatNow: 'Repeat now',
-    lessonExportSchedule: 'Export schedule',
-    lessonImportSchedule: 'Import schedule',
-    lessonPreviewAnki: 'Preview Anki',
-    lessonHidePreview: 'Hide Preview',
-    lessonExportAnki: 'Export Anki',
-    lessonScoreLabel: 'Score: {score}',
-    lessonRepeat: 'Repeat',
-    lessonAnki: 'Anki',
-    lessonNextNotScheduled: 'Next: not scheduled',
-    lessonNextDueNow: 'Next: due now',
-    lessonNextIn: 'Next: in {time}',
-    lessonNextReviewLabel: 'Next review: {text}',
-    lessonNextReviewNone: 'Next review: none',
-    lessonDueNotScheduled: 'not scheduled',
-    lessonDueNow: 'due now',
-    lessonDueIn: 'in {time}',
-    lessonScheduleExported: 'Schedule exported',
-    lessonScheduleImported: 'Imported schedule items: {count}',
-    lessonPreviewUnavailable: 'Preview unavailable.',
-    lessonBasics: 'Basics: Merge Tanks',
-    lessonCombat: 'Combat: Fire Patterns',
-    lessonEconomy: 'Economy: Coin Strategy',
-    lessonDefense: 'Defense: Zombie Waves',
-    lessonAdvanced: 'Advanced: Multi-Barrel',
-    experimentsTitle: 'Experiments',
-    experimentsRefresh: 'Refresh',
-    experimentsClear: 'Clear assignments',
-    experimentsReset: 'Reset config',
-    experimentsEmpty: 'No experiments defined.',
-    experimentsEnabled: 'Enabled',
-    experimentsRollout: 'Rollout %',
-    experimentsForce: 'Force',
-    experimentsAuto: 'auto',
-    funnelTitle: 'Funnel',
-    funnelRefresh: 'Refresh',
-    funnelExport: 'Export JSON',
-    funnelReset: 'Reset funnel',
-    funnelCompleted: 'done',
-    funnelPending: 'pending',
-    funnelDrop: 'drop-off',
-    funnelFirstLaunch: 'First launch',
-    funnelFirstMerge: 'First merge',
-    funnelFirstBattle: 'First battle',
-    funnelFirstUpgrade: 'First upgrade',
-    funnelReturnVisit: 'Return visit',
-    triageTitle: 'Bug triage',
-    triageExport: 'Export JSON',
-    triageClear: 'Clear all',
-    triageTitleLabel: 'Title',
-    triageNotesLabel: 'Notes',
-    triageStatusLabel: 'Status',
-    triagePriorityLabel: 'Priority',
-    triageReproLabel: 'Repro',
-    triageSystemLabel: 'System',
-    triageAdd: 'Add bug',
-    triageEmpty: 'No bugs tracked.',
-    triageAttachTelemetry: 'Attach telemetry',
-    triageRemove: 'Remove',
-    triageTelemetryAttached: 'Telemetry attached',
-  }
-};
+if (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.createAudioSettingsController) {
+  audioSettingsController = window.Game.AudioSettings.createAudioSettingsController({
+    ui,
+    clamp,
+    initialSettings: settings,
+    storageKey: 'settings',
+  });
+}
+
+const STRINGS = (window.Game && window.Game.I18nFallback && window.Game.I18nFallback.STRINGS)
+  ? window.Game.I18nFallback.STRINGS
+  : { ru: {}, en: {} };
 
 if (window.Game && window.Game.I18n && window.Game.I18n.setFallback) {
   window.Game.I18n.setFallback(STRINGS);
@@ -2189,12 +1902,19 @@ function edgeSpawnR(){
 }
 
 function zombieSlotTheta(slotIndex, slotCount){
+  if (ZombieSpawnApi && ZombieSpawnApi.zombieSlotTheta) {
+    return ZombieSpawnApi.zombieSlotTheta(slotIndex, slotCount);
+  }
   const step = (Math.PI * 2) / Math.max(1, slotCount);
   const jitter = (Math.random() * 2 - 1) * step * 0.25;
   return slotIndex * step + jitter;
 }
 
 function assignZombieSlot(z, slotIndex, slotCount){
+  if (ZombieSpawnApi && ZombieSpawnApi.assignZombieSlot) {
+    ZombieSpawnApi.assignZombieSlot(z, slotIndex, slotCount, zombieFenceLimit, BAL);
+    return;
+  }
   const theta = zombieSlotTheta(slotIndex, slotCount);
   z.slotIndex = slotIndex;
   z.anchorTheta = theta;
@@ -2206,12 +1926,18 @@ function assignZombieSlot(z, slotIndex, slotCount){
 const MAX_ZOMBIE_LEVEL = 60;
 
 function toSafeInt(value, fallback){
+  if (ZombieSpawnApi && ZombieSpawnApi.toSafeInt) {
+    return ZombieSpawnApi.toSafeInt(value, fallback);
+  }
   if (!Number.isFinite(value)) return fallback;
   const n = Math.floor(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
 function getZombieSpawnBalanceConfig(){
+  if (ZombieSpawnApi && ZombieSpawnApi.getZombieSpawnBalanceConfig) {
+    return ZombieSpawnApi.getZombieSpawnBalanceConfig(ZombieSprites ? ZombieSprites.spawnConfig : null, BAL);
+  }
   const cfg = ZombieSprites && ZombieSprites.spawnConfig ? ZombieSprites.spawnConfig : null;
   const targetAlive = Math.max(1, toSafeInt(cfg?.targetAlive, BAL.zombieCountTarget));
   const sideCount = Math.max(1, toSafeInt(cfg?.sideCount, BAL.zombieSideCount || 4));
@@ -2228,12 +1954,18 @@ function getZombieSpawnBalanceConfig(){
 }
 
 function zombieSideForSlot(slotIndex, slotCount, sideCount){
+  if (ZombieSpawnApi && ZombieSpawnApi.zombieSideForSlot) {
+    return ZombieSpawnApi.zombieSideForSlot(slotIndex, slotCount, sideCount);
+  }
   const normalized = ((slotIndex % slotCount) + slotCount) % slotCount;
   const ratio = normalized / Math.max(1, slotCount);
   return Math.max(0, Math.min(sideCount - 1, Math.floor(ratio * sideCount)));
 }
 
 function pickMissingSlotBySide(missingBySide, aliveBySide, cfg){
+  if (ZombieSpawnApi && ZombieSpawnApi.pickMissingSlotBySide) {
+    return ZombieSpawnApi.pickMissingSlotBySide(missingBySide, aliveBySide, cfg);
+  }
   const sideCount = cfg.sideCount;
   let bestSide = -1;
   let bestScore = -Infinity;
@@ -3315,6 +3047,10 @@ function fillDismantleConfirmModal(selectedTankIds){
 }
 
 function closeDismantleModal(){
+  if (UIModals && typeof UIModals.closeDismantleModal === 'function') {
+    UIModals.closeDismantleModal({ ui, a11yClose });
+    return;
+  }
   if (!ui.dismantleModal) return;
   ui.dismantleModal.classList.add('hidden');
   ui.dismantleModal.setAttribute('aria-hidden', 'true');
@@ -3679,6 +3415,10 @@ function renderCrateIcon(level){
 }
 
 function openBoostModal(){
+  if (UIModals && typeof UIModals.openBoostModal === 'function') {
+    UIModals.openBoostModal({ t, a11yOpen, onClose: closeBoostModal });
+    return;
+  }
   const modal = document.getElementById('boostModal');
   if (!modal) return;
   const textEl = document.getElementById('boostModalText');
@@ -3690,6 +3430,10 @@ function openBoostModal(){
   a11yOpen(modal, { initialFocus: watchEl, onClose: closeBoostModal });
 }
 function closeBoostModal(){
+  if (UIModals && typeof UIModals.closeBoostModal === 'function') {
+    UIModals.closeBoostModal({ a11yClose });
+    return;
+  }
   const modal = document.getElementById('boostModal');
   if (!modal) return;
   modal.classList.add('hidden');
@@ -3698,6 +3442,10 @@ function closeBoostModal(){
 }
 
 function openResetTalentsModal(){
+  if (UIModals && typeof UIModals.openResetTalentsModal === 'function') {
+    UIModals.openResetTalentsModal({ t, a11yOpen, onClose: closeResetTalentsModal });
+    return;
+  }
   const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   const textEl = document.getElementById('resetTalentsModalText');
@@ -3709,6 +3457,10 @@ function openResetTalentsModal(){
   a11yOpen(modal, { initialFocus: watchEl, onClose: closeResetTalentsModal });
 }
 function closeResetTalentsModal(){
+  if (UIModals && typeof UIModals.closeResetTalentsModal === 'function') {
+    UIModals.closeResetTalentsModal({ a11yClose });
+    return;
+  }
   const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   modal.classList.add('hidden');
@@ -3717,6 +3469,17 @@ function closeResetTalentsModal(){
 }
 
 function openCrateModal(){
+  if (UIModals && typeof UIModals.openCrateModal === 'function') {
+    UIModals.openCrateModal({
+      state,
+      ui,
+      t,
+      a11yOpen,
+      onClose: closeCrateModal,
+      renderCrateIcon,
+    });
+    return;
+  }
   if (!state.crate || !ui.crateModal) return;
   ui.crateModal.classList.remove('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'false');
@@ -3730,6 +3493,10 @@ function openCrateModal(){
 }
 
 function closeCrateModal(){
+  if (UIModals && typeof UIModals.closeCrateModal === 'function') {
+    UIModals.closeCrateModal({ ui, a11yClose });
+    return;
+  }
   if (!ui.crateModal) return;
   ui.crateModal.classList.add('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'true');

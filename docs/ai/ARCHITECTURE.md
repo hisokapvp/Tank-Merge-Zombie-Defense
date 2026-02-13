@@ -17,6 +17,8 @@
 
 3. **Domain systems (`src/*`)**
    - mechanics: бой, экономика, гараж, targeting
+   - audio: управление громкостью, SFX playback/pooling
+   - i18n: runtime перевод + fallback-словарь
    - persistence: save/load/offline
    - ui: модалки/панели
    - render/perf/telemetry/analytics/i18n/flags
@@ -67,9 +69,13 @@ Canvas pointer events:
 
 ## Ownership
 
-- `game.js`: orchestration, жизненный цикл, большинство runtime связок.
+- `game.js`: orchestration и жизненный цикл; доменные вычисления постепенно выносятся в `src/*`.
 - `src/mechanics/*`: чистые правила и вычисления.
+- `src/mechanics/zombieSpawn.js`: логика балансного распределения spawn-слотов по сторонам.
 - `src/ui/*`: модальные окна, панели, интерактив UI.
+- `src/ui/modals.js`: централизованное открытие/закрытие основных игровых модалок.
+- `src/audio/settingsAudio.js`: аудио-настройки, применение громкости и SFX-пул.
+- `src/i18n/fallbackStrings.js`: fallback-словарь при недоступном JSON i18n.
 - `src/persistence/*`: долговременное состояние и офлайн-модель.
 - `src/perf/*`: ограничители производительности.
 - `src/analytics/*`, `src/telemetry/*`: метрики и экспорт.

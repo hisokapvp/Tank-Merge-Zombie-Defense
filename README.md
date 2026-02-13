@@ -149,7 +149,7 @@ chmod +x hooks/pre-commit
 
 ```
 ├── index.html          # Entry point
-├── game.js             # Основной игровой код
+├── game.js             # Оркестрация и runtime-цикл
 ├── style.css           # Стили
 ├── docs/
 │   ├── CONTRIBUTING.md
@@ -167,8 +167,12 @@ chmod +x hooks/pre-commit
 │   ├── mechanics/      # Игровая логика
 │   │   ├── combat.js   # Дальность стрельбы, pickDeathAnim
 │   │   ├── economy.js  # Цены, монеты
+│   │   ├── zombieSpawn.js # Баланс спавна и распределение слотов зомби
 │   │   └── ...
+│   ├── audio/          # Подсистемы звука и аудио-настроек
+│   │   └── settingsAudio.js
 │   ├── i18n/            # Локализация RU/EN
+│   │   └── fallbackStrings.js # Fallback-словарь UI-строк
 │   ├── persistence/    # Сохранение/загрузка
 │   ├── render/         # Canvas rendering
 │   ├── telemetry/      # Pack 2: расширенная телеметрия
@@ -178,6 +182,7 @@ chmod +x hooks/pre-commit
 │   │       └── anki_export.js
 │   ├── ui/             # UI-компоненты
 │   │   ├── lessonProgress.js    # Pack 2: панель уроков
+│   │   ├── modals.js            # Управление UI-модалками
 │   │   ├── zombieAnimPreview.js # Debug preview анимаций
 │   │   └── ...
 │   └── utils/          # Утилиты
@@ -240,6 +245,13 @@ chmod +x hooks/pre-commit
 - **A11y helpers** (`src/accessibility/a11y.js`) — focus trap and ESC handling
 - **Projectile pooling** (game.js + `src/perf/objectPool.js`) — reduced allocations
 - Pack 5 тесты: `Test/pack5/perf_regression.test.js`
+
+### v7.x (Refactor game.js)
+- Вынесен модуль `src/audio/settingsAudio.js`: загрузка/сохранение аудио-настроек, применение громкости, SFX pooling и dedup.
+- Вынесен модуль `src/mechanics/zombieSpawn.js`: вычисление spawn-конфига, распределение слотов и side-balance для зомби.
+- Вынесен fallback-словарь в `src/i18n/fallbackStrings.js`.
+- Вынесена логика UI-модалок в `src/ui/modals.js`.
+- `game.js` оставлен как слой orchestration с делегированием доменной логики в `src/*`.
 
 ### v3.x (QA/Tools)
 - Добавлен `pickDeathAnim` для детерминированного выбора death-анимации
