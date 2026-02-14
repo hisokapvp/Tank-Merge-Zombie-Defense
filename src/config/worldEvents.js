@@ -2,9 +2,9 @@
   'use strict';
 
   var cfg = {
-    enabled: false,
+    enabled: enabled,
     weather: {
-      enabled: false,
+      enabled: enabled,
       rain: {
         enabled: true,
         density: 0.16,
@@ -25,12 +25,12 @@
       },
     },
     attackMode: {
-      enabled: false,
-      attackEverySec: 75,
-      attackDurationSec: 20,
+      enabled: enabled,
+      attackEverySec: 1,
+      attackDurationSec: 180,
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
-      targetAliveMult: 1.25,
+      targetAliveMult: 5,
       speedMult: 1.2,
       damageMult: 1.15,
     },
