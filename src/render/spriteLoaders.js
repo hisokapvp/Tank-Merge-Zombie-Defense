@@ -306,6 +306,7 @@
               y: f.y != null ? f.y : 0,
               w: f.w != null ? f.w : 24,
               h: f.h != null ? f.h : 24,
+              scale: Number.isFinite(f.scale) && f.scale > 0 ? f.scale : 1,
               anchor: f.anchor || { x: 0.5, y: 0.8 },
             });
           }

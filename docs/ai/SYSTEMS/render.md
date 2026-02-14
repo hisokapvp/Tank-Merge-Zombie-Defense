@@ -54,7 +54,7 @@
 
 - `drawZombieFence()` строит сегменты через `Game.FenceLayout.buildSquareFenceSegments({...})`.
 - Базовые формулы шага/инсета: `step=max(6, fenceWidth*1.15)`, `cornerInset=max(4, fenceWidth*0.65)`.
-- Для scale-aware раскладки обе формулы умножаются на `frame.scale` (side/corner); крайние side-сегменты всегда упираются в угловые inset-границы.
+- Для scale-aware раскладки обе формулы умножаются на `frame.scale` (side/corner); side-сегменты ставятся по центрам интервалов между inset-границами (без постановки в точные start/end).
 - В каждом углу рисуется ровно один `corner` сегмент; `side` сегменты распределяются между углами без наложения на corner-точки.
 - Если в `assets/fence.json` задан `cornerInsetPx`, он переопределяет автозначение inset.
 - При отрисовке учитывается `rotation -> rotationDeg -> 0` (градусы).
@@ -63,7 +63,11 @@
 
 - Конфиг: `src/config/worldEvents.js`.
 - По умолчанию всё выключено (`enabled:false`).
-- Поддержка погоды: `rain` + `lightning` + `thunder` SFX (`assets/sfx/thunder.wav`; отсутствие файла не ломает loop).
+- Поддержка погоды: `rain` + `lightning` + `thunder` SFX.
+- `weather.lightning.intervalMinSec` / `weather.lightning.intervalMaxSec`: рандомный интервал между вспышками/громом (в секундах, выбирается заново каждый цикл).
+- Если `intervalMinSec/intervalMaxSec` не заданы, используется legacy-ветка `chancePerSec`.
+- Thunder source поддерживает массив форматов (пример: `['assets/sfx/thunder.ogg','assets/sfx/thunder.wav']`) с fallback по поддержке браузера и последующим fallback при ошибке загрузки файла.
+- Rain loop SFX (`rainLoop`) запускается при активной погоде и `rain.enabled !== false`, играет по кругу, останавливается при выключении погоды/дождя; отсутствие файла не ломает игру.
 - Атак-цикл зомби:
 	- `attackEverySec`, `attackDurationSec`
 	- `weatherLeadInSec`: за это время до атаки включается погода
@@ -85,6 +89,13 @@
 
 - Resize: маленькое / среднее / большое окно — визуально `~5px` ангар↔трек и трек↔забор, без пересечений.
 - Zombie fence: нижняя грань / боковая грань / угол — нет пустоты перед забором, нет выхода за забор.
+
+## Checklist (Weather/SFX)
+
+- Включить `enabled:true`, `weather.enabled:true` в `src/config/worldEvents.js`: дождь/молнии визуально появляются в бою.
+- Для lightning задать `intervalMinSec: 8`, `intervalMaxSec: 20`: вспышки/гром происходят через случайные интервалы в этих границах.
+- Для thunder оставить массив `ogg/wav`: в браузерах с поддержкой ogg грузится `ogg`, иначе fallback на `wav`; при отсутствии файла игра продолжает работать.
+- Проверить rain loop: при старте погоды звук запускается и лупится; при отключении погоды/дождя звук останавливается.
 
 ## Изменённые файлы (PACK 1)
 

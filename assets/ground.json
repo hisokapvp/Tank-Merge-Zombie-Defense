@@ -32,11 +32,12 @@
   "stamps": [
     {
       "id": "ruins_patch",
-      "count": 40,
+      "mode": "variants",
+      "count": 80,
       "spawnArea": { "type": "rect", "x": -960, "y": -540, "w": 1920, "h": 1080 },
       "items": [
-        { "xg": 0, "yg": 0, "x": 0, "y": 0, "w": 32, "h": 32, "scale": 1 },
-        { "xg": 0, "yg": 0, "x": 224, "y": 0, "w": 32, "h": 32, "scale": 1 },
+        { "xg": 0, "yg": 0, "x": 0, "y": 0, "w": 48, "h": 48, "scale": 1 },
+        { "xg": 0, "yg": 0, "x": 224, "y": 0, "w": 48, "h": 48, "scale": 1 },
         { "xg": 0, "yg": 0, "x": 240, "y": 80, "w": 32, "h": 32, "scale": 1 }
       ]
     }

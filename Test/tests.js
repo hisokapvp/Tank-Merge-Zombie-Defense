@@ -706,9 +706,9 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     const expectedEnd = halfSide - expectedInset;
     const expectedStep = Math.max(6, fenceWidth * 1.15) * 2;
 
-    assert(top.length >= 2, 'top side has at least two segments');
-    assert(Math.abs(top[0].x - expectedStart) < 1e-6, 'first top segment touches corner inset boundary');
-    assert(Math.abs(top[top.length - 1].x - expectedEnd) < 1e-6, 'last top segment touches opposite corner inset boundary');
+    assert(top.length >= 1, 'top side has at least one segment');
+    assert(top[0].x > expectedStart, 'first top segment is inset from corner boundary');
+    assert(top[top.length - 1].x < expectedEnd, 'last top segment is inset from opposite corner boundary');
     for (let i = 1; i < top.length; i++) {
       const dx = top[i].x - top[i - 1].x;
       assert(dx + 1e-6 >= expectedStep, 'scaled step prevents overlap between neighbor segments');

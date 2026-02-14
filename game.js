@@ -389,6 +389,11 @@ function applyAudioSettings(){
       player.volume = sfxVolume;
     }
   });
+  Object.keys(LOOP_SFX_PLAYERS).forEach(id => {
+    const player = LOOP_SFX_PLAYERS[id];
+    if (!player) return;
+    player.volume = sfxVolume;
+  });
 }
 
 // SFX playback: volume from settings.sfxVolume; dedup by event id
@@ -396,10 +401,74 @@ const SFX_LAST_PLAYED = {};
 const SFX_DEDUP_MS = 80;
 const SFX_POOL_SIZE = 6;
 const SFX_POOLS = {};
+const LOOP_SFX_PLAYERS = {};
+const SFX_RESOLVED_SOURCE_LISTS = {};
+let SFX_AUDIO_PROBE = null;
+
+function sfxSourceToMime(source){
+  const normalized = String(source || '').toLowerCase();
+  if (normalized.endsWith('.ogg')) return 'audio/ogg';
+  if (normalized.endsWith('.wav')) return 'audio/wav';
+  if (normalized.endsWith('.mp3')) return 'audio/mpeg';
+  return '';
+}
+
+function canPlaySfxSource(source){
+  if (typeof Audio === 'undefined') return true;
+  try {
+    if (!SFX_AUDIO_PROBE) SFX_AUDIO_PROBE = new Audio();
+    if (!SFX_AUDIO_PROBE || typeof SFX_AUDIO_PROBE.canPlayType !== 'function') return true;
+    const mime = sfxSourceToMime(source);
+    if (!mime) return true;
+    const support = SFX_AUDIO_PROBE.canPlayType(mime);
+    return support === 'probably' || support === 'maybe';
+  } catch (e) {
+    return true;
+  }
+}
+
+function resolveSfxSourceList(id){
+  if (Object.prototype.hasOwnProperty.call(SFX_RESOLVED_SOURCE_LISTS, id)) {
+    return SFX_RESOLVED_SOURCE_LISTS[id];
+  }
+  const source = SFX_SOURCES[id];
+  const resolved = [];
+  if (Array.isArray(source)) {
+    for (let i = 0; i < source.length; i++) {
+      const candidate = source[i];
+      if (typeof candidate !== 'string' || !candidate) continue;
+      if (canPlaySfxSource(candidate)) {
+        resolved.push(candidate);
+      }
+    }
+    for (let i = 0; i < source.length; i++) {
+      const candidate = source[i];
+      if (typeof candidate !== 'string' || !candidate) continue;
+      if (resolved.indexOf(candidate) === -1) resolved.push(candidate);
+    }
+  } else if (typeof source === 'string' && source) {
+    resolved.push(source);
+  }
+  SFX_RESOLVED_SOURCE_LISTS[id] = resolved;
+  return resolved;
+}
+
+function enableAudioFallback(player, sourceList){
+  if (!player || !Array.isArray(sourceList) || sourceList.length < 2) return;
+  player.__sourceIndex = 0;
+  player.addEventListener('error', function () {
+    var nextIndex = Number.isFinite(player.__sourceIndex) ? player.__sourceIndex + 1 : 1;
+    if (nextIndex >= sourceList.length) return;
+    player.__sourceIndex = nextIndex;
+    player.src = sourceList[nextIndex];
+    try { player.load(); } catch (e) {}
+  });
+}
 
 function getSfxPool(id){
   if (!SFX_POOLS[id]) {
-    const src = SFX_SOURCES[id];
+    const sources = resolveSfxSourceList(id);
+    const src = sources[0];
     if (!src) return null;
     const players = [];
     const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
@@ -407,11 +476,46 @@ function getSfxPool(id){
       const player = new Audio(src);
       player.preload = 'auto';
       player.volume = vol;
+      enableAudioFallback(player, sources);
       players.push(player);
     }
     SFX_POOLS[id] = { players, cursor: 0 };
   }
   return SFX_POOLS[id];
+}
+
+function getLoopSfxPlayer(id){
+  if (!LOOP_SFX_PLAYERS[id]) {
+    const sources = resolveSfxSourceList(id);
+    const src = sources[0];
+    if (!src) return null;
+    const player = new Audio(src);
+    player.preload = 'auto';
+    player.loop = true;
+    enableAudioFallback(player, sources);
+    LOOP_SFX_PLAYERS[id] = player;
+  }
+  return LOOP_SFX_PLAYERS[id];
+}
+
+function playLoopSfx(id){
+  const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  try {
+    const player = getLoopSfxPlayer(id);
+    if (!player) return;
+    player.volume = vol;
+    if (!player.paused) return;
+    player.play().catch(() => {});
+  } catch (e) {}
+}
+
+function stopLoopSfx(id){
+  try {
+    const player = LOOP_SFX_PLAYERS[id];
+    if (!player) return;
+    player.pause();
+    try { player.currentTime = 0; } catch (e) {}
+  } catch (e) {}
 }
 
 function playSfx(id){
@@ -448,7 +552,8 @@ const SFX_SOURCES = {
   levelUp: 'assets/sfx/level_up.ogg',
   applyTalents: 'assets/sfx/apply_talents.ogg',
   activeAbility: 'assets/sfx/active_ability.ogg',
-  thunder: 'assets/sfx/thunder.wav',
+  thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
+  rainLoop: ['assets/sfx/rain_loop.ogg', 'assets/sfx/rain_loop.wav'],
 };
 
 function updateMenuVolumes(){
@@ -571,7 +676,12 @@ const WorldEventsCfg = (window.Game && window.Game.Config && window.Game.Config.
   ? window.Game.Config.WorldEvents
   : {
       enabled: false,
-      weather: { enabled: false, rain: { enabled: true }, lightning: { enabled: true }, thunder: { enabled: true, sfxId: 'thunder' } },
+      weather: {
+        enabled: false,
+        rain: { enabled: true },
+        lightning: { enabled: true, intervalMinSec: 8, intervalMaxSec: 20 },
+        thunder: { enabled: true, sfxId: 'thunder' },
+      },
       attackMode: {
         enabled: false,
         attackEverySec: 75,
@@ -591,6 +701,7 @@ const worldEventsState = {
   weatherUntil: 0,
   weatherEnabled: false,
   lightningUntil: 0,
+  nextLightningAt: 0,
 };
 
 const rainCache = {
@@ -897,12 +1008,56 @@ function getWorldEventsAttackCfg(){
 
 function getWeatherCfg(){
   const cfg = WorldEventsCfg && WorldEventsCfg.weather ? WorldEventsCfg.weather : {};
+  const lightning = cfg.lightning || {};
+  const hasInterval = Number.isFinite(lightning.intervalMinSec) || Number.isFinite(lightning.intervalMaxSec);
+  const minSec = Number.isFinite(lightning.intervalMinSec) ? Math.max(0.1, lightning.intervalMinSec) : 8;
+  const maxSec = Number.isFinite(lightning.intervalMaxSec) ? Math.max(minSec, lightning.intervalMaxSec) : Math.max(minSec, 20);
   return {
     enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled),
     rain: cfg.rain || {},
-    lightning: cfg.lightning || {},
+    lightning: {
+      ...lightning,
+      intervalMinSec: minSec,
+      intervalMaxSec: maxSec,
+      useInterval: hasInterval,
+    },
     thunder: cfg.thunder || {},
   };
+}
+
+function scheduleNextLightning(now, lightningCfg){
+  const minSec = Number.isFinite(lightningCfg?.intervalMinSec) ? Math.max(0.1, lightningCfg.intervalMinSec) : 8;
+  const maxSec = Number.isFinite(lightningCfg?.intervalMaxSec) ? Math.max(minSec, lightningCfg.intervalMaxSec) : Math.max(minSec, 20);
+  const delay = minSec + Math.random() * (maxSec - minSec);
+  worldEventsState.nextLightningAt = now + delay;
+}
+
+function processWeatherLightning(now, dt, weatherCfg){
+  const lightningCfg = weatherCfg && weatherCfg.lightning ? weatherCfg.lightning : {};
+  if (!worldEventsState.weatherEnabled || !lightningCfg.enabled) return;
+
+  const flashDur = Number.isFinite(lightningCfg.flashDurationSec) ? Math.max(0.03, lightningCfg.flashDurationSec) : 0.12;
+  let shouldFlash = false;
+  if (lightningCfg.useInterval) {
+    if (!Number.isFinite(worldEventsState.nextLightningAt) || worldEventsState.nextLightningAt <= 0) {
+      scheduleNextLightning(now, lightningCfg);
+    }
+    if (now >= worldEventsState.nextLightningAt) {
+      shouldFlash = true;
+      scheduleNextLightning(now, lightningCfg);
+    }
+  } else {
+    const chancePerSec = Number.isFinite(lightningCfg.chancePerSec) ? Math.max(0, lightningCfg.chancePerSec) : 0.14;
+    if (now >= (worldEventsState.lightningUntil || 0) && Math.random() < chancePerSec * Math.max(0.001, dt)) {
+      shouldFlash = true;
+    }
+  }
+
+  if (!shouldFlash) return;
+  worldEventsState.lightningUntil = now + flashDur;
+  if (weatherCfg.thunder && weatherCfg.thunder.enabled) {
+    playSfx(weatherCfg.thunder.sfxId || 'thunder');
+  }
 }
 
 function isZombieAttackModeActive(){
@@ -924,49 +1079,51 @@ function getZombieAttackMultipliers(){
 function updateWorldEvents(dt){
   const attackCfg = getWorldEventsAttackCfg();
   const weatherCfg = getWeatherCfg();
+  const rainCfg = weatherCfg.rain || {};
   const now = nowSec();
+  const prevWeatherEnabled = !!worldEventsState.weatherEnabled;
 
   if (!attackCfg.enabled) {
     worldEventsState.currentAttackStartAt = 0;
     worldEventsState.attackEndAt = 0;
     worldEventsState.weatherUntil = 0;
-    worldEventsState.weatherEnabled = false;
-    return;
+    worldEventsState.weatherEnabled = !!weatherCfg.enabled;
+  } else {
+    if (!Number.isFinite(worldEventsState.attackStartAt) || worldEventsState.attackStartAt <= 0) {
+      worldEventsState.attackStartAt = now + attackCfg.attackEverySec;
+    }
+
+    if (now >= worldEventsState.attackStartAt) {
+      const startAt = worldEventsState.attackStartAt;
+      worldEventsState.currentAttackStartAt = startAt;
+      worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
+      worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
+    }
+
+    if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
+      worldEventsState.currentAttackStartAt = 0;
+    }
+
+    const inLeadIn = now >= (worldEventsState.attackStartAt - attackCfg.weatherLeadInSec) && now < worldEventsState.attackStartAt;
+    const inAttackWindow = worldEventsState.currentAttackStartAt > 0 && now >= worldEventsState.currentAttackStartAt && now < worldEventsState.attackEndAt;
+    const inLeadOut = inAttackWindow && now >= (worldEventsState.attackEndAt - attackCfg.weatherLeadOutSec);
+    worldEventsState.weatherEnabled = weatherCfg.enabled && (inLeadIn || (inAttackWindow && !inLeadOut));
   }
 
-  if (!Number.isFinite(worldEventsState.attackStartAt) || worldEventsState.attackStartAt <= 0) {
-    worldEventsState.attackStartAt = now + attackCfg.attackEverySec;
-  }
-
-  if (now >= worldEventsState.attackStartAt) {
-    const startAt = worldEventsState.attackStartAt;
-    worldEventsState.currentAttackStartAt = startAt;
-    worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
-    worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
-  }
-
-  if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
-    worldEventsState.currentAttackStartAt = 0;
-  }
-
-  const inLeadIn = now >= (worldEventsState.attackStartAt - attackCfg.weatherLeadInSec) && now < worldEventsState.attackStartAt;
-  const inAttackWindow = worldEventsState.currentAttackStartAt > 0 && now >= worldEventsState.currentAttackStartAt && now < worldEventsState.attackEndAt;
-  const inLeadOut = inAttackWindow && now >= (worldEventsState.attackEndAt - attackCfg.weatherLeadOutSec);
-  worldEventsState.weatherEnabled = weatherCfg.enabled && (inLeadIn || (inAttackWindow && !inLeadOut));
   if (!worldEventsState.weatherEnabled) {
     worldEventsState.lightningUntil = 0;
+    worldEventsState.nextLightningAt = 0;
   }
 
-  if (worldEventsState.weatherEnabled && weatherCfg.lightning && weatherCfg.lightning.enabled) {
-    const chancePerSec = Number.isFinite(weatherCfg.lightning.chancePerSec) ? Math.max(0, weatherCfg.lightning.chancePerSec) : 0.14;
-    if (now >= (worldEventsState.lightningUntil || 0) && Math.random() < chancePerSec * Math.max(0.001, dt)) {
-      const flashDur = Number.isFinite(weatherCfg.lightning.flashDurationSec) ? Math.max(0.03, weatherCfg.lightning.flashDurationSec) : 0.12;
-      worldEventsState.lightningUntil = now + flashDur;
-      if (weatherCfg.thunder && weatherCfg.thunder.enabled) {
-        playSfx(weatherCfg.thunder.sfxId || 'thunder');
-      }
-    }
+  const rainActive = !!(worldEventsState.weatherEnabled && rainCfg.enabled !== false);
+  if (!prevWeatherEnabled && rainActive) {
+    playLoopSfx('rainLoop');
   }
+  if (prevWeatherEnabled && !rainActive) {
+    stopLoopSfx('rainLoop');
+  }
+
+  processWeatherLightning(now, dt, weatherCfg);
 }
 
 function ensureRainCache(requiredCount){
@@ -3811,7 +3968,8 @@ function drawDecors(){
   for (const d of state.decors){
     const frame = DecorSprites.pickFrame(d.spriteId);
     if (!frame) continue;
-    const scale = 0.5 * balScale;
+    const frameScale = Number.isFinite(frame.scale) && frame.scale > 0 ? frame.scale : 1;
+    const scale = 0.5 * balScale * frameScale;
     const ax = frame.anchor?.x ?? 0.5;
     const ay = frame.anchor?.y ?? 0.8;
     ctx.save();

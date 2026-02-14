@@ -129,12 +129,58 @@
       if (!parsedItems.length) continue;
       result.push({
         id: typeof st.id === 'string' ? st.id : ('stamp_' + i),
+        mode: st.mode === 'variants' ? 'variants' : 'composite',
         count: Number.isFinite(st.count) ? Math.max(0, Math.floor(st.count)) : 1,
         spawnArea: resolveSpawnArea(st.spawnArea),
         items: parsedItems,
       });
     }
     return result;
+  }
+
+  function buildVariantPlacementOrder(stamp) {
+    var count = Number.isFinite(stamp && stamp.count) ? Math.max(0, Math.floor(stamp.count)) : 0;
+    var variants = Array.isArray(stamp && stamp.items) ? stamp.items.length : 0;
+    if (count <= 0 || variants <= 0) return [];
+
+    var counts = new Array(variants);
+    for (var i = 0; i < variants; i++) counts[i] = 0;
+
+    var assigned = 0;
+    if (count >= variants) {
+      for (i = 0; i < variants; i++) {
+        counts[i] = 1;
+      }
+      assigned = variants;
+    }
+
+    var remaining = count - assigned;
+    for (i = 0; i < remaining; i++) {
+      var pick = Math.floor(hash01(stamp.id, 'variant-count', i + 1) * variants);
+      if (pick < 0) pick = 0;
+      if (pick >= variants) pick = variants - 1;
+      counts[pick] += 1;
+    }
+
+    var order = new Array(count);
+    var cursor = 0;
+    for (i = 0; i < variants; i++) {
+      for (var n = 0; n < counts[i]; n++) {
+        order[cursor++] = i;
+      }
+    }
+
+    for (var j = order.length - 1; j > 0; j--) {
+      var rnd = hash01(stamp.id, 'variant-shuffle', j);
+      var k = Math.floor(rnd * (j + 1));
+      if (k < 0) k = 0;
+      if (k > j) k = j;
+      var tmp = order[j];
+      order[j] = order[k];
+      order[k] = tmp;
+    }
+
+    return order;
   }
 
   function computeRanges(viewW, viewH, tileW, tileH) {
@@ -278,6 +324,32 @@
         var centerY = Math.floor(viewH / 2);
         for (var si = 0; si < stampSets.length; si++) {
           var stamp = stampSets[si];
+          if (stamp.mode === 'variants') {
+            var placementOrder = buildVariantPlacementOrder(stamp);
+            for (var vi = 0; vi < placementOrder.length; vi++) {
+              var variantIdx = placementOrder[vi];
+              var variantItem = stamp.items[variantIdx];
+              if (!variantItem) continue;
+              var variantSpawn = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, vi);
+              var variantDrawW = Math.max(1, Math.round(variantItem.w * variantItem.scale));
+              var variantDrawH = Math.max(1, Math.round(variantItem.h * variantItem.scale));
+              var variantDrawX = Math.round(variantSpawn.x + variantItem.xg - variantDrawW * 0.5);
+              var variantDrawY = Math.round(variantSpawn.y + variantItem.yg - variantDrawH * 0.5);
+              localCtx.drawImage(
+                atlasImg,
+                variantItem.x,
+                variantItem.y,
+                variantItem.w,
+                variantItem.h,
+                variantDrawX,
+                variantDrawY,
+                variantDrawW,
+                variantDrawH
+              );
+            }
+            continue;
+          }
+
           for (var ci = 0; ci < stamp.count; ci++) {
             var spawnPoint = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, ci);
             for (var ii = 0; ii < stamp.items.length; ii++) {

@@ -28,7 +28,11 @@
 	- `weights`: массив `{ frame:{col,row}|{x,y,w,h,scale?}, weight, rotationDeg?, scale? }`.
 	- Допускаются дубликаты `{col,row}` с разными `rotationDeg/scale`.
 - `stamps[]` (алиас `pieces[]`): куски карты
-	- `stamp`: `{ id, count, spawnArea, items[] }`
+	- `stamp`: `{ id, mode?, count, spawnArea, items[] }`
+	- `mode`:
+		- `composite` (по умолчанию) — каждый placement рисует все `items[]` со своими `xg/yg`.
+		- `variants` — каждый placement выбирает ровно один item-вариант из `items[]`.
+		- Для `variants`: при `count >= items.length` каждый вариант гарантированно используется минимум один раз; остаток распределяется детерминированно по seed/stamp.id; порядок placement перемешивается детерминированно.
 	- `spawnArea`: `rect|circle` в world-coords относительно центра.
 	- `items[]`: `{ xg, yg, x, y, w, h, scale }`, рисуется в `(spawnPoint.x + xg, spawnPoint.y + yg)`.
 
@@ -46,6 +50,7 @@ Runtime:
 ### Decor (`assets/decor.json`)
 
 - `count` / `spriteIds[]` / `noSpawnZones[]` можно задавать в JSON.
+- `frames[].scale` (optional, default `1`): локальный множитель размера конкретного декор-кадра.
 - `noSpawnZones[]`: `circle {type:'circle',cx,cy,r}` и `rect {type:'rect',x,y,w,h}` в world-coords.
 - Приоритет runtime: `BAL.decorNoSpawnZones` / `BAL.decorCount` / `BAL.decorSpriteIds` переопределяют JSON.
 

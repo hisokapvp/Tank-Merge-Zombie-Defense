@@ -1,6 +1,8 @@
 (function (global) {
   'use strict';
 
+  var enabled = tue;
+
   var cfg = {
     enabled: enabled,
     weather: {
@@ -18,6 +20,8 @@
         enabled: true,
         chancePerSec: 0.14,
         flashDurationSec: 0.12,
+        intervalMinSec: 8,
+        intervalMaxSec: 20,
       },
       thunder: {
         enabled: true,
@@ -26,7 +30,7 @@
     },
     attackMode: {
       enabled: enabled,
-      attackEverySec: 1,
+      attackEverySec: 180,
       attackDurationSec: 180,
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,

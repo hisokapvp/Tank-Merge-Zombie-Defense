@@ -17,24 +17,29 @@ function test(name, fn) {
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '../..');
-const gamePath = path.join(root, 'game.js');
-const content = fs.readFileSync(gamePath, 'utf8');
+const fenceLayoutPath = path.join(root, 'src', 'render', 'fenceLayout.js');
+const content = fs.readFileSync(fenceLayoutPath, 'utf8');
 
-function extractFunctionBody(name) {
-  const re = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}');
-  const match = content.match(re) || content.match(new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\}'));
-  return match ? match[1] : null;
-}
+const sandbox = {
+  window: {},
+  console,
+  Math,
+  Number,
+};
+sandbox.window.window = sandbox.window;
+vm.createContext(sandbox);
+vm.runInContext(content, sandbox, { filename: 'fenceLayout.js' });
 
 console.log('\n── Pack 7: Fence corner slots ──');
 
 test('FCS-1: buildSquareFenceSegments defines 4 corners and sides', () => {
-  const body = extractFunctionBody('buildSquareFenceSegments');
-  assert(!!body, 'buildSquareFenceSegments function found');
-
-  const buildSquareFenceSegments = new Function('halfSide', 'fenceWidth', 'spriteKeys', body);
+  const buildSquareFenceSegments = sandbox.window.Game
+    && sandbox.window.Game.FenceLayout
+    && sandbox.window.Game.FenceLayout.buildSquareFenceSegments;
+  assert(typeof buildSquareFenceSegments === 'function', 'buildSquareFenceSegments function found');
   const spriteKeys = {
     cornerTL: 'cornerTL',
     cornerTR: 'cornerTR',
@@ -48,7 +53,7 @@ test('FCS-1: buildSquareFenceSegments defines 4 corners and sides', () => {
 
   const halfSide = 100;
   const fenceWidth = 20;
-  const segments = buildSquareFenceSegments(halfSide, fenceWidth, spriteKeys);
+  const segments = buildSquareFenceSegments({ halfSide, fenceWidth, spriteKeys });
   assert(Array.isArray(segments), 'segments array returned');
   assert(segments.length > 0, 'segments not empty');
 
