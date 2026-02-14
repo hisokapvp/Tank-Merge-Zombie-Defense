@@ -74,6 +74,13 @@
                 h: t.death.h != null ? t.death.h : ((t.frame && t.frame.h) != null ? t.frame.h : 96),
                 frames: t.death.frames != null ? t.death.frames : 1,
               } : null,
+              attack: t.attack ? {
+                x: t.attack.x != null ? t.attack.x : ((t.frame && t.frame.x) != null ? t.frame.x : 0),
+                y: t.attack.y != null ? t.attack.y : ((t.frame && t.frame.y) != null ? t.frame.y : 0),
+                w: t.attack.w != null ? t.attack.w : ((t.frame && t.frame.w) != null ? t.frame.w : 96),
+                h: t.attack.h != null ? t.attack.h : ((t.frame && t.frame.h) != null ? t.frame.h : 96),
+                frames: t.attack.frames != null ? t.attack.frames : (t.frames != null ? t.frames : 1),
+              } : null,
             };
           });
 
@@ -237,13 +244,14 @@
             var f = frames[i];
             var id = f.id || String(this.framesById.size);
             var frameScale = Number.isFinite(f.scale) ? f.scale : 1;
+            var rotation = Number.isFinite(f.rotation) ? f.rotation : (Number.isFinite(f.rotationDeg) ? f.rotationDeg : 0);
             this.framesById.set(id, {
               x: f.x != null ? f.x : 0,
               y: f.y != null ? f.y : 0,
               w: f.w != null ? f.w : 32,
               h: f.h != null ? f.h : 32,
               scale: frameScale,
-              rotationDeg: Number.isFinite(f.rotationDeg) ? f.rotationDeg : 0,
+              rotationDeg: rotation,
               anchor: f.anchor || { x: 0.5, y: 0.5 },
             });
             if (Number.isFinite(frameScale)) this.maxFrameScale = Math.max(this.maxFrameScale, frameScale);
@@ -279,6 +287,7 @@
       error: '',
       atlasImg: null,
       framesById: new Map(),
+      config: null,
       load: async function () {
         try {
           var res = await fetch('assets/decor.json', { cache: 'no-store' });
@@ -300,12 +309,43 @@
               anchor: f.anchor || { x: 0.5, y: 0.8 },
             });
           }
+
+          var noSpawnZones = Array.isArray(data.noSpawnZones) ? data.noSpawnZones : [];
+          var parsedZones = [];
+          for (var j = 0; j < noSpawnZones.length; j++) {
+            var z = noSpawnZones[j] || {};
+            var type = typeof z.type === 'string' ? z.type.toLowerCase() : '';
+            if (!type && Number.isFinite(z.r)) type = 'circle';
+            if (!type && Number.isFinite(z.w) && Number.isFinite(z.h)) type = 'rect';
+            if (type === 'circle') {
+              if (!Number.isFinite(z.cx) || !Number.isFinite(z.cy) || !Number.isFinite(z.r) || z.r <= 0) continue;
+              parsedZones.push({ type: 'circle', cx: z.cx, cy: z.cy, r: z.r });
+              continue;
+            }
+            if (type === 'rect') {
+              if (!Number.isFinite(z.x) || !Number.isFinite(z.y) || !Number.isFinite(z.w) || !Number.isFinite(z.h) || z.w <= 0 || z.h <= 0) continue;
+              parsedZones.push({ type: 'rect', x: z.x, y: z.y, w: z.w, h: z.h });
+            }
+          }
+
+          var idsFromConfig = Array.isArray(data.spriteIds) ? data.spriteIds.filter(function (id) {
+            return typeof id === 'string' && id.length > 0;
+          }) : [];
+          var autoIds = Array.from(this.framesById.keys());
+          var spriteIds = idsFromConfig.length ? idsFromConfig : autoIds;
+          this.config = {
+            count: Number.isFinite(data.count) ? Math.max(0, Math.floor(data.count)) : null,
+            spriteIds: spriteIds,
+            noSpawnZones: parsedZones,
+          };
+
           this.ready = true;
           this.error = '';
         } catch (e) {
           this.ready = false;
           this.atlasImg = null;
           this.framesById.clear();
+          this.config = null;
           this.error = String(e);
         }
       },
@@ -340,6 +380,8 @@
             fillMode: fillMode,
             manual: data && data.manual ? data.manual : { anchor: 'center', grid: [] },
             procedural: data && data.procedural ? data.procedural : { seed: '0', weights: [] },
+            stamps: Array.isArray(data && data.stamps) ? data.stamps : [],
+            pieces: Array.isArray(data && data.pieces) ? data.pieces : [],
           };
 
           this.atlasImg = img;

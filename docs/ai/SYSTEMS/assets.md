@@ -22,11 +22,15 @@
 	- `fillMode`: `repeat | stretch`.
 - `manual`:
 	- `anchor`: `center` (центр тайла = центр клетки).
-	- `grid`: матрица тайлов `[{ frame:{col,row}, rotationDeg?, scale? }]`.
+	- `grid`: матрица тайлов `[{ frame:{col,row}|{x,y,w,h,scale?}, rotationDeg?, scale? }]`.
 - `procedural`:
 	- `seed`: строка/число для детерминизма.
-	- `weights`: массив `{ frame:{col,row}, weight, rotationDeg?, scale? }`.
+	- `weights`: массив `{ frame:{col,row}|{x,y,w,h,scale?}, weight, rotationDeg?, scale? }`.
 	- Допускаются дубликаты `{col,row}` с разными `rotationDeg/scale`.
+- `stamps[]` (алиас `pieces[]`): куски карты
+	- `stamp`: `{ id, count, spawnArea, items[] }`
+	- `spawnArea`: `rect|circle` в world-coords относительно центра.
+	- `items[]`: `{ xg, yg, x, y, w, h, scale }`, рисуется в `(spawnPoint.x + xg, spawnPoint.y + yg)`.
 
 Runtime:
 
@@ -36,8 +40,20 @@ Runtime:
 ### Fence (`assets/fence.json`)
 
 - Top-level `cornerInsetPx` (optional): override авто-расчёта inset для углов на каждой стороне.
-- `frames[].rotationDeg` (optional, degrees, default `0`): поворот конкретного кадра сегмента при `drawZombieFence()`.
+- `frames[].rotation` (priority) → `frames[].rotationDeg` → `0` (degrees): поворот конкретного кадра сегмента.
 - `frames[].scale` влияет на геометрию раскладки сегментов (step/inset) и реальный размер спрайта.
+
+### Decor (`assets/decor.json`)
+
+- `count` / `spriteIds[]` / `noSpawnZones[]` можно задавать в JSON.
+- `noSpawnZones[]`: `circle {type:'circle',cx,cy,r}` и `rect {type:'rect',x,y,w,h}` в world-coords.
+- Приоритет runtime: `BAL.decorNoSpawnZones` / `BAL.decorCount` / `BAL.decorSpriteIds` переопределяют JSON.
+
+### Zombies (`assets/zombies.json`)
+
+- `types[].attack` (optional) поддерживается по аналогии с `death`:
+	- `{ x, y, w, h, frames }`
+	- если `attack` отсутствует, используется обычная `frame` анимация (fallback).
 
 ## Риски
 

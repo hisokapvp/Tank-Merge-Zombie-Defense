@@ -1,5 +1,5 @@
 {
-  "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается сегментами по кругу вокруг ангара; зомби не могут проходить сквозь него. 1) atlas — имя PNG-атласа в папке assets (например fence_atlas.png). 2) frames — массив кадров. Каждый кадр: id (уникальный, строкой), x, y — левый верхний угол в атласе, w, h — размер кадра. anchor (опционально) — точка привязки при рисовании: { \"x\": 0.5, \"y\": 0.5 } = центр. В game.js в BAL.fenceSpriteIds укажите массив id кадров, из которых случайно выбираются сегменты (например [\"post\", \"rail\", \"post\"]). Без fence.json или при пустом fenceSpriteIds забор рисуется процедурно.",
+  "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }.",
   "atlas": "fence_atlas.png",
   "frames": [
     {
@@ -9,6 +9,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -18,6 +19,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -27,6 +29,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -36,6 +39,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -45,6 +49,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -54,6 +59,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -63,6 +69,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -72,6 +79,7 @@
       "w": 128,
       "h": 128,
       "scale": 2.1,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -81,6 +89,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -90,6 +99,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     },
     {
@@ -99,6 +109,7 @@
       "w": 128,
       "h": 128,
       "scale": 2,
+      "rotation": 0,
       "anchor": { "x": 0.5, "y": 0.5 }
     }
   ]

@@ -216,7 +216,8 @@
 
     await opts.TankSprites.load();
     opts.FenceSprites.load().catch(function () {});
-    opts.DecorSprites.load().catch(function () {});
+    await opts.DecorSprites.load().catch(function () {});
+    if (typeof opts.onDecorSpritesLoaded === 'function') opts.onDecorSpritesLoaded();
 
     if (windowObj.Game && windowObj.Game.MergePopup) windowObj.Game.MergePopup.init();
     if (windowObj.Game && windowObj.Game.TelemetryLogger) windowObj.Game.TelemetryLogger.init();

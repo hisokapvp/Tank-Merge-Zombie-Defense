@@ -1,6 +1,12 @@
 {
-  "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты (бочки, мусор и т.п.) размещаются случайно по карте. Запретные зоны задаются в game.js в BAL.decorNoSpawnZones (круги: { cx, cy, r } или прямоугольники: { x, y, w, h }). Список id для выбора — в BAL.decorSpriteIds, количество — BAL.decorCount. 1) atlas — имя PNG-атласа в папке assets (например decor_atlas.png). 2) frames — массив кадров. Каждый кадр: id (уникальный), x, y — левый верхний угол в атласе, w, h — размер. anchor (опционально) — точка привязки, по умолчанию { \"x\": 0.5, \"y\": 0.8 } (низ по центру для объектов на земле).",
+  "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты размещаются случайно по карте. Можно задать count/spriteIds/noSpawnZones прямо тут. noSpawnZones работают в world-coords относительно центра экрана: circle { type:'circle', cx, cy, r } и rect { type:'rect', x, y, w, h }. В game.js значения BAL.decorNoSpawnZones / BAL.decorCount / BAL.decorSpriteIds имеют приоритет и переопределяют JSON при явной настройке. frames: id, x, y, w, h, anchor(optional).",
   "atlas": "decor_atlas.png",
+  "count": 24,
+  "spriteIds": ["barrel", "crate_small", "debris", "can"],
+  "noSpawnZones": [
+    { "type": "circle", "cx": 0, "cy": 0, "r": 220 },
+    { "type": "rect", "x": -120, "y": -70, "w": 240, "h": 140 }
+  ],
   "frames": [
     {
       "id": "barrel",

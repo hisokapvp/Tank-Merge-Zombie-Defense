@@ -9,6 +9,8 @@
 
   function normalizeCfg(cfg) {
     var tile = (cfg && cfg.tile) || {};
+    var stamps = Array.isArray(cfg && cfg.stamps) ? cfg.stamps : [];
+    var pieces = Array.isArray(cfg && cfg.pieces) ? cfg.pieces : [];
     return {
       tile: {
         w: toInt(tile.w, 16),
@@ -18,12 +20,22 @@
       fillMode: cfg && cfg.fillMode === 'stretch' ? 'stretch' : 'repeat',
       manual: cfg && cfg.manual ? cfg.manual : { anchor: 'center', grid: [] },
       procedural: cfg && cfg.procedural ? cfg.procedural : { seed: '0', weights: [] },
+      stamps: stamps,
+      pieces: pieces,
     };
   }
 
   function getSrcRect(cfg, frame) {
     var safeCfg = normalizeCfg(cfg);
     if (!frame) return null;
+    if (Number.isFinite(frame.x) && Number.isFinite(frame.y) && Number.isFinite(frame.w) && Number.isFinite(frame.h)) {
+      return {
+        x: Math.floor(frame.x),
+        y: Math.floor(frame.y),
+        w: Math.max(1, Math.floor(frame.w)),
+        h: Math.max(1, Math.floor(frame.h)),
+      };
+    }
     var col = Number(frame.col);
     var row = Number(frame.row);
     if (!Number.isFinite(col) || !Number.isFinite(row)) return null;
@@ -35,6 +47,94 @@
       w: tw,
       h: th,
     };
+  }
+
+  function resolveSpawnArea(area) {
+    if (!area || typeof area !== 'object') return null;
+    var type = typeof area.type === 'string' ? area.type.toLowerCase() : '';
+    if (!type && Number.isFinite(area.r)) type = 'circle';
+    if (!type && Number.isFinite(area.w) && Number.isFinite(area.h)) type = 'rect';
+
+    if (type === 'circle') {
+      var cx = Number.isFinite(area.cx) ? area.cx : (Number.isFinite(area.x) ? area.x : 0);
+      var cy = Number.isFinite(area.cy) ? area.cy : (Number.isFinite(area.y) ? area.y : 0);
+      var r = Number(area.r);
+      if (!Number.isFinite(r) || r <= 0) return null;
+      return { type: 'circle', cx: cx, cy: cy, r: r };
+    }
+
+    if (type === 'rect') {
+      var x = Number(area.x);
+      var y = Number(area.y);
+      var w = Number(area.w);
+      var h = Number(area.h);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+      return { type: 'rect', x: x, y: y, w: w, h: h };
+    }
+    return null;
+  }
+
+  function hash01(seedA, seedB, seedC) {
+    if (GroundGen && typeof GroundGen.hash2 === 'function') {
+      return GroundGen.hash2(seedA, seedB, seedC);
+    }
+    var s = String(seedA) + '|' + String(seedB) + '|' + String(seedC);
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return (h >>> 0) / 4294967296;
+  }
+
+  function pickSpawnPoint(area, centerX, centerY, seedA, seedB) {
+    if (!area) return { x: centerX, y: centerY };
+    var r1 = hash01(seedA, seedB, 17);
+    var r2 = hash01(seedA, seedB, 31);
+    if (area.type === 'rect') {
+      return {
+        x: centerX + area.x + r1 * area.w,
+        y: centerY + area.y + r2 * area.h,
+      };
+    }
+    var angle = r1 * Math.PI * 2;
+    var dist = Math.sqrt(r2) * area.r;
+    return {
+      x: centerX + area.cx + Math.cos(angle) * dist,
+      y: centerY + area.cy + Math.sin(angle) * dist,
+    };
+  }
+
+  function collectStampSets(cfg) {
+    var rawStamps = Array.isArray(cfg.stamps) && cfg.stamps.length ? cfg.stamps : (Array.isArray(cfg.pieces) ? cfg.pieces : []);
+    var result = [];
+    for (var i = 0; i < rawStamps.length; i++) {
+      var st = rawStamps[i] || {};
+      var items = Array.isArray(st.items) ? st.items : [];
+      if (!items.length) continue;
+      var parsedItems = [];
+      for (var j = 0; j < items.length; j++) {
+        var it = items[j] || {};
+        if (!Number.isFinite(it.x) || !Number.isFinite(it.y) || !Number.isFinite(it.w) || !Number.isFinite(it.h)) continue;
+        parsedItems.push({
+          xg: Number.isFinite(it.xg) ? it.xg : 0,
+          yg: Number.isFinite(it.yg) ? it.yg : 0,
+          x: Math.floor(it.x),
+          y: Math.floor(it.y),
+          w: Math.max(1, Math.floor(it.w)),
+          h: Math.max(1, Math.floor(it.h)),
+          scale: Number.isFinite(it.scale) && it.scale > 0 ? it.scale : 1,
+        });
+      }
+      if (!parsedItems.length) continue;
+      result.push({
+        id: typeof st.id === 'string' ? st.id : ('stamp_' + i),
+        count: Number.isFinite(st.count) ? Math.max(0, Math.floor(st.count)) : 1,
+        spawnArea: resolveSpawnArea(st.spawnArea),
+        items: parsedItems,
+      });
+    }
+    return result;
   }
 
   function computeRanges(viewW, viewH, tileW, tileH) {
@@ -171,6 +271,34 @@
             drawH
           );
           localCtx.restore();
+        }
+
+        var stampSets = collectStampSets(cfg);
+        var centerX = Math.floor(viewW / 2);
+        var centerY = Math.floor(viewH / 2);
+        for (var si = 0; si < stampSets.length; si++) {
+          var stamp = stampSets[si];
+          for (var ci = 0; ci < stamp.count; ci++) {
+            var spawnPoint = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, ci);
+            for (var ii = 0; ii < stamp.items.length; ii++) {
+              var item = stamp.items[ii];
+              var drawW = Math.max(1, Math.round(item.w * item.scale));
+              var drawH = Math.max(1, Math.round(item.h * item.scale));
+              var drawX = Math.round(spawnPoint.x + item.xg - drawW * 0.5);
+              var drawY = Math.round(spawnPoint.y + item.yg - drawH * 0.5);
+              localCtx.drawImage(
+                atlasImg,
+                item.x,
+                item.y,
+                item.w,
+                item.h,
+                drawX,
+                drawY,
+                drawW,
+                drawH
+              );
+            }
+          }
         }
 
         this.canvas = canvas;

@@ -46,10 +46,11 @@
       var start = params.start;
       var end = params.end;
       var isHorizontal = params.isHorizontal;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
       var sideFrame = getFrame(spriteId);
       var step = sideStepFor(sideFrame);
-      var localSpan = Math.max(0, end - start);
-      var count = Math.max(1, Math.floor(localSpan / step) + 1);
+      var localSpan = end - start;
+      var count = Math.max(1, Math.floor(localSpan / Math.max(1, step)) + 1);
       for (var i = 0; i < count; i++) {
         var t = count === 1 ? 0.5 : i / (count - 1);
         var v = start + localSpan * t;

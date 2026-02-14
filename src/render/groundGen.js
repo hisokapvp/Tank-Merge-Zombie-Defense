@@ -49,13 +49,30 @@
 
   function normalizeTileEntry(raw) {
     if (!raw || !raw.frame) return null;
-    var col = Number(raw.frame.col);
-    var row = Number(raw.frame.row);
-    if (!Number.isFinite(col) || !Number.isFinite(row)) return null;
+    var frame = raw.frame;
+    var byPixels = Number.isFinite(frame.x) && Number.isFinite(frame.y) && Number.isFinite(frame.w) && Number.isFinite(frame.h);
+    var byGrid = Number.isFinite(frame.col) && Number.isFinite(frame.row);
+    if (!byPixels && !byGrid) return null;
+    var normalizedFrame = null;
+    if (byPixels) {
+      normalizedFrame = {
+        x: Math.floor(frame.x),
+        y: Math.floor(frame.y),
+        w: Math.max(1, Math.floor(frame.w)),
+        h: Math.max(1, Math.floor(frame.h)),
+      };
+    } else {
+      normalizedFrame = {
+        col: Math.max(0, Math.floor(frame.col)),
+        row: Math.max(0, Math.floor(frame.row)),
+      };
+    }
     return {
-      frame: { col: Math.max(0, Math.floor(col)), row: Math.max(0, Math.floor(row)) },
+      frame: normalizedFrame,
       rotationDeg: Number.isFinite(raw.rotationDeg) ? raw.rotationDeg : 0,
-      scale: Number.isFinite(raw.scale) && raw.scale > 0 ? raw.scale : 1,
+      scale: Number.isFinite(raw.scale) && raw.scale > 0
+        ? raw.scale
+        : (Number.isFinite(frame.scale) && frame.scale > 0 ? frame.scale : 1),
     };
   }
 

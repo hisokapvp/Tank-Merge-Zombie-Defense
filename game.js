@@ -148,7 +148,7 @@ const BAL = {
   fenceSpriteIds: [],
 
   decorSpriteIds: [],
-  decorCount: 24,
+  decorCount: null,
   decorNoSpawnZones: [],
   decorMaxAttempts: 400,
 };
@@ -448,6 +448,7 @@ const SFX_SOURCES = {
   levelUp: 'assets/sfx/level_up.ogg',
   applyTalents: 'assets/sfx/apply_talents.ogg',
   activeAbility: 'assets/sfx/active_ability.ogg',
+  thunder: 'assets/sfx/thunder.wav',
 };
 
 function updateMenuVolumes(){
@@ -564,6 +565,40 @@ const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoade
   atlasImg: null,
   config: null,
   async load() {},
+};
+
+const WorldEventsCfg = (window.Game && window.Game.Config && window.Game.Config.WorldEvents)
+  ? window.Game.Config.WorldEvents
+  : {
+      enabled: false,
+      weather: { enabled: false, rain: { enabled: true }, lightning: { enabled: true }, thunder: { enabled: true, sfxId: 'thunder' } },
+      attackMode: {
+        enabled: false,
+        attackEverySec: 75,
+        attackDurationSec: 20,
+        weatherLeadInSec: 5,
+        weatherLeadOutSec: 3,
+        targetAliveMult: 1,
+        speedMult: 1,
+        damageMult: 1,
+      },
+    };
+
+const worldEventsState = {
+  attackStartAt: nowSec() + (((WorldEventsCfg.attackMode && Number.isFinite(WorldEventsCfg.attackMode.attackEverySec)) ? Math.max(1, WorldEventsCfg.attackMode.attackEverySec) : 75)),
+  currentAttackStartAt: 0,
+  attackEndAt: 0,
+  weatherUntil: 0,
+  weatherEnabled: false,
+  lightningUntil: 0,
+};
+
+const rainCache = {
+  maxDrops: 0,
+  x: [],
+  y: [],
+  speed: [],
+  len: [],
 };
 
 const groundLayer = GroundLayerApi && typeof GroundLayerApi.createGroundLayer === 'function'
@@ -721,10 +756,20 @@ function initBoard(){
 
 function initDecors(){
   state.decors = [];
-  const ids = BAL.decorSpriteIds || [];
-  const count = Math.min(Math.max(0, BAL.decorCount || 0), 200);
+  const decorCfg = DecorSprites && DecorSprites.config ? DecorSprites.config : null;
+  const cfgIds = Array.isArray(decorCfg?.spriteIds) ? decorCfg.spriteIds : [];
+  const cfgCount = Number.isFinite(decorCfg?.count) ? decorCfg.count : 0;
+  const cfgZones = Array.isArray(decorCfg?.noSpawnZones) ? decorCfg.noSpawnZones : [];
+
+  const hasBalIds = Array.isArray(BAL.decorSpriteIds) && BAL.decorSpriteIds.length > 0;
+  const hasBalCount = Number.isFinite(BAL.decorCount);
+  const hasBalZones = Array.isArray(BAL.decorNoSpawnZones) && BAL.decorNoSpawnZones.length > 0;
+
+  const ids = hasBalIds ? BAL.decorSpriteIds : cfgIds;
+  const rawCount = hasBalCount ? BAL.decorCount : cfgCount;
+  const count = Math.min(Math.max(0, rawCount || 0), 200);
   if (!ids.length || count <= 0) return;
-  const zones = BAL.decorNoSpawnZones || [];
+  const zones = hasBalZones ? BAL.decorNoSpawnZones : cfgZones;
   const maxAttempts = BAL.decorMaxAttempts || 400;
   const innerR = (BAL.tankOrbitRadius || 200) + 50;
   const outerR = Math.min(viewSize.w, viewSize.h) / 2 - 30;
@@ -737,8 +782,18 @@ function initDecors(){
       const y = center.y + Math.sin(angle) * r;
       let inZone = false;
       for (const z of zones){
-        if (z.r != null && Math.hypot(x - (z.cx ?? z.x ?? 0), y - (z.cy ?? z.y ?? 0)) <= z.r) inZone = true;
-        if (z.w != null && z.h != null && x >= (z.x ?? 0) && x <= (z.x ?? 0) + z.w && y >= (z.y ?? 0) && y <= (z.y ?? 0) + z.h) inZone = true;
+        const type = typeof z?.type === 'string' ? z.type.toLowerCase() : '';
+        if ((type === 'circle' || z?.r != null) && Number.isFinite(z?.r)) {
+          const cx = center.x + (z?.cx ?? z?.x ?? 0);
+          const cy = center.y + (z?.cy ?? z?.y ?? 0);
+          if (Math.hypot(x - cx, y - cy) <= z.r) inZone = true;
+        }
+        if ((type === 'rect' || (z?.w != null && z?.h != null)) && Number.isFinite(z?.w) && Number.isFinite(z?.h)) {
+          const zx = center.x + (z?.x ?? 0);
+          const zy = center.y + (z?.y ?? 0);
+          if (x >= zx && x <= zx + z.w && y >= zy && y <= zy + z.h) inZone = true;
+        }
+        if (inZone) break;
       }
       if (!inZone){
         state.decors.push({ x, y, spriteId: ids[Math.floor(Math.random() * ids.length)] });
@@ -823,6 +878,146 @@ function rebuildGroundLayer(){
   } catch (e) {
     if (typeof groundLayer.invalidate === 'function') groundLayer.invalidate();
     return false;
+  }
+}
+
+function getWorldEventsAttackCfg(){
+  const cfg = WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {};
+  return {
+    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled),
+    attackEverySec: Number.isFinite(cfg.attackEverySec) ? Math.max(1, cfg.attackEverySec) : 75,
+    attackDurationSec: Number.isFinite(cfg.attackDurationSec) ? Math.max(1, cfg.attackDurationSec) : 20,
+    weatherLeadInSec: Number.isFinite(cfg.weatherLeadInSec) ? Math.max(0, cfg.weatherLeadInSec) : 5,
+    weatherLeadOutSec: Number.isFinite(cfg.weatherLeadOutSec) ? Math.max(0, cfg.weatherLeadOutSec) : 3,
+    targetAliveMult: Number.isFinite(cfg.targetAliveMult) ? Math.max(0.1, cfg.targetAliveMult) : 1,
+    speedMult: Number.isFinite(cfg.speedMult) ? Math.max(0.1, cfg.speedMult) : 1,
+    damageMult: Number.isFinite(cfg.damageMult) ? Math.max(0.1, cfg.damageMult) : 1,
+  };
+}
+
+function getWeatherCfg(){
+  const cfg = WorldEventsCfg && WorldEventsCfg.weather ? WorldEventsCfg.weather : {};
+  return {
+    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled),
+    rain: cfg.rain || {},
+    lightning: cfg.lightning || {},
+    thunder: cfg.thunder || {},
+  };
+}
+
+function isZombieAttackModeActive(){
+  return nowSec() < (worldEventsState.attackEndAt || 0);
+}
+
+function getZombieAttackMultipliers(){
+  const attackCfg = getWorldEventsAttackCfg();
+  if (!attackCfg.enabled || !isZombieAttackModeActive()) {
+    return { targetAliveMult: 1, speedMult: 1, damageMult: 1 };
+  }
+  return {
+    targetAliveMult: attackCfg.targetAliveMult,
+    speedMult: attackCfg.speedMult,
+    damageMult: attackCfg.damageMult,
+  };
+}
+
+function updateWorldEvents(dt){
+  const attackCfg = getWorldEventsAttackCfg();
+  const weatherCfg = getWeatherCfg();
+  const now = nowSec();
+
+  if (!attackCfg.enabled) {
+    worldEventsState.currentAttackStartAt = 0;
+    worldEventsState.attackEndAt = 0;
+    worldEventsState.weatherUntil = 0;
+    worldEventsState.weatherEnabled = false;
+    return;
+  }
+
+  if (!Number.isFinite(worldEventsState.attackStartAt) || worldEventsState.attackStartAt <= 0) {
+    worldEventsState.attackStartAt = now + attackCfg.attackEverySec;
+  }
+
+  if (now >= worldEventsState.attackStartAt) {
+    const startAt = worldEventsState.attackStartAt;
+    worldEventsState.currentAttackStartAt = startAt;
+    worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
+    worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
+  }
+
+  if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
+    worldEventsState.currentAttackStartAt = 0;
+  }
+
+  const inLeadIn = now >= (worldEventsState.attackStartAt - attackCfg.weatherLeadInSec) && now < worldEventsState.attackStartAt;
+  const inAttackWindow = worldEventsState.currentAttackStartAt > 0 && now >= worldEventsState.currentAttackStartAt && now < worldEventsState.attackEndAt;
+  const inLeadOut = inAttackWindow && now >= (worldEventsState.attackEndAt - attackCfg.weatherLeadOutSec);
+  worldEventsState.weatherEnabled = weatherCfg.enabled && (inLeadIn || (inAttackWindow && !inLeadOut));
+  if (!worldEventsState.weatherEnabled) {
+    worldEventsState.lightningUntil = 0;
+  }
+
+  if (worldEventsState.weatherEnabled && weatherCfg.lightning && weatherCfg.lightning.enabled) {
+    const chancePerSec = Number.isFinite(weatherCfg.lightning.chancePerSec) ? Math.max(0, weatherCfg.lightning.chancePerSec) : 0.14;
+    if (now >= (worldEventsState.lightningUntil || 0) && Math.random() < chancePerSec * Math.max(0.001, dt)) {
+      const flashDur = Number.isFinite(weatherCfg.lightning.flashDurationSec) ? Math.max(0.03, weatherCfg.lightning.flashDurationSec) : 0.12;
+      worldEventsState.lightningUntil = now + flashDur;
+      if (weatherCfg.thunder && weatherCfg.thunder.enabled) {
+        playSfx(weatherCfg.thunder.sfxId || 'thunder');
+      }
+    }
+  }
+}
+
+function ensureRainCache(requiredCount){
+  const count = Math.max(0, Math.floor(requiredCount));
+  if (rainCache.maxDrops >= count) return;
+  for (let i = rainCache.maxDrops; i < count; i++) {
+    rainCache.x[i] = Math.random();
+    rainCache.y[i] = Math.random();
+    rainCache.speed[i] = 0.65 + Math.random() * 0.7;
+    rainCache.len[i] = 0.7 + Math.random() * 0.8;
+  }
+  rainCache.maxDrops = count;
+}
+
+function drawWeather(){
+  const weatherCfg = getWeatherCfg();
+  if (!weatherCfg.enabled || !worldEventsState.weatherEnabled) return;
+
+  const rainCfg = weatherCfg.rain || {};
+  if (rainCfg.enabled !== false) {
+    const density = Number.isFinite(rainCfg.density) ? Math.max(0, rainCfg.density) : 0.16;
+    const dropCount = Math.floor(viewSize.w * density);
+    ensureRainCache(dropCount);
+    const speedMin = Number.isFinite(rainCfg.speedMin) ? rainCfg.speedMin : 520;
+    const speedMax = Number.isFinite(rainCfg.speedMax) ? rainCfg.speedMax : 760;
+    const lenMin = Number.isFinite(rainCfg.lengthMin) ? rainCfg.lengthMin : 10;
+    const lenMax = Number.isFinite(rainCfg.lengthMax) ? rainCfg.lengthMax : 18;
+    const alpha = Number.isFinite(rainCfg.alpha) ? clamp(rainCfg.alpha, 0.05, 0.6) : 0.26;
+    const t = nowSec();
+    ctx.save();
+    ctx.strokeStyle = `rgba(180,205,255,${alpha})`;
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < dropCount; i++) {
+      const sx = rainCache.x[i] * viewSize.w;
+      const speed = speedMin + (speedMax - speedMin) * rainCache.speed[i];
+      const y = ((rainCache.y[i] * (viewSize.h + 30)) + (t * speed)) % (viewSize.h + 30) - 20;
+      const len = lenMin + (lenMax - lenMin) * rainCache.len[i];
+      ctx.beginPath();
+      ctx.moveTo(sx, y);
+      ctx.lineTo(sx - len * 0.22, y + len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  if (nowSec() < (worldEventsState.lightningUntil || 0)) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(228,238,255,0.22)';
+    ctx.fillRect(0, 0, viewSize.w, viewSize.h);
+    ctx.restore();
   }
 }
 
@@ -1718,10 +1913,13 @@ function getZombieSpawnBalanceConfig(){
     return ZombieSpawnApi.getZombieSpawnBalanceConfig(ZombieSprites ? ZombieSprites.spawnConfig : null, BAL);
   }
   const cfg = ZombieSprites && ZombieSprites.spawnConfig ? ZombieSprites.spawnConfig : null;
-  const targetAlive = Math.max(1, toSafeInt(cfg?.targetAlive, BAL.zombieCountTarget));
+  const attackMult = getZombieAttackMultipliers();
+  const targetAliveBase = Math.max(1, toSafeInt(cfg?.targetAlive, BAL.zombieCountTarget));
+  const targetAlive = Math.max(1, Math.round(targetAliveBase * attackMult.targetAliveMult));
   const sideCount = Math.max(1, toSafeInt(cfg?.sideCount, BAL.zombieSideCount || 4));
   const defaultPerSide = Math.max(1, Math.round(targetAlive / sideCount));
-  const perSideTarget = Math.max(1, toSafeInt(cfg?.perSideTarget, BAL.zombiePerSideTarget || defaultPerSide));
+  const basePerSideTarget = Math.max(1, toSafeInt(cfg?.perSideTarget, BAL.zombiePerSideTarget || defaultPerSide));
+  const perSideTarget = Math.max(1, Math.round(basePerSideTarget * attackMult.targetAliveMult));
   const perSideTolerance = Math.max(0, toSafeInt(cfg?.perSideTolerance, BAL.zombiePerSideTolerance || 5));
   return {
     targetAlive,
@@ -1783,7 +1981,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const levelHpMul = zombieHpMultiplier(level);
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
-  const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul;
+  const attackMult = getZombieAttackMultipliers();
+  const baseOmega = (BAL.omegaBase + (Math.random()*2-1)*BAL.omegaVar) * dir * levelOmegaMul * attackMult.speedMult;
   const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
 
   const z = {
@@ -2004,6 +2203,9 @@ function startZombieDying(z){
 
 function stepZombies(dt){
   const slow = (state.empUntil && nowSec() < state.empUntil) ? 0.5 : 1;
+  const attackMult = getZombieAttackMultipliers();
+  const speedMul = attackMult.speedMult;
+  const damageMul = attackMult.damageMult;
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -2021,13 +2223,13 @@ function stepZombies(dt){
     }
     const prevTheta = z.theta;
 
-    z.swayPhase += dt * z.swaySpeed * slow;
+    z.swayPhase += dt * z.swaySpeed * slow * speedMul;
     z.theta = z.anchorTheta + Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
 
     // Join ring from edge
-    const t = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed));
+    const t = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul);
     z.r = z.r + (z.targetR - z.r) * t;
-    z.r -= BAL.zombieFencePush * dt;
+    z.r -= BAL.zombieFencePush * dt * speedMul;
 
     const fenceLimit = zombieFenceLimit(z);
     if (z.targetR < fenceLimit) z.targetR = fenceLimit;
@@ -2040,11 +2242,11 @@ function stepZombies(dt){
 
     const speed = Math.abs(z.omega);
     const animMul = z.type?.animSpeed ?? 1.0;
-    z.anim += dt * animMul * (1.4 + speed * 6.0) * slow;
+    z.anim += dt * animMul * (1.4 + speed * 6.0) * slow * speedMul;
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
-        z.hp -= (z.dotDps || 0) * dt;
+        z.hp -= ((z.dotDps || 0) * dt) / damageMul;
       } else {
         z.dotUntil = 0;
         z.dotDps = 0;
@@ -2386,6 +2588,8 @@ function critChanceFromTankLevel(level){
 
 function impactAt(x,y,b){
   const mods = getMods();
+  const attackMult = getZombieAttackMultipliers();
+  const damageMul = attackMult.damageMult;
   const tankLevel = b.level ?? 1;
   const critChance = critChanceFromTankLevel(tankLevel);
   for (const z of state.zombies){
@@ -2396,7 +2600,7 @@ function impactAt(x,y,b){
       const falloff = 0.55 + 0.45*(1 - d/b.aoe);
       const baseDmg = b.dmg * falloff;
       const isCrit = Math.random() < critChance;
-      const finalDmg = baseDmg * (isCrit ? 1.5 : 1);
+      const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
       const dmgRounded = Math.round(finalDmg);
       z.hp -= dmgRounded;
       addDamageNumber(p.x, p.y, dmgRounded, isCrit);
@@ -2434,6 +2638,8 @@ function impactAt(x,y,b){
 }
 
 function chainLightning(x,y,b){
+    const attackMult = getZombieAttackMultipliers();
+    const damageMul = attackMult.damageMult;
   const range = b.prof?.chainRange ?? 84;
   const jumps = b.prof?.chainJumps ?? 3;
   const mul = b.prof?.chainMul ?? 0.45;
@@ -2464,7 +2670,7 @@ function chainLightning(x,y,b){
     const tankLevel = b.level ?? 1;
     const critChance = critChanceFromTankLevel(tankLevel);
     const isCrit = Math.random() < critChance;
-    const finalChainDmg = baseChainDmg * (isCrit ? 1.5 : 1);
+    const finalChainDmg = (baseChainDmg * (isCrit ? 1.5 : 1)) / damageMul;
     const dmgRounded = Math.round(finalChainDmg);
     best.hp -= dmgRounded;
     addDamageNumber(p.x, p.y, dmgRounded, isCrit);
@@ -3536,6 +3742,7 @@ function draw(){
   drawImpacts();
   drawParticles();
   drawDamageNumbers();
+  drawWeather();
   drawLevelUpVfx();
 
   // If sprites failed to load, show a small hint on canvas
@@ -4321,6 +4528,7 @@ function drawZombieSprite(x,y,z){
 
   const isDying = z.state === 'dying';
   const hasDeathAnim = isDying && z.deathAnim;
+  const hasAttackAnim = !isDying && isZombieAttackModeActive() && t.attack;
   
   // Determine which frame to draw
   let fx, fy, fw, fh;
@@ -4332,6 +4540,14 @@ function drawZombieSprite(x,y,z){
     fy = da.y;
     fw = da.w;
     fh = da.h;
+  } else if (hasAttackAnim) {
+    const aa = t.attack;
+    const frames = aa.frames || 1;
+    const frameIndex = Math.floor(z.anim) % frames;
+    fx = aa.x + frameIndex * aa.w;
+    fy = aa.y;
+    fw = aa.w;
+    fh = aa.h;
   } else {
     // Use walk animation frame
     const frames = t.frames || 1;
@@ -4343,8 +4559,10 @@ function drawZombieSprite(x,y,z){
   }
 
   const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
-  const w = (hasDeathAnim ? z.deathAnim.w : f.w) * scale;
-  const h = (hasDeathAnim ? z.deathAnim.h : f.h) * scale;
+  const baseW = hasDeathAnim ? z.deathAnim.w : (hasAttackAnim ? t.attack.w : f.w);
+  const baseH = hasDeathAnim ? z.deathAnim.h : (hasAttackAnim ? t.attack.h : f.h);
+  const w = baseW * scale;
+  const h = baseH * scale;
 
   const bob = hasDeathAnim ? 0 : Math.sin(z.anim) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
@@ -4821,6 +5039,7 @@ function loop(now){
   updateCenterNotification();
 
   const effDt = dt * (state.timeScale ?? 1);
+  updateWorldEvents(effDt);
   if (!state.ui.menuOpen){
     ensureZombieCount();
     maybeSpawnCrate();
@@ -4975,6 +5194,7 @@ async function boot(){
       TankSprites,
       FenceSprites,
       DecorSprites,
+      onDecorSpritesLoaded: initDecors,
       GroundSprites,
       ensureZombieCount,
       acceptLevelReward,

@@ -55,8 +55,20 @@
 - `drawZombieFence()` строит сегменты через `Game.FenceLayout.buildSquareFenceSegments({...})`.
 - Базовые формулы шага/инсета: `step=max(6, fenceWidth*1.15)`, `cornerInset=max(4, fenceWidth*0.65)`.
 - Для scale-aware раскладки обе формулы умножаются на `frame.scale` (side/corner); крайние side-сегменты всегда упираются в угловые inset-границы.
+- В каждом углу рисуется ровно один `corner` сегмент; `side` сегменты распределяются между углами без наложения на corner-точки.
 - Если в `assets/fence.json` задан `cornerInsetPx`, он переопределяет автозначение inset.
-- При отрисовке учитывается `frame.rotationDeg` (градусы, default `0`).
+- При отрисовке учитывается `rotation -> rotationDeg -> 0` (градусы).
+
+## World Events / Weather
+
+- Конфиг: `src/config/worldEvents.js`.
+- По умолчанию всё выключено (`enabled:false`).
+- Поддержка погоды: `rain` + `lightning` + `thunder` SFX (`assets/sfx/thunder.wav`; отсутствие файла не ломает loop).
+- Атак-цикл зомби:
+	- `attackEverySec`, `attackDurationSec`
+	- `weatherLeadInSec`: за это время до атаки включается погода
+	- `weatherLeadOutSec`: за это время до конца атаки погода выключается
+	- Множители на фазе атаки: `targetAliveMult`, `speedMult`, `damageMult`
 
 ## Риски
 

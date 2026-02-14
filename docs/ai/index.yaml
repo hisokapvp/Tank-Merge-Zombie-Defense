@@ -20,6 +20,7 @@ systems:
       - src/render/groundGen.js
       - src/render/groundLayer.js
       - src/render/layout/hangarLayout.js
+      - src/config/worldEvents.js
       - src/perf/mobileMode.js
   input:
     doc: docs/ai/SYSTEMS/input.md

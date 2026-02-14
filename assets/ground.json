@@ -4,18 +4,18 @@
     "w": 16,
     "h": 16
   },
-  "mode": "fillMode",
+  "mode": "manual",
   "fillMode": "repeat",
   "manual": {
     "anchor": "center",
     "grid": [
       [
         { "frame": { "col": 2, "row": 1 } },
-        { "frame": { "col": 3, "row": 1 }, "rotationDeg": 0 }
+        { "frame": { "x": 48, "y": 16, "w": 16, "h": 16, "scale": 1 }, "rotationDeg": 0 }
       ],
       [
         { "frame": { "col": 1, "row": 2 }, "scale": 1 },
-        { "frame": { "col": 2, "row": 2 } }
+        { "frame": { "x": 32, "y": 32, "w": 16, "h": 16 } }
       ]
     ]
   },
@@ -25,8 +25,20 @@
       { "frame": { "col": 0, "row": 0 }, "weight": 4 },
       { "frame": { "col": 1, "row": 0 }, "weight": 2 },
       { "frame": { "col": 1, "row": 0 }, "weight": 1, "rotationDeg": 90 },
-      { "frame": { "col": 2, "row": 0 }, "weight": 1, "scale": 1.1 },
+      { "frame": { "x": 32, "y": 0, "w": 16, "h": 16 }, "weight": 1, "scale": 1.1 },
       { "frame": { "col": 3, "row": 0 }, "weight": 1, "rotationDeg": 180, "scale": 0.95 }
     ]
-  }
+  },
+  "stamps": [
+    {
+      "id": "ruins_patch",
+      "count": 3,
+      "spawnArea": { "type": "rect", "x": -420, "y": -260, "w": 840, "h": 520 },
+      "items": [
+        { "xg": 0, "yg": 0, "x": 0, "y": 0, "w": 16, "h": 16, "scale": 2.2 },
+        { "xg": 14, "yg": 10, "x": 16, "y": 0, "w": 16, "h": 16, "scale": 1.8 },
+        { "xg": -12, "yg": 9, "x": 32, "y": 0, "w": 16, "h": 16, "scale": 1.7 }
+      ]
+    }
+  ]
 }
