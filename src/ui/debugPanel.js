@@ -19,11 +19,15 @@
       log: [],
       targetCellIndex: null,
       talentOverrides: {},
+      forceDisableAttackMode: false,
+      forceDisableWeather: false,
       collapsed: false,
       previewParticles: [],
       debugStatusActive: false,
       zombieCountCache: { at: 0, text: '' },
     };
+    if (typeof state.debug.forceDisableAttackMode !== 'boolean') state.debug.forceDisableAttackMode = false;
+    if (typeof state.debug.forceDisableWeather !== 'boolean') state.debug.forceDisableWeather = false;
 
     var main = document.querySelector('.layout');
     if (!main || document.getElementById('debugPanel')) return;
@@ -167,6 +171,42 @@
           state.activeEffects.economyUntil = 0;
           debugLog('info', 'Cleared debug statuses.');
         }, 'Clear statuses failed ');
+      });
+    }
+
+    var effectsSection = panel.querySelector('#debugSectionEffects');
+    if (effectsSection) {
+      var attackToggleRow = document.createElement('div');
+      attackToggleRow.className = 'debugRow';
+      attackToggleRow.style.marginTop = '8px';
+      attackToggleRow.innerHTML = '<label><input type="checkbox" id="debugDisableAttackMode" /> Force disable attackMode</label>';
+      effectsSection.appendChild(attackToggleRow);
+
+      var weatherToggleRow = document.createElement('div');
+      weatherToggleRow.className = 'debugRow';
+      weatherToggleRow.innerHTML = '<label><input type="checkbox" id="debugDisableWeather" /> Force disable weather</label>';
+      effectsSection.appendChild(weatherToggleRow);
+    }
+
+    var disableAttackModeEl = panel.querySelector('#debugDisableAttackMode');
+    if (disableAttackModeEl) {
+      disableAttackModeEl.checked = !!state.debug.forceDisableAttackMode;
+      disableAttackModeEl.addEventListener('change', function () {
+        safeDebug(function () {
+          state.debug.forceDisableAttackMode = !!disableAttackModeEl.checked;
+          debugLog('info', 'Force disable attackMode: ' + (state.debug.forceDisableAttackMode ? 'ON' : 'OFF') + '.');
+        }, 'Toggle attackMode override failed ');
+      });
+    }
+
+    var disableWeatherEl = panel.querySelector('#debugDisableWeather');
+    if (disableWeatherEl) {
+      disableWeatherEl.checked = !!state.debug.forceDisableWeather;
+      disableWeatherEl.addEventListener('change', function () {
+        safeDebug(function () {
+          state.debug.forceDisableWeather = !!disableWeatherEl.checked;
+          debugLog('info', 'Force disable weather: ' + (state.debug.forceDisableWeather ? 'ON' : 'OFF') + '.');
+        }, 'Toggle weather override failed ');
       });
     }
 

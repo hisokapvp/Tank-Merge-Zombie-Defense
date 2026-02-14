@@ -338,6 +338,8 @@
             count: Number.isFinite(data.count) ? Math.max(0, Math.floor(data.count)) : null,
             spriteIds: spriteIds,
             noSpawnZones: parsedZones,
+            blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
+            blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
           };
 
           this.ready = true;

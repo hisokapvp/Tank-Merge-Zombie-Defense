@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var enabled = tue;
+  var enabled = true;
 
   var cfg = {
     enabled: enabled,
@@ -15,6 +15,7 @@
         lengthMin: 10,
         lengthMax: 18,
         alpha: 0.26,
+        sfxLoopSources: ['assets/sfx/rain_loop.ogg', 'assets/sfx/rain_loop.wav'],
       },
       lightning: {
         enabled: true,

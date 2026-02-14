@@ -13,6 +13,7 @@
 ## Что править
 
 - Порядок слоёв и `draw*` — в `draw()`.
+- Текущий порядок объектов: `drawZombieFence()` рисуется раньше `drawDecors()`, поэтому decor всегда поверх fence.
 - FPS/FX-лимиты — через `Game.MobileMode` и quality-ветки в `loop()`.
 - Centerline / road-fence gap — `initBoard`, `drawTankTrack`, `drawZombieFence`.
 - Фон-земля через atlas: `drawBackground()` + `rebuildGroundLayer()` в `game.js`.

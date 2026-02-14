@@ -403,6 +403,7 @@ const SFX_POOL_SIZE = 6;
 const SFX_POOLS = {};
 const LOOP_SFX_PLAYERS = {};
 const SFX_RESOLVED_SOURCE_LISTS = {};
+const DEFAULT_RAIN_LOOP_SOURCES = ['assets/sfx/rain_loop.ogg', 'assets/sfx/rain_loop.wav'];
 let SFX_AUDIO_PROBE = null;
 
 function sfxSourceToMime(source){
@@ -518,6 +519,32 @@ function stopLoopSfx(id){
   } catch (e) {}
 }
 
+function normalizedSfxSources(value, fallbackList){
+  const fallback = Array.isArray(fallbackList) ? fallbackList.filter((s) => typeof s === 'string' && s.length > 0) : [];
+  if (Array.isArray(value)) {
+    const list = value.filter((s) => typeof s === 'string' && s.length > 0);
+    return list.length ? list : fallback;
+  }
+  if (typeof value === 'string' && value.length > 0) return [value];
+  return fallback;
+}
+
+function setSfxSources(id, sources){
+  const next = normalizedSfxSources(sources, []);
+  if (!next.length) return;
+  const prevRaw = SFX_SOURCES[id];
+  const prev = Array.isArray(prevRaw)
+    ? prevRaw.filter((s) => typeof s === 'string' && s.length > 0)
+    : (typeof prevRaw === 'string' && prevRaw.length > 0 ? [prevRaw] : []);
+  if (prev.length === next.length && prev.every((s, i) => s === next[i])) return;
+
+  stopLoopSfx(id);
+  delete LOOP_SFX_PLAYERS[id];
+  delete SFX_POOLS[id];
+  delete SFX_RESOLVED_SOURCE_LISTS[id];
+  SFX_SOURCES[id] = next.slice();
+}
+
 function playSfx(id){
   const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
   const now = performance.now();
@@ -553,7 +580,7 @@ const SFX_SOURCES = {
   applyTalents: 'assets/sfx/apply_talents.ogg',
   activeAbility: 'assets/sfx/active_ability.ogg',
   thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
-  rainLoop: ['assets/sfx/rain_loop.ogg', 'assets/sfx/rain_loop.wav'],
+  rainLoop: DEFAULT_RAIN_LOOP_SOURCES.slice(),
 };
 
 function updateMenuVolumes(){
@@ -880,6 +907,8 @@ function initDecors(){
   const rawCount = hasBalCount ? BAL.decorCount : cfgCount;
   const count = Math.min(Math.max(0, rawCount || 0), 200);
   if (!ids.length || count <= 0) return;
+  const blockRadiusK = Number.isFinite(decorCfg?.blockRadiusK) ? Math.max(0.1, decorCfg.blockRadiusK) : 0.35;
+  const blockRadiusMin = Number.isFinite(decorCfg?.blockRadiusMin) ? Math.max(1, decorCfg.blockRadiusMin) : 8;
   const zones = hasBalZones ? BAL.decorNoSpawnZones : cfgZones;
   const maxAttempts = BAL.decorMaxAttempts || 400;
   const innerR = (BAL.tankOrbitRadius || 200) + 50;
@@ -907,7 +936,12 @@ function initDecors(){
         if (inZone) break;
       }
       if (!inZone){
-        state.decors.push({ x, y, spriteId: ids[Math.floor(Math.random() * ids.length)] });
+        const spriteId = ids[Math.floor(Math.random() * ids.length)];
+        const frame = DecorSprites.pickFrame(spriteId);
+        const frameScale = Number.isFinite(frame?.scale) && frame.scale > 0 ? frame.scale : 1;
+        const drawScale = 0.5 * balScale * frameScale;
+        const blockR = frame ? Math.max(blockRadiusMin, frame.w * drawScale * blockRadiusK) : blockRadiusMin;
+        state.decors.push({ x, y, spriteId, blockR });
         break;
       }
     }
@@ -994,8 +1028,9 @@ function rebuildGroundLayer(){
 
 function getWorldEventsAttackCfg(){
   const cfg = WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {};
+  const debugDisableAttack = !!(state && state.debug && state.debug.forceDisableAttackMode);
   return {
-    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled),
+    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled && !debugDisableAttack),
     attackEverySec: Number.isFinite(cfg.attackEverySec) ? Math.max(1, cfg.attackEverySec) : 75,
     attackDurationSec: Number.isFinite(cfg.attackDurationSec) ? Math.max(1, cfg.attackDurationSec) : 20,
     weatherLeadInSec: Number.isFinite(cfg.weatherLeadInSec) ? Math.max(0, cfg.weatherLeadInSec) : 5,
@@ -1009,12 +1044,21 @@ function getWorldEventsAttackCfg(){
 function getWeatherCfg(){
   const cfg = WorldEventsCfg && WorldEventsCfg.weather ? WorldEventsCfg.weather : {};
   const lightning = cfg.lightning || {};
+  const rain = cfg.rain || {};
+  const debugDisableWeather = !!(state && state.debug && state.debug.forceDisableWeather);
   const hasInterval = Number.isFinite(lightning.intervalMinSec) || Number.isFinite(lightning.intervalMaxSec);
   const minSec = Number.isFinite(lightning.intervalMinSec) ? Math.max(0.1, lightning.intervalMinSec) : 8;
   const maxSec = Number.isFinite(lightning.intervalMaxSec) ? Math.max(minSec, lightning.intervalMaxSec) : Math.max(minSec, 20);
+  const rainLoopSources = normalizedSfxSources(
+    rain.sfxLoopSources,
+    normalizedSfxSources(rain.sfxLoopFile, DEFAULT_RAIN_LOOP_SOURCES)
+  );
   return {
-    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled),
-    rain: cfg.rain || {},
+    enabled: !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled && !debugDisableWeather),
+    rain: {
+      ...rain,
+      sfxLoopSources: rainLoopSources,
+    },
     lightning: {
       ...lightning,
       intervalMinSec: minSec,
@@ -1023,6 +1067,15 @@ function getWeatherCfg(){
     },
     thunder: cfg.thunder || {},
   };
+}
+
+function configureRainLoopSfx(rainCfg){
+  const rain = rainCfg || {};
+  const sources = normalizedSfxSources(
+    rain.sfxLoopSources,
+    normalizedSfxSources(rain.sfxLoopFile, DEFAULT_RAIN_LOOP_SOURCES)
+  );
+  setSfxSources('rainLoop', sources);
 }
 
 function scheduleNextLightning(now, lightningCfg){
@@ -1080,6 +1133,7 @@ function updateWorldEvents(dt){
   const attackCfg = getWorldEventsAttackCfg();
   const weatherCfg = getWeatherCfg();
   const rainCfg = weatherCfg.rain || {};
+  configureRainLoopSfx(rainCfg);
   const now = nowSec();
   const prevWeatherEnabled = !!worldEventsState.weatherEnabled;
 
@@ -2222,6 +2276,65 @@ function zombiePos(z){
   };
 }
 
+function pushZombieOutOfDecor(z){
+  if (!z || !state.decors || !state.decors.length) return;
+
+  const zR = zombieCollisionRadius(z);
+  if (!Number.isFinite(zR) || zR <= 0) return;
+
+  let px = center.x + Math.cos(z.theta) * z.r;
+  let py = center.y + Math.sin(z.theta) * z.r;
+  const maxIterations = 3;
+  const eps = 0.01;
+  let hadPush = false;
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    let pushed = false;
+    for (let i = 0; i < state.decors.length; i++) {
+      const d = state.decors[i];
+      const blockR = Number.isFinite(d?.blockR) ? d.blockR : 0;
+      if (!Number.isFinite(blockR) || blockR <= 0) continue;
+
+      const minDist = zR + blockR;
+      const dx = px - d.x;
+      const dy = py - d.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq >= minDist * minDist) continue;
+
+      let dist = Math.sqrt(Math.max(distSq, 1e-9));
+      let nx = dx / dist;
+      let ny = dy / dist;
+      if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+        nx = Math.cos(z.theta);
+        ny = Math.sin(z.theta);
+        dist = 0;
+      }
+
+      const push = (minDist - dist) + eps;
+      px += nx * push;
+      py += ny * push;
+      pushed = true;
+      hadPush = true;
+    }
+    if (!pushed) break;
+  }
+
+  if (!hadPush) return;
+
+  const relX = px - center.x;
+  const relY = py - center.y;
+  const nextR = Math.hypot(relX, relY);
+  if (!Number.isFinite(nextR) || nextR <= 0) return;
+
+  z.theta = Math.atan2(relY, relX);
+  z.anchorTheta = z.theta;
+  z.r = nextR;
+
+  const fenceLimit = zombieFenceLimit(z);
+  if (z.targetR < fenceLimit) z.targetR = fenceLimit;
+  if (z.r < fenceLimit) z.r = fenceLimit;
+}
+
 // All zombies use fixed visual size (no scaling by level).
 function zombieLevelScale(z){
   return 1;
@@ -2391,6 +2504,8 @@ function stepZombies(dt){
     const fenceLimit = zombieFenceLimit(z);
     if (z.targetR < fenceLimit) z.targetR = fenceLimit;
     if (z.r < fenceLimit) z.r = fenceLimit;
+
+    pushZombieOutOfDecor(z);
 
     const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
     const moving = Math.abs(dTheta) > 0.0005;
@@ -3886,10 +4001,10 @@ function draw(){
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
   drawBackground();
-  drawDecors();
   drawTrack();
   drawTankTrack();
   drawZombieFence();
+  drawDecors();
   drawBoard();
   drawOrbitingTanks();
   drawCrate();

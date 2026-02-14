@@ -105,8 +105,53 @@
     };
   }
 
+  function makeRect(x, y, w, h) {
+    return {
+      x: Math.round(x),
+      y: Math.round(y),
+      w: Math.max(1, Math.round(w)),
+      h: Math.max(1, Math.round(h)),
+    };
+  }
+
+  function itemDrawRect(spawnPoint, item) {
+    var drawW = Math.max(1, Math.round(item.w * item.scale));
+    var drawH = Math.max(1, Math.round(item.h * item.scale));
+    var drawX = Math.round(spawnPoint.x + item.xg - drawW * 0.5);
+    var drawY = Math.round(spawnPoint.y + item.yg - drawH * 0.5);
+    return makeRect(drawX, drawY, drawW, drawH);
+  }
+
+  function rectsOverlap(a, b) {
+    return a.x < (b.x + b.w) && (a.x + a.w) > b.x && a.y < (b.y + b.h) && (a.y + a.h) > b.y;
+  }
+
+  function isOccupied(rect, occupiedRects) {
+    for (var i = 0; i < occupiedRects.length; i++) {
+      if (rectsOverlap(rect, occupiedRects[i])) return true;
+    }
+    return false;
+  }
+
+  function unionRects(rects) {
+    if (!Array.isArray(rects) || !rects.length) return null;
+    var minX = rects[0].x;
+    var minY = rects[0].y;
+    var maxX = rects[0].x + rects[0].w;
+    var maxY = rects[0].y + rects[0].h;
+    for (var i = 1; i < rects.length; i++) {
+      var r = rects[i];
+      if (r.x < minX) minX = r.x;
+      if (r.y < minY) minY = r.y;
+      if ((r.x + r.w) > maxX) maxX = r.x + r.w;
+      if ((r.y + r.h) > maxY) maxY = r.y + r.h;
+    }
+    return makeRect(minX, minY, maxX - minX, maxY - minY);
+  }
+
   function collectStampSets(cfg) {
     var rawStamps = Array.isArray(cfg.stamps) && cfg.stamps.length ? cfg.stamps : (Array.isArray(cfg.pieces) ? cfg.pieces : []);
+    var defaultAttempts = Number.isFinite(cfg.stampPlacementMaxAttempts) ? Math.max(1, Math.floor(cfg.stampPlacementMaxAttempts)) : 24;
     var result = [];
     for (var i = 0; i < rawStamps.length; i++) {
       var st = rawStamps[i] || {};
@@ -131,6 +176,7 @@
         id: typeof st.id === 'string' ? st.id : ('stamp_' + i),
         mode: st.mode === 'variants' ? 'variants' : 'composite',
         count: Number.isFinite(st.count) ? Math.max(0, Math.floor(st.count)) : 1,
+        maxPlacementAttempts: Number.isFinite(st.maxPlacementAttempts) ? Math.max(1, Math.floor(st.maxPlacementAttempts)) : defaultAttempts,
         spawnArea: resolveSpawnArea(st.spawnArea),
         items: parsedItems,
       });
@@ -322,54 +368,75 @@
         var stampSets = collectStampSets(cfg);
         var centerX = Math.floor(viewW / 2);
         var centerY = Math.floor(viewH / 2);
+        var occupiedRects = [];
         for (var si = 0; si < stampSets.length; si++) {
           var stamp = stampSets[si];
+          var maxAttempts = Number.isFinite(stamp.maxPlacementAttempts) ? Math.max(1, stamp.maxPlacementAttempts) : 24;
           if (stamp.mode === 'variants') {
             var placementOrder = buildVariantPlacementOrder(stamp);
             for (var vi = 0; vi < placementOrder.length; vi++) {
               var variantIdx = placementOrder[vi];
               var variantItem = stamp.items[variantIdx];
               if (!variantItem) continue;
-              var variantSpawn = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, vi);
-              var variantDrawW = Math.max(1, Math.round(variantItem.w * variantItem.scale));
-              var variantDrawH = Math.max(1, Math.round(variantItem.h * variantItem.scale));
-              var variantDrawX = Math.round(variantSpawn.x + variantItem.xg - variantDrawW * 0.5);
-              var variantDrawY = Math.round(variantSpawn.y + variantItem.yg - variantDrawH * 0.5);
+              var variantRect = null;
+              var variantSpawn = null;
+              for (var va = 0; va < maxAttempts; va++) {
+                variantSpawn = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, 'v' + vi + '|' + va);
+                var testRect = itemDrawRect(variantSpawn, variantItem);
+                if (!isOccupied(testRect, occupiedRects)) {
+                  variantRect = testRect;
+                  break;
+                }
+              }
+              if (!variantRect || !variantSpawn) continue;
               localCtx.drawImage(
                 atlasImg,
                 variantItem.x,
                 variantItem.y,
                 variantItem.w,
                 variantItem.h,
-                variantDrawX,
-                variantDrawY,
-                variantDrawW,
-                variantDrawH
+                variantRect.x,
+                variantRect.y,
+                variantRect.w,
+                variantRect.h
               );
+              occupiedRects.push(variantRect);
             }
             continue;
           }
 
           for (var ci = 0; ci < stamp.count; ci++) {
-            var spawnPoint = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, ci);
+            var spawnPoint = null;
+            var itemRects = null;
+            var compositeRect = null;
+            for (var ca = 0; ca < maxAttempts; ca++) {
+              spawnPoint = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, 'c' + ci + '|' + ca);
+              itemRects = [];
+              for (var it = 0; it < stamp.items.length; it++) {
+                itemRects.push(itemDrawRect(spawnPoint, stamp.items[it]));
+              }
+              compositeRect = unionRects(itemRects);
+              if (compositeRect && !isOccupied(compositeRect, occupiedRects)) break;
+              compositeRect = null;
+            }
+            if (!spawnPoint || !itemRects || !compositeRect) continue;
             for (var ii = 0; ii < stamp.items.length; ii++) {
               var item = stamp.items[ii];
-              var drawW = Math.max(1, Math.round(item.w * item.scale));
-              var drawH = Math.max(1, Math.round(item.h * item.scale));
-              var drawX = Math.round(spawnPoint.x + item.xg - drawW * 0.5);
-              var drawY = Math.round(spawnPoint.y + item.yg - drawH * 0.5);
+              var drawRect = itemRects[ii];
+              if (!drawRect) continue;
               localCtx.drawImage(
                 atlasImg,
                 item.x,
                 item.y,
                 item.w,
                 item.h,
-                drawX,
-                drawY,
-                drawW,
-                drawH
+                drawRect.x,
+                drawRect.y,
+                drawRect.w,
+                drawRect.h
               );
             }
+            occupiedRects.push(compositeRect);
           }
         }
 

@@ -67,6 +67,17 @@ Runtime:
 - `zombies.spawn`: держать согласованность `targetAlive ≈ sideCount * perSideTarget`.
 - Для `ground.json` не использовать отрицательные `tile.w/h` и не нулевые веса.
 
+## Weather SFX (WorldEvents)
+
+- Конфиг дождя: `src/config/worldEvents.js` → `weather.rain`.
+- Поддерживаемые поля для loop-звука дождя:
+	- `sfxLoopSources: ['assets/sfx/rain_loop.ogg','assets/sfx/rain_loop.wav']`
+	- или `sfxLoopFile: 'assets/sfx/rain_loop.ogg'`
+- При отсутствии этих полей используется дефолт:
+	- `assets/sfx/rain_loop.ogg`
+	- fallback: `assets/sfx/rain_loop.wav`
+- Файлы нужно класть в папку `assets/sfx/`.
+
 ## Мини-проверка
 
 - `node ops/monitoring/health_check.js --root .`

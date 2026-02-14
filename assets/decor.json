@@ -1,11 +1,13 @@
 {
-  "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты размещаются случайно по карте. Можно задать count/spriteIds/noSpawnZones прямо тут. noSpawnZones работают в world-coords относительно центра экрана: circle { type:'circle', cx, cy, r } и rect { type:'rect', x, y, w, h }. В game.js значения BAL.decorNoSpawnZones / BAL.decorCount / BAL.decorSpriteIds имеют приоритет и переопределяют JSON при явной настройке. frames: id, x, y, w, h, anchor(optional).",
+  "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты размещаются случайно по карте. Можно задать count/spriteIds/noSpawnZones прямо тут. noSpawnZones работают в world-coords относительно центра экрана: circle { type:'circle', cx, cy, r } и rect { type:'rect', x, y, w, h }. В game.js значения BAL.decorNoSpawnZones / BAL.decorCount / BAL.decorSpriteIds имеют приоритет и переопределяют JSON при явной настройке. blockRadiusK/blockRadiusMin управляют радиусом непроходимой зоны у основания decor. frames: id, x, y, w, h, anchor(optional).",
   "atlas": "decor_atlas.png",
-  "count": 24,
+  "count":50,
+  "blockRadiusK": 0.35,
+  "blockRadiusMin": 8,
   "spriteIds": ["barrel", "tree", "debris", "can"],
   "noSpawnZones": [
     { "type": "circle", "cx": 0, "cy": 0, "r": 400 },
-    { "type": "rect", "x": -120, "y": -70, "w": 1000, "h": 1000 }
+    { "type": "rect", "x": 0, "y": 0, "w": 1920, "h": 1080 }
   ],
   "frames": [
     {
