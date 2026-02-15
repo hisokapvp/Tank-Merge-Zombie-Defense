@@ -51,8 +51,20 @@ Runtime:
 
 - `count` / `spriteIds[]` / `noSpawnZones[]` можно задавать в JSON.
 - `frames[].scale` (optional, default `1`): локальный множитель размера конкретного декор-кадра.
+- `frames[].isWall` (optional, default `false`): если `true`, decor считается стеной для зомби (коллизия + обход без телепорта).
 - `noSpawnZones[]`: `circle {type:'circle',cx,cy,r}` и `rect {type:'rect',x,y,w,h}` в world-coords.
 - Приоритет runtime: `BAL.decorNoSpawnZones` / `BAL.decorCount` / `BAL.decorSpriteIds` переопределяют JSON.
+
+Пример:
+
+```json
+{
+	"frames": [
+		{ "id": "tree", "x": 12, "y": 0, "w": 24, "h": 36, "scale": 3, "isWall": true },
+		{ "id": "barrel", "x": 0, "y": 20, "w": 12, "h": 16, "scale": 2 }
+	]
+}
+```
 
 ### Zombies (`assets/zombies.json`)
 

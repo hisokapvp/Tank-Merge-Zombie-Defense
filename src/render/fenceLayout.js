@@ -50,9 +50,10 @@
       var sideFrame = getFrame(spriteId);
       var step = sideStepFor(sideFrame);
       var localSpan = end - start;
-      var count = Math.max(1, Math.floor(localSpan / Math.max(1, step)) + 1);
+      var baseCount = Math.max(1, Math.floor(localSpan / Math.max(1, step)) + 1);
+      var count = Math.max(1, baseCount - 1);
       for (var i = 0; i < count; i++) {
-        var t = count > 1 ? (i / (count - 1)) : 0.5;
+        var t = (i + 0.5) / count;
         var v = start + localSpan * t;
         segments.push({
           x: isHorizontal ? v : fixedValue,

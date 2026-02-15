@@ -19,9 +19,9 @@
       },
       lightning: {
         enabled: true,
-        chancePerSec: 0.14,
+        chancePerSec: 0.20,
         flashDurationSec: 0.12,
-        intervalMinSec: 8,
+        intervalMinSec: 1,
         intervalMaxSec: 20,
       },
       thunder: {
@@ -31,13 +31,16 @@
     },
     attackMode: {
       enabled: enabled,
-      attackEverySec: 180,
-      attackDurationSec: 180,
+      attackEverySec: 30,
+      attackDurationSec: 10,
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
       targetAliveMult: 5,
+      targetAliveRampSec: 2,
       speedMult: 1.2,
       damageMult: 1.15,
+      eveningDimAlpha: 0.30,
+      eveningTransitionSec: 2.5,
     },
   };
 

@@ -19,15 +19,23 @@
       log: [],
       targetCellIndex: null,
       talentOverrides: {},
-      forceDisableAttackMode: false,
-      forceDisableWeather: false,
+      forceAttackMode: false,
+      forceWeather: false,
       collapsed: false,
       previewParticles: [],
       debugStatusActive: false,
       zombieCountCache: { at: 0, text: '' },
     };
-    if (typeof state.debug.forceDisableAttackMode !== 'boolean') state.debug.forceDisableAttackMode = false;
-    if (typeof state.debug.forceDisableWeather !== 'boolean') state.debug.forceDisableWeather = false;
+    if (typeof state.debug.forceAttackMode !== 'boolean') {
+      state.debug.forceAttackMode = typeof state.debug.forceDisableAttackMode === 'boolean'
+        ? !state.debug.forceDisableAttackMode
+        : false;
+    }
+    if (typeof state.debug.forceWeather !== 'boolean') {
+      state.debug.forceWeather = typeof state.debug.forceDisableWeather === 'boolean'
+        ? !state.debug.forceDisableWeather
+        : false;
+    }
 
     var main = document.querySelector('.layout');
     if (!main || document.getElementById('debugPanel')) return;
@@ -179,33 +187,33 @@
       var attackToggleRow = document.createElement('div');
       attackToggleRow.className = 'debugRow';
       attackToggleRow.style.marginTop = '8px';
-      attackToggleRow.innerHTML = '<label><input type="checkbox" id="debugDisableAttackMode" /> Force disable attackMode</label>';
+      attackToggleRow.innerHTML = '<label><input type="checkbox" id="debugForceAttackMode" /> Force attackMode</label>';
       effectsSection.appendChild(attackToggleRow);
 
       var weatherToggleRow = document.createElement('div');
       weatherToggleRow.className = 'debugRow';
-      weatherToggleRow.innerHTML = '<label><input type="checkbox" id="debugDisableWeather" /> Force disable weather</label>';
+      weatherToggleRow.innerHTML = '<label><input type="checkbox" id="debugForceWeather" /> Force weather</label>';
       effectsSection.appendChild(weatherToggleRow);
     }
 
-    var disableAttackModeEl = panel.querySelector('#debugDisableAttackMode');
-    if (disableAttackModeEl) {
-      disableAttackModeEl.checked = !!state.debug.forceDisableAttackMode;
-      disableAttackModeEl.addEventListener('change', function () {
+    var forceAttackModeEl = panel.querySelector('#debugForceAttackMode');
+    if (forceAttackModeEl) {
+      forceAttackModeEl.checked = !!state.debug.forceAttackMode;
+      forceAttackModeEl.addEventListener('change', function () {
         safeDebug(function () {
-          state.debug.forceDisableAttackMode = !!disableAttackModeEl.checked;
-          debugLog('info', 'Force disable attackMode: ' + (state.debug.forceDisableAttackMode ? 'ON' : 'OFF') + '.');
+          state.debug.forceAttackMode = !!forceAttackModeEl.checked;
+          debugLog('info', 'Force attackMode: ' + (state.debug.forceAttackMode ? 'ON' : 'OFF') + '.');
         }, 'Toggle attackMode override failed ');
       });
     }
 
-    var disableWeatherEl = panel.querySelector('#debugDisableWeather');
-    if (disableWeatherEl) {
-      disableWeatherEl.checked = !!state.debug.forceDisableWeather;
-      disableWeatherEl.addEventListener('change', function () {
+    var forceWeatherEl = panel.querySelector('#debugForceWeather');
+    if (forceWeatherEl) {
+      forceWeatherEl.checked = !!state.debug.forceWeather;
+      forceWeatherEl.addEventListener('change', function () {
         safeDebug(function () {
-          state.debug.forceDisableWeather = !!disableWeatherEl.checked;
-          debugLog('info', 'Force disable weather: ' + (state.debug.forceDisableWeather ? 'ON' : 'OFF') + '.');
+          state.debug.forceWeather = !!forceWeatherEl.checked;
+          debugLog('info', 'Force weather: ' + (state.debug.forceWeather ? 'ON' : 'OFF') + '.');
         }, 'Toggle weather override failed ');
       });
     }

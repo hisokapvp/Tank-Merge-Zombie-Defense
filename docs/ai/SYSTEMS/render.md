@@ -80,6 +80,18 @@
 - Не добавлять бизнес-логику в `draw()`.
 - Не создавать лишние объекты в hot path.
 
+## Depth sorting (zombies vs decor)
+
+- Для взаимного порядка `zombies` и `decor` используется y-sort: объект с большим `y` рисуется поверх.
+- Область применения ограничена только парой `zombies`/`decor` (танки и другие слои не переупорядочиваются этим правилом).
+- Для устранения мерцания используется стабильный tie-breaker (`renderOrder` / `id`).
+
+## AttackMode evening dim
+
+- В `attackMode` поверх сцены рисуется лёгкое «вечернее» затемнение.
+- Сила затемнения задаётся конфигом `WorldEvents.attackMode.eveningDimAlpha` в диапазоне `0..1`.
+- Затемнение активно только когда реально активен `attackMode` (включая debug force attackMode).
+
 ## Мини-проверка
 
 - `node Test/pack4/perf_stress.test.js`

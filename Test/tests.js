@@ -706,12 +706,15 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     const expectedEnd = halfSide - expectedInset;
     const expectedStep = Math.max(6, fenceWidth * 1.15) * 2;
     const span = expectedEnd - expectedStart;
-    const expectedCount = Math.max(1, Math.floor(span / expectedStep) + 1);
-    const expectedSpacing = expectedCount > 1 ? span / (expectedCount - 1) : 0;
+    const expectedBaseCount = Math.max(1, Math.floor(span / expectedStep) + 1);
+    const expectedCount = Math.max(1, expectedBaseCount - 1);
+    const expectedSpacing = span / expectedCount;
+    const expectedFirst = expectedStart + span * (0.5 / expectedCount);
+    const expectedLast = expectedStart + span * ((expectedCount - 0.5) / expectedCount);
 
-    assert(top.length === expectedCount, 'top side segment count follows endpoint-inclusive formula');
-    assert(Math.abs(top[0].x - expectedStart) <= 1e-6, 'first top segment touches corner-side start boundary');
-    assert(Math.abs(top[top.length - 1].x - expectedEnd) <= 1e-6, 'last top segment touches opposite corner-side end boundary');
+    assert(top.length === expectedCount, 'top side segment count follows reduced side formula (minus one per side)');
+    assert(Math.abs(top[0].x - expectedFirst) <= 1e-6, 'first top segment centered within first interval');
+    assert(Math.abs(top[top.length - 1].x - expectedLast) <= 1e-6, 'last top segment centered within last interval');
     for (let i = 1; i < top.length; i++) {
       const dx = top[i].x - top[i - 1].x;
       assert(dx > 0, 'segments are strictly ordered along the side');

@@ -307,6 +307,7 @@
               w: f.w != null ? f.w : 24,
               h: f.h != null ? f.h : 24,
               scale: Number.isFinite(f.scale) && f.scale > 0 ? f.scale : 1,
+              isWall: !!f.isWall,
               anchor: f.anchor || { x: 0.5, y: 0.8 },
             });
           }
@@ -334,9 +335,19 @@
           }) : [];
           var autoIds = Array.from(this.framesById.keys());
           var spriteIds = idsFromConfig.length ? idsFromConfig : autoIds;
+          var wallIds = Array.isArray(data.wallSpriteIds)
+            ? data.wallSpriteIds.filter(function (id) { return typeof id === 'string' && id.length > 0; })
+            : [];
+          if (!wallIds.length) {
+            wallIds = autoIds.filter(function (id) {
+              var frame = this.framesById.get(id);
+              return !!(frame && frame.isWall);
+            }, this);
+          }
           this.config = {
             count: Number.isFinite(data.count) ? Math.max(0, Math.floor(data.count)) : null,
             spriteIds: spriteIds,
+            wallSpriteIds: wallIds,
             noSpawnZones: parsedZones,
             blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
             blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
