@@ -6,6 +6,13 @@
 - Runtime логика: `game.js` (`getWorldEventsAttackCfg`, `getWeatherCfg`, `updateWorldEvents`, `getZombieAttackMultipliers`)
 - Debug toggles: `src/ui/debugPanel.js`
 
+## Что править
+
+- Тайминги attackMode (`attackEverySec`, `attackDurationSec`, `weatherLeadInSec`, `weatherLeadOutSec`) — в `src/config/worldEvents.js`.
+- Множители атаки (`targetAliveMult`, `speedMult`, `damageMult`, `targetAliveRampSec`) — через `getZombieAttackMultipliers()`.
+- Погода/SFX (`rain`, `lightning`, `thunder`, `rainLoop`) — конфиг + runtime в `updateWorldEvents`.
+- Debug force-переключатели — только через `src/ui/debugPanel.js`.
+
 ## Force семантика (Debug)
 
 - `Force weather`:
@@ -48,3 +55,15 @@ attackMode: {
   eveningDimAlpha: 0.16,
 }
 ```
+
+## Риски
+
+- Не смешивать debug force-state с production-логикой цикла.
+- Не увеличивать множители без проверки спавна и нагрузки.
+- При правках SFX сохранять fallback для форматов/отсутствующих файлов.
+
+## Мини-проверка
+
+- `?debug=1`: проверить `Force weather` и `Force attackMode` (`ON/OFF`).
+- Проверить ramp: в начале attackMode `targetAliveMult` растёт плавно.
+- Проверить weather SFX: thunder/rainLoop включаются и корректно отключаются.

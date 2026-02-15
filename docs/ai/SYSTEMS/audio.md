@@ -6,6 +6,12 @@
 - Настройки громкости UI: `src/audio/settingsAudio.js`.
 - Управление причинами паузы: `src/systems/pauseManager.js`.
 
+## Что править
+
+- Маршрутизацию звуков по каналам (`gameplay/ui/music`) — в `game.js`.
+- Настройки громкости и связь с UI — в `src/audio/settingsAudio.js`.
+- Причины паузы/возобновления звука — в `src/systems/pauseManager.js`.
+
 ## Каналы
 
 - `gameplay`: боевые и worldEvents звуки (например `shoot*`, `thunder`, `rainLoop`, `activeAbility`).
@@ -35,4 +41,9 @@
 ## Риски
 
 - Не переводить UI/menu звуки в канал `gameplay`, иначе они будут глушиться на паузе меню.
-- Не вызывать reset `currentTime` при pause/resume, иначе пропадает требуемое «доигрывание». 
+- Не вызывать reset `currentTime` при pause/resume, иначе пропадает требуемое «доигрывание».
+
+## Мини-проверка
+
+- Открыть меню: `gameplay` затухает, `ui/music` не ломаются.
+- Свернуть/развернуть вкладку: активные `gameplay` SFX возобновляются без restart.

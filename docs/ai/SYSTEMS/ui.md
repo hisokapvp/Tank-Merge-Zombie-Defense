@@ -15,41 +15,26 @@
 - Поведение кнопок: `src/ui/buttonBehavior.js` + `.uiButtonBehavior`.
 - Offline modal: эталон — settings modal; текст `Money/Деньги` и суммы с `$`/`⭐`.
 
-## Level-up modal (PACK 1)
+## Фактические UI-подсистемы в рантайме
 
-- Файлы:
-	- `index.html` — добавлена кнопка `✕` (`#levelModalClose`) в правом верхнем углу level-up модалки.
-	- `game.js` — подключён `ui.levelClose` и обработчик закрытия через `closeLevelModal()`.
-	- `src/mechanics/levelFlow.js` — убран auto-dismiss level-награды.
-- Поведение:
-	- Модалка level-up **не закрывается автоматически**.
-	- Закрытие только вручную: `Принять` или `✕`.
-	- Escape не закрывает level-up (onClose для a11y — no-op).
-	- Клики/инпут по игре под модалкой блокируются, пока level-up открыт.
+- Rewarded ads: `src/ui/adService.js` (заглушка Promise API для crate/boost/offline claim).
+- Lesson Progress panel: `src/ui/lessonProgress.js` + блок `#lessonProgressPanel` в `index.html`.
+- SRS календарь/планировщик: `src/scheduler/srs.js` + `src/ui/calendar/*` (ленивая загрузка из `lessonProgress.js`).
+- Anki: `src/tools/anki/importer.js`, `src/tools/anki/anki_export.js`, кнопка `#export-anki`.
+- Feedback widget: `src/feedback/widget.js` (floating button, локальный storage, telemetry hooks).
+- Debug UI-панели: `src/ui/adminFlags.js`, `src/ui/analyticsPanel.js`, `src/ui/funnelPanel.js`, `src/ui/experimentsPanel.js`, `src/ui/bugTriage.js`.
 
-## Checklist (PACK 1)
+## Debug/Dev-only правила
 
-- Level-up сценарии:
-	- не закрывается сама;
-	- закрывается по `Принять`;
-	- закрывается по `✕`;
-	- клики по игре под модалкой не проходят;
-	- Chrome desktop.
-- Cross-check с render:
-	- resize 3 размера;
-	- бой с зомби у нижней/боковой/угловой части забора.
+- Большинство debug-панелей активируются только при `?debug=1`.
+- `AdminFlags` дополнительно ограничен dev-host/file (`localhost`, `127.0.0.1`, `file:`).
+- Для новых debug-виджетов держать strict guard в `init()` до создания DOM.
 
-## Изменённые файлы (PACK 1)
+## Level-up modal
 
-- `index.html`
-- `game.js`
-- `src/mechanics/levelFlow.js`
-
-## Команды проверки (факт)
-
-- `node Test/tests.js` → PASS (`76 passed, 0 failed`)
-- `bash ci/check_style.sh` → FAIL в текущей среде (`/bin/bash` недоступен)
-- `bash ci/run_tests.sh` → FAIL в текущей среде (`/bin/bash` недоступен)
+- Разметка: `#levelModal`, `#levelAccept`, `#levelModalClose` в `index.html`.
+- Runtime: `src/mechanics/levelFlow.js` + вызовы в `game.js`.
+- Поведение: автозакрытия нет; закрытие только `Принять` или `✕`; клики по игре под модалкой блокируются.
 
 ## Риски
 
@@ -60,5 +45,8 @@
 
 - Открытие/закрытие модалок, Escape, Tab-cycle.
 - Переключение RU/EN.
+- Проверка `?debug=1`: видны analytics/funnel/experiments/triage панели.
+- Проверка Lesson Progress: repeat/export/import schedule, preview/export Anki.
+- Проверка level-up: модалка не закрывается сама и закрывается только вручную.
 - `node Test/pack1/mergePopup.test.js`
 - `node Test/pack9/offlineModal_ui_i18n.test.js`

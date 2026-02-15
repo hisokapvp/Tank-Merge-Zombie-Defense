@@ -33,7 +33,7 @@
 - Fallback:
 	- Если `ground_atlas.png` или `ground.json` не загрузились, используется старый procedural gradient-фон.
 
-## Layout tuning (PACK 1)
+## Layout tuning
 
 - `src/config/layoutTuning.js`:
 	- `trackToHangarGapPx = 5` (по умолчанию)
@@ -43,7 +43,7 @@
 	- `gapTrackToFence = (fenceRadius - fenceWidth/2) - (tankOrbitRadius + tankTrackWidth/2)`
 - При нехватке места на маленьком viewport применяется безопасный clamp (без пересечений; приоритет safety над точным `5px`).
 
-## Fence/track и zombie bounds (PACK 1)
+## Fence/track и zombie bounds
 
 - Рендер трека использует layout-радиусы напрямую (без отдельного clip по `roadFenceGap`).
 - Ограничение зомби привязано к визуальной геометрии забора:
@@ -98,34 +98,9 @@
 - `node Test/pack5/perf_regression.test.js`
 - Ручной smoke: resize + 3 минуты боя без артефактов.
 
-## Checklist (PACK 1)
-
-- Resize: маленькое / среднее / большое окно — визуально `~5px` ангар↔трек и трек↔забор, без пересечений.
-- Zombie fence: нижняя грань / боковая грань / угол — нет пустоты перед забором, нет выхода за забор.
-
-## Checklist (Weather/SFX)
+## Мини-проверка (Weather/SFX)
 
 - Включить `enabled:true`, `weather.enabled:true` в `src/config/worldEvents.js`: дождь/молнии визуально появляются в бою.
 - Для lightning задать `intervalMinSec: 8`, `intervalMaxSec: 20`: вспышки/гром происходят через случайные интервалы в этих границах.
 - Для thunder оставить массив `ogg/wav`: в браузерах с поддержкой ogg грузится `ogg`, иначе fallback на `wav`; при отсутствии файла игра продолжает работать.
 - Проверить rain loop: при старте погоды звук запускается и лупится; при отключении погоды/дождя звук останавливается.
-
-## Изменённые файлы (PACK 1)
-
-- `src/config/layoutTuning.js` (новый)
-- `src/render/layout/hangarLayout.js`
-- `game.js`
-
-## Изменённые файлы (GROUND)
-
-- `assets/ground.json` (новый)
-- `src/render/groundGen.js` (новый)
-- `src/render/groundLayer.js` (новый)
-- `src/render/spriteLoaders.js`
-- `game.js`
-
-## Команды проверки (факт)
-
-- `node Test/tests.js` → PASS (`76 passed, 0 failed`)
-- `bash ci/check_style.sh` → FAIL в текущей среде (`/bin/bash` недоступен)
-- `bash ci/run_tests.sh` → FAIL в текущей среде (`/bin/bash` недоступен)

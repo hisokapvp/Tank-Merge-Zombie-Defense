@@ -1,5 +1,5 @@
 version: 2
-updated_at: 2026-02-13
+updated_at: 2026-02-15
 entrypoints:
   boot:
     file: game.js
@@ -37,6 +37,17 @@ systems:
       - style.css
       - src/ui
       - src/accessibility/a11y.js
+      - src/feedback/widget.js
+      - src/scheduler/srs.js
+      - src/lessons/catalog.js
+      - src/tools/anki
+  audio:
+    doc: docs/ai/SYSTEMS/audio.md
+    tags: [audio, sfx, pause, music]
+    files:
+      - game.js
+      - src/audio/settingsAudio.js
+      - src/systems/pauseManager.js
   assets:
     doc: docs/ai/SYSTEMS/assets.md
     tags: [assets, sprites, config]
@@ -49,11 +60,17 @@ systems:
       - src/render/spriteLoaders.js
   combat:
     doc: docs/ai/SYSTEMS/combat.md
-    tags: [combat, projectile, damage]
+    tags: [combat, projectile, damage, economy, progression, spawn]
     files:
       - src/mechanics/combat.js
+      - src/mechanics/combatProfiles.js
       - src/mechanics/targeting.js
       - src/mechanics/corpseDespawn.js
+      - src/mechanics/zombieSpawn.js
+      - src/mechanics/economy.js
+      - src/mechanics/progression.js
+      - src/mechanics/garage.js
+      - src/mechanics/levelFlow.js
       - game.js
   save:
     doc: docs/ai/SYSTEMS/save.md
@@ -67,14 +84,27 @@ systems:
       - game.js
   telemetry:
     doc: docs/ai/SYSTEMS/telemetry.md
-    tags: [telemetry, analytics, flags, experiments, funnel]
+    tags: [telemetry, analytics, flags, experiments, funnel, debug-panels]
     files:
       - src/utils/telemetry.js
+      - src/utils/eventTelemetry.js
       - src/telemetry/telemetry.js
       - src/analytics/collector.js
       - src/analytics/funnel.js
       - src/flags/flags.js
       - src/experiments/experiments.js
+      - src/ui/adminFlags.js
+      - src/ui/analyticsPanel.js
+      - src/ui/funnelPanel.js
+      - src/ui/experimentsPanel.js
+      - src/ui/bugTriage.js
+  worldEvents:
+    doc: docs/ai/SYSTEMS/worldEvents.md
+    tags: [world-events, weather, attack-mode]
+    files:
+      - src/config/worldEvents.js
+      - src/ui/debugPanel.js
+      - game.js
   perf:
     doc: docs/ai/SYSTEMS/perf.md
     tags: [perf, profiling, mobile]

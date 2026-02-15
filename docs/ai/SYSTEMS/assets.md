@@ -15,31 +15,9 @@
 
 ### Ground (`assets/ground.json`)
 
-- Top-level:
-	- `atlas`: имя atlas-файла (по умолчанию `ground_atlas.png`).
-	- `tile`: `{w,h}` размер кадра (px), сейчас `16x16`.
-	- `mode`: `manual | procedural`.
-	- `fillMode`: `repeat | stretch`.
-- `manual`:
-	- `anchor`: `center` (центр тайла = центр клетки).
-	- `grid`: матрица тайлов `[{ frame:{col,row}|{x,y,w,h,scale?}, rotationDeg?, scale? }]`.
-- `procedural`:
-	- `seed`: строка/число для детерминизма.
-	- `weights`: массив `{ frame:{col,row}|{x,y,w,h,scale?}, weight, rotationDeg?, scale? }`.
-	- Допускаются дубликаты `{col,row}` с разными `rotationDeg/scale`.
-- `stamps[]` (алиас `pieces[]`): куски карты
-	- `stamp`: `{ id, mode?, count, spawnArea, items[] }`
-	- `mode`:
-		- `composite` (по умолчанию) — каждый placement рисует все `items[]` со своими `xg/yg`.
-		- `variants` — каждый placement выбирает ровно один item-вариант из `items[]`.
-		- Для `variants`: при `count >= items.length` каждый вариант гарантированно используется минимум один раз; остаток распределяется детерминированно по seed/stamp.id; порядок placement перемешивается детерминированно.
-	- `spawnArea`: `rect|circle` в world-coords относительно центра.
-	- `items[]`: `{ xg, yg, x, y, w, h, scale }`, рисуется в `(spawnPoint.x + xg, spawnPoint.y + yg)`.
-
-Runtime:
-
-- Loader: `GroundSprites.load()` в `src/render/spriteLoaders.js`.
-- При ошибке загрузки atlas/config рендер возвращается к legacy background.
+- Ключевые поля: `atlas`, `tile`, `mode`, `fillMode`, `manual.grid`, `procedural.weights`, `stamps[]/pieces[]`.
+- `mode`: `manual | procedural`; `fillMode`: `repeat | stretch`.
+- Runtime: `GroundSprites.load()` в `src/render/spriteLoaders.js`; при ошибке загрузки fallback на legacy background.
 
 ### Fence (`assets/fence.json`)
 
@@ -55,17 +33,6 @@ Runtime:
 - `noSpawnZones[]`: `circle {type:'circle',cx,cy,r}` и `rect {type:'rect',x,y,w,h}` в world-coords.
 - Приоритет runtime: `BAL.decorNoSpawnZones` / `BAL.decorCount` / `BAL.decorSpriteIds` переопределяют JSON.
 
-Пример:
-
-```json
-{
-	"frames": [
-		{ "id": "tree", "x": 12, "y": 0, "w": 24, "h": 36, "scale": 3, "isWall": true },
-		{ "id": "barrel", "x": 0, "y": 20, "w": 12, "h": 16, "scale": 2 }
-	]
-}
-```
-
 ### Zombies (`assets/zombies.json`)
 
 - `types[].attack` (optional) поддерживается по аналогии с `death`:
@@ -78,17 +45,7 @@ Runtime:
 - Не ссылаться на несуществующие файлы.
 - `zombies.spawn`: держать согласованность `targetAlive ≈ sideCount * perSideTarget`.
 - Для `ground.json` не использовать отрицательные `tile.w/h` и не нулевые веса.
-
-## Weather SFX (WorldEvents)
-
-- Конфиг дождя: `src/config/worldEvents.js` → `weather.rain`.
-- Поддерживаемые поля для loop-звука дождя:
-	- `sfxLoopSources: ['assets/sfx/rain_loop.ogg','assets/sfx/rain_loop.wav']`
-	- или `sfxLoopFile: 'assets/sfx/rain_loop.ogg'`
-- При отсутствии этих полей используется дефолт:
-	- `assets/sfx/rain_loop.ogg`
-	- fallback: `assets/sfx/rain_loop.wav`
-- Файлы нужно класть в папку `assets/sfx/`.
+- Weather SFX конфиг и runtime-правила описаны в `docs/ai/SYSTEMS/worldEvents.md`.
 
 ## Мини-проверка
 

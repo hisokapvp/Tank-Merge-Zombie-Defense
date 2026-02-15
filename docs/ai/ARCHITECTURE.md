@@ -8,6 +8,12 @@
 4. Content: `assets/*.json` + спрайты
 5. Validation/Ops: `Test/*`, `ci/*`, `ops/*`
 
+Дополнительно активные контуры:
+
+- Learning: `src/lessons`, `src/scheduler`, `src/tools/anki`, `src/ui/lessonProgress.js`.
+- Live-ops/debug UI: `src/ui/*Panel.js`, `src/ui/adminFlags.js`, `src/ui/bugTriage.js`.
+- In-game feedback: `src/feedback/widget.js`.
+
 ## Ключевые потоки
 
 - Startup: `index.html` → модули `src/*` → `game.js` → `boot()`

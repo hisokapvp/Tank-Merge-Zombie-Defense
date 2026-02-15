@@ -33,6 +33,8 @@ bash ci/release_checklist.sh
 
 - `game.js` — orchestration (`boot`, `loop`, `draw`)
 - `src/` — доменные модули (mechanics/ui/persistence/render/perf/...)
+- `src/lessons` + `src/scheduler` + `src/tools/anki` — контур обучения (уроки, SRS, export)
+- `src/feedback/widget.js` — in-game feedback с локальным хранением
 - `assets/` — конфиги и спрайты
 - `Test/` — регрессионные тесты
 
