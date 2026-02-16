@@ -28,12 +28,51 @@
 ## Урон забору в attackMode
 
 - Урон сегментам забора применяется только при активном `attackMode`.
-- Частота удара: `hitIntervalMs = 500` на каждого зомби у границы.
-- Формула: `damagePerHit = zombieType.attackDamage * attackMode.damageMult`.
-- Цель удара — конкретный сегмент перед зомби (включая corner-зоны).
+- Формула урона: `damagePerHit = zombieType.attackDamage * attackMode.damageMult`.
 - Урон по уже сломанному сегменту не применяется.
 - Конфиг типа зомби: `assets/zombies.json -> types[].attackDamage`.
-- Если поле отсутствует — используется fallback и warning в console (игра не падает).
+- Если `attackDamage` отсутствует — используется fallback (без падения игры).
+
+## Zombie attack state machine
+
+- Состояния: `walk -> attack -> cooldown`.
+- `walk`:
+	- зомби двигается,
+	- играет `walk` анимацию,
+	- при наличии цели в `attackRangePx` переходит в `attack`.
+- `attack`:
+	- движение отключено (`speed=0`, no movement integration),
+	- играет `attack` анимация,
+	- урон наносится ровно 1 раз в момент `attackHitAt * attackAnimDuration`,
+	- перед нанесением урона цель повторно валидируется через тот же selector.
+- `cooldown`:
+	- зомби снова двигается и играет `walk`,
+	- таймер `attackCooldownSec` стартует от конца `attack` анимации,
+	- по завершении: если цель в range — снова `attack`, иначе `walk`.
+
+Edge-cases:
+
+- если цель уничтожена до hit-момента — урон пропускается;
+- attack-анимация доигрывается полностью;
+- затем всегда переход в `cooldown`.
+
+## Выбор цели fence
+
+- Единый selector используется в двух местах:
+	- для решения "можно ли начать attack";
+	- для фактического hit в `attackHitAt`.
+- Метрика: `distance(zombieCenter, segmentAabb)`.
+- Расстояние считается как `distancePointAabb(point, aabb)`:
+	- `0`, если центр внутри `AABB`;
+	- иначе минимальная дистанция до прямоугольника.
+- Кандидаты: все живые `side + corner` сегменты с `holeAabb`.
+- Фильтр: `distance <= attackRangePx`.
+- Tie-break (стабильный):
+	1. меньший `distance`;
+	2. при равенстве — `isCorner=true`;
+	3. при равенстве — меньший `id/index`.
+
+Это устраняет кейс "зомби атакует у corner, но corner не получает урон".
 
 ## Прорыв (breach)
 

@@ -299,6 +299,17 @@ function isDebugPanelEnabled(){
   } catch (_) { return false; }
 }
 const DebugPanelEnabled = isDebugPanelEnabled();
+let zombieAttackOverlayEnabled = false;
+
+function toggleZombieAttackOverlayByHotkey(e){
+  if (!DebugPanelEnabled) return;
+  const key = String(e && e.key ? e.key : '').toLowerCase();
+  if (key !== ZOMBIE_OVERLAY_TOGGLE_KEY) return;
+  const tag = e && e.target && e.target.tagName ? String(e.target.tagName).toLowerCase() : '';
+  const isTyping = tag === 'input' || tag === 'textarea' || (e && e.target && e.target.isContentEditable);
+  if (isTyping) return;
+  zombieAttackOverlayEnabled = !zombieAttackOverlayEnabled;
+}
 
 let viewSize = { w: canvas.width, h: canvas.height, dpr: 1 };
 let center = { x: viewSize.w/2, y: viewSize.h/2 };
@@ -316,6 +327,13 @@ const FENCE_HIT_INTERVAL_MS = 500;
 const FENCE_DEFAULT_SEGMENT_HP = 200;
 const FENCE_DEFAULT_REPAIR_COST = 100;
 const ZOMBIE_DEFAULT_ATTACK_DAMAGE = 8;
+const ZOMBIE_DEFAULT_ATTACK_RANGE_PX = 24;
+const ZOMBIE_DEFAULT_ATTACK_COOLDOWN_SEC = 0.35;
+const ZOMBIE_DEFAULT_ATTACK_HIT_AT = 0.5;
+const ZOMBIE_DEFAULT_WALK_FPS = 10;
+const ZOMBIE_DEFAULT_ATTACK_FPS = 10;
+const ZOMBIE_DEFAULT_DEATH_FPS = 10;
+const ZOMBIE_OVERLAY_TOGGLE_KEY = 'h';
 const warnedBrokenFrames = new Set();
 const warnedZombieAttackDamage = new Set();
 const ZombieSpawnApi = GameApi.ZombieSpawn ?? null;
@@ -2698,6 +2716,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   // Zombies no longer orbit; omegaBase is 0 (they approach the fence directly)
   const baseOmega = 0;
   const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
+  const attackCfg = getZombieAttackConfig({ type: t });
+  const animCfg = getZombieAnimConfig({ type: t });
 
   const z = {
     id: crypto.randomUUID(),
@@ -2719,7 +2739,19 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     maxHp: baseHp * (t?.hpMul ?? 1.0),
     rewardMul: (t?.rewardMul ?? 1.0),
     anim: Math.random() * (t?.frames ?? 1),
-    fenceHitTimerMs: 0,
+    walkAnimFrame: Math.random() * (t?.frames ?? 1),
+    attackAnimTimeSec: 0,
+    attackState: 'walk',
+    attackCooldownTimerSec: 0,
+    attackDidHit: false,
+    attackTargetId: null,
+    attackRangePx: attackCfg.attackRangePx,
+    attackCooldownSec: attackCfg.attackCooldownSec,
+    attackHitAt: attackCfg.attackHitAt,
+    walkFrameRateFps: animCfg.walkFps,
+    attackFrameRateFps: animCfg.attackFps,
+    deathFrameRateFps: animCfg.deathFps,
+    deathCommonFrameRateFps: animCfg.deathCommonFps,
     breached: false,
   };
 
@@ -3031,6 +3063,112 @@ function getFenceSegmentForTheta(theta){
   return info.sideSegs[idx];
 }
 
+function distancePointAabb(px, py, aabb){
+  if (!aabb) return Infinity;
+  const dx = px < aabb.minX ? (aabb.minX - px) : (px > aabb.maxX ? (px - aabb.maxX) : 0);
+  const dy = py < aabb.minY ? (aabb.minY - py) : (py > aabb.maxY ? (py - aabb.maxY) : 0);
+  if (dx === 0 && dy === 0) return 0;
+  return Math.hypot(dx, dy);
+}
+
+function clamp01(value, fallback){
+  if (!Number.isFinite(value)) return fallback;
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+}
+
+function getZombieAnimConfig(z){
+  const type = z && z.type ? z.type : null;
+  const cfg = type && type.animations && typeof type.animations === 'object' ? type.animations : null;
+  const deathCommonFps = Number.isFinite(cfg?.deathCommon?.frameRateFps)
+    ? cfg.deathCommon.frameRateFps
+    : (Number.isFinite(ZombieSprites?.deathCommon?.frameRateFps) ? ZombieSprites.deathCommon.frameRateFps : ZOMBIE_DEFAULT_DEATH_FPS);
+  return {
+    walkFps: Number.isFinite(cfg?.walk?.frameRateFps) ? cfg.walk.frameRateFps : ZOMBIE_DEFAULT_WALK_FPS,
+    attackFps: Number.isFinite(cfg?.attack?.frameRateFps) ? cfg.attack.frameRateFps : ZOMBIE_DEFAULT_ATTACK_FPS,
+    deathFps: Number.isFinite(cfg?.death?.frameRateFps) ? cfg.death.frameRateFps : ZOMBIE_DEFAULT_DEATH_FPS,
+    deathCommonFps,
+  };
+}
+
+function getZombieAttackConfig(z){
+  const type = z && z.type ? z.type : null;
+  const cfg = type && type.attackConfig && typeof type.attackConfig === 'object' ? type.attackConfig : null;
+  const legacy = type && type.attack && typeof type.attack === 'object' ? type.attack : null;
+  const range = Number.isFinite(cfg?.attackRangePx)
+    ? cfg.attackRangePx
+    : (Number.isFinite(legacy?.attackRangePx) ? legacy.attackRangePx : ZOMBIE_DEFAULT_ATTACK_RANGE_PX);
+  const cooldown = Number.isFinite(cfg?.attackCooldownSec)
+    ? cfg.attackCooldownSec
+    : (Number.isFinite(legacy?.attackCooldownSec) ? legacy.attackCooldownSec : ZOMBIE_DEFAULT_ATTACK_COOLDOWN_SEC);
+  const hitAtRaw = Number.isFinite(cfg?.attackHitAt)
+    ? cfg.attackHitAt
+    : (Number.isFinite(legacy?.attackHitAt) ? legacy.attackHitAt : ZOMBIE_DEFAULT_ATTACK_HIT_AT);
+  return {
+    attackRangePx: Math.max(6, range),
+    attackCooldownSec: Math.max(0.01, cooldown),
+    attackHitAt: clamp01(hitAtRaw, ZOMBIE_DEFAULT_ATTACK_HIT_AT),
+  };
+}
+
+function compareFenceTargetTie(a, b){
+  const ida = (a && a.seg && a.seg.id != null) ? String(a.seg.id) : '';
+  const idb = (b && b.seg && b.seg.id != null) ? String(b.seg.id) : '';
+  if (ida && idb) {
+    if (ida < idb) return -1;
+    if (ida > idb) return 1;
+  }
+  const idxA = Number.isFinite(a?.index) ? a.index : 2147483647;
+  const idxB = Number.isFinite(b?.index) ? b.index : 2147483647;
+  if (idxA < idxB) return -1;
+  if (idxA > idxB) return 1;
+  return 0;
+}
+
+function selectZombieFenceTarget(zombieCenterX, zombieCenterY, attackRangePx){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return null;
+  const maxDist = Math.max(0, attackRangePx || 0);
+  let best = null;
+  const EPS = 1e-6;
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || seg.broken || !Number.isFinite(seg.hp) || seg.hp <= 0 || !seg.holeAabb) continue;
+    const distance = distancePointAabb(zombieCenterX, zombieCenterY, seg.holeAabb);
+    if (!Number.isFinite(distance) || distance > maxDist) continue;
+    const candidate = {
+      seg,
+      index: i,
+      distance,
+      isCorner: !!seg.isCorner,
+    };
+    if (!best) {
+      best = candidate;
+      continue;
+    }
+    if (distance < best.distance - EPS) {
+      best = candidate;
+      continue;
+    }
+    if (Math.abs(distance - best.distance) <= EPS) {
+      if (candidate.isCorner && !best.isCorner) {
+        best = candidate;
+        continue;
+      }
+      if (candidate.isCorner === best.isCorner && compareFenceTargetTie(candidate, best) < 0) {
+        best = candidate;
+      }
+    }
+  }
+  return best;
+}
+
+function selectZombieFenceTargetForZombie(z, attackRangePx){
+  const zx = Math.cos(z.theta || 0) * (z.r || 0);
+  const zy = Math.sin(z.theta || 0) * (z.r || 0);
+  return selectZombieFenceTarget(zx, zy, attackRangePx);
+}
+
 function getFenceInnerLimit(z){
   const tankTrackOuter = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + zombieCollisionRadius(z);
   const dx = Math.cos(z.theta ?? 0);
@@ -3186,6 +3324,9 @@ function zombieFenceLimit(z){
 function startZombieDying(z){
   if (z.state === 'dying') return;
   z.state = 'dying';
+  z.attackState = 'walk';
+  z.attackTargetId = null;
+  z.attackDidHit = false;
   z.deathDuration = 0.65;
   z.deathTimer = z.deathDuration;
   z.deathProgress = 0;
@@ -3202,7 +3343,9 @@ function startZombieDying(z){
   z.deathAnim = pickDeathAnim(commonDeath, personalDeath, Math.random());
   
   z.deathFrame = 0; // current frame of death animation
-  z.deathAnimSpeed = 10; // frames per second for death animation
+  const animCfg = getZombieAnimConfig(z);
+  const isCommonDeathAnim = !!(z.deathAnim && ZombieSprites.deathCommon && z.deathAnim === ZombieSprites.deathCommon);
+  z.deathAnimSpeed = isCommonDeathAnim ? animCfg.deathCommonFps : animCfg.deathFps;
 
   const corpseHelper = Game?.CorpseDespawn;
   let animDuration = null;
@@ -3245,6 +3388,7 @@ function stepZombies(dt){
   const attackMult = getZombieAttackMultipliers();
   const speedMul = attackMult.speedMult;
   const damageMul = attackMult.damageMult;
+  const attackActive = isZombieAttackModeActive();
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -3260,75 +3404,124 @@ function stepZombies(dt){
       z.anim += dt * 4.5;
       continue;
     }
+    if (!z.attackState || (z.attackState !== 'walk' && z.attackState !== 'attack' && z.attackState !== 'cooldown')) {
+      z.attackState = 'walk';
+    }
+    if (!Number.isFinite(z.attackAnimTimeSec) || z.attackAnimTimeSec < 0) z.attackAnimTimeSec = 0;
+    if (!Number.isFinite(z.attackCooldownTimerSec) || z.attackCooldownTimerSec < 0) z.attackCooldownTimerSec = 0;
+    if (!Number.isFinite(z.attackRangePx) || z.attackRangePx <= 0) z.attackRangePx = getZombieAttackConfig(z).attackRangePx;
+    if (!Number.isFinite(z.attackCooldownSec) || z.attackCooldownSec <= 0) z.attackCooldownSec = getZombieAttackConfig(z).attackCooldownSec;
+    if (!Number.isFinite(z.attackHitAt)) z.attackHitAt = getZombieAttackConfig(z).attackHitAt;
+    z.attackHitAt = clamp01(z.attackHitAt, ZOMBIE_DEFAULT_ATTACK_HIT_AT);
+    if (!Number.isFinite(z.walkFrameRateFps) || z.walkFrameRateFps <= 0) z.walkFrameRateFps = getZombieAnimConfig(z).walkFps;
+    if (!Number.isFinite(z.attackFrameRateFps) || z.attackFrameRateFps <= 0) z.attackFrameRateFps = getZombieAnimConfig(z).attackFps;
+    if (!Number.isFinite(z.walkAnimFrame)) z.walkAnimFrame = 0;
+
+    const typeId = z.type?.id || '';
+    const balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
+    const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
+
+    const shouldMove = !attackActive || z.attackState !== 'attack';
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
     const prevY = center.y + Math.sin(prevTheta) * z.r;
 
-    // Balance multiplier for zombie speed
-    const typeId = z.type?.id || '';
-    const balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
+    let radialSpeed = 0;
+    if (shouldMove) {
+      z.swayPhase += dt * z.swaySpeed * slow * speedMul * balSpeedMul;
+      const swayOffset = Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
+      const desiredTheta = z.anchorTheta + swayOffset;
 
-    // Zombies approach the fence side (no circular orbiting)
-    // anchorTheta stays roughly fixed (the side they approach from)
-    // Only sway left/right slightly when near the fence
-    z.swayPhase += dt * z.swaySpeed * slow * speedMul * balSpeedMul;
-    const swayOffset = Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
-    const desiredTheta = z.anchorTheta + swayOffset;
+      const blend = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
+      let desiredR = z.r + (z.targetR - z.r) * blend;
+      desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
 
-    // Move radially inward toward fence
-    const t = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
-    let desiredR = z.r + (z.targetR - z.r) * t;
-    desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
+      z.theta = desiredTheta;
+      z.r = desiredR;
 
-    z.theta = desiredTheta;
-    z.r = desiredR;
+      const fenceLimit = zombieFenceLimit(z);
+      if (z.targetR < fenceLimit) z.targetR = fenceLimit;
+      if (z.r < fenceLimit) z.r = fenceLimit;
 
-    const fenceLimit = zombieFenceLimit(z);
-    if (z.targetR < fenceLimit) z.targetR = fenceLimit;
-    if (z.r < fenceLimit) z.r = fenceLimit;
-
-    const desiredX = center.x + Math.cos(z.theta) * z.r;
-    const desiredY = center.y + Math.sin(z.theta) * z.r;
-    const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
-    const relX = moved.x - center.x;
-    const relY = moved.y - center.y;
-    const movedR = Math.hypot(relX, relY);
-    if (Number.isFinite(movedR) && movedR > 0) {
-      z.theta = Math.atan2(relY, relX);
-      z.anchorTheta = z.theta - swayOffset;
-      z.r = Math.max(movedR, zombieFenceLimit(z));
-      if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
-    }
-
-    const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
-    const moving = Math.abs(dTheta) > 0.0005;
-    const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
-    z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
-
-    // Animation speed based on radial approach + sway, not orbital speed
-    const radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
-    const animMul = z.type?.animSpeed ?? 1.0;
-    z.anim += dt * animMul * (1.4 + radialSpeed * 2.0) * slow * speedMul * balSpeedMul;
-
-    const attackActive = isZombieAttackModeActive();
-    const targetSegment = getFenceSegmentForTheta(z.theta);
-    const fenceContactLimit = zombieFenceLimit(z);
-    const nearFence = z.r <= fenceContactLimit + Math.max(2, BAL.fenceWidth * 0.08);
-    if (
-      attackActive
-      && nearFence
-      && targetSegment
-      && !targetSegment.broken
-    ) {
-      z.fenceHitTimerMs = (z.fenceHitTimerMs || 0) + dt * 1000;
-      const damagePerHit = getZombieAttackDamage(z) * damageMul;
-      while (z.fenceHitTimerMs >= FENCE_HIT_INTERVAL_MS) {
-        z.fenceHitTimerMs -= FENCE_HIT_INTERVAL_MS;
-        if (!targetSegment.broken) applyFenceSegmentDamage(targetSegment, damagePerHit);
+      const desiredX = center.x + Math.cos(z.theta) * z.r;
+      const desiredY = center.y + Math.sin(z.theta) * z.r;
+      const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
+      const relX = moved.x - center.x;
+      const relY = moved.y - center.y;
+      const movedR = Math.hypot(relX, relY);
+      if (Number.isFinite(movedR) && movedR > 0) {
+        z.theta = Math.atan2(relY, relX);
+        z.anchorTheta = z.theta - swayOffset;
+        z.r = Math.max(movedR, zombieFenceLimit(z));
+        if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
       }
-    } else {
-      z.fenceHitTimerMs = 0;
+
+      const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
+      const moving = Math.abs(dTheta) > 0.0005;
+      const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
+      z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
+
+      radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
+      const walkAnimMul = z.type?.animSpeed ?? 1.0;
+      const walkAnimAdvance = dt * walkAnimMul * (1.4 + radialSpeed * 2.0) * slow * speedMul * balSpeedMul;
+      z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
+
+    const targetNow = attackActive ? selectZombieFenceTargetForZombie(z, z.attackRangePx) : null;
+    z.debugAttackTargetId = targetNow && targetNow.seg ? targetNow.seg.id : null;
+
+    if (!attackActive) {
+      z.attackState = 'walk';
+      z.attackAnimTimeSec = 0;
+      z.attackCooldownTimerSec = 0;
+      z.attackDidHit = false;
+      z.attackTargetId = null;
+    } else if (z.attackState === 'walk') {
+      if (targetNow && targetNow.seg) {
+        z.attackState = 'attack';
+        z.attackAnimTimeSec = 0;
+        z.attackDidHit = false;
+        z.attackTargetId = targetNow.seg.id || null;
+      }
+    } else if (z.attackState === 'attack') {
+      z.attackAnimTimeSec += dt;
+      const attackFrames = Math.max(1, Number.isFinite(z.type?.attack?.frames) ? z.type.attack.frames : 1);
+      const attackRateFps = Math.max(0.01, z.attackFrameRateFps * (Number.isFinite(balAtkSpd) ? balAtkSpd : 1));
+      const attackDurationSec = attackFrames / attackRateFps;
+      const attackHitTimeSec = attackDurationSec * z.attackHitAt;
+
+      if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
+        const hitTarget = selectZombieFenceTargetForZombie(z, z.attackRangePx);
+        if (hitTarget && hitTarget.seg) {
+          applyFenceSegmentDamage(hitTarget.seg, getZombieAttackDamage(z) * damageMul);
+          z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
+        }
+        z.attackDidHit = true;
+      }
+
+      if (z.attackAnimTimeSec >= attackDurationSec) {
+        z.attackState = 'cooldown';
+        z.attackCooldownTimerSec = z.attackCooldownSec;
+        z.attackAnimTimeSec = 0;
+        z.attackDidHit = false;
+        z.attackTargetId = null;
+      }
+    } else if (z.attackState === 'cooldown') {
+      z.attackCooldownTimerSec = Math.max(0, z.attackCooldownTimerSec - dt);
+      if (z.attackCooldownTimerSec <= 0) {
+        if (targetNow && targetNow.seg) {
+          z.attackState = 'attack';
+          z.attackAnimTimeSec = 0;
+          z.attackDidHit = false;
+          z.attackTargetId = targetNow.seg.id || null;
+        } else {
+          z.attackState = 'walk';
+          z.attackTargetId = null;
+        }
+      }
+    }
+
+    z.anim = z.walkAnimFrame;
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
@@ -4944,6 +5137,10 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
   pauseManager.setMenuOpen(!!(state && state.ui && state.ui.menuOpen));
 }
 
+if (DebugPanelEnabled) {
+  window.addEventListener('keydown', toggleZombieAttackOverlayByHotkey);
+}
+
 // ---------- Render ----------
 function draw(){
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
@@ -4964,6 +5161,7 @@ function draw(){
   drawWeather();
   drawAttackModeEveningDim();
   drawLevelUpVfx();
+  if (DebugPanelEnabled && zombieAttackOverlayEnabled) drawZombieAttackOverlay();
 
   // If sprites failed to load, show a small hint on canvas
   if (!ZombieSprites.ready){
@@ -4979,6 +5177,54 @@ function draw(){
     const previewDt = Math.min(0.033, 1/60);
     window.Game.ZombieAnimPreview.renderPreview(ctx, viewSize.w, viewSize.h, previewDt);
   }
+}
+
+function drawZombieAttackOverlay(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    const aabb = seg && seg.holeAabb ? seg.holeAabb : null;
+    if (!aabb) continue;
+    const w = aabb.maxX - aabb.minX;
+    const h = aabb.maxY - aabb.minY;
+    ctx.strokeStyle = seg.isCorner ? 'rgba(255,203,107,0.95)' : 'rgba(131,197,255,0.75)';
+    ctx.lineWidth = seg.isCorner ? 2 : 1;
+    ctx.strokeRect(aabb.minX, aabb.minY, w, h);
+  }
+
+  const byId = state.fenceSegmentsMeta && state.fenceSegmentsMeta.byId ? state.fenceSegmentsMeta.byId : null;
+  for (let i = 0; i < state.zombies.length; i++) {
+    const z = state.zombies[i];
+    if (!z || z.state === 'dying') continue;
+    const zx = Math.cos(z.theta || 0) * (z.r || 0);
+    const zy = Math.sin(z.theta || 0) * (z.r || 0);
+    const range = Number.isFinite(z.attackRangePx) ? z.attackRangePx : ZOMBIE_DEFAULT_ATTACK_RANGE_PX;
+
+    ctx.strokeStyle = 'rgba(124,236,170,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(zx, zy, range, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const targetId = z.attackTargetId || z.debugAttackTargetId;
+    const targetSeg = (targetId && byId && byId[targetId]) ? byId[targetId] : null;
+    if (targetSeg) {
+      ctx.strokeStyle = 'rgba(255,99,132,0.95)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(zx, zy);
+      ctx.lineTo(targetSeg.x, targetSeg.y);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,99,132,0.95)';
+      ctx.beginPath();
+      ctx.arc(targetSeg.x, targetSeg.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 function drawAttackModeEveningDim(){
@@ -5861,7 +6107,7 @@ function drawZombieSprite(x,y,z){
 
   const isDying = z.state === 'dying';
   const hasDeathAnim = isDying && z.deathAnim;
-  const hasAttackAnim = !isDying && isZombieAttackModeActive() && t.attack;
+  const hasAttackAnim = !isDying && z.attackState === 'attack' && t.attack;
   
   // Determine which frame to draw
   let fx, fy, fw, fh;
@@ -5878,7 +6124,8 @@ function drawZombieSprite(x,y,z){
     const frames = aa.frames || 1;
     const typeId = t.id || '';
     const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
-    const frameIndex = Math.floor(z.anim * balAtkSpd) % frames;
+    const attackFps = Math.max(0.01, (z.attackFrameRateFps || ZOMBIE_DEFAULT_ATTACK_FPS) * balAtkSpd);
+    const frameIndex = Math.min(frames - 1, Math.floor((z.attackAnimTimeSec || 0) * attackFps));
     fx = aa.x + frameIndex * aa.w;
     fy = aa.y;
     fw = aa.w;
@@ -5886,7 +6133,7 @@ function drawZombieSprite(x,y,z){
   } else {
     // Use walk animation frame
     const frames = t.frames || 1;
-    const frameIndex = Math.floor(z.anim) % frames;
+    const frameIndex = Math.floor(z.walkAnimFrame || z.anim || 0) % frames;
     fx = f.x + frameIndex * f.w;
     fy = f.y;
     fw = f.w;
@@ -5899,7 +6146,9 @@ function drawZombieSprite(x,y,z){
   const w = baseW * scale;
   const h = baseH * scale;
 
-  const bob = hasDeathAnim ? 0 : Math.sin(z.anim) * BAL.zombieBobAmp;
+  const walkPhase = z.walkAnimFrame || z.anim || 0;
+  const bobPhase = hasAttackAnim ? (z.attackAnimTimeSec || 0) * Math.max(0.01, z.attackFrameRateFps || ZOMBIE_DEFAULT_ATTACK_FPS) : walkPhase;
+  const bob = hasDeathAnim ? 0 : Math.sin(bobPhase) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const rot = face + (t.rotation ?? 0);
@@ -5969,7 +6218,8 @@ function drawZombieSprite(x,y,z){
 }
 
 function drawZombieFallback(x,y,z){
-  const bob = Math.sin(z.anim || 0) * BAL.zombieBobAmp;
+  const walkPhase = z.walkAnimFrame || z.anim || 0;
+  const bob = Math.sin(walkPhase) * BAL.zombieBobAmp;
   const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
   const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
   const facing = x >= center.x ? -1 : 1;

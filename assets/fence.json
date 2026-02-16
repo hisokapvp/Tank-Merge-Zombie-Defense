@@ -3,7 +3,7 @@
   "atlas": "fence_atlas.png",
   "cornerInsetPx": 0,
   "segmentsPerSide": 8,
-  "segmentMaxHp": 100,
+  "segmentMaxHp": 10000,
   "healthBar": {
     "w": 28,
     "h": 4,

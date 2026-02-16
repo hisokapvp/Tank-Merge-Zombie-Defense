@@ -15,6 +15,33 @@
     var BAL = opts.BAL || {};
     var getState = typeof opts.getState === 'function' ? opts.getState : function () { return null; };
 
+    function toPositiveNumber(value, fallback) {
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    }
+
+    function clamp01(value, fallback) {
+      if (!Number.isFinite(value)) return fallback;
+      if (value <= 0) return 0;
+      if (value >= 1) return 1;
+      return value;
+    }
+
+    function normalizeAnimConfig(raw, fallbackFps) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      return {
+        frameRateFps: toPositiveNumber(src.frameRateFps, fallbackFps),
+      };
+    }
+
+    function normalizeAttackConfig(raw, fallback) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      return {
+        attackRangePx: toPositiveNumber(src.attackRangePx, fallback.attackRangePx),
+        attackCooldownSec: toPositiveNumber(src.attackCooldownSec, fallback.attackCooldownSec),
+        attackHitAt: clamp01(src.attackHitAt, fallback.attackHitAt),
+      };
+    }
+
     var ZombieSprites = {
       ready: false,
       error: '',
@@ -30,6 +57,18 @@
           var atlasPath = 'assets/' + (data.atlas || 'zombie_atlas.png');
           var img = await loadImage(atlasPath);
 
+          var defaultAnimFps = {
+            walk: 10,
+            attack: 10,
+            death: 10,
+            deathCommon: 10,
+          };
+          var defaultAttackConfig = {
+            attackRangePx: Math.max(6, Number.isFinite(BAL.fenceWidth) ? BAL.fenceWidth * 1.2 : 24),
+            attackCooldownSec: 0.35,
+            attackHitAt: 0.5,
+          };
+
           if (data.deathCommon) {
             this.deathCommon = {
               x: data.deathCommon.x != null ? data.deathCommon.x : 0,
@@ -37,6 +76,7 @@
               w: data.deathCommon.w != null ? data.deathCommon.w : 96,
               h: data.deathCommon.h != null ? data.deathCommon.h : 96,
               frames: data.deathCommon.frames != null ? data.deathCommon.frames : 1,
+              frameRateFps: toPositiveNumber(data.deathCommon.frameRateFps, defaultAnimFps.deathCommon),
             };
           } else {
             this.deathCommon = null;
@@ -54,6 +94,8 @@
           }
 
           this.types = (data.types || []).map(function (t) {
+            var animations = t && typeof t.animations === 'object' ? t.animations : null;
+            var attackTuning = t && t.attack && typeof t.attack === 'object' ? t.attack : null;
             return {
               id: t.id || 'zombie',
               frame: t.frame || { x: 0, y: 0, w: 64, h: 64 },
@@ -82,6 +124,13 @@
                 h: t.attack.h != null ? t.attack.h : ((t.frame && t.frame.h) != null ? t.frame.h : 96),
                 frames: t.attack.frames != null ? t.attack.frames : (t.frames != null ? t.frames : 1),
               } : null,
+              animations: {
+                walk: normalizeAnimConfig(animations && animations.walk, defaultAnimFps.walk),
+                attack: normalizeAnimConfig(animations && animations.attack, defaultAnimFps.attack),
+                death: normalizeAnimConfig(animations && animations.death, defaultAnimFps.death),
+                deathCommon: normalizeAnimConfig(animations && animations.deathCommon, defaultAnimFps.deathCommon),
+              },
+              attackConfig: normalizeAttackConfig(attackTuning, defaultAttackConfig),
             };
           });
 

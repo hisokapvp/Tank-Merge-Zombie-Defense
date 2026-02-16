@@ -12,6 +12,7 @@
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
+- Zombie AI state machine / target selector → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
@@ -23,6 +24,7 @@
 - World events/weather/attackMode → `docs/ai/SYSTEMS/worldEvents.md`
 - Производительность/mobile/object pool → `docs/ai/SYSTEMS/perf.md`
 - Lesson Progress/SRS/Anki/feedback/debug-panels → `docs/ai/SYSTEMS/ui.md`
+- Runtime debug overlay (`?debug=1`, hotkeys) → `docs/debug-overlay.md`
 
 ## Карта кода
 

@@ -44,6 +44,23 @@ Merge + tower defense на canvas.
 - Если щель больше `0.5px`, выводится ровно: `console.warn("Fence gap", valuePx)`.
 - `valuePx` — вычисленная максимальная щель в world/screen px (как в текущей геометрии fence).
 
+## Zombie attack state machine + targeting
+
+- Конфиг: `assets/zombies.json` → `types[i]`.
+- Новые параметры анимаций: `animations.walk.frameRateFps`, `animations.attack.frameRateFps`, `animations.death.frameRateFps`, `animations.deathCommon.frameRateFps`.
+- Новые параметры атаки: `attack.attackRangePx`, `attack.attackCooldownSec`, `attack.attackHitAt` (clamp `0..1`).
+- Выбор цели fence выполняется единообразно по `distance(zombieCenter, segmentAabb)` для side+corner сегментов.
+- Состояния атаки: `walk → attack → cooldown`; урон наносится один раз в момент `attackHitAt` внутри attack-анимации, а cooldown считается от конца attack-анимации.
+
+## Debug overlay для атаки зомби
+
+- Overlay доступен только при `?debug=1`.
+- Toggle: клавиша `H`.
+- Отрисовывается:
+	- `AABB` fence-сегментов (side + corner),
+	- круг `attackRangePx` для каждого зомби,
+	- текущая выбранная цель (маркер + линия от зомби).
+
 ## Команды проверки
 
 ```bash

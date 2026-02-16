@@ -5,7 +5,8 @@
     "y": 384,
     "w": 191,
     "h": 204,
-    "frames": 15
+    "frames": 15,
+    "frameRateFps": 10
   },
   "spawn": {
     "targetAlive": 240,
@@ -28,7 +29,10 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 4
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
       "death": {
         "x": 960,
@@ -49,7 +53,21 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 50
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl2",
@@ -65,7 +83,10 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
       "death": {
         "x": 768,
@@ -86,7 +107,21 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl3",
@@ -102,7 +137,10 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
       "death": {
         "x": 672,
@@ -123,7 +161,21 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl4",
@@ -151,9 +203,26 @@
         "y": 288,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl5",
@@ -181,9 +250,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl6",
@@ -211,9 +297,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl7",
@@ -241,9 +344,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl8",
@@ -271,9 +391,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl9",
@@ -301,9 +438,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl10",
@@ -331,9 +485,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl11",
@@ -361,9 +532,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl12",
@@ -391,9 +579,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl13",
@@ -421,9 +626,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl14",
@@ -451,9 +673,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl15",
@@ -481,9 +720,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl16",
@@ -511,9 +767,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl17",
@@ -541,9 +814,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl18",
@@ -571,9 +861,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl19",
@@ -601,9 +908,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl20",
@@ -631,9 +955,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl21",
@@ -661,9 +1002,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl22",
@@ -691,9 +1049,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl23",
@@ -721,9 +1096,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl24",
@@ -751,9 +1143,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl25",
@@ -781,9 +1190,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl26",
@@ -811,9 +1237,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl27",
@@ -841,9 +1284,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl28",
@@ -871,9 +1331,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl29",
@@ -901,9 +1378,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl30",
@@ -931,9 +1425,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl31",
@@ -961,9 +1472,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl32",
@@ -991,9 +1519,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl33",
@@ -1021,9 +1566,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl34",
@@ -1051,9 +1613,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl35",
@@ -1081,9 +1660,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl36",
@@ -1111,9 +1707,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl37",
@@ -1141,9 +1754,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl38",
@@ -1171,9 +1801,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl39",
@@ -1201,9 +1848,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl40",
@@ -1231,9 +1895,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl41",
@@ -1261,9 +1942,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl42",
@@ -1291,9 +1989,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl43",
@@ -1321,9 +2036,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl44",
@@ -1351,9 +2083,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl45",
@@ -1381,9 +2130,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl46",
@@ -1411,9 +2177,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl47",
@@ -1441,9 +2224,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl48",
@@ -1471,9 +2271,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl49",
@@ -1501,9 +2318,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl50",
@@ -1531,9 +2365,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl51",
@@ -1561,9 +2412,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl52",
@@ -1591,9 +2459,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl53",
@@ -1621,9 +2506,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl54",
@@ -1651,9 +2553,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl55",
@@ -1681,9 +2600,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl56",
@@ -1711,9 +2647,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl57",
@@ -1741,9 +2694,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl58",
@@ -1771,9 +2741,26 @@
         "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 10
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl59",
@@ -1801,9 +2788,26 @@
         "y": 96,
         "w": 96,
         "h": 96,
-        "frames": 8
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     },
     {
       "id": "zombie_lvl60",
@@ -1831,9 +2835,26 @@
         "y": 192,
         "w": 96,
         "h": 96,
-        "frames": 7
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
       },
-      "attackDamage": 8
+      "attackDamage": 8,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      }
     }
   ]
 }

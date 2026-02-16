@@ -46,6 +46,17 @@
 - `types[].attack` (optional) поддерживается по аналогии с `death`:
 	- `{ x, y, w, h, frames }`
 	- если `attack` отсутствует, используется обычная `frame` анимация (fallback).
+- Параметры анимаций (per `types[i]`):
+	- `animations.walk.frameRateFps`
+	- `animations.attack.frameRateFps`
+	- `animations.death.frameRateFps`
+	- `animations.deathCommon.frameRateFps`
+- Параметры атаки (per `types[i]`):
+	- `attack.attackRangePx`
+	- `attack.attackCooldownSec`
+	- `attack.attackHitAt` (runtime clamp в `0..1`)
+- Global common death может содержать `deathCommon.frameRateFps`.
+- Runtime применяет дефолты/валидацию без console-спама для старых конфигов.
 
 ## Риски
 
