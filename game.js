@@ -12,6 +12,7 @@ const ui = {
   buyCost: document.getElementById('buyCost'),
   boost: document.getElementById('boost'),
   buyBulk: document.getElementById('buyBulk'),
+  autoMergeBtn: document.getElementById('autoMergeBtn'),
   boostState: document.getElementById('boostState'),
   talentsBtn: document.getElementById('talentsBtn'),
   achievementsBtn: document.getElementById('achievementsBtn'),
@@ -348,6 +349,12 @@ const FenceLayoutApi = GameApi.FenceLayout ?? null;
 const GroundLayerApi = GameApi.GroundLayer ?? null;
 const PauseManagerApi = GameApi.PauseManager ?? null;
 const DepthSortApi = GameApi.DepthSort ?? null;
+const AutoMergeApi = GameApi.AutoMerge ?? null;
+const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
+  ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
+  : 300;
+let isAutoMergeBusy = false;
+let autoMergeBusyTimeout = null;
 
 function setSimulationClockPaused(paused){
   const shouldPause = !!paused;
@@ -1880,6 +1887,33 @@ function performMerge(fromIdx, toIdx, opts){
 
 function mergeCells(fromIdx, toIdx){
   return performMerge(fromIdx, toIdx, { placeResult: 'original' });
+}
+
+function findTankCellIndex(tankRef){
+  if (!tankRef || !Array.isArray(state.cells)) return null;
+  const id = typeof tankRef.id === 'string' ? tankRef.id : null;
+  for (let i = 0; i < state.cells.length; i++) {
+    const cell = state.cells[i];
+    if (!cell || !cell.tank) continue;
+    if (cell.tank === tankRef) return cell.i;
+    if (id && cell.tank.id === id) return cell.i;
+  }
+  return null;
+}
+
+function mergeAutoPair(leftTank, rightTank){
+  const fromIdx = findTankCellIndex(leftTank);
+  const toIdx = findTankCellIndex(rightTank);
+  if (fromIdx == null || toIdx == null || fromIdx === toIdx) return false;
+  const fromCell = state.cells[fromIdx];
+  const toCell = state.cells[toIdx];
+  if (!fromCell || !toCell || !fromCell.tank || !toCell.tank) return false;
+  if (fromCell.tank.level !== toCell.tank.level) return false;
+  return performMerge(fromIdx, toIdx, { placeResult: 'hangar' });
+}
+
+if (AutoMergeApi && typeof AutoMergeApi.setMergePairExecutor === 'function') {
+  AutoMergeApi.setMergePairExecutor(mergeAutoPair);
 }
 
 // ---------- Economy / boost ----------
@@ -4366,6 +4400,8 @@ function updateUI(){
     ui.buyBulk.disabled = !plan.enabled;
   }
 
+  refreshAutoMergeButton();
+
   if (ui.achievementsModal && !ui.achievementsModal.classList.contains('hidden')) {
     renderAchievementsList();
   }
@@ -4374,6 +4410,60 @@ function updateUI(){
   updateStageAbilitySlots();
   updateDismantleButton();
   if (DebugPanelEnabled && state.debug?.refreshZombieCounts) state.debug.refreshZombieCounts();
+}
+
+function refreshAutoMergeButton(){
+  if (!ui.autoMergeBtn) return;
+  if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function') {
+    ui.autoMergeBtn.classList.add('hidden');
+    ui.autoMergeBtn.disabled = true;
+    return;
+  }
+
+  const model = AutoMergeApi.getAutoMergeButtonModel(state);
+  if (!model || !model.visible) {
+    ui.autoMergeBtn.classList.add('hidden');
+    ui.autoMergeBtn.disabled = true;
+    return;
+  }
+
+  ui.autoMergeBtn.classList.remove('hidden');
+  ui.autoMergeBtn.textContent = model.label || t('autoMerge2');
+  ui.autoMergeBtn.disabled = isAutoMergeBusy || !model.enabled;
+}
+
+function runAutoMergeClick(){
+  if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function' || typeof AutoMergeApi.runAutoMerge !== 'function') return;
+  if (isAutoMergeBusy) return;
+
+  const model = AutoMergeApi.getAutoMergeButtonModel(state);
+  if (!model || !model.visible || !model.enabled) return;
+
+  const tier = typeof AutoMergeApi.getAutoMergeTier === 'function'
+    ? AutoMergeApi.getAutoMergeTier(state)
+    : 'merge2';
+  if (!tier || tier === 'hidden') return;
+
+  isAutoMergeBusy = true;
+  refreshAutoMergeButton();
+
+  try {
+    AutoMergeApi.runAutoMerge(state, tier);
+  } finally {
+    if (autoMergeBusyTimeout != null) {
+      window.clearTimeout(autoMergeBusyTimeout);
+      autoMergeBusyTimeout = null;
+    }
+    const cooldown = Number.isFinite(model.cooldownMs)
+      ? Math.max(200, Math.min(400, Math.floor(model.cooldownMs)))
+      : AUTO_MERGE_COOLDOWN_MS;
+    autoMergeBusyTimeout = window.setTimeout(() => {
+      isAutoMergeBusy = false;
+      autoMergeBusyTimeout = null;
+      refreshAutoMergeButton();
+    }, cooldown);
+    updateUI();
+  }
 }
 
 function updateDismantleButton(){
@@ -5141,6 +5231,7 @@ canvas.addEventListener('pointerup', (e)=>{
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
 ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
+ui.autoMergeBtn?.addEventListener('click', ()=> runAutoMergeClick());
 ui.boost.addEventListener('click', () => openBoostModal());
 ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());
 ui.achievementsClose?.addEventListener('click', () => closeAchievementsModal());

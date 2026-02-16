@@ -44,5 +44,19 @@
 
 ## Что открывают creator_*
 
-`creator_novice/pro/expert` являются гейтами для кнопок/режимов auto-merge.
-Детальная логика auto-merge и debug-claim будет добавлена в PACK2/PACK3.
+`creator_novice/pro/expert` являются гейтами для одной auto-merge кнопки в нижней части панели.
+
+Tier-поведение:
+
+- до `creator_novice` — кнопка скрыта (`hidden`),
+- `creator_novice` и без `creator_pro` — режим `merge2`, label: «Соединить 2 танка»,
+- `creator_pro` и без `creator_expert` — режим `mergeX`, label: «Соединить 2 танка» или «Соединить 4 танка» по доступным парам,
+- `creator_expert` — режим `mergeAll`, label: «Соединить все танки».
+
+Дополнительно:
+
+- auto-merge всегда использует общий merge entrypoint (`performMerge`) и кладёт результат в hangar,
+- `mergeAll` работает только по снимку пар на момент клика (без chain reaction),
+- повторный клик блокируется cooldown `200..400ms` (по умолчанию `300ms`).
+
+Подробные правила подбора пар: `docs/auto-merge.md`.

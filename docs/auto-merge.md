@@ -1,0 +1,75 @@
+# Auto-merge
+
+## Источник истины
+
+Auto-merge и manual-merge используют один и тот же успешный entrypoint: `performMerge(fromIdx, toIdx, opts)`.
+
+- manual: `placeResult: 'original'`
+- auto: `placeResult: 'hangar'`
+
+Это гарантирует одинаковые проверки валидности merge, telemetry, funnel и achievement progress.
+
+## Кандидаты и исключения
+
+Кандидаты на merge собираются из двух областей:
+
+- hangar (`state.cells[].tank` с `onTrack !== true`)
+- track (`state.cells[].tank` с `onTrack === true`)
+
+При `excludeAdBox=true` исключаются танки, у которых установлен хотя бы один флаг:
+
+- `requiresAd`
+- `locked`
+- `fromAdBox`
+
+Если после фильтрации остаются только такие танки, пар нет.
+
+## Детерминированный выбор пар
+
+`findMergePairs(...)` работает детерминированно и всегда выдаёт одинаковый порядок при одинаковом `state`.
+
+Порядок:
+
+1. группировка по `level`
+2. уровни сортируются `asc`
+3. внутри уровня сортировка по `locationOrder`:
+   - сначала hangar (`slotIndex asc`)
+   - затем track (`trackIndex asc`)
+4. если индекс не задан, используется стабильный ключ, вычисленный один раз при сборе списка
+5. пары формируются строго последовательно: `(0,1), (2,3), ...`
+6. `maxPairs` ограничивает количество возвращаемых пар
+
+## Tier UI-кнопки
+
+Одна кнопка внизу панели, без замены/сдвига buy-кнопки.
+
+- `hidden` — до `creator_novice`
+- `merge2` — `creator_novice` без `creator_pro`
+- `mergeX` — `creator_pro` без `creator_expert`
+- `mergeAll` — `creator_expert`
+
+Label:
+
+- `merge2` → «Соединить 2 танка»
+- `mergeX` → «Соединить 4 танка», если доступно ≥2 пары, иначе «Соединить 2 танка»
+- `mergeAll` → «Соединить все танки»
+
+## Snapshot поведение
+
+Важно: auto-merge запускается по снимку пар на момент клика.
+
+- пары вычисляются один раз в начале (`pairsSnapshot`)
+- merge выполняются строго в этом порядке
+- новые танки-результаты не участвуют в этом же клике
+
+Поэтому режим `all` не делает chain reaction в рамках одного запуска.
+
+## Anti-doubleclick
+
+Кнопка защищена от двойного клика:
+
+- локальный флаг `isAutoMergeBusy`
+- cooldown `AUTO_MERGE_COOLDOWN_MS = 300` (допустимый диапазон `200..400`)
+- повторные клики во время busy игнорируются
+
+Два клика подряд за ≤ cooldown дают эффект как один клик.

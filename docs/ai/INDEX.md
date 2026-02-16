@@ -25,6 +25,7 @@
 - World events/weather/attackMode → `docs/ai/SYSTEMS/worldEvents.md`
 - World events (product doc) → `docs/world-events.md`
 - Shop bulk-buy UX (product doc) → `docs/ui-shop.md`
+- Auto-merge tiers/pairing/snapshot rules → `docs/auto-merge.md` + `docs/ai/SYSTEMS/achievements.md`
 - Производительность/mobile/object pool → `docs/ai/SYSTEMS/perf.md`
 - Lesson Progress/SRS/Anki/feedback/debug-panels → `docs/ai/SYSTEMS/ui.md`
 - Runtime debug overlay (`?debug=1`, hotkeys) → `docs/debug-overlay.md`
