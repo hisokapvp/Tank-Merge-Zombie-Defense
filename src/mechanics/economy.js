@@ -15,7 +15,7 @@
   }
 
   /**
-   * Можно ли купить танк: достаточно монет и есть свободная ячейка (через Garage.hasFreeCell).
+  * Можно ли создать танк: достаточно монет и есть свободная ячейка (через Garage.hasFreeCell).
    * @param {{ coins: number }} state
    * @param {number} cost
    * @param {boolean} hasFree

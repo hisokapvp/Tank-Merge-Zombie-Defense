@@ -16,7 +16,7 @@
       hudKills: 'Убито монстров',
       hudSprites: 'Спрайты',
       hudBoost: 'Буст',
-      buyTank: 'Купить танк {level} уровня',
+      buyTank: 'Создать танк {level} уровня',
       boostBtn: 'Буст скорости',
       boostModalText: 'Получить буст скорости в 2 раза на 60 секунд посмотрев рекламу',
       boostModalWatch: 'Посмотреть',
