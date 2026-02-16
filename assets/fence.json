@@ -1,7 +1,8 @@
 {
   "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }.",
   "atlas": "fence_atlas.png",
-  "segmentsPerSide": 10,
+  "cornerInsetPx": 0,
+  "segmentsPerSide": 8,
   "segmentMaxHp": 100,
   "healthBar": {
     "w": 28,

@@ -21,7 +21,8 @@
 
 ### Fence (`assets/fence.json`)
 
-- Top-level `cornerInsetPx` (optional): override авто-расчёта inset для углов на каждой стороне.
+- Top-level `cornerInsetPx` (float, default `0`): signed ручная подстройка угловых сегментов после базового стыка по bounds.
+- Отрицательное значение допустимо: увеличивает заход corner в side (контролируемое перекрытие).
 - `frames[].rotation` (priority) → `frames[].rotationDeg` → `0` (degrees): поворот конкретного кадра сегмента.
 - `frames[].scale` влияет на геометрию раскладки сегментов (step/inset) и реальный размер спрайта.
 

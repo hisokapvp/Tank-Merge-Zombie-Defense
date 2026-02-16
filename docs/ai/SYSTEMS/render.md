@@ -69,10 +69,13 @@
 ## Fence sprites layout
 
 - `drawZombieFence()` строит сегменты через `Game.FenceLayout.buildSquareFenceSegments({...})`.
-- Базовые формулы шага/инсета: `step=max(6, fenceWidth*1.15)`, `cornerInset=max(4, fenceWidth*0.65)`.
-- Для scale-aware раскладки обе формулы умножаются на `frame.scale` (side/corner); side-сегменты ставятся по центрам интервалов между inset-границами (без постановки в точные start/end).
-- В каждом углу рисуется ровно один `corner` сегмент; `side` сегменты распределяются между углами без наложения на corner-точки.
-- Если в `assets/fence.json` задан `cornerInsetPx`, он переопределяет автозначение inset.
+- Стык corner↔side считается по фактическим bounds спрайтов после применения `scale/rotation/anchor` (без магических констант inset).
+- Границы side-цепочек считаются от реальных краёв corner-спрайтов по направлению стороны (горизонт/вертикаль).
+- Для устранения визуальных щелей на subpixel-стыках применяется микроперекрытие `1px` на границах side-цепочек (corner↔side overlap).
+- Ось side-сегментов (`fixedValue`) привязана к финальным corner-позициям стороны, поэтому corner/side «примагничены» даже при `cornerInsetPx`.
+- `cornerInsetPx` из `assets/fence.json` применяется как финальная signed-подстройка corner-позиций; отрицательное значение увеличивает overlap corner↔side.
+- `holeAabb` у corner/side строится из тех же bounds, что и отрисовка, чтобы hit/урон соответствовали визуалу.
+- После layout считается max gap в стыках corner↔side; при `gap > 0.5` выводится `console.warn("Fence gap", valuePx)`.
 - При отрисовке учитывается `rotation -> rotationDeg -> 0` (градусы).
 
 ## Dynamic fence size / segmentsPerSide

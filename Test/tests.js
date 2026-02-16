@@ -673,7 +673,7 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
   // ═══════════════════════════════════════════════
   console.log('\n── T8: Fence layout / LevelFlow instant rewards ──');
 
-  test('T8-1: fence scale=2 uses scaled step/inset and keeps non-overlap', () => {
+  test('T8-1: fence scale=2 stitches corner/side by bounds and supports negative cornerInsetPx overlap', () => {
     const buildSquareFenceSegments = Game.FenceLayout && Game.FenceLayout.buildSquareFenceSegments;
     assert(typeof buildSquareFenceSegments === 'function', 'Game.FenceLayout.buildSquareFenceSegments exists');
 
@@ -694,32 +694,43 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
       halfSide,
       fenceWidth,
       spriteKeys,
-      getFrame: function () { return { scale: 2 }; },
+      getFrame: function () { return { w: 128, h: 128, scale: 2, rotation: 0, anchor: { x: 0.5, y: 0.5 } }; },
     });
 
-    const top = segments
-      .filter(function (s) { return s.spriteId === 'sideTop' && s.y === -halfSide; })
-      .sort(function (a, b) { return a.x - b.x; });
+    const byId = {};
+    for (let i = 0; i < segments.length; i++) byId[segments[i].id] = segments[i];
 
-    const expectedInset = Math.max(4, fenceWidth * 0.65) * 2;
-    const expectedStart = -halfSide + expectedInset;
-    const expectedEnd = halfSide - expectedInset;
-    const expectedStep = Math.max(6, fenceWidth * 1.15) * 2;
-    const span = expectedEnd - expectedStart;
-    const expectedBaseCount = Math.max(1, Math.floor(span / expectedStep) + 1);
-    const expectedCount = Math.max(1, expectedBaseCount - 1);
-    const expectedSpacing = span / expectedCount;
-    const expectedFirst = expectedStart + span * (0.5 / expectedCount);
-    const expectedLast = expectedStart + span * ((expectedCount - 0.5) / expectedCount);
+    const top = segments.filter(function (s) { return s.kind === 'sideTop'; }).sort(function (a, b) { return a.x - b.x; });
+    const right = segments.filter(function (s) { return s.kind === 'sideRight'; }).sort(function (a, b) { return a.y - b.y; });
+    const bottom = segments.filter(function (s) { return s.kind === 'sideBottom'; }).sort(function (a, b) { return a.x - b.x; });
+    const left = segments.filter(function (s) { return s.kind === 'sideLeft'; }).sort(function (a, b) { return a.y - b.y; });
 
-    assert(top.length === expectedCount, 'top side segment count follows reduced side formula (minus one per side)');
-    assert(Math.abs(top[0].x - expectedFirst) <= 1e-6, 'first top segment centered within first interval');
-    assert(Math.abs(top[top.length - 1].x - expectedLast) <= 1e-6, 'last top segment centered within last interval');
-    for (let i = 1; i < top.length; i++) {
-      const dx = top[i].x - top[i - 1].x;
-      assert(dx > 0, 'segments are strictly ordered along the side');
-      assert(Math.abs(dx - expectedSpacing) <= 1e-6, 'side segments are evenly distributed between boundaries');
+    function gap(a, b) {
+      return Math.max(0, b - a);
     }
+
+    assert(gap(byId.cornerTL.holeAabb.maxX, top[0].holeAabb.minX) <= 1e-6, 'no top-left gap');
+    assert(gap(top[top.length - 1].holeAabb.maxX, byId.cornerTR.holeAabb.minX) <= 1e-6, 'no top-right gap');
+    assert(gap(byId.cornerTL.holeAabb.maxY, left[0].holeAabb.minY) <= 1e-6, 'no left-top gap');
+    assert(gap(left[left.length - 1].holeAabb.maxY, byId.cornerBL.holeAabb.minY) <= 1e-6, 'no left-bottom gap');
+    assert(gap(byId.cornerTR.holeAabb.maxY, right[0].holeAabb.minY) <= 1e-6, 'no right-top gap');
+    assert(gap(right[right.length - 1].holeAabb.maxY, byId.cornerBR.holeAabb.minY) <= 1e-6, 'no right-bottom gap');
+    assert(gap(byId.cornerBL.holeAabb.maxX, bottom[0].holeAabb.minX) <= 1e-6, 'no bottom-left gap');
+    assert(gap(bottom[bottom.length - 1].holeAabb.maxX, byId.cornerBR.holeAabb.minX) <= 1e-6, 'no bottom-right gap');
+
+    const negativeInsetSegments = buildSquareFenceSegments({
+      halfSide,
+      fenceWidth,
+      spriteKeys,
+      cornerInsetPxOverride: -4,
+      getFrame: function () { return { w: 128, h: 128, scale: 2, rotation: 0, anchor: { x: 0.5, y: 0.5 } }; },
+    });
+
+    const nCornerTL = negativeInsetSegments.filter(function (s) { return s.id === 'cornerTL'; })[0];
+    const nTopFirst = negativeInsetSegments.filter(function (s) { return s.kind === 'sideTop'; }).sort(function (a, b) { return a.x - b.x; })[0];
+    assert(nCornerTL.x === -halfSide + 4, 'negative cornerInsetPx shifts corner inward on X');
+    assert(nCornerTL.y === -halfSide + 4, 'negative cornerInsetPx shifts corner inward on Y');
+    assert(nCornerTL.holeAabb.maxX > nTopFirst.holeAabb.minX, 'negative cornerInsetPx allows overlap');
   });
 
   test('T8-2: grantXP gives multi-level rewards immediately', () => {
