@@ -58,18 +58,22 @@
         xp: rewards.xp,
         onConfirm: function () {
           OfflineModal.setClaiming(true);
-          AdService.requestRewardedAd().then(function (result) {
-            if (result && result.success) {
-              getState().coins += rewards.coins;
-              getState().player.xp += rewards.xp;
-              opts.grantXP(0);
-              opts.meta.lastSeenAt = Date.now();
-              opts.saveProgress();
-              OfflineModal.hideModal();
-              opts.updateUI();
-            }
-            OfflineModal.setClaiming(false);
-          });
+          AdService.requestRewardedAd()
+            .then(function (result) {
+              if (result && result.success) {
+                getState().coins += rewards.coins;
+                getState().player.xp += rewards.xp;
+                opts.grantXP(0);
+                opts.meta.lastSeenAt = Date.now();
+                opts.saveProgress();
+                OfflineModal.hideModal();
+                opts.updateUI();
+              }
+            })
+            .catch(function () {})
+            .finally(function () {
+              OfflineModal.setClaiming(false);
+            });
         },
       });
     }

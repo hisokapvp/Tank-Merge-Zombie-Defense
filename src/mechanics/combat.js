@@ -37,7 +37,7 @@
   /**
    * Детерминированный выбор анимации смерти зомби.
    * 70% personal, 30% common (если оба доступны).
-   * 
+    *
    * @param {object|null} common - общая death-анимация (ZombieSprites.deathCommon)
    * @param {object|null} personal - персональная death-анимация (z.type.death)
    * @param {number} rand01 - случайное число [0, 1) для детерминированного тестирования
@@ -55,7 +55,7 @@
     } else {
       r = rand01;
     }
-    
+
     if (personal && common) {
       // Оба доступны: 70% personal, 30% common
       return r < 0.7 ? personal : common;

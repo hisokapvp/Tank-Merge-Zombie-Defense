@@ -1,15 +1,9 @@
-// Tank Merger: Zombie Orbit (v3)
-// Fixes requested:
-// 1) If zombies look like simple blobs -> sprites not loaded; show status in HUD.
-// 2) Make projectiles visible.
-// 3) Tanks differ visually by level.
-// 4) Projectiles & hit effects differ by level.
-// 5) Reduce cell size.
-// 6) Reduce tank size.
+// Tank Merger: Zombie Orbit
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
+const GameApi = (window.Game = window.Game || {});
 
 const ui = {
   coins: document.getElementById('coins'),
@@ -58,7 +52,7 @@ const ui = {
 };
 
 const MAX_TANK_LEVEL = 60;
-const ProgressionApi = window.Game && window.Game.Progression ? window.Game.Progression : null;
+const ProgressionApi = GameApi?.Progression ?? null;
 function computePowerTier(playerLevel){
   if (ProgressionApi && ProgressionApi.computePowerTier) {
     return ProgressionApi.computePowerTier(playerLevel);
@@ -209,12 +203,12 @@ const muted = false;
 
 const backgroundLayer = {
   canvas: null,
-  ctx: null,
   ready: false,
 };
 
-const DEFAULT_SETTINGS = (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.DEFAULT_SETTINGS)
-  ? { ...window.Game.AudioSettings.DEFAULT_SETTINGS }
+const audioDefaultsFromApi = GameApi?.AudioSettings?.DEFAULT_SETTINGS;
+const DEFAULT_SETTINGS = audioDefaultsFromApi
+  ? { ...audioDefaultsFromApi }
   : {
       sfxVolume: 0.75,
       musicVolume: 0.6,
@@ -222,8 +216,8 @@ const DEFAULT_SETTINGS = (window.Game && window.Game.AudioSettings && window.Gam
 
 let settings = { ...DEFAULT_SETTINGS };
 let audioSettingsController = null;
-const InitialStateApi = window.Game && window.Game.InitialState ? window.Game.InitialState : null;
-const AchievementsApi = window.Game && window.Game.Achievements ? window.Game.Achievements : null;
+const InitialStateApi = GameApi?.InitialState ?? null;
+const AchievementsApi = GameApi?.Achievements ?? null;
 
 function createInitialState(){
   if (InitialStateApi && InitialStateApi.createInitialState) {
@@ -324,17 +318,17 @@ const FENCE_DEFAULT_REPAIR_COST = 100;
 const ZOMBIE_DEFAULT_ATTACK_DAMAGE = 8;
 const warnedBrokenFrames = new Set();
 const warnedZombieAttackDamage = new Set();
-const ZombieSpawnApi = window.Game && window.Game.ZombieSpawn ? window.Game.ZombieSpawn : null;
-const UIModals = window.Game && window.Game.UIModals ? window.Game.UIModals : null;
-const CombatProfilesApi = window.Game && window.Game.CombatProfiles ? window.Game.CombatProfiles : null;
-const SpriteLoadersApi = window.Game && window.Game.SpriteLoaders ? window.Game.SpriteLoaders : null;
-const DebugPanelApi = window.Game && window.Game.DebugPanel ? window.Game.DebugPanel : null;
-const LevelFlowApi = window.Game && window.Game.LevelFlow ? window.Game.LevelFlow : null;
-const BootstrapApi = window.Game && window.Game.Bootstrap ? window.Game.Bootstrap : null;
-const FenceLayoutApi = window.Game && window.Game.FenceLayout ? window.Game.FenceLayout : null;
-const GroundLayerApi = window.Game && window.Game.GroundLayer ? window.Game.GroundLayer : null;
-const PauseManagerApi = window.Game && window.Game.PauseManager ? window.Game.PauseManager : null;
-const DepthSortApi = window.Game && window.Game.DepthSort ? window.Game.DepthSort : null;
+const ZombieSpawnApi = GameApi.ZombieSpawn ?? null;
+const UIModals = GameApi.UIModals ?? null;
+const CombatProfilesApi = GameApi.CombatProfiles ?? null;
+const SpriteLoadersApi = GameApi.SpriteLoaders ?? null;
+const DebugPanelApi = GameApi.DebugPanel ?? null;
+const LevelFlowApi = GameApi.LevelFlow ?? null;
+const BootstrapApi = GameApi.Bootstrap ?? null;
+const FenceLayoutApi = GameApi.FenceLayout ?? null;
+const GroundLayerApi = GameApi.GroundLayer ?? null;
+const PauseManagerApi = GameApi.PauseManager ?? null;
+const DepthSortApi = GameApi.DepthSort ?? null;
 
 function setSimulationClockPaused(paused){
   const shouldPause = !!paused;
@@ -349,8 +343,8 @@ function setSimulationClockPaused(paused){
   simClockPaused = false;
 }
 
-if (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.createAudioSettingsController) {
-  audioSettingsController = window.Game.AudioSettings.createAudioSettingsController({
+if (GameApi.AudioSettings && GameApi.AudioSettings.createAudioSettingsController) {
+  audioSettingsController = GameApi.AudioSettings.createAudioSettingsController({
     ui,
     clamp,
     initialSettings: settings,
@@ -358,18 +352,18 @@ if (window.Game && window.Game.AudioSettings && window.Game.AudioSettings.create
   });
 }
 
-const STRINGS = (window.Game && window.Game.I18nFallback && window.Game.I18nFallback.STRINGS)
-  ? window.Game.I18nFallback.STRINGS
+const STRINGS = GameApi.I18nFallback && GameApi.I18nFallback.STRINGS
+  ? GameApi.I18nFallback.STRINGS
   : { ru: {}, en: {} };
 
-if (window.Game && window.Game.I18n && window.Game.I18n.setFallback) {
-  window.Game.I18n.setFallback(STRINGS);
+if (GameApi.I18n && GameApi.I18n.setFallback) {
+  GameApi.I18n.setFallback(STRINGS);
 }
 
 let currentLang = 'ru';
 
 function getI18n(){
-  return window.Game && window.Game.I18n ? window.Game.I18n : null;
+  return GameApi.I18n ?? null;
 }
 
 function getCurrentLang(){
@@ -892,8 +886,8 @@ const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoade
   async load() {},
 };
 
-const WorldEventsCfg = (window.Game && window.Game.Config && window.Game.Config.WorldEvents)
-  ? window.Game.Config.WorldEvents
+const WorldEventsCfg = (GameApi.Config && GameApi.Config.WorldEvents)
+  ? GameApi.Config.WorldEvents
   : {
       enabled: false,
       weather: {
@@ -1234,7 +1228,6 @@ function buildBackground(){
   }
 
   backgroundLayer.canvas = bg;
-  backgroundLayer.ctx = bctx;
   backgroundLayer.ready = true;
   rebuildGroundLayer();
 }

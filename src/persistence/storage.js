@@ -39,19 +39,19 @@
     };
     var cells = [];
     if (Array.isArray(state.cells)) {
-    for (var i = 0; i < state.cells.length; i++) {
-      var c = state.cells[i];
-      var tank = null;
-      if (c.tank) {
-        tank = {
-          id: c.tank.id,
-          level: c.tank.level,
-          onTrack: !!c.tank.onTrack,
-          powerTier: c.tank.powerTier,
-        };
+      for (var i = 0; i < state.cells.length; i++) {
+        var c = state.cells[i];
+        var tank = null;
+        if (c.tank) {
+          tank = {
+            id: c.tank.id,
+            level: c.tank.level,
+            onTrack: !!c.tank.onTrack,
+            powerTier: c.tank.powerTier,
+          };
+        }
+        cells.push({ i: c.i, orbitPhase: c.orbitPhase, tank: tank });
       }
-      cells.push({ i: c.i, orbitPhase: c.orbitPhase, tank: tank });
-    }
     }
     var crate = null;
     if (state.crate) {

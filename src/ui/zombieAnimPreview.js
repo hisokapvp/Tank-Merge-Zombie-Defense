@@ -2,7 +2,7 @@
  * ZombieAnimPreview — debug-only превью death-анимаций зомби.
  * Активен только при ?debug=1, toggle по клавише P.
  * Cycle: types (←/→ или A/D), variant (walk/death) — по клавише V.
- * 
+ *
  * Не влияет на геймплей, не отображается без debug.
  */
 (function (global) {
@@ -163,7 +163,7 @@
   function handleKeyDown(e) {
     if (!isDebugMode()) return;
     var key = e.key?.toLowerCase() || e.code?.toLowerCase();
-    
+
     // Toggle preview: P
     if (key === 'p') {
       togglePreview();
@@ -199,7 +199,7 @@
     if (!isDebugMode() || !previewState.active) return;
 
     var data = getCurrentFrameData();
-    
+
     // Обновляем кадр анимации
     var animSpeed = 8; // fps
     previewState.animFrame += dt * animSpeed;
@@ -214,10 +214,10 @@
     ctx.font = 'bold 16px Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    
+
     var title = 'ZOMBIE ANIM PREVIEW (P to close)';
     ctx.fillText(title, canvasW / 2, 20);
-    
+
     ctx.font = '14px Roboto, sans-serif';
     var typeName = getCurrentTypeName();
     var variantText = previewState.variant;

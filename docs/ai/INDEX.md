@@ -13,6 +13,7 @@
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
+- Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
 - Audio/SFX/pause-resume → `docs/ai/SYSTEMS/audio.md`
 - Telemetry/analytics/flags/experiments/funnel → `docs/ai/SYSTEMS/telemetry.md`
