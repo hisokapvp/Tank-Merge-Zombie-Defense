@@ -398,6 +398,7 @@
             }, this);
           }
           this.config = {
+            seed: (typeof data.seed === 'string' || Number.isFinite(data.seed)) ? data.seed : 'decor-default-seed',
             count: Number.isFinite(data.count) ? Math.max(0, Math.floor(data.count)) : null,
             spriteIds: spriteIds,
             wallSpriteIds: wallIds,
@@ -445,6 +446,7 @@
 
           this.config = {
             atlas: data && data.atlas ? data.atlas : 'ground_atlas.png',
+            seed: (data && (typeof data.seed === 'string' || Number.isFinite(data.seed))) ? data.seed : 'ground-stamps-seed',
             tile: { w: tileW, h: tileH },
             mode: mode,
             fillMode: fillMode,

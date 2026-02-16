@@ -57,6 +57,13 @@
     if (state.crate) {
       crate = { cellIndex: state.crate.cellIndex, rewardLevel: state.crate.rewardLevel };
     }
+    var mapSeeds = null;
+    if (state.mapSeeds && typeof state.mapSeeds === 'object') {
+      mapSeeds = {
+        stampsSeed: state.mapSeeds.stampsSeed,
+        decorSeed: state.mapSeeds.decorSeed,
+      };
+    }
     return {
       version: SAVE_VERSION,
       coins: state.coins,
@@ -72,6 +79,7 @@
       activeEffects: state.activeEffects,
       fenceState: fenceState,
       achievements: state.achievements,
+      mapSeeds: mapSeeds,
     };
   }
 

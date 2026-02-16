@@ -2,6 +2,7 @@
   'use strict';
 
   var GroundGen = global.Game && global.Game.GroundGen ? global.Game.GroundGen : null;
+  var SeededRng = global.Game && global.Game.SeededRng ? global.Game.SeededRng : null;
 
   function toInt(v, fallback) {
     return Number.isFinite(v) ? Math.max(1, Math.floor(v)) : fallback;
@@ -12,6 +13,7 @@
     var stamps = Array.isArray(cfg && cfg.stamps) ? cfg.stamps : [];
     var pieces = Array.isArray(cfg && cfg.pieces) ? cfg.pieces : [];
     return {
+      seed: (cfg && (typeof cfg.seed === 'string' || Number.isFinite(cfg.seed))) ? cfg.seed : 'ground-stamps-seed',
       tile: {
         w: toInt(tile.w, 16),
         h: toInt(tile.h, 16),
@@ -23,6 +25,21 @@
       stamps: stamps,
       pieces: pieces,
     };
+  }
+
+  function normalizeRange(minValue, maxValue, fallbackMin, fallbackMax, floorValue) {
+    var min = Number.isFinite(minValue) ? minValue : fallbackMin;
+    var max = Number.isFinite(maxValue) ? maxValue : fallbackMax;
+    if (min > max) {
+      var tmp = min;
+      min = max;
+      max = tmp;
+    }
+    if (Number.isFinite(floorValue)) {
+      if (min < floorValue) min = floorValue;
+      if (max < floorValue) max = floorValue;
+    }
+    return { min: min, max: max };
   }
 
   function getSrcRect(cfg, frame) {
@@ -74,23 +91,61 @@
     return null;
   }
 
-  function hash01(seedA, seedB, seedC) {
-    if (GroundGen && typeof GroundGen.hash2 === 'function') {
-      return GroundGen.hash2(seedA, seedB, seedC);
-    }
-    var s = String(seedA) + '|' + String(seedB) + '|' + String(seedC);
+  function hashStringU32(value) {
+    var s = String(value);
     var h = 2166136261 >>> 0;
     for (var i = 0; i < s.length; i++) {
       h ^= s.charCodeAt(i);
       h = Math.imul(h, 16777619) >>> 0;
     }
-    return (h >>> 0) / 4294967296;
+    return h >>> 0;
   }
 
-  function pickSpawnPoint(area, centerX, centerY, seedA, seedB) {
+  function makeFallbackRng(seed) {
+    var state = hashStringU32(seed);
+    if (state === 0) state = 0x6d2b79f5;
+    return {
+      nextFloat01: function () {
+        state = (state + 0x6D2B79F5) >>> 0;
+        var t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      },
+      nextInt: function (min, max) {
+        var lo = Number.isFinite(min) ? Math.floor(min) : 0;
+        var hi = Number.isFinite(max) ? Math.floor(max) : lo;
+        if (lo > hi) {
+          var tmp = lo;
+          lo = hi;
+          hi = tmp;
+        }
+        var span = hi - lo + 1;
+        if (span <= 1) return lo;
+        return lo + Math.floor(this.nextFloat01() * span);
+      },
+      shuffle: function (array) {
+        if (!Array.isArray(array)) return array;
+        for (var i = array.length - 1; i > 0; i--) {
+          var j = Math.floor(this.nextFloat01() * (i + 1));
+          var t = array[i];
+          array[i] = array[j];
+          array[j] = t;
+        }
+        return array;
+      },
+    };
+  }
+
+  function createPlacementRng(seed) {
+    if (SeededRng && typeof SeededRng.makeRng === 'function') return SeededRng.makeRng(seed);
+    return makeFallbackRng(seed);
+  }
+
+  function pickSpawnPoint(area, centerX, centerY, rng) {
     if (!area) return { x: centerX, y: centerY };
-    var r1 = hash01(seedA, seedB, 17);
-    var r2 = hash01(seedA, seedB, 31);
+    var r1 = rng.nextFloat01();
+    var r2 = rng.nextFloat01();
     if (area.type === 'rect') {
       return {
         x: centerX + area.x + r1 * area.w,
@@ -115,11 +170,32 @@
   }
 
   function itemDrawRect(spawnPoint, item) {
-    var drawW = Math.max(1, Math.round(item.w * item.scale));
-    var drawH = Math.max(1, Math.round(item.h * item.scale));
+    var drawW = Math.max(1, Math.round(item.w * item.scale * (item.scaleMul || 1)));
+    var drawH = Math.max(1, Math.round(item.h * item.scale * (item.scaleMul || 1)));
     var drawX = Math.round(spawnPoint.x + item.xg - drawW * 0.5);
     var drawY = Math.round(spawnPoint.y + item.yg - drawH * 0.5);
     return makeRect(drawX, drawY, drawW, drawH);
+  }
+
+  function itemDrawTransform(spawnPoint, item, scaleMul, rotationRad) {
+    var drawW = Math.max(1, Math.round(item.w * item.scale * scaleMul));
+    var drawH = Math.max(1, Math.round(item.h * item.scale * scaleMul));
+    var centerX = Math.round(spawnPoint.x + item.xg);
+    var centerY = Math.round(spawnPoint.y + item.yg);
+    var halfW = drawW * 0.5;
+    var halfH = drawH * 0.5;
+    var cosA = Math.cos(rotationRad);
+    var sinA = Math.sin(rotationRad);
+    var extX = Math.abs(cosA) * halfW + Math.abs(sinA) * halfH;
+    var extY = Math.abs(sinA) * halfW + Math.abs(cosA) * halfH;
+    return {
+      centerX: centerX,
+      centerY: centerY,
+      drawW: drawW,
+      drawH: drawH,
+      rotationRad: rotationRad,
+      aabb: makeRect(centerX - extX, centerY - extY, extX * 2, extY * 2),
+    };
   }
 
   function rectsOverlap(a, b) {
@@ -138,22 +214,6 @@
       if (isOccupied(rects[i], occupiedRects)) return true;
     }
     return false;
-  }
-
-  function unionRects(rects) {
-    if (!Array.isArray(rects) || !rects.length) return null;
-    var minX = rects[0].x;
-    var minY = rects[0].y;
-    var maxX = rects[0].x + rects[0].w;
-    var maxY = rects[0].y + rects[0].h;
-    for (var i = 1; i < rects.length; i++) {
-      var r = rects[i];
-      if (r.x < minX) minX = r.x;
-      if (r.y < minY) minY = r.y;
-      if ((r.x + r.w) > maxX) maxX = r.x + r.w;
-      if ((r.y + r.h) > maxY) maxY = r.y + r.h;
-    }
-    return makeRect(minX, minY, maxX - minX, maxY - minY);
   }
 
   function collectStampSets(cfg) {
@@ -179,19 +239,27 @@
         });
       }
       if (!parsedItems.length) continue;
+      var rotationRange = normalizeRange(st.rotationDegMin, st.rotationDegMax, 0, 0, null);
+      var scaleRange = normalizeRange(st.scaleMin, st.scaleMax, 1, 1, 0.05);
       result.push({
         id: typeof st.id === 'string' ? st.id : ('stamp_' + i),
         mode: st.mode === 'variants' ? 'variants' : 'composite',
         count: Number.isFinite(st.count) ? Math.max(0, Math.floor(st.count)) : 1,
-        maxPlacementAttempts: Number.isFinite(st.maxPlacementAttempts) ? Math.max(1, Math.floor(st.maxPlacementAttempts)) : defaultAttempts,
+        maxPlacementAttempts: Number.isFinite(st.placementMaxAttempts)
+          ? Math.max(1, Math.floor(st.placementMaxAttempts))
+          : (Number.isFinite(st.maxPlacementAttempts) ? Math.max(1, Math.floor(st.maxPlacementAttempts)) : defaultAttempts),
         spawnArea: resolveSpawnArea(st.spawnArea),
+        rotationDegMin: rotationRange.min,
+        rotationDegMax: rotationRange.max,
+        scaleMin: scaleRange.min,
+        scaleMax: scaleRange.max,
         items: parsedItems,
       });
     }
     return result;
   }
 
-  function buildVariantPlacementOrder(stamp) {
+  function buildVariantPlacementOrder(stamp, rng) {
     var count = Number.isFinite(stamp && stamp.count) ? Math.max(0, Math.floor(stamp.count)) : 0;
     var variants = Array.isArray(stamp && stamp.items) ? stamp.items.length : 0;
     if (count <= 0 || variants <= 0) return [];
@@ -209,9 +277,7 @@
 
     var remaining = count - assigned;
     for (i = 0; i < remaining; i++) {
-      var pick = Math.floor(hash01(stamp.id, 'variant-count', i + 1) * variants);
-      if (pick < 0) pick = 0;
-      if (pick >= variants) pick = variants - 1;
+      var pick = rng.nextInt(0, variants - 1);
       counts[pick] += 1;
     }
 
@@ -223,15 +289,7 @@
       }
     }
 
-    for (var j = order.length - 1; j > 0; j--) {
-      var rnd = hash01(stamp.id, 'variant-shuffle', j);
-      var k = Math.floor(rnd * (j + 1));
-      if (k < 0) k = 0;
-      if (k > j) k = j;
-      var tmp = order[j];
-      order[j] = order[k];
-      order[k] = tmp;
-    }
+    rng.shuffle(order);
 
     return order;
   }
@@ -249,7 +307,7 @@
     return total;
   }
 
-  function buildStampRequests(stampSets) {
+  function buildStampRequests(stampSets, rng) {
     var requests = [];
     var requestedTotal = 0;
 
@@ -258,7 +316,7 @@
       if (!stamp) continue;
       var maxAttempts = Number.isFinite(stamp.maxPlacementAttempts) ? Math.max(1, stamp.maxPlacementAttempts) : 24;
       if (stamp.mode === 'variants') {
-        var order = buildVariantPlacementOrder(stamp);
+        var order = buildVariantPlacementOrder(stamp, rng);
         for (var vi = 0; vi < order.length; vi++) {
           var variantIdx = order[vi];
           var variantItem = stamp.items[variantIdx];
@@ -269,6 +327,10 @@
             spawnArea: stamp.spawnArea,
             maxAttempts: maxAttempts,
             items: [variantItem],
+            rotationDegMin: stamp.rotationDegMin,
+            rotationDegMax: stamp.rotationDegMax,
+            scaleMin: stamp.scaleMin,
+            scaleMax: stamp.scaleMax,
             requestArea: estimateStampRequestArea([variantItem]),
           });
           requestedTotal += 1;
@@ -283,17 +345,17 @@
           spawnArea: stamp.spawnArea,
           maxAttempts: maxAttempts,
           items: stamp.items,
+          rotationDegMin: stamp.rotationDegMin,
+          rotationDegMax: stamp.rotationDegMax,
+          scaleMin: stamp.scaleMin,
+          scaleMax: stamp.scaleMax,
           requestArea: estimateStampRequestArea(stamp.items),
         });
         requestedTotal += 1;
       }
     }
 
-    requests.sort(function (a, b) {
-      var areaDelta = a.requestArea - b.requestArea;
-      if (areaDelta !== 0) return areaDelta;
-      return a.stampId < b.stampId ? -1 : (a.stampId > b.stampId ? 1 : 0);
-    });
+    rng.shuffle(requests);
 
     return {
       requests: requests,
@@ -301,45 +363,37 @@
     };
   }
 
-  function pickSpawnPointByRatios(area, centerX, centerY, angle01, dist01) {
-    if (!area) return { x: centerX, y: centerY };
-    if (area.type === 'rect') {
-      return {
-        x: centerX + area.x + angle01 * area.w,
-        y: centerY + area.y + dist01 * area.h,
-      };
-    }
-    var angle = angle01 * Math.PI * 2;
-    var dist = Math.sqrt(dist01) * area.r;
-    return {
-      x: centerX + area.cx + Math.cos(angle) * dist,
-      y: centerY + area.cy + Math.sin(angle) * dist,
-    };
-  }
-
-  function tryPlaceStampRequest(request, centerX, centerY, occupiedRects) {
+  function tryPlaceStampRequest(request, centerX, centerY, occupiedRects, rng) {
     var maxAttempts = Number.isFinite(request.maxAttempts) ? Math.max(1, request.maxAttempts) : 24;
-    for (var attempt = 0; attempt < maxAttempts; attempt++) {
-      var spawn = pickSpawnPoint(request.spawnArea, centerX, centerY, request.stampId, request.requestKey + '|' + attempt);
-      var itemRects = [];
-      for (var i = 0; i < request.items.length; i++) {
-        itemRects.push(itemDrawRect(spawn, request.items[i]));
-      }
-      if (areAnyRectsOccupied(itemRects, occupiedRects)) continue;
-      return { itemRects: itemRects, usedFallback: false };
-    }
+    var rotRange = normalizeRange(request.rotationDegMin, request.rotationDegMax, 0, 0, null);
+    var scaleRange = normalizeRange(request.scaleMin, request.scaleMax, 1, 1, 0.05);
+    var baseRotationDeg = rotRange.min + rng.nextFloat01() * (rotRange.max - rotRange.min);
+    var rotationRad = (baseRotationDeg * Math.PI) / 180;
+    var currentScale = scaleRange.min + rng.nextFloat01() * (scaleRange.max - scaleRange.min);
+    var shrinkStep = Math.max(0.02, (scaleRange.max - scaleRange.min) / 6);
+    var shrinkEvery = Math.max(3, Math.floor(maxAttempts / 4));
 
-    var fallbackAttempts = Math.max(12, maxAttempts);
-    for (var fa = 0; fa < fallbackAttempts; fa++) {
-      var angle01 = (hash01(request.stampId, request.requestKey, 'faA|' + fa) + (fa * 0.3819660112501051)) % 1;
-      var dist01 = (hash01(request.stampId, request.requestKey, 'faR|' + fa) + (fa * 0.6180339887498948)) % 1;
-      var fallbackSpawn = pickSpawnPointByRatios(request.spawnArea, centerX, centerY, angle01, dist01);
-      var fallbackRects = [];
-      for (var fi = 0; fi < request.items.length; fi++) {
-        fallbackRects.push(itemDrawRect(fallbackSpawn, request.items[fi]));
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      var spawn = pickSpawnPoint(request.spawnArea, centerX, centerY, rng);
+      var itemPlacements = [];
+      var aabbRects = [];
+      for (var i = 0; i < request.items.length; i++) {
+        var placement = itemDrawTransform(spawn, request.items[i], currentScale, rotationRad);
+        itemPlacements.push(placement);
+        aabbRects.push(placement.aabb);
       }
-      if (areAnyRectsOccupied(fallbackRects, occupiedRects)) continue;
-      return { itemRects: fallbackRects, usedFallback: true };
+      if (areAnyRectsOccupied(aabbRects, occupiedRects)) {
+        if (((attempt + 1) % shrinkEvery) === 0 && currentScale > scaleRange.min) {
+          currentScale = Math.max(scaleRange.min, currentScale - shrinkStep);
+        }
+        continue;
+      }
+      return {
+        itemPlacements: itemPlacements,
+        aabbRects: aabbRects,
+        rotationRad: rotationRad,
+        scaleMul: currentScale,
+      };
     }
 
     return null;
@@ -430,6 +484,7 @@
         var opts = params || {};
         var atlasImg = opts.atlasImg;
         var cfg = normalizeCfg(opts.cfg || {});
+        var stampsSeed = (opts.stampsSeed !== undefined && opts.stampsSeed !== null) ? opts.stampsSeed : cfg.seed;
         var viewW = toInt(opts.width, 0);
         var viewH = toInt(opts.height, 0);
 
@@ -503,7 +558,8 @@
         var centerX = Math.floor(viewW / 2);
         var centerY = Math.floor(viewH / 2);
         var occupiedRects = [];
-        var stampReqPack = buildStampRequests(stampSets);
+        var placementRng = createPlacementRng(stampsSeed);
+        var stampReqPack = buildStampRequests(stampSets, placementRng);
         var stampRequests = stampReqPack.requests;
         var requestedTotal = stampReqPack.requestedTotal;
         var placedTotal = 0;
@@ -511,40 +567,46 @@
 
         for (var si = 0; si < stampRequests.length; si++) {
           var request = stampRequests[si];
-          var placement = tryPlaceStampRequest(request, centerX, centerY, occupiedRects);
-          if (!placement || !Array.isArray(placement.itemRects)) continue;
+          var placement = tryPlaceStampRequest(request, centerX, centerY, occupiedRects, placementRng);
+          if (!placement || !Array.isArray(placement.itemPlacements) || !Array.isArray(placement.aabbRects)) continue;
           for (var ii = 0; ii < request.items.length; ii++) {
             var item = request.items[ii];
-            var drawRect = placement.itemRects[ii];
-            if (!item || !drawRect) continue;
+            var drawPlacement = placement.itemPlacements[ii];
+            var aabb = placement.aabbRects[ii];
+            if (!item || !drawPlacement || !aabb) continue;
             stampDrawList.push({
               srcX: item.x,
               srcY: item.y,
               srcW: item.w,
               srcH: item.h,
-              dstX: drawRect.x,
-              dstY: drawRect.y,
-              dstW: drawRect.w,
-              dstH: drawRect.h,
+              centerX: drawPlacement.centerX,
+              centerY: drawPlacement.centerY,
+              drawW: drawPlacement.drawW,
+              drawH: drawPlacement.drawH,
+              rotationRad: drawPlacement.rotationRad,
             });
-            occupiedRects.push(drawRect);
+            occupiedRects.push(aabb);
           }
           placedTotal += 1;
         }
 
         for (i = 0; i < stampDrawList.length; i++) {
           var stampDraw = stampDrawList[i];
+          localCtx.save();
+          localCtx.translate(stampDraw.centerX, stampDraw.centerY);
+          localCtx.rotate(stampDraw.rotationRad);
           localCtx.drawImage(
             atlasImg,
             stampDraw.srcX,
             stampDraw.srcY,
             stampDraw.srcW,
             stampDraw.srcH,
-            stampDraw.dstX,
-            stampDraw.dstY,
-            stampDraw.dstW,
-            stampDraw.dstH
+            -Math.floor(stampDraw.drawW / 2),
+            -Math.floor(stampDraw.drawH / 2),
+            stampDraw.drawW,
+            stampDraw.drawH
           );
+          localCtx.restore();
         }
 
         var coverage = requestedTotal > 0 ? (placedTotal / requestedTotal) : 1;

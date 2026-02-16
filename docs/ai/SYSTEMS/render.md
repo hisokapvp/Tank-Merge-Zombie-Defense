@@ -37,13 +37,19 @@
 
 - Pipeline: `assets/ground.json` → `GroundSprites.load()` (`src/render/spriteLoaders.js`) → `groundLayer.rebuild()` (`src/render/groundLayer.js`).
 - Stamps рисуются отдельным draw-list после tile draw-list, поэтому всегда поверх ground-тайлов.
-- Placement: единая проверка non-overlap по sprite-rect каждого stamp-item (включая composite).
+- Placement детерминирован от `ground.json.seed` (отдельно от `procedural.seed`).
+- Per stamp-set поля: `rotationDegMin/Max`, `scaleMin/Max`, `placementMaxAttempts` (optional).
+- Placement: seeded shuffle requests + seeded position/rotation/scale.
+- Non-overlap: strict AABB-check после применения rotation/scale.
+- Soft fallback: при серии фейлов scale уменьшается до `scaleMin`, seed/state RNG не сбрасывается.
 - Coverage rule: рассчитывается `placedTotal / requestedTotal` по всем stamp-set’ам суммарно, целевой порог `>= 0.8`.
 - При недоборе `< 0.8` движок не пишет новые `console.*`, а просто рисует успешно размещённые stamps.
+- Невалидные диапазоны (`min > max`) нормализуются swap/clamp без throw.
 
 ### Decor placement (`assets/decor.json`)
 
 - Декор размещается в `initDecors()` (`game.js`) вне fence-radius, с поэтапным расширением области поиска до краёв карты.
+- Placement детерминирован от `decor.json.seed`.
 - На каждом этапе используется `placementMaxAttempts` попыток (default `40`, см. `assets/decor.json`).
 - Placement строгий: соблюдаются `noSpawnZones`, запрет overlap между decor-объектами и запрет захода внутрь fence.
 - Runtime доводит размещение до требуемого `count` (из JSON или BAL override) через стадийный annulus + grid/bruteforce fallback с конечными лимитами.

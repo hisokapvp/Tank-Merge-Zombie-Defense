@@ -4,6 +4,7 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
+const SeededRngApi = GameApi?.SeededRng ?? null;
 
 const ui = {
   coins: document.getElementById('coins'),
@@ -237,6 +238,10 @@ function createInitialState(){
     damageNumbers: [],
     decors: [],
       wallDecors: [],
+    mapSeeds: {
+      stampsSeed: null,
+      decorSeed: null,
+    },
     nextZombieRenderOrder: 1,
     fenceSegments: [],
     fenceSegmentsMeta: null,
@@ -291,6 +296,33 @@ function createInitialState(){
 
 let state = createInitialState();
 let meta = { lastSeenAt: null };
+
+const DEFAULT_STAMPS_SEED = 'ground-stamps-seed';
+const DEFAULT_DECOR_SEED = 'decor-default-seed';
+
+function resolveGroundStampsSeed(){
+  const cfgSeed = GroundSprites?.config?.seed;
+  return (cfgSeed !== undefined && cfgSeed !== null) ? cfgSeed : DEFAULT_STAMPS_SEED;
+}
+
+function resolveDecorSeed(){
+  const cfgSeed = DecorSprites?.config?.seed;
+  return (cfgSeed !== undefined && cfgSeed !== null) ? cfgSeed : DEFAULT_DECOR_SEED;
+}
+
+function ensureMapSeedsState(){
+  if (!state.mapSeeds || typeof state.mapSeeds !== 'object') {
+    state.mapSeeds = { stampsSeed: null, decorSeed: null };
+  }
+  if (state.mapSeeds.stampsSeed === undefined || state.mapSeeds.stampsSeed === null) {
+    state.mapSeeds.stampsSeed = resolveGroundStampsSeed();
+  }
+  if (state.mapSeeds.decorSeed === undefined || state.mapSeeds.decorSeed === null) {
+    const cfgSeed = DecorSprites?.config?.seed;
+    if (cfgSeed !== undefined && cfgSeed !== null) state.mapSeeds.decorSeed = cfgSeed;
+  }
+  return state.mapSeeds;
+}
 
 // Debug panel: enabled only via URL param (?debug=1 or ?debug=true)
 const DEBUG_PARAM = 'debug';
@@ -1119,6 +1151,7 @@ function initBoard(){
     }
   }
 
+  ensureMapSeedsState();
   buildBackground();
   initDecors();
 }
@@ -1126,6 +1159,50 @@ function initBoard(){
 function initDecors(){
   state.decors = [];
   state.wallDecors = [];
+  const mapSeeds = ensureMapSeedsState();
+  const decorSeed = (mapSeeds.decorSeed !== undefined && mapSeeds.decorSeed !== null)
+    ? mapSeeds.decorSeed
+    : resolveDecorSeed();
+  if (mapSeeds.decorSeed === undefined || mapSeeds.decorSeed === null) {
+    mapSeeds.decorSeed = decorSeed;
+  }
+
+  function makeFallbackRng(seed){
+    let localState = 2166136261 >>> 0;
+    const src = String(seed);
+    for (let i = 0; i < src.length; i++) {
+      localState ^= src.charCodeAt(i);
+      localState = Math.imul(localState, 16777619) >>> 0;
+    }
+    if (localState === 0) localState = 0x6d2b79f5;
+    function nextFloat01(){
+      localState = (localState + 0x6D2B79F5) >>> 0;
+      let t = localState;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    return {
+      nextFloat01,
+      nextInt(min, max){
+        let lo = Number.isFinite(min) ? Math.floor(min) : 0;
+        let hi = Number.isFinite(max) ? Math.floor(max) : lo;
+        if (lo > hi) {
+          const tmp = lo;
+          lo = hi;
+          hi = tmp;
+        }
+        const span = hi - lo + 1;
+        if (span <= 1) return lo;
+        return lo + Math.floor(nextFloat01() * span);
+      },
+    };
+  }
+
+  const rng = (SeededRngApi && typeof SeededRngApi.makeRng === 'function')
+    ? SeededRngApi.makeRng(decorSeed)
+    : makeFallbackRng(decorSeed);
+
   const decorCfg = DecorSprites && DecorSprites.config ? DecorSprites.config : null;
   const cfgIds = Array.isArray(decorCfg?.spriteIds) ? decorCfg.spriteIds : [];
   const cfgCount = Number.isFinite(decorCfg?.count) ? decorCfg.count : 0;
@@ -1228,8 +1305,8 @@ function initDecors(){
   }
 
   function sampleAnnulusPoint(decorIndex, stageIndex, attempt, outerR){
-    const angleUnit = (decorIndex * 0.6180339887498948 + stageIndex * 0.3819660112501051 + attempt * 0.7548776662466927) % 1;
-    const radiusUnit = (decorIndex * 0.5698402909980532 + stageIndex * 0.438579134225367 + attempt * 0.3517337112491958) % 1;
+    const angleUnit = rng.nextFloat01();
+    const radiusUnit = rng.nextFloat01();
     const angle = angleUnit * Math.PI * 2;
     const r = innerR + Math.sqrt(radiusUnit) * Math.max(1, outerR - innerR);
     return {
@@ -1243,7 +1320,7 @@ function initDecors(){
       const outerR = stageOuterR[stage];
       for (let attempt = 0; attempt < maxAttemptsPerStage; attempt++) {
         const p = sampleAnnulusPoint(decorIndex, stage, attempt, outerR);
-        const spriteId = ids[(decorIndex + stage + attempt) % ids.length];
+        const spriteId = ids[rng.nextInt(0, ids.length - 1)];
         if (tryCommitDecor(p.x, p.y, spriteId)) return true;
       }
     }
@@ -1252,12 +1329,13 @@ function initDecors(){
 
   function exhaustiveGridPlacement(decorIndex){
     const gridStep = Math.max(8, Math.floor(blockRadiusMin * 1.5));
-    const offsetX = (decorIndex * 17) % gridStep;
-    const offsetY = (decorIndex * 29) % gridStep;
+    const offsetX = rng.nextInt(0, Math.max(0, gridStep - 1));
+    const offsetY = rng.nextInt(0, Math.max(0, gridStep - 1));
+    const startSpriteOffset = ids.length > 1 ? rng.nextInt(0, ids.length - 1) : 0;
     for (let y = offsetY; y <= viewSize.h; y += gridStep) {
       for (let x = offsetX; x <= viewSize.w; x += gridStep) {
         for (let si = 0; si < ids.length; si++) {
-          const spriteId = ids[(decorIndex + si) % ids.length];
+          const spriteId = ids[(startSpriteOffset + si) % ids.length];
           if (tryCommitDecor(x, y, spriteId)) return true;
         }
       }
@@ -1268,9 +1346,9 @@ function initDecors(){
   function bruteForcePlacement(decorIndex){
     const hardAttempts = Math.max(12000, maxAttemptsPerStage * 300);
     for (let attempt = 0; attempt < hardAttempts; attempt++) {
-      const x = Math.random() * viewSize.w;
-      const y = Math.random() * viewSize.h;
-      const spriteId = ids[(decorIndex + attempt) % ids.length];
+      const x = rng.nextFloat01() * viewSize.w;
+      const y = rng.nextFloat01() * viewSize.h;
+      const spriteId = ids[rng.nextInt(0, ids.length - 1)];
       if (tryCommitDecor(x, y, spriteId)) return true;
     }
     return false;
@@ -1347,9 +1425,11 @@ function rebuildGroundLayer(){
     return false;
   }
   try {
+    const mapSeeds = ensureMapSeedsState();
     groundLayer.rebuild({
       cfg: GroundSprites.config,
       atlasImg: GroundSprites.atlasImg,
+      stampsSeed: mapSeeds.stampsSeed,
       width: viewSize.w,
       height: viewSize.h,
     });
@@ -2623,6 +2703,7 @@ function getSavedProgress(){
 function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
   ensureAchievementsState();
+  ensureMapSeedsState();
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   if (saved.player) Object.assign(state.player, saved.player);
@@ -2651,6 +2732,14 @@ function restoreFullState(saved){
     };
   }
   if (saved.nextCrateAt != null) state.nextCrateAt = saved.nextCrateAt;
+  if (saved.mapSeeds && typeof saved.mapSeeds === 'object') {
+    if (saved.mapSeeds.stampsSeed !== undefined && saved.mapSeeds.stampsSeed !== null) {
+      state.mapSeeds.stampsSeed = saved.mapSeeds.stampsSeed;
+    }
+    if (saved.mapSeeds.decorSeed !== undefined && saved.mapSeeds.decorSeed !== null) {
+      state.mapSeeds.decorSeed = saved.mapSeeds.decorSeed;
+    }
+  }
   for (let i = 0; i < saved.cells.length; i++) {
     const sc = saved.cells[i];
     const cell = state.cells[sc.i];

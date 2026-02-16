@@ -17,6 +17,10 @@
       particles: [],
       damageNumbers: [],
       decors: [],
+      mapSeeds: {
+        stampsSeed: null,
+        decorSeed: null,
+      },
       fenceSegments: [],
       fenceSegmentsMeta: null,
       savedFenceState: null,
