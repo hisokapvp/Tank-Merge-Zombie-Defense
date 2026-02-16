@@ -7,6 +7,7 @@
       titleKey: 'achievementBuyerNovice',
       rewardKey: 'achievementRewardBuy2',
       target: 100,
+      progressType: 'purchases',
       rewardMode: 'buy2',
     },
     {
@@ -14,6 +15,7 @@
       titleKey: 'achievementBuyerPro',
       rewardKey: 'achievementRewardBuy5',
       target: 500,
+      progressType: 'purchases',
       rewardMode: 'buy5',
     },
     {
@@ -21,7 +23,32 @@
       titleKey: 'achievementBuyerExpert',
       rewardKey: 'achievementRewardBuyMax',
       target: 1000,
+      progressType: 'purchases',
       rewardMode: 'buyMax',
+    },
+    {
+      id: 'creator_novice',
+      titleKey: 'achievementCreatorNovice',
+      rewardKey: 'achievementRewardAutoMergeBasic',
+      target: 100,
+      progressType: 'merges',
+      rewardMode: 'autoMergeBasic',
+    },
+    {
+      id: 'creator_pro',
+      titleKey: 'achievementCreatorPro',
+      rewardKey: 'achievementRewardAutoMergeAdvanced',
+      target: 400,
+      progressType: 'merges',
+      rewardMode: 'autoMergeAdvanced',
+    },
+    {
+      id: 'creator_expert',
+      titleKey: 'achievementCreatorExpert',
+      rewardKey: 'achievementRewardAutoMergeExpert',
+      target: 1000,
+      progressType: 'merges',
+      rewardMode: 'autoMergeExpert',
     },
   ];
 
@@ -47,7 +74,40 @@
       }
       state.achievements.totalPurchased = Math.max(0, inferred);
     }
+    if (!Number.isFinite(state.achievements.totalMerges)) {
+      state.achievements.totalMerges = 0;
+    }
     return state.achievements;
+  }
+
+  function getProgressValueFromAchievements(progressType, ach) {
+    var type = typeof progressType === 'string' ? progressType : 'purchases';
+    if (!ach || typeof ach !== 'object') return 0;
+    if (type === 'merges') {
+      return Number.isFinite(ach.totalMerges) ? Math.max(0, Math.floor(ach.totalMerges)) : 0;
+    }
+    return Number.isFinite(ach.totalPurchased) ? Math.max(0, Math.floor(ach.totalPurchased)) : 0;
+  }
+
+  function getProgressValue(state, progressType) {
+    var ach = ensureState(state);
+    return getProgressValueFromAchievements(progressType, ach);
+  }
+
+  function recalculateUnlocks(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var unlockedNow = [];
+    for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+      var def = ACHIEVEMENTS[i];
+      if (ach.unlocked[def.id]) continue;
+      var progress = getProgressValueFromAchievements(def.progressType, ach);
+      if (progress >= def.target) {
+        ach.unlocked[def.id] = true;
+        unlockedNow.push(def.id);
+      }
+    }
+    return unlockedNow;
   }
 
   function getDefinitions() {
@@ -63,23 +123,26 @@
     return 'none';
   }
 
-  function addProgress(state, purchasedCount) {
+  function addProgress(state, progressType, deltaCount) {
     var ach = ensureState(state);
     if (!ach) return [];
-    var delta = Math.max(0, Math.floor(Number(purchasedCount) || 0));
-    if (delta <= 0) return [];
-    ach.totalPurchased += delta;
+    var type = progressType;
+    var deltaRaw = deltaCount;
 
-    var unlockedNow = [];
-    for (var i = 0; i < ACHIEVEMENTS.length; i++) {
-      var def = ACHIEVEMENTS[i];
-      if (ach.unlocked[def.id]) continue;
-      if (ach.totalPurchased >= def.target) {
-        ach.unlocked[def.id] = true;
-        unlockedNow.push(def.id);
-      }
+    if (typeof progressType !== 'string') {
+      type = 'purchases';
+      deltaRaw = progressType;
     }
-    return unlockedNow;
+
+    var delta = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+    if (delta <= 0) return [];
+    if (type === 'merges') {
+      ach.totalMerges += delta;
+    } else {
+      ach.totalPurchased += delta;
+    }
+
+    return recalculateUnlocks(state);
   }
 
   global.Game = global.Game || {};
@@ -87,6 +150,8 @@
     getDefinitions: getDefinitions,
     ensureState: ensureState,
     addProgress: addProgress,
+    getProgressValue: getProgressValue,
+    recalculateUnlocks: recalculateUnlocks,
     getBulkMode: getBulkMode,
   };
 })(typeof window !== 'undefined' ? window : this);

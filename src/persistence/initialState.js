@@ -53,6 +53,7 @@
         unlocked: {},
         popupQueue: [],
         totalPurchased: 0,
+        totalMerges: 0,
       },
       ui: {
         talentsOpen: false,

@@ -13,8 +13,24 @@
 - `buyer_novice` (`100` покупок танков) → `buy2`
 - `buyer_pro` (`500` покупок танков) → `buy5`
 - `buyer_expert` (`1000` покупок танков) → `buyMax`
+- `creator_novice` (`100` успешных merge) → `autoMergeBasic` (кнопка/режим в PACK2)
+- `creator_pro` (`400` успешных merge) → `autoMergeAdvanced` (кнопка/режим в PACK2)
+- `creator_expert` (`1000` успешных merge) → `autoMergeExpert` (кнопка/режим в PACK3)
 
-Прогресс считается по факту покупок, включая bulk-покупки.
+Прогресс считается по типам:
+
+- `purchases` → `state.achievements.totalPurchased` (покупки, включая bulk).
+- `merges` → `state.achievements.totalMerges` (только успешные merge).
+
+Неуспешные попытки merge (нет пары/невалидный drop/кап уровня) прогресс `merges` не меняют.
+Разблокировка работает в режиме «unlock-only»: уже открытые достижения назад не закрываются.
+
+## Source of truth: merge
+
+- Общая точка входа merge: `game.js` → `performMerge(fromIdx, toIdx, opts)`.
+- Manual drag/drop использует `performMerge(..., { placeResult: 'original' })`.
+- После успешного merge вызывается `addProgress('merges', 1)` через achievements API.
+- Параметр `placeResult` зарезервирован под PACK2/3 (`'hangar'`) без изменения текущего manual placement.
 
 ## Награды
 

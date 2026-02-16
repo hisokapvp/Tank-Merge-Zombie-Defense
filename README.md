@@ -68,6 +68,11 @@ Merge + tower defense на canvas.
 - Покупка доступна только если хватает денег на **ровно X** танков.
 - Частичной bulk-покупки нет: либо покупается ровно `X`, либо покупка недоступна.
 
+## Достижения и merge-прогресс
+
+- Правила успешного merge и инкремента `totalMerges`: `docs/achievements.md`.
+- Пороги `creator_novice/pro/expert`: `100/400/1000` (auto-merge unlock roadmap PACK2/3).
+
 ## Debug overlay для атаки зомби
 
 - Overlay доступен только при `?debug=1`.

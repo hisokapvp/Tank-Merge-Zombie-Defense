@@ -273,6 +273,7 @@ function createInitialState(){
       unlocked: {},
       popupQueue: [],
       totalPurchased: 0,
+      totalMerges: 0,
     },
     ui: {
       talentsOpen: false,
@@ -1716,11 +1717,12 @@ function bumpBuyPrice(level){
 function ensureAchievementsState(){
   if (AchievementsApi && AchievementsApi.ensureState) return AchievementsApi.ensureState(state);
   if (!state.achievements || typeof state.achievements !== 'object') {
-    state.achievements = { unlocked: {}, popupQueue: [], totalPurchased: 0 };
+    state.achievements = { unlocked: {}, popupQueue: [], totalPurchased: 0, totalMerges: 0 };
   }
   if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
   if (!Number.isFinite(state.achievements.totalPurchased)) state.achievements.totalPurchased = 0;
+  if (!Number.isFinite(state.achievements.totalMerges)) state.achievements.totalMerges = 0;
   return state.achievements;
 }
 
@@ -1730,15 +1732,18 @@ function queueAchievementPopup(achievementId){
   if (ach.popupQueue.indexOf(achievementId) < 0) ach.popupQueue.push(achievementId);
 }
 
-function processAchievementProgress(deltaCount){
-  const count = Math.max(0, Math.floor(Number(deltaCount) || 0));
+function processAchievementProgress(progressType, deltaCount){
+  const type = typeof progressType === 'string' ? progressType : 'purchases';
+  const rawDelta = typeof progressType === 'string' ? deltaCount : progressType;
+  const count = Math.max(0, Math.floor(Number(rawDelta) || 0));
   if (count <= 0) return;
   let unlocked = [];
   if (AchievementsApi && AchievementsApi.addProgress) {
-    unlocked = AchievementsApi.addProgress(state, count) || [];
+    unlocked = AchievementsApi.addProgress(state, type, rawDelta) || [];
   } else {
     const ach = ensureAchievementsState();
-    ach.totalPurchased += count;
+    if (type === 'merges') ach.totalMerges += count;
+    else ach.totalPurchased += count;
   }
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
   maybeShowNextAchievementPopup();
@@ -1800,7 +1805,7 @@ function performTankPurchaseOnce(){
 
 function tryBuyTank(){
   const bought = performTankPurchaseOnce();
-  if (bought) processAchievementProgress(1);
+  if (bought) processAchievementProgress('purchases', 1);
 }
 
 function buyBulkMode(){
@@ -1817,21 +1822,47 @@ function tryBuyBulk(){
     if (!performTankPurchaseOnce()) return;
     purchased += 1;
   }
-  if (purchased === countToBuy) processAchievementProgress(purchased);
+  if (purchased === countToBuy) processAchievementProgress('purchases', purchased);
 }
 
-function mergeCells(fromIdx, toIdx){
+function resolveMergeResultCellIndex(fromIdx, toIdx, placeResult){
+  if (placeResult !== 'hangar') return toIdx;
+  if (state.cells[toIdx] && !(state.crate && state.crate.cellIndex === toIdx)) return toIdx;
+  if (state.cells[fromIdx] && !(state.crate && state.crate.cellIndex === fromIdx)) return fromIdx;
+  for (let i = 0; i < state.cells.length; i++) {
+    const candidate = state.cells[i];
+    if (!candidate || candidate.tank) continue;
+    if (state.crate && state.crate.cellIndex === candidate.i) continue;
+    return candidate.i;
+  }
+  return toIdx;
+}
+
+function performMerge(fromIdx, toIdx, opts){
+  const options = opts || {};
+  const placeResult = options.placeResult === 'hangar' ? 'hangar' : 'original';
   if (fromIdx === toIdx) return false;
   const a = state.cells[fromIdx];
   const b = state.cells[toIdx];
-  if (!a.tank || !b.tank) return false;
+  if (!a || !b || !a.tank || !b.tank) return false;
   if (a.tank.level !== b.tank.level) return false;
   if (a.tank.level >= MAX_TANK_LEVEL) return false;
   const fromLevel = a.tank.level;
   const lvl = fromLevel + 1;
   if (lvl > MAX_TANK_LEVEL) return false;
-  b.tank = makeTank(lvl, false);
+
+  const resultCellIndex = resolveMergeResultCellIndex(fromIdx, toIdx, placeResult);
+  const resultCell = state.cells[resultCellIndex];
+  if (!resultCell) return false;
+  if (resultCellIndex !== fromIdx && resultCellIndex !== toIdx && resultCell.tank) return false;
+
+  resultCell.tank = makeTank(lvl, false);
   a.tank = null;
+  if (resultCellIndex !== toIdx) {
+    b.tank = null;
+  }
+
+  processAchievementProgress('merges', 1);
   recordTankLevel(lvl);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: fromLevel, toLevel: lvl });
@@ -1842,9 +1873,13 @@ function mergeCells(fromIdx, toIdx){
     window.Game.MergePopup.show(lvl);
   }
 
-  burst(b.x+b.w/2, b.y+b.h/2, 20, 'rgba(125,255,178,.85)');
-  popText(b.x+b.w/2, b.y+b.h/2-16, t('levelUp', {level: lvl}), '#eaf1ff');
+  burst(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2, 20, 'rgba(125,255,178,.85)');
+  popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
+}
+
+function mergeCells(fromIdx, toIdx){
+  return performMerge(fromIdx, toIdx, { placeResult: 'original' });
 }
 
 // ---------- Economy / boost ----------
@@ -2455,6 +2490,9 @@ function restoreFullState(saved){
     ach.totalPurchased = Number.isFinite(saved.achievements.totalPurchased)
       ? Math.max(0, Math.floor(saved.achievements.totalPurchased))
       : ach.totalPurchased;
+    ach.totalMerges = Number.isFinite(saved.achievements.totalMerges)
+      ? Math.max(0, Math.floor(saved.achievements.totalMerges))
+      : ach.totalMerges;
     ach.popupQueue = [];
   }
   if (saved.fenceState && typeof saved.fenceState === 'object') {
@@ -2524,6 +2562,7 @@ function applySavedProgress(data){
     const ach = ensureAchievementsState();
     ach.unlocked = achievements.unlocked && typeof achievements.unlocked === 'object' ? { ...achievements.unlocked } : ach.unlocked;
     ach.totalPurchased = Number.isFinite(achievements.totalPurchased) ? Math.max(0, Math.floor(achievements.totalPurchased)) : ach.totalPurchased;
+    ach.totalMerges = Number.isFinite(achievements.totalMerges) ? Math.max(0, Math.floor(achievements.totalMerges)) : ach.totalMerges;
     ach.popupQueue = [];
   }
   return true;
@@ -4481,13 +4520,21 @@ function renderAchievementsList(){
   if (!ui.achievementsList) return;
   const defs = getAchievementDefinitions();
   const ach = ensureAchievementsState();
+  if (AchievementsApi && AchievementsApi.recalculateUnlocks) {
+    const unlocked = AchievementsApi.recalculateUnlocks(state) || [];
+    for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+    maybeShowNextAchievementPopup();
+  }
   ui.achievementsList.innerHTML = '';
   for (let i = 0; i < defs.length; i++) {
     const def = defs[i];
     const done = !!ach.unlocked[def.id];
     const row = document.createElement('div');
     row.className = `achievementRow ${done ? 'done' : ''}`;
-    const progress = clamp(ach.totalPurchased || 0, 0, def.target);
+    const progressRaw = (AchievementsApi && AchievementsApi.getProgressValue)
+      ? AchievementsApi.getProgressValue(state, def.progressType)
+      : (def.progressType === 'merges' ? ach.totalMerges : ach.totalPurchased);
+    const progress = clamp(progressRaw || 0, 0, def.target);
     const status = done ? t('achievementStatusDone') : t('achievementStatusTodo');
     row.innerHTML = `
       <div class="achievementName">${t(def.titleKey)}</div>
@@ -5080,7 +5127,7 @@ canvas.addEventListener('pointerup', (e)=>{
     if (targetHasBox){
       popText(target.x + target.w/2, target.y + target.h/2, t('dropOnCrateReject'), '#ffaa44');
     } else {
-      const merged = mergeCells(from.i, target.i);
+      const merged = performMerge(from.i, target.i, { placeResult: 'original' });
       if (!merged && !target.tank){
         target.tank = from.tank;
         from.tank = null;
