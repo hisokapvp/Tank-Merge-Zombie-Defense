@@ -29,6 +29,7 @@
 - Производительность/mobile/object pool → `docs/ai/SYSTEMS/perf.md`
 - Lesson Progress/SRS/Anki/feedback/debug-panels → `docs/ai/SYSTEMS/ui.md`
 - Runtime debug overlay (`?debug=1`, hotkeys) → `docs/debug-overlay.md`
+- Debug panel dev-инструменты (achievements / totalMerges) → `docs/debug.md` + `docs/ai/SYSTEMS/achievements.md`
 
 ## Карта кода
 

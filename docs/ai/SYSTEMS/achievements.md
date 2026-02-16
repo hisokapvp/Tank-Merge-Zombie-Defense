@@ -31,6 +31,8 @@
 - Manual drag/drop использует `performMerge(..., { placeResult: 'original' })`.
 - После успешного merge вызывается `addProgress('merges', 1)` через achievements API.
 - Параметр `placeResult` зарезервирован под PACK2/3 (`'hangar'`) без изменения текущего manual placement.
+- Post-merge FX/звук вызывается в том же entrypoint строго после создания результата merge.
+- Для серий merge используется FIFO-очередь FX (краткий gap), чтобы не спамить все эффекты в один кадр.
 
 ## Награды
 
@@ -55,6 +57,17 @@
 - Кнопка `#achievementsBtn` открывает список достижений.
 - Модалка списка показывает: название, прогресс, статус, награду.
 - Popup `#achievementPopup` показывается очередью (если закрыто несколько достижений подряд).
+
+## Debug panel (dev)
+
+- Расширение в `src/ui/debugPanel.js` (раздел `Achievements (dev)` во вкладке `Logs&Tools`).
+- `Unlock + claim reward`:
+  - форсирует `state.achievements.unlocked[id] = true` (через dev-hook из `game.js`),
+  - сразу обновляет UI (в т.ч. tier auto-merge кнопки).
+- `Set totalMerges`:
+  - устанавливает `state.achievements.totalMerges` c clamp `0..Number.MAX_SAFE_INTEGER`,
+  - запускает тот же unlock-only пересчёт (`recalculateUnlocks`) и popup queue.
+- Политика: уже открытые достижения не закрываются при уменьшении `totalMerges`.
 
 ## Bulk-buy
 

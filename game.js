@@ -353,8 +353,11 @@ const AutoMergeApi = GameApi.AutoMerge ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
+const MERGE_FX_GAP_MS = 80;
 let isAutoMergeBusy = false;
 let autoMergeBusyTimeout = null;
+let mergeFxQueue = [];
+let mergeFxQueueTimer = null;
 
 function setSimulationClockPaused(paused){
   const shouldPause = !!paused;
@@ -1756,6 +1759,40 @@ function processAchievementProgress(progressType, deltaCount){
   maybeShowNextAchievementPopup();
 }
 
+function clampDevInt(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
+}
+
+function recalculateAchievementsAndQueuePopups(){
+  if (!(AchievementsApi && AchievementsApi.recalculateUnlocks)) return [];
+  const unlocked = AchievementsApi.recalculateUnlocks(state) || [];
+  for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  maybeShowNextAchievementPopup();
+  return unlocked;
+}
+
+function debugUnlockAchievementAndClaim(achievementId){
+  const ach = ensureAchievementsState();
+  const def = getAchievementById(achievementId);
+  if (!ach || !def) return false;
+  ach.unlocked[def.id] = true;
+  updateUI();
+  return true;
+}
+
+function debugSetTotalMerges(rawValue){
+  const ach = ensureAchievementsState();
+  if (!ach) return { totalMerges: 0, unlockedNow: [] };
+  ach.totalMerges = clampDevInt(Number(rawValue));
+  const unlockedNow = recalculateAchievementsAndQueuePopups();
+  updateUI();
+  return {
+    totalMerges: ach.totalMerges,
+    unlockedNow: unlockedNow,
+  };
+}
+
 function calculateAffordableBuyCount(limit){
   const Garage = window.Game && window.Game.Garage;
   const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
@@ -1845,6 +1882,80 @@ function resolveMergeResultCellIndex(fromIdx, toIdx, placeResult){
   return toIdx;
 }
 
+function resolveMergeFxPosition(context){
+  const fxContext = context || {};
+  if (Number.isFinite(fxContext.resultCellIndex)) {
+    const cell = state.cells[fxContext.resultCellIndex];
+    if (cell) {
+      return {
+        x: cell.x + cell.w / 2,
+        y: cell.y + cell.h / 2,
+      };
+    }
+  }
+
+  const tankId = typeof fxContext.resultTankId === 'string' ? fxContext.resultTankId : null;
+  if (tankId) {
+    for (let i = 0; i < state.cells.length; i++) {
+      const cell = state.cells[i];
+      if (!cell || !cell.tank || cell.tank.id !== tankId) continue;
+      return {
+        x: cell.x + cell.w / 2,
+        y: cell.y + cell.h / 2,
+      };
+    }
+  }
+
+  return { x: center.x, y: center.y };
+}
+
+function playMergeFxNow(context){
+  const pos = resolveMergeFxPosition(context);
+  burst(pos.x, pos.y, 18, 'rgba(125,255,178,.78)');
+  state.impacts.push({ x: pos.x, y: pos.y, r: 0, maxR: 34, life: 0.24, max: 0.24, kind: 'he' });
+  for (let i = 0; i < 6; i++) {
+    state.particles.push({
+      x: pos.x,
+      y: pos.y,
+      r: 2,
+      color: 'rgba(125,255,178,.38)',
+      life: 0.22,
+      max: 0.22,
+      vx: (Math.random() - 0.5) * 80,
+      vy: (Math.random() - 0.5) * 80,
+    });
+  }
+  playSfx('levelUp');
+}
+
+function flushMergeFxQueue(){
+  if (!mergeFxQueue.length) {
+    mergeFxQueueTimer = null;
+    return;
+  }
+  const context = mergeFxQueue.shift();
+  playMergeFxNow(context);
+  if (mergeFxQueue.length) {
+    mergeFxQueueTimer = window.setTimeout(flushMergeFxQueue, MERGE_FX_GAP_MS);
+  } else {
+    mergeFxQueueTimer = null;
+  }
+}
+
+function playMergeFx(context){
+  mergeFxQueue.push(context || null);
+  if (mergeFxQueueTimer != null) return;
+  flushMergeFxQueue();
+}
+
+function clearMergeFxQueue(){
+  mergeFxQueue = [];
+  if (mergeFxQueueTimer != null) {
+    window.clearTimeout(mergeFxQueueTimer);
+    mergeFxQueueTimer = null;
+  }
+}
+
 function performMerge(fromIdx, toIdx, opts){
   const options = opts || {};
   const placeResult = options.placeResult === 'hangar' ? 'hangar' : 'original';
@@ -1869,6 +1980,11 @@ function performMerge(fromIdx, toIdx, opts){
     b.tank = null;
   }
 
+  playMergeFx({
+    resultCellIndex: resultCellIndex,
+    resultTankId: resultCell.tank && resultCell.tank.id,
+  });
+
   processAchievementProgress('merges', 1);
   recordTankLevel(lvl);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
@@ -1880,7 +1996,6 @@ function performMerge(fromIdx, toIdx, opts){
     window.Game.MergePopup.show(lvl);
   }
 
-  burst(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2, 20, 'rgba(125,255,178,.85)');
   popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
 }
@@ -4315,6 +4430,7 @@ function updateMenuState(){
 
 function resetGameState(){
   const wasCollapsed = state.debug?.collapsed;
+  clearMergeFxQueue();
   if (state.projectiles && state.projectiles.length){
     for (const p of state.projectiles) releaseProjectile(p);
   }
@@ -4610,11 +4726,7 @@ function renderAchievementsList(){
   if (!ui.achievementsList) return;
   const defs = getAchievementDefinitions();
   const ach = ensureAchievementsState();
-  if (AchievementsApi && AchievementsApi.recalculateUnlocks) {
-    const unlocked = AchievementsApi.recalculateUnlocks(state) || [];
-    for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
-    maybeShowNextAchievementPopup();
-  }
+  recalculateAchievementsAndQueuePopups();
   ui.achievementsList.innerHTML = '';
   for (let i = 0; i < defs.length; i++) {
     const def = defs[i];
@@ -6885,6 +6997,9 @@ function initDebugPanel(){
       useActiveAbility,
       initTalentDefs,
       getTalentDefs: () => TALENT_DEFS,
+      getAchievementDefinitions,
+      debugUnlockAchievementAndClaim,
+      debugSetTotalMerges,
       updateUI,
       debugLog,
       debugReset,

@@ -60,3 +60,35 @@ Tier-поведение:
 - повторный клик блокируется cooldown `200..400ms` (по умолчанию `300ms`).
 
 Подробные правила подбора пар: `docs/auto-merge.md`.
+
+## Merge FX/звук (post-merge)
+
+- FX вызывается только после подтверждённого успешного merge в общем entrypoint `performMerge(...)`.
+- Частота: `1 merge = 1 FX` (manual и auto используют один и тот же entrypoint).
+- Для серий (`mergeX`/`mergeAll`) FX запускается по очереди в порядке merge-операций, с небольшим интервалом между стартами.
+- Звук merge-эффекта уважает текущие audio settings проекта (`sfxVolume` и общий pipeline `playSfx(...)`).
+
+## Debug tools (Achievements dev)
+
+В debug panel (`src/ui/debugPanel.js`, вкладка `Logs&Tools`) доступны инструменты:
+
+- `Unlock + claim reward`: форсирует `state.achievements.unlocked[selectedId] = true` через dev-hook и сразу обновляет UI.
+- `Set totalMerges`: выставляет `state.achievements.totalMerges` (clamp `0..Number.MAX_SAFE_INTEGER`) и запускает стандартный пересчёт unlock'ов.
+
+Политика пересчёта: **unlock-only** (уже открытые достижения не закрываются при уменьшении `totalMerges`).
+
+## i18n (creator_* / auto-merge)
+
+Строки достижений и кнопок live в:
+
+- `src/i18n/ru.json`
+- `src/i18n/en.json`
+
+Ключи creator-tier:
+
+- `achievementCreatorNovice`, `achievementCreatorPro`, `achievementCreatorExpert`
+- (описания) `achievementCreatorNoviceDesc`, `achievementCreatorProDesc`, `achievementCreatorExpertDesc`
+
+Ключи кнопок auto-merge:
+
+- `autoMerge2`, `autoMerge4`, `autoMergeAll`

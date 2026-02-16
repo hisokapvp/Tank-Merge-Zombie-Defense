@@ -58,6 +58,9 @@
     var useActiveAbility = opts.useActiveAbility;
     var initTalentDefs = opts.initTalentDefs;
     var getTalentDefs = opts.getTalentDefs;
+    var getAchievementDefinitions = opts.getAchievementDefinitions;
+    var debugUnlockAchievementAndClaim = opts.debugUnlockAchievementAndClaim;
+    var debugSetTotalMerges = opts.debugSetTotalMerges;
     var center = opts.center;
     var updateUI = opts.updateUI;
 
@@ -102,6 +105,7 @@
         if (tab === 'roads') refreshDebugRoadsSliders();
         if (tab === 'actives') refreshDebugActivesList();
         if (tab === 'talents') refreshDebugTalentsList();
+        if (tab === 'logs') refreshDebugAchievementsTools();
       });
     });
 
@@ -242,6 +246,142 @@
         debugLog('info', 'Log cleared.');
       });
     }
+
+    var debugAchievementsMount = null;
+    var debugAchievementSelect = null;
+    var debugTotalMergesInput = null;
+    var debugAchievementsState = null;
+
+    function clampDevInt(value) {
+      var parsed = Math.floor(Number(value));
+      if (!Number.isFinite(parsed) || parsed < 0) return 0;
+      if (parsed > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+      return parsed;
+    }
+
+    function getAchievementDefsForDebug() {
+      if (typeof getAchievementDefinitions !== 'function') return [];
+      var defs = getAchievementDefinitions();
+      return Array.isArray(defs) ? defs : [];
+    }
+
+    function refreshDebugAchievementsTools() {
+      var defs = getAchievementDefsForDebug();
+      if (debugAchievementSelect) {
+        var selectedId = debugAchievementSelect.value;
+        debugAchievementSelect.innerHTML = '';
+        for (var i = 0; i < defs.length; i++) {
+          var def = defs[i];
+          debugAchievementSelect.appendChild(new Option(def.id, def.id));
+        }
+        if (defs.length > 0) {
+          var hasSelection = defs.some(function (def) { return def.id === selectedId; });
+          debugAchievementSelect.value = hasSelection ? selectedId : defs[0].id;
+          debugAchievementSelect.disabled = false;
+        } else {
+          debugAchievementSelect.disabled = true;
+        }
+      }
+
+      if (debugTotalMergesInput) {
+        var totalMerges = state && state.achievements ? clampDevInt(state.achievements.totalMerges) : 0;
+        debugTotalMergesInput.value = String(totalMerges);
+      }
+
+      if (debugAchievementsState) {
+        var achievements = state && state.achievements ? state.achievements : {};
+        var unlocked = achievements.unlocked && typeof achievements.unlocked === 'object'
+          ? Object.keys(achievements.unlocked).filter(function (id) { return !!achievements.unlocked[id]; })
+          : [];
+        unlocked.sort();
+        debugAchievementsState.textContent = 'totalMerges=' + clampDevInt(achievements.totalMerges) + '; unlocked: ' + (unlocked.length ? unlocked.join(', ') : 'none');
+      }
+    }
+
+    function mountDebugAchievementsTools() {
+      var logsSection = panel.querySelector('#debugSectionLogs');
+      if (!logsSection) return;
+
+      debugAchievementsMount = document.createElement('div');
+      debugAchievementsMount.className = 'debugTools';
+      debugAchievementsMount.style.marginTop = '10px';
+      debugAchievementsMount.innerHTML = [
+        '<div class="debugRow"><strong>Achievements (dev)</strong></div>',
+        '<div class="debugRow">',
+        '  <label class="debugLabel" for="debugAchievementSelect">Achievement id</label>',
+        '  <select id="debugAchievementSelect" class="debugSelect"></select>',
+        '</div>',
+        '<div class="debugRow">',
+        '  <button type="button" class="debugBtn" id="debugAchievementUnlock">Unlock + claim reward</button>',
+        '</div>',
+        '<div class="debugRow" style="margin-top:8px">',
+        '  <label class="debugLabel" for="debugTotalMergesInput">totalMerges</label>',
+        '  <input type="number" id="debugTotalMergesInput" class="debugSelect" min="0" step="1" style="max-width:140px" />',
+        '  <button type="button" class="debugBtn" id="debugSetTotalMerges">Set totalMerges</button>',
+        '</div>',
+        '<div id="debugAchievementsState" class="debugRow" style="font-size:11px;margin-top:4px"></div>',
+      ].join('');
+
+      var telemetryMount = panel.querySelector('#debugTelemetryMount');
+      logsSection.insertBefore(debugAchievementsMount, telemetryMount || null);
+
+      debugAchievementSelect = panel.querySelector('#debugAchievementSelect');
+      debugTotalMergesInput = panel.querySelector('#debugTotalMergesInput');
+      debugAchievementsState = panel.querySelector('#debugAchievementsState');
+
+      var unlockBtn = panel.querySelector('#debugAchievementUnlock');
+      if (unlockBtn) {
+        unlockBtn.addEventListener('click', function () {
+          safeDebug(function () {
+            var achievementId = debugAchievementSelect ? String(debugAchievementSelect.value || '') : '';
+            if (!achievementId) {
+              debugLog('warn', 'Achievements(dev): select achievement id.');
+              return;
+            }
+            var done = false;
+            if (typeof debugUnlockAchievementAndClaim === 'function') {
+              done = debugUnlockAchievementAndClaim(achievementId) === true;
+            } else {
+              state.achievements = state.achievements || { unlocked: {}, totalMerges: 0 };
+              state.achievements.unlocked = state.achievements.unlocked || {};
+              state.achievements.unlocked[achievementId] = true;
+              done = true;
+            }
+            if (typeof updateUI === 'function') updateUI();
+            refreshDebugAchievementsTools();
+            debugLog(done ? 'info' : 'warn', done
+              ? 'Achievements(dev): unlocked ' + achievementId + '.'
+              : 'Achievements(dev): failed to unlock ' + achievementId + '.');
+          }, 'Achievements(dev) unlock failed ');
+        });
+      }
+
+      var setTotalMergesBtn = panel.querySelector('#debugSetTotalMerges');
+      if (setTotalMergesBtn) {
+        setTotalMergesBtn.addEventListener('click', function () {
+          safeDebug(function () {
+            var totalMerges = clampDevInt(debugTotalMergesInput ? debugTotalMergesInput.value : 0);
+            var unlockedNow = [];
+            if (typeof debugSetTotalMerges === 'function') {
+              var result = debugSetTotalMerges(totalMerges) || {};
+              totalMerges = clampDevInt(result.totalMerges);
+              unlockedNow = Array.isArray(result.unlockedNow) ? result.unlockedNow : [];
+            } else {
+              state.achievements = state.achievements || { unlocked: {}, totalMerges: 0 };
+              state.achievements.unlocked = state.achievements.unlocked || {};
+              state.achievements.totalMerges = totalMerges;
+            }
+            if (typeof updateUI === 'function') updateUI();
+            refreshDebugAchievementsTools();
+            debugLog('info', 'Achievements(dev): totalMerges=' + totalMerges + (unlockedNow.length ? '; unlocked now: ' + unlockedNow.join(', ') : '.'));
+          }, 'Achievements(dev) set totalMerges failed ');
+        });
+      }
+
+      refreshDebugAchievementsTools();
+    }
+
+    mountDebugAchievementsTools();
 
     function refreshDebugHangarList() {
       var container = panel.querySelector('#debugHangarList');
