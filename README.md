@@ -52,6 +52,22 @@ Merge + tower defense на canvas.
 - Выбор цели fence выполняется единообразно по `distance(zombieCenter, segmentAabb)` для side+corner сегментов.
 - Состояния атаки: `walk → attack → cooldown`; урон наносится один раз в момент `attackHitAt` внутри attack-анимации, а cooldown считается от конца attack-анимации.
 
+## World Events: desired targetAlive
+
+- `targetAliveMult` влияет **только** на `desired targetAlive` спавна зомби.
+- Формула: `desiredTargetAlive = round(baseTargetAlive * aliveMultCurrent)`.
+- `baseTargetAlive` — базовое значение без world events множителя.
+- При `attackMode=true`: `aliveMultCurrent` плавно стремится к `targetAliveMult`.
+- При `attackMode=false`: `aliveMultCurrent` плавно возвращается к `1`.
+- Скорость задаётся `targetAliveRampSec`; если `targetAliveRampSec <= 0`, переключение мгновенное.
+
+## Bulk-buy танков (динамический X)
+
+- Кнопка bulk-покупки всегда видима.
+- `X = min(5, freeSlots)`, для текста используется диапазон `2..5` (`freeSlots < 2` → показывается `2`, но кнопка disabled).
+- Покупка доступна только если хватает денег на **ровно X** танков.
+- Частичной bulk-покупки нет: либо покупается ровно `X`, либо покупка недоступна.
+
 ## Debug overlay для атаки зомби
 
 - Overlay доступен только при `?debug=1`.

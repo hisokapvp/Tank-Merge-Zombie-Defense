@@ -25,13 +25,19 @@
 ## AttackMode множители и цель зомби
 
 - Базовый принцип:
-  - `EffectiveTargetAlive = BaseTargetAlive * targetAliveMult`
+  - `DesiredTargetAlive = round(BaseTargetAlive * aliveMultCurrent)`
+- `targetAliveMult` применяется только к `DesiredTargetAlive`.
+- `perSideTarget`, `speedMult`, `damageMult` не участвуют в формуле `DesiredTargetAlive`.
 - В runtime это применяется в `getZombieSpawnBalanceConfig()` через `getZombieAttackMultipliers()`.
 
 ## Ramp targetAlive
 
-- Новый параметр: `attackMode.targetAliveRampSec` (по умолчанию `2`, рабочий диапазон `1..3` сек).
-- При старте attackMode множитель `targetAliveMult` растёт плавно от `1` до целевого значения за `targetAliveRampSec`.
+- Параметр: `attackMode.targetAliveRampSec` (секунды, `<= 0` означает мгновенное переключение).
+- В состоянии хранится `aliveMultCurrent` и на каждом тике двигается к `aliveMultTarget`:
+  - `aliveMultTarget = attackModeActive ? targetAliveMult : 1`
+  - `speed = |aliveMultTarget - aliveMultCurrent| / targetAliveRampSec`
+  - `aliveMultCurrent = moveTowards(aliveMultCurrent, aliveMultTarget, speed * dt)`
+- При быстрых переключениях attackMode множитель не сбрасывается: продолжается движение от текущего значения к новому target.
 - Работает и для auto attackMode, и для `Force attackMode`.
 
 ## Evening dim
@@ -65,5 +71,5 @@ attackMode: {
 ## Мини-проверка
 
 - `?debug=1`: проверить `Force weather` и `Force attackMode` (`ON/OFF`).
-- Проверить ramp: в начале attackMode `targetAliveMult` растёт плавно.
+- Проверить ramp: при включении attackMode `DesiredTargetAlive` плавно растёт до `BaseTargetAlive * targetAliveMult`, при выключении плавно возвращается к `BaseTargetAlive`.
 - Проверить weather SFX: thunder/rainLoop включаются и корректно отключаются.

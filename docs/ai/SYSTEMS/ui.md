@@ -24,6 +24,14 @@
 - Feedback widget: `src/feedback/widget.js` (floating button, локальный storage, telemetry hooks).
 - Debug UI-панели: `src/ui/adminFlags.js`, `src/ui/analyticsPanel.js`, `src/ui/funnelPanel.js`, `src/ui/experimentsPanel.js`, `src/ui/bugTriage.js`.
 
+## Shop bulk-buy
+
+- Основная реализация: `game.js` (`getBulkBuyPlan`, `tryBuyBulk`, `updateUI`).
+- Кнопка bulk-покупки видима всегда.
+- Количество для bulk: `X = min(5, freeSlots)`, отображаемое значение ограничено диапазоном `2..5`.
+- Если `freeSlots < 2`, кнопка disabled и клик не выполняет покупку.
+- Перед покупкой проверяется бюджет на ровно `X` танков; частичная bulk-покупка не допускается.
+
 ## Debug/Dev-only правила
 
 - Большинство debug-панелей активируются только при `?debug=1`.

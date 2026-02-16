@@ -53,6 +53,7 @@
   "buyBulk2": "Купить 2 танка",
   "buyBulk5": "Купить 5 танков",
   "buyBulkMax": "Купить максимум танков",
+  "buyBulkDynamic": "Купить {count} танков",
   "fenceRepairNoCoins": "Не хватает монет на ремонт",
   "fenceRepairDone": "Сегмент отремонтирован",
   "talentTreeTitle": "Древо талантов",

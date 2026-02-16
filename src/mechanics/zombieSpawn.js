@@ -7,11 +7,14 @@
     return Number.isFinite(n) ? n : fallback;
   }
 
-  function getZombieSpawnBalanceConfig(spawnConfig, bal) {
+  function getZombieSpawnBalanceConfig(spawnConfig, bal, options) {
     var cfg = (spawnConfig && typeof spawnConfig === 'object') ? spawnConfig : null;
-    var targetAlive = Math.max(1, toSafeInt(cfg && cfg.targetAlive, bal.zombieCountTarget));
+    var opts = (options && typeof options === 'object') ? options : null;
+    var baseTargetAlive = Math.max(1, toSafeInt(cfg && cfg.targetAlive, bal.zombieCountTarget));
+    var desiredAliveMult = Number.isFinite(opts && opts.desiredAliveMult) ? Math.max(0, opts.desiredAliveMult) : 1;
+    var targetAlive = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.round(baseTargetAlive * desiredAliveMult)));
     var sideCount = Math.max(1, toSafeInt(cfg && cfg.sideCount, bal.zombieSideCount || 4));
-    var defaultPerSide = Math.max(1, Math.round(targetAlive / sideCount));
+    var defaultPerSide = Math.max(1, Math.round(baseTargetAlive / sideCount));
     var perSideTarget = Math.max(1, toSafeInt(cfg && cfg.perSideTarget, bal.zombiePerSideTarget || defaultPerSide));
     var perSideTolerance = Math.max(0, toSafeInt(cfg && cfg.perSideTolerance, bal.zombiePerSideTolerance || 5));
 

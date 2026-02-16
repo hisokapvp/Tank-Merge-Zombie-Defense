@@ -940,6 +940,7 @@ const worldEventsState = {
   lightningUntil: 0,
   nextLightningAt: 0,
   rainBlend: 0,
+  aliveMultCurrent: 1,
 };
 
 const rainCache = {
@@ -1364,7 +1365,7 @@ function getWorldEventsAttackCfg(){
     weatherLeadInSec: Number.isFinite(cfg.weatherLeadInSec) ? Math.max(0, cfg.weatherLeadInSec) : 5,
     weatherLeadOutSec: Number.isFinite(cfg.weatherLeadOutSec) ? Math.max(0, cfg.weatherLeadOutSec) : 3,
     targetAliveMult: Number.isFinite(cfg.targetAliveMult) ? Math.max(0.1, cfg.targetAliveMult) : 1,
-    targetAliveRampSec: Number.isFinite(cfg.targetAliveRampSec) ? clamp(cfg.targetAliveRampSec, 1, 3) : 2,
+    targetAliveRampSec: Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 2,
     speedMult: Number.isFinite(cfg.speedMult) ? Math.max(0.1, cfg.speedMult) : 1,
     damageMult: Number.isFinite(cfg.damageMult) ? Math.max(0.1, cfg.damageMult) : 1,
     eveningDimAlpha: Number.isFinite(cfg.eveningDimAlpha) ? clamp(cfg.eveningDimAlpha, 0, 1) : 0.16,
@@ -1461,21 +1462,46 @@ function isZombieAttackModeActive(){
   return nowSec() < (worldEventsState.attackEndAt || 0);
 }
 
+function desiredAliveMultTarget(attackCfg){
+  const cfg = attackCfg || getWorldEventsAttackCfg();
+  const attackActive = isZombieAttackModeActive();
+  const enabled = !!(cfg.enabled || cfg.forceEnabled);
+  if (!enabled || !attackActive) return 1;
+  return Number.isFinite(cfg.targetAliveMult) ? Math.max(0, cfg.targetAliveMult) : 1;
+}
+
+function updateDesiredAliveMultCurrent(dt, attackCfg){
+  const cfg = attackCfg || getWorldEventsAttackCfg();
+  const target = desiredAliveMultTarget(cfg);
+  const rampSec = Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 0;
+  const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+  const currentRaw = Number.isFinite(worldEventsState.aliveMultCurrent) ? worldEventsState.aliveMultCurrent : 1;
+  const current = Math.max(0, currentRaw);
+
+  let next = target;
+  if (rampSec > 0 && safeDt > 0) {
+    const delta = target - current;
+    const speed = Math.abs(delta) / rampSec;
+    const step = speed * safeDt;
+    if (step >= Math.abs(delta)) next = target;
+    else next = current + Math.sign(delta) * step;
+  }
+
+  if (!Number.isFinite(next)) next = target;
+  worldEventsState.aliveMultCurrent = Math.max(0, next);
+}
+
 function getZombieAttackMultipliers(){
   const attackCfg = getWorldEventsAttackCfg();
   const attackActive = isZombieAttackModeActive();
+  const aliveMultCurrent = Number.isFinite(worldEventsState.aliveMultCurrent)
+    ? Math.max(0, worldEventsState.aliveMultCurrent)
+    : 1;
   if ((!attackCfg.enabled && !attackCfg.forceEnabled) || !attackActive) {
-    return { targetAliveMult: 1, speedMult: 1, damageMult: 1 };
+    return { targetAliveMult: aliveMultCurrent, speedMult: 1, damageMult: 1 };
   }
-  const startAt = Number.isFinite(worldEventsState.currentAttackStartAt) && worldEventsState.currentAttackStartAt > 0
-    ? worldEventsState.currentAttackStartAt
-    : nowSec();
-  const elapsed = Math.max(0, nowSec() - startAt);
-  const rampSec = Number.isFinite(attackCfg.targetAliveRampSec) ? Math.max(0, attackCfg.targetAliveRampSec) : 0;
-  const k = rampSec > 0 ? clamp(elapsed / rampSec, 0, 1) : 1;
-  const targetAliveMult = 1 + (attackCfg.targetAliveMult - 1) * k;
   return {
-    targetAliveMult,
+    targetAliveMult: aliveMultCurrent,
     speedMult: attackCfg.speedMult,
     damageMult: attackCfg.damageMult,
   };
@@ -1538,6 +1564,8 @@ function updateWorldEvents(dt){
   if (weatherCfg.forceEnabled) {
     worldEventsState.weatherEnabled = true;
   }
+
+  updateDesiredAliveMultCurrent(dt, attackCfg);
 
   if (!worldEventsState.weatherEnabled) {
     worldEventsState.lightningUntil = 0;
@@ -1741,6 +1769,15 @@ function calculateAffordableBuyCount(limit){
   return { count, totalCost };
 }
 
+function getBulkBuyPlan(){
+  const Garage = window.Game && window.Game.Garage;
+  const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  const count = Math.max(2, Math.min(5, freeSlots));
+  if (freeSlots < 2) return { freeSlots, count, enabled: false };
+  const affordable = calculateAffordableBuyCount(count);
+  return { freeSlots, count, enabled: affordable.count === count };
+}
+
 function performTankPurchaseOnce(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
@@ -1772,19 +1809,15 @@ function buyBulkMode(){
 }
 
 function tryBuyBulk(){
-  const mode = buyBulkMode();
-  if (mode === 'none') return;
-  const target = mode === 'buy2' ? 2 : (mode === 'buy5' ? 5 : Number.MAX_SAFE_INTEGER);
-  const affordable = calculateAffordableBuyCount(target);
-  if (mode !== 'buyMax' && affordable.count !== target) return;
-  const countToBuy = mode === 'buyMax' ? affordable.count : target;
-  if (countToBuy <= 0) return;
+  const plan = getBulkBuyPlan();
+  if (!plan.enabled || plan.freeSlots < 2) return;
+  const countToBuy = plan.count;
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
-    if (!performTankPurchaseOnce()) break;
+    if (!performTankPurchaseOnce()) return;
     purchased += 1;
   }
-  if (purchased > 0) processAchievementProgress(purchased);
+  if (purchased === countToBuy) processAchievementProgress(purchased);
 }
 
 function mergeCells(fromIdx, toIdx){
@@ -2634,17 +2667,22 @@ function toSafeInt(value, fallback){
 }
 
 function getZombieSpawnBalanceConfig(){
+  const attackMult = getZombieAttackMultipliers();
+  const desiredAliveMult = Number.isFinite(attackMult.targetAliveMult) ? Math.max(0, attackMult.targetAliveMult) : 1;
   if (ZombieSpawnApi && ZombieSpawnApi.getZombieSpawnBalanceConfig) {
-    return ZombieSpawnApi.getZombieSpawnBalanceConfig(ZombieSprites ? ZombieSprites.spawnConfig : null, BAL);
+    return ZombieSpawnApi.getZombieSpawnBalanceConfig(
+      ZombieSprites ? ZombieSprites.spawnConfig : null,
+      BAL,
+      { desiredAliveMult: desiredAliveMult }
+    );
   }
   const cfg = ZombieSprites && ZombieSprites.spawnConfig ? ZombieSprites.spawnConfig : null;
-  const attackMult = getZombieAttackMultipliers();
   const targetAliveBase = Math.max(1, toSafeInt(cfg?.targetAlive, BAL.zombieCountTarget));
-  const targetAlive = Math.max(1, Math.round(targetAliveBase * attackMult.targetAliveMult));
+  const targetAlive = clamp(Math.round(targetAliveBase * desiredAliveMult), 0, Number.MAX_SAFE_INTEGER);
   const sideCount = Math.max(1, toSafeInt(cfg?.sideCount, BAL.zombieSideCount || 4));
-  const defaultPerSide = Math.max(1, Math.round(targetAlive / sideCount));
+  const defaultPerSide = Math.max(1, Math.round(targetAliveBase / sideCount));
   const basePerSideTarget = Math.max(1, toSafeInt(cfg?.perSideTarget, BAL.zombiePerSideTarget || defaultPerSide));
-  const perSideTarget = Math.max(1, Math.round(basePerSideTarget * attackMult.targetAliveMult));
+  const perSideTarget = basePerSideTarget;
   const perSideTolerance = Math.max(0, toSafeInt(cfg?.perSideTolerance, BAL.zombiePerSideTolerance || 5));
   return {
     targetAlive,
@@ -4283,25 +4321,10 @@ function updateUI(){
   ui.buy.disabled = state.coins < cost || !hasFree;
 
   if (ui.buyBulk) {
-    const mode = buyBulkMode();
-    if (mode === 'none') {
-      ui.buyBulk.classList.add('hidden');
-      ui.buyBulk.disabled = true;
-    } else {
-      ui.buyBulk.classList.remove('hidden');
-      const textKey = mode === 'buy2' ? 'buyBulk2' : (mode === 'buy5' ? 'buyBulk5' : 'buyBulkMax');
-      ui.buyBulk.textContent = t(textKey);
-      if (mode === 'buy2') {
-        const sim2 = calculateAffordableBuyCount(2);
-        ui.buyBulk.disabled = sim2.count < 2;
-      } else if (mode === 'buy5') {
-        const sim5 = calculateAffordableBuyCount(5);
-        ui.buyBulk.disabled = sim5.count < 5;
-      } else {
-        const simMax = calculateAffordableBuyCount(Number.MAX_SAFE_INTEGER);
-        ui.buyBulk.disabled = simMax.count < 1;
-      }
-    }
+    const plan = getBulkBuyPlan();
+    ui.buyBulk.classList.remove('hidden');
+    ui.buyBulk.textContent = t('buyBulkDynamic', { count: plan.count });
+    ui.buyBulk.disabled = !plan.enabled;
   }
 
   if (ui.achievementsModal && !ui.achievementsModal.classList.contains('hidden')) {

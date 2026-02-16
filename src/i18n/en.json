@@ -53,6 +53,7 @@
   "buyBulk2": "Buy 2 tanks",
   "buyBulk5": "Buy 5 tanks",
   "buyBulkMax": "Buy max tanks",
+  "buyBulkDynamic": "Buy {count} tanks",
   "fenceRepairNoCoins": "Not enough coins to repair",
   "fenceRepairDone": "Segment repaired",
   "talentTreeTitle": "Talent Tree",
