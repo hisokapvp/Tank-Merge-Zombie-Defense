@@ -1100,6 +1100,9 @@ function initDecors(){
   const cfgIds = Array.isArray(decorCfg?.spriteIds) ? decorCfg.spriteIds : [];
   const cfgCount = Number.isFinite(decorCfg?.count) ? decorCfg.count : 0;
   const cfgZones = Array.isArray(decorCfg?.noSpawnZones) ? decorCfg.noSpawnZones : [];
+  const cfgPlacementMaxAttempts = Number.isFinite(decorCfg?.placementMaxAttempts)
+    ? Math.max(1, Math.floor(decorCfg.placementMaxAttempts))
+    : 40;
 
   const hasBalIds = Array.isArray(BAL.decorSpriteIds) && BAL.decorSpriteIds.length > 0;
   const hasBalCount = Number.isFinite(BAL.decorCount);
@@ -1112,15 +1115,35 @@ function initDecors(){
   const blockRadiusK = Number.isFinite(decorCfg?.blockRadiusK) ? clamp(decorCfg.blockRadiusK, 0.1, 0.6) : 0.35;
   const blockRadiusMin = Number.isFinite(decorCfg?.blockRadiusMin) ? Math.max(1, decorCfg.blockRadiusMin) : 8;
   const zones = hasBalZones ? BAL.decorNoSpawnZones : cfgZones;
-  const maxAttempts = BAL.decorMaxAttempts || 400;
-  const boardRect = state.boardRect || { x: center.x - 120, y: center.y - 120, w: 240, h: 240 };
+  const maxAttemptsPerStage = Number.isFinite(BAL.decorMaxAttempts)
+    ? Math.max(1, Math.floor(BAL.decorMaxAttempts))
+    : cfgPlacementMaxAttempts;
   // Decor spawns OUTSIDE the fence, not inside
   const fenceOuterEdge = Number.isFinite(BAL.fenceRadius) ? (BAL.fenceRadius + (BAL.fenceWidth || 20) * 0.5 + 12) : 300;
   const innerR = fenceOuterEdge;
   const outerRByViewport = Math.max(viewSize.w, viewSize.h) * 0.62;
-  let outerR = outerRByViewport;
-  if (!(outerR > innerR)) {
-    outerR = innerR + 80;
+  const maxMapRadius = Math.max(
+    Math.hypot(center.x, center.y),
+    Math.hypot(viewSize.w - center.x, center.y),
+    Math.hypot(center.x, viewSize.h - center.y),
+    Math.hypot(viewSize.w - center.x, viewSize.h - center.y)
+  );
+  let firstStageOuterR = outerRByViewport;
+  if (!(firstStageOuterR > innerR)) {
+    firstStageOuterR = innerR + 80;
+  }
+  if (firstStageOuterR > maxMapRadius) {
+    firstStageOuterR = maxMapRadius;
+  }
+  const stageCount = 5;
+  const stageOuterR = new Array(stageCount);
+  for (let s = 0; s < stageCount; s++) {
+    const t = (s + 1) / stageCount;
+    stageOuterR[s] = firstStageOuterR + (maxMapRadius - firstStageOuterR) * t;
+  }
+
+  function isInsideMapWithPadding(x, y, pad){
+    return x >= pad && x <= (viewSize.w - pad) && y >= pad && y <= (viewSize.h - pad);
   }
 
   function pointBlockedByZones(x, y, noSpawnZones){
@@ -1145,33 +1168,88 @@ function initDecors(){
     return false;
   }
 
-  function tryPlaceDecor(checkZones){
-    for (let attempt = 0; attempt < maxAttempts; attempt++){
-      const angle = Math.random() * Math.PI * 2;
-      const r = innerR + Math.random() * (outerR - innerR);
-      const x = center.x + Math.cos(angle) * r;
-      const y = center.y + Math.sin(angle) * r;
-
-      if (checkZones && zones.length && pointBlockedByZones(x, y, zones)) continue;
-
-      const spriteId = ids[Math.floor(Math.random() * ids.length)];
-      const frame = DecorSprites.pickFrame(spriteId);
-      const frameScale = Number.isFinite(frame?.scale) && frame.scale > 0 ? frame.scale : 1;
-      const isWall = !!(frame && frame.isWall);
-      const drawScale = 0.5 * balScale * frameScale;
-      const baseRadius = frame ? Math.min(frame.w, frame.h) * drawScale : blockRadiusMin;
-      const blockR = Math.max(blockRadiusMin, baseRadius * blockRadiusK);
-      const decor = { x, y, spriteId, blockR, isWall, renderOrder: state.decors.length };
-      state.decors.push(decor);
-      if (isWall) state.wallDecors.push(decor);
-      return true;
+  function overlapsPlacedDecors(x, y, blockR){
+    for (let i = 0; i < state.decors.length; i++) {
+      const d = state.decors[i];
+      const minDist = blockR + d.blockR;
+      if (Math.hypot(x - d.x, y - d.y) < minDist) return true;
     }
     return false;
   }
 
-  for (let n = 0; n < count; n++){
-    const placedWithZones = tryPlaceDecor(true);
-    if (!placedWithZones && zones.length) tryPlaceDecor(false);
+  function tryCommitDecor(x, y, spriteId){
+    const frame = DecorSprites.pickFrame(spriteId);
+    if (!frame) return false;
+    const frameScale = Number.isFinite(frame.scale) && frame.scale > 0 ? frame.scale : 1;
+    const isWall = !!frame.isWall;
+    const drawScale = 0.5 * balScale * frameScale;
+    const baseRadius = Math.min(frame.w, frame.h) * drawScale;
+    const blockR = Math.max(blockRadiusMin, baseRadius * blockRadiusK);
+
+    if (!isInsideMapWithPadding(x, y, blockR)) return false;
+    if (Math.hypot(x - center.x, y - center.y) < innerR) return false;
+    if (zones.length && pointBlockedByZones(x, y, zones)) return false;
+    if (overlapsPlacedDecors(x, y, blockR)) return false;
+
+    const decor = { x, y, spriteId, blockR, isWall, renderOrder: state.decors.length };
+    state.decors.push(decor);
+    if (isWall) state.wallDecors.push(decor);
+    return true;
+  }
+
+  function sampleAnnulusPoint(decorIndex, stageIndex, attempt, outerR){
+    const angleUnit = (decorIndex * 0.6180339887498948 + stageIndex * 0.3819660112501051 + attempt * 0.7548776662466927) % 1;
+    const radiusUnit = (decorIndex * 0.5698402909980532 + stageIndex * 0.438579134225367 + attempt * 0.3517337112491958) % 1;
+    const angle = angleUnit * Math.PI * 2;
+    const r = innerR + Math.sqrt(radiusUnit) * Math.max(1, outerR - innerR);
+    return {
+      x: center.x + Math.cos(angle) * r,
+      y: center.y + Math.sin(angle) * r,
+    };
+  }
+
+  function tryPlaceDecorForIndex(decorIndex){
+    for (let stage = 0; stage < stageOuterR.length; stage++) {
+      const outerR = stageOuterR[stage];
+      for (let attempt = 0; attempt < maxAttemptsPerStage; attempt++) {
+        const p = sampleAnnulusPoint(decorIndex, stage, attempt, outerR);
+        const spriteId = ids[(decorIndex + stage + attempt) % ids.length];
+        if (tryCommitDecor(p.x, p.y, spriteId)) return true;
+      }
+    }
+    return false;
+  }
+
+  function exhaustiveGridPlacement(decorIndex){
+    const gridStep = Math.max(8, Math.floor(blockRadiusMin * 1.5));
+    const offsetX = (decorIndex * 17) % gridStep;
+    const offsetY = (decorIndex * 29) % gridStep;
+    for (let y = offsetY; y <= viewSize.h; y += gridStep) {
+      for (let x = offsetX; x <= viewSize.w; x += gridStep) {
+        for (let si = 0; si < ids.length; si++) {
+          const spriteId = ids[(decorIndex + si) % ids.length];
+          if (tryCommitDecor(x, y, spriteId)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function bruteForcePlacement(decorIndex){
+    const hardAttempts = Math.max(12000, maxAttemptsPerStage * 300);
+    for (let attempt = 0; attempt < hardAttempts; attempt++) {
+      const x = Math.random() * viewSize.w;
+      const y = Math.random() * viewSize.h;
+      const spriteId = ids[(decorIndex + attempt) % ids.length];
+      if (tryCommitDecor(x, y, spriteId)) return true;
+    }
+    return false;
+  }
+
+  for (let n = 0; n < count; n++) {
+    if (tryPlaceDecorForIndex(n)) continue;
+    if (exhaustiveGridPlacement(n)) continue;
+    bruteForcePlacement(n);
   }
 }
 

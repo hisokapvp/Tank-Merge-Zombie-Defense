@@ -28,10 +28,17 @@
 ### Decor (`assets/decor.json`)
 
 - `count` / `spriteIds[]` / `noSpawnZones[]` можно задавать в JSON.
+- `placementMaxAttempts` (int, default `40`): число попыток размещения на один этап области поиска для каждого decor-объекта.
 - `frames[].scale` (optional, default `1`): локальный множитель размера конкретного декор-кадра.
 - `frames[].isWall` (optional, default `false`): если `true`, decor считается стеной для зомби (коллизия + обход без телепорта).
 - `noSpawnZones[]`: `circle {type:'circle',cx,cy,r}` и `rect {type:'rect',x,y,w,h}` в world-coords.
 - Приоритет runtime: `BAL.decorNoSpawnZones` / `BAL.decorCount` / `BAL.decorSpriteIds` переопределяют JSON.
+- Генератор decor выполняет `count` строго, без overlap и с соблюдением `noSpawnZones`; область поиска расширяется до краёв карты.
+
+### Stamps (`assets/ground.json`)
+
+- `stamps[]` задаёт stamp-set’ы для ground atlas.
+- Runtime-правила: non-overlap между stamp-областями/спрайтами, суммарный coverage-порог `>= 80%` по всем set’ам (без console-логов при недоборе).
 
 ### Zombies (`assets/zombies.json`)
 

@@ -15,6 +15,7 @@
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
+- Генерация карты (ground stamps + decor placement) → `docs/map-generation.md` + `docs/ai/SYSTEMS/render.md`
 - Audio/SFX/pause-resume → `docs/ai/SYSTEMS/audio.md`
 - Telemetry/analytics/flags/experiments/funnel → `docs/ai/SYSTEMS/telemetry.md`
 - World events/weather/attackMode → `docs/ai/SYSTEMS/worldEvents.md`

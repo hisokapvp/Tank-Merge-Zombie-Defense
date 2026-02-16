@@ -2,6 +2,7 @@
   "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты размещаются случайно по карте. Можно задать count/spriteIds/noSpawnZones прямо тут. noSpawnZones работают в world-coords относительно центра экрана: circle { type:'circle', cx, cy, r } и rect { type:'rect', x, y, w, h }. В game.js значения BAL.decorNoSpawnZones / BAL.decorCount / BAL.decorSpriteIds имеют приоритет и переопределяют JSON при явной настройке. blockRadiusK/blockRadiusMin управляют радиусом непроходимой зоны у основания decor. frames: id, x, y, w, h, anchor(optional), isWall(optional: true => препятствие для зомби).",
   "atlas": "decor_atlas.png",
   "count":60,
+  "placementMaxAttempts": 100,
   "blockRadiusK": 0.35,
   "blockRadiusMin": 8,
   "spriteIds": ["barrel", "tree", "debris", "can"],

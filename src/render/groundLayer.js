@@ -133,6 +133,13 @@
     return false;
   }
 
+  function areAnyRectsOccupied(rects, occupiedRects) {
+    for (var i = 0; i < rects.length; i++) {
+      if (isOccupied(rects[i], occupiedRects)) return true;
+    }
+    return false;
+  }
+
   function unionRects(rects) {
     if (!Array.isArray(rects) || !rects.length) return null;
     var minX = rects[0].x;
@@ -229,6 +236,115 @@
     return order;
   }
 
+  function estimateStampRequestArea(items) {
+    if (!Array.isArray(items) || !items.length) return 0;
+    var total = 0;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (!it) continue;
+      var w = Math.max(1, Math.round(it.w * it.scale));
+      var h = Math.max(1, Math.round(it.h * it.scale));
+      total += w * h;
+    }
+    return total;
+  }
+
+  function buildStampRequests(stampSets) {
+    var requests = [];
+    var requestedTotal = 0;
+
+    for (var si = 0; si < stampSets.length; si++) {
+      var stamp = stampSets[si];
+      if (!stamp) continue;
+      var maxAttempts = Number.isFinite(stamp.maxPlacementAttempts) ? Math.max(1, stamp.maxPlacementAttempts) : 24;
+      if (stamp.mode === 'variants') {
+        var order = buildVariantPlacementOrder(stamp);
+        for (var vi = 0; vi < order.length; vi++) {
+          var variantIdx = order[vi];
+          var variantItem = stamp.items[variantIdx];
+          if (!variantItem) continue;
+          requests.push({
+            stampId: stamp.id,
+            requestKey: 'v' + vi,
+            spawnArea: stamp.spawnArea,
+            maxAttempts: maxAttempts,
+            items: [variantItem],
+            requestArea: estimateStampRequestArea([variantItem]),
+          });
+          requestedTotal += 1;
+        }
+        continue;
+      }
+
+      for (var ci = 0; ci < stamp.count; ci++) {
+        requests.push({
+          stampId: stamp.id,
+          requestKey: 'c' + ci,
+          spawnArea: stamp.spawnArea,
+          maxAttempts: maxAttempts,
+          items: stamp.items,
+          requestArea: estimateStampRequestArea(stamp.items),
+        });
+        requestedTotal += 1;
+      }
+    }
+
+    requests.sort(function (a, b) {
+      var areaDelta = a.requestArea - b.requestArea;
+      if (areaDelta !== 0) return areaDelta;
+      return a.stampId < b.stampId ? -1 : (a.stampId > b.stampId ? 1 : 0);
+    });
+
+    return {
+      requests: requests,
+      requestedTotal: requestedTotal,
+    };
+  }
+
+  function pickSpawnPointByRatios(area, centerX, centerY, angle01, dist01) {
+    if (!area) return { x: centerX, y: centerY };
+    if (area.type === 'rect') {
+      return {
+        x: centerX + area.x + angle01 * area.w,
+        y: centerY + area.y + dist01 * area.h,
+      };
+    }
+    var angle = angle01 * Math.PI * 2;
+    var dist = Math.sqrt(dist01) * area.r;
+    return {
+      x: centerX + area.cx + Math.cos(angle) * dist,
+      y: centerY + area.cy + Math.sin(angle) * dist,
+    };
+  }
+
+  function tryPlaceStampRequest(request, centerX, centerY, occupiedRects) {
+    var maxAttempts = Number.isFinite(request.maxAttempts) ? Math.max(1, request.maxAttempts) : 24;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      var spawn = pickSpawnPoint(request.spawnArea, centerX, centerY, request.stampId, request.requestKey + '|' + attempt);
+      var itemRects = [];
+      for (var i = 0; i < request.items.length; i++) {
+        itemRects.push(itemDrawRect(spawn, request.items[i]));
+      }
+      if (areAnyRectsOccupied(itemRects, occupiedRects)) continue;
+      return { itemRects: itemRects, usedFallback: false };
+    }
+
+    var fallbackAttempts = Math.max(12, maxAttempts);
+    for (var fa = 0; fa < fallbackAttempts; fa++) {
+      var angle01 = (hash01(request.stampId, request.requestKey, 'faA|' + fa) + (fa * 0.3819660112501051)) % 1;
+      var dist01 = (hash01(request.stampId, request.requestKey, 'faR|' + fa) + (fa * 0.6180339887498948)) % 1;
+      var fallbackSpawn = pickSpawnPointByRatios(request.spawnArea, centerX, centerY, angle01, dist01);
+      var fallbackRects = [];
+      for (var fi = 0; fi < request.items.length; fi++) {
+        fallbackRects.push(itemDrawRect(fallbackSpawn, request.items[fi]));
+      }
+      if (areAnyRectsOccupied(fallbackRects, occupiedRects)) continue;
+      return { itemRects: fallbackRects, usedFallback: true };
+    }
+
+    return null;
+  }
+
   function computeRanges(viewW, viewH, tileW, tileH) {
     var centerX = Math.floor(viewW / 2);
     var centerY = Math.floor(viewH / 2);
@@ -302,11 +418,13 @@
       ctx: null,
       ready: false,
       error: '',
+      stampPlacementStats: { requestedTotal: 0, placedTotal: 0, coverage: 1 },
       width: 0,
       height: 0,
       invalidate: function () {
         this.ready = false;
         this.error = '';
+        this.stampPlacementStats = { requestedTotal: 0, placedTotal: 0, coverage: 1 };
       },
       rebuild: function (params) {
         var opts = params || {};
@@ -332,6 +450,7 @@
         localCtx.imageSmoothingEnabled = false;
 
         var placements = computeLayout(cfg, viewW, viewH);
+        var tileDrawList = [];
         for (var i = 0; i < placements.length; i++) {
           var place = placements[i];
           var tile = GroundGen.getTileAt(cfg, place.tileX, place.tileY);
@@ -348,19 +467,34 @@
           var drawW = Math.max(1, Math.round(place.w * scale));
           var drawH = Math.max(1, Math.round(place.h * scale));
 
+          tileDrawList.push({
+            srcX: src.x,
+            srcY: src.y,
+            srcW: src.w,
+            srcH: src.h,
+            centerX: centerX,
+            centerY: centerY,
+            drawW: drawW,
+            drawH: drawH,
+            rotationRad: rotationRad,
+          });
+        }
+
+        for (i = 0; i < tileDrawList.length; i++) {
+          var tileDraw = tileDrawList[i];
           localCtx.save();
-          localCtx.translate(centerX, centerY);
-          localCtx.rotate(rotationRad);
+          localCtx.translate(tileDraw.centerX, tileDraw.centerY);
+          localCtx.rotate(tileDraw.rotationRad);
           localCtx.drawImage(
             atlasImg,
-            src.x,
-            src.y,
-            src.w,
-            src.h,
-            -Math.floor(drawW / 2),
-            -Math.floor(drawH / 2),
-            drawW,
-            drawH
+            tileDraw.srcX,
+            tileDraw.srcY,
+            tileDraw.srcW,
+            tileDraw.srcH,
+            -Math.floor(tileDraw.drawW / 2),
+            -Math.floor(tileDraw.drawH / 2),
+            tileDraw.drawW,
+            tileDraw.drawH
           );
           localCtx.restore();
         }
@@ -369,76 +503,56 @@
         var centerX = Math.floor(viewW / 2);
         var centerY = Math.floor(viewH / 2);
         var occupiedRects = [];
-        for (var si = 0; si < stampSets.length; si++) {
-          var stamp = stampSets[si];
-          var maxAttempts = Number.isFinite(stamp.maxPlacementAttempts) ? Math.max(1, stamp.maxPlacementAttempts) : 24;
-          if (stamp.mode === 'variants') {
-            var placementOrder = buildVariantPlacementOrder(stamp);
-            for (var vi = 0; vi < placementOrder.length; vi++) {
-              var variantIdx = placementOrder[vi];
-              var variantItem = stamp.items[variantIdx];
-              if (!variantItem) continue;
-              var variantRect = null;
-              var variantSpawn = null;
-              for (var va = 0; va < maxAttempts; va++) {
-                variantSpawn = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, 'v' + vi + '|' + va);
-                var testRect = itemDrawRect(variantSpawn, variantItem);
-                if (!isOccupied(testRect, occupiedRects)) {
-                  variantRect = testRect;
-                  break;
-                }
-              }
-              if (!variantRect || !variantSpawn) continue;
-              localCtx.drawImage(
-                atlasImg,
-                variantItem.x,
-                variantItem.y,
-                variantItem.w,
-                variantItem.h,
-                variantRect.x,
-                variantRect.y,
-                variantRect.w,
-                variantRect.h
-              );
-              occupiedRects.push(variantRect);
-            }
-            continue;
-          }
+        var stampReqPack = buildStampRequests(stampSets);
+        var stampRequests = stampReqPack.requests;
+        var requestedTotal = stampReqPack.requestedTotal;
+        var placedTotal = 0;
+        var stampDrawList = [];
 
-          for (var ci = 0; ci < stamp.count; ci++) {
-            var spawnPoint = null;
-            var itemRects = null;
-            var compositeRect = null;
-            for (var ca = 0; ca < maxAttempts; ca++) {
-              spawnPoint = pickSpawnPoint(stamp.spawnArea, centerX, centerY, stamp.id, 'c' + ci + '|' + ca);
-              itemRects = [];
-              for (var it = 0; it < stamp.items.length; it++) {
-                itemRects.push(itemDrawRect(spawnPoint, stamp.items[it]));
-              }
-              compositeRect = unionRects(itemRects);
-              if (compositeRect && !isOccupied(compositeRect, occupiedRects)) break;
-              compositeRect = null;
-            }
-            if (!spawnPoint || !itemRects || !compositeRect) continue;
-            for (var ii = 0; ii < stamp.items.length; ii++) {
-              var item = stamp.items[ii];
-              var drawRect = itemRects[ii];
-              if (!drawRect) continue;
-              localCtx.drawImage(
-                atlasImg,
-                item.x,
-                item.y,
-                item.w,
-                item.h,
-                drawRect.x,
-                drawRect.y,
-                drawRect.w,
-                drawRect.h
-              );
-            }
-            occupiedRects.push(compositeRect);
+        for (var si = 0; si < stampRequests.length; si++) {
+          var request = stampRequests[si];
+          var placement = tryPlaceStampRequest(request, centerX, centerY, occupiedRects);
+          if (!placement || !Array.isArray(placement.itemRects)) continue;
+          for (var ii = 0; ii < request.items.length; ii++) {
+            var item = request.items[ii];
+            var drawRect = placement.itemRects[ii];
+            if (!item || !drawRect) continue;
+            stampDrawList.push({
+              srcX: item.x,
+              srcY: item.y,
+              srcW: item.w,
+              srcH: item.h,
+              dstX: drawRect.x,
+              dstY: drawRect.y,
+              dstW: drawRect.w,
+              dstH: drawRect.h,
+            });
+            occupiedRects.push(drawRect);
           }
+          placedTotal += 1;
         }
+
+        for (i = 0; i < stampDrawList.length; i++) {
+          var stampDraw = stampDrawList[i];
+          localCtx.drawImage(
+            atlasImg,
+            stampDraw.srcX,
+            stampDraw.srcY,
+            stampDraw.srcW,
+            stampDraw.srcH,
+            stampDraw.dstX,
+            stampDraw.dstY,
+            stampDraw.dstW,
+            stampDraw.dstH
+          );
+        }
+
+        var coverage = requestedTotal > 0 ? (placedTotal / requestedTotal) : 1;
+        this.stampPlacementStats = {
+          requestedTotal: requestedTotal,
+          placedTotal: placedTotal,
+          coverage: coverage,
+        };
 
         this.canvas = canvas;
         this.ctx = localCtx;

@@ -33,6 +33,21 @@
 - Fallback:
 	- Если `ground_atlas.png` или `ground.json` не загрузились, используется старый procedural gradient-фон.
 
+### Ground stamps (`assets/ground.json`)
+
+- Pipeline: `assets/ground.json` → `GroundSprites.load()` (`src/render/spriteLoaders.js`) → `groundLayer.rebuild()` (`src/render/groundLayer.js`).
+- Stamps рисуются отдельным draw-list после tile draw-list, поэтому всегда поверх ground-тайлов.
+- Placement: единая проверка non-overlap по sprite-rect каждого stamp-item (включая composite).
+- Coverage rule: рассчитывается `placedTotal / requestedTotal` по всем stamp-set’ам суммарно, целевой порог `>= 0.8`.
+- При недоборе `< 0.8` движок не пишет новые `console.*`, а просто рисует успешно размещённые stamps.
+
+### Decor placement (`assets/decor.json`)
+
+- Декор размещается в `initDecors()` (`game.js`) вне fence-radius, с поэтапным расширением области поиска до краёв карты.
+- На каждом этапе используется `placementMaxAttempts` попыток (default `40`, см. `assets/decor.json`).
+- Placement строгий: соблюдаются `noSpawnZones`, запрет overlap между decor-объектами и запрет захода внутрь fence.
+- Runtime доводит размещение до требуемого `count` (из JSON или BAL override) через стадийный annulus + grid/bruteforce fallback с конечными лимитами.
+
 ## Layout tuning
 
 - `src/config/layoutTuning.js`:

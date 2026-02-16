@@ -353,6 +353,9 @@
             spriteIds: spriteIds,
             wallSpriteIds: wallIds,
             noSpawnZones: parsedZones,
+            placementMaxAttempts: Number.isFinite(data.placementMaxAttempts)
+              ? Math.max(1, Math.floor(data.placementMaxAttempts))
+              : 40,
             blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
             blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
           };
