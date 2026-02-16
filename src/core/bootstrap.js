@@ -215,7 +215,8 @@
     }
 
     await opts.TankSprites.load();
-    opts.FenceSprites.load().catch(function () {});
+    await opts.FenceSprites.load().catch(function () {});
+    opts.resizeCanvas();
     await opts.DecorSprites.load().catch(function () {});
     if (typeof opts.onDecorSpritesLoaded === 'function') opts.onDecorSpritesLoaded();
 

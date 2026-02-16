@@ -23,6 +23,20 @@
    */
   function serializeState(state) {
     if (!state) return {};
+    var fenceHpById = {};
+    if (Array.isArray(state.fenceSegments)) {
+      for (var si = 0; si < state.fenceSegments.length; si++) {
+        var seg = state.fenceSegments[si];
+        if (!seg || !seg.id || !Number.isFinite(seg.hp)) continue;
+        fenceHpById[seg.id] = Math.max(0, seg.hp);
+      }
+    }
+    var fenceState = {
+      segmentsPerSide: Number.isFinite(state.fenceSegmentsMeta && state.fenceSegmentsMeta.segmentsPerSide)
+        ? state.fenceSegmentsMeta.segmentsPerSide
+        : null,
+      hpById: fenceHpById,
+    };
     var cells = [];
     if (Array.isArray(state.cells)) {
     for (var i = 0; i < state.cells.length; i++) {
@@ -56,6 +70,8 @@
       maxTankLevelAchieved: state.maxTankLevelAchieved,
       boostUntil: state.boostUntil,
       activeEffects: state.activeEffects,
+      fenceState: fenceState,
+      achievements: state.achievements,
     };
   }
 

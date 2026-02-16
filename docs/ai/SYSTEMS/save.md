@@ -15,6 +15,22 @@
 - Порог показа offline modal: `OFFLINE_THRESHOLD_MS`.
 - Любые изменения схемы: синхронно `initialState` + `storage` + restore path в boot.
 
+## Новые поля сейва
+
+- `achievements`:
+	- `unlocked` — карта полученных достижений,
+	- `totalPurchased` — накопленный прогресс покупок,
+	- `popupQueue` в сейв не критичен (на загрузке очищается).
+- `fenceState`:
+	- `segmentsPerSide` — сигнатура конфигурации,
+	- `hpById` — сохранённое HP сегментов по стабильному `id`.
+
+## Миграция / совместимость
+
+- Старые сейвы без новых полей загружаются без ошибок.
+- Для достижений без `totalPurchased` прогресс может быть восстановлен из исторического `buyCounts`.
+- При смене `segmentsPerSide` восстановление fence HP идёт по совпавшим `id`; новые/изменённые сегменты получают `maxHp`.
+
 ## Риски
 
 - Сохранять backward compatibility save.

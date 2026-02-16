@@ -36,10 +36,36 @@
     return findFreeCell(state) !== null;
   }
 
+  function countFreeCells(state) {
+    if (!state || !Array.isArray(state.cells)) return 0;
+    var count = 0;
+    for (var i = 0; i < state.cells.length; i++) {
+      if (isCellAvailableForTank(state.cells[i], state)) count += 1;
+    }
+    return count;
+  }
+
+  function findFreeCells(state, n) {
+    if (!state || !Array.isArray(state.cells)) return [];
+    var need = Math.max(0, Math.floor(Number(n) || 0));
+    if (need <= 0) return [];
+    var found = [];
+    for (var i = 0; i < state.cells.length; i++) {
+      var cell = state.cells[i];
+      if (isCellAvailableForTank(cell, state)) {
+        found.push(cell.i);
+        if (found.length >= need) break;
+      }
+    }
+    return found;
+  }
+
   global.Game = global.Game || {};
   global.Game.Garage = {
     isCellAvailableForTank,
     findFreeCell,
     hasFreeCell,
+    countFreeCells,
+    findFreeCells,
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -12,6 +12,17 @@
 - Merge/drop/onTrack — `pointerup`.
 - Ранние перехваты modal/crate — начало `pointerdown`.
 
+## Ремонт сегмента забора кликом
+
+- Ремонт обрабатывается в `game.js` внутри `pointerdown`.
+- Порядок важен:
+	1. ранние return модалок/offline/crate/track,
+	2. проверка dismantle-режима,
+	3. hit-test по fence-сегментам и ремонт,
+	4. только затем старт drag танка.
+- Ремонт работает только при отсутствии blocking modal и только по повреждённому сегменту (`hp < maxHp`).
+- За клик чинится один сегмент; списание монет идёт из `FenceSprites.config.repair.costCoins` (fallback `100`).
+
 ## Риски
 
 - Не ломать ранние `return` в `pointerdown`.

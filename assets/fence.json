@@ -1,6 +1,17 @@
 {
   "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }.",
   "atlas": "fence_atlas.png",
+  "segmentsPerSide": 10,
+  "segmentMaxHp": 2000,
+  "healthBar": {
+    "w": 28,
+    "h": 4,
+    "offsetY": -24
+  },
+  "repair": {
+    "enabled": true,
+    "costCoins": 100
+  },
   "frames": [
     {
       "id": "post",
@@ -110,6 +121,86 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 270,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "sideTopBroken",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "sideRightBroken",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "sideBottomBroken",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 180,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "sideLeftBroken",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "cornerTLBroken",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "cornerTRBroken",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "cornerBRBroken",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": { "x": 0.5, "y": 0.5 }
+    },
+    {
+      "id": "cornerBLBroken",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 180,
       "anchor": { "x": 0.5, "y": 0.5 }
     }
   ]

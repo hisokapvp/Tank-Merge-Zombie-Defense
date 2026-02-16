@@ -32,6 +32,7 @@
     var hangarPad = toNumber(input && input.hangarPad, 12);
     var trackPad = toNumber(input && input.trackPad, 18);
     var minTankOrbitRadius = Math.max(1, toNumber(input && input.minTankOrbitRadius, 110));
+    var minFenceRadius = Math.max(0, toNumber(input && input.minFenceRadius, 0));
     var zombieTrackWidth = Math.max(1, toNumber(input && input.zombieTrackWidth, 14));
     var tuning = getLayoutTuning(global);
 
@@ -39,6 +40,12 @@
     var minSafeTankOrbit = Math.max(minTankOrbitRadius, halfDiag + hangarPad + tankTrackWidth * 0.5);
     var tankOrbitRadius = Math.max(minSafeTankOrbit, minSafeTankOrbit + tuning.trackToHangarGapPx);
     var fenceRadius = tankOrbitRadius + tankTrackWidth * 0.5 + tuning.trackToFenceGapPx + fenceWidth * 0.5;
+    if (minFenceRadius > 0 && fenceRadius < minFenceRadius) {
+      fenceRadius = minFenceRadius;
+      tankOrbitRadius = Math.max(minSafeTankOrbit, fenceRadius - (tankTrackWidth * 0.5 + tuning.trackToFenceGapPx + fenceWidth * 0.5));
+      fenceRadius = tankOrbitRadius + tankTrackWidth * 0.5 + tuning.trackToFenceGapPx + fenceWidth * 0.5;
+      if (fenceRadius < minFenceRadius) fenceRadius = minFenceRadius;
+    }
     var zombieTrackRadius = fenceRadius + fenceWidth * 0.5 + trackPad + zombieTrackWidth * 0.5;
 
     var minCanvas = Math.min(viewW, viewH);
@@ -48,7 +55,19 @@
       var overflow = currentOuter - maxOuter;
       tankOrbitRadius = Math.max(minSafeTankOrbit, tankOrbitRadius - overflow);
       fenceRadius = tankOrbitRadius + tankTrackWidth * 0.5 + tuning.trackToFenceGapPx + fenceWidth * 0.5;
+      if (minFenceRadius > 0 && fenceRadius < minFenceRadius) {
+        fenceRadius = minFenceRadius;
+        tankOrbitRadius = Math.max(minSafeTankOrbit, fenceRadius - (tankTrackWidth * 0.5 + tuning.trackToFenceGapPx + fenceWidth * 0.5));
+      }
       zombieTrackRadius = fenceRadius + fenceWidth * 0.5 + trackPad + zombieTrackWidth * 0.5;
+      var afterOuter = zombieTrackRadius + zombieTrackWidth * 0.5;
+      if (afterOuter > maxOuter && typeof console !== 'undefined' && console.warn) {
+        console.warn('[HangarLayout] Layout does not fit in canvas; applying maximum possible size.', {
+          maxOuter: maxOuter,
+          requestedOuter: afterOuter,
+          minFenceRadius: minFenceRadius,
+        });
+      }
     }
 
     return {

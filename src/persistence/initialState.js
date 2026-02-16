@@ -18,6 +18,8 @@
       damageNumbers: [],
       decors: [],
       fenceSegments: [],
+      fenceSegmentsMeta: null,
+      savedFenceState: null,
       crate: null,
       nextCrateAt: 0,
       dragging: null,
@@ -47,6 +49,11 @@
       maxTankLevelAchieved: 1,
       buyCounts: {},
       buyPrices: {},
+      achievements: {
+        unlocked: {},
+        popupQueue: [],
+        totalPurchased: 0,
+      },
       ui: {
         talentsOpen: false,
         talentBranch: 0,

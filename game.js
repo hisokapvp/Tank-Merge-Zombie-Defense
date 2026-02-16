@@ -17,8 +17,18 @@ const ui = {
   buy: document.getElementById('buy'),
   buyCost: document.getElementById('buyCost'),
   boost: document.getElementById('boost'),
+  buyBulk: document.getElementById('buyBulk'),
   boostState: document.getElementById('boostState'),
   talentsBtn: document.getElementById('talentsBtn'),
+  achievementsBtn: document.getElementById('achievementsBtn'),
+  achievementsModal: document.getElementById('achievementsModal'),
+  achievementsClose: document.getElementById('achievementsClose'),
+  achievementsList: document.getElementById('achievementsList'),
+  achievementPopup: document.getElementById('achievementPopup'),
+  achievementPopupClose: document.getElementById('achievementPopupClose'),
+  achievementPopupClaim: document.getElementById('achievementPopupClaim'),
+  achievementPopupName: document.getElementById('achievementPopupName'),
+  achievementPopupReward: document.getElementById('achievementPopupReward'),
   settingsBtn: document.getElementById('settingsBtn'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
@@ -213,6 +223,7 @@ const DEFAULT_SETTINGS = (window.Game && window.Game.AudioSettings && window.Gam
 let settings = { ...DEFAULT_SETTINGS };
 let audioSettingsController = null;
 const InitialStateApi = window.Game && window.Game.InitialState ? window.Game.InitialState : null;
+const AchievementsApi = window.Game && window.Game.Achievements ? window.Game.Achievements : null;
 
 function createInitialState(){
   if (InitialStateApi && InitialStateApi.createInitialState) {
@@ -233,6 +244,8 @@ function createInitialState(){
       wallDecors: [],
     nextZombieRenderOrder: 1,
     fenceSegments: [],
+    fenceSegmentsMeta: null,
+    savedFenceState: null,
     crate: null,
     nextCrateAt: 0,
     dragging: null,
@@ -262,6 +275,11 @@ function createInitialState(){
     maxTankLevelAchieved: 1,
     buyCounts: {},
     buyPrices: {},
+    achievements: {
+      unlocked: {},
+      popupQueue: [],
+      totalPurchased: 0,
+    },
     ui: {
       talentsOpen: false,
       talentBranch: 0,
@@ -300,6 +318,12 @@ const nowSec = ()=>{
   return raw - simClockOffsetSec;
 };
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const FENCE_HIT_INTERVAL_MS = 500;
+const FENCE_DEFAULT_SEGMENT_HP = 200;
+const FENCE_DEFAULT_REPAIR_COST = 100;
+const ZOMBIE_DEFAULT_ATTACK_DAMAGE = 8;
+const warnedBrokenFrames = new Set();
+const warnedZombieAttackDamage = new Set();
 const ZombieSpawnApi = window.Game && window.Game.ZombieSpawn ? window.Game.ZombieSpawn : null;
 const UIModals = window.Game && window.Game.UIModals ? window.Game.UIModals : null;
 const CombatProfilesApi = window.Game && window.Game.CombatProfiles ? window.Game.CombatProfiles : null;
@@ -1011,6 +1035,12 @@ function initBoard(){
   const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
   const trackToHangarGapPx = Number.isFinite(layoutTuning.trackToHangarGapPx) ? Math.max(0, layoutTuning.trackToHangarGapPx) : 5;
   const trackToFenceGapPx = Number.isFinite(layoutTuning.trackToFenceGapPx) ? Math.max(0, layoutTuning.trackToFenceGapPx) : 5;
+  const spriteKeys = resolveFenceSpriteKeys();
+  const fenceCfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+  const segmentsPerSide = Number.isFinite(fenceCfg && fenceCfg.segmentsPerSide)
+    ? Math.max(1, Math.floor(fenceCfg.segmentsPerSide))
+    : null;
+  const minFenceRadius = estimateFenceMinRadius(segmentsPerSide, spriteKeys);
   const layoutApi = window.Game && window.Game.HangarLayout;
   const computeLayout = layoutApi && layoutApi.computeHangarTrackLayout;
   if (typeof computeLayout === 'function') {
@@ -1026,6 +1056,7 @@ function initBoard(){
       hangarPad: 12,
       trackPad: 18,
       minTankOrbitRadius: 110,
+      minFenceRadius: minFenceRadius,
     });
     BAL.tankOrbitRadius = layout.tankOrbitRadius;
     BAL.fenceRadius = layout.fenceRadius;
@@ -1036,6 +1067,7 @@ function initBoard(){
     const minSafeTankOrbit = hangarRadius + 12 + BAL.tankTrackWidth * 0.5;
     BAL.tankOrbitRadius = Math.max(110, minSafeTankOrbit + trackToHangarGapPx);
     BAL.fenceRadius = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + trackToFenceGapPx + BAL.fenceWidth * 0.5;
+    if (minFenceRadius > 0 && BAL.fenceRadius < minFenceRadius) BAL.fenceRadius = minFenceRadius;
     BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth * 0.5 + trackPad + BAL.zombieTrackWidth * 0.5;
   }
   state.fenceSegments = [];
@@ -1551,20 +1583,84 @@ function buyTankCost(level){
   return Math.max(1, Math.round(base * mods.buyCostMul * expMul));
 }
 
+function getBuyCostMul(){
+  const mods = getMods();
+  const exp = window.Game && window.Game.Experiments ? window.Game.Experiments.getVariant('economy_curve') : 'control';
+  const expMul = exp === 'soft' ? 0.92 : 1;
+  return mods.buyCostMul * expMul;
+}
+
 function bumpBuyPrice(level){
   const current = ensureBuyPrice(level);
   const delta = Math.max(1, Math.ceil(current * 0.001));
   state.buyPrices[level] = current + delta;
 }
 
-function tryBuyTank(){
+function ensureAchievementsState(){
+  if (AchievementsApi && AchievementsApi.ensureState) return AchievementsApi.ensureState(state);
+  if (!state.achievements || typeof state.achievements !== 'object') {
+    state.achievements = { unlocked: {}, popupQueue: [], totalPurchased: 0 };
+  }
+  if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
+  if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
+  if (!Number.isFinite(state.achievements.totalPurchased)) state.achievements.totalPurchased = 0;
+  return state.achievements;
+}
+
+function queueAchievementPopup(achievementId){
+  const ach = ensureAchievementsState();
+  if (!ach || !achievementId) return;
+  if (ach.popupQueue.indexOf(achievementId) < 0) ach.popupQueue.push(achievementId);
+}
+
+function processAchievementProgress(deltaCount){
+  const count = Math.max(0, Math.floor(Number(deltaCount) || 0));
+  if (count <= 0) return;
+  let unlocked = [];
+  if (AchievementsApi && AchievementsApi.addProgress) {
+    unlocked = AchievementsApi.addProgress(state, count) || [];
+  } else {
+    const ach = ensureAchievementsState();
+    ach.totalPurchased += count;
+  }
+  for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  maybeShowNextAchievementPopup();
+}
+
+function calculateAffordableBuyCount(limit){
+  const Garage = window.Game && window.Game.Garage;
+  const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  const maxAttempts = Math.max(0, Math.floor(Number(limit) || 0));
+  if (freeSlots <= 0 || maxAttempts <= 0) return { count: 0, totalCost: 0 };
+
+  const level = buyTankLevel();
+  const mul = getBuyCostMul();
+  let virtualPrice = ensureBuyPrice(level);
+  let coins = state.coins;
+  let totalCost = 0;
+  let count = 0;
+  const cap = Math.min(freeSlots, maxAttempts);
+
+  for (let i = 0; i < cap; i++) {
+    const cost = Math.max(1, Math.round(virtualPrice * mul));
+    if (coins < cost) break;
+    coins -= cost;
+    totalCost += cost;
+    count += 1;
+    virtualPrice += Math.max(1, Math.ceil(virtualPrice * 0.001));
+  }
+  return { count, totalCost };
+}
+
+function performTankPurchaseOnce(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
   const Garage = window.Game && window.Game.Garage;
   const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c=>!c.tank)?.i ?? null);
-  if (freeIdx == null || state.coins < cost) return;
+  if (freeIdx == null || state.coins < cost) return false;
   const empty = state.cells[freeIdx];
-  if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return;
+  if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return false;
+
   state.coins -= cost;
   empty.tank = makeTank(level, false);
   recordTankLevel(level);
@@ -1573,6 +1669,33 @@ function tryBuyTank(){
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level });
+  return true;
+}
+
+function tryBuyTank(){
+  const bought = performTankPurchaseOnce();
+  if (bought) processAchievementProgress(1);
+}
+
+function buyBulkMode(){
+  if (AchievementsApi && AchievementsApi.getBulkMode) return AchievementsApi.getBulkMode(state);
+  return 'none';
+}
+
+function tryBuyBulk(){
+  const mode = buyBulkMode();
+  if (mode === 'none') return;
+  const target = mode === 'buy2' ? 2 : (mode === 'buy5' ? 5 : Number.MAX_SAFE_INTEGER);
+  const affordable = calculateAffordableBuyCount(target);
+  if (mode !== 'buyMax' && affordable.count !== target) return;
+  const countToBuy = mode === 'buyMax' ? affordable.count : target;
+  if (countToBuy <= 0) return;
+  let purchased = 0;
+  for (let i = 0; i < countToBuy; i++) {
+    if (!performTankPurchaseOnce()) break;
+    purchased += 1;
+  }
+  if (purchased > 0) processAchievementProgress(purchased);
 }
 
 function mergeCells(fromIdx, toIdx){
@@ -2172,6 +2295,7 @@ function saveProgress(){
       eventShown60: p.eventShown60,
       buyCounts: state.buyCounts,
       buyPrices: state.buyPrices,
+      achievements: state.achievements,
     }));
   }catch(e){}
 }
@@ -2192,6 +2316,7 @@ function getSavedProgress(){
 
 function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
+  ensureAchievementsState();
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   if (saved.player) Object.assign(state.player, saved.player);
@@ -2200,6 +2325,22 @@ function restoreFullState(saved){
   if (saved.maxTankLevelAchieved != null) state.maxTankLevelAchieved = saved.maxTankLevelAchieved;
   if (saved.boostUntil != null) state.boostUntil = saved.boostUntil;
   if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects };
+  if (saved.achievements && typeof saved.achievements === 'object') {
+    const ach = ensureAchievementsState();
+    ach.unlocked = saved.achievements.unlocked && typeof saved.achievements.unlocked === 'object'
+      ? { ...saved.achievements.unlocked }
+      : ach.unlocked;
+    ach.totalPurchased = Number.isFinite(saved.achievements.totalPurchased)
+      ? Math.max(0, Math.floor(saved.achievements.totalPurchased))
+      : ach.totalPurchased;
+    ach.popupQueue = [];
+  }
+  if (saved.fenceState && typeof saved.fenceState === 'object') {
+    state.savedFenceState = {
+      segmentsPerSide: Number.isFinite(saved.fenceState.segmentsPerSide) ? Math.max(1, Math.floor(saved.fenceState.segmentsPerSide)) : null,
+      hpById: saved.fenceState.hpById && typeof saved.fenceState.hpById === 'object' ? { ...saved.fenceState.hpById } : {},
+    };
+  }
   if (saved.nextCrateAt != null) state.nextCrateAt = saved.nextCrateAt;
   for (let i = 0; i < saved.cells.length; i++) {
     const sc = saved.cells[i];
@@ -2238,7 +2379,7 @@ function inflateBuyPrice(price, count){
 
 function applySavedProgress(data){
   if (!data) return false;
-  const { buyCounts, buyPrices, ...playerData } = data;
+  const { buyCounts, buyPrices, achievements, ...playerData } = data;
   Object.assign(state.player, playerData);
   refreshTanksPowerTier();
   if (state.player.level >= 60) state.endgameVisuals = true;
@@ -2256,6 +2397,12 @@ function applySavedProgress(data){
       prices[level] = inflateBuyPrice(base, Math.max(0, Number(count) || 0));
     }
     state.buyPrices = prices;
+  }
+  if (achievements && typeof achievements === 'object') {
+    const ach = ensureAchievementsState();
+    ach.unlocked = achievements.unlocked && typeof achievements.unlocked === 'object' ? { ...achievements.unlocked } : ach.unlocked;
+    ach.totalPurchased = Number.isFinite(achievements.totalPurchased) ? Math.max(0, Math.floor(achievements.totalPurchased)) : ach.totalPurchased;
+    ach.popupQueue = [];
   }
   return true;
 }
@@ -2501,6 +2648,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     maxHp: baseHp * (t?.hpMul ?? 1.0),
     rewardMul: (t?.rewardMul ?? 1.0),
     anim: Math.random() * (t?.frames ?? 1),
+    fenceHitTimerMs: 0,
+    breached: false,
   };
 
   const fenceLimit = zombieFenceLimit(z);
@@ -2664,6 +2813,239 @@ function zombieCollisionRadius(z){
   return baseSize * scale * 0.28;
 }
 
+function getFenceConfig(){
+  return FenceSprites && FenceSprites.config ? FenceSprites.config : {};
+}
+
+function getFenceSegmentsPerSide(){
+  const cfg = getFenceConfig();
+  return Number.isFinite(cfg.segmentsPerSide) ? Math.max(1, Math.floor(cfg.segmentsPerSide)) : null;
+}
+
+function getFenceSegmentMaxHp(){
+  const cfg = getFenceConfig();
+  return Number.isFinite(cfg.segmentMaxHp) ? Math.max(1, cfg.segmentMaxHp) : FENCE_DEFAULT_SEGMENT_HP;
+}
+
+function getFenceHealthBarConfig(){
+  const cfg = getFenceConfig();
+  const bar = cfg.healthBar || {};
+  return {
+    w: Number.isFinite(bar.w) ? Math.max(8, bar.w) : 28,
+    h: Number.isFinite(bar.h) ? Math.max(2, bar.h) : 4,
+    offsetY: Number.isFinite(bar.offsetY) ? bar.offsetY : -24,
+  };
+}
+
+function getFenceRepairConfig(){
+  const cfg = getFenceConfig();
+  const repair = cfg.repair || {};
+  return {
+    enabled: repair.enabled !== false,
+    costCoins: Number.isFinite(repair.costCoins) ? Math.max(0, repair.costCoins) : FENCE_DEFAULT_REPAIR_COST,
+  };
+}
+
+function mapBrokenKind(kind){
+  if (!kind) return '';
+  if (kind.indexOf('Broken') >= 0) return kind;
+  return kind + 'Broken';
+}
+
+function resolveBrokenSpriteId(kind, spriteKeys){
+  const brokenKind = mapBrokenKind(kind);
+  if (FenceSprites && FenceSprites.framesById && FenceSprites.framesById.has(brokenKind)) return brokenKind;
+  const fallback = spriteKeys && spriteKeys[kind] ? spriteKeys[kind] : kind;
+  if (!warnedBrokenFrames.has(brokenKind)) {
+    warnedBrokenFrames.add(brokenKind);
+    console.warn('[Fence] Missing broken sprite id, using intact frame.', brokenKind);
+  }
+  return fallback;
+}
+
+function estimateFenceMinRadius(segmentsPerSide, spriteKeys){
+  if (!segmentsPerSide || !spriteKeys || !FenceSprites || !FenceSprites.ready) return 0;
+  const cornerInsetOverride = FenceSprites.cornerInsetPx;
+  function frameScale(frame) {
+    return Number.isFinite(frame && frame.scale) ? frame.scale : 1;
+  }
+  function cornerInset(frameA, frameB) {
+    if (Number.isFinite(cornerInsetOverride)) return Math.max(0, cornerInsetOverride);
+    const cornerScale = Math.max(frameScale(frameA), frameScale(frameB));
+    return Math.max(4, BAL.fenceWidth * 0.65) * cornerScale;
+  }
+  function sideStep(frame) {
+    return Math.max(6, BAL.fenceWidth * 1.15) * frameScale(frame);
+  }
+
+  const f = {
+    cornerTL: FenceSprites.pickFrame(spriteKeys.cornerTL),
+    cornerTR: FenceSprites.pickFrame(spriteKeys.cornerTR),
+    cornerBR: FenceSprites.pickFrame(spriteKeys.cornerBR),
+    cornerBL: FenceSprites.pickFrame(spriteKeys.cornerBL),
+    sideTop: FenceSprites.pickFrame(spriteKeys.sideTop),
+    sideRight: FenceSprites.pickFrame(spriteKeys.sideRight),
+    sideBottom: FenceSprites.pickFrame(spriteKeys.sideBottom),
+    sideLeft: FenceSprites.pickFrame(spriteKeys.sideLeft),
+  };
+
+  const candidates = [];
+  candidates.push((sideStep(f.sideTop) * segmentsPerSide + cornerInset(f.cornerTL, f.cornerTR) + cornerInset(f.cornerTR, f.cornerTL)) * 0.5);
+  candidates.push((sideStep(f.sideRight) * segmentsPerSide + cornerInset(f.cornerTR, f.cornerBR) + cornerInset(f.cornerBR, f.cornerTR)) * 0.5);
+  candidates.push((sideStep(f.sideBottom) * segmentsPerSide + cornerInset(f.cornerBL, f.cornerBR) + cornerInset(f.cornerBR, f.cornerBL)) * 0.5);
+  candidates.push((sideStep(f.sideLeft) * segmentsPerSide + cornerInset(f.cornerTL, f.cornerBL) + cornerInset(f.cornerBL, f.cornerTL)) * 0.5);
+
+  let minRadius = 0;
+  for (let i = 0; i < candidates.length; i++) {
+    if (Number.isFinite(candidates[i])) minRadius = Math.max(minRadius, candidates[i]);
+  }
+  return minRadius;
+}
+
+function ensureFenceSegmentMathMeta(){
+  const meta = state.fenceSegmentsMeta;
+  if (!meta || !meta.byId) return;
+  if (meta.sideMath) return;
+
+  const byId = meta.byId;
+  function sideInfo(sideKey, sideKind, cornerStartId, cornerEndId) {
+    const sideSegs = [];
+    for (let i = 0; i < state.fenceSegments.length; i++) {
+      const seg = state.fenceSegments[i];
+      if (seg && seg.kind === sideKind) sideSegs.push(seg);
+    }
+    sideSegs.sort((a, b) => (a.sideIndex || 0) - (b.sideIndex || 0));
+    return {
+      sideKey,
+      sideKind,
+      start: sideSegs.length ? sideSegs[0].spanStart : -BAL.fenceRadius,
+      end: sideSegs.length ? sideSegs[sideSegs.length - 1].spanEnd : BAL.fenceRadius,
+      sideSegs,
+      cornerStart: byId[cornerStartId] || null,
+      cornerEnd: byId[cornerEndId] || null,
+    };
+  }
+
+  meta.sideMath = {
+    top: sideInfo('top', 'sideTop', 'cornerTL', 'cornerTR'),
+    right: sideInfo('right', 'sideRight', 'cornerTR', 'cornerBR'),
+    bottom: sideInfo('bottom', 'sideBottom', 'cornerBL', 'cornerBR'),
+    left: sideInfo('left', 'sideLeft', 'cornerTL', 'cornerBL'),
+  };
+}
+
+function getFenceSegmentForTheta(theta){
+  if (!state.fenceSegmentsMeta || !state.fenceSegmentsMeta.byId) return null;
+  ensureFenceSegmentMathMeta();
+  const sm = state.fenceSegmentsMeta.sideMath;
+  if (!sm) return null;
+  const dx = Math.cos(theta || 0);
+  const dy = Math.sin(theta || 0);
+  let sideKey = 'right';
+  let coord = BAL.fenceRadius * dy;
+  if (Math.abs(dy) > Math.abs(dx)) {
+    sideKey = dy >= 0 ? 'bottom' : 'top';
+    coord = BAL.fenceRadius * dx;
+  } else {
+    sideKey = dx >= 0 ? 'right' : 'left';
+    coord = BAL.fenceRadius * dy;
+  }
+  const info = sm[sideKey];
+  if (!info) return null;
+  if (coord <= info.start) return info.cornerStart || (info.sideSegs[0] || null);
+  if (coord >= info.end) return info.cornerEnd || (info.sideSegs[info.sideSegs.length - 1] || null);
+  if (!info.sideSegs.length) return null;
+  const t = clamp((coord - info.start) / Math.max(1e-6, info.end - info.start), 0, 0.999999);
+  const idx = Math.min(info.sideSegs.length - 1, Math.floor(t * info.sideSegs.length));
+  return info.sideSegs[idx];
+}
+
+function getFenceInnerLimit(z){
+  const tankTrackOuter = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + zombieCollisionRadius(z);
+  const dx = Math.cos(z.theta ?? 0);
+  const dy = Math.sin(z.theta ?? 0);
+  const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
+  return tankTrackOuter / denom;
+}
+
+function applyFenceSegmentDamage(seg, amount){
+  if (!seg || seg.broken) return false;
+  const dmg = Math.max(0, amount || 0);
+  if (dmg <= 0) return false;
+  seg.hp = clamp(seg.hp - dmg, 0, seg.maxHp);
+  seg.broken = seg.hp <= 0;
+  return true;
+}
+
+function getZombieAttackDamage(z){
+  const id = z && z.type && z.type.id ? z.type.id : 'unknown';
+  const value = z && z.type ? z.type.attackDamage : null;
+  if (Number.isFinite(value) && value > 0) return value;
+  if (!warnedZombieAttackDamage.has(id)) {
+    warnedZombieAttackDamage.add(id);
+    console.warn('[Zombies] Missing attackDamage in config, using fallback for', id);
+  }
+  return ZOMBIE_DEFAULT_ATTACK_DAMAGE;
+}
+
+function isBlockingModalOpen(){
+  const ids = [
+    'menuOverlay',
+    'crateModal',
+    'dismantleModal',
+    'boostModal',
+    'resetTalentsModal',
+    'talentOverlay',
+    'mergePopupModal',
+    'achievementsModal',
+    'achievementPopup',
+  ];
+  for (let i = 0; i < ids.length; i++) {
+    const el = document.getElementById(ids[i]);
+    if (!el) continue;
+    const visible = !el.classList.contains('hidden') && el.getAttribute('aria-hidden') !== 'true';
+    if (visible) return true;
+  }
+  return false;
+}
+
+function pickFenceSegmentByPoint(px, py){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return null;
+  const lx = px - center.x;
+  const ly = py - center.y;
+  let best = null;
+  let bestDist = Infinity;
+  const pad = Math.max(10, BAL.fenceWidth * 0.8);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || !seg.holeAabb) continue;
+    const a = seg.holeAabb;
+    if (lx < a.minX - pad || lx > a.maxX + pad || ly < a.minY - pad || ly > a.maxY + pad) continue;
+    const d = Math.hypot(lx - seg.x, ly - seg.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = seg;
+    }
+  }
+  return best;
+}
+
+function tryRepairFenceSegmentAt(px, py){
+  const repair = getFenceRepairConfig();
+  if (!repair.enabled) return false;
+  const seg = pickFenceSegmentByPoint(px, py);
+  if (!seg || seg.hp >= seg.maxHp) return false;
+  if (state.coins < repair.costCoins) {
+    popText(px, py, t('fenceRepairNoCoins'), '#ff9c7a');
+    return true;
+  }
+  state.coins -= repair.costCoins;
+  seg.hp = seg.maxHp;
+  seg.broken = false;
+  popText(px, py, t('fenceRepairDone'), '#7dffb2');
+  return true;
+}
+
 function resolveFenceFrameScale(frame){
   return Number.isFinite(frame?.scale) ? frame.scale : 1;
 }
@@ -2719,7 +3101,15 @@ function zombieFenceLimit(z){
   const sideOffset = Number.isFinite(offsetBySide[sideKey]) ? offsetBySide[sideKey] : 0;
   outerFenceSide += sideOffset * balScale;
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-  return outerFenceSide / denom + zombieCollisionRadius(z);
+  const outerLimit = outerFenceSide / denom + zombieCollisionRadius(z);
+
+  const seg = getFenceSegmentForTheta(z.theta);
+  if (seg && seg.broken && !z.breached && z.r <= outerLimit + Math.max(2, BAL.fenceWidth * 0.15)) {
+    z.breached = true;
+  }
+  if (z.breached) return getFenceInnerLimit(z);
+  if (seg && seg.broken) return getFenceInnerLimit(z);
+  return outerLimit;
 }
 
 function startZombieDying(z){
@@ -2848,6 +3238,26 @@ function stepZombies(dt){
     const radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
     const animMul = z.type?.animSpeed ?? 1.0;
     z.anim += dt * animMul * (1.4 + radialSpeed * 2.0) * slow * speedMul * balSpeedMul;
+
+    const attackActive = isZombieAttackModeActive();
+    const targetSegment = getFenceSegmentForTheta(z.theta);
+    const fenceContactLimit = zombieFenceLimit(z);
+    const nearFence = z.r <= fenceContactLimit + Math.max(2, BAL.fenceWidth * 0.08);
+    if (
+      attackActive
+      && nearFence
+      && targetSegment
+      && !targetSegment.broken
+    ) {
+      z.fenceHitTimerMs = (z.fenceHitTimerMs || 0) + dt * 1000;
+      const damagePerHit = getZombieAttackDamage(z) * damageMul;
+      while (z.fenceHitTimerMs >= FENCE_HIT_INTERVAL_MS) {
+        z.fenceHitTimerMs -= FENCE_HIT_INTERVAL_MS;
+        if (!targetSegment.broken) applyFenceSegmentDamage(targetSegment, damagePerHit);
+      }
+    } else {
+      z.fenceHitTimerMs = 0;
+    }
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
@@ -3607,6 +4017,32 @@ function updateUI(){
   const Garage = window.Game && window.Game.Garage;
   const hasFree = Garage ? Garage.hasFreeCell(state) : state.cells.some(c=>!c.tank);
   ui.buy.disabled = state.coins < cost || !hasFree;
+
+  if (ui.buyBulk) {
+    const mode = buyBulkMode();
+    if (mode === 'none') {
+      ui.buyBulk.classList.add('hidden');
+      ui.buyBulk.disabled = true;
+    } else {
+      ui.buyBulk.classList.remove('hidden');
+      const textKey = mode === 'buy2' ? 'buyBulk2' : (mode === 'buy5' ? 'buyBulk5' : 'buyBulkMax');
+      ui.buyBulk.textContent = t(textKey);
+      if (mode === 'buy2') {
+        const sim2 = calculateAffordableBuyCount(2);
+        ui.buyBulk.disabled = sim2.count < 2;
+      } else if (mode === 'buy5') {
+        const sim5 = calculateAffordableBuyCount(5);
+        ui.buyBulk.disabled = sim5.count < 5;
+      } else {
+        const simMax = calculateAffordableBuyCount(Number.MAX_SAFE_INTEGER);
+        ui.buyBulk.disabled = simMax.count < 1;
+      }
+    }
+  }
+
+  if (ui.achievementsModal && !ui.achievementsModal.classList.contains('hidden')) {
+    renderAchievementsList();
+  }
   updateProgressUI();
   updateTalentUI();
   updateStageAbilitySlots();
@@ -3739,6 +4175,78 @@ function hitDismantleCheckbox(cell, px, py){
 
 function isTankSelectedForDismantle(tankId){
   return (state.selectedTankIds || []).indexOf(tankId) >= 0;
+}
+
+function getAchievementDefinitions(){
+  if (AchievementsApi && AchievementsApi.getDefinitions) return AchievementsApi.getDefinitions();
+  return [];
+}
+
+function getAchievementById(id){
+  const defs = getAchievementDefinitions();
+  for (let i = 0; i < defs.length; i++) {
+    if (defs[i].id === id) return defs[i];
+  }
+  return null;
+}
+
+function renderAchievementsList(){
+  if (!ui.achievementsList) return;
+  const defs = getAchievementDefinitions();
+  const ach = ensureAchievementsState();
+  ui.achievementsList.innerHTML = '';
+  for (let i = 0; i < defs.length; i++) {
+    const def = defs[i];
+    const done = !!ach.unlocked[def.id];
+    const row = document.createElement('div');
+    row.className = `achievementRow ${done ? 'done' : ''}`;
+    const progress = clamp(ach.totalPurchased || 0, 0, def.target);
+    const status = done ? t('achievementStatusDone') : t('achievementStatusTodo');
+    row.innerHTML = `
+      <div class="achievementName">${t(def.titleKey)}</div>
+      <div class="achievementMeta">${t('achievementProgress', { value: progress, target: def.target })}</div>
+      <div class="achievementMeta">${status}</div>
+      <div class="achievementMeta">${t('achievementReward', { reward: t(def.rewardKey) })}</div>
+    `;
+    ui.achievementsList.appendChild(row);
+  }
+}
+
+function openAchievementsModal(){
+  if (!ui.achievementsModal) return;
+  renderAchievementsList();
+  ui.achievementsModal.classList.remove('hidden');
+  ui.achievementsModal.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.achievementsModal, { initialFocus: ui.achievementsClose, onClose: closeAchievementsModal });
+}
+
+function closeAchievementsModal(){
+  if (!ui.achievementsModal) return;
+  ui.achievementsModal.classList.add('hidden');
+  ui.achievementsModal.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.achievementsModal);
+}
+
+function closeAchievementPopup(){
+  if (!ui.achievementPopup) return;
+  ui.achievementPopup.classList.add('hidden');
+  ui.achievementPopup.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.achievementPopup);
+  maybeShowNextAchievementPopup();
+}
+
+function maybeShowNextAchievementPopup(){
+  const ach = ensureAchievementsState();
+  if (!ui.achievementPopup || !ach || !ach.popupQueue || !ach.popupQueue.length) return;
+  if (!ui.achievementPopup.classList.contains('hidden')) return;
+  const nextId = ach.popupQueue.shift();
+  const def = getAchievementById(nextId);
+  if (!def) return;
+  if (ui.achievementPopupName) ui.achievementPopupName.textContent = t(def.titleKey);
+  if (ui.achievementPopupReward) ui.achievementPopupReward.textContent = t('achievementReward', { reward: t(def.rewardKey) });
+  ui.achievementPopup.classList.remove('hidden');
+  ui.achievementPopup.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.achievementPopup, { initialFocus: ui.achievementPopupClaim, onClose: closeAchievementPopup });
 }
 
 function ensureProgressUI(){
@@ -4223,6 +4731,10 @@ canvas.addEventListener('pointerdown', (e)=>{
     }
     return;
   }
+  if (!state.dragging && !isBlockingModalOpen() && tryRepairFenceSegmentAt(p.x, p.y)) {
+    updateUI();
+    return;
+  }
   if (!c || !c.tank) return;
   if (c.tank.onTrack){
     c.tank.onTrack = false;
@@ -4294,7 +4806,18 @@ canvas.addEventListener('pointerup', (e)=>{
 });
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
+ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
 ui.boost.addEventListener('click', () => openBoostModal());
+ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());
+ui.achievementsClose?.addEventListener('click', () => closeAchievementsModal());
+ui.achievementsModal?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.achievementsClose === 'true') closeAchievementsModal();
+});
+ui.achievementPopupClose?.addEventListener('click', () => closeAchievementPopup());
+ui.achievementPopupClaim?.addEventListener('click', () => closeAchievementPopup());
+ui.achievementPopup?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
+});
 document.getElementById('boostModalWatch')?.addEventListener('click', () => {
   state.boostUntil = nowSec() + BAL.boostDurationSec;
   closeBoostModal();
@@ -4541,6 +5064,9 @@ function drawZombieFence(){
   const halfSide = BAL.fenceRadius;
   const spriteKeys = resolveFenceSpriteKeys();
   const useSprites = FenceSprites.ready && !!spriteKeys;
+  const segmentsPerSide = getFenceSegmentsPerSide();
+  const maxHp = getFenceSegmentMaxHp();
+  const hpBar = getFenceHealthBarConfig();
 
   ctx.save();
   ctx.translate(center.x, center.y);
@@ -4555,24 +5081,74 @@ function drawZombieFence(){
       !state.fenceSegmentsMeta ||
       state.fenceSegmentsMeta.halfSide !== halfSide ||
       state.fenceSegmentsMeta.fenceWidth !== BAL.fenceWidth ||
+      state.fenceSegmentsMeta.segmentsPerSide !== segmentsPerSide ||
       state.fenceSegmentsMeta.spriteHash !== spriteHash ||
       state.fenceSegmentsMeta.cornerInsetPxOverride !== FenceSprites.cornerInsetPx;
     if (needRebuild){
+      const hpById = {};
+      if (Array.isArray(state.fenceSegments)) {
+        for (let i = 0; i < state.fenceSegments.length; i++) {
+          const prev = state.fenceSegments[i];
+          if (!prev || !prev.id || !Number.isFinite(prev.hp)) continue;
+          hpById[prev.id] = prev.hp;
+        }
+      }
+      if (state.savedFenceState && state.savedFenceState.hpById && typeof state.savedFenceState.hpById === 'object') {
+        const saveSegmentsPerSide = Number.isFinite(state.savedFenceState.segmentsPerSide)
+          ? Math.max(1, Math.floor(state.savedFenceState.segmentsPerSide))
+          : null;
+        if (saveSegmentsPerSide == null || saveSegmentsPerSide === segmentsPerSide) {
+          Object.assign(hpById, state.savedFenceState.hpById);
+        }
+      }
+
       if (FenceLayoutApi && typeof FenceLayoutApi.buildSquareFenceSegments === 'function') {
-        state.fenceSegments = FenceLayoutApi.buildSquareFenceSegments({
+        const rawSegments = FenceLayoutApi.buildSquareFenceSegments({
           halfSide,
           fenceWidth: BAL.fenceWidth,
           spriteKeys,
+          segmentsPerSide,
           getFrame: (spriteId) => FenceSprites.pickFrame(spriteId),
           cornerInsetPxOverride: FenceSprites.cornerInsetPx,
+        });
+        state.fenceSegments = rawSegments.map((seg) => {
+          const id = seg.id || `${seg.kind || 'segment'}#${seg.sideIndex || 0}`;
+          const hp = Number.isFinite(hpById[id]) ? clamp(hpById[id], 0, maxHp) : maxHp;
+          const broken = hp <= 0;
+          const intactId = seg.spriteId;
+          const brokenId = resolveBrokenSpriteId(seg.kind, spriteKeys);
+          return {
+            ...seg,
+            id,
+            spriteIdIntact: intactId,
+            spriteIdBroken: brokenId,
+            maxHp,
+            hp,
+            broken,
+          };
         });
       } else {
         state.fenceSegments = [];
       }
-      state.fenceSegmentsMeta = { halfSide, fenceWidth: BAL.fenceWidth, spriteHash, cornerInsetPxOverride: FenceSprites.cornerInsetPx };
+      const byId = {};
+      for (let i = 0; i < state.fenceSegments.length; i++) {
+        const seg = state.fenceSegments[i];
+        if (seg && seg.id) byId[seg.id] = seg;
+      }
+      state.fenceSegmentsMeta = {
+        halfSide,
+        fenceWidth: BAL.fenceWidth,
+        segmentsPerSide,
+        spriteHash,
+        cornerInsetPxOverride: FenceSprites.cornerInsetPx,
+        byId,
+        sideMath: null,
+      };
+      state.savedFenceState = null;
     }
     for (const seg of state.fenceSegments){
-      const frame = FenceSprites.pickFrame(seg.spriteId);
+      const spriteId = seg.broken ? seg.spriteIdBroken : seg.spriteIdIntact;
+      const frame = FenceSprites.pickFrame(spriteId);
       if (!frame || !FenceSprites.atlasImg) continue;
       ctx.save();
       ctx.translate(seg.x, seg.y);
@@ -4588,6 +5164,19 @@ function drawZombieFence(){
         frame.w * scale, frame.h * scale
       );
       ctx.restore();
+
+      if (seg.hp < seg.maxHp) {
+        const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
+        const greenWidth = Math.round(hpBar.w * ratio);
+        const barX = Math.round(seg.x - hpBar.w * 0.5);
+        const barY = Math.round(seg.y + hpBar.offsetY);
+        ctx.fillStyle = 'rgba(72,72,72,0.95)';
+        ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
+        if (greenWidth > 0) {
+          ctx.fillStyle = 'rgba(125,255,178,0.95)';
+          ctx.fillRect(barX, barY, greenWidth, hpBar.h);
+        }
+      }
     }
   } else {
     state.fenceSegments = [];

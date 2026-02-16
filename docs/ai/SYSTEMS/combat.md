@@ -25,6 +25,22 @@
 - Тайминги death/despawn — в `corpseDespawn.js`.
 - UX level-up (open/close/reward queue) — в `levelFlow.js`.
 
+## Урон забору в attackMode
+
+- Урон сегментам забора применяется только при активном `attackMode`.
+- Частота удара: `hitIntervalMs = 500` на каждого зомби у границы.
+- Формула: `damagePerHit = zombieType.attackDamage * attackMode.damageMult`.
+- Цель удара — конкретный сегмент перед зомби (включая corner-зоны).
+- Урон по уже сломанному сегменту не применяется.
+- Конфиг типа зомби: `assets/zombies.json -> types[].attackDamage`.
+- Если поле отсутствует — используется fallback и warning в console (игра не падает).
+
+## Прорыв (breach)
+
+- Сломанный сегмент открывает проход только в своей области.
+- При первом проходе зомби помечается `breached=true`.
+- После прорыва лимит держится по внешнему краю танкового трека (зомби не уходят в ангар).
+
 ## Риски
 
 - Сохранять детерминизм `pickDeathAnim`.

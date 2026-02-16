@@ -12,6 +12,9 @@
     var spriteKeys = opts.spriteKeys;
     var getFrame = typeof opts.getFrame === 'function' ? opts.getFrame : function () { return null; };
     var cornerInsetPxOverride = opts.cornerInsetPxOverride;
+    var forcedSegmentsPerSide = Number.isFinite(opts.segmentsPerSide)
+      ? Math.max(1, Math.floor(opts.segmentsPerSide))
+      : null;
 
     var segments = [];
     if (!spriteKeys || !Number.isFinite(halfSide) || !Number.isFinite(fenceWidth)) return segments;
@@ -21,10 +24,26 @@
     var cornerBRFrame = getFrame(spriteKeys.cornerBR);
     var cornerBLFrame = getFrame(spriteKeys.cornerBL);
 
-    segments.push({ x: -halfSide, y: -halfSide, spriteId: spriteKeys.cornerTL, isCorner: true });
-    segments.push({ x: halfSide, y: -halfSide, spriteId: spriteKeys.cornerTR, isCorner: true });
-    segments.push({ x: halfSide, y: halfSide, spriteId: spriteKeys.cornerBR, isCorner: true });
-    segments.push({ x: -halfSide, y: halfSide, spriteId: spriteKeys.cornerBL, isCorner: true });
+    function pushCorner(id, x, y, sideKey, spanStart, spanEnd) {
+      segments.push({
+        id: id,
+        kind: id,
+        sideKey: sideKey,
+        sideIndex: null,
+        x: x,
+        y: y,
+        spriteId: spriteKeys[id],
+        isCorner: true,
+        spanStart: spanStart,
+        spanEnd: spanEnd,
+        holeAabb: {
+          minX: x - fenceWidth * 0.75,
+          maxX: x + fenceWidth * 0.75,
+          minY: y - fenceWidth * 0.75,
+          maxY: y + fenceWidth * 0.75,
+        },
+      });
+    }
 
     function cornerInsetFor(frameA, frameB) {
       if (Number.isFinite(cornerInsetPxOverride)) {
@@ -46,20 +65,41 @@
       var start = params.start;
       var end = params.end;
       var isHorizontal = params.isHorizontal;
+      var sideKey = params.sideKey;
+      var kind = params.kind;
       if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
       var sideFrame = getFrame(spriteId);
       var step = sideStepFor(sideFrame);
       var localSpan = end - start;
       var baseCount = Math.max(1, Math.floor(localSpan / Math.max(1, step)) + 1);
-      var count = Math.max(1, baseCount - 1);
+      var count = forcedSegmentsPerSide != null ? forcedSegmentsPerSide : Math.max(1, baseCount - 1);
+      var segSpan = localSpan / count;
       for (var i = 0; i < count; i++) {
         var t = (i + 0.5) / count;
         var v = start + localSpan * t;
+        var segStart = start + segSpan * i;
+        var segEnd = segStart + segSpan;
+        var sx = isHorizontal ? v : fixedValue;
+        var sy = isHorizontal ? fixedValue : v;
+        var halfW = isHorizontal ? segSpan * 0.5 : fenceWidth * 0.75;
+        var halfH = isHorizontal ? fenceWidth * 0.75 : segSpan * 0.5;
         segments.push({
-          x: isHorizontal ? v : fixedValue,
-          y: isHorizontal ? fixedValue : v,
+          id: kind + '#' + i,
+          kind: kind,
+          sideKey: sideKey,
+          sideIndex: i,
+          x: sx,
+          y: sy,
           spriteId: spriteId,
           isCorner: false,
+          spanStart: segStart,
+          spanEnd: segEnd,
+          holeAabb: {
+            minX: sx - halfW,
+            maxX: sx + halfW,
+            minY: sy - halfH,
+            maxY: sy + halfH,
+          },
         });
       }
     }
@@ -73,10 +113,15 @@
     var leftStart = -halfSide + cornerInsetFor(cornerTLFrame, cornerBLFrame);
     var leftEnd = halfSide - cornerInsetFor(cornerBLFrame, cornerTLFrame);
 
-    addSide({ spriteId: spriteKeys.sideTop, fixedValue: -halfSide, start: topStart, end: topEnd, isHorizontal: true });
-    addSide({ spriteId: spriteKeys.sideRight, fixedValue: halfSide, start: rightStart, end: rightEnd, isHorizontal: false });
-    addSide({ spriteId: spriteKeys.sideBottom, fixedValue: halfSide, start: bottomStart, end: bottomEnd, isHorizontal: true });
-    addSide({ spriteId: spriteKeys.sideLeft, fixedValue: -halfSide, start: leftStart, end: leftEnd, isHorizontal: false });
+    pushCorner('cornerTL', -halfSide, -halfSide, 'top', -halfSide, topStart);
+    pushCorner('cornerTR', halfSide, -halfSide, 'right', -halfSide, rightStart);
+    pushCorner('cornerBR', halfSide, halfSide, 'bottom', bottomEnd, halfSide);
+    pushCorner('cornerBL', -halfSide, halfSide, 'left', leftEnd, halfSide);
+
+    addSide({ spriteId: spriteKeys.sideTop, fixedValue: -halfSide, start: topStart, end: topEnd, isHorizontal: true, sideKey: 'top', kind: 'sideTop' });
+    addSide({ spriteId: spriteKeys.sideRight, fixedValue: halfSide, start: rightStart, end: rightEnd, isHorizontal: false, sideKey: 'right', kind: 'sideRight' });
+    addSide({ spriteId: spriteKeys.sideBottom, fixedValue: halfSide, start: bottomStart, end: bottomEnd, isHorizontal: true, sideKey: 'bottom', kind: 'sideBottom' });
+    addSide({ spriteId: spriteKeys.sideLeft, fixedValue: -halfSide, start: leftStart, end: leftEnd, isHorizontal: false, sideKey: 'left', kind: 'sideLeft' });
 
     return segments;
   }

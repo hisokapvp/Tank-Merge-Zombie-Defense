@@ -36,11 +36,11 @@
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
       targetAliveMult: 5,
-      targetAliveRampSec: 2,
-      speedMult: 1.2,
-      damageMult: 1.15,
-      eveningDimAlpha: 0.30,
-      eveningTransitionSec: 2.5,
+      targetAliveRampSec: 3,
+      speedMult: 1.5,
+      damageMult: 1.5,
+      eveningDimAlpha: 0.40,
+      eveningTransitionSec: 1,
     },
   };
 

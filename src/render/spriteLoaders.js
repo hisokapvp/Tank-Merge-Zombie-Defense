@@ -65,6 +65,7 @@
               hpMul: t.hpMul != null ? t.hpMul : 1.0,
               omegaMul: t.omegaMul != null ? t.omegaMul : 1.0,
               rewardMul: t.rewardMul != null ? t.rewardMul : 1.0,
+              attackDamage: Number.isFinite(t.attackDamage) ? t.attackDamage : null,
               weight: t.weight != null ? t.weight : 1.0,
               hitbox: t.hitbox != null ? t.hitbox : null,
               death: t.death ? {
@@ -224,6 +225,7 @@
       ready: false,
       error: '',
       atlasImg: null,
+      config: null,
       maxFrameScale: 1,
       cornerInsetPx: null,
       framesById: new Map(),
@@ -232,6 +234,7 @@
           var res = await fetch('assets/fence.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
+          this.config = data || null;
           this.cornerInsetPx = Number.isFinite(data.cornerInsetPx) ? data.cornerInsetPx : null;
           var atlasPath = 'assets/' + (data.atlas || 'fence.png');
           var img = await loadImage(atlasPath);
@@ -271,6 +274,7 @@
         } catch (e) {
           this.ready = false;
           this.atlasImg = null;
+          this.config = null;
           this.maxFrameScale = 1;
           this.cornerInsetPx = null;
           this.framesById.clear();

@@ -60,6 +60,27 @@
 - Если в `assets/fence.json` задан `cornerInsetPx`, он переопределяет автозначение inset.
 - При отрисовке учитывается `rotation -> rotationDeg -> 0` (градусы).
 
+## Dynamic fence size / segmentsPerSide
+
+- Конфиг: `assets/fence.json`.
+	- `segmentsPerSide` — фиксированное число side-сегментов на сторону (углы отдельно).
+	- `segmentMaxHp`, `healthBar`, `repair`, `*Broken` frame ids.
+- `FenceSprites.config` сохраняется в `src/render/spriteLoaders.js` и используется рантаймом.
+- `initBoard()` вычисляет `minFenceRadius` из `segmentsPerSide` + размерности fence-спрайтов и передаёт его в `computeHangarTrackLayout`.
+- `computeHangarTrackLayout` держит постоянный `trackToFenceGapPx`; если внешний радиус не помещается в canvas — пишет warning и даёт максимально возможную геометрию.
+- Генерация сегментов (`src/render/fenceLayout.js`) создаёт:
+	- 4 corner-сегмента,
+	- ровно `segmentsPerSide` side-сегментов на каждую сторону,
+	- метаданные `id/kind/sideKey/sideIndex/spanStart/spanEnd/holeAabb`.
+
+## Fence durability visuals
+
+- Сегменты хранят `hp/maxHp/broken` в runtime (`state.fenceSegments`).
+- При `hp < maxHp` рисуется полоска фиксированного размера:
+	- зелёная часть = `round(barW * hp/maxHp)`,
+	- оставшаяся часть — серая.
+- При `hp <= 0` используется `*Broken` sprite; если broken-frame отсутствует — fallback на intact + warning.
+
 ## World Events / Weather
 
 - Конфиг: `src/config/worldEvents.js`.
