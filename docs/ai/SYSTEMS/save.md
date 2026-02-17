@@ -34,6 +34,10 @@
 	- `stampsSeed` — seed stamps placement,
 	- `decorSeed` — seed decor placement,
 	- применяется на load приоритетно из сейва (без перезаписи значениями из `assets/*.json`).
+- `totalDamageDealtRaw`:
+	- int, default `0`, монотонный накопитель нанесённого танками урона,
+	- учитывается только applied damage по зомби (без overkill), источник урона `tank`.
+	- производная метрика: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
 
 ## Миграция / совместимость
 
@@ -41,6 +45,7 @@
 - Для достижений без `totalPurchased` прогресс может быть восстановлен из исторического `buyCounts`.
 - При смене `segmentsPerSide` восстановление fence HP идёт по совпавшим `id`; новые/изменённые сегменты получают `maxHp`.
 - Для `mapSeeds`: старые сейвы без поля загружаются корректно; seed берётся из assets только если в сейве отсутствует.
+- Для `totalDamageDealtRaw`: старые сейвы без поля загружаются корректно с дефолтом `0`.
 
 ## Риски
 
@@ -68,3 +73,12 @@
 - Boot без сейва: `talentPoints` не форсится в `1` (остаётся дефолт initial state).
 - Load сейва: `talentPoints` берётся из сейва (`applySavedProgress`), без post-load бонуса.
 - New Game reset: `talentPoints === 1` сразу после создания нового state.
+
+## Damage points: reset/load contract
+
+- При `New game`/reset поле `totalDamageDealtRaw` сбрасывается в `0`.
+- При save/load поле сериализуется/десериализуется в payload `progress` как `totalDamageDealtRaw`.
+- При открытии модалки «Модификации танков и стен» UI показывает локализованную строку:
+	- RU: `Очки урона: {count}`
+	- EN: `Damage points: {count}`
+	- где `{count} = floor(totalDamageDealtRaw / 10000)`.

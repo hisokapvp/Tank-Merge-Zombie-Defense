@@ -7,6 +7,11 @@
   var SAVE_KEY = 'progress';
   var SAVE_VERSION = 2;
 
+  function normalizeTotalDamageDealtRaw(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.floor(value));
+  }
+
   function safeParse(raw, fallback) {
     try {
       if (raw == null || raw === '') return fallback;
@@ -68,6 +73,7 @@
       version: SAVE_VERSION,
       coins: state.coins,
       kills: state.kills,
+      totalDamageDealtRaw: normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw),
       cells: cells,
       supercomputer: state.supercomputer,
       player: state.player,
@@ -96,6 +102,7 @@
       var data = safeParse(raw, null);
       if (!data || typeof data !== 'object') return null;
       if (Array.isArray(data.cells)) {
+        data.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(data.totalDamageDealtRaw);
         return { state: data, meta: { lastSeenAt: data.lastSeenAt, version: data.version } };
       }
       return { state: null, meta: {}, legacyProgress: data };

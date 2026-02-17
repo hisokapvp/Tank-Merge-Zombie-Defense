@@ -230,6 +230,7 @@ function createInitialState(options){
     : {
     coins: 120,
     kills: 0,
+    totalDamageDealtRaw: 0,
     cells: [],
     boardRect: {x:0,y:0,w:0,h:0},
     zombies: [],
@@ -323,6 +324,38 @@ function createInitialState(options){
 
 let state = createInitialState();
 let meta = { lastSeenAt: null };
+
+function normalizeTotalDamageDealtRaw(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
+function ensureDamageProgressState(){
+  state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw);
+  return state.totalDamageDealtRaw;
+}
+
+function getDamagePoints(){
+  return Math.floor(ensureDamageProgressState() / 10000);
+}
+
+function updateDamagePointsUI(){
+  const controller = getSupercomputerMenuController();
+  if (controller && typeof controller.refreshDamagePointsIfVisible === 'function') {
+    controller.refreshDamagePointsIfVisible();
+  }
+}
+
+function addTankDamageDealt(appliedDamage){
+  const appliedDamageInt = normalizeTotalDamageDealtRaw(appliedDamage);
+  if (appliedDamageInt <= 0) return 0;
+  ensureDamageProgressState();
+  state.totalDamageDealtRaw += appliedDamageInt;
+  updateDamagePointsUI();
+  return appliedDamageInt;
+}
+
+GameApi.getDamagePoints = getDamagePoints;
 
 let supercomputerController = null;
 
@@ -983,6 +1016,7 @@ function applyTranslations(){
   }
   updateTalentUI();
   updateLevelModal();
+  updateDamagePointsUI();
 }
 
 // ---------- Sprite atlas loader (PNG + JSON) ----------
@@ -2884,6 +2918,7 @@ function saveProgress(){
       buyCounts: state.buyCounts,
       buyPrices: state.buyPrices,
       achievements: state.achievements,
+      totalDamageDealtRaw: ensureDamageProgressState(),
     }));
   }catch(e){}
 }
@@ -2906,8 +2941,10 @@ function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
   ensureAchievementsState();
   ensureMapSeedsState();
+  ensureDamageProgressState();
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
+  state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
     Object.assign(getComputerState(), saved.supercomputer);
   }
@@ -3000,7 +3037,7 @@ function inflateBuyPrice(price, count){
 
 function applySavedProgress(data){
   if (!data) return false;
-  const { buyCounts, buyPrices, achievements, supercomputer, computerLevel, ...playerData } = data;
+  const { buyCounts, buyPrices, achievements, supercomputer, computerLevel, totalDamageDealtRaw, ...playerData } = data;
   if (supercomputer && typeof supercomputer === 'object') {
     Object.assign(getComputerState(), supercomputer);
   } else {
@@ -3045,6 +3082,7 @@ function applySavedProgress(data){
     ach.totalMerges = Number.isFinite(achievements.totalMerges) ? Math.max(0, Math.floor(achievements.totalMerges)) : ach.totalMerges;
     ach.popupQueue = [];
   }
+  state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(totalDamageDealtRaw);
   return true;
 }
 
@@ -4170,7 +4208,7 @@ function stepZombies(dt){
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
-        z.hp -= ((z.dotDps || 0) * dt) / damageMul;
+        applyDamageToZombie(z, ((z.dotDps || 0) * dt) / damageMul, 'tank');
       } else {
         z.dotUntil = 0;
         z.dotDps = 0;
@@ -4189,6 +4227,19 @@ function pickBurstTargetsFallback(candidates, count){
     result.push(list[i % total]);
   }
   return result;
+}
+
+function applyDamageToZombie(zombie, rawDamage, sourceKind){
+  if (!zombie || zombie.state === 'dying') return 0;
+  const beforeHp = Number.isFinite(zombie.hp) ? zombie.hp : 0;
+  if (beforeHp <= 0) return 0;
+  const incomingDamage = Number.isFinite(rawDamage) ? Math.max(0, rawDamage) : 0;
+  if (incomingDamage <= 0) return 0;
+  const nextHp = Math.max(0, beforeHp - incomingDamage);
+  zombie.hp = nextHp;
+  const appliedDamage = beforeHp - nextHp;
+  if (sourceKind === 'tank') addTankDamageDealt(appliedDamage);
+  return appliedDamage;
 }
 
 // ---------- Combat: visible projectiles ----------
@@ -4527,7 +4578,7 @@ function impactAt(x,y,b){
       const isCrit = Math.random() < critChance;
       const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
       const dmgRounded = Math.round(finalDmg);
-      z.hp -= dmgRounded;
+      applyDamageToZombie(z, dmgRounded, 'tank');
       addDamageNumber(p.x, p.y, dmgRounded, isCrit);
       if (Math.random() < mods.dotChance){
         z.dotUntil = nowSec() + 4;
@@ -4597,7 +4648,7 @@ function chainLightning(x,y,b){
     const isCrit = Math.random() < critChance;
     const finalChainDmg = (baseChainDmg * (isCrit ? 1.5 : 1)) / damageMul;
     const dmgRounded = Math.round(finalChainDmg);
-    best.hp -= dmgRounded;
+    applyDamageToZombie(best, dmgRounded, 'tank');
     addDamageNumber(p.x, p.y, dmgRounded, isCrit);
     curX = p.x;
     curY = p.y;
@@ -4670,7 +4721,7 @@ function stepDecals(dt){
         const p = zombiePos(z);
         const dist = Math.hypot(p.x-d.x, p.y-d.y);
         if (dist <= d.r){
-          z.hp -= d.dps * dt;
+          applyDamageToZombie(z, d.dps * dt, 'tank');
         }
       }
     }
@@ -4854,6 +4905,7 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  ensureDamageProgressState();
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();
@@ -4894,6 +4946,7 @@ function resetGameState(options){
     recordTankLevel(1);
   }
   refreshTanksPowerTier();
+  updateDamagePointsUI();
 
   if (DebugPanelEnabled) initDebugPanel();
 }
@@ -5668,9 +5721,8 @@ function getSupercomputerMenuController(){
     onPauseLockChange: function (open) {
       setMenuPauseSource('supercomputer', !!open);
     },
-    getDamagePoints: function () {
-      return 0;
-    },
+    getDamagePoints: getDamagePoints,
+    translate: t,
   });
   return supercomputerMenuController;
 }

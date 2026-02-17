@@ -47,6 +47,7 @@
   "modsTabGuns": "Guns",
   "modsTabWalls": "Walls",
   "modsDamagePoints": "Damage Points",
+  "damagePointsLabel": "Damage points: {count}",
   "modsInDevelopment": "In development",
   "supercomputerBack": "Close",
   "achievementsBtn": "Achievements",

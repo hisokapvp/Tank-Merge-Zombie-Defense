@@ -6,7 +6,7 @@
   "placementMaxAttempts": 100,
   "blockRadiusK": 0.35,
   "blockRadiusMin": 8,
-  "spriteIds": ["barrel", "tree", "debris", "can"],
+  "spriteIds": ["barrel", "tree", "tree", "can"],
   "noSpawnZones": [
     { "type": "circle", "cx": 0, "cy": 0, "r": 450 }
   ],
@@ -25,18 +25,18 @@
       "id": "tree",
       "x": 13,
       "y": 0,
-      "w": 24,
+      "w": 22,
       "h": 36,
       "scale": 3,
       "isWall": true,
       "anchor": { "x": 0.5, "y": 0.9 }
     },
     {
-      "id": "debris",
-      "x": 0,
+      "id": "grass",
+      "x": 36,
       "y": 0,
-      "w": 12,
-      "h": 16,
+      "w": 40,
+      "h": 27,
       "scale": 1,
       "anchor": { "x": 0.5, "y": 0.8 }
     },

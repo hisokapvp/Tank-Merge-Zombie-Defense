@@ -39,6 +39,13 @@ bash ci/release_checklist.sh
 - `assets/` — конфиги и спрайты
 - `Test/` — регрессионные тесты
 
+## Damage Points
+
+- Счётчик сырого урона: `state.totalDamageDealtRaw` (int, default `0`).
+- Формула UI-значения: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- Источник учёта: только applied damage по зомби от источника `tank` (без overkill).
+- Хранение: поле `totalDamageDealtRaw` в save payload (`progress`), backward-compatible загрузка старых сейвов с `0`.
+
 ## Debug
 
 - Запуск с `?debug=1`

@@ -30,11 +30,21 @@
     var openTalents = typeof opts.openTalents === 'function' ? opts.openTalents : null;
     var closeTalents = typeof opts.closeTalents === 'function' ? opts.closeTalents : null;
     var getDamagePoints = typeof opts.getDamagePoints === 'function' ? opts.getDamagePoints : function () { return 0; };
+    var translate = typeof opts.translate === 'function' ? opts.translate : function (_, vars) {
+      return 'Damage points: ' + (vars && vars.count != null ? vars.count : 0);
+    };
 
     var state = {
       isOpen: false,
       view: 'closed',
     };
+
+    function updateDamagePointsLabel() {
+      var damagePointsEl = documentObj.getElementById('modsTankWallDamagePoints');
+      if (!damagePointsEl) return;
+      var count = Math.max(0, Math.floor(getDamagePoints()));
+      damagePointsEl.textContent = translate('damagePointsLabel', { count: count });
+    }
 
     function openRoot() {
       if (state.view === 'talents' && closeTalents) closeTalents();
@@ -59,8 +69,7 @@
     }
 
     function showTankWallMods() {
-      var damagePointsEl = documentObj.getElementById('modsTankWallDamagePoints');
-      if (damagePointsEl) damagePointsEl.textContent = String(Math.max(0, Math.floor(getDamagePoints())));
+      updateDamagePointsLabel();
 
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, true, a11yOpen, a11yClose, {
@@ -120,6 +129,10 @@
       closeAll: closeAll,
       isOpen: function () { return !!state.isOpen; },
       getView: function () { return state.view; },
+      refreshDamagePointsIfVisible: function () {
+        if (!state.isOpen || state.view !== 'tankWall') return;
+        updateDamagePointsLabel();
+      },
     };
   }
 

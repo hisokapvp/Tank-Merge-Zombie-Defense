@@ -47,6 +47,7 @@
   "modsTabGuns": "Орудия",
   "modsTabWalls": "Стены",
   "modsDamagePoints": "Очки урона",
+  "damagePointsLabel": "Очки урона: {count}",
   "modsInDevelopment": "В разработке",
   "supercomputerBack": "Закрыть",
   "achievementsBtn": "Достижения",

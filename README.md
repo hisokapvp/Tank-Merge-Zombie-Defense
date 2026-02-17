@@ -102,6 +102,14 @@ Merge + tower defense на canvas.
 - Вызов reset из UI: `src/core/bootstrap.js` (`menuNew` → `resetGameState({ reason: 'new_game' })`).
 - Применение правила `talentPoints = 1`: `game.js` (`createInitialState(options)` для `reason === 'new_game'`).
 
+## Очки урона (Damage Points)
+
+- В `state` хранится сырой накопитель урона: `totalDamageDealtRaw` (int, default `0`).
+- Очки урона считаются только на чтение: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- В `totalDamageDealtRaw` засчитывается только фактически снятое HP (`applied`, без overkill) и только при источнике урона `tank`.
+- Поле сохраняется в `progress` save payload как `totalDamageDealtRaw`; старые сейвы без поля загружаются с дефолтом `0`.
+- При `New game`/reset значение сбрасывается в `0`.
+
 ## Debug overlay для атаки зомби
 
 - Overlay доступен только при `?debug=1`.

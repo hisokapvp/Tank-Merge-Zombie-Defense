@@ -17,6 +17,7 @@
 - Achievements/progress (`totalPurchased`, `totalMerges`, creator_*; bulk-buy tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
+- Damage points (`totalDamageDealtRaw`, `damagePoints`) → `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `src/ui/supercomputerMenu.js`
 - New Game reset (`menuNew`) и правило стартового `talentPoints` → `docs/ai/SYSTEMS/save.md` + `README.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
@@ -40,6 +41,7 @@
 - `src/mechanics/` — игровые правила.
 - `src/lessons/`, `src/scheduler/`, `src/tools/anki/` — контур обучения (catalog + SRS + export).
 - `src/persistence/` — save/load/offline.
+- `state.totalDamageDealtRaw` — сырой урон от танков (applied, без overkill), используется для UI-метрики `damagePoints`.
 - `src/render/` — canvas и загрузчики.
 - `src/render/fenceLayout.js` — геометрия сегментов квадратного забора (scale-aware шаг/инсеты).
 - `src/ui/` — UI-модули, модалки, панели.

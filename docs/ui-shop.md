@@ -1,5 +1,12 @@
 # UI Shop: bulk-покупка танков
 
+## Дополнительная прогресс-метрика: очки урона
+
+- В модалке «Модификации танков и стен» отображается `damagePoints`.
+- Формула: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- `totalDamageDealtRaw` — applied damage по зомби (без overkill), учитывается только источник `tank`.
+- На `New game`/reset: `totalDamageDealtRaw = 0`, соответственно `damagePoints = 0`.
+
 ## Гейтинг по достижениям `creator_*`
 
 | Состояние unlock | Tier | `maxByTier` | Видимость |
