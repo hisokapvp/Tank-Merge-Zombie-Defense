@@ -561,6 +561,135 @@
       },
     };
 
+    var DronSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      framesById: new Map(),
+      load: async function () {
+        try {
+          var res = await fetch('assets/dron.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+
+          var atlasName = data.atlas || data.png || 'decor_atlas.png';
+          var atlasPath = 'assets/' + atlasName;
+          var img = await loadImage(atlasPath);
+
+          this.framesById.clear();
+          var rawFrames = Array.isArray(data.frames) ? data.frames : [];
+          for (var i = 0; i < rawFrames.length; i++) {
+            var frame = rawFrames[i] || {};
+            var id = typeof frame.id === 'string' && frame.id.length > 0 ? frame.id : String(i);
+            this.framesById.set(id, {
+              id: id,
+              x: Number.isFinite(frame.x) ? frame.x : 0,
+              y: Number.isFinite(frame.y) ? frame.y : 0,
+              w: toPositiveNumber(frame.w, 64),
+              h: toPositiveNumber(frame.h, 64),
+            });
+          }
+
+          var idleFallback = Array.from(this.framesById.keys());
+          var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
+
+          function normalizeAnim(rawAnim, fallbackIds, map) {
+            var src = rawAnim && typeof rawAnim === 'object' ? rawAnim : {};
+            var ids = Array.isArray(src.frames) ? src.frames.filter(function (id) {
+              return typeof id === 'string' && map.has(id);
+            }) : [];
+            if (!ids.length) ids = fallbackIds.slice();
+            if (!ids.length) return null;
+            return {
+              frames: ids,
+              frameRateFps: toPositiveNumber(src.frameRateFps, 6),
+              loop: src.loop !== false,
+            };
+          }
+
+          var idleAnim = normalizeAnim(animationsRaw.idle, idleFallback, this.framesById);
+          var flyAnim = normalizeAnim(animationsRaw.fly, idleAnim ? idleAnim.frames : idleFallback, this.framesById);
+          var repairAnim = normalizeAnim(animationsRaw.repair, flyAnim ? flyAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById);
+
+          var levels = {};
+          var maxLevel = 1;
+          if (data && data.levels && typeof data.levels === 'object') {
+            var levelKeys = Array.isArray(data.levels)
+              ? data.levels.map(function (_, idx) { return String(idx + 1); })
+              : Object.keys(data.levels);
+            for (var lk = 0; lk < levelKeys.length; lk++) {
+              var key = levelKeys[lk];
+              var lvlNum = Math.max(1, Math.floor(Number(key) || (lk + 1)));
+              var source = Array.isArray(data.levels) ? data.levels[lvlNum - 1] : data.levels[key];
+              if (!source || typeof source !== 'object') continue;
+              levels[lvlNum] = {
+                moveSpeedPxSec: toPositiveNumber(source.moveSpeedPxSec, 72),
+                repairSpeedMult: toPositiveNumber(source.repairSpeedMult, 1),
+                costMult: toPositiveNumber(source.costMult, 1),
+              };
+              if (lvlNum > maxLevel) maxLevel = lvlNum;
+            }
+          }
+          if (!Object.keys(levels).length) {
+            levels[1] = { moveSpeedPxSec: 72, repairSpeedMult: 1, costMult: 1 };
+            maxLevel = 1;
+          }
+
+          this.config = {
+            atlas: atlasName,
+            baseRepairSec: toPositiveNumber(data.baseRepairSec, 5),
+            iconSize: {
+              w: toPositiveNumber(data && data.iconSize && data.iconSize.w, 20),
+              h: toPositiveNumber(data && data.iconSize && data.iconSize.h, 20),
+            },
+            iconsOffsetY: Number.isFinite(data.iconsOffsetY) ? data.iconsOffsetY : -32,
+            scale: toPositiveNumber(data.scale, 1),
+            anchor: data && data.anchor && typeof data.anchor === 'object'
+              ? {
+                  x: clamp01(data.anchor.x, 0.5),
+                  y: clamp01(data.anchor.y, 0.5),
+                }
+              : { x: 0.5, y: 0.5 },
+            levels: levels,
+            maxLevel: maxLevel,
+            animations: {
+              idle: idleAnim,
+              fly: flyAnim,
+              repair: repairAnim,
+            },
+          };
+
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          this.ready = false;
+          this.error = String(e);
+          this.atlasImg = null;
+          this.config = null;
+          this.framesById.clear();
+        }
+      },
+      getLevel: function (level) {
+        var cfg = this.config;
+        if (!cfg || !cfg.levels) return null;
+        var lvl = Math.max(1, Math.floor(Number(level) || 1));
+        for (var n = lvl; n >= 1; n--) {
+          if (cfg.levels[n]) return cfg.levels[n];
+        }
+        return cfg.levels[1] || null;
+      },
+      getAnimation: function (name) {
+        var anims = this.config && this.config.animations ? this.config.animations : null;
+        if (!anims) return null;
+        return anims[name] || anims.idle || null;
+      },
+      pickFrame: function (frameId) {
+        return this.framesById.get(frameId) || this.framesById.values().next().value || null;
+      },
+    };
+
     return {
       loadImage: loadImage,
       ZombieSprites: ZombieSprites,
@@ -569,6 +698,7 @@
       DecorSprites: DecorSprites,
       GroundSprites: GroundSprites,
       SupercomputerSprites: SupercomputerSprites,
+      DronSprites: DronSprites,
     };
   }
 

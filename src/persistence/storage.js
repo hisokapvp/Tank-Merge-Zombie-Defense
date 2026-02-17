@@ -83,6 +83,42 @@
       tanksMergedCount: normalizeSafeCounter(state.stats && state.stats.tanksMergedCount),
       tanksBoughtCount: normalizeSafeCounter(state.stats && state.stats.tanksBoughtCount),
     };
+    var drones = [];
+    if (Array.isArray(state.drones)) {
+      for (var di = 0; di < state.drones.length; di++) {
+        var d = state.drones[di];
+        if (!d || typeof d !== 'object') continue;
+        var repair = null;
+        if (d.repair && typeof d.repair === 'object') {
+          repair = {
+            startHp: Number.isFinite(d.repair.startHp) ? Math.max(0, Math.floor(d.repair.startHp)) : 0,
+            maxHp: Number.isFinite(d.repair.maxHp) ? Math.max(1, Math.floor(d.repair.maxHp)) : 1,
+            totalCostCoins: Number.isFinite(d.repair.totalCostCoins) ? Math.max(0, Math.floor(d.repair.totalCostCoins)) : 0,
+            repairDurationSec: Number.isFinite(d.repair.repairDurationSec) ? Math.max(0.01, d.repair.repairDurationSec) : 0.01,
+            repairStartTimeSec: Number.isFinite(d.repair.repairStartTimeSec) ? d.repair.repairStartTimeSec : 0,
+            coinsSpentPrev: Number.isFinite(d.repair.coinsSpentPrev) ? Math.max(0, Math.floor(d.repair.coinsSpentPrev)) : 0,
+          };
+        }
+        drones.push({
+          id: d.id,
+          level: Number.isFinite(d.level) ? Math.max(1, Math.floor(d.level)) : 1,
+          mode: d.mode,
+          substate: d.substate,
+          pos: {
+            x: Number.isFinite(d.pos && d.pos.x) ? d.pos.x : 0,
+            y: Number.isFinite(d.pos && d.pos.y) ? d.pos.y : 0,
+          },
+          basePos: {
+            x: Number.isFinite(d.basePos && d.basePos.x) ? d.basePos.x : 0,
+            y: Number.isFinite(d.basePos && d.basePos.y) ? d.basePos.y : 0,
+          },
+          targetSegmentId: d.targetSegmentId != null ? d.targetSegmentId : null,
+          reservedSegmentId: d.reservedSegmentId != null ? d.reservedSegmentId : null,
+          repair: repair,
+          patrolSeed: Number.isFinite(d.patrolSeed) ? d.patrolSeed : 0,
+        });
+      }
+    }
     return {
       version: SAVE_VERSION,
       coins: state.coins,
@@ -104,6 +140,7 @@
       achievements: state.achievements,
       stats: stats,
       mapSeeds: mapSeeds,
+      drones: drones,
     };
   }
 

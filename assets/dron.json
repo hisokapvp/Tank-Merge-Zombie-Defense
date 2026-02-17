@@ -1,0 +1,34 @@
+{
+  "atlas": "dron_atlas.png",
+  "png": "dron_atlas.png",
+  "baseRepairSec": 5,
+  "iconSize": { "w": 20, "h": 20 },
+  "iconsOffsetY": -34,
+  "anchor": { "x": 0.5, "y": 0.5 },
+  "scale": 0.5,
+  "frames": [
+    { "id": "dron_idle_1", "x": 0, "y": 96, "w": 96, "h": 96 },
+    { "id": "dron_idle_2", "x": 0, "y": 96, "w": 96, "h": 96 },
+    { "id": "dron_fly_1", "x": 0, "y": 192, "w": 96, "h": 96 },
+    { "id": "dron_fly_2", "x": 0, "y": 192, "w": 96, "h": 96 },
+    { "id": "dron_repair_1", "x": 0, "y": 0, "w": 96, "h": 96 },
+    { "id": "dron_repair_2", "x": 0, "y": 0, "w": 96, "h": 96 }
+  ],
+  "animations": {
+    "idle": { "frames": ["dron_idle_1"], "frameRateFps": 4, "loop": true },
+    "fly": { "frames": ["dron_fly_1"], "frameRateFps": 4, "loop": true },
+    "repair": { "frames": ["dron_repair_1"], "frameRateFps": 16, "loop": true }
+  },
+  "levels": {
+    "1": { "moveSpeedPxSec": 74, "repairSpeedMult": 1.0, "costMult": 0.1 },
+    "2": { "moveSpeedPxSec": 80, "repairSpeedMult": 1.08, "costMult": 1.02 },
+    "3": { "moveSpeedPxSec": 86, "repairSpeedMult": 1.16, "costMult": 1.04 },
+    "4": { "moveSpeedPxSec": 92, "repairSpeedMult": 1.24, "costMult": 1.06 },
+    "5": { "moveSpeedPxSec": 98, "repairSpeedMult": 1.32, "costMult": 1.08 },
+    "6": { "moveSpeedPxSec": 104, "repairSpeedMult": 1.40, "costMult": 1.10 },
+    "7": { "moveSpeedPxSec": 110, "repairSpeedMult": 1.48, "costMult": 1.12 },
+    "8": { "moveSpeedPxSec": 116, "repairSpeedMult": 1.56, "costMult": 1.14 },
+    "9": { "moveSpeedPxSec": 122, "repairSpeedMult": 1.64, "costMult": 1.16 },
+    "10": { "moveSpeedPxSec": 128, "repairSpeedMult": 1.72, "costMult": 1.18 }
+  }
+}

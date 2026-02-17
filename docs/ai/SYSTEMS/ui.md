@@ -55,6 +55,20 @@
 - `AdminFlags` дополнительно ограничен dev-host/file (`localhost`, `127.0.0.1`, `file:`).
 - Для новых debug-виджетов держать strict guard в `init()` до создания DOM.
 
+## Dron world-space icons
+
+- Над каждым дроном рисуются world-space иконки режимов: `⏳` (standby) и `🔧` (repair).
+- Hit-test выполняется по world-space прямоугольникам, размер строго из `assets/dron.json.iconSize`, смещение по Y из `iconsOffsetY`.
+- `🔧` disabled, если нет валидной цели ремонта или монет меньше стоимости полного ремонта выбранного сегмента.
+- Клик по disabled `🔧` не меняет режим.
+
+## Debug: Add Dron
+
+- В `src/ui/debugPanel.js` добавлен только один контрол для дронов:
+	- `Dron level (1..N)`
+	- `Add Dron`
+- Кнопка вызывает callback `addDron(level)` из `game.js`.
+
 ## Level-up modal
 
 - Разметка: `#levelModal`, `#levelAccept`, `#levelModalClose` в `index.html`.

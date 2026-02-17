@@ -17,6 +17,7 @@
       decals: [],
       particles: [],
       damageNumbers: [],
+      drones: [],
       decors: [],
       mapSeeds: {
         stampsSeed: null,

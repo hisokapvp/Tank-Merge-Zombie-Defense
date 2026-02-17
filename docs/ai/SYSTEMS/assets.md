@@ -72,6 +72,18 @@
 - Global common death может содержать `deathCommon.frameRateFps`.
 - Runtime применяет дефолты/валидацию без console-спама для старых конфигов.
 
+### Drones (`assets/dron.json`)
+
+- Ключевые поля:
+	- `atlas`/`png`
+	- `frames[]`
+	- `animations.{idle,fly,repair}`
+	- `levels[1..N]` (`N >= 10`) с `moveSpeedPxSec`, `repairSpeedMult`, `costMult`
+	- `baseRepairSec`
+	- `iconSize`, `iconsOffsetY`
+- Runtime: `DronSprites.load()` в `src/render/spriteLoaders.js`.
+- Путь к atlas/png берётся только из JSON (без хардкода в `game.js`).
+
 ## Риски
 
 - Не менять JSON-схемы без обновления runtime.

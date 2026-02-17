@@ -140,6 +140,13 @@
 - Область применения ограничена только парой `zombies`/`decor` (танки и другие слои не переупорядочиваются этим правилом).
 - Для устранения мерцания используется стабильный tie-breaker (`renderOrder` / `id`).
 
+## Dron render layer
+
+- Дроны рисуются отдельным world-layer (`drawDrones`) после `drawSupercomputer`.
+- Тело дрона: из `DronSprites` (`assets/dron.json`), fallback — простая фигура.
+- Иконки режимов (`⏳`/`🔧`) рисуются в том же проходе с hitbox-геометрией из `iconSize` + `iconsOffsetY`.
+- Рендер не содержит бизнес-логики ремонта; логика выбора/резервов/ремонта живёт в `src/mechanics/drones.js`.
+
 ## AttackMode evening dim
 
 - В `attackMode` поверх сцены рисуется лёгкое «вечернее» затемнение.

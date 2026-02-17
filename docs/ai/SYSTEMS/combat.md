@@ -12,6 +12,7 @@
 - Правила занятости ячеек гаража: `src/mechanics/garage.js`
 - Level-up flow и награды: `src/mechanics/levelFlow.js`
 - Supercomputer state machine/урон/броня: `src/mechanics/supercomputer.js` + интеграция в `game.js`
+- Dron repair mechanic: `src/mechanics/drones.js` + интеграция в `game.js`
 - Интеграция в цикл: `game.js`
 
 ## Что править
@@ -26,6 +27,16 @@
 - Проверки занятости/покупки — через `garage.js` + `economy.js`.
 - Тайминги death/despawn — в `corpseDespawn.js`.
 - UX level-up (open/close/reward queue) — в `levelFlow.js`.
+
+## Dron repair flow (fence)
+
+- Режимы: `standby` / `repair`; substates: `patrol`, `flyToTarget`, `repairing`, `returnToBase`.
+- Выбор цели: самый повреждённый незарезервированный сегмент (`min hp/maxHp`, tie-break по `segmentId`).
+- Резерв: `segment.reservedByDroneId` ставится сразу при выборе и снимается при cancel/invalid/completed/no-coins.
+- Формулы:
+	- `totalCostCoins = ceil(baseCost * missingRatio * costMult(level))`
+	- `repairDurationSec = baseRepairSec / repairSpeedMult(level)`
+- Ремонт детерминирован по времени (`round` HP, `floor` spend), монеты никогда не уходят ниже `0`.
 
 ## Computer progression (playerLevel → computerLevel)
 

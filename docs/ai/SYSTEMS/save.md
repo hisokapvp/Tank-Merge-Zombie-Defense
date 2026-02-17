@@ -42,6 +42,9 @@
 - `damagePointsSpent`:
 	- int, default `0`, сумма потраченных очков на апгрейды fence.
 	- производная метрика: `damagePoints = max(0, floor(totalDamageDealtRaw / 10000) - damagePointsSpent)`.
+- `drones`:
+	- сериализуются `id/level/mode/substate/pos/basePos` (и служебные поля repair-процесса).
+	- при load резервы fence не восстанавливаются «как есть»: runtime сбрасывает `reservedByDroneId` и безопасно ре-валидирует цели.
 
 ## Миграция / совместимость
 
@@ -52,6 +55,7 @@
 - Для `totalDamageDealtRaw`: старые сейвы без поля загружаются корректно с дефолтом `0`.
 - Для `fenceLevel`: старые сейвы без поля загружаются с дефолтом `1`.
 - Для `damagePointsSpent`: старые сейвы без поля загружаются с дефолтом `0`.
+- Для `drones`: старые сейвы без поля загружаются корректно с дефолтом `[]`.
 
 ## Риски
 

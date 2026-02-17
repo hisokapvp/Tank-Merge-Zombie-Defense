@@ -231,6 +231,9 @@
     await opts.FenceSprites.load().catch(function () {});
     opts.resizeCanvas();
     await opts.DecorSprites.load().catch(function () {});
+    if (opts.DronSprites && typeof opts.DronSprites.load === 'function') {
+      await opts.DronSprites.load().catch(function () {});
+    }
     if (opts.SupercomputerSprites && typeof opts.SupercomputerSprites.load === 'function') {
       await opts.SupercomputerSprites.load().catch(function () {});
       if (typeof opts.onSupercomputerConfigLoaded === 'function') opts.onSupercomputerConfigLoaded();

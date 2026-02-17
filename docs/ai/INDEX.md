@@ -36,6 +36,7 @@
 - Lesson Progress/SRS/Anki/feedback/debug-panels → `docs/ai/SYSTEMS/ui.md`
 - Runtime debug overlay (`?debug=1`, hotkeys) → `docs/debug-overlay.md`
 - Debug panel dev-инструменты (achievements / totalMerges) → `docs/debug.md` + `docs/ai/SYSTEMS/achievements.md`
+- Dron repair system (asset/state/reservations/repair loop/debug add) → `docs/dron.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md` + `docs/ai/SYSTEMS/save.md` + `docs/ai/SYSTEMS/assets.md` + `docs/ai/SYSTEMS/ui.md`
 
 ## Карта кода
 

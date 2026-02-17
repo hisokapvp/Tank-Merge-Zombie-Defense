@@ -221,6 +221,7 @@ let audioSettingsController = null;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
+const DronesApi = GameApi?.Drones ?? null;
 
 function createInitialState(options){
   const opts = options || {};
@@ -241,6 +242,7 @@ function createInitialState(options){
     decals: [],      // e.g., toxic pools
     particles: [],
     damageNumbers: [],
+    drones: [],
     decors: [],
       wallDecors: [],
     mapSeeds: {
@@ -1113,6 +1115,44 @@ const SupercomputerSprites = spriteLoaders && spriteLoaders.SupercomputerSprites
   getAnimation() { return null; },
 };
 
+const DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.DronSprites : {
+  ready: false,
+  error: 'SpriteLoaders module is unavailable',
+  atlasImg: null,
+  config: null,
+  framesById: new Map(),
+  async load() {},
+  getLevel() { return null; },
+  getAnimation() { return null; },
+  pickFrame() { return null; },
+};
+
+function getDronConfig(){
+  return DronSprites && DronSprites.config ? DronSprites.config : null;
+}
+
+function getFenceRepairCostCoins(){
+  const repair = getFenceRepairConfig();
+  return Number.isFinite(repair.costCoins) ? Math.max(0, repair.costCoins) : FENCE_DEFAULT_REPAIR_COST;
+}
+
+function getDronRuntimeConfig(){
+  const cfg = getDronConfig() || {};
+  return {
+    levels: cfg.levels && typeof cfg.levels === 'object' ? cfg.levels : {},
+    maxLevel: Number.isFinite(cfg.maxLevel) ? Math.max(1, Math.floor(cfg.maxLevel)) : 1,
+    baseRepairSec: Number.isFinite(cfg.baseRepairSec) ? Math.max(0.01, cfg.baseRepairSec) : 5,
+    iconSize: {
+      w: Number.isFinite(cfg.iconSize && cfg.iconSize.w) ? Math.max(8, cfg.iconSize.w) : 20,
+      h: Number.isFinite(cfg.iconSize && cfg.iconSize.h) ? Math.max(8, cfg.iconSize.h) : 20,
+    },
+    iconsOffsetY: Number.isFinite(cfg.iconsOffsetY) ? cfg.iconsOffsetY : -32,
+    scale: Number.isFinite(cfg.scale) ? Math.max(0.1, cfg.scale) : 1,
+    anchor: cfg.anchor || { x: 0.5, y: 0.5 },
+    animations: cfg.animations || {},
+  };
+}
+
 const WorldEventsCfg = (GameApi.Config && GameApi.Config.WorldEvents)
   ? GameApi.Config.WorldEvents
   : {
@@ -1941,6 +1981,15 @@ function makeTank(level, onTrack = false){
     cannonAnim: 0,
     firedThisCycle: false,
   };
+}
+
+function addDron(level){
+  if (!(DronesApi && typeof DronesApi.addDron === 'function')) return null;
+  const drone = DronesApi.addDron(state, level, { dronConfig: getDronRuntimeConfig() });
+  if (drone) {
+    updateUI();
+  }
+  return drone;
 }
 
 function recordTankLevel(level){
@@ -2943,6 +2992,7 @@ function saveProgress(){
       totalDamageDealtRaw: ensureDamageProgressState(),
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
+      drones: Array.isArray(state.drones) ? state.drones : [],
     }));
   }catch(e){}
 }
@@ -3012,6 +3062,11 @@ function restoreFullState(saved){
       segmentsPerSide: Number.isFinite(saved.fenceState.segmentsPerSide) ? Math.max(1, Math.floor(saved.fenceState.segmentsPerSide)) : null,
       hpById: saved.fenceState.hpById && typeof saved.fenceState.hpById === 'object' ? { ...saved.fenceState.hpById } : {},
     };
+  }
+  if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
+    DronesApi.restoreSavedDrones(state, saved.drones);
+  } else {
+    state.drones = Array.isArray(saved.drones) ? saved.drones : [];
   }
   const scRestored = getComputerState();
   if (supercomputerController && supercomputerController.syncLevel) {
@@ -5929,6 +5984,20 @@ canvas.addEventListener('pointerdown', (e)=>{
   const p = getPointerPos(e);
   if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
   if (isBlockingModalOpen()) return;
+  if (DronesApi && typeof DronesApi.handlePointerDown === 'function') {
+    const dronInput = DronesApi.handlePointerDown({
+      state,
+      x: p.x,
+      y: p.y,
+      balScale,
+      dronConfig: getDronRuntimeConfig(),
+      fenceRepairCost: getFenceRepairCostCoins(),
+    });
+    if (dronInput && dronInput.handled) {
+      if (dronInput.changed) updateUI();
+      return;
+    }
+  }
   if (supercomputerHitTest(p.x, p.y)) {
     openSupercomputerMenu();
     return;
@@ -6109,6 +6178,7 @@ function draw(){
   drawTankTrack();
   drawZombieFence();
   drawSupercomputer();
+  drawDrones();
   drawBoard();
   drawOrbitingTanks();
   drawCrate();
@@ -6419,6 +6489,19 @@ function drawSupercomputer(){
   drawSupercomputerHpBar(sc, config && config.hpBar ? config.hpBar : null);
 }
 
+function drawDrones(){
+  if (!(DronesApi && typeof DronesApi.draw === 'function')) return;
+  DronesApi.draw({
+    state,
+    ctx,
+    nowSec: nowSec(),
+    balScale,
+    dronConfig: getDronRuntimeConfig(),
+    dronSprites: DronSprites,
+    fenceRepairCost: getFenceRepairCostCoins(),
+  });
+}
+
 function drawZombieFence(){
   const halfSide = BAL.fenceRadius;
   const spriteKeys = resolveFenceSpriteKeys();
@@ -6484,6 +6567,7 @@ function drawZombieFence(){
             maxHp,
             hp,
             broken,
+            reservedByDroneId: null,
           };
         });
       } else {
@@ -7740,6 +7824,15 @@ function loop(now){
     stepParticles(effDt);
     stepDamageNumbers(effDt);
     stepSupercomputer(effDt);
+    if (DronesApi && typeof DronesApi.step === 'function') {
+      DronesApi.step({
+        state,
+        dt: effDt,
+        nowSec: nowSec(),
+        fenceRepairCost: getFenceRepairCostCoins(),
+        dronConfig: getDronRuntimeConfig(),
+      });
+    }
   }
 
   updateUI();
@@ -7805,10 +7898,12 @@ function initDebugPanel(){
       nowSec,
       DEBUG_PARAM,
       MAX_TANK_LEVEL,
+      MAX_DRON_LEVEL: Math.max(10, getDronRuntimeConfig().maxLevel || 1),
       BAL,
       BASE_BAL,
       center,
       makeTank,
+      addDron,
       recordTankLevel,
       openDismantleModal,
       setMenuOpen,
@@ -7901,6 +7996,7 @@ async function boot(){
       FenceSprites,
       DecorSprites,
       SupercomputerSprites,
+      DronSprites,
       onSupercomputerConfigLoaded: initBoard,
       onDecorSpritesLoaded: initDecors,
       GroundSprites,
