@@ -13,6 +13,7 @@
 - Окружение: `fence.json`, `decor.json`.
 - Земля/подложка: `ground.json`.
 - Supercomputer: `supercomputer.json` (`animations`, `glitch`, `stats`, `offsetY`).
+- BonusBox/crate: `bonusbox.json` (`atlas`, `frames[]`, `animations.drop/idle/hover/press`).
 
 ### Supercomputer (`assets/supercomputer.json`)
 
@@ -76,13 +77,27 @@
 
 - Ключевые поля:
 	- `atlas`/`png`
-	- `frames[]`
+	- `frames[]` (optional legacy)
 	- `animations.{idle,fly,repair}`
 	- `levels[1..N]` (`N >= 10`) с `moveSpeedPxSec`, `repairSpeedMult`, `costMult`
 	- `baseRepairSec`
 	- `iconSize`, `iconsOffsetY`
+- Формат анимации поддерживает два варианта:
+	- legacy: `{ frames:[id...], frameRateFps, loop }`
+	- clip: `{ x, y, w, h, frames, frameRateFps, loop }` (кадры берутся из atlas-strip слева направо)
 - Runtime: `DronSprites.load()` в `src/render/spriteLoaders.js`.
 - Путь к atlas/png берётся только из JSON (без хардкода в `game.js`).
+
+### BonusBox (`assets/bonusbox.json`)
+
+- Обязательные поля:
+	- `atlas` (например, `bonusbox_atlas.png`)
+	- `animations.drop|idle|hover|press` с clip-форматом `{ x, y, w, h, frames, frameRateFps, loop }`
+	- `frames[]` в формате `{ id, x, y, w, h }` (optional legacy)
+- Семантика loop:
+	- one-shot: `drop`, `press` (`loop:false`)
+	- зацикленные: `idle`, `hover` (`loop:true`)
+- Runtime-loader: `BonusBoxSprites.load()` в `src/render/spriteLoaders.js`.
 
 ## Риски
 

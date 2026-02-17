@@ -147,6 +147,17 @@
 - Иконки режимов (`⏳`/`🔧`) рисуются в том же проходе с hitbox-геометрией из `iconSize` + `iconsOffsetY`.
 - Рендер не содержит бизнес-логики ремонта; логика выбора/резервов/ремонта живёт в `src/mechanics/drones.js`.
 
+## BonusBox / crate animation
+
+- Runtime визуал crate использует `BonusBoxSprites` (`assets/bonusbox.json` + atlas).
+- State-machine в runtime:
+	- spawn: `drop` (one-shot) → auto `idle`
+	- hover enter: `idle -> hover` (если не `drop/press`)
+	- hover leave: `hover -> idle`
+	- pointerdown: мгновенно `press` (one-shot), при этом логика открытия crate UI/награды не ждёт завершения анимации
+	- after `press`: возврат в `hover` при активном hover, иначе в `idle`
+- Допустим ранний обрыв анимации при удалении crate (например, в момент выдачи награды); это штатно и без исключений.
+
 ## AttackMode evening dim
 
 - В `attackMode` поверх сцены рисуется лёгкое «вечернее» затемнение.

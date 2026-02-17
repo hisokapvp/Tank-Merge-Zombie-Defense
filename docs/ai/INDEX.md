@@ -37,6 +37,7 @@
 - Runtime debug overlay (`?debug=1`, hotkeys) → `docs/debug-overlay.md`
 - Debug panel dev-инструменты (achievements / totalMerges) → `docs/debug.md` + `docs/ai/SYSTEMS/achievements.md`
 - Dron repair system (asset/state/reservations/repair loop/debug add) → `docs/dron.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md` + `docs/ai/SYSTEMS/save.md` + `docs/ai/SYSTEMS/assets.md` + `docs/ai/SYSTEMS/ui.md`
+- BonusBox/crate sprite-анимации (`drop/idle/hover/press`, clip-схема `x/y/w/h/frames/frameRateFps`) → `docs/bonusbox.md` + `docs/ai/SYSTEMS/render.md` + `docs/ai/SYSTEMS/assets.md`
 
 ## Карта кода
 

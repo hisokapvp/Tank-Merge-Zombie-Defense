@@ -7,7 +7,6 @@
 Обязательные поля:
 
 - `atlas` / `png` — путь к atlas/png (runtime использует файл из JSON, без хардкода в коде).
-- `frames[]` — список кадров с `id`, `x`, `y`, `w`, `h`.
 - `animations` — минимум:
   - `idle`
   - `fly`
@@ -23,9 +22,13 @@
 
 Поддерживаемый runtime-паттерн:
 
-- `animations.<name>.frames` — массив `frame.id`.
+- `animations.<name>` может быть в двух форматах:
+  - legacy: `frames` — массив `frame.id`.
+  - clip: `x`, `y`, `w`, `h`, `frames` (число кадров).
 - `animations.<name>.frameRateFps` — fps анимации.
 - `animations.<name>.loop` — цикличность.
+
+Опционально поддерживается legacy `frames[]` (список кадров atlas с `id/x/y/w/h`) для обратной совместимости.
 
 ## 2) State и структура дрона
 

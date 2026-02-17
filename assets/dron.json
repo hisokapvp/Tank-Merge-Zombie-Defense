@@ -6,18 +6,10 @@
   "iconsOffsetY": -34,
   "anchor": { "x": 0.5, "y": 0.5 },
   "scale": 0.5,
-  "frames": [
-    { "id": "dron_idle_1", "x": 0, "y": 96, "w": 96, "h": 96 },
-    { "id": "dron_idle_2", "x": 0, "y": 96, "w": 96, "h": 96 },
-    { "id": "dron_fly_1", "x": 0, "y": 192, "w": 96, "h": 96 },
-    { "id": "dron_fly_2", "x": 0, "y": 192, "w": 96, "h": 96 },
-    { "id": "dron_repair_1", "x": 0, "y": 0, "w": 96, "h": 96 },
-    { "id": "dron_repair_2", "x": 0, "y": 0, "w": 96, "h": 96 }
-  ],
   "animations": {
-    "idle": { "frames": ["dron_idle_1"], "frameRateFps": 4, "loop": true },
-    "fly": { "frames": ["dron_fly_1"], "frameRateFps": 4, "loop": true },
-    "repair": { "frames": ["dron_repair_1"], "frameRateFps": 16, "loop": true }
+    "idle": { "x": 0, "y": 96, "w": 96, "h": 96, "frames": 4, "frameRateFps": 15, "loop": true },
+    "fly": { "x": 0, "y": 192, "w": 96, "h": 96, "frames": 4, "frameRateFps": 30, "loop": true },
+    "repair": { "x": 0, "y": 0, "w": 96, "h": 96, "frames": 16, "frameRateFps": 15, "loop": true }
   },
   "levels": {
     "1": { "moveSpeedPxSec": 74, "repairSpeedMult": 1.0, "costMult": 0.1 },

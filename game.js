@@ -1127,6 +1127,17 @@ const DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.D
   pickFrame() { return null; },
 };
 
+const BonusBoxSprites = spriteLoaders && spriteLoaders.BonusBoxSprites ? spriteLoaders.BonusBoxSprites : {
+  ready: false,
+  error: 'SpriteLoaders module is unavailable',
+  atlasImg: null,
+  config: null,
+  framesById: new Map(),
+  async load() {},
+  getAnimation() { return null; },
+  pickFrame() { return null; },
+};
+
 function getDronConfig(){
   return DronSprites && DronSprites.config ? DronSprites.config : null;
 }
@@ -1357,6 +1368,10 @@ function initBoard(){
       state.crate.x = cell.x + cell.w / 2;
       state.crate.targetY = cell.y + cell.h / 2;
       state.crate.y = Math.min(state.crate.y, state.crate.targetY);
+      if (typeof state.crate.animState !== 'string') state.crate.animState = 'idle';
+      if (!Number.isFinite(state.crate.animTimeSec)) state.crate.animTimeSec = 0;
+      if (typeof state.crate.isHover !== 'boolean') state.crate.isHover = false;
+      if (typeof state.crate.isAlive !== 'boolean') state.crate.isAlive = true;
     }
   }
   if (state.dragging){
@@ -3099,6 +3114,10 @@ function restoreFullState(saved){
       targetY: cell.y + cell.h / 2,
       size: BAL.crateSize,
       pulse: 0,
+      animState: 'idle',
+      animTimeSec: 0,
+      isHover: false,
+      isAlive: true,
       rewardLevel: saved.crate.rewardLevel ?? 1,
       cellIndex: saved.crate.cellIndex,
       claiming: false,
@@ -4957,11 +4976,45 @@ function spawnCrate(){
     targetY,
     size,
     pulse: 0,
+    animState: 'drop',
+    animTimeSec: 0,
+    isHover: false,
+    isAlive: true,
     rewardLevel: pickCrateRewardLevel(),
     cellIndex: cell.i,
     claiming: false,
   };
   return true;
+}
+
+function getCrateAnimation(stateName){
+  if (!(BonusBoxSprites && typeof BonusBoxSprites.getAnimation === 'function')) return null;
+  return BonusBoxSprites.getAnimation(stateName) || BonusBoxSprites.getAnimation('idle');
+}
+
+function setCrateAnimationState(crate, nextState, resetTime){
+  if (!crate || typeof nextState !== 'string' || !nextState.length) return;
+  if (crate.animState !== nextState) {
+    crate.animState = nextState;
+    crate.animTimeSec = 0;
+    return;
+  }
+  if (resetTime) crate.animTimeSec = 0;
+}
+
+function syncCrateHoverAt(x, y){
+  const c = state.crate;
+  if (!c || c.isAlive === false) return;
+  const hovered = crateHitTest(x, y);
+  if (hovered === c.isHover) return;
+  c.isHover = hovered;
+  if (hovered) {
+    if (c.animState !== 'press' && c.animState !== 'drop') {
+      setCrateAnimationState(c, 'hover', true);
+    }
+    return;
+  }
+  if (c.animState === 'hover') setCrateAnimationState(c, 'idle', true);
 }
 
 function maybeSpawnCrate(){
@@ -4978,6 +5031,20 @@ function stepCrate(dt){
   const c = state.crate;
   c.y = Math.min(c.targetY, c.y + BAL.crateDropSpeed * dt);
   c.pulse += dt * 4;
+  c.animTimeSec = Number.isFinite(c.animTimeSec) ? (c.animTimeSec + dt) : dt;
+
+  const anim = getCrateAnimation(c.animState);
+  if (!anim || anim.loop !== false) return;
+  const frameCount = Math.max(1, Array.isArray(anim.frames) ? anim.frames.length : 1);
+  const fps = Math.max(0.01, Number(anim.frameRateFps) || 1);
+  const durationSec = frameCount / fps;
+  if (c.animTimeSec < durationSec) return;
+
+  if (c.animState === 'drop') {
+    setCrateAnimationState(c, 'idle', true);
+  } else if (c.animState === 'press') {
+    setCrateAnimationState(c, c.isHover ? 'hover' : 'idle', true);
+  }
 }
 
 function crateHitTest(x,y){
@@ -5982,6 +6049,7 @@ function isLevelModalOpen(){
 canvas.addEventListener('pointerdown', (e)=>{
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
+  syncCrateHoverAt(p.x, p.y);
   if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
   if (isBlockingModalOpen()) return;
   if (DronesApi && typeof DronesApi.handlePointerDown === 'function') {
@@ -6003,6 +6071,10 @@ canvas.addEventListener('pointerdown', (e)=>{
     return;
   }
   if (crateHitTest(p.x, p.y)){
+    if (state.crate) {
+      state.crate.isHover = true;
+      setCrateAnimationState(state.crate, 'press', true);
+    }
     openCrateModal();
     return;
   }
@@ -6047,12 +6119,13 @@ canvas.addEventListener('pointerdown', (e)=>{
 });
 
 canvas.addEventListener('pointermove', (e)=>{
+  const p = getPointerPos(e);
+  syncCrateHoverAt(p.x, p.y);
   if (isLevelModalOpen()) {
     state.dragging = null;
     return;
   }
   if (!state.dragging) return;
-  const p = getPointerPos(e);
   state.dragging.x = p.x;
   state.dragging.y = p.y;
   const dx = p.x - state.dragging.startX;
@@ -6061,12 +6134,13 @@ canvas.addEventListener('pointermove', (e)=>{
 });
 
 canvas.addEventListener('pointerup', (e)=>{
+  const p = getPointerPos(e);
+  syncCrateHoverAt(p.x, p.y);
   if (isLevelModalOpen()) {
     state.dragging = null;
     return;
   }
   if (!state.dragging) return;
-  const p = getPointerPos(e);
   const target = cellAt(p.x, p.y);
 
   const from = state.cells[state.dragging.cellIndex];
@@ -6094,6 +6168,13 @@ canvas.addEventListener('pointerup', (e)=>{
   }
   state.dragging = null;
   updateDismantleButton();
+});
+
+canvas.addEventListener('pointerleave', ()=>{
+  if (!state.crate || state.crate.isAlive === false) return;
+  if (!state.crate.isHover) return;
+  state.crate.isHover = false;
+  if (state.crate.animState === 'hover') setCrateAnimationState(state.crate, 'idle', true);
 });
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
@@ -7528,6 +7609,21 @@ function drawCrate(){
   const half = size * 0.5;
   const pulse = 1 + Math.sin(c.pulse) * 0.04;
 
+  const anim = getCrateAnimation(c.animState);
+  const frameIds = anim && Array.isArray(anim.frames) ? anim.frames : null;
+  const frameCount = frameIds && frameIds.length ? frameIds.length : 0;
+  const fps = anim ? Math.max(0.01, Number(anim.frameRateFps) || 1) : 1;
+  const durationSec = frameCount > 0 ? frameCount / fps : 0;
+  var frameIndex = 0;
+  if (frameCount > 0 && durationSec > 0) {
+    if (anim.loop !== false) frameIndex = Math.floor((c.animTimeSec % durationSec) * fps) % frameCount;
+    else frameIndex = Math.min(frameCount - 1, Math.floor(c.animTimeSec * fps));
+  }
+  const frameId = frameCount > 0 ? frameIds[frameIndex] : null;
+  const frame = frameId && BonusBoxSprites && typeof BonusBoxSprites.pickFrame === 'function'
+    ? BonusBoxSprites.pickFrame(frameId)
+    : null;
+
   ctx.save();
   ctx.translate(c.x, c.y);
   ctx.scale(pulse, pulse);
@@ -7536,6 +7632,27 @@ function drawCrate(){
   ctx.beginPath();
   ctx.ellipse(0, half + 6, half * 0.9, half * 0.4, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  if (BonusBoxSprites && BonusBoxSprites.ready && BonusBoxSprites.atlasImg && frame) {
+    const config = BonusBoxSprites.config || {};
+    const anchor = config.anchor || { x: 0.5, y: 0.5 };
+    const spriteScale = Number.isFinite(config.scale) ? Math.max(0.1, config.scale) : 1;
+    const drawW = size * spriteScale;
+    const drawH = size * spriteScale;
+    ctx.drawImage(
+      BonusBoxSprites.atlasImg,
+      frame.x,
+      frame.y,
+      frame.w,
+      frame.h,
+      -drawW * anchor.x,
+      -drawH * anchor.y,
+      drawW,
+      drawH
+    );
+    ctx.restore();
+    return;
+  }
 
   ctx.fillStyle = '#c88b4c';
   ctx.strokeStyle = 'rgba(0,0,0,.35)';
@@ -7997,6 +8114,7 @@ async function boot(){
       DecorSprites,
       SupercomputerSprites,
       DronSprites,
+      BonusBoxSprites,
       onSupercomputerConfigLoaded: initBoard,
       onDecorSpritesLoaded: initDecors,
       GroundSprites,

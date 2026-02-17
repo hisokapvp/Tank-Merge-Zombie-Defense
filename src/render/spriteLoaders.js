@@ -55,6 +55,40 @@
       };
     }
 
+    function collectAnimationFrameIds(rawAnim, fallbackIds, frameMap, animationName) {
+      var src = rawAnim && typeof rawAnim === 'object' ? rawAnim : {};
+      var ids = Array.isArray(src.frames)
+        ? src.frames.filter(function (frameId) { return typeof frameId === 'string' && frameMap.has(frameId); })
+        : [];
+
+      var frameCount = Number.isFinite(src.frames) ? Math.max(1, Math.floor(src.frames)) : 0;
+      var hasRect = Number.isFinite(src.x) || Number.isFinite(src.y) || Number.isFinite(src.w) || Number.isFinite(src.h);
+      if (!ids.length && frameCount > 0 && hasRect) {
+        var fallbackFrame = fallbackIds && fallbackIds.length ? frameMap.get(fallbackIds[0]) : null;
+        var frameW = toPositiveNumber(src.w, fallbackFrame ? fallbackFrame.w : 64);
+        var frameH = toPositiveNumber(src.h, fallbackFrame ? fallbackFrame.h : 64);
+        var baseX = Number.isFinite(src.x) ? src.x : (fallbackFrame ? fallbackFrame.x : 0);
+        var baseY = Number.isFinite(src.y) ? src.y : (fallbackFrame ? fallbackFrame.y : 0);
+        for (var i = 0; i < frameCount; i++) {
+          var generatedId = '__' + animationName + '_' + i;
+          frameMap.set(generatedId, {
+            id: generatedId,
+            x: baseX + i * frameW,
+            y: baseY,
+            w: frameW,
+            h: frameH,
+          });
+          ids.push(generatedId);
+        }
+      }
+
+      if (!ids.length && frameCount > 0 && fallbackIds && fallbackIds.length) {
+        ids = fallbackIds.slice(0, Math.min(frameCount, fallbackIds.length));
+      }
+      if (!ids.length && fallbackIds && fallbackIds.length) ids = fallbackIds.slice();
+      return ids;
+    }
+
     var ZombieSprites = {
       ready: false,
       error: '',
@@ -594,11 +628,9 @@
           var idleFallback = Array.from(this.framesById.keys());
           var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
 
-          function normalizeAnim(rawAnim, fallbackIds, map) {
+          function normalizeAnim(rawAnim, fallbackIds, map, animationName) {
             var src = rawAnim && typeof rawAnim === 'object' ? rawAnim : {};
-            var ids = Array.isArray(src.frames) ? src.frames.filter(function (id) {
-              return typeof id === 'string' && map.has(id);
-            }) : [];
+            var ids = collectAnimationFrameIds(rawAnim, fallbackIds, map, 'dron_' + animationName);
             if (!ids.length) ids = fallbackIds.slice();
             if (!ids.length) return null;
             return {
@@ -608,9 +640,13 @@
             };
           }
 
-          var idleAnim = normalizeAnim(animationsRaw.idle, idleFallback, this.framesById);
-          var flyAnim = normalizeAnim(animationsRaw.fly, idleAnim ? idleAnim.frames : idleFallback, this.framesById);
-          var repairAnim = normalizeAnim(animationsRaw.repair, flyAnim ? flyAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById);
+          var idleAnimRaw = animationsRaw.idle && typeof animationsRaw.idle === 'object' ? animationsRaw.idle : {};
+          var flyAnimRaw = animationsRaw.fly && typeof animationsRaw.fly === 'object' ? animationsRaw.fly : {};
+          var repairAnimRaw = animationsRaw.repair && typeof animationsRaw.repair === 'object' ? animationsRaw.repair : {};
+
+          var idleAnim = normalizeAnim(idleAnimRaw, idleFallback, this.framesById, 'idle');
+          var flyAnim = normalizeAnim(flyAnimRaw, idleAnim ? idleAnim.frames : idleFallback, this.framesById, 'fly');
+          var repairAnim = normalizeAnim(repairAnimRaw, flyAnim ? flyAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById, 'repair');
 
           var levels = {};
           var maxLevel = 1;
@@ -690,6 +726,98 @@
       },
     };
 
+    var BonusBoxSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      framesById: new Map(),
+      load: async function () {
+        try {
+          var res = await fetch('assets/bonusbox.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+
+          var atlasPath = 'assets/' + (data.atlas || 'bonusbox_atlas.png');
+          var img = await loadImage(atlasPath);
+
+          this.framesById.clear();
+          var rawFrames = Array.isArray(data.frames) ? data.frames : [];
+          for (var i = 0; i < rawFrames.length; i++) {
+            var frame = rawFrames[i] || {};
+            var id = typeof frame.id === 'string' && frame.id.length > 0 ? frame.id : String(i);
+            this.framesById.set(id, {
+              id: id,
+              x: Number.isFinite(frame.x) ? frame.x : 0,
+              y: Number.isFinite(frame.y) ? frame.y : 0,
+              w: toPositiveNumber(frame.w, 64),
+              h: toPositiveNumber(frame.h, 64),
+            });
+          }
+
+          var fallbackFrames = Array.from(this.framesById.keys());
+          var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
+
+          function normalizeAnim(rawAnim, fallbackIds, map, animationName) {
+            var src = rawAnim && typeof rawAnim === 'object' ? rawAnim : {};
+            var ids = collectAnimationFrameIds(rawAnim, fallbackIds, map, 'bonusbox_' + animationName);
+            if (!ids.length) ids = fallbackIds.slice();
+            if (!ids.length) return null;
+            return {
+              frames: ids,
+              frameRateFps: toPositiveNumber(src.frameRateFps, 8),
+              loop: src.loop !== false,
+            };
+          }
+
+          var dropAnimRaw = animationsRaw.drop && typeof animationsRaw.drop === 'object' ? animationsRaw.drop : {};
+          var idleAnimRaw = animationsRaw.idle && typeof animationsRaw.idle === 'object' ? animationsRaw.idle : {};
+          var hoverAnimRaw = animationsRaw.hover && typeof animationsRaw.hover === 'object' ? animationsRaw.hover : {};
+          var pressAnimRaw = animationsRaw.press && typeof animationsRaw.press === 'object' ? animationsRaw.press : {};
+
+          var dropAnim = normalizeAnim(dropAnimRaw, fallbackFrames, this.framesById, 'drop');
+          var idleAnim = normalizeAnim(idleAnimRaw, dropAnim ? dropAnim.frames : fallbackFrames, this.framesById, 'idle');
+          var hoverAnim = normalizeAnim(hoverAnimRaw, idleAnim ? idleAnim.frames : fallbackFrames, this.framesById, 'hover');
+          var pressAnim = normalizeAnim(pressAnimRaw, hoverAnim ? hoverAnim.frames : (idleAnim ? idleAnim.frames : fallbackFrames), this.framesById, 'press');
+
+          this.config = {
+            atlas: data && data.atlas ? data.atlas : 'bonusbox_atlas.png',
+            anchor: data && data.anchor && typeof data.anchor === 'object'
+              ? {
+                  x: clamp01(data.anchor.x, 0.5),
+                  y: clamp01(data.anchor.y, 0.5),
+                }
+              : { x: 0.5, y: 0.5 },
+            scale: toPositiveNumber(data && data.scale, 1),
+            animations: {
+              drop: dropAnim,
+              idle: idleAnim,
+              hover: hoverAnim,
+              press: pressAnim,
+            },
+          };
+
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          this.ready = false;
+          this.error = String(e);
+          this.atlasImg = null;
+          this.config = null;
+          this.framesById.clear();
+        }
+      },
+      getAnimation: function (name) {
+        var anims = this.config && this.config.animations ? this.config.animations : null;
+        if (!anims) return null;
+        return anims[name] || anims.idle || null;
+      },
+      pickFrame: function (frameId) {
+        return this.framesById.get(frameId) || this.framesById.values().next().value || null;
+      },
+    };
+
     return {
       loadImage: loadImage,
       ZombieSprites: ZombieSprites,
@@ -699,6 +827,7 @@
       GroundSprites: GroundSprites,
       SupercomputerSprites: SupercomputerSprites,
       DronSprites: DronSprites,
+      BonusBoxSprites: BonusBoxSprites,
     };
   }
 
