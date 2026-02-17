@@ -154,8 +154,8 @@
       label = t('autoMerge2', 'Соединить 2 танка');
     } else if (tier === 'mergeX') {
       label = pairs.length >= 2
-        ? t('autoMerge4', 'Соединить 4 танка')
-        : t('autoMerge2', 'Соединить 2 танка');
+        ? t('autoMerge4Short', 'Соединить 4')
+        : t('autoMerge2Short', 'Соединить 2');
     } else {
       label = t('autoMergeAll', 'Соединить все танки');
     }

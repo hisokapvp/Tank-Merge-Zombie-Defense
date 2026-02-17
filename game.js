@@ -1981,12 +1981,30 @@ function calculateAffordableBuyCount(limit){
 }
 
 function getBulkBuyPlan(){
+  return getBulkBuyPlanByMode(buyBulkMode());
+}
+
+function getBulkBuyPlanByMode(mode){
   const Garage = window.Game && window.Game.Garage;
   const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
-  const count = Math.max(2, Math.min(5, freeSlots));
-  if (freeSlots < 2) return { freeSlots, count, enabled: false };
-  const affordable = calculateAffordableBuyCount(count);
-  return { freeSlots, count, enabled: affordable.count === count };
+  const resolvedMode = mode === 'buy2' || mode === 'buy5' || mode === 'buyMax' ? mode : 'none';
+  if (resolvedMode === 'none') return { mode: 'none', freeSlots: freeSlots, count: 0, enabled: false, visible: false };
+
+  const requested = resolvedMode === 'buy2'
+    ? 2
+    : (resolvedMode === 'buy5' ? 5 : Math.max(0, freeSlots));
+  const affordable = calculateAffordableBuyCount(requested);
+  const enabled = resolvedMode === 'buyMax'
+    ? affordable.count > 0
+    : affordable.count === requested;
+  const count = resolvedMode === 'buyMax' ? affordable.count : requested;
+  return {
+    mode: resolvedMode,
+    freeSlots: freeSlots,
+    count: count,
+    enabled: enabled,
+    visible: true,
+  };
 }
 
 function performTankPurchaseOnce(){
@@ -2020,8 +2038,10 @@ function buyBulkMode(){
 }
 
 function tryBuyBulk(){
-  const plan = getBulkBuyPlan();
-  if (!plan.enabled || plan.freeSlots < 2) return;
+  const mode = buyBulkMode();
+  if (mode === 'none') return;
+  const plan = getBulkBuyPlanByMode(mode);
+  if (!plan.enabled || plan.count <= 0) return;
   const countToBuy = plan.count;
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
@@ -4835,10 +4855,18 @@ function updateUI(){
   ui.buy.disabled = state.coins < cost || !hasFree;
 
   if (ui.buyBulk) {
-    const plan = getBulkBuyPlan();
-    ui.buyBulk.classList.remove('hidden');
-    ui.buyBulk.textContent = t('buyBulkDynamic', { count: plan.count });
-    ui.buyBulk.disabled = !plan.enabled;
+    const mode = buyBulkMode();
+    const plan = getBulkBuyPlanByMode(mode);
+    if (!plan.visible) {
+      ui.buyBulk.classList.add('hidden');
+      ui.buyBulk.disabled = true;
+    } else {
+      ui.buyBulk.classList.remove('hidden');
+      if (mode === 'buy2') ui.buyBulk.textContent = t('buyBulk2');
+      else if (mode === 'buy5') ui.buyBulk.textContent = t('buyBulk5');
+      else ui.buyBulk.textContent = t('buyBulkMax');
+      ui.buyBulk.disabled = !plan.enabled;
+    }
   }
 
   refreshAutoMergeButton();

@@ -65,6 +65,8 @@
   "buyBulkDynamic": "Buy {count} tanks",
   "autoMerge2": "Merge 2 tanks",
   "autoMerge4": "Merge 4 tanks",
+  "autoMerge2Short": "Merge 2",
+  "autoMerge4Short": "Merge 4",
   "autoMergeAll": "Merge all tanks",
   "fenceRepairNoCoins": "Not enough coins to repair",
   "fenceRepairDone": "Segment repaired",

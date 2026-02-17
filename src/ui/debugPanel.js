@@ -338,6 +338,10 @@
               debugLog('warn', 'Achievements(dev): select achievement id.');
               return;
             }
+            var AchievementsApi = global.Game && global.Game.Achievements;
+            if (AchievementsApi && typeof AchievementsApi.ensureState === 'function') {
+              AchievementsApi.ensureState(state);
+            }
             var done = false;
             if (typeof debugUnlockAchievementAndClaim === 'function') {
               done = debugUnlockAchievementAndClaim(achievementId) === true;

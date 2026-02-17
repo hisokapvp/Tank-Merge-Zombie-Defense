@@ -62,6 +62,7 @@
 
 - Расширение в `src/ui/debugPanel.js` (раздел `Achievements (dev)` во вкладке `Logs&Tools`).
 - `Unlock + claim reward`:
+  - перед мутацией вызывается `Game.Achievements.ensureState(state)`,
   - форсирует `state.achievements.unlocked[id] = true` (через dev-hook из `game.js`),
   - сразу обновляет UI (в т.ч. tier auto-merge кнопки).
 - `Set totalMerges`:
@@ -72,10 +73,32 @@
 ## Bulk-buy
 
 - Базовая кнопка `#buy` остаётся всегда.
-- `#buyBulk` переключается по лучшей награде:
+- `#buyBulk` определяется только `Achievements.getBulkMode(state)` (пересчёт на каждом `updateUI()`, без кешей):
+  - `none` → кнопка скрыта
   - `buy2` → «Создать 2 танка»
   - `buy5` → «Создать 5 танков»
   - `buyMax` → «Создать максимум танков»
+- Запрещён альтернативный гейтинг через `rewardMode`/`claimed`.
 - Disabled-логика:
   - `buy2`/`buy5`: нужно ровно `N` свободных слотов и монет на все `N` последовательных покупок.
   - `buyMax`: покупает `K = min(freeSlots, maxKByCoins)`; кнопка disabled, если `K == 0`.
+
+## Таблица tier/label
+
+### Buyer
+
+| Unlock | Mode | Visibility | Label |
+|---|---|---|---|
+| нет `buyer_novice` | `none` | hidden | — |
+| `buyer_novice` | `buy2` | visible | «Создать 2 танка» |
+| `buyer_pro` | `buy5` | visible | «Создать 5 танков» |
+| `buyer_expert` | `buyMax` | visible | «Создать максимум танков» |
+
+### Creator
+
+| Unlock | Mode | Visibility | Label |
+|---|---|---|---|
+| нет `creator_novice` | `hidden` | hidden | — |
+| `creator_novice` | `merge2` | visible | «Соединить 2 танка» |
+| `creator_pro` | `mergeX` | visible | «Соединить 2» или «Соединить 4» |
+| `creator_expert` | `mergeAll` | visible | «Соединить все танки» |

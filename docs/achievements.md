@@ -50,7 +50,7 @@ Tier-поведение:
 
 - до `creator_novice` — кнопка скрыта (`hidden`),
 - `creator_novice` и без `creator_pro` — режим `merge2`, label: «Соединить 2 танка»,
-- `creator_pro` и без `creator_expert` — режим `mergeX`, label: «Соединить 2 танка» или «Соединить 4 танка» по доступным парам,
+- `creator_pro` и без `creator_expert` — режим `mergeX`, label: «Соединить 2» или «Соединить 4» по доступным парам,
 - `creator_expert` — режим `mergeAll`, label: «Соединить все танки».
 
 Дополнительно:
@@ -75,6 +75,8 @@ Tier-поведение:
 - `Unlock + claim reward`: форсирует `state.achievements.unlocked[selectedId] = true` через dev-hook и сразу обновляет UI.
 - `Set totalMerges`: выставляет `state.achievements.totalMerges` (clamp `0..Number.MAX_SAFE_INTEGER`) и запускает стандартный пересчёт unlock'ов.
 
+Обязательное правило для dev-flow: debug unlock сначала гарантирует структуру achievements через `Game.Achievements.ensureState(state)`, затем меняет `state.achievements.unlocked[...]`, после чего вызывает `updateUI()`. UI обязан обновиться сразу, без reload.
+
 Политика пересчёта: **unlock-only** (уже открытые достижения не закрываются при уменьшении `totalMerges`).
 
 ## i18n (creator_* / auto-merge)
@@ -92,3 +94,36 @@ Tier-поведение:
 Ключи кнопок auto-merge:
 
 - `autoMerge2`, `autoMerge4`, `autoMergeAll`
+
+## Buyer achievements (bulk-buy)
+
+Пороги buyer-достижений:
+
+- `buyer_novice` — `100` покупок → режим `buy2`
+- `buyer_pro` — `500` покупок → режим `buy5`
+- `buyer_expert` — `1000` покупок → режим `buyMax`
+
+Источник правды для bulk-buy UI: только `Achievements.getBulkMode(state)`.
+
+- Запрещено гейтить bulk-buy по `rewardMode`, `claimed` или кешированным значениям.
+- Режим должен пересчитываться на каждом `updateUI()`.
+
+## Таблица режимов и label/visibility
+
+### Buyer (bulk-buy)
+
+| Achievement unlock state | Mode (`Achievements.getBulkMode`) | Visibility | Label |
+|---|---|---|---|
+| нет `buyer_novice` | `none` | скрыта | — |
+| `buyer_novice`, без `buyer_pro` | `buy2` | показана | «Создать 2 танка» |
+| `buyer_pro`, без `buyer_expert` | `buy5` | показана | «Создать 5 танков» |
+| `buyer_expert` | `buyMax` | показана | «Создать максимум танков» |
+
+### Creator (auto-merge)
+
+| Achievement unlock state | Tier | Visibility | Label |
+|---|---|---|---|
+| нет `creator_novice` | `hidden` | скрыта | — |
+| `creator_novice`, без `creator_pro` | `merge2` | показана | «Соединить 2 танка» |
+| `creator_pro`, без `creator_expert` | `mergeX` | показана | «Соединить 2» или «Соединить 4» (по доступным парам) |
+| `creator_expert` | `mergeAll` | показана | «Соединить все танки» |

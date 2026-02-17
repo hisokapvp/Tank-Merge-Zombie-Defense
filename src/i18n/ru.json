@@ -65,6 +65,8 @@
   "buyBulkDynamic": "Создать {count} танков",
   "autoMerge2": "Соединить 2 танка",
   "autoMerge4": "Соединить 4 танка",
+  "autoMerge2Short": "Соединить 2",
+  "autoMerge4Short": "Соединить 4",
   "autoMergeAll": "Соединить все танки",
   "fenceRepairNoCoins": "Не хватает монет на ремонт",
   "fenceRepairDone": "Сегмент отремонтирован",
