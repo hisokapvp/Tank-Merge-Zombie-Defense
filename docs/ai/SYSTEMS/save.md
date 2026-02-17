@@ -54,3 +54,17 @@
 - `node Test/pack8/offlineProgress.test.js`
 - `node Test/pack9/offlineModal_ui_i18n.test.js`
 - Ручной сценарий: пауза > 5 мин и возврат.
+
+## New Game: правило стартового таланта
+
+- Reset по кнопке `menuNew` идёт отдельным путём через `src/core/bootstrap.js`:
+	- `menuNew` → `resetGameState({ reason: 'new_game' })`.
+- В `game.js` правило применено при создании state:
+	- `createInitialState(options)` выставляет `player.talentPoints = 1` **только** при `reason === 'new_game'`.
+	- Используется присваивание (не инкремент), поэтому повторный reset не накапливает очки.
+
+Ожидаемое поведение по сценариям:
+
+- Boot без сейва: `talentPoints` не форсится в `1` (остаётся дефолт initial state).
+- Load сейва: `talentPoints` берётся из сейва (`applySavedProgress`), без post-load бонуса.
+- New Game reset: `talentPoints === 1` сразу после создания нового state.

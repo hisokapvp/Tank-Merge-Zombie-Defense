@@ -23,7 +23,7 @@ function test(name, fn) {
 const fs = require('fs');
 const path = require('path');
 
-console.log('\n── T5: New Game popup flag reset ──');
+console.log('\n── T5: New Game reset + talent point rules ──');
 
 // Test 1: game.js contains resetSeenLevels call in resetGameState
 test('T5-1: resetGameState calls MergePopup.resetSeenLevels', () => {
@@ -34,7 +34,7 @@ test('T5-1: resetGameState calls MergePopup.resetSeenLevels', () => {
 // Test 2: resetSeenLevels is inside resetGameState function
 test('T5-2: resetSeenLevels is inside resetGameState block', () => {
   const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
-  const resetIdx = gameJs.indexOf('function resetGameState()');
+  const resetIdx = gameJs.indexOf('function resetGameState(options)');
   const callIdx = gameJs.indexOf('MergePopup.resetSeenLevels');
   assert(resetIdx !== -1, 'resetGameState exists');
   assert(callIdx !== -1, 'resetSeenLevels call exists');
@@ -82,15 +82,15 @@ test('T5-4: resetSeenLevels removes localStorage key', () => {
   assertEqual(store['seenMergeLevels'], undefined, 'localStorage key removed');
 });
 
-// Test 5: New Game handler clears localStorage 'progress'
-test('T5-5: menuNew handler removes progress from localStorage', () => {
-  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
-  // Find the menuNew click handler
-  const menuNewIdx = gameJs.indexOf("menuNew?.addEventListener('click'");
-  assert(menuNewIdx !== -1, 'menuNew handler exists');
-  // Check that localStorage.removeItem('progress') is nearby
-  const removeIdx = gameJs.indexOf("localStorage.removeItem('progress')", menuNewIdx);
-  assert(removeIdx !== -1 && removeIdx - menuNewIdx < 200, 'progress removal near menuNew handler');
+// Test 5: New Game handler clears localStorage 'progress' and passes new_game reason
+test('T5-5: menuNew handler removes progress and calls reset with reason=new_game', () => {
+  const bootJs = fs.readFileSync(path.resolve(__dirname, '../../src/core/bootstrap.js'), 'utf-8');
+  const menuNewIdx = bootJs.indexOf("opts.ui.menuNew && opts.ui.menuNew.addEventListener('click'");
+  assert(menuNewIdx !== -1, 'menuNew handler exists in bootstrap');
+  const removeIdx = bootJs.indexOf("localStorageObj.removeItem('progress')", menuNewIdx);
+  assert(removeIdx !== -1 && removeIdx - menuNewIdx < 220, 'progress removal near menuNew handler');
+  const reasonIdx = bootJs.indexOf("opts.resetGameState({ reason: 'new_game' })", menuNewIdx);
+  assert(reasonIdx !== -1 && reasonIdx - menuNewIdx < 260, 'new game reason passed to reset');
 });
 
 // Test 6: No auto-close in merge popup
@@ -112,6 +112,35 @@ test('T5-8: index.html has btn-fight and btn-close', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
   assert(html.indexOf('id="btn-fight"') !== -1, 'btn-fight in HTML');
   assert(html.indexOf('id="btn-close"') !== -1, 'btn-close in HTML');
+});
+
+// Test 9: Boot default does not auto-grant talent point
+test('T5-9: boot path keeps default talentPoints=0', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  assert(gameJs.indexOf('let state = createInitialState();') !== -1, 'boot uses default createInitialState without new_game reason');
+  const initStateJs = fs.readFileSync(path.resolve(__dirname, '../../src/persistence/initialState.js'), 'utf-8');
+  assert(initStateJs.indexOf('talentPoints: 0') !== -1, 'default initial talent points are zero');
+});
+
+// Test 10: New Game path sets exactly one talent point
+test('T5-10: new game reset sets player.talentPoints to 1 via assignment', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  assert(gameJs.indexOf("const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';") !== -1, 'reset has explicit reason split');
+  assert(gameJs.indexOf("state = createInitialState({ reason });") !== -1, 'reset passes reason into initial state creation');
+  const assignIdx = gameJs.indexOf('initialState.player.talentPoints = 1;');
+  assert(assignIdx !== -1, 'new_game flow uses direct assignment to 1');
+  assert(gameJs.indexOf('talentPoints += 1') === -1, 'no accumulating increment for reset talent point');
+});
+
+// Test 11: Load path does not force talentPoints=1
+test('T5-11: load path keeps talentPoints from save', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  assert(gameJs.indexOf('if (Number.isFinite(playerData.talentPoints)) state.player.talentPoints = Math.max(0, Math.floor(playerData.talentPoints));') !== -1,
+    'applySavedProgress restores talent points from save payload');
+  const loadFnStart = gameJs.indexOf('function applySavedProgress(data){');
+  const loadFnEnd = gameJs.indexOf('return true;', loadFnStart);
+  const loadFnBody = loadFnStart !== -1 && loadFnEnd !== -1 ? gameJs.slice(loadFnStart, loadFnEnd) : '';
+  assert(loadFnBody.indexOf('talentPoints = 1') === -1, 'load path does not inject new_game talent grant');
 });
 
 // Summary

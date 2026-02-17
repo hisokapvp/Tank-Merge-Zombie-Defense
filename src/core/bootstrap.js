@@ -111,7 +111,7 @@
 
     opts.ui.menuNew && opts.ui.menuNew.addEventListener('click', function () {
       localStorageObj.removeItem('progress');
-      opts.resetGameState();
+      opts.resetGameState({ reason: 'new_game' });
       opts.meta.lastSeenAt = Date.now();
       opts.saveProgress();
       opts.setMenuOpen(false);

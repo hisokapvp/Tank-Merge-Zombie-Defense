@@ -222,11 +222,12 @@ const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
 
-function createInitialState(){
-  if (InitialStateApi && InitialStateApi.createInitialState) {
-    return InitialStateApi.createInitialState({ maxLevel: MAX_TANK_LEVEL });
-  }
-  return {
+function createInitialState(options){
+  const opts = options || {};
+  const reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
+  const initialState = InitialStateApi && InitialStateApi.createInitialState
+    ? InitialStateApi.createInitialState({ maxLevel: MAX_TANK_LEVEL, reason })
+    : {
     coins: 120,
     kills: 0,
     cells: [],
@@ -310,6 +311,14 @@ function createInitialState(){
     isDismantleMode: false,
     selectedTankIds: [],
   };
+  if (reason === 'new_game') {
+    if (!initialState.player || typeof initialState.player !== 'object') {
+      initialState.player = { talentPoints: 1 };
+    } else {
+      initialState.player.talentPoints = 1;
+    }
+  }
+  return initialState;
 }
 
 let state = createInitialState();
@@ -4769,13 +4778,15 @@ function updateMenuState(){
   updateMenuVolumes();
 }
 
-function resetGameState(){
+function resetGameState(options){
+  const opts = options || {};
+  const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
   const wasCollapsed = state.debug?.collapsed;
   clearMergeFxQueue();
   if (state.projectiles && state.projectiles.length){
     for (const p of state.projectiles) releaseProjectile(p);
   }
-  state = createInitialState();
+  state = createInitialState({ reason });
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();

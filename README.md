@@ -77,6 +77,22 @@ Merge + tower defense на canvas.
 - Правила успешного merge и инкремента `totalMerges`: `docs/achievements.md`.
 - Пороги `creator_novice/pro/expert`: `100/400/1000` (auto-merge unlock roadmap PACK2/3).
 
+## New Game reset и стартовые таланты
+
+- Кнопка **Новая игра** (`menuNew`) делает reset с причиной `reason: 'new_game'` и выставляет **ровно** `player.talentPoints = 1`.
+- Выдача делается присваиванием (не инкрементом), поэтому повторные reset не накапливают очки.
+
+Сценарии и ожидаемое значение `talentPoints`:
+
+- **Boot без сейва**: остаётся дефолт из initial state (`0`, если не изменён балансом/миграцией).
+- **Load сейва**: берётся значение из сейва (без принудительной установки в `1`).
+- **Новая игра**: сразу после reset всегда `1`.
+
+Реализация:
+
+- Вызов reset из UI: `src/core/bootstrap.js` (`menuNew` → `resetGameState({ reason: 'new_game' })`).
+- Применение правила `talentPoints = 1`: `game.js` (`createInitialState(options)` для `reason === 'new_game'`).
+
 ## Debug overlay для атаки зомби
 
 - Overlay доступен только при `?debug=1`.

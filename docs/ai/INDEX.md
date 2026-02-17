@@ -16,6 +16,7 @@
 - Achievements/progress (`totalPurchased`, `totalMerges`, buyer_*, creator_*) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
+- New Game reset (`menuNew`) и правило стартового `talentPoints` → `docs/ai/SYSTEMS/save.md` + `README.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
 - Генерация карты (ground stamps + decor placement) → `docs/map-generation.md` + `docs/ai/SYSTEMS/render.md`
