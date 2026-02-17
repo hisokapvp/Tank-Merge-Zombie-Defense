@@ -49,7 +49,11 @@ Merge + tower defense на canvas.
 - Конфиг: `assets/zombies.json` → `types[i]`.
 - Новые параметры анимаций: `animations.walk.frameRateFps`, `animations.attack.frameRateFps`, `animations.death.frameRateFps`, `animations.deathCommon.frameRateFps`.
 - Новые параметры атаки: `attack.attackRangePx`, `attack.attackCooldownSec`, `attack.attackHitAt` (clamp `0..1`).
+- До брича зомби атакуют `fence`.
+- После брича переключение на `supercomputer` происходит только у группы зомби стороны, где разрушен сегмент.
 - Выбор цели fence выполняется единообразно по `distance(zombieCenter, segmentAabb)` для side+corner сегментов.
+- Приоритет атаки: `supercomputer` (если `hp > 0` и цель в `attackRangePx`) → иначе `fence`.
+- Урон по `supercomputer` интегрирован через `applySupercomputerDamage(...)`.
 - Состояния атаки: `walk → attack → cooldown`; урон наносится один раз в момент `attackHitAt` внутри attack-анимации, а cooldown считается от конца attack-анимации.
 
 ## World Events: desired targetAlive

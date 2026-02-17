@@ -3075,6 +3075,7 @@ function assignZombieSlot(z, slotIndex, slotCount){
   z.slotIndex = slotIndex;
   z.anchorTheta = theta;
   z.theta = theta;
+  z.spawnSideKey = getSideKeyForTheta(theta);
   const fenceLimit = zombieFenceLimit(z);
   z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
 }
@@ -3188,6 +3189,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     level,
     theta,
     anchorTheta: theta,
+    spawnSideKey: getSideKeyForTheta(theta),
     heading: 0,
     slotIndex: Number.isFinite(slotIndex) ? slotIndex : null,
     swayPhase: Math.random() * Math.PI * 2,
@@ -3300,6 +3302,7 @@ function wallCollisionPenalty(x, y, zR, walls){
 }
 
 function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
+  if (z && z.breached) return { x: toX, y: toY };
   const walls = getWallDecors();
   if (!walls.length) return { x: toX, y: toY };
   const zR = zombieCollisionRadius(z);
@@ -3525,6 +3528,40 @@ function getFenceSegmentForTheta(theta){
   return info.sideSegs[idx];
 }
 
+function getSideKeyForTheta(theta){
+  const dx = Math.cos(theta || 0);
+  const dy = Math.sin(theta || 0);
+  if (Math.abs(dy) > Math.abs(dx)) return dy >= 0 ? 'bottom' : 'top';
+  return dx >= 0 ? 'right' : 'left';
+}
+
+function getFenceSideKeyForSegment(seg){
+  if (!seg) return null;
+  if (seg.kind === 'sideTop') return 'top';
+  if (seg.kind === 'sideRight') return 'right';
+  if (seg.kind === 'sideBottom') return 'bottom';
+  if (seg.kind === 'sideLeft') return 'left';
+  if (seg.kind === 'cornerTL') return 'top';
+  if (seg.kind === 'cornerTR') return 'right';
+  if (seg.kind === 'cornerBR') return 'bottom';
+  if (seg.kind === 'cornerBL') return 'left';
+  if (Number.isFinite(seg.theta)) return getSideKeyForTheta(seg.theta);
+  if (Number.isFinite(seg.x) && Number.isFinite(seg.y)) return getSideKeyForTheta(Math.atan2(seg.y, seg.x));
+  return null;
+}
+
+function getBrokenFenceSidesMap(){
+  const result = { top: false, right: false, bottom: false, left: false };
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return result;
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || !seg.broken) continue;
+    const sideKey = getFenceSideKeyForSegment(seg);
+    if (sideKey) result[sideKey] = true;
+  }
+  return result;
+}
+
 function distancePointAabb(px, py, aabb){
   if (!aabb) return Infinity;
   const dx = px < aabb.minX ? (aabb.minX - px) : (px > aabb.maxX ? (px - aabb.maxX) : 0);
@@ -3631,12 +3668,45 @@ function selectZombieFenceTargetForZombie(z, attackRangePx){
   return selectZombieFenceTarget(zx, zy, attackRangePx);
 }
 
+function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer){
+  const p = zombiePos(z);
+  const sc = getComputerState();
+  const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
+  const scAlive = !!sc && Number.isFinite(sc.hp) && sc.hp > 0;
+  const maxDist = Math.max(0, attackRangePx || 0);
+  if (allowSupercomputer && scCoordsValid && scAlive) {
+    const distToSc = Math.hypot(p.x - sc.x, p.y - sc.y);
+    if (Number.isFinite(distToSc) && distToSc <= maxDist) {
+      return {
+        kind: 'supercomputer',
+        id: 'supercomputer',
+        distance: distToSc,
+      };
+    }
+  }
+  const fenceTarget = selectZombieFenceTargetForZombie(z, attackRangePx);
+  if (!fenceTarget || !fenceTarget.seg) return null;
+  return {
+    kind: 'fence',
+    seg: fenceTarget.seg,
+    id: fenceTarget.seg.id || null,
+    index: fenceTarget.index,
+    distance: fenceTarget.distance,
+    isCorner: fenceTarget.isCorner,
+  };
+}
+
 function getFenceInnerLimit(z){
   const tankTrackOuter = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + zombieCollisionRadius(z);
   const dx = Math.cos(z.theta ?? 0);
   const dy = Math.sin(z.theta ?? 0);
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-  return tankTrackOuter / denom;
+  const legacyInner = tankTrackOuter / denom;
+  const sc = getComputerState();
+  if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return legacyInner;
+  const scInner = Math.hypot(sc.x - center.x, sc.y - center.y);
+  if (!Number.isFinite(scInner)) return legacyInner;
+  return Math.min(legacyInner, scInner);
 }
 
 function applyFenceSegmentDamage(seg, amount){
@@ -3851,6 +3921,10 @@ function stepZombies(dt){
   const speedMul = attackMult.speedMult;
   const damageMul = attackMult.damageMult;
   const attackActive = isZombieAttackModeActive();
+  const sc = getComputerState();
+  const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
+  const scTheta = scCoordsValid ? Math.atan2(sc.y - center.y, sc.x - center.x) : null;
+  const brokenFenceSides = getBrokenFenceSidesMap();
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -3884,12 +3958,20 @@ function stepZombies(dt){
     const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
 
     const shouldMove = !attackActive || z.attackState !== 'attack';
+    const zombieSideKey = z.spawnSideKey || getSideKeyForTheta(Number.isFinite(z.anchorTheta) ? z.anchorTheta : z.theta);
+    const canTargetSupercomputer = !!brokenFenceSides[zombieSideKey];
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
     const prevY = center.y + Math.sin(prevTheta) * z.r;
 
     let radialSpeed = 0;
     if (shouldMove) {
+      if (canTargetSupercomputer && scCoordsValid && Number.isFinite(scTheta)) {
+        if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
+        const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
+        z.anchorTheta = smoothAngle(z.anchorTheta, scTheta, anchorSteerAmt);
+      }
+
       z.swayPhase += dt * z.swaySpeed * slow * speedMul * balSpeedMul;
       const swayOffset = Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
       const desiredTheta = z.anchorTheta + swayOffset;
@@ -3929,8 +4011,8 @@ function stepZombies(dt){
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
 
-    const targetNow = attackActive ? selectZombieFenceTargetForZombie(z, z.attackRangePx) : null;
-    z.debugAttackTargetId = targetNow && targetNow.seg ? targetNow.seg.id : null;
+    const targetNow = attackActive ? selectZombieAttackTargetForZombie(z, z.attackRangePx, canTargetSupercomputer) : null;
+    z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
     if (!attackActive) {
       z.attackState = 'walk';
@@ -3939,11 +4021,11 @@ function stepZombies(dt){
       z.attackDidHit = false;
       z.attackTargetId = null;
     } else if (z.attackState === 'walk') {
-      if (targetNow && targetNow.seg) {
+      if (targetNow) {
         z.attackState = 'attack';
         z.attackAnimTimeSec = 0;
         z.attackDidHit = false;
-        z.attackTargetId = targetNow.seg.id || null;
+        z.attackTargetId = targetNow.kind === 'fence' ? (targetNow.seg && targetNow.seg.id ? targetNow.seg.id : null) : 'supercomputer';
       }
     } else if (z.attackState === 'attack') {
       z.attackAnimTimeSec += dt;
@@ -3953,10 +4035,13 @@ function stepZombies(dt){
       const attackHitTimeSec = attackDurationSec * z.attackHitAt;
 
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
-        const hitTarget = selectZombieFenceTargetForZombie(z, z.attackRangePx);
-        if (hitTarget && hitTarget.seg) {
+        const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, canTargetSupercomputer);
+        if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
           applyFenceSegmentDamage(hitTarget.seg, getZombieAttackDamage(z) * damageMul);
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
+        } else if (hitTarget && hitTarget.kind === 'supercomputer') {
+          applySupercomputerDamage(getZombieAttackDamage(z) * damageMul);
+          z.attackTargetId = 'supercomputer';
         }
         z.attackDidHit = true;
       }
@@ -3971,11 +4056,11 @@ function stepZombies(dt){
     } else if (z.attackState === 'cooldown') {
       z.attackCooldownTimerSec = Math.max(0, z.attackCooldownTimerSec - dt);
       if (z.attackCooldownTimerSec <= 0) {
-        if (targetNow && targetNow.seg) {
+        if (targetNow) {
           z.attackState = 'attack';
           z.attackAnimTimeSec = 0;
           z.attackDidHit = false;
-          z.attackTargetId = targetNow.seg.id || null;
+          z.attackTargetId = targetNow.kind === 'fence' ? (targetNow.seg && targetNow.seg.id ? targetNow.seg.id : null) : 'supercomputer';
         } else {
           z.attackState = 'walk';
           z.attackTargetId = null;
