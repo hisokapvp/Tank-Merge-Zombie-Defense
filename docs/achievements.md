@@ -95,29 +95,40 @@ Tier-поведение:
 
 - `autoMerge2`, `autoMerge4`, `autoMergeAll`
 
-## Buyer achievements (bulk-buy)
-
-Пороги buyer-достижений:
-
-- `buyer_novice` — `100` покупок → режим `buy2`
-- `buyer_pro` — `500` покупок → режим `buy5`
-- `buyer_expert` — `1000` покупок → режим `buyMax`
+## Bulk-buy (гейтинг через creator_*)
 
 Источник правды для bulk-buy UI: только `Achievements.getBulkMode(state)`.
 
 - Запрещено гейтить bulk-buy по `rewardMode`, `claimed` или кешированным значениям.
-- Режим должен пересчитываться на каждом `updateUI()`.
+- Режим пересчитывается на каждом `updateUI()`.
+- `buyer_*` больше не используются и удалены из списка достижений.
+
+Tier-прогрессия:
+
+- нет `creator_novice` → `none` (кнопка скрыта),
+- `creator_novice` без `creator_pro` → `buy2` (`maxByTier = 2`),
+- `creator_pro` без `creator_expert` → `buy5` (`maxByTier = 5`),
+- `creator_expert` → `buyMax` (`maxByTier = freeSlots`).
+
+Формула покупки:
+
+- `X = min(maxByTier, freeSlots, affordableByCoins)`.
+- `affordableByCoins` считается точной симуляцией последовательных цен за каждый танк.
+- Для label: `xDisplay = max(2, X)`.
+- Если `X < 2`: кнопка disabled, label остаётся «Купить 2 …», клик = no-op.
+- Если `X >= 2`: клик покупает ровно `X` танков.
+- Частичная bulk-покупка разрешена в рамках cap тира.
 
 ## Таблица режимов и label/visibility
 
-### Buyer (bulk-buy)
+### Creator (bulk-buy)
 
-| Achievement unlock state | Mode (`Achievements.getBulkMode`) | Visibility | Label |
-|---|---|---|---|
-| нет `buyer_novice` | `none` | скрыта | — |
-| `buyer_novice`, без `buyer_pro` | `buy2` | показана | «Создать 2 танка» |
-| `buyer_pro`, без `buyer_expert` | `buy5` | показана | «Создать 5 танков» |
-| `buyer_expert` | `buyMax` | показана | «Создать максимум танков» |
+| Achievement unlock state | Mode (`Achievements.getBulkMode`) | `maxByTier` | Visibility | Label |
+|---|---|---:|---|---|
+| нет `creator_novice` | `none` | `0` | скрыта | — |
+| `creator_novice`, без `creator_pro` | `buy2` | `2` | показана | «Купить {xDisplay} …» |
+| `creator_pro`, без `creator_expert` | `buy5` | `5` | показана | «Купить {xDisplay} …» |
+| `creator_expert` | `buyMax` | `freeSlots` | показана | «Купить {xDisplay} …» |
 
 ### Creator (auto-merge)
 

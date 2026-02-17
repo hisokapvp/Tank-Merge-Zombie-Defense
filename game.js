@@ -521,6 +521,25 @@ function talentWord(points){
   return points === 1 ? 'talent' : 'talents';
 }
 
+function getTankWordKey(count){
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (getCurrentLang() === 'ru') {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return 'tankWord5';
+    if (mod10 === 1) return 'tankWord1';
+    if (mod10 >= 2 && mod10 <= 4) return 'tankWord2_4';
+    return 'tankWord5';
+  }
+  return n === 1 ? 'tankWord1' : 'tankWord5';
+}
+
+function bulkBuyLabel(count){
+  const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+  const word = t(getTankWordKey(safeCount));
+  return t('buyBulkBuy', { count: safeCount, tankWord: word });
+}
+
 function setLanguage(lang){
   const i18n = getI18n();
   if (i18n && typeof i18n.setLanguage === 'function') {
@@ -2013,21 +2032,39 @@ function getBulkBuyPlanByMode(mode){
   const Garage = window.Game && window.Game.Garage;
   const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
   const resolvedMode = mode === 'buy2' || mode === 'buy5' || mode === 'buyMax' ? mode : 'none';
-  if (resolvedMode === 'none') return { mode: 'none', freeSlots: freeSlots, count: 0, enabled: false, visible: false };
+  if (resolvedMode === 'none') {
+    return {
+      mode: 'none',
+      freeSlots: freeSlots,
+      maxByTier: 0,
+      maxAffordableByCoins: 0,
+      x: 0,
+      xDisplay: 2,
+      count: 0,
+      disabled: true,
+      enabled: false,
+      visible: false,
+    };
+  }
 
-  const requested = resolvedMode === 'buy2'
+  const maxByTier = resolvedMode === 'buy2'
     ? 2
     : (resolvedMode === 'buy5' ? 5 : Math.max(0, freeSlots));
-  const affordable = calculateAffordableBuyCount(requested);
-  const enabled = resolvedMode === 'buyMax'
-    ? affordable.count > 0
-    : affordable.count === requested;
-  const count = resolvedMode === 'buyMax' ? affordable.count : requested;
+  const affordable = calculateAffordableBuyCount(maxByTier);
+  const maxAffordableByCoins = affordable.count;
+  const x = Math.min(maxByTier, freeSlots, maxAffordableByCoins);
+  const xDisplay = Math.max(2, x);
+  const disabled = x < 2;
   return {
     mode: resolvedMode,
     freeSlots: freeSlots,
-    count: count,
-    enabled: enabled,
+    maxByTier: maxByTier,
+    maxAffordableByCoins: maxAffordableByCoins,
+    x: x,
+    xDisplay: xDisplay,
+    count: x,
+    disabled: disabled,
+    enabled: !disabled,
     visible: true,
   };
 }
@@ -2066,8 +2103,8 @@ function tryBuyBulk(){
   const mode = buyBulkMode();
   if (mode === 'none') return;
   const plan = getBulkBuyPlanByMode(mode);
-  if (!plan.enabled || plan.count <= 0) return;
-  const countToBuy = plan.count;
+  if (plan.disabled || plan.x <= 0) return;
+  const countToBuy = plan.x;
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
     if (!performTankPurchaseOnce()) return;
@@ -4900,13 +4937,13 @@ function updateUI(){
     const plan = getBulkBuyPlanByMode(mode);
     if (!plan.visible) {
       ui.buyBulk.classList.add('hidden');
+      ui.buyBulk.style.display = 'none';
       ui.buyBulk.disabled = true;
     } else {
       ui.buyBulk.classList.remove('hidden');
-      if (mode === 'buy2') ui.buyBulk.textContent = t('buyBulk2');
-      else if (mode === 'buy5') ui.buyBulk.textContent = t('buyBulk5');
-      else ui.buyBulk.textContent = t('buyBulkMax');
-      ui.buyBulk.disabled = !plan.enabled;
+      ui.buyBulk.style.display = '';
+      ui.buyBulk.textContent = bulkBuyLabel(plan.xDisplay);
+      ui.buyBulk.disabled = plan.disabled;
     }
   }
 

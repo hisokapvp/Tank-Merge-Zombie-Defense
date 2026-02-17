@@ -10,12 +10,11 @@
 
 ## Достижения
 
-- `buyer_novice` (`100` покупок танков) → `buy2`
-- `buyer_pro` (`500` покупок танков) → `buy5`
-- `buyer_expert` (`1000` покупок танков) → `buyMax`
 - `creator_novice` (`100` успешных merge) → `autoMergeBasic` (кнопка/режим в PACK2)
 - `creator_pro` (`400` успешных merge) → `autoMergeAdvanced` (кнопка/режим в PACK2)
 - `creator_expert` (`1000` успешных merge) → `autoMergeExpert` (кнопка/режим в PACK3)
+
+`buyer_*` удалены из `ACHIEVEMENTS` и больше не участвуют в unlock/popup пайплайне.
 
 Прогресс считается по типам:
 
@@ -38,7 +37,7 @@
 
 - Награда применяется сразу в момент выполнения условия (разблок режима bulk-кнопки).
 - Popup носит информативный характер: показывает название достижения и награду.
-- Для `creator_*` награда также влияет на tier одной кнопки auto-merge (`hidden` → `merge2` → `mergeX` → `mergeAll`).
+- Для `creator_*` награда влияет на tier обеих кнопок: bulk-buy (`none` → `buy2` → `buy5` → `buyMax`) и auto-merge (`hidden` → `merge2` → `mergeX` → `mergeAll`).
 
 ## Auto-merge (PACK2/PACK3)
 
@@ -75,24 +74,31 @@
 - Базовая кнопка `#buy` остаётся всегда.
 - `#buyBulk` определяется только `Achievements.getBulkMode(state)` (пересчёт на каждом `updateUI()`, без кешей):
   - `none` → кнопка скрыта
-  - `buy2` → «Создать 2 танка»
-  - `buy5` → «Создать 5 танков»
-  - `buyMax` → «Создать максимум танков»
+  - `buy2` → tier cap `2`
+  - `buy5` → tier cap `5`
+  - `buyMax` → tier cap `freeSlots`
 - Запрещён альтернативный гейтинг через `rewardMode`/`claimed`.
-- Disabled-логика:
-  - `buy2`/`buy5`: нужно ровно `N` свободных слотов и монет на все `N` последовательных покупок.
-  - `buyMax`: покупает `K = min(freeSlots, maxKByCoins)`; кнопка disabled, если `K == 0`.
+
+Формула плана покупки:
+
+- `maxByTier = 2 | 5 | freeSlots` по текущему mode.
+- `maxAffordableByCoins` считается точной симуляцией последовательных цен (с ростом после каждого танка) без мутаций `state`.
+- `X = min(maxByTier, freeSlots, maxAffordableByCoins)`.
+- `xDisplay = max(2, X)`.
+- `X < 2` → кнопка `disabled`, label остаётся «Купить 2 …», клик = no-op.
+
+При `X >= 2` клик покупает ровно `X` танков. Частичная bulk-покупка разрешена в рамках cap тира.
 
 ## Таблица tier/label
 
-### Buyer
+### Creator → Bulk-buy
 
-| Unlock | Mode | Visibility | Label |
-|---|---|---|---|
-| нет `buyer_novice` | `none` | hidden | — |
-| `buyer_novice` | `buy2` | visible | «Создать 2 танка» |
-| `buyer_pro` | `buy5` | visible | «Создать 5 танков» |
-| `buyer_expert` | `buyMax` | visible | «Создать максимум танков» |
+| Unlock | Bulk mode | `maxByTier` | Visibility | Label |
+|---|---|---:|---|---|
+| нет `creator_novice` | `none` | `0` | hidden | — |
+| `creator_novice`, без `creator_pro` | `buy2` | `2` | visible | «Купить {xDisplay} …» |
+| `creator_pro`, без `creator_expert` | `buy5` | `5` | visible | «Купить {xDisplay} …» |
+| `creator_expert` | `buyMax` | `freeSlots` | visible | «Купить {xDisplay} …» |
 
 ### Creator
 

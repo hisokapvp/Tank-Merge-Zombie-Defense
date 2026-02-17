@@ -3,30 +3,6 @@
 
   var ACHIEVEMENTS = [
     {
-      id: 'buyer_novice',
-      titleKey: 'achievementBuyerNovice',
-      rewardKey: 'achievementRewardBuy2',
-      target: 100,
-      progressType: 'purchases',
-      rewardMode: 'buy2',
-    },
-    {
-      id: 'buyer_pro',
-      titleKey: 'achievementBuyerPro',
-      rewardKey: 'achievementRewardBuy5',
-      target: 500,
-      progressType: 'purchases',
-      rewardMode: 'buy5',
-    },
-    {
-      id: 'buyer_expert',
-      titleKey: 'achievementBuyerExpert',
-      rewardKey: 'achievementRewardBuyMax',
-      target: 1000,
-      progressType: 'purchases',
-      rewardMode: 'buyMax',
-    },
-    {
       id: 'creator_novice',
       titleKey: 'achievementCreatorNovice',
       rewardKey: 'achievementRewardAutoMergeBasic',
@@ -117,9 +93,9 @@
   function getBulkMode(state) {
     var ach = ensureState(state);
     if (!ach) return 'none';
-    if (ach.unlocked.buyer_expert) return 'buyMax';
-    if (ach.unlocked.buyer_pro) return 'buy5';
-    if (ach.unlocked.buyer_novice) return 'buy2';
+    if (ach.unlocked.creator_expert) return 'buyMax';
+    if (ach.unlocked.creator_pro) return 'buy5';
+    if (ach.unlocked.creator_novice) return 'buy2';
     return 'none';
   }
 
