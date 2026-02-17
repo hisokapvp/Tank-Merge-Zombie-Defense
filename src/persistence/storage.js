@@ -69,6 +69,7 @@
       coins: state.coins,
       kills: state.kills,
       cells: cells,
+      supercomputer: state.supercomputer,
       player: state.player,
       buyCounts: state.buyCounts,
       buyPrices: state.buyPrices,

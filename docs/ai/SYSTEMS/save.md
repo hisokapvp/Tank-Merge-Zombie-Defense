@@ -17,6 +17,12 @@
 
 ## Новые поля сейва
 
+- `supercomputer`:
+	- `computerLevel`, `xp`, `xpToNext`, `maxLevel`,
+	- `hp`, `maxHp`, `armorFlat`,
+	- runtime-поля state machine (`state`, `animElapsedSec`, `glitch*`, `wantsBuildTank/pendingBuildTank`).
+- legacy-поля `player.level/xp` читаются только как fallback при миграции старых сейвов.
+
 - `achievements`:
 	- `unlocked` — карта полученных достижений,
 	- `totalPurchased` — накопленный прогресс покупок,

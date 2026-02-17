@@ -2,7 +2,7 @@
 
 ## Где искать
 
-- Конфиги: `assets/tanks.json`, `assets/zombies.json`, `assets/fence.json`, `assets/decor.json`, `assets/ground.json`
+- Конфиги: `assets/tanks.json`, `assets/zombies.json`, `assets/fence.json`, `assets/decor.json`, `assets/ground.json`, `assets/supercomputer.json`
 - Схемы: `assets/tanks_README.md`, `assets/zombies_README.md`
 - Runtime loaders: `src/render/spriteLoaders.js`
 
@@ -12,6 +12,15 @@
 - Зомби: `types`, `deathCommon`, `spawn` в `zombies.json`.
 - Окружение: `fence.json`, `decor.json`.
 - Земля/подложка: `ground.json`.
+- Supercomputer: `supercomputer.json` (`animations`, `glitch`, `stats`, `offsetY`).
+
+### Supercomputer (`assets/supercomputer.json`)
+
+- Основные поля: `atlas`, `offsetY`, `anchor`, `renderScale`, `hpBar`.
+- `animations`: `idle/work`, `glitch`, `buildTank`, `destroy` с кадрами/скоростью (`x,y,w,h,frames,frameRateFps,loop`).
+- `glitch`: `chancePerSecond`, `minLoops`, `maxLoops`, `cooldownSec`.
+- `stats`: data-driven формулы `maxHp`/`armorFlat` по `computerLevel`.
+- Runtime: `SupercomputerSprites.load()` в `src/render/spriteLoaders.js`.
 
 ### Ground (`assets/ground.json`)
 

@@ -19,7 +19,36 @@
     var showCenterNotification = opts.showCenterNotification || function () {};
     var xpNeededForLevel = opts.xpNeededForLevel || function () { return 500; };
     var levelGoldReward = opts.levelGoldReward || function () { return 0; };
+    var onComputerLevelChanged = typeof opts.onComputerLevelChanged === 'function' ? opts.onComputerLevelChanged : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
+
+    function getComputer() {
+      if (state.supercomputer) return state.supercomputer;
+      if (state.player && Number.isFinite(state.player.level)) {
+        return {
+          computerLevel: state.player.level,
+          xp: Number.isFinite(state.player.xp) ? state.player.xp : 0,
+          xpToNext: Number.isFinite(state.player.xpToNext) ? state.player.xpToNext : 500,
+          maxLevel: Number.isFinite(state.player.maxLevel) ? state.player.maxLevel : 60,
+          eventShown40: !!state.player.eventShown40,
+          eventShown50: !!state.player.eventShown50,
+          eventShown60: !!state.player.eventShown60,
+          _legacyProxy: true,
+        };
+      }
+      return null;
+    }
+
+    function writeBackLegacyComputer(computer) {
+      if (!computer || !computer._legacyProxy || !state.player) return;
+      state.player.level = computer.computerLevel;
+      state.player.xp = computer.xp;
+      state.player.xpToNext = computer.xpToNext;
+      state.player.maxLevel = computer.maxLevel;
+      state.player.eventShown40 = !!computer.eventShown40;
+      state.player.eventShown50 = !!computer.eventShown50;
+      state.player.eventShown60 = !!computer.eventShown60;
+    }
 
     function updateLevelModal() {
       var reward = state.ui.levelReward;
@@ -98,50 +127,58 @@
     }
 
     function checkPowerMomentEvents(level) {
-      var p = state.player;
-      if (!p) return;
-      if (level >= 40 && !p.eventShown40) {
-        p.eventShown40 = true;
+      var computer = getComputer();
+      if (!computer) return;
+      if (level >= 40 && !computer.eventShown40) {
+        computer.eventShown40 = true;
         showCenterNotification(t('powerMoment40'));
       }
-      if (level >= 50) p.eventShown50 = true;
+      if (level >= 50) computer.eventShown50 = true;
       if (level >= 60) {
-        p.eventShown60 = true;
+        computer.eventShown60 = true;
         state.endgameVisuals = true;
       }
     }
 
     function grantXP(amount) {
-      var p = state.player;
-      if (!p || p.level >= p.maxLevel) return;
+      var p = getComputer();
+      if (!p || p.computerLevel >= p.maxLevel) return;
 
       p.xp += amount;
       var leveled = false;
       var gainedLevels = 0;
       var rewardGold = 0;
+      var previousMaxHp = Number.isFinite(p.maxHp) ? p.maxHp : 1;
 
-      while (p.level < p.maxLevel) {
-        p.xpToNext = xpNeededForLevel(p.level);
+      while (p.computerLevel < p.maxLevel) {
+        p.xpToNext = xpNeededForLevel(p.computerLevel);
         if (p.xp < p.xpToNext) break;
 
         p.xp -= p.xpToNext;
-        p.level += 1;
+        p.computerLevel += 1;
         leveled = true;
         gainedLevels += 1;
-        rewardGold += levelGoldReward(p.level);
+        rewardGold += levelGoldReward(p.computerLevel);
       }
 
-      p.xpToNext = xpNeededForLevel(p.level);
+      p.xpToNext = xpNeededForLevel(p.computerLevel);
       if (leveled) {
-        p.talentPoints += gainedLevels;
+        if (state.player) state.player.talentPoints += gainedLevels;
         state.coins += rewardGold;
+        if (onComputerLevelChanged) {
+          onComputerLevelChanged({
+            computer: p,
+            oldMaxHp: previousMaxHp,
+          });
+        }
         refreshTanksPowerTier();
-        triggerLevelUpVfx(p.level);
-        checkPowerMomentEvents(p.level);
-        queueLevelReward(p.level, gainedLevels, rewardGold);
+        triggerLevelUpVfx(p.computerLevel);
+        checkPowerMomentEvents(p.computerLevel);
+        queueLevelReward(p.computerLevel, gainedLevels, rewardGold);
         saveProgress();
         updateUI();
       }
+      writeBackLegacyComputer(p);
     }
 
     return {

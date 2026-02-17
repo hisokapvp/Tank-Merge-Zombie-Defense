@@ -7,6 +7,7 @@
   config.LayoutTuning = {
     trackToHangarGapPx: 0,
     trackToFenceGapPx: 30,
+    supercomputerOffsetY: 64,
     zombieFenceOffsetPxBySide: {
       top: 20,
       right: 10,

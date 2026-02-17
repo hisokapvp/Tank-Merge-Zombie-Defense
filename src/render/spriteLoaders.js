@@ -42,6 +42,19 @@
       };
     }
 
+    function normalizeAnimationClip(raw, fallback) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      return {
+        x: Number.isFinite(src.x) ? src.x : fallback.x,
+        y: Number.isFinite(src.y) ? src.y : fallback.y,
+        w: toPositiveNumber(src.w, fallback.w),
+        h: toPositiveNumber(src.h, fallback.h),
+        frames: Math.max(1, Math.floor(toPositiveNumber(src.frames, fallback.frames))),
+        frameRateFps: toPositiveNumber(src.frameRateFps, fallback.frameRateFps),
+        loop: src.loop !== false,
+      };
+    }
+
     var ZombieSprites = {
       ready: false,
       error: '',
@@ -468,6 +481,86 @@
       },
     };
 
+    var SupercomputerSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      load: async function () {
+        try {
+          var res = await fetch('assets/supercomputer.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+
+          var atlasPath = 'assets/' + (data.atlas || 'decor.png');
+          var img = await loadImage(atlasPath);
+          var fallbackClip = {
+            x: 0,
+            y: 0,
+            w: 96,
+            h: 96,
+            frames: 1,
+            frameRateFps: 1,
+            loop: true,
+          };
+
+          var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
+          var idleClip = normalizeAnimationClip(animationsRaw.idle || animationsRaw.work, fallbackClip);
+          var workClip = normalizeAnimationClip(animationsRaw.work || animationsRaw.idle, idleClip);
+
+          var glitchRaw = data && data.glitch && typeof data.glitch === 'object' ? data.glitch : {};
+          var minLoops = Number.isFinite(glitchRaw.minLoops) ? Math.max(1, Math.floor(glitchRaw.minLoops)) : 1;
+          var maxLoops = Number.isFinite(glitchRaw.maxLoops) ? Math.max(minLoops, Math.floor(glitchRaw.maxLoops)) : minLoops;
+
+          this.config = {
+            atlas: data && data.atlas ? data.atlas : 'decor.png',
+            offsetY: Number.isFinite(data && data.offsetY) ? data.offsetY : null,
+            anchor: (data && data.anchor && typeof data.anchor === 'object')
+              ? {
+                  x: Number.isFinite(data.anchor.x) ? data.anchor.x : 0.5,
+                  y: Number.isFinite(data.anchor.y) ? data.anchor.y : 0.75,
+                }
+              : { x: 0.5, y: 0.75 },
+            renderScale: Number.isFinite(data && data.renderScale) ? Math.max(0.1, data.renderScale) : 1,
+            hpBar: (data && data.hpBar && typeof data.hpBar === 'object')
+              ? {
+                  width: toPositiveNumber(data.hpBar.width, 92),
+                  height: toPositiveNumber(data.hpBar.height, 8),
+                  offsetY: Number.isFinite(data.hpBar.offsetY) ? data.hpBar.offsetY : -56,
+                }
+              : { width: 92, height: 8, offsetY: -56 },
+            animations: {
+              idle: idleClip,
+              work: workClip,
+              glitch: normalizeAnimationClip(animationsRaw.glitch, idleClip),
+              buildTank: normalizeAnimationClip(animationsRaw.buildTank, idleClip),
+              destroy: normalizeAnimationClip(animationsRaw.destroy, idleClip),
+            },
+            glitch: {
+              chancePerSecond: Number.isFinite(glitchRaw.chancePerSecond) ? Math.max(0, glitchRaw.chancePerSecond) : 0,
+              minLoops: minLoops,
+              maxLoops: maxLoops,
+              cooldownSec: Number.isFinite(glitchRaw.cooldownSec) ? Math.max(0, glitchRaw.cooldownSec) : 0,
+            },
+            stats: data && data.stats && typeof data.stats === 'object' ? data.stats : {},
+          };
+
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          this.ready = false;
+          this.atlasImg = null;
+          this.config = null;
+          this.error = String(e);
+        }
+      },
+      getAnimation: function (stateName) {
+        if (!this.config || !this.config.animations) return null;
+        return this.config.animations[stateName] || this.config.animations.idle || this.config.animations.work || null;
+      },
+    };
+
     return {
       loadImage: loadImage,
       ZombieSprites: ZombieSprites,
@@ -475,6 +568,7 @@
       FenceSprites: FenceSprites,
       DecorSprites: DecorSprites,
       GroundSprites: GroundSprites,
+      SupercomputerSprites: SupercomputerSprites,
     };
   }
 

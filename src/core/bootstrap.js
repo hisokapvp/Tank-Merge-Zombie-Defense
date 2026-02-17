@@ -40,7 +40,12 @@
     }
 
     opts.ensureTalentState();
-    getState().player.xpToNext = opts.xpNeededForLevel(getState().player.level);
+    var state = getState();
+    if (state.supercomputer) {
+      state.supercomputer.xpToNext = opts.xpNeededForLevel(state.supercomputer.computerLevel);
+    } else {
+      state.player.xpToNext = opts.xpNeededForLevel(state.player.level);
+    }
     getState().player.modsDirty = true;
 
     if (opts.ui.langRu && opts.ui.langEn) {
@@ -62,7 +67,8 @@
             .then(function (result) {
               if (result && result.success) {
                 getState().coins += rewards.coins;
-                getState().player.xp += rewards.xp;
+                if (getState().supercomputer) getState().supercomputer.xp += rewards.xp;
+                else getState().player.xp += rewards.xp;
                 opts.grantXP(0);
                 opts.meta.lastSeenAt = Date.now();
                 opts.saveProgress();
@@ -222,6 +228,10 @@
     await opts.FenceSprites.load().catch(function () {});
     opts.resizeCanvas();
     await opts.DecorSprites.load().catch(function () {});
+    if (opts.SupercomputerSprites && typeof opts.SupercomputerSprites.load === 'function') {
+      await opts.SupercomputerSprites.load().catch(function () {});
+      if (typeof opts.onSupercomputerConfigLoaded === 'function') opts.onSupercomputerConfigLoaded();
+    }
     if (typeof opts.onDecorSpritesLoaded === 'function') opts.onDecorSpritesLoaded();
 
     if (windowObj.Game && windowObj.Game.MergePopup) windowObj.Game.MergePopup.init();

@@ -79,7 +79,7 @@
   "talentNeedPoints": "Не хватает очков",
   "talentActive": "Использовать активку",
   "talentActiveCooldown": "Активка ({sec}с)",
-  "levelLabel": "Уровень",
+  "levelLabel": "Уровень компьютера",
   "levelShort": "Ур.",
   "levelUp": "Ур.{level}!",
   "levelModalTitle": "Вы достигли {level} уровня!",

@@ -737,15 +737,20 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     const state = {
       coins: 0,
       ui: { levelReward: null, levelRewardTimer: 0 },
-      player: {
-        level: 1,
+      supercomputer: {
+        computerLevel: 1,
         xp: 0,
         xpToNext: 100,
         maxLevel: 60,
-        talentPoints: 0,
+        maxHp: 1000,
+        hp: 1000,
+        armorFlat: 0,
         eventShown40: false,
         eventShown50: false,
         eventShown60: false,
+      },
+      player: {
+        talentPoints: 0,
       },
     };
 
@@ -772,8 +777,8 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
 
     lf.grantXP(250);
 
-    assertEqual(state.player.level, 3, 'leveled up twice');
-    assertEqual(state.player.xp, 50, 'xp remainder kept');
+    assertEqual(state.supercomputer.computerLevel, 3, 'leveled up twice');
+    assertEqual(state.supercomputer.xp, 50, 'xp remainder kept');
     assertEqual(state.player.talentPoints, 2, 'talent points added immediately');
     assertEqual(state.coins, 50, 'coins added immediately for both levels');
     assert(state.ui.levelReward && state.ui.levelReward.points === 2, 'info modal reward shows aggregated points');
@@ -784,15 +789,20 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     const state = {
       coins: 0,
       ui: { levelReward: null, levelRewardTimer: 0 },
-      player: {
-        level: 1,
+      supercomputer: {
+        computerLevel: 1,
         xp: 0,
         xpToNext: 100,
         maxLevel: 60,
-        talentPoints: 0,
+        maxHp: 1000,
+        hp: 1000,
+        armorFlat: 0,
         eventShown40: false,
         eventShown50: false,
         eventShown60: false,
+      },
+      player: {
+        talentPoints: 0,
       },
     };
 

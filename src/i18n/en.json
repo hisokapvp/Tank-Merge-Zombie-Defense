@@ -79,7 +79,7 @@
   "talentNeedPoints": "Not enough points",
   "talentActive": "Use active",
   "talentActiveCooldown": "Active ({sec}s)",
-  "levelLabel": "Level",
+  "levelLabel": "Computer level",
   "levelShort": "Lv",
   "levelUp": "Lv{level}!",
   "levelModalTitle": "You reached level {level}!",

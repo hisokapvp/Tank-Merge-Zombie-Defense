@@ -11,6 +11,7 @@
 - Прогрессия и XP-кривая: `src/mechanics/progression.js`
 - Правила занятости ячеек гаража: `src/mechanics/garage.js`
 - Level-up flow и награды: `src/mechanics/levelFlow.js`
+- Supercomputer state machine/урон/броня: `src/mechanics/supercomputer.js` + интеграция в `game.js`
 - Интеграция в цикл: `game.js`
 
 ## Что править
@@ -21,9 +22,26 @@
 - Баланс alive-per-side и выбор слота спавна — в `zombieSpawn.js`.
 - Цена покупки и buy-level формула — в `economy.js`.
 - XP до уровня и награда золота — в `progression.js`.
+- Источник уровня для UI/баланса — `state.supercomputer.computerLevel`.
 - Проверки занятости/покупки — через `garage.js` + `economy.js`.
 - Тайминги death/despawn — в `corpseDespawn.js`.
 - UX level-up (open/close/reward queue) — в `levelFlow.js`.
+
+## Computer progression (playerLevel → computerLevel)
+
+- Прогрессия уровня использует `state.supercomputer.computerLevel`.
+- Формулы XP (`xpNeededForLevel`) и источники XP не меняются.
+- При level-up supercomputer пересчитывает `maxHp` и `armorFlat` из data-driven конфига.
+- HP сохраняет процент: `hp = round(newMaxHp * (oldHp / oldMaxHp))`, затем clamp `0..newMaxHp`.
+
+## Supercomputer damage / animation states
+
+- Формула урона: `finalDamage = max(0, baseDamage - armorFlat)`.
+- Обновление HP: `hp = max(0, hp - finalDamage)`.
+- При `hp==0`: состояние `destroy` → `destroyed` без game over и без паузы симуляции.
+- State machine: `idle/work`, `glitch`, `buildTank`, `destroy/destroyed`.
+- `glitch` использует `chancePerSecond`, `minLoops/maxLoops`, `cooldownSec`.
+- Во время `glitch` запрос `buildTank` ставится в pending и запускается после завершения loops.
 
 ## Урон забору в attackMode
 

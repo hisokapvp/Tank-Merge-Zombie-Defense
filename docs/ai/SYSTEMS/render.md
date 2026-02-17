@@ -17,6 +17,15 @@
 - FPS/FX-лимиты — через `Game.MobileMode` и quality-ветки в `loop()`.
 - Centerline / road-fence gap — `initBoard`, `drawTankTrack`, `drawZombieFence`.
 - Фон-земля через atlas: `drawBackground()` + `rebuildGroundLayer()` в `game.js`.
+- Supercomputer world-object: `drawSupercomputer()` + `drawSupercomputerHpBar()` в `game.js`.
+
+## Supercomputer placement / HP bar
+
+- Позиция рассчитывается от layout ангара в `initBoard()`:
+	- `x = hangarCenterX`
+	- `y = hangarBottomY + offsetY`
+- `offsetY`: `assets/supercomputer.json.offsetY` с fallback на `src/config/layoutTuning.js` (`supercomputerOffsetY`).
+- HP bar рисуется в world-space над объектом; только текущее HP (`hp/maxHp`) без дополнительных панелей.
 
 ## Ground layer (atlas tile 16x16)
 

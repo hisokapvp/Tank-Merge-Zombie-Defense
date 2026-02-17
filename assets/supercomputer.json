@@ -1,0 +1,79 @@
+{
+  "atlas": "supercomputer_atlas.png",
+  "offsetY": 64,
+  "anchor": {
+    "x": 0.5,
+    "y": 0.75
+  },
+  "renderScale": 0.85,
+  "hpBar": {
+    "width": 92,
+    "height": 8,
+    "offsetY": -56
+  },
+  "animations": {
+    "idle": {
+      "x": 0,
+      "y": 0,
+      "w": 61,
+      "h": 31,
+      "frames": 1,
+      "frameRateFps": 1,
+      "loop": true
+    },
+    "work": {
+      "x": 0,
+      "y": 0,
+      "w": 61,
+      "h": 31,
+      "frames": 1,
+      "frameRateFps": 1,
+      "loop": true
+    },
+    "glitch": {
+      "x": 96,
+      "y": 0,
+      "w": 61,
+      "h": 31,
+      "frames": 2,
+      "frameRateFps": 8,
+      "loop": true
+    },
+    "buildTank": {
+      "x": 192,
+      "y": 0,
+      "w": 61,
+      "h": 31,
+      "frames": 2,
+      "frameRateFps": 7,
+      "loop": true
+    },
+    "destroy": {
+      "x": 288,
+      "y": 0,
+      "w": 61,
+      "h": 31,
+      "frames": 4,
+      "frameRateFps": 10,
+      "loop": false
+    }
+  },
+  "glitch": {
+    "chancePerSecond": 0.08,
+    "minLoops": 1,
+    "maxLoops": 3,
+    "cooldownSec": 8
+  },
+  "stats": {
+    "maxHp": {
+      "base": 800,
+      "perLevel": 120,
+      "max": 24000
+    },
+    "armorFlat": {
+      "base": 2,
+      "perLevel": 1,
+      "max": 80
+    }
+  }
+}

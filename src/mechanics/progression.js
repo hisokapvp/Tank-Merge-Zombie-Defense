@@ -3,8 +3,8 @@
 
   var POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
 
-  function computePowerTier(playerLevel) {
-    var lvl = Math.max(1, Math.floor(playerLevel));
+  function computePowerTier(computerLevel) {
+    var lvl = Math.max(1, Math.floor(computerLevel));
     if (lvl < 10) return 0;
     if (lvl < 20) return 1;
     if (lvl < 30) return 2;
