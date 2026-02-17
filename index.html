@@ -31,7 +31,7 @@
             <div class="xpValue" id="xpText">0/0</div>
           </div>
 
-          <button id="talentsBtn" class="btn btnSecondary" type="button" data-i18n="talentsBtn">Древо талантов</button>
+          <button id="supercomputerBtn" class="btn btnSecondary" type="button" data-i18n="supercomputerBtn">Суперкомпьютер</button>
           <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
           <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
             <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
@@ -143,6 +143,46 @@
             <div class="levelModal__line" id="achievementPopupName"></div>
             <div class="levelModal__line" id="achievementPopupReward"></div>
             <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="supercomputerMenuOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-supercomputer-root-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
+            <button class="levelModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Меню суперкомпьютера</div>
+            <div class="levelModal__actions" style="display:flex;flex-direction:column;gap:10px;justify-content:center;margin-top:12px">
+              <button id="supercomputerOpenHangarMods" class="btn btnSecondary" type="button" data-i18n="supercomputerModsHangarBtn">Модификации ангара</button>
+              <button id="supercomputerOpenTankWallMods" class="btn btnSecondary" type="button" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</button>
+              <button id="supercomputerOpenTalents" class="btn btnPrimary" type="button" data-i18n="supercomputerTalentsBtn">Древо талантов</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="modsHangarOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-mods-hangar-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
+            <button class="levelModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">Улучшения ячеек ангара</div>
+            <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+              <button id="modsHangarBack" class="btn btnPrimary" type="button" data-i18n="supercomputerBack">Закрыть</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="modsTankWallOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-mods-tank-wall-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="modsTankWallTitle" tabindex="-1">
+            <button class="levelModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации танков и стен</div>
+            <div class="levelModal__actions" style="display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap">
+              <button id="modsTankWallTabBases" class="btn btnSecondary" type="button" data-i18n="modsTabBases">Базы</button>
+              <button id="modsTankWallTabGuns" class="btn btnSecondary" type="button" data-i18n="modsTabGuns">Орудия</button>
+              <button id="modsTankWallTabWalls" class="btn btnSecondary" type="button" data-i18n="modsTabWalls">Стены</button>
+            </div>
+            <div class="levelModal__line"><span data-i18n="modsDamagePoints">Очки урона</span>: <span id="modsTankWallDamagePoints">0</span></div>
+            <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+              <button id="modsTankWallBack" class="btn btnPrimary" type="button" data-i18n="supercomputerBack">Закрыть</button>
+            </div>
           </div>
         </div>
       </div>
@@ -261,6 +301,7 @@
   <script src="src/ui/bugTriage.js"></script>
   <script src="src/ui/debugPanel.js"></script>
   <script src="src/ui/modals.js"></script>
+  <script src="src/ui/supercomputerMenu.js"></script>
   <script src="src/systems/pauseManager.js"></script>
   <script src="src/systems/depthSort.js"></script>
   <script src="src/perf/objectPool.js"></script>

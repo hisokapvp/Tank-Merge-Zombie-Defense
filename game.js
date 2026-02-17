@@ -15,7 +15,7 @@ const ui = {
   buyBulk: document.getElementById('buyBulk'),
   autoMergeBtn: document.getElementById('autoMergeBtn'),
   boostState: document.getElementById('boostState'),
-  talentsBtn: document.getElementById('talentsBtn'),
+  supercomputerBtn: document.getElementById('supercomputerBtn'),
   achievementsBtn: document.getElementById('achievementsBtn'),
   achievementsModal: document.getElementById('achievementsModal'),
   achievementsClose: document.getElementById('achievementsClose'),
@@ -448,6 +448,7 @@ const GroundLayerApi = GameApi.GroundLayer ?? null;
 const PauseManagerApi = GameApi.PauseManager ?? null;
 const DepthSortApi = GameApi.DepthSort ?? null;
 const AutoMergeApi = GameApi.AutoMerge ?? null;
+const SupercomputerMenuApi = GameApi.SupercomputerMenu ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
@@ -605,6 +606,8 @@ let gameplayAudioFadeToken = 0;
 let pauseManager = null;
 let simulationPaused = false;
 let lastPauseReasons = { menuOpen: false, tabInactive: false };
+let menuPauseLocks = { settings: !!(state && state.ui && state.ui.menuOpen), supercomputer: false };
+let supercomputerMenuController = null;
 let SFX_AUDIO_PROBE = null;
 
 function sfxChannelOf(id){
@@ -705,6 +708,19 @@ function setSimulationPaused(nextPaused, reasons){
   } else {
     resumeGameplayAudio();
   }
+}
+
+function recomputeMenuPauseLock(){
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer);
+  if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
+    pauseManager.setMenuOpen(lockOpen);
+  }
+}
+
+function setMenuPauseSource(source, open){
+  if (!source || !Object.prototype.hasOwnProperty.call(menuPauseLocks, source)) return;
+  menuPauseLocks[source] = !!open;
+  recomputeMenuPauseLock();
 }
 
 function sfxSourceToMime(source){
@@ -2741,7 +2757,19 @@ function useActiveAbility(branch){
 }
 
 const TALENT_OPEN_ANIM_MS = 180;
-function openTalents(){
+let talentCloseRequestHandler = null;
+
+function requestCloseTalents(){
+  if (typeof talentCloseRequestHandler === 'function') {
+    talentCloseRequestHandler();
+    return;
+  }
+  closeTalents();
+}
+
+function openTalents(options){
+  const opts = options || {};
+  talentCloseRequestHandler = typeof opts.onClose === 'function' ? opts.onClose : closeTalents;
   state.ui.talentsOpen = true;
   ensureTalentUI();
   updateTalentUI();
@@ -2749,7 +2777,7 @@ function openTalents(){
   if (!overlay) return;
   const modal = overlay.querySelector('.modal');
   overlay.classList.remove('hidden');
-  a11yOpen(overlay, { initialFocus: overlay.querySelector('#talentApply'), onClose: closeTalents });
+  a11yOpen(overlay, { initialFocus: overlay.querySelector('#talentApply'), onClose: talentCloseRequestHandler });
   if (modal){
     modal.style.transform = 'scale(0.92)';
     modal.style.opacity = '0';
@@ -2777,6 +2805,7 @@ function closeTalents(){
     overlay.classList.add('hidden');
     a11yClose(overlay);
   }
+  talentCloseRequestHandler = null;
 }
 
 function ensureTalentState(){
@@ -3766,6 +3795,9 @@ function isBlockingModalOpen(){
     'boostModal',
     'resetTalentsModal',
     'talentOverlay',
+    'supercomputerMenuOverlay',
+    'modsHangarOverlay',
+    'modsTankWallOverlay',
     'mergePopupModal',
     'achievementsModal',
     'achievementPopup',
@@ -4744,9 +4776,7 @@ function stepParticles(dt){
 }
 
 function setMenuOpen(open){
-  if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
-    pauseManager.setMenuOpen(!!open);
-  }
+  setMenuPauseSource('settings', !!open);
   if (UIModals && typeof UIModals.setMenuOpen === 'function') {
     UIModals.setMenuOpen({
       open,
@@ -5216,9 +5246,9 @@ function ensureTalentUI(){
   document.body.appendChild(overlay);
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeTalents();
+    if (e.target === overlay) requestCloseTalents();
   });
-  overlay.querySelector('.modalClose')?.addEventListener('click', () => closeTalents());
+  overlay.querySelector('.modalClose')?.addEventListener('click', () => requestCloseTalents());
   overlay.querySelector('#talentResetAll')?.addEventListener('click', () => openResetTalentsModal());
   overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
   overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
@@ -5588,6 +5618,62 @@ function claimCrateReward(){
   }, 1200);
 }
 
+function getSupercomputerMenuController(){
+  if (supercomputerMenuController || !SupercomputerMenuApi || typeof SupercomputerMenuApi.createController !== 'function') {
+    return supercomputerMenuController;
+  }
+  supercomputerMenuController = SupercomputerMenuApi.createController({
+    documentObj: document,
+    a11yOpen,
+    a11yClose,
+    openTalents,
+    closeTalents,
+    onPauseLockChange: function (open) {
+      setMenuPauseSource('supercomputer', !!open);
+    },
+    getDamagePoints: function () {
+      return 0;
+    },
+  });
+  return supercomputerMenuController;
+}
+
+function openSupercomputerMenu(){
+  const controller = getSupercomputerMenuController();
+  if (!controller || typeof controller.openRoot !== 'function') {
+    openTalents();
+    return;
+  }
+  controller.openRoot();
+}
+
+function closeSupercomputerMenu(){
+  const controller = getSupercomputerMenuController();
+  if (!controller || typeof controller.closeAll !== 'function') return;
+  controller.closeAll();
+}
+
+function supercomputerHitTest(x, y){
+  const sc = getComputerState();
+  if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return false;
+  const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
+  const stateName = sc.state === 'idle' ? 'work' : sc.state;
+  const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
+  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
+  const scale = scaleCfg * balScale;
+  let radius = 44 * balScale;
+
+  if (config && config.hitbox && Number.isFinite(config.hitbox.r) && config.hitbox.r > 0) {
+    radius = config.hitbox.r * scale;
+  } else if (anim && Number.isFinite(anim.w) && Number.isFinite(anim.h)) {
+    radius = Math.max(24 * balScale, Math.max(anim.w * scale, anim.h * scale) * 0.36);
+  }
+
+  const dx = x - sc.x;
+  const dy = y - sc.y;
+  return (dx * dx + dy * dy) <= radius * radius;
+}
+
 // ---------- Input ----------
 function getPointerPos(evt){
   const r = canvas.getBoundingClientRect();
@@ -5611,6 +5697,11 @@ canvas.addEventListener('pointerdown', (e)=>{
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
   if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
+  if (isBlockingModalOpen()) return;
+  if (supercomputerHitTest(p.x, p.y)) {
+    openSupercomputerMenu();
+    return;
+  }
   if (crateHitTest(p.x, p.y)){
     openCrateModal();
     return;
@@ -5765,13 +5856,13 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     documentObj: document,
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !(state && state.ui && state.ui.menuOpen)) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer) {
         setMenuOpen(true);
       }
     },
   });
   pauseManager.attach();
-  pauseManager.setMenuOpen(!!(state && state.ui && state.ui.menuOpen));
+  recomputeMenuPauseLock();
 }
 
 if (DebugPanelEnabled) {
@@ -7394,7 +7485,10 @@ function loop(now){
   const effDt = dt * (state.timeScale ?? 1);
   const paused = pauseManager && typeof pauseManager.isPaused === 'function'
     ? pauseManager.isPaused()
-    : !!(state && state.ui && state.ui.menuOpen);
+    : !!(
+      (state && state.ui && state.ui.menuOpen) ||
+      (supercomputerMenuController && typeof supercomputerMenuController.isOpen === 'function' && supercomputerMenuController.isOpen())
+    );
   setSimulationPaused(paused, pauseManager && pauseManager.getReasons ? pauseManager.getReasons() : { menuOpen: !!state.ui.menuOpen, tabInactive: false });
   if (!paused){
     updateWorldEvents(effDt);
@@ -7553,6 +7647,7 @@ async function boot(){
       updateMenuVolumes,
       saveSettings,
       openTalents,
+      openSupercomputerMenu,
       setMenuOpen,
       t,
       resetGameState,

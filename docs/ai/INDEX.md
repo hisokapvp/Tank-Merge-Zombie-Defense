@@ -11,6 +11,7 @@
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
+- Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer) → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`totalPurchased`, `totalMerges`, buyer_*, creator_*) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
@@ -42,6 +43,7 @@
 - `src/render/` — canvas и загрузчики.
 - `src/render/fenceLayout.js` — геометрия сегментов квадратного забора (scale-aware шаг/инсеты).
 - `src/ui/` — UI-модули, модалки, панели.
+- `src/ui/supercomputerMenu.js` — root/child supercomputer overlays (A11y open/close, Esc/back routing).
 - `src/feedback/` — in-game feedback widget.
 - `src/perf/` — профилирование и лимиты.
 - `src/i18n/` — RU/EN строки.

@@ -15,6 +15,14 @@
 - Поведение кнопок: `src/ui/buttonBehavior.js` + `.uiButtonBehavior`.
 - Offline modal: эталон — settings modal; текст `Money/Деньги` и суммы с `$`/`⭐`.
 
+## Supercomputer menu flow
+
+- Основной вход в таланты: `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
+- Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо талантов`).
+- Child overlays: `#modsHangarOverlay`, `#modsTankWallOverlay`, плюс существующий `#talentOverlay` как child-ветка.
+- Правило `Esc`: в root — закрыть supercomputer UI и снять его pause-lock; в child — шаг назад в root, pause-lock сохраняется.
+- Реализация: `index.html` (разметка), `src/ui/supercomputerMenu.js` (modal routing), `src/accessibility/a11y.js` (focus trap + Esc), `src/systems/pauseManager.js` + `game.js` (единый menu pause lock между settings/supercomputer).
+
 ## Фактические UI-подсистемы в рантайме
 
 - Rewarded ads: `src/ui/adService.js` (заглушка Promise API для crate/boost/offline claim).

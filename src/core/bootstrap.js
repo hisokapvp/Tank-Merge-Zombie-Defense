@@ -135,7 +135,10 @@
       opts.saveSettings();
     });
 
-    opts.ui.talentsBtn && opts.ui.talentsBtn.addEventListener('click', function () { return opts.openTalents(); });
+    opts.ui.supercomputerBtn && opts.ui.supercomputerBtn.addEventListener('click', function () {
+      if (typeof opts.openSupercomputerMenu === 'function') return opts.openSupercomputerMenu();
+      return opts.openTalents();
+    });
     opts.ui.settingsBtn && opts.ui.settingsBtn.addEventListener('click', function () { return opts.setMenuOpen(true); });
 
     var settingsTooltip = documentObj.getElementById('settingsTooltip');

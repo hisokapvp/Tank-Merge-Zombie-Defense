@@ -33,6 +33,7 @@ bash ci/release_checklist.sh
 
 - `game.js` — orchestration (`boot`, `loop`, `draw`)
 - `src/` — доменные модули (mechanics/ui/persistence/render/perf/...)
+- Supercomputer UI flow: `index.html` (`#supercomputerBtn`, overlays) + `src/ui/supercomputerMenu.js` + `game.js` (canvas hit-test, pause lock integration)
 - `src/lessons` + `src/scheduler` + `src/tools/anki` — контур обучения (уроки, SRS, export)
 - `src/feedback/widget.js` — in-game feedback с локальным хранением
 - `assets/` — конфиги и спрайты
