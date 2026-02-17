@@ -30,7 +30,25 @@
     var openTalents = typeof opts.openTalents === 'function' ? opts.openTalents : null;
     var closeTalents = typeof opts.closeTalents === 'function' ? opts.closeTalents : null;
     var getDamagePoints = typeof opts.getDamagePoints === 'function' ? opts.getDamagePoints : function () { return 0; };
+    var getFenceStats = typeof opts.getFenceStats === 'function' ? opts.getFenceStats : function () {
+      return {
+        level: 1,
+        segmentMaxHp: 0,
+        armorFlat: 0,
+        hasNextLevel: false,
+        canUpgrade: false,
+        upgradeCostDamagePoints: null,
+      };
+    };
+    var upgradeFence = typeof opts.upgradeFence === 'function' ? opts.upgradeFence : function () { return false; };
     var translate = typeof opts.translate === 'function' ? opts.translate : function (_, vars) {
+      var key = _ || '';
+      if (key === 'modsWallsLevelLabel') return 'Wall level: ' + (vars && vars.level != null ? vars.level : 1);
+      if (key === 'modsWallsSegmentHpLabel') return 'Segment HP: ' + (vars && vars.hp != null ? vars.hp : 0);
+      if (key === 'modsWallsArmorLabel') return 'Armor: ' + (vars && vars.armor != null ? vars.armor : 0);
+      if (key === 'modsWallsUpgradeCost') return 'Upgrade (' + (vars && vars.cost != null ? vars.cost : 0) + ')';
+      if (key === 'modsWallsUpgradeMax') return 'Max level';
+      if (key === 'modsWallsUpgrade') return 'Upgrade';
       return 'Damage points: ' + (vars && vars.count != null ? vars.count : 0);
     };
 
@@ -44,6 +62,40 @@
       if (!damagePointsEl) return;
       var count = Math.max(0, Math.floor(getDamagePoints()));
       damagePointsEl.textContent = translate('damagePointsLabel', { count: count });
+    }
+
+    function updateFenceStatsUI() {
+      var stats = getFenceStats() || {};
+      var levelEl = documentObj.getElementById('modsTankWallFenceLevel');
+      var hpEl = documentObj.getElementById('modsTankWallFenceHp');
+      var armorEl = documentObj.getElementById('modsTankWallFenceArmor');
+      var upgradeBtn = documentObj.getElementById('modsTankWallFenceUpgrade');
+
+      if (levelEl) {
+        levelEl.textContent = translate('modsWallsLevelLabel', {
+          level: Math.max(1, Math.floor(stats.level || 1)),
+        });
+      }
+      if (hpEl) {
+        hpEl.textContent = translate('modsWallsSegmentHpLabel', {
+          hp: Math.max(1, Math.floor(stats.segmentMaxHp || 0)),
+        });
+      }
+      if (armorEl) {
+        armorEl.textContent = translate('modsWallsArmorLabel', {
+          armor: Math.max(0, Math.floor(stats.armorFlat || 0)),
+        });
+      }
+      if (upgradeBtn) {
+        if (stats.hasNextLevel) {
+          var cost = Math.max(0, Math.floor(stats.upgradeCostDamagePoints || 0));
+          upgradeBtn.textContent = translate('modsWallsUpgradeCost', { cost: cost });
+          upgradeBtn.disabled = !stats.canUpgrade;
+        } else {
+          upgradeBtn.textContent = translate('modsWallsUpgradeMax');
+          upgradeBtn.disabled = true;
+        }
+      }
     }
 
     function openRoot() {
@@ -70,6 +122,7 @@
 
     function showTankWallMods() {
       updateDamagePointsLabel();
+      updateFenceStatsUI();
 
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, true, a11yOpen, a11yClose, {
@@ -120,6 +173,11 @@
 
     documentObj.getElementById('modsTankWallClose')?.addEventListener('click', backFromChild);
     documentObj.getElementById('modsTankWallBack')?.addEventListener('click', backFromChild);
+    documentObj.getElementById('modsTankWallFenceUpgrade')?.addEventListener('click', function () {
+      if (!upgradeFence()) return;
+      updateDamagePointsLabel();
+      updateFenceStatsUI();
+    });
     tankWallOverlay.addEventListener('click', function (evt) {
       if (evt.target && evt.target.dataset && evt.target.dataset.modsTankWallClose === 'true') backFromChild();
     });
@@ -132,6 +190,12 @@
       refreshDamagePointsIfVisible: function () {
         if (!state.isOpen || state.view !== 'tankWall') return;
         updateDamagePointsLabel();
+        updateFenceStatsUI();
+      },
+      refreshTankWallIfVisible: function () {
+        if (!state.isOpen || state.view !== 'tankWall') return;
+        updateDamagePointsLabel();
+        updateFenceStatsUI();
       },
     };
   }

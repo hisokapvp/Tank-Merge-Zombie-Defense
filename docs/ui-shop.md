@@ -3,9 +3,17 @@
 ## Дополнительная прогресс-метрика: очки урона
 
 - В модалке «Модификации танков и стен» отображается `damagePoints`.
-- Формула: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- Формула: `damagePoints = max(0, floor(totalDamageDealtRaw / 10000) - damagePointsSpent)`.
 - `totalDamageDealtRaw` — applied damage по зомби (без overkill), учитывается только источник `tank`.
 - На `New game`/reset: `totalDamageDealtRaw = 0`, соответственно `damagePoints = 0`.
+
+## Вкладка «Стены»
+
+- Показывает: `Уровень стен`, `HP сегмента`, `Броня`.
+- Кнопка `Улучшить` доступна только при наличии следующего уровня и достаточного числа `damagePoints`.
+- Стоимость перехода берётся из текущего уровня: `levels[levelIndex].upgradeCostDamagePoints`.
+- При апгрейде: `fenceLevel++`, `damagePointsSpent += cost`, затем HP всех сегментов клэмпится к новому `segmentMaxHp`.
+- UI обновляется при открытии модалки и сразу после нажатия кнопки (без кадр-поллинга).
 
 ## Гейтинг по достижениям `creator_*`
 

@@ -231,6 +231,8 @@ function createInitialState(options){
     coins: 120,
     kills: 0,
     totalDamageDealtRaw: 0,
+    damagePointsSpent: 0,
+    fenceLevel: 1,
     cells: [],
     boardRect: {x:0,y:0,w:0,h:0},
     zombies: [],
@@ -330,17 +332,37 @@ function normalizeTotalDamageDealtRaw(value){
   return Math.max(0, Math.floor(value));
 }
 
+function normalizeDamagePointsSpent(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
 function ensureDamageProgressState(){
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw);
   return state.totalDamageDealtRaw;
 }
 
+function ensureDamagePointsSpentState(){
+  state.damagePointsSpent = normalizeDamagePointsSpent(state.damagePointsSpent);
+  return state.damagePointsSpent;
+}
+
+function getAvailableDamagePoints(){
+  const totalDamagePoints = Math.floor(ensureDamageProgressState() / 10000);
+  const spent = ensureDamagePointsSpentState();
+  return Math.max(0, totalDamagePoints - spent);
+}
+
 function getDamagePoints(){
-  return Math.floor(ensureDamageProgressState() / 10000);
+  return getAvailableDamagePoints();
 }
 
 function updateDamagePointsUI(){
   const controller = getSupercomputerMenuController();
+  if (controller && typeof controller.refreshTankWallIfVisible === 'function') {
+    controller.refreshTankWallIfVisible();
+    return;
+  }
   if (controller && typeof controller.refreshDamagePointsIfVisible === 'function') {
     controller.refreshDamagePointsIfVisible();
   }
@@ -2919,6 +2941,8 @@ function saveProgress(){
       buyPrices: state.buyPrices,
       achievements: state.achievements,
       totalDamageDealtRaw: ensureDamageProgressState(),
+      damagePointsSpent: ensureDamagePointsSpentState(),
+      fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
     }));
   }catch(e){}
 }
@@ -2945,6 +2969,8 @@ function restoreFullState(saved){
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
+  state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
+  state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
     Object.assign(getComputerState(), saved.supercomputer);
   }
@@ -3083,6 +3109,8 @@ function applySavedProgress(data){
     ach.popupQueue = [];
   }
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(totalDamageDealtRaw);
+  state.damagePointsSpent = normalizeDamagePointsSpent(data.damagePointsSpent);
+  state.fenceLevel = Number.isFinite(data.fenceLevel) ? Math.max(1, Math.floor(data.fenceLevel)) : 1;
   return true;
 }
 
@@ -3523,9 +3551,117 @@ function getFenceSegmentsPerSide(){
   return Number.isFinite(cfg.segmentsPerSide) ? Math.max(1, Math.floor(cfg.segmentsPerSide)) : null;
 }
 
-function getFenceSegmentMaxHp(){
+function getFenceLevels(){
   const cfg = getFenceConfig();
-  return Number.isFinite(cfg.segmentMaxHp) ? Math.max(1, cfg.segmentMaxHp) : FENCE_DEFAULT_SEGMENT_HP;
+  const fallbackMaxHp = Number.isFinite(cfg.segmentMaxHp) ? Math.max(1, Math.floor(cfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
+  const source = Array.isArray(cfg.levels) ? cfg.levels : null;
+  if (!source || source.length === 0) {
+    return [{ segmentMaxHp: fallbackMaxHp, armorFlat: 0, upgradeCostDamagePoints: null }];
+  }
+  const levels = [];
+  for (let i = 0; i < source.length; i++) {
+    const raw = source[i] || {};
+    if (!Number.isFinite(raw.segmentMaxHp) || raw.segmentMaxHp < 1) continue;
+    const segmentMaxHp = Math.max(1, Math.floor(raw.segmentMaxHp));
+    const armorFlat = Number.isFinite(raw.armorFlat) ? Math.max(0, Math.floor(raw.armorFlat)) : 0;
+    const upgradeCostDamagePoints = Number.isFinite(raw.upgradeCostDamagePoints)
+      ? Math.max(0, Math.floor(raw.upgradeCostDamagePoints))
+      : null;
+    levels.push({ segmentMaxHp, armorFlat, upgradeCostDamagePoints });
+  }
+  if (!levels.length) {
+    return [{ segmentMaxHp: fallbackMaxHp, armorFlat: 0, upgradeCostDamagePoints: null }];
+  }
+  return levels;
+}
+
+function getFenceLevelIndex(){
+  const levels = getFenceLevels();
+  const maxLevel = levels.length;
+  const requested = Number.isFinite(state.fenceLevel) ? Math.floor(state.fenceLevel) : 1;
+  const clampedLevel = clamp(requested, 1, maxLevel);
+  state.fenceLevel = clampedLevel;
+  return clampedLevel - 1;
+}
+
+function getCurrentFenceLevelConfig(){
+  const levels = getFenceLevels();
+  const index = getFenceLevelIndex();
+  return levels[index] || levels[0];
+}
+
+function getFenceSegmentMaxHp(){
+  const levelCfg = getCurrentFenceLevelConfig();
+  return Number.isFinite(levelCfg && levelCfg.segmentMaxHp)
+    ? Math.max(1, Math.floor(levelCfg.segmentMaxHp))
+    : FENCE_DEFAULT_SEGMENT_HP;
+}
+
+function getFenceArmorFlat(){
+  const levelCfg = getCurrentFenceLevelConfig();
+  return Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
+}
+
+function getFenceUpgradeCostDamagePoints(){
+  const levels = getFenceLevels();
+  const index = getFenceLevelIndex();
+  if (index >= levels.length - 1) return null;
+  const levelCfg = levels[index] || {};
+  return Number.isFinite(levelCfg.upgradeCostDamagePoints)
+    ? Math.max(0, Math.floor(levelCfg.upgradeCostDamagePoints))
+    : 0;
+}
+
+function getFenceStats(){
+  const levels = getFenceLevels();
+  const index = getFenceLevelIndex();
+  const level = index + 1;
+  const levelsCount = levels.length;
+  const segmentMaxHp = getFenceSegmentMaxHp();
+  const armorFlat = getFenceArmorFlat();
+  const hasNextLevel = index < levelsCount - 1;
+  const upgradeCostDamagePoints = hasNextLevel ? getFenceUpgradeCostDamagePoints() : null;
+  const availableDamagePoints = getAvailableDamagePoints();
+  const canUpgrade = !!hasNextLevel && availableDamagePoints >= (upgradeCostDamagePoints || 0);
+  return {
+    level,
+    levelsCount,
+    segmentMaxHp,
+    armorFlat,
+    hasNextLevel,
+    upgradeCostDamagePoints,
+    availableDamagePoints,
+    canUpgrade,
+  };
+}
+
+function clampFenceSegmentsToMaxHp(maxHp){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg) continue;
+    seg.maxHp = maxHp;
+    const hp = Number.isFinite(seg.hp) ? seg.hp : maxHp;
+    seg.hp = clamp(hp, 0, maxHp);
+    seg.broken = seg.hp <= 0;
+  }
+}
+
+function tryUpgradeFenceLevel(){
+  const stats = getFenceStats();
+  if (!stats.hasNextLevel) return false;
+  const cost = stats.upgradeCostDamagePoints || 0;
+  if (stats.availableDamagePoints < cost) return false;
+
+  state.fenceLevel = Math.min(stats.levelsCount, stats.level + 1);
+  state.damagePointsSpent = ensureDamagePointsSpentState() + cost;
+
+  const maxHp = getFenceSegmentMaxHp();
+  clampFenceSegmentsToMaxHp(maxHp);
+  if (state.fenceSegmentsMeta) state.fenceSegmentsMeta.segmentMaxHp = maxHp;
+
+  updateDamagePointsUI();
+  return true;
 }
 
 function getFenceHealthBarConfig(){
@@ -3844,9 +3980,12 @@ function getFenceInnerLimit(z){
 
 function applyFenceSegmentDamage(seg, amount){
   if (!seg || seg.broken) return false;
-  const dmg = Math.max(0, amount || 0);
-  if (dmg <= 0) return false;
-  seg.hp = clamp(seg.hp - dmg, 0, seg.maxHp);
+  const incomingDamage = Math.max(0, amount || 0);
+  if (incomingDamage <= 0) return false;
+  const armorFlat = getFenceArmorFlat();
+  const finalDamage = Math.max(0, incomingDamage - armorFlat);
+  if (finalDamage <= 0) return false;
+  seg.hp = clamp(seg.hp - finalDamage, 0, seg.maxHp);
   seg.broken = seg.hp <= 0;
   return true;
 }
@@ -4906,6 +5045,7 @@ function resetGameState(options){
   }
   state = createInitialState({ reason });
   ensureDamageProgressState();
+  ensureDamagePointsSpentState();
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();
@@ -5722,6 +5862,8 @@ function getSupercomputerMenuController(){
       setMenuPauseSource('supercomputer', !!open);
     },
     getDamagePoints: getDamagePoints,
+    getFenceStats: getFenceStats,
+    upgradeFence: tryUpgradeFenceLevel,
     translate: t,
   });
   return supercomputerMenuController;
@@ -6356,12 +6498,17 @@ function drawZombieFence(){
         halfSide,
         fenceWidth: BAL.fenceWidth,
         segmentsPerSide,
+        segmentMaxHp: maxHp,
         spriteHash,
         cornerInsetPxOverride: FenceSprites.cornerInsetPx,
         byId,
         sideMath: null,
       };
       state.savedFenceState = null;
+    }
+    if (state.fenceSegmentsMeta && state.fenceSegmentsMeta.segmentMaxHp !== maxHp) {
+      clampFenceSegmentsToMaxHp(maxHp);
+      state.fenceSegmentsMeta.segmentMaxHp = maxHp;
     }
     for (const seg of state.fenceSegments){
       const spriteId = seg.broken ? seg.spriteIdBroken : seg.spriteIdIntact;

@@ -105,10 +105,19 @@ Merge + tower defense на canvas.
 ## Очки урона (Damage Points)
 
 - В `state` хранится сырой накопитель урона: `totalDamageDealtRaw` (int, default `0`).
-- Очки урона считаются только на чтение: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- Доступные очки урона: `damagePoints = max(0, floor(totalDamageDealtRaw / 10000) - damagePointsSpent)`.
+- `damagePointsSpent` — суммарно потраченные очки урона на апгрейды стен.
 - В `totalDamageDealtRaw` засчитывается только фактически снятое HP (`applied`, без overkill) и только при источнике урона `tank`.
-- Поле сохраняется в `progress` save payload как `totalDamageDealtRaw`; старые сейвы без поля загружаются с дефолтом `0`.
+- Поля `totalDamageDealtRaw`, `damagePointsSpent`, `fenceLevel` сохраняются в `progress`; старые сейвы без новых полей загружаются с дефолтами (`0`, `1`).
 - При `New game`/reset значение сбрасывается в `0`.
+
+## Уровни стен и броня
+
+- Уровень стен хранится в `state.fenceLevel` (default `1`).
+- Конфиг уровней: `assets/fence.json -> levels[]`.
+- Приоритет конфига: `levels[]` выше `segmentMaxHp`; `segmentMaxHp` используется только как fallback для legacy-конфига.
+- Формула урона сегменту забора: `finalDamage = max(0, incomingDamage - armorFlat)`.
+- Если `incomingDamage <= armorFlat`, HP сегмента не уменьшается.
 
 ## Debug overlay для атаки зомби
 

@@ -42,9 +42,16 @@ bash ci/release_checklist.sh
 ## Damage Points
 
 - Счётчик сырого урона: `state.totalDamageDealtRaw` (int, default `0`).
-- Формула UI-значения: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- Формула UI-значения: `damagePoints = max(0, floor(totalDamageDealtRaw / 10000) - damagePointsSpent)`.
 - Источник учёта: только applied damage по зомби от источника `tank` (без overkill).
-- Хранение: поле `totalDamageDealtRaw` в save payload (`progress`), backward-compatible загрузка старых сейвов с `0`.
+- Хранение: `totalDamageDealtRaw`, `damagePointsSpent`, `fenceLevel` в save payload (`progress`), backward-compatible загрузка старых сейвов.
+
+## Fence levels
+
+- Текущий уровень стен: `state.fenceLevel` (default `1`).
+- Конфиг уровней: `assets/fence.json -> levels[]`.
+- Fallback: если `levels[]` отсутствует/пуст, используется legacy `segmentMaxHp` как уровень 1 с `armorFlat=0`, без апгрейда.
+- Урон забору: `finalDamage = max(0, incomingDamage - armorFlat)`.
 
 ## Debug
 

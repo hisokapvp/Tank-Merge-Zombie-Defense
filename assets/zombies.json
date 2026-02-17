@@ -107,7 +107,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8,
+      "attackDamage": 108,
       "animations": {
         "walk": {
           "frameRateFps": 10

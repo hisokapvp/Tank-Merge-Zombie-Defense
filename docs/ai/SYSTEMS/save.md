@@ -30,6 +30,8 @@
 - `fenceState`:
 	- `segmentsPerSide` — сигнатура конфигурации,
 	- `hpById` — сохранённое HP сегментов по стабильному `id`.
+- `fenceLevel`:
+	- текущий уровень стен (default `1`).
 - `mapSeeds`:
 	- `stampsSeed` — seed stamps placement,
 	- `decorSeed` — seed decor placement,
@@ -37,7 +39,9 @@
 - `totalDamageDealtRaw`:
 	- int, default `0`, монотонный накопитель нанесённого танками урона,
 	- учитывается только applied damage по зомби (без overkill), источник урона `tank`.
-	- производная метрика: `damagePoints = floor(totalDamageDealtRaw / 10000)`.
+- `damagePointsSpent`:
+	- int, default `0`, сумма потраченных очков на апгрейды fence.
+	- производная метрика: `damagePoints = max(0, floor(totalDamageDealtRaw / 10000) - damagePointsSpent)`.
 
 ## Миграция / совместимость
 
@@ -46,6 +50,8 @@
 - При смене `segmentsPerSide` восстановление fence HP идёт по совпавшим `id`; новые/изменённые сегменты получают `maxHp`.
 - Для `mapSeeds`: старые сейвы без поля загружаются корректно; seed берётся из assets только если в сейве отсутствует.
 - Для `totalDamageDealtRaw`: старые сейвы без поля загружаются корректно с дефолтом `0`.
+- Для `fenceLevel`: старые сейвы без поля загружаются с дефолтом `1`.
+- Для `damagePointsSpent`: старые сейвы без поля загружаются с дефолтом `0`.
 
 ## Риски
 
@@ -77,7 +83,8 @@
 ## Damage points: reset/load contract
 
 - При `New game`/reset поле `totalDamageDealtRaw` сбрасывается в `0`.
-- При save/load поле сериализуется/десериализуется в payload `progress` как `totalDamageDealtRaw`.
+- При `New game`/reset поле `damagePointsSpent` сбрасывается в `0`, `fenceLevel` — в `1`.
+- При save/load поля сериализуются/десериализуются в payload `progress` как `totalDamageDealtRaw`, `damagePointsSpent`, `fenceLevel`.
 - При открытии модалки «Модификации танков и стен» UI показывает локализованную строку:
 	- RU: `Очки урона: {count}`
 	- EN: `Damage points: {count}`

@@ -12,6 +12,11 @@
     return Math.max(0, Math.floor(value));
   }
 
+  function normalizeDamagePointsSpent(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.floor(value));
+  }
+
   function safeParse(raw, fallback) {
     try {
       if (raw == null || raw === '') return fallback;
@@ -74,6 +79,8 @@
       coins: state.coins,
       kills: state.kills,
       totalDamageDealtRaw: normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw),
+      damagePointsSpent: normalizeDamagePointsSpent(state.damagePointsSpent),
+      fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       cells: cells,
       supercomputer: state.supercomputer,
       player: state.player,

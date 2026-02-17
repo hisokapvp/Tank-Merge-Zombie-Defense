@@ -4,6 +4,23 @@
   "cornerInsetPx": 0,
   "segmentsPerSide": 8,
   "segmentMaxHp": 10000,
+  "levels": [
+    {
+      "segmentMaxHp": 10000,
+      "armorFlat": 100,
+      "upgradeCostDamagePoints": 2
+    },
+    {
+      "segmentMaxHp": 12000,
+      "armorFlat": 2,
+      "upgradeCostDamagePoints": 3
+    },
+    {
+      "segmentMaxHp": 15000,
+      "armorFlat": 4,
+      "upgradeCostDamagePoints": 0
+    }
+  ],
   "healthBar": {
     "w": 28,
     "h": 4,

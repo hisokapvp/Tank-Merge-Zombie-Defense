@@ -46,7 +46,9 @@
 ## Урон забору в attackMode
 
 - Урон сегментам забора применяется только при активном `attackMode`.
-- Формула урона: `damagePerHit = zombieType.attackDamage * attackMode.damageMult`.
+- Базовый входящий урон: `incomingDamage = zombieType.attackDamage * attackMode.damageMult`.
+- Финальный урон сегменту: `finalDamage = max(0, incomingDamage - armorFlat)`.
+- `armorFlat` берётся из текущего уровня fence (`assets/fence.json.levels[]`, fallback `0`).
 - Урон по уже сломанному сегменту не применяется.
 - Конфиг типа зомби: `assets/zombies.json -> types[].attackDamage`.
 - Если `attackDamage` отсутствует — используется fallback (без падения игры).

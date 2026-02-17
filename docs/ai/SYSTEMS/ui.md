@@ -23,6 +23,15 @@
 - Правило `Esc`: в root — закрыть supercomputer UI и снять его pause-lock; в child — шаг назад в root, pause-lock сохраняется.
 - Реализация: `index.html` (разметка), `src/ui/supercomputerMenu.js` (modal routing), `src/accessibility/a11y.js` (focus trap + Esc), `src/systems/pauseManager.js` + `game.js` (единый menu pause lock между settings/supercomputer).
 
+### Вкладка «Стены» (минимально функциональная)
+
+- Показывает текущие статы fence: `Уровень стен`, `HP сегмента`, `Броня`.
+- Кнопка `Улучшить`:
+	- disabled на последнем уровне,
+	- disabled при нехватке `damagePoints`,
+	- при успехе сразу обновляет видимые статы и доступные очки (без кадр-поллинга).
+- Данные и бизнес-логика приходят коллбэками из `game.js` (`getFenceStats`, `upgradeFence`).
+
 ## Фактические UI-подсистемы в рантайме
 
 - Rewarded ads: `src/ui/adService.js` (заглушка Promise API для crate/boost/offline claim).

@@ -32,6 +32,11 @@
 
 - Top-level `cornerInsetPx` (float, default `0`): signed ручная подстройка угловых сегментов после базового стыка по bounds.
 - Отрицательное значение допустимо: увеличивает заход corner в side (контролируемое перекрытие).
+- `levels[]` (приоритетнее legacy `segmentMaxHp`):
+	- `segmentMaxHp` (int >= 1),
+	- `armorFlat` (int >= 0),
+	- `upgradeCostDamagePoints` (int >= 0, для последнего уровня может быть `0` или отсутствовать).
+- Fallback: если `levels[]` отсутствует/пустой — runtime использует legacy `segmentMaxHp` как единственный уровень с `armorFlat=0`.
 - `frames[].rotation` (priority) → `frames[].rotationDeg` → `0` (degrees): поворот конкретного кадра сегмента.
 - `frames[].scale` влияет на геометрию раскладки сегментов (step/inset) и реальный размер спрайта.
 

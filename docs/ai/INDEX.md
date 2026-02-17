@@ -18,6 +18,7 @@
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
 - Damage points (`totalDamageDealtRaw`, `damagePoints`) → `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `src/ui/supercomputerMenu.js`
+- Fence levels/armor/upgrade (`fenceLevel`, `armorFlat`, `damagePointsSpent`) → `docs/ai/SYSTEMS/fence.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `docs/ai/SYSTEMS/ui.md`
 - New Game reset (`menuNew`) и правило стартового `talentPoints` → `docs/ai/SYSTEMS/save.md` + `README.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
@@ -44,6 +45,7 @@
 - `state.totalDamageDealtRaw` — сырой урон от танков (applied, без overkill), используется для UI-метрики `damagePoints`.
 - `src/render/` — canvas и загрузчики.
 - `src/render/fenceLayout.js` — геометрия сегментов квадратного забора (scale-aware шаг/инсеты).
+- `game.js` — runtime логика fence HP/урона/ремонта/уровней (`applyFenceSegmentDamage`, `tryRepairFenceSegmentAt`, `tryUpgradeFenceLevel`).
 - `src/ui/` — UI-модули, модалки, панели.
 - `src/ui/supercomputerMenu.js` — root/child supercomputer overlays (A11y open/close, Esc/back routing).
 - `src/feedback/` — in-game feedback widget.
