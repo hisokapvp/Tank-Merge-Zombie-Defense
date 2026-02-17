@@ -3,108 +3,94 @@
 ## Где искать
 
 - Логика достижений: `src/mechanics/achievements.js`
+- Auto-merge tiers/label: `src/mechanics/autoMerge.js`
 - Интеграция прогресса/наград: `game.js`
-- UI кнопок и модалок: `index.html`, `style.css`, `game.js`
 - Локализация: `src/i18n/ru.json`, `src/i18n/en.json`
-- Сохранение: `src/persistence/storage.js`, `docs/ai/SYSTEMS/save.md`
+- Сохранение: `src/persistence/storage.js`
 
-## Достижения
+## Ветки достижений
 
-- `creator_novice` (`100` успешных merge) → `autoMergeBasic` (кнопка/режим в PACK2)
-- `creator_pro` (`400` успешных merge) → `autoMergeAdvanced` (кнопка/режим в PACK2)
-- `creator_expert` (`1000` успешных merge) → `autoMergeExpert` (кнопка/режим в PACK3)
+Система разделена на 2 ветки:
 
-`buyer_*` удалены из `ACHIEVEMENTS` и больше не участвуют в unlock/popup пайплайне.
+- `creator_*` (покупки):
+  - `creator_novice` target `100`
+  - `creator_pro` target `400`
+  - `creator_expert` target `1000`
+  - `progressType = purchases`
+  - reward keys: `achievementRewardBuy2/Buy5/BuyMax`
+- `engineer_*` (merge):
+  - `engineer_novice` target `200`
+  - `engineer_pro` target `500`
+  - `engineer_expert` target `1000`
+  - `progressType = merges`
+  - reward keys: `achievementRewardAutoMergeBasic/Advanced/Expert`
 
-Прогресс считается по типам:
+`buyer_*` остаются в i18n только как legacy-строки и не участвуют в unlock логике.
 
-- `purchases` → `state.achievements.totalPurchased` (покупки, включая bulk).
-- `merges` → `state.achievements.totalMerges` (только успешные merge).
+## Source of truth
 
-Неуспешные попытки merge (нет пары/невалидный drop/кап уровня) прогресс `merges` не меняют.
-Разблокировка работает в режиме «unlock-only»: уже открытые достижения назад не закрываются.
+Источник прогресса:
 
-## Source of truth: merge
+- `state.stats.tanksMergedCount`
+- `state.stats.tanksBoughtCount`
 
-- Общая точка входа merge: `game.js` → `performMerge(fromIdx, toIdx, opts)`.
-- Manual drag/drop использует `performMerge(..., { placeResult: 'original' })`.
-- После успешного merge вызывается `addProgress('merges', 1)` через achievements API.
-- Параметр `placeResult` зарезервирован под PACK2/3 (`'hangar'`) без изменения текущего manual placement.
-- Post-merge FX/звук вызывается в том же entrypoint строго после создания результата merge.
-- Для серий merge используется FIFO-очередь FX (краткий gap), чтобы не спамить все эффекты в один кадр.
+Legacy-совместимость (зеркало для debug/старых мест чтения):
 
-## Награды
+- `state.achievements.totalMerges`
+- `state.achievements.totalPurchased`
 
-- Награда применяется сразу в момент выполнения условия (разблок режима bulk-кнопки).
-- Popup носит информативный характер: показывает название достижения и награду.
-- Для `creator_*` награда влияет на tier обеих кнопок: bulk-buy (`none` → `buy2` → `buy5` → `buyMax`) и auto-merge (`hidden` → `merge2` → `mergeX` → `mergeAll`).
+`Achievements.ensureState(state)` гарантирует структуру:
 
-## Auto-merge (PACK2/PACK3)
+- `state.achievements.unlocked`
+- `state.achievements.popupQueue`
+- `state.stats.{tanksMergedCount,tanksBoughtCount}`
+- синхронизацию `stats` ↔ legacy counters
 
-- Кандидаты: только танки из `hangar + track`.
-- Строгое исключение: не участвуют танки с `requiresAd || locked || fromAdBox`.
-- Детерминированный приоритет пар:
-  - сначала `level asc`,
-  - внутри уровня сначала hangar (`slotIndex asc`), затем track (`trackIndex asc`),
-  - пары только последовательно `(0,1), (2,3), ...`.
-- `mergeAll` работает по snapshot-парам: пары считаются ровно один раз на клик, без chain-reaction в этом же запуске.
-- Manual и auto используют общий merge entrypoint `performMerge(...)`; auto выставляет `placeResult: 'hangar'`.
-- Защита от двойного клика на UI-кнопке: cooldown в диапазоне `200..400ms` (по умолчанию `300ms`).
+## Миграция старых сейвов
 
-## UI
+Если `state.stats.*` отсутствуют:
 
-- Кнопка `#achievementsBtn` открывает список достижений.
-- Модалка списка показывает: название, прогресс, статус, награду.
-- Popup `#achievementPopup` показывается очередью (если закрыто несколько достижений подряд).
+- `tanksMergedCount` берётся из `state.achievements.totalMerges`
+- `tanksBoughtCount` берётся из `state.achievements.totalPurchased`
+- если `totalPurchased` отсутствует — допускается infer из `state.buyCounts`
 
-## Debug panel (dev)
+Сериализация `state.stats` выполняется в `src/persistence/storage.js` с clamp к `0..Number.MAX_SAFE_INTEGER`.
 
-- Расширение в `src/ui/debugPanel.js` (раздел `Achievements (dev)` во вкладке `Logs&Tools`).
-- `Unlock + claim reward`:
-  - перед мутацией вызывается `Game.Achievements.ensureState(state)`,
-  - форсирует `state.achievements.unlocked[id] = true` (через dev-hook из `game.js`),
-  - сразу обновляет UI (в т.ч. tier auto-merge кнопки).
-- `Set totalMerges`:
-  - устанавливает `state.achievements.totalMerges` c clamp `0..Number.MAX_SAFE_INTEGER`,
-  - запускает тот же unlock-only пересчёт (`recalculateUnlocks`) и popup queue.
-- Политика: уже открытые достижения не закрываются при уменьшении `totalMerges`.
+## Unlock semantics
 
-## Bulk-buy
+- unlock-only: уже unlocked achievements назад не закрываются.
+- прогресс читается через `Achievements.getProgressValue(state, progressType)`.
+- `Achievements.addProgress(state, progressType, delta)` обновляет `state.stats.*` и зеркалит legacy-поля.
 
-- Базовая кнопка `#buy` остаётся всегда.
-- `#buyBulk` определяется только `Achievements.getBulkMode(state)` (пересчёт на каждом `updateUI()`, без кешей):
-  - `none` → кнопка скрыта
-  - `buy2` → tier cap `2`
-  - `buy5` → tier cap `5`
-  - `buyMax` → tier cap `freeSlots`
-- Запрещён альтернативный гейтинг через `rewardMode`/`claimed`.
+## Bulk-buy gating (creator_*)
 
-Формула плана покупки:
+`Achievements.getBulkMode(state)`:
 
-- `maxByTier = 2 | 5 | freeSlots` по текущему mode.
-- `maxAffordableByCoins` считается точной симуляцией последовательных цен (с ростом после каждого танка) без мутаций `state`.
-- `X = min(maxByTier, freeSlots, maxAffordableByCoins)`.
-- `xDisplay = max(2, X)`.
-- `X < 2` → кнопка `disabled`, label остаётся «Купить 2 …», клик = no-op.
+- нет `creator_novice` → `none`
+- `creator_novice` → `buy2`
+- `creator_pro` → `buy5`
+- `creator_expert` → `buyMax`
 
-При `X >= 2` клик покупает ровно `X` танков. Частичная bulk-покупка разрешена в рамках cap тира.
+## Auto-merge gating (engineer_*)
 
-## Таблица tier/label
+`AutoMerge.getAutoMergeTier(state)`:
 
-### Creator → Bulk-buy
+- нет `engineer_novice` → `hidden`
+- `engineer_novice` → `merge2`
+- `engineer_pro` → `mergeX`
+- `engineer_expert` → `mergeAll`
 
-| Unlock | Bulk mode | `maxByTier` | Visibility | Label |
-|---|---|---:|---|---|
-| нет `creator_novice` | `none` | `0` | hidden | — |
-| `creator_novice`, без `creator_pro` | `buy2` | `2` | visible | «Купить {xDisplay} …» |
-| `creator_pro`, без `creator_expert` | `buy5` | `5` | visible | «Купить {xDisplay} …» |
-| `creator_expert` | `buyMax` | `freeSlots` | visible | «Купить {xDisplay} …» |
+`mergeX`:
 
-### Creator
+- лимит: до `5` пар за клик (до 10 танков)
+- label: `t('autoMergeDynamicShort', 'Соединить {count}', { count })`, где `count` в диапазоне `2..10`
 
-| Unlock | Mode | Visibility | Label |
-|---|---|---|---|
-| нет `creator_novice` | `hidden` | hidden | — |
-| `creator_novice` | `merge2` | visible | «Соединить 2 танка» |
-| `creator_pro` | `mergeX` | visible | «Соединить 2» или «Соединить 4» |
-| `creator_expert` | `mergeAll` | visible | «Соединить все танки» |
+Инварианты auto-merge остаются:
+
+- `excludeAdBox: true`
+- snapshot-подбор пар
+- cooldown `300ms`
+
+## Debug panel
+
+`Set totalMerges` в `src/ui/debugPanel.js` продолжает работать корректно из-за синхронизации legacy `totalMerges` с `state.stats.tanksMergedCount` внутри achievements API.

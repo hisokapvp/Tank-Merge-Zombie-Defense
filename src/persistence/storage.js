@@ -17,6 +17,11 @@
     return Math.max(0, Math.floor(value));
   }
 
+  function normalizeSafeCounter(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
+  }
+
   function safeParse(raw, fallback) {
     try {
       if (raw == null || raw === '') return fallback;
@@ -74,6 +79,10 @@
         decorSeed: state.mapSeeds.decorSeed,
       };
     }
+    var stats = {
+      tanksMergedCount: normalizeSafeCounter(state.stats && state.stats.tanksMergedCount),
+      tanksBoughtCount: normalizeSafeCounter(state.stats && state.stats.tanksBoughtCount),
+    };
     return {
       version: SAVE_VERSION,
       coins: state.coins,
@@ -93,6 +102,7 @@
       activeEffects: state.activeEffects,
       fenceState: fenceState,
       achievements: state.achievements,
+      stats: stats,
       mapSeeds: mapSeeds,
     };
   }

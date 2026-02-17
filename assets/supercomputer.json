@@ -9,7 +9,7 @@
   "hpBar": {
     "width": 92,
     "height": 8,
-    "offsetY": -56
+    "offsetY": -30
   },
   "animations": {
     "idle": {

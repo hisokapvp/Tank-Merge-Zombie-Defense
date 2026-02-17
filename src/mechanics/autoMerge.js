@@ -115,15 +115,15 @@
 
   function getAutoMergeTier(state) {
     var unlocked = state && state.achievements && state.achievements.unlocked;
-    if (!unlocked || !unlocked.creator_novice) return 'hidden';
-    if (unlocked.creator_expert) return 'mergeAll';
-    if (unlocked.creator_pro) return 'mergeX';
+    if (!unlocked || !unlocked.engineer_novice) return 'hidden';
+    if (unlocked.engineer_expert) return 'mergeAll';
+    if (unlocked.engineer_pro) return 'mergeX';
     return 'merge2';
   }
 
   function maxPairsForTier(tier) {
     if (tier === 'merge2') return 1;
-    if (tier === 'mergeX') return 2;
+    if (tier === 'mergeX') return 5;
     if (tier === 'mergeAll') return Infinity;
     return 0;
   }
@@ -153,9 +153,8 @@
     if (tier === 'merge2') {
       label = t('autoMerge2', 'Соединить 2 танка');
     } else if (tier === 'mergeX') {
-      label = pairs.length >= 2
-        ? t('autoMerge4Short', 'Соединить 4')
-        : t('autoMerge2Short', 'Соединить 2');
+      var dynamicCount = Math.max(2, Math.min(10, pairs.length * 2));
+      label = t('autoMergeDynamicShort', 'Соединить {count}', { count: dynamicCount });
     } else {
       label = t('autoMergeAll', 'Соединить все танки');
     }

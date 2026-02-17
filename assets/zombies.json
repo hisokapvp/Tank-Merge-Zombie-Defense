@@ -110,7 +110,7 @@
       "attackDamage": 108,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 50
         },
         "attack": {
           "frameRateFps": 10
@@ -127,14 +127,14 @@
       "id": "zombie_lvl3",
       "frame": {
         "x": 0,
-        "y": 192,
+        "y": 193,
         "w": 96,
         "h": 96
       },
       "frames": 7,
       "attack": {
         "x": 0,
-        "y": 192,
+        "y": 193,
         "w": 96,
         "h": 96,
         "frames": 7,
@@ -144,7 +144,7 @@
       },
       "death": {
         "x": 672,
-        "y": 192,
+        "y": 193,
         "w": 96,
         "h": 96,
         "frames": 7
@@ -164,7 +164,7 @@
       "attackDamage": 8,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 50
         },
         "attack": {
           "frameRateFps": 10

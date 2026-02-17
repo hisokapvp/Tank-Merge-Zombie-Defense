@@ -14,7 +14,7 @@
 - Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer) → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
-- Achievements/progress (`totalPurchased`, `totalMerges`, creator_*; bulk-buy tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
+- Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
 - Damage points (`totalDamageDealtRaw`, `damagePoints`) → `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `src/ui/supercomputerMenu.js`
