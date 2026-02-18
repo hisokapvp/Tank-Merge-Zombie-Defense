@@ -7,7 +7,6 @@
     var ui = opts.ui;
     var BAL = opts.BAL;
     var t = opts.t || function (k) { return k; };
-    var talentWord = opts.talentWord || function () { return ''; };
     var UIModals = opts.UIModals || null;
     var a11yOpen = opts.a11yOpen;
     var a11yClose = opts.a11yClose;
@@ -57,7 +56,6 @@
       if (ui.levelTalent) {
         ui.levelTalent.textContent = t('levelModalTalent', {
           points: reward.points,
-          talent: talentWord(reward.points),
         });
       }
       var fmt = windowObj && windowObj.Game && windowObj.Game.NumberFormat

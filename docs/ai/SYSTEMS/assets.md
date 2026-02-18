@@ -14,6 +14,7 @@
 - Окружение: `fence.json`, `decor.json`.
 - Земля/подложка: `ground.json`.
 - Supercomputer: `supercomputer.json` (`animations`, `glitch`, `stats`, `offsetY`).
+- Boost icons: `boost_icons.json` + `boost_icons_atlas.png` (иконки и cooldown overlay для screen-space UI рядом с supercomputer).
 - BonusBox/crate: `bonusbox.json` (`atlas`, `frames[]`, `animations.drop/idle/hover/press`).
 
 ### Tanks (`assets/tanks.json`)
@@ -48,6 +49,31 @@
 - `glitch`: `chancePerSecond`, `minLoops`, `maxLoops`, `cooldownSec`.
 - `stats`: data-driven формулы `maxHp`/`armorFlat` по `computerLevel`.
 - Runtime: `SupercomputerSprites.load()` в `src/render/spriteLoaders.js`.
+
+### Boost icons (`assets/boost_icons.json`)
+
+- Базовая схема:
+
+```json
+{
+	"atlas": "boost_icons_atlas.png",
+	"boosts": {
+		"<boostId>": {
+			"iconFrames": [{ "x": 0, "y": 0, "w": 32, "h": 32 }],
+			"cooldownOverlayFrames": [{ "x": 32, "y": 0, "w": 32, "h": 32 }]
+		}
+	}
+}
+```
+
+- `boostId` должен совпадать с runtime-идентификатором эффекта (например, `speedBoost`, `attackBoost`, `defenseBoost`, `economyBoost`).
+- `iconFrames[0]` используется как базовая иконка буста.
+- `cooldownOverlayFrames` опционален; если кадров `< 2`, overlay не рисуется.
+- Runtime loader: `BoostIconsSprites.load()` в `src/render/spriteLoaders.js`.
+- Runtime render (в `game.js`):
+	- таймер под иконкой: `Math.ceil(remainingSec)`;
+	- прогресс overlay: `p = clamp(1 - remainingSec/secondsTotal, 0..1)`, `idx = floor(p*(K-1))`;
+	- количество иконок не ограничено (рисуются все активные boosts).
 
 ### Ground (`assets/ground.json`)
 

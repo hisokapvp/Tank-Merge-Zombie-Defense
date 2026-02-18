@@ -15,6 +15,7 @@
   --ui-scale: clamp(0.95, 0.92 + 0.65vw, 1.22);
   --ui-btn-transition: .2s;
   --ui-btn-press-shift: 2px;
+  --scTileIconSize: 30px;
 }
 *{box-sizing:border-box}
 body{
@@ -597,6 +598,74 @@ body.menu-open .stageUi .hudItem{
   outline:2px solid rgba(166,212,255,.85);
   outline-offset:2px;
 }
+.supercomputerHudBtn{
+  width:42px !important;
+  min-width:42px !important;
+  height:42px;
+  padding:0;
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  align-self:flex-end;
+  overflow:hidden;
+}
+.stageUi .supercomputerHudBtn{
+  width:42px;
+}
+.supercomputerHudBtn::after{
+  display:none;
+}
+.supercomputerHudBtn:hover,
+.supercomputerHudBtn:active{
+  transform:none;
+  box-shadow:var(--btnShadow);
+}
+.supercomputerHudBtn:hover{
+  filter:brightness(1.1);
+}
+.supercomputerHudBtn:active{
+  filter:brightness(0.98);
+}
+.supercomputerHudBtn__icon{
+  font-size:20px;
+  line-height:1;
+  pointer-events:none;
+}
+.scRootTiles{
+  display:flex;
+  flex-direction:row;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  margin-top:12px;
+}
+.scRootTile{
+  flex:1 1 180px;
+  min-height:106px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  text-align:center;
+}
+.scRootTile__icon{
+  width:var(--scTileIconSize);
+  height:var(--scTileIconSize);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.16);
+  font-size:calc(var(--scTileIconSize) * 0.56);
+  line-height:1;
+}
+.scRootTile__label{
+  font-size:13px;
+  line-height:1.25;
+}
 .btn[disabled],
 .btn:disabled{
   cursor:not-allowed;
@@ -1163,6 +1232,9 @@ body.menu-open .stageUi .hudItem{
   .hudItem{min-width:72px}
   .xpBar{width:140px}
   .stageActions .btn{width:100%}
+  .scRootTile{
+    flex-basis:100%;
+  }
 }
 
 /* ---------- Debug panel (only when ?debug=1) ---------- */

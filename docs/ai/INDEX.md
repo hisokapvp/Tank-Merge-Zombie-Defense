@@ -14,7 +14,7 @@
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
 - Main menu gating (`Continue` доступна при наличии любого валидного сохранения) → `docs/ai/SYSTEMS/ui.md`
 - Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
-- Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer, tabs `Орудия/Базы/Стены` с дефолтом `Орудия` без запоминания) → `docs/ai/SYSTEMS/ui.md`
+- Supercomputer + Boost UI (`#supercomputerBtn` icon-only + aria-label, root tiles в один ряд с сохранением IDs, active boost icons рядом со спрайтом supercomputer, Esc/back routing, tabs `Орудия/Базы/Стены` с дефолтом `Орудия`) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/assets.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`

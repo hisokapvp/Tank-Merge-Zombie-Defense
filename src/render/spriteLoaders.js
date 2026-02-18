@@ -775,6 +775,78 @@
       },
     };
 
+    var BoostIconsSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      boosts: null,
+      load: async function () {
+        try {
+          var res = await fetch('assets/boost_icons.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+
+          var atlasName = data && data.atlas ? data.atlas : 'boost_icons_atlas.png';
+          var atlasPath = 'assets/' + atlasName;
+          var img = await loadImage(atlasPath);
+
+          function normalizeFrame(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+            var w = Number.isFinite(raw.w) ? Math.max(1, Math.floor(raw.w)) : 0;
+            var h = Number.isFinite(raw.h) ? Math.max(1, Math.floor(raw.h)) : 0;
+            if (w <= 0 || h <= 0) return null;
+            return {
+              x: Number.isFinite(raw.x) ? Math.floor(raw.x) : 0,
+              y: Number.isFinite(raw.y) ? Math.floor(raw.y) : 0,
+              w: w,
+              h: h,
+            };
+          }
+
+          function normalizeFrameList(rawList) {
+            if (!Array.isArray(rawList)) return [];
+            var out = [];
+            for (var i = 0; i < rawList.length; i++) {
+              var frame = normalizeFrame(rawList[i]);
+              if (frame) out.push(frame);
+            }
+            return out;
+          }
+
+          var boosts = {};
+          var rawBoosts = data && data.boosts && typeof data.boosts === 'object' ? data.boosts : {};
+          var boostIds = Object.keys(rawBoosts);
+          for (var b = 0; b < boostIds.length; b++) {
+            var boostId = boostIds[b];
+            var src = rawBoosts[boostId] && typeof rawBoosts[boostId] === 'object' ? rawBoosts[boostId] : {};
+            boosts[boostId] = {
+              iconFrames: normalizeFrameList(src.iconFrames),
+              cooldownOverlayFrames: normalizeFrameList(src.cooldownOverlayFrames),
+            };
+          }
+
+          this.config = {
+            atlas: atlasName,
+          };
+          this.boosts = boosts;
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          this.ready = false;
+          this.error = String(e);
+          this.atlasImg = null;
+          this.config = null;
+          this.boosts = null;
+        }
+      },
+      getBoost: function (boostId) {
+        if (!this.boosts || !boostId) return null;
+        return this.boosts[boostId] || null;
+      },
+    };
+
     var DronSprites = {
       ready: false,
       error: '',
@@ -1006,6 +1078,7 @@
       DecorSprites: DecorSprites,
       GroundSprites: GroundSprites,
       SupercomputerSprites: SupercomputerSprites,
+      BoostIconsSprites: BoostIconsSprites,
       DronSprites: DronSprites,
       BonusBoxSprites: BonusBoxSprites,
       BulletSprites: BulletSprites,

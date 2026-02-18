@@ -184,6 +184,9 @@
     if (opts.BulletSprites && typeof opts.BulletSprites.load === 'function') {
       await opts.BulletSprites.load().catch(function () {});
     }
+    if (opts.BoostIconsSprites && typeof opts.BoostIconsSprites.load === 'function') {
+      await opts.BoostIconsSprites.load().catch(function () {});
+    }
     await opts.FenceSprites.load().catch(function () {});
     opts.resizeCanvas();
     await opts.DecorSprites.load().catch(function () {});

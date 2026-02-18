@@ -164,11 +164,42 @@ Merge + tower defense на canvas.
 
 ## Навигация через суперкомпьютер
 
-- В правом HUD вход в таланты теперь идёт через кнопку `Суперкомпьютер` (`#supercomputerBtn`), прямой `talentsBtn` больше не используется.
-- Root-меню суперкомпьютера содержит 3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо талантов`.
+- В правом HUD вход идёт через icon-only кнопку `#supercomputerBtn`; локализованный `aria-label` и `title` берутся из ключа `supercomputerBtn`.
+- Root-меню суперкомпьютера содержит 3 tile-пункта в один ряд: `Модификации ангара`, `Модификации танков и стен`, `Древо улучшений`.
+- У tile-пунктов сохраняются прежние IDs: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
 - `Esc` в root-меню суперкомпьютера закрывает меню и снимает menu-pause (если settings уже не открыт).
-- `Esc` в дочерних окнах суперкомпьютера (`mods*` и talents) делает шаг назад в root-меню, пауза сохраняется.
+- `Esc` в дочерних окнах суперкомпьютера (`mods*` и upgrade tree) делает шаг назад в root-меню, пауза сохраняется.
 - Реализация: разметка в `index.html`, логика в `src/ui/supercomputerMenu.js` + orchestration в `game.js`, modal/a11y через `src/accessibility/a11y.js`, pause lock через `src/systems/pauseManager.js`.
+
+## Boost UI
+
+- HUD-блок `Boost` удалён; активные бусты рисуются рядом со спрайтом supercomputer в screen-space.
+- Ассеты: `assets/boost_icons.json` + `assets/boost_icons_atlas.png`.
+- JSON-схема:
+
+```json
+{
+	"atlas": "boost_icons_atlas.png",
+	"boosts": {
+		"<boostId>": {
+			"iconFrames": [{ "x": 0, "y": 0, "w": 32, "h": 32 }],
+			"cooldownOverlayFrames": [{ "x": 32, "y": 0, "w": 32, "h": 32 }]
+		}
+	}
+}
+```
+
+- Таймер под иконкой: `Math.ceil(remainingSec)`.
+- Кадр overlay: `p = clamp(1 - remainingSec/secondsTotal, 0..1)`, `idx = floor(p*(K-1))`.
+- Если `cooldownOverlayFrames` отсутствует или содержит меньше 2 валидных кадров — иконка/таймер рисуются без overlay.
+- Лимита на количество активных иконок нет: UI рисует все активные бусты.
+- Повторная активация того же `boostId` сбрасывает `remainingSec` до полной длительности, без дублирования иконок.
+
+## Глоссарий терминов
+
+- RU: `улучшение`, `Очки улучшений`, `Древо улучшений`.
+- EN: `upgrade`, `Upgrade points`, `Upgrade Tree`.
+- i18n ключи: `talentsBtn`, `supercomputerTalentsBtn`, `talentTreeTitle`, `talentPoints`, `levelModalTalent`, `talentResetAll`, `talentResetModalText`.
 
 ## Достижения и merge-прогресс
 

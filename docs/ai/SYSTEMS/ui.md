@@ -23,8 +23,10 @@
 
 ## Supercomputer menu flow
 
-- Основной вход в таланты: `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
-- Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо талантов`).
+- Основной вход в дерево улучшений: icon-only `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
+- Для icon-only `#supercomputerBtn` локализованный `aria-label`/`title` берётся из ключа `supercomputerBtn`.
+- Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо улучшений`).
+- Root-пункты оформлены как tile (`иконка сверху + текст снизу`) в один ряд с `flex-wrap`; `id` остаются прежними: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
 - Child overlays: `#modsHangarOverlay`, `#modsTankWallOverlay`, плюс существующий `#talentOverlay` как child-ветка.
 - Единый стиль кнопок supercomputer: класс `.scButton` применяется в root-меню и в релевантных action/tab кнопках child overlays (без изменения layout-контейнеров).
 - Единый контейнер supercomputer-модалок: класс `.scModal` у `#modsTankWallOverlay` и у modal-панели `#talentOverlay` (через `src/ui/supercomputerMenu.js`), чтобы размер модалки `Модификации танков и стен` соответствовал `Древу талантов`.
@@ -37,6 +39,22 @@
 - Дефолт при каждом открытии `#modsTankWallOverlay`: активна `Орудия` (`weapons`) вне зависимости от выбора в прошлом открытии.
 - Состояние вкладки не сохраняется между открытиями (без localStorage/state carry-over).
 - Tab-кнопки остаются focusable (button + `role="tab"`, `aria-selected`, `tabindex`), `Esc`/back/focus trap работают по прежним правилам supercomputer child overlay.
+
+## Boost UI возле supercomputer
+
+- HUD-окно `Boost` удалено: активные бусты отображаются рядом со спрайтом supercomputer в screen-space.
+- Источник ассетов: `assets/boost_icons.json` + `assets/boost_icons_atlas.png`; загрузчик `BoostIconsSprites` в `src/render/spriteLoaders.js`.
+- Каждый активный буст рисуется как `icon + ceil(remainingSec)` в вертикальной колонке с `gap`.
+- Overlay-кадр cooldown выбирается как `idx = floor(clamp(1 - remainingSec/secondsTotal, 0..1) * (K-1))`.
+- Если `cooldownOverlayFrames` отсутствует/невалиден (`K < 2`) — UI продолжает рисовать иконку и таймер без overlay.
+- Лимит на количество одновременно активных boost-иконок отсутствует.
+- Повторный boost того же `boostId` не создаёт второй элемент: обновляется `remainingSec` текущего.
+
+## Термины UI/i18n
+
+- RU: `Древо улучшений`, `Очки улучшений`, `Сбросить улучшения`.
+- EN: `Upgrade Tree`, `Upgrade points`, `Reset upgrades`.
+- Ключи: `talentsBtn`, `supercomputerTalentsBtn`, `talentTreeTitle`, `talentPoints`, `levelModalTalent`, `talentResetAll`, `talentResetModalText`.
 
 ### Вкладка «Стены» (минимально функциональная)
 

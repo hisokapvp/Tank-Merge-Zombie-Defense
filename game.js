@@ -160,6 +160,14 @@ const BAL = {
   decorMaxAttempts: 400,
 };
 
+const ACTIVE_ABILITY_DURATION_SEC = 6;
+const BOOST_EFFECT_DEFS = [
+  { boostId: 'speedBoost', source: 'state', key: 'boostUntil', secondsTotal: BAL.boostDurationSec },
+  { boostId: 'attackBoost', source: 'activeEffects', key: 'attackUntil', secondsTotal: ACTIVE_ABILITY_DURATION_SEC },
+  { boostId: 'defenseBoost', source: 'activeEffects', key: 'speedUntil', secondsTotal: ACTIVE_ABILITY_DURATION_SEC },
+  { boostId: 'economyBoost', source: 'activeEffects', key: 'economyUntil', secondsTotal: ACTIVE_ABILITY_DURATION_SEC },
+];
+
 const BASE_BAL = {
   cellW: 48,
   cellH: 38,
@@ -582,17 +590,6 @@ function t(key, vars = {}){
     text = text.replaceAll(`{${k}}`, String(v));
   }
   return text;
-}
-
-function talentWord(points){
-  if (getCurrentLang() === 'ru'){
-    const mod10 = points % 10;
-    const mod100 = points % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'талант';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'таланта';
-    return 'талантов';
-  }
-  return points === 1 ? 'talent' : 'talents';
 }
 
 function getTankWordKey(count){
@@ -1051,6 +1048,10 @@ function applyTranslations(){
     ui.settingsBtn.setAttribute('aria-label', t('menuSettings'));
     ui.settingsBtn.setAttribute('title', t('menuSettings'));
   }
+  if (ui.supercomputerBtn){
+    ui.supercomputerBtn.setAttribute('aria-label', t('supercomputerBtn'));
+    ui.supercomputerBtn.setAttribute('title', t('supercomputerBtn'));
+  }
   const langSwitch = document.querySelector('.langSwitch');
   if (langSwitch){
     langSwitch.setAttribute('aria-label', t('menuLanguage'));
@@ -1130,6 +1131,16 @@ const SupercomputerSprites = spriteLoaders && spriteLoaders.SupercomputerSprites
   config: null,
   async load() {},
   getAnimation() { return null; },
+};
+
+const BoostIconsSprites = spriteLoaders && spriteLoaders.BoostIconsSprites ? spriteLoaders.BoostIconsSprites : {
+  ready: false,
+  error: 'SpriteLoaders module is unavailable',
+  atlasImg: null,
+  config: null,
+  boosts: null,
+  async load() {},
+  getBoost() { return null; },
 };
 
 const DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.DronSprites : {
@@ -2704,7 +2715,6 @@ function getLevelFlowController(){
     ui,
     BAL,
     t,
-    talentWord,
     UIModals,
     a11yOpen,
     a11yClose,
@@ -3116,16 +3126,37 @@ function useActiveAbility(branch){
   playSfx('activeAbility');
 
   if (branch === 0){
-    state.activeEffects.attackUntil = now + 6;
+    activateTimedBoost('attackBoost', ACTIVE_ABILITY_DURATION_SEC);
     burst(center.x, center.y, 60, 'rgba(255,120,90,.2)');
   } else if (branch === 1){
-    state.activeEffects.speedUntil = now + 6;
+    activateTimedBoost('defenseBoost', ACTIVE_ABILITY_DURATION_SEC);
     burst(center.x, center.y, 60, 'rgba(125,255,178,.22)');
   } else if (branch === 2){
-    state.activeEffects.economyUntil = now + 6;
+    activateTimedBoost('economyBoost', ACTIVE_ABILITY_DURATION_SEC);
     burst(center.x, center.y, 60, 'rgba(255,215,125,.22)');
   }
   saveProgress();
+}
+
+function activateTimedBoost(boostId, secondsTotal){
+  const total = Number.isFinite(secondsTotal) ? Math.max(0, secondsTotal) : 0;
+  const until = nowSec() + total;
+  if (boostId === 'speedBoost') {
+    state.boostUntil = until;
+    return;
+  }
+  if (!state.activeEffects || typeof state.activeEffects !== 'object') return;
+  if (boostId === 'attackBoost') {
+    state.activeEffects.attackUntil = until;
+    return;
+  }
+  if (boostId === 'defenseBoost') {
+    state.activeEffects.speedUntil = until;
+    return;
+  }
+  if (boostId === 'economyBoost') {
+    state.activeEffects.economyUntil = until;
+  }
 }
 
 const TALENT_OPEN_ANIM_MS = 180;
@@ -5722,9 +5753,11 @@ function updateUI(){
   ui.buyCost.textContent = fmt(cost);
 
   const left = state.boostUntil - nowSec();
-  ui.boostState.textContent = left > 0
-    ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
-    : '—';
+  if (ui.boostState) {
+    ui.boostState.textContent = left > 0
+      ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
+      : '—';
+  }
 
   const Garage = window.Game && window.Game.Garage;
   const hasFree = Garage ? Garage.hasFreeCell(state) : state.cells.some(c=>!c.tank);
@@ -6665,7 +6698,7 @@ ui.achievementPopup?.addEventListener('click', (e) => {
   if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
 });
 document.getElementById('boostModalWatch')?.addEventListener('click', () => {
-  state.boostUntil = nowSec() + BAL.boostDurationSec;
+  activateTimedBoost('speedBoost', BAL.boostDurationSec);
   closeBoostModal();
 });
 document.getElementById('boostModalClose')?.addEventListener('click', () => closeBoostModal());
@@ -6745,6 +6778,7 @@ function draw(){
   drawWeather();
   drawAttackModeEveningDim();
   drawLevelUpVfx();
+  drawSupercomputerBoostIcons();
   if (DebugPanelEnabled && zombieAttackOverlayEnabled) drawZombieAttackOverlay();
 
   // If sprites failed to load, show a small hint on canvas
@@ -7037,6 +7071,108 @@ function drawSupercomputer(){
   }
 
   drawSupercomputerHpBar(sc, config && config.hpBar ? config.hpBar : null);
+}
+
+function getBoostEffectUntil(def){
+  if (!def || !def.key) return 0;
+  if (def.source === 'state') {
+    return Number.isFinite(state[def.key]) ? state[def.key] : 0;
+  }
+  if (def.source === 'activeEffects') {
+    const effects = state.activeEffects;
+    return Number.isFinite(effects && effects[def.key]) ? effects[def.key] : 0;
+  }
+  return 0;
+}
+
+function isValidBoostFrame(frame){
+  return !!(
+    frame &&
+    Number.isFinite(frame.x) &&
+    Number.isFinite(frame.y) &&
+    Number.isFinite(frame.w) && frame.w > 0 &&
+    Number.isFinite(frame.h) && frame.h > 0
+  );
+}
+
+function drawSupercomputerBoostIcons(){
+  const sc = getComputerState();
+  if (!sc) return;
+  if (!BoostIconsSprites || !BoostIconsSprites.ready || !BoostIconsSprites.atlasImg || !BoostIconsSprites.boosts) return;
+
+  const atlas = BoostIconsSprites.atlasImg;
+  const boostsConfig = BoostIconsSprites.boosts;
+  const now = nowSec();
+  const iconSize = Math.max(16, Math.round(24 * balScale));
+  const gap = Math.max(4, Math.round(6 * balScale));
+  const timerOffset = Math.max(10, Math.round(12 * balScale));
+  const stepY = iconSize + gap + timerOffset;
+  const offsetX = Math.round(52 * balScale);
+  const offsetY = Math.round(-58 * balScale);
+
+  let activeIdx = 0;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = '700 ' + Math.max(10, Math.round(11 * balScale)) + 'px Roboto, Arial, sans-serif';
+
+  for (let i = 0; i < BOOST_EFFECT_DEFS.length; i++) {
+    const def = BOOST_EFFECT_DEFS[i];
+    const until = getBoostEffectUntil(def);
+    const remainingSec = until - now;
+    if (remainingSec <= 0) continue;
+
+    const boostCfg = boostsConfig[def.boostId] || null;
+    const iconFrames = boostCfg && Array.isArray(boostCfg.iconFrames) ? boostCfg.iconFrames : null;
+    const overlayFrames = boostCfg && Array.isArray(boostCfg.cooldownOverlayFrames) ? boostCfg.cooldownOverlayFrames : null;
+    const iconFrame = iconFrames && iconFrames.length > 0 ? iconFrames[0] : null;
+    const x = sc.x + offsetX;
+    const y = sc.y + offsetY + activeIdx * stepY;
+
+    ctx.fillStyle = 'rgba(10, 8, 6, 0.62)';
+    rr(ctx, x - iconSize * 0.5, y - iconSize * 0.5, iconSize, iconSize, Math.max(4, Math.round(5 * balScale)));
+    ctx.fill();
+
+    if (isValidBoostFrame(iconFrame)) {
+      ctx.drawImage(
+        atlas,
+        iconFrame.x,
+        iconFrame.y,
+        iconFrame.w,
+        iconFrame.h,
+        x - iconSize * 0.5,
+        y - iconSize * 0.5,
+        iconSize,
+        iconSize
+      );
+    }
+
+    if (overlayFrames && overlayFrames.length >= 2 && Number.isFinite(def.secondsTotal) && def.secondsTotal > 0) {
+      const p = clamp(1 - (remainingSec / def.secondsTotal), 0, 1);
+      const overlayIndex = Math.floor(p * (overlayFrames.length - 1));
+      const overlayFrame = overlayFrames[overlayIndex];
+      if (isValidBoostFrame(overlayFrame)) {
+        ctx.drawImage(
+          atlas,
+          overlayFrame.x,
+          overlayFrame.y,
+          overlayFrame.w,
+          overlayFrame.h,
+          x - iconSize * 0.5,
+          y - iconSize * 0.5,
+          iconSize,
+          iconSize
+        );
+      }
+    }
+
+    ctx.fillStyle = 'rgba(255, 245, 224, 0.98)';
+    ctx.fillText(String(Math.ceil(remainingSec)), x, y + iconSize * 0.5 + 2);
+
+    activeIdx += 1;
+  }
+
+  ctx.restore();
 }
 
 function drawDrones(){
@@ -8609,6 +8745,7 @@ async function boot(){
       getZombieSpawnBalanceConfig,
       TankSprites,
       BulletSprites,
+      BoostIconsSprites,
       FenceSprites,
       DecorSprites,
       SupercomputerSprites,
