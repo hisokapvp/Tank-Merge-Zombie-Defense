@@ -25,6 +25,7 @@ const ui = {
   achievementPopupClaim: document.getElementById('achievementPopupClaim'),
   achievementPopupName: document.getElementById('achievementPopupName'),
   achievementPopupReward: document.getElementById('achievementPopupReward'),
+  achievementToast: document.getElementById('achievementToast'),
   settingsBtn: document.getElementById('settingsBtn'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
@@ -311,6 +312,14 @@ function createInitialState(options){
       levelReward: null,
       levelRewardTimer: 0,
       menuOpen: true,
+      toast: {
+        active: null,
+        queue: [],
+      },
+      unlockFx: {
+        autoMergeUntilMs: 0,
+        bulkBuyUntilMs: 0,
+      },
     },
     selectedHangarCellIndex: null,
     isDismantleMode: false,
@@ -509,11 +518,17 @@ const SupercomputerMenuApi = GameApi.SupercomputerMenu ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
+const ACHIEVEMENT_TOAST_DURATION_MS = 1500;
+const ACHIEVEMENT_UNLOCK_PULSE_MS = 1800;
 const MERGE_FX_GAP_MS = 80;
 let isAutoMergeBusy = false;
 let autoMergeBusyTimeout = null;
 let mergeFxQueue = [];
 let mergeFxQueueTimer = null;
+const autoMergeHudSlot = {
+  parent: ui.autoMergeBtn ? ui.autoMergeBtn.parentElement : null,
+  nextSibling: ui.autoMergeBtn ? ui.autoMergeBtn.nextElementSibling : null,
+};
 
 function setSimulationClockPaused(paused){
   const shouldPause = !!paused;
@@ -2051,21 +2066,78 @@ function bumpBuyPrice(level){
 }
 
 function ensureAchievementsState(){
-  if (AchievementsApi && AchievementsApi.ensureState) return AchievementsApi.ensureState(state);
+  if (AchievementsApi && AchievementsApi.ensureState) {
+    const achievementsState = AchievementsApi.ensureState(state);
+    if (!achievementsState) return achievementsState;
+    if (!Array.isArray(achievementsState.popupQueue)) achievementsState.popupQueue = [];
+    normalizeAchievementPopupQueueInPlace(achievementsState.popupQueue);
+    return achievementsState;
+  }
   if (!state.achievements || typeof state.achievements !== 'object') {
     state.achievements = { unlocked: {}, popupQueue: [], totalPurchased: 0, totalMerges: 0 };
   }
   if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
+  normalizeAchievementPopupQueueInPlace(state.achievements.popupQueue);
   if (!Number.isFinite(state.achievements.totalPurchased)) state.achievements.totalPurchased = 0;
   if (!Number.isFinite(state.achievements.totalMerges)) state.achievements.totalMerges = 0;
   return state.achievements;
 }
 
+function ensureAchievementUiState(){
+  if (!state.ui || typeof state.ui !== 'object') state.ui = {};
+  if (!state.ui.toast || typeof state.ui.toast !== 'object') {
+    state.ui.toast = { active: null, queue: [] };
+  }
+  if (!state.ui.unlockFx || typeof state.ui.unlockFx !== 'object') {
+    state.ui.unlockFx = { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 };
+  }
+  state.ui.unlockFx.autoMergeUntilMs = Number.isFinite(state.ui.unlockFx.autoMergeUntilMs)
+    ? Math.max(0, Math.floor(state.ui.unlockFx.autoMergeUntilMs))
+    : 0;
+  state.ui.unlockFx.bulkBuyUntilMs = Number.isFinite(state.ui.unlockFx.bulkBuyUntilMs)
+    ? Math.max(0, Math.floor(state.ui.unlockFx.bulkBuyUntilMs))
+    : 0;
+  return state.ui;
+}
+
+function normalizeAchievementQueueEvent(item){
+  if (!item) return null;
+  if (typeof item === 'string') {
+    return {
+      type: 'achievement_unlock',
+      id: item,
+      ts: Date.now(),
+    };
+  }
+  if (typeof item !== 'object') return null;
+  if (typeof item.id !== 'string' || item.id.length <= 0) return null;
+  return {
+    type: 'achievement_unlock',
+    id: item.id,
+    ts: Number.isFinite(item.ts) ? Math.max(0, Math.floor(item.ts)) : Date.now(),
+  };
+}
+
+function normalizeAchievementPopupQueueInPlace(queue){
+  if (!Array.isArray(queue)) return;
+  let writeIndex = 0;
+  for (let readIndex = 0; readIndex < queue.length; readIndex++) {
+    const event = normalizeAchievementQueueEvent(queue[readIndex]);
+    if (!event) continue;
+    queue[writeIndex++] = event;
+  }
+  queue.length = writeIndex;
+}
+
 function queueAchievementPopup(achievementId){
   const ach = ensureAchievementsState();
   if (!ach || !achievementId) return;
-  if (ach.popupQueue.indexOf(achievementId) < 0) ach.popupQueue.push(achievementId);
+  ach.popupQueue.push({
+    type: 'achievement_unlock',
+    id: achievementId,
+    ts: Date.now(),
+  });
 }
 
 function processAchievementProgress(progressType, deltaCount){
@@ -2082,7 +2154,6 @@ function processAchievementProgress(progressType, deltaCount){
     else ach.totalPurchased += count;
   }
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
-  maybeShowNextAchievementPopup();
 }
 
 function clampDevInt(value){
@@ -2094,8 +2165,101 @@ function recalculateAchievementsAndQueuePopups(){
   if (!(AchievementsApi && AchievementsApi.recalculateUnlocks)) return [];
   const unlocked = AchievementsApi.recalculateUnlocks(state) || [];
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
-  maybeShowNextAchievementPopup();
   return unlocked;
+}
+
+function shouldBlockAchievementToastByPause(){
+  const reasons = lastPauseReasons && typeof lastPauseReasons === 'object'
+    ? lastPauseReasons
+    : { menuOpen: false, tabInactive: false };
+  return !!(reasons.menuOpen || reasons.tabInactive);
+}
+
+function toAchievementToastMessage(event){
+  if (!event || event.type !== 'achievement_unlock' || typeof event.id !== 'string') return '';
+  const def = getAchievementById(event.id);
+  if (!def) return '';
+  return t('achievementToastUnlocked', { name: t(def.titleKey) });
+}
+
+function applyAchievementUnlockFx(achievementId, nowMs){
+  if (typeof achievementId !== 'string') return;
+  const uiState = ensureAchievementUiState();
+  const unlockFx = uiState.unlockFx;
+  const untilMs = Math.max(0, Math.floor(nowMs + ACHIEVEMENT_UNLOCK_PULSE_MS));
+  if (achievementId.indexOf('engineer_') === 0) {
+    unlockFx.autoMergeUntilMs = Math.max(unlockFx.autoMergeUntilMs, untilMs);
+  }
+  if (achievementId.indexOf('creator_') === 0) {
+    unlockFx.bulkBuyUntilMs = Math.max(unlockFx.bulkBuyUntilMs, untilMs);
+  }
+}
+
+function updateAchievementToastState(){
+  const ach = ensureAchievementsState();
+  const uiState = ensureAchievementUiState();
+  if (!ach || !uiState.toast) return;
+  const queue = ach.popupQueue;
+  const nowMs = Date.now();
+  const blockedByPause = shouldBlockAchievementToastByPause();
+  if (!blockedByPause && uiState.toast.active && nowMs >= uiState.toast.active.expiresAtMs) {
+    uiState.toast.active = null;
+  }
+  if (!uiState.toast.active && !blockedByPause) {
+    while (queue.length > 0) {
+      const nextEvent = normalizeAchievementQueueEvent(queue.shift());
+      if (!nextEvent) continue;
+      const message = toAchievementToastMessage(nextEvent);
+      if (!message) continue;
+      uiState.toast.active = {
+        type: nextEvent.type,
+        id: nextEvent.id,
+        message: message,
+        expiresAtMs: nowMs + ACHIEVEMENT_TOAST_DURATION_MS,
+      };
+      applyAchievementUnlockFx(nextEvent.id, nowMs);
+      break;
+    }
+  }
+  if (!ui.achievementToast) return;
+  if (uiState.toast.active && !blockedByPause) {
+    ui.achievementToast.textContent = uiState.toast.active.message || '';
+    ui.achievementToast.classList.remove('hidden');
+    ui.achievementToast.setAttribute('aria-hidden', 'false');
+  } else {
+    ui.achievementToast.classList.add('hidden');
+    ui.achievementToast.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function applyUnlockPulseState(nowMs){
+  const uiState = ensureAchievementUiState();
+  const unlockFx = uiState.unlockFx;
+  if (ui.buyBulk) {
+    const pulseBulk = Number.isFinite(unlockFx.bulkBuyUntilMs) && nowMs < unlockFx.bulkBuyUntilMs;
+    ui.buyBulk.classList.toggle('unlockPulse', pulseBulk);
+  }
+  if (ui.autoMergeBtn) {
+    const pulseAutoMerge = Number.isFinite(unlockFx.autoMergeUntilMs) && nowMs < unlockFx.autoMergeUntilMs;
+    ui.autoMergeBtn.classList.toggle('unlockPulse', pulseAutoMerge);
+  }
+}
+
+function mountAutoMergeButton(){
+  if (!ui.autoMergeBtn || !autoMergeHudSlot.parent) return;
+  if (ui.autoMergeBtn.parentElement === autoMergeHudSlot.parent) return;
+  if (autoMergeHudSlot.nextSibling && autoMergeHudSlot.nextSibling.parentElement === autoMergeHudSlot.parent) {
+    autoMergeHudSlot.parent.insertBefore(ui.autoMergeBtn, autoMergeHudSlot.nextSibling);
+  } else {
+    autoMergeHudSlot.parent.appendChild(ui.autoMergeBtn);
+  }
+}
+
+function unmountAutoMergeButton(){
+  if (!ui.autoMergeBtn) return;
+  ui.autoMergeBtn.classList.add('hidden');
+  ui.autoMergeBtn.disabled = true;
+  if (ui.autoMergeBtn.parentElement) ui.autoMergeBtn.remove();
 }
 
 function debugUnlockAchievementAndClaim(achievementId){
@@ -5229,6 +5393,7 @@ function a11yClose(modalEl){
 }
 
 function updateUI(){
+  const nowMs = Date.now();
   const level = buyTankLevel();
   const cost = buyTankCost(level);
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
@@ -5263,6 +5428,8 @@ function updateUI(){
   }
 
   refreshAutoMergeButton();
+  updateAchievementToastState();
+  applyUnlockPulseState(nowMs);
 
   if (ui.achievementsModal && !ui.achievementsModal.classList.contains('hidden')) {
     renderAchievementsList();
@@ -5277,18 +5444,17 @@ function updateUI(){
 function refreshAutoMergeButton(){
   if (!ui.autoMergeBtn) return;
   if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function') {
-    ui.autoMergeBtn.classList.add('hidden');
-    ui.autoMergeBtn.disabled = true;
+    unmountAutoMergeButton();
     return;
   }
 
   const model = AutoMergeApi.getAutoMergeButtonModel(state);
   if (!model || !model.visible) {
-    ui.autoMergeBtn.classList.add('hidden');
-    ui.autoMergeBtn.disabled = true;
+    unmountAutoMergeButton();
     return;
   }
 
+  mountAutoMergeButton();
   ui.autoMergeBtn.classList.remove('hidden');
   ui.autoMergeBtn.textContent = model.label || t('autoMerge2');
   ui.autoMergeBtn.disabled = isAutoMergeBusy || !model.enabled;
@@ -5514,21 +5680,10 @@ function closeAchievementPopup(){
   ui.achievementPopup.classList.add('hidden');
   ui.achievementPopup.setAttribute('aria-hidden', 'true');
   a11yClose(ui.achievementPopup);
-  maybeShowNextAchievementPopup();
 }
 
 function maybeShowNextAchievementPopup(){
-  const ach = ensureAchievementsState();
-  if (!ui.achievementPopup || !ach || !ach.popupQueue || !ach.popupQueue.length) return;
-  if (!ui.achievementPopup.classList.contains('hidden')) return;
-  const nextId = ach.popupQueue.shift();
-  const def = getAchievementById(nextId);
-  if (!def) return;
-  if (ui.achievementPopupName) ui.achievementPopupName.textContent = t(def.titleKey);
-  if (ui.achievementPopupReward) ui.achievementPopupReward.textContent = t('achievementReward', { reward: t(def.rewardKey) });
-  ui.achievementPopup.classList.remove('hidden');
-  ui.achievementPopup.setAttribute('aria-hidden', 'false');
-  a11yOpen(ui.achievementPopup, { initialFocus: ui.achievementPopupClaim, onClose: closeAchievementPopup });
+  return;
 }
 
 function ensureProgressUI(){

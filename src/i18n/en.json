@@ -59,6 +59,7 @@
   "achievementsBtn": "Achievements",
   "achievementsTitle": "Achievements",
   "achievementUnlockedTitle": "Achievement unlocked",
+  "achievementToastUnlocked": "Unlocked: {name}",
   "achievementClaim": "Claim",
   "achievementStatusDone": "Unlocked",
   "achievementStatusTodo": "Locked",

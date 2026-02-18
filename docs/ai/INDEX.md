@@ -11,6 +11,7 @@
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
+- Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
 - Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer) → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`

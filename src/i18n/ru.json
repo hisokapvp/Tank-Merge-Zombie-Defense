@@ -59,6 +59,7 @@
   "achievementsBtn": "Достижения",
   "achievementsTitle": "Достижения",
   "achievementUnlockedTitle": "Достижение получено",
+  "achievementToastUnlocked": "Открыто: {name}",
   "achievementClaim": "Получить",
   "achievementStatusDone": "Получено",
   "achievementStatusTodo": "Не получено",

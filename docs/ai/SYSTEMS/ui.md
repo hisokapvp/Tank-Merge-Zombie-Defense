@@ -49,6 +49,27 @@
 - Если `freeSlots < 2`, кнопка disabled и клик не выполняет покупку.
 - Перед покупкой проверяется бюджет на ровно `X` танков; частичная bulk-покупка не допускается.
 
+## Achievement unlock UX
+
+- Pipeline: `Game.Achievements.addProgress(state, progressType, delta)` возвращает `unlockedNow` (массив id) → `game.js/processAchievementProgress` делает enqueue событий в `state.achievements.popupQueue` в формате `{ type:'achievement_unlock', id, ts }`.
+- Очередь хранит только события; логика показа не выполняется в местах начисления прогресса.
+- Потребление очереди выполняется в `game.js/updateAchievementToastState`.
+- Правило consume: очередь читается только когда `pause.reasons.menuOpen === false` и `pause.reasons.tabInactive === false`.
+- Показ реализован non-modal toast (`#achievementToast`, `role="status"`, `aria-live="polite"`), без focus trap и без перехвата `Esc`.
+
+### Mapping unlock → UI
+
+| Achievement id | Toast | Highlight/pulse |
+|---|---|---|
+| `engineer_novice`, `engineer_pro`, `engineer_expert` | `achievementToastUnlocked` + `achievementEngineer*` | auto-merge button (`#autoMergeBtn`, `state.ui.unlockFx.autoMergeUntilMs`) |
+| `creator_novice`, `creator_pro`, `creator_expert` | `achievementToastUnlocked` + `achievementCreator*` | bulk-buy button (`#buyBulk`, `state.ui.unlockFx.bulkBuyUntilMs`) |
+
+### Auto-merge hard gating
+
+- Источник модели: `Game.AutoMerge.getAutoMergeButtonModel(state)`.
+- Если `model.visible === false`, кнопка auto-merge не рендерится в HUD: элемент удаляется из `.stageActions` (`game.js/unmountAutoMergeButton`), поэтому нет DOM/hitbox/слота.
+- Если `model.visible === true`, кнопка монтируется обратно (`game.js/mountAutoMergeButton`) и рендерится стандартно с `disabled = !model.enabled`.
+
 ## Debug/Dev-only правила
 
 - Большинство debug-панелей активируются только при `?debug=1`.

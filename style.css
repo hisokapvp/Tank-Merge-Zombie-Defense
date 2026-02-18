@@ -433,6 +433,32 @@ body.menu-open .stageUi .hudItem{
   display:none;
 }
 
+.achievementToast{
+  position:fixed;
+  left:50%;
+  top:calc(var(--safe-top) + 16px);
+  transform:translateX(-50%);
+  min-width:min(420px, 86vw);
+  max-width:90vw;
+  padding:10px 14px;
+  border-radius:14px;
+  border:2px solid var(--line);
+  background:var(--card);
+  color:var(--text);
+  box-shadow:var(--btnShadow);
+  font-weight:700;
+  text-align:center;
+  z-index:64;
+  pointer-events:none;
+}
+.achievementToast.hidden{
+  display:none;
+}
+
+.unlockPulse{
+  animation:unlockPulse .9s ease-in-out infinite;
+}
+
 .levelModal__backdrop{
   position:absolute;
   inset:0;
@@ -1000,6 +1026,12 @@ body.menu-open .stageUi .hudItem{
 @keyframes btnPulse{
   0%,100%{box-shadow:0 10px 0 rgba(0,0,0,.18), 0 0 0 rgba(43,219,168,.0)}
   50%{box-shadow:0 12px 0 rgba(0,0,0,.22), 0 0 18px rgba(43,219,168,.35)}
+}
+
+@keyframes unlockPulse{
+  0%{transform:translateY(0) scale(1);filter:brightness(1)}
+  50%{transform:translateY(-1px) scale(1.02);filter:brightness(1.2)}
+  100%{transform:translateY(0) scale(1);filter:brightness(1)}
 }
 
 @keyframes grain{
