@@ -39,6 +39,7 @@
       targetAliveRampSec: 3,
       speedMult: 1.5,
       damageMult: 1.5,
+      safeWaves: 3,
       eveningDimAlpha: 0.40,
       eveningTransitionSec: 1,
     },

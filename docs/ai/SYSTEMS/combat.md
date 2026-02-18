@@ -28,6 +28,16 @@
 - Тайминги death/despawn — в `corpseDespawn.js`.
 - UX level-up (open/close/reward queue) — в `levelFlow.js`.
 
+## Bullets и формула урона выстрела
+
+- Источник конфигурации выстрела: `TankSprites.getTank(level)` → `bulletId`/`bulletLevel`.
+- Детали пули: `BulletSprites.getBullet(bulletId, bulletLevel)`.
+- Если bullet-конфиг не найден (`null`) — выстрел становится no-op с warning в консоль (игра не падает).
+- Базовый урон до множителей:
+	- `shotBaseDamage = tank.stats.baseDamage + bullet.addDamage`
+- Далее к `shotBaseDamage` применяются все текущие множители (talents/mods/boost/balance).
+- Bullet rotation: `atan2(dir.y, dir.x)`; `0°` спрайта направлено вправо.
+
 ## Dron repair flow (fence)
 
 - Режимы: `standby` / `repair`; substates: `patrol`, `flyToTarget`, `repairing`, `returnToBase`.

@@ -1,0 +1,72 @@
+{
+  "atlas": "bullet_atlas_1.png",
+  "bullets": {
+    "bullet_base": {
+      "levels": [
+        {
+          "addDamage": 0,
+          "aoe": 1,
+          "sfx": "shootNormal",
+          "projectileKind": "ap",
+          "bulletSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frames": 10,
+            "frameRateFps": 20,
+            "anchor": { "x": 0.5, "y": 0.5 },
+            "scale": 1
+          },
+          "impactSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+            "frames": 9,
+            "frameRateFps": 20,
+            "scale": 1
+          }
+        },
+        {
+          "addDamage": 12,
+          "aoe": 1.08,
+          "sfx": "shootHeavy",
+          "projectileKind": "he",
+          "bulletSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frames": 10,
+            "frameRateFps": 20,
+            "anchor": { "x": 0.5, "y": 0.5 },
+            "scale": 1
+          },
+          "impactSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+            "frames": 9,
+            "frameRateFps": 20,
+            "scale": 1
+          }
+        },
+        {
+          "addDamage": 26,
+          "aoe": 1.18,
+          "sfx": "shootHeavy2",
+          "projectileKind": "tesla",
+          "bulletSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frames": 10,
+            "frameRateFps": 20,
+            "anchor": { "x": 0.5, "y": 0.5 },
+            "scale": 1
+          },
+          "impactSprite": {
+            "src": "bullet_atlas_1.png",
+            "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+            "frames": 9,
+            "frameRateFps": 20,
+            "scale": 1
+          }
+        }
+      ]
+    }
+  }
+}

@@ -124,6 +124,7 @@
       coins: state.coins,
       kills: state.kills,
       totalDamageDealtRaw: normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw),
+      zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       damagePointsSpent: normalizeDamagePointsSpent(state.damagePointsSpent),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       cells: cells,

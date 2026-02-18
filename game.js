@@ -234,6 +234,7 @@ function createInitialState(options){
     coins: 120,
     kills: 0,
     totalDamageDealtRaw: 0,
+    zombieWaveAtkMult: 1,
     damagePointsSpent: 0,
     fenceLevel: 1,
     cells: [],
@@ -1082,7 +1083,7 @@ const TankSprites = spriteLoaders && spriteLoaders.TankSprites ? spriteLoaders.T
   config: null,
   cache: new Map(),
   async load() {},
-  resolveVariant() { return null; },
+  getTank() { return null; },
   pickBody() { return null; },
   pickCannon() { return null; },
   pickAura() { return null; },
@@ -1154,6 +1155,15 @@ const BonusBoxSprites = spriteLoaders && spriteLoaders.BonusBoxSprites ? spriteL
   pickFrame() { return null; },
 };
 
+const BulletSprites = spriteLoaders && spriteLoaders.BulletSprites ? spriteLoaders.BulletSprites : {
+  ready: false,
+  error: 'SpriteLoaders module is unavailable',
+  atlasImg: null,
+  config: null,
+  async load() {},
+  getBullet() { return null; },
+};
+
 function getDronConfig(){
   return DronSprites && DronSprites.config ? DronSprites.config : null;
 }
@@ -1200,6 +1210,7 @@ const WorldEventsCfg = (GameApi.Config && GameApi.Config.WorldEvents)
         targetAliveRampSec: 2,
         speedMult: 1,
         damageMult: 1,
+        safeWaves: 3,
         eveningDimAlpha: 0.16,
         eveningTransitionSec: 4,
       },
@@ -1217,6 +1228,7 @@ const worldEventsState = {
   nextLightningAt: 0,
   rainBlend: 0,
   aliveMultCurrent: 1,
+  waveNumber: 0,
 };
 
 function resetWorldEventsRuntimeForNewGame(){
@@ -1233,6 +1245,7 @@ function resetWorldEventsRuntimeForNewGame(){
   worldEventsState.nextLightningAt = 0;
   worldEventsState.rainBlend = 0;
   worldEventsState.aliveMultCurrent = 1;
+  worldEventsState.waveNumber = 0;
 }
 
 const rainCache = {
@@ -1728,6 +1741,7 @@ function getWorldEventsAttackCfg(){
     targetAliveRampSec: Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 2,
     speedMult: Number.isFinite(cfg.speedMult) ? Math.max(0.1, cfg.speedMult) : 1,
     damageMult: Number.isFinite(cfg.damageMult) ? Math.max(0.1, cfg.damageMult) : 1,
+    safeWaves: Number.isFinite(cfg.safeWaves) ? Math.max(0, Math.floor(cfg.safeWaves)) : 3,
     eveningDimAlpha: Number.isFinite(cfg.eveningDimAlpha) ? clamp(cfg.eveningDimAlpha, 0, 1) : 0.16,
     eveningTransitionSec: Number.isFinite(cfg.eveningTransitionSec) ? clamp(cfg.eveningTransitionSec, 0.1, 30) : 4,
   };
@@ -1906,6 +1920,10 @@ function updateWorldEvents(dt){
       worldEventsState.currentAttackStartAt = startAt;
       worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
       worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
+      worldEventsState.waveNumber = Math.max(0, Math.floor(worldEventsState.waveNumber || 0)) + 1;
+      if (worldEventsState.waveNumber > attackCfg.safeWaves) {
+        state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
+      }
     }
 
     if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
@@ -2608,21 +2626,37 @@ function tankStats(level){
   const mods = getMods();
   const balDmgMul = getTankBalanceMul(level, 'attackDamageMul');
   const balAtkSpeedMul = getTankBalanceMul(level, 'attackSpeedMul');
-  const dmg = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
+  const fallbackBaseDamage = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
+  const bulletInfo = getBulletConfigForTankLevel(level);
+  const tankBaseDamage = bulletInfo.tankCfg && bulletInfo.tankCfg.stats && Number.isFinite(bulletInfo.tankCfg.stats.baseDamage)
+    ? bulletInfo.tankCfg.stats.baseDamage
+    : fallbackBaseDamage;
+  const bulletAddDamage = bulletInfo.bulletCfg && Number.isFinite(bulletInfo.bulletCfg.addDamage)
+    ? bulletInfo.bulletCfg.addDamage
+    : 0;
+  const shotBaseDamage = Math.max(0, tankBaseDamage + bulletAddDamage);
   const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
   const Combat = window.Game && window.Game.Combat;
   const range = Combat ? Combat.getShootRange({ level }, state) : (BAL.rangeBase + BAL.rangePerLevel*(level-1));
-  const prof = projectileProfile(level);
+  const prof = projectileProfile(level, bulletInfo.bulletCfg);
   // Tie AOE to profile but also allow slight growth with level.
   const aoe = clamp(prof.aoeBase + prof.aoePerLevel*(level-1), prof.aoeMin, prof.aoeMax);
+  const aoeMulFromBullet = bulletInfo.bulletCfg && Number.isFinite(bulletInfo.bulletCfg.aoe)
+    ? Math.max(0, bulletInfo.bulletCfg.aoe)
+    : 1;
   const activeAttack = nowSec() < state.activeEffects.attackUntil ? 1.5 : 1;
   const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+  const finalDamageMul = mods.dmgMul * activeAttack * balDmgMul;
   return {
-    dmg: dmg * mods.dmgMul * activeAttack * balDmgMul,
+    dmg: shotBaseDamage * finalDamageMul,
     fr: fr * mods.fireRateMul * activeSpeed * balAtkSpeedMul,
     range: range * mods.rangeMul,
-    aoe: aoe * mods.aoeMul * (activeAttack > 1 ? 1.2 : 1),
+    aoe: aoe * aoeMulFromBullet * mods.aoeMul * (activeAttack > 1 ? 1.2 : 1),
     prof,
+    shotBaseDamage,
+    bulletCfg: bulletInfo.bulletCfg,
+    bulletId: bulletInfo.bulletId,
+    bulletLevel: bulletInfo.bulletLevel,
   };
 }
 
@@ -3186,6 +3220,7 @@ function saveProgress(){
       buyPrices: state.buyPrices,
       achievements: state.achievements,
       totalDamageDealtRaw: ensureDamageProgressState(),
+      zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       drones: Array.isArray(state.drones) ? state.drones : [],
@@ -3215,6 +3250,7 @@ function restoreFullState(saved){
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
+  state.zombieWaveAtkMult = Number.isFinite(saved.zombieWaveAtkMult) ? Math.max(0, saved.zombieWaveAtkMult) : 1;
   state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
@@ -3366,6 +3402,7 @@ function applySavedProgress(data){
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(totalDamageDealtRaw);
   state.damagePointsSpent = normalizeDamagePointsSpent(data.damagePointsSpent);
   state.fenceLevel = Number.isFinite(data.fenceLevel) ? Math.max(1, Math.floor(data.fenceLevel)) : 1;
+  state.zombieWaveAtkMult = Number.isFinite(data.zombieWaveAtkMult) ? Math.max(0, data.zombieWaveAtkMult) : 1;
   return true;
 }
 
@@ -3376,12 +3413,28 @@ const PROJECTILE_KINDS = CombatProfilesApi && CombatProfilesApi.PROJECTILE_KINDS
   tesla: { kind:'tesla', speed: 900, r: 4.6, color:'#8bd3ff', glow:'rgba(139,211,255,.25)', trail:'rgba(139,211,255,.10)', aoeBase: 26, aoePerLevel: 2.8, aoeMin: 26, aoeMax: 66, chainRange: 84, chainJumps: 3, chainMul: 0.45 },
 };
 
-function projectileProfile(level){
+function getTankConfigByLevel(level){
+  if (!TankSprites || typeof TankSprites.getTank !== 'function') return null;
+  return TankSprites.getTank(level);
+}
+
+function getBulletConfigForTankLevel(level){
+  const tankCfg = getTankConfigByLevel(level);
+  if (!tankCfg) return { tankCfg: null, bulletCfg: null, bulletId: 'bullet_base', bulletLevel: 1 };
+  const bulletId = typeof tankCfg.bulletId === 'string' && tankCfg.bulletId.length ? tankCfg.bulletId : 'bullet_base';
+  const bulletLevel = Number.isFinite(tankCfg.bulletLevel) ? Math.max(1, Math.floor(tankCfg.bulletLevel)) : 1;
+  const bulletCfg = BulletSprites && typeof BulletSprites.getBullet === 'function'
+    ? BulletSprites.getBullet(bulletId, bulletLevel)
+    : null;
+  return { tankCfg, bulletCfg, bulletId, bulletLevel };
+}
+
+function projectileProfile(level, bulletCfg){
   if (CombatProfilesApi && CombatProfilesApi.projectileProfile) {
-    return CombatProfilesApi.projectileProfile(level, (lvl, key) => TankSprites?.resolveVariant?.(lvl, key));
+    return CombatProfilesApi.projectileProfile(level, bulletCfg);
   }
-  const bulletVariant = TankSprites?.resolveVariant?.(level, 'bulletVariant');
-  if (bulletVariant && PROJECTILE_KINDS[bulletVariant]) return PROJECTILE_KINDS[bulletVariant];
+  const bulletKind = bulletCfg && typeof bulletCfg.projectileKind === 'string' ? bulletCfg.projectileKind : null;
+  if (bulletKind && PROJECTILE_KINDS[bulletKind]) return PROJECTILE_KINDS[bulletKind];
   // Level bands: 1-3 AP, 4-6 HE, 7-9 Toxic, 10+ Tesla
   if (level <= 3) return {
     kind:'ap',
@@ -4418,6 +4471,17 @@ function getZombieAttackDamage(z){
   return ZOMBIE_DEFAULT_ATTACK_DAMAGE;
 }
 
+function getZombieWaveAtkMult(){
+  const value = Number.isFinite(state && state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1;
+  return Math.max(0, value);
+}
+
+function getZombieFinalAttackDamage(z, damageMul){
+  const baseDamage = getZombieAttackDamage(z);
+  const attackModeMul = Number.isFinite(damageMul) ? Math.max(0, damageMul) : 1;
+  return baseDamage * attackModeMul * getZombieWaveAtkMult();
+}
+
 function isBlockingModalOpen(){
   const ids = [
     'menuOverlay',
@@ -4768,10 +4832,10 @@ function stepZombies(dt){
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
         const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget);
         if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
-          applyFenceSegmentDamage(hitTarget.seg, getZombieAttackDamage(z) * damageMul);
+          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, damageMul));
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
         } else if (hitTarget && hitTarget.kind === 'supercomputer') {
-          applySupercomputerDamage(getZombieAttackDamage(z) * damageMul);
+          applySupercomputerDamage(getZombieFinalAttackDamage(z, damageMul));
           z.attackTargetId = 'supercomputer';
         }
         z.attackDidHit = true;
@@ -4850,9 +4914,10 @@ function stepTanks(dt){
     if (cell.orbitPhase !== undefined) cell.orbitPhase += dt * angularSpeed;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
-    const hasSpriteConfig = TankSprites?.ready && TankSprites?.config?.body && (TankSprites?.config?.cannons?.length || 0) > 0;
+    const tankCfgForLevel = TankSprites?.getTank?.(tank.level);
+    const hasSpriteConfig = TankSprites?.ready && !!(tankCfgForLevel && tankCfgForLevel.body && tankCfgForLevel.cannon);
     if (hasSpriteConfig){
-      const bodyCfg = TankSprites.config.body;
+      const bodyCfg = tankCfgForLevel.body;
       tank.bodyAnim += dt * (bodyCfg.animSpeed ?? 2.0);
     }
 
@@ -4955,6 +5020,9 @@ function resetProjectile(p){
   p.aoe = 0;
   p.level = 0;
   p.prof = null;
+  p.bulletCfg = null;
+  p.rotation = 0;
+  p.animTime = 0;
   p.effectIntensity = 1;
   p.shotId = 0;
   p.life = 0;
@@ -4986,6 +5054,12 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
   const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, N) : pickBurstTargetsFallback(baseTargets, N);
   if (!burstTargets.length) return;
 
+  const bulletCfg = stats && stats.bulletCfg ? stats.bulletCfg : null;
+  if (!bulletCfg) {
+    console.warn('[Combat] Bullet config is missing for tank level', tank.level, '(id=' + (stats?.bulletId || 'bullet_base') + ', level=' + (stats?.bulletLevel || 1) + '). Shot skipped.');
+    return;
+  }
+
   // Barrel spread perpendicular to heading
   const heading = Math.atan2(tp.y - sy, tp.x - sx);
   const perpX = -Math.sin(heading);
@@ -5015,6 +5089,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
+          bulletCfg,
           effectIntensity, shotId,
           isTankAttackingZombie,
         });
@@ -5031,6 +5106,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
+          bulletCfg,
           effectIntensity, shotId,
           isTankAttackingZombie,
         });
@@ -5078,6 +5154,7 @@ function tankOrbitState(cell, timeSec){
 }
 
 function spawnProjectile(p){
+  if (!p || !p.prof || !p.bulletCfg) return;
   const b = projectilePool ? projectilePool.acquire() : {};
   b.x = p.fromX;
   b.y = p.fromY;
@@ -5094,6 +5171,9 @@ function spawnProjectile(p){
   b.aoe = p.aoe;
   b.level = p.level;
   b.prof = p.prof;
+  b.bulletCfg = p.bulletCfg;
+  b.rotation = Math.atan2((p.toY ?? p.fromY) - p.fromY, (p.toX ?? p.fromX) - p.fromX);
+  b.animTime = 0;
   b.effectIntensity = p.effectIntensity ?? 1;
   b.shotId = p.shotId ?? 0;
   b.life = 2.0;
@@ -5133,6 +5213,8 @@ function stepProjectiles(dt){
     const dist = Math.hypot(dx,dy) || 1;
     const vx = dx/dist;
     const vy = dy/dist;
+    b.rotation = Math.atan2(vy, vx);
+    b.animTime = (b.animTime || 0) + dt;
 
     b.x += vx * b.speed * dt;
     b.y += vy * b.speed * dt;
@@ -5212,10 +5294,10 @@ function impactAt(x,y,b,opts){
     // Visual impact rings (scale by effectIntensity)
     const ei = b.effectIntensity ?? 1;
     const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
-    state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
+    state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind,bulletCfg:b.bulletCfg||null});
     burst(x, y, impactCount, b.glow);
     if (b.dmg > 80){
-      state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
+      state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow',bulletCfg:b.bulletCfg||null});
     }
   }
 }
@@ -7375,7 +7457,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
 
 // Aura: per-level auraVariant. If string — спрайт из auras; если number 1–6 — процедурная полоса; если null/false — нет ауры.
 function computeAuraBand(level){
-  const v = TankSprites?.resolveVariant?.(level, 'auraVariant');
+  const v = getTankConfigByLevel(level)?.auraBand;
   if (v != null && typeof v === 'string') return null;
   if (v != null && typeof v === 'number' && v >= 1 && v <= 6) return v;
   if (v != null && v === false) return null;
@@ -7896,47 +7978,41 @@ function drawZombieFallback(x,y,z){
 function drawProjectiles(){
   if (!state.projectiles.length) return;
 
-  if (!isFxLite()){
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    for (const b of state.projectiles){
-      if (b.isTankAttackingZombie === true) continue;
-      ctx.fillStyle = b.glow;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
   for (const b of state.projectiles){
     if (b.isTankAttackingZombie === true) continue;
-    // core
+    const bulletSprite = b.bulletCfg && b.bulletCfg.bulletSprite ? b.bulletCfg.bulletSprite : null;
+    if (BulletSprites && BulletSprites.ready && BulletSprites.atlasImg && bulletSprite) {
+      const frames = Math.max(1, Number.isFinite(bulletSprite.frames) ? Math.floor(bulletSprite.frames) : 1);
+      const fps = Math.max(0.01, Number(bulletSprite.frameRateFps || bulletSprite.animSpeed || 12));
+      const frameIndex = Math.floor((b.animTime || 0) * fps) % frames;
+      const sx = (bulletSprite.frame && Number.isFinite(bulletSprite.frame.x) ? bulletSprite.frame.x : 0) + frameIndex * bulletSprite.frame.w;
+      const sy = bulletSprite.frame && Number.isFinite(bulletSprite.frame.y) ? bulletSprite.frame.y : 0;
+      const sw = bulletSprite.frame.w;
+      const sh = bulletSprite.frame.h;
+      const anchor = bulletSprite.anchor || { x: 0.5, y: 0.5 };
+      const scale = Number.isFinite(bulletSprite.scale) ? Math.max(0.05, bulletSprite.scale) : 1;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(Number.isFinite(b.rotation) ? b.rotation : 0);
+      ctx.drawImage(
+        BulletSprites.atlasImg,
+        sx,
+        sy,
+        sw,
+        sh,
+        -sw * scale * anchor.x,
+        -sh * scale * anchor.y,
+        sw * scale,
+        sh * scale
+      );
+      ctx.restore();
+      continue;
+    }
+
     ctx.fillStyle = b.color;
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
-
-    // small shape hint by kind
-    if (b.kind === 'ap'){
-      ctx.fillStyle = 'rgba(255,255,255,.25)';
-      ctx.fillRect(b.x - 1, b.y - 4, 2, 8);
-    }
-    if (b.kind === 'he'){
-      ctx.strokeStyle = 'rgba(255,255,255,.22)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r + 2, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    if (b.kind === 'tesla'){
-      ctx.strokeStyle = 'rgba(139,211,255,.35)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(b.x - 6, b.y);
-      ctx.lineTo(b.x + 6, b.y);
-      ctx.stroke();
-    }
   }
 }
 
@@ -7959,6 +8035,35 @@ function drawImpacts(){
       ctx.lineTo(mx + (Math.random()*2-1)*8, my + (Math.random()*2-1)*8);
       ctx.lineTo(fx.tx, fx.ty);
       ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+
+    const impactSprite = fx.bulletCfg && fx.bulletCfg.impactSprite ? fx.bulletCfg.impactSprite : null;
+    if (BulletSprites && BulletSprites.ready && BulletSprites.atlasImg && impactSprite) {
+      const elapsed = Math.max(0, (fx.max || 0) - (fx.life || 0));
+      const frames = Math.max(1, Number.isFinite(impactSprite.frames) ? Math.floor(impactSprite.frames) : 1);
+      const fps = Math.max(0.01, Number(impactSprite.frameRateFps || impactSprite.animSpeed || 12));
+      const frameIndex = Math.min(frames - 1, Math.floor(elapsed * fps));
+      const sx = (impactSprite.frame && Number.isFinite(impactSprite.frame.x) ? impactSprite.frame.x : 0) + frameIndex * impactSprite.frame.w;
+      const sy = impactSprite.frame && Number.isFinite(impactSprite.frame.y) ? impactSprite.frame.y : 0;
+      const sw = impactSprite.frame.w;
+      const sh = impactSprite.frame.h;
+      const scale = Number.isFinite(impactSprite.scale) ? Math.max(0.05, impactSprite.scale) : 1;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, t));
+      ctx.drawImage(
+        BulletSprites.atlasImg,
+        sx,
+        sy,
+        sw,
+        sh,
+        fx.x - sw * scale * 0.5,
+        fx.y - sh * scale * 0.5,
+        sw * scale,
+        sh * scale
+      );
       ctx.restore();
       continue;
     }
@@ -8503,6 +8608,7 @@ async function boot(){
       ZombieSprites,
       getZombieSpawnBalanceConfig,
       TankSprites,
+      BulletSprites,
       FenceSprites,
       DecorSprites,
       SupercomputerSprites,

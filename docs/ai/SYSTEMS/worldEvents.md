@@ -46,6 +46,15 @@
 - Ключевое требование: `aliveMultCurrent` принудительно возвращается в `1`, чтобы начальный `targetAlive` не наследовался из активного `attackMode` прошлой сессии.
 - Также обнуляются активные окна attack/weather (`attackEndAt`, `weatherUntil`, `forceAttackActive`, blends).
 
+## Wave anti-exploit
+
+- Конфиг: `src/config/worldEvents.js -> attackMode.safeWaves` (default `3`).
+- Runtime считает волны через `worldEventsState.waveNumber` (инкремент на старте окна attack wave).
+- Правило роста:
+  - если `waveNumber > safeWaves`, то `state.zombieWaveAtkMult *= 1.05`.
+- Применение в уроне зомби: множитель `zombieWaveAtkMult` используется последним, после `attackMode.damageMult` и прочих вычислений.
+- На `New Game` reset множитель сбрасывается в `1.0`.
+
 ## Evening dim
 
 - Параметр: `attackMode.eveningDimAlpha` (`0..1`, по умолчанию `0.16`).
@@ -64,6 +73,7 @@ attackMode: {
   targetAliveRampSec: 2,
   speedMult: 1.2,
   damageMult: 1.15,
+  safeWaves: 3,
   eveningDimAlpha: 0.16,
 }
 ```

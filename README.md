@@ -14,6 +14,87 @@ Merge + tower defense на canvas.
 - Runtime pipeline: `src/render/spriteLoaders.js`, `src/render/groundLayer.js`, `game.js` (`initDecors`)
 - Подробные правила: `docs/map-generation.md`
 
+## Формат `assets/tanks.json` (tank_lvlN)
+
+- Конфиг теперь плоский: top-level ключи `tank_lvl1` … `tank_lvl60`.
+- Для каждого уровня обязательны поля: `stats`, `body`, `cannon`.
+- `stats`: `moveSpeed`, `attackSpeed`, `baseDamage`.
+- `body` / `cannon`: `src`, `frame`, `frames`, `anchor`, `scale`, `animSpeed` (и для пушки `fireFrame`, `muzzle`, `recoil`).
+- Опционально: `aura`, `bulletId` (default `bullet_base`), `bulletLevel` (default `1`).
+- Используется только прямое чтение `tank_lvlN` (без fallback-наследования по предыдущим уровням).
+
+Пример `tank_lvl1`:
+
+```json
+{
+	"tank_lvl1": {
+		"stats": { "moveSpeed": 1, "attackSpeed": 1, "baseDamage": 20 },
+		"body": {
+			"src": "tanks/body.png",
+			"frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+			"frames": 2,
+			"animSpeed": 2,
+			"anchor": { "x": 0.5, "y": 0.6 },
+			"scale": 1
+		},
+		"cannon": {
+			"src": "tanks/cannon_lvl1_desert.png",
+			"frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+			"frames": 8,
+			"animSpeed": 10,
+			"fireFrame": 2,
+			"anchor": { "x": 0.5, "y": 0.7 },
+			"scale": 1,
+			"muzzle": { "x": 28, "y": -2 },
+			"recoil": 4
+		},
+		"bulletId": "bullet_base",
+		"bulletLevel": 1
+	}
+}
+```
+
+## Формат `assets/bullet.json`
+
+- Конфиг пуль: `bullets.{bulletId}.levels[]`.
+- Каждый уровень содержит: `bulletSprite`, `impactSprite`, `addDamage`, `aoe`, `sfx`.
+- `bulletSprite.anchor` применяется при рендере снаряда.
+- Для impact anchor из конфига игнорируется: impact всегда рисуется по центру точки попадания.
+- Все bullet/impact кадры берутся только из `assets/bullet_atlas.png`.
+
+Пример:
+
+```json
+{
+	"atlas": "bullet_atlas.png",
+	"bullets": {
+		"bullet_base": {
+			"levels": [
+				{
+					"addDamage": 0,
+					"aoe": 1,
+					"bulletSprite": {
+						"src": "bullet_atlas.png",
+						"frame": { "x": 0, "y": 0, "w": 32, "h": 32 },
+						"frames": 4,
+						"frameRateFps": 18,
+						"anchor": { "x": 0.5, "y": 0.5 },
+						"scale": 0.8
+					},
+					"impactSprite": {
+						"src": "bullet_atlas.png",
+						"frame": { "x": 0, "y": 32, "w": 32, "h": 32 },
+						"frames": 6,
+						"frameRateFps": 24,
+						"scale": 1.6
+					}
+				}
+			]
+		}
+	}
+}
+```
+
 ## Правила генерации карты
 
 - **Stamps** размещаются поверх ground tiles, без overlap между stamp-спрайтами.
@@ -65,6 +146,14 @@ Merge + tower defense на canvas.
 - При `attackMode=false`: `aliveMultCurrent` плавно возвращается к `1`.
 - Скорость задаётся `targetAliveRampSec`; если `targetAliveRampSec <= 0`, переключение мгновенное.
 
+## Wave scaling anti-exploit
+
+- Файл настройки: `src/config/worldEvents.js` (`attackMode.safeWaves`).
+- `safeWaves` по умолчанию: `3`.
+- Начиная с wave `safeWaves + 1`, при старте каждой новой волны: `zombieWaveAtkMult *= 1.05`.
+- В формуле урона зомби `zombieWaveAtkMult` применяется последним множителем.
+- При `New Game`/reset `zombieWaveAtkMult` сбрасывается в `1.0`.
+
 ## Bulk-buy танков (динамический X)
 
 - Гейтинг bulk-buy идёт по `creator_*`: `none` → `buy2` → `buy5` → `buyMax`.
@@ -89,6 +178,7 @@ Merge + tower defense на canvas.
 ## New Game reset и стартовые таланты
 
 - Кнопка **Новая игра** (`menuNew`) делает reset с причиной `reason: 'new_game'` и выставляет **ровно** `player.talentPoints = 1`.
+- В этом же reset сбрасывается anti-exploit множитель волн: `zombieWaveAtkMult = 1.0`.
 - Выдача делается присваиванием (не инкрементом), поэтому повторные reset не накапливают очки.
 
 Сценарии и ожидаемое значение `talentPoints`:

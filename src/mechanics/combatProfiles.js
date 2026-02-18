@@ -8,9 +8,9 @@
     tesla: { kind:'tesla', speed: 900, r: 4.6, color:'#8bd3ff', glow:'rgba(139,211,255,.25)', trail:'rgba(139,211,255,.10)', aoeBase: 26, aoePerLevel: 2.8, aoeMin: 26, aoeMax: 66, chainRange: 84, chainJumps: 3, chainMul: 0.45 },
   };
 
-  function projectileProfile(level, resolveVariant) {
-    var bulletVariant = typeof resolveVariant === 'function' ? resolveVariant(level, 'bulletVariant') : null;
-    if (bulletVariant && PROJECTILE_KINDS[bulletVariant]) return PROJECTILE_KINDS[bulletVariant];
+  function projectileProfile(level, bulletCfg) {
+    var bulletKind = bulletCfg && typeof bulletCfg.projectileKind === 'string' ? bulletCfg.projectileKind : null;
+    if (bulletKind && PROJECTILE_KINDS[bulletKind]) return PROJECTILE_KINDS[bulletKind];
 
     if (level <= 3) return PROJECTILE_KINDS.ap;
     if (level <= 6) return PROJECTILE_KINDS.he;

@@ -89,6 +89,46 @@
       return ids;
     }
 
+    function parseTankLevelKey(key) {
+      if (typeof key !== 'string') return null;
+      var m = /^tank_lvl(\d+)$/.exec(key);
+      if (!m) return null;
+      var lvl = Number(m[1]);
+      if (!Number.isFinite(lvl)) return null;
+      return Math.max(1, Math.floor(lvl));
+    }
+
+    function normalizeSpriteBlock(raw) {
+      if (!raw || typeof raw !== 'object' || !raw.src) return null;
+      var frame = raw.frame && typeof raw.frame === 'object' ? raw.frame : {};
+      return {
+        src: raw.src,
+        frame: {
+          x: Number.isFinite(frame.x) ? frame.x : 0,
+          y: Number.isFinite(frame.y) ? frame.y : 0,
+          w: toPositiveNumber(frame.w, 64),
+          h: toPositiveNumber(frame.h, 64),
+        },
+        frames: Math.max(1, Math.floor(toPositiveNumber(raw.frames, 1))),
+        animSpeed: toPositiveNumber(raw.animSpeed, toPositiveNumber(raw.frameRateFps, 10)),
+        frameRateFps: toPositiveNumber(raw.frameRateFps, toPositiveNumber(raw.animSpeed, 10)),
+        anchor: {
+          x: clamp01(raw.anchor && raw.anchor.x, 0.5),
+          y: clamp01(raw.anchor && raw.anchor.y, 0.5),
+        },
+        scale: toPositiveNumber(raw.scale, 1),
+        rotation: Number.isFinite(raw.rotation) ? raw.rotation : 0,
+        muzzle: raw.muzzle && typeof raw.muzzle === 'object'
+          ? {
+              x: Number.isFinite(raw.muzzle.x) ? raw.muzzle.x : 28,
+              y: Number.isFinite(raw.muzzle.y) ? raw.muzzle.y : -2,
+            }
+          : { x: 28, y: -2 },
+        recoil: Number.isFinite(raw.recoil) ? raw.recoil : 0,
+        fireFrame: Number.isFinite(raw.fireFrame) ? Math.max(0, Math.floor(raw.fireFrame)) : 0,
+      };
+    }
+
     var ZombieSprites = {
       ready: false,
       error: '',
@@ -222,60 +262,130 @@
       error: '',
       config: null,
       cache: new Map(),
+      warnedMissingLevels: new Set(),
+      warnedClampLevels: new Set(),
+      maxLevel: 0,
       load: async function () {
         try {
           var res = await fetch('assets/tanks.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
-          var cfg = await res.json();
-          this.config = cfg;
+          var rawCfg = await res.json();
 
+          var keys = Object.keys(rawCfg || {});
           var srcs = new Set();
-          if (cfg && cfg.body && cfg.body.src) srcs.add('assets/' + cfg.body.src);
-          var bodyKeys = Object.keys((cfg && cfg.bodies) || {});
-          for (var i = 0; i < bodyKeys.length; i++) {
-            var b = cfg.bodies[bodyKeys[i]];
-            if (b && b.src) srcs.add('assets/' + b.src);
-          }
-          var cannons = (cfg && cfg.cannons) || [];
-          for (var j = 0; j < cannons.length; j++) {
-            var cannon = cannons[j];
-            if (cannon && cannon.src) srcs.add('assets/' + cannon.src);
-          }
-          var auraKeys = Object.keys((cfg && cfg.auras) || {});
-          for (var k = 0; k < auraKeys.length; k++) {
-            var a = cfg.auras[auraKeys[k]];
-            if (a && typeof a === 'object' && a.src) srcs.add('assets/' + a.src);
+          var normalized = {
+            _readme: rawCfg && rawCfg._readme ? rawCfg._readme : '',
+            tankScale: Number.isFinite(rawCfg && rawCfg.tankScale) ? rawCfg.tankScale : 1,
+          };
+          var maxLevel = 0;
+          var levelsFound = 0;
+          for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            var lvl = parseTankLevelKey(key);
+            if (lvl == null) continue;
+            var rawTank = rawCfg[key];
+            if (!rawTank || typeof rawTank !== 'object') {
+              throw new Error('tank_lvl' + lvl + ': expected object');
+            }
+            if (!rawTank.stats || typeof rawTank.stats !== 'object') {
+              throw new Error('tank_lvl' + lvl + ': missing stats');
+            }
+            if (!rawTank.body || typeof rawTank.body !== 'object') {
+              throw new Error('tank_lvl' + lvl + ': missing body');
+            }
+            if (!rawTank.cannon || typeof rawTank.cannon !== 'object') {
+              throw new Error('tank_lvl' + lvl + ': missing cannon');
+            }
+
+            var bodyCfg = normalizeSpriteBlock(rawTank.body);
+            if (!bodyCfg) throw new Error('tank_lvl' + lvl + ': invalid body.src/frame');
+            var cannonCfg = normalizeSpriteBlock(rawTank.cannon);
+            if (!cannonCfg) throw new Error('tank_lvl' + lvl + ': invalid cannon.src/frame');
+            var auraCfg = rawTank.aura ? normalizeSpriteBlock(rawTank.aura) : null;
+            if (rawTank.aura && !auraCfg) throw new Error('tank_lvl' + lvl + ': invalid aura.src/frame');
+
+            var stats = rawTank.stats;
+            var moveSpeed = Number(stats.moveSpeed);
+            var attackSpeed = Number(stats.attackSpeed);
+            var baseDamage = Number(stats.baseDamage);
+            if (!Number.isFinite(moveSpeed) || moveSpeed <= 0) throw new Error('tank_lvl' + lvl + ': invalid stats.moveSpeed');
+            if (!Number.isFinite(attackSpeed) || attackSpeed <= 0) throw new Error('tank_lvl' + lvl + ': invalid stats.attackSpeed');
+            if (!Number.isFinite(baseDamage) || baseDamage < 0) throw new Error('tank_lvl' + lvl + ': invalid stats.baseDamage');
+
+            var tankCfg = {
+              stats: {
+                moveSpeed: moveSpeed,
+                attackSpeed: attackSpeed,
+                baseDamage: baseDamage,
+              },
+              body: bodyCfg,
+              cannon: cannonCfg,
+              aura: auraCfg,
+              bulletId: typeof rawTank.bulletId === 'string' && rawTank.bulletId.length ? rawTank.bulletId : 'bullet_base',
+              bulletLevel: Number.isFinite(rawTank.bulletLevel) ? Math.max(1, Math.floor(rawTank.bulletLevel)) : 1,
+            };
+            normalized[key] = tankCfg;
+
+            srcs.add('assets/' + bodyCfg.src);
+            srcs.add('assets/' + cannonCfg.src);
+            if (auraCfg && auraCfg.src) srcs.add('assets/' + auraCfg.src);
+
+            maxLevel = Math.max(maxLevel, lvl);
+            levelsFound++;
           }
 
+          if (!levelsFound) {
+            throw new Error('tanks.json: expected keys tank_lvl1..tank_lvlN');
+          }
+
+          this.cache.clear();
           for (var s of srcs) {
             var img = await loadImage(s);
             this.cache.set(s, img);
           }
 
+          this.config = normalized;
+          this.maxLevel = maxLevel;
+          this.warnedMissingLevels.clear();
+          this.warnedClampLevels.clear();
           this.ready = true;
           this.error = '';
         } catch (e) {
           this.ready = false;
           this.error = String(e);
           this.config = null;
+          this.maxLevel = 0;
+          this.warnedMissingLevels.clear();
+          this.warnedClampLevels.clear();
           this.cache.clear();
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[TankSprites] load failed:', this.error);
+          }
         }
       },
-      resolveVariant: function (level, key) {
-        var levels = this.config && this.config.levels;
-        if (!levels || !Array.isArray(levels)) return null;
-        var lvl = Math.max(1, Math.min(60, Math.floor(level)));
-        for (var l = lvl; l >= 1; l--) {
-          var entry = levels[l - 1];
-          if (entry && entry[key] != null) return entry[key];
+      getTank: function (level) {
+        if (!this.ready || !this.config) return null;
+        var lvl = Math.max(1, Math.floor(Number(level) || 1));
+        var maxLevel = Math.max(1, this.maxLevel || 1);
+        if (lvl > maxLevel) {
+          if (!this.warnedClampLevels.has(lvl) && typeof console !== 'undefined' && console.warn) {
+            this.warnedClampLevels.add(lvl);
+            console.warn('[TankSprites] Requested level', lvl, 'is above max available', maxLevel, '- clamping to', maxLevel);
+          }
+          lvl = maxLevel;
         }
-        return null;
+        var key = 'tank_lvl' + lvl;
+        var tankCfg = this.config[key] || null;
+        if (!tankCfg && !this.warnedMissingLevels.has(lvl) && typeof console !== 'undefined' && console.error) {
+          this.warnedMissingLevels.add(lvl);
+          console.error('[TankSprites] Missing config for', key);
+        }
+        return tankCfg;
       },
       pickBody: function (level) {
-        if (!this.ready || !(this.config && this.config.body && this.config.body.src)) return null;
-        var bodyVariant = level != null ? this.resolveVariant(level, 'bodyVariant') : null;
-        var bodies = this.config && this.config.bodies;
-        var cfg = (bodies && bodyVariant && bodies[bodyVariant]) ? bodies[bodyVariant] : this.config.body;
+        var tankCfg = this.getTank(level);
+        if (!tankCfg || !tankCfg.body) return null;
+        var cfg = tankCfg.body;
         if (!cfg || !cfg.src) return null;
         var full = 'assets/' + cfg.src;
         var img = this.cache.get(full);
@@ -283,37 +393,107 @@
         return { img: img, cfg: cfg };
       },
       pickCannon: function (level) {
-        if (!this.ready || !(this.config && this.config.cannons && this.config.cannons.length)) return null;
-        var cannonVariant = level != null ? this.resolveVariant(level, 'cannonVariant') : null;
-        var cannons = this.config.cannons;
-        var chosen = null;
-        if (cannonVariant) {
-          chosen = cannons.find(function (c) { return c.id === cannonVariant; });
-          if (!chosen && typeof console !== 'undefined' && console.warn) console.warn('TankSprites: unknown cannonVariant', cannonVariant);
-        }
-        if (!chosen) {
-          var sorted = cannons.slice().sort(function (a, b) { return a.minLevel - b.minLevel; });
-          for (var i = 0; i < sorted.length; i++) {
-            if (sorted[i].minLevel <= level) chosen = sorted[i];
-          }
-        }
-        if (!chosen || !chosen.src) return null;
-        var full = 'assets/' + chosen.src;
+        var tankCfg = this.getTank(level);
+        if (!tankCfg || !tankCfg.cannon) return null;
+        var cfg = tankCfg.cannon;
+        if (!cfg.src) return null;
+        var full = 'assets/' + cfg.src;
         var img = this.cache.get(full);
         if (!img) return null;
-        return { img: img, cfg: chosen };
+        return { img: img, cfg: cfg };
       },
       pickAura: function (level) {
-        if (!this.ready) return null;
-        var auraVariant = level != null ? this.resolveVariant(level, 'auraVariant') : null;
-        if (auraVariant == null || typeof auraVariant !== 'string') return null;
-        var auras = this.config && this.config.auras;
-        var cfg = auras ? auras[auraVariant] : null;
+        var tankCfg = this.getTank(level);
+        if (!tankCfg || !tankCfg.aura) return null;
+        var cfg = tankCfg.aura;
         if (!cfg || !cfg.src) return null;
         var full = 'assets/' + cfg.src;
         var img = this.cache.get(full);
         if (!img) return null;
         return { img: img, cfg: cfg };
+      },
+    };
+
+    var BulletSprites = {
+      ready: false,
+      error: '',
+      atlasImg: null,
+      config: null,
+      _warnedMissing: new Set(),
+      load: async function () {
+        try {
+          var res = await fetch('assets/bullet.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+          var atlasName = (data && data.atlas) ? data.atlas : 'bullet_atlas.png';
+          var atlasPath = 'assets/' + atlasName;
+          var img = await loadImage(atlasPath);
+
+          var bulletsRaw = data && data.bullets && typeof data.bullets === 'object' ? data.bullets : {};
+          var normalizedBullets = {};
+          var ids = Object.keys(bulletsRaw);
+          for (var i = 0; i < ids.length; i++) {
+            var bulletId = ids[i];
+            var bulletEntry = bulletsRaw[bulletId];
+            if (!bulletEntry || typeof bulletEntry !== 'object') continue;
+            var levels = Array.isArray(bulletEntry.levels) ? bulletEntry.levels : [];
+            var normalizedLevels = [];
+            for (var li = 0; li < levels.length; li++) {
+              var levelCfg = levels[li] || {};
+              var bulletSprite = normalizeSpriteBlock(levelCfg.bulletSprite);
+              var impactSprite = normalizeSpriteBlock(levelCfg.impactSprite);
+              if (!bulletSprite || !impactSprite) continue;
+              normalizedLevels.push({
+                bulletSprite: bulletSprite,
+                impactSprite: impactSprite,
+                addDamage: Number.isFinite(levelCfg.addDamage) ? levelCfg.addDamage : 0,
+                aoe: Number.isFinite(levelCfg.aoe) ? Math.max(0, levelCfg.aoe) : 1,
+                sfx: typeof levelCfg.sfx === 'string' ? levelCfg.sfx : null,
+                projectileKind: typeof levelCfg.projectileKind === 'string' ? levelCfg.projectileKind : 'ap',
+              });
+            }
+            normalizedBullets[bulletId] = { levels: normalizedLevels };
+          }
+
+          this.config = {
+            atlas: atlasName,
+            bullets: normalizedBullets,
+          };
+          this.atlasImg = img;
+          this.ready = true;
+          this.error = '';
+          this._warnedMissing.clear();
+          if (!normalizedBullets.bullet_base || !Array.isArray(normalizedBullets.bullet_base.levels) || !normalizedBullets.bullet_base.levels.length) {
+            if (typeof console !== 'undefined' && console.warn) {
+              console.warn('[BulletSprites] bullet_base is missing or has empty levels. Shots will be no-op.');
+            }
+          }
+        } catch (e) {
+          this.ready = false;
+          this.error = String(e);
+          this.atlasImg = null;
+          this.config = null;
+          this._warnedMissing.clear();
+          if (typeof console !== 'undefined' && console.error) {
+            console.error('[BulletSprites] load failed:', this.error);
+          }
+        }
+      },
+      getBullet: function (bulletId, bulletLevel) {
+        if (!this.ready || !this.config || !this.config.bullets) return null;
+        var id = typeof bulletId === 'string' && bulletId.length ? bulletId : 'bullet_base';
+        var entry = this.config.bullets[id];
+        var levels = entry && Array.isArray(entry.levels) ? entry.levels : null;
+        if (!levels || !levels.length) {
+          if (!this._warnedMissing.has(id) && typeof console !== 'undefined' && console.warn) {
+            this._warnedMissing.add(id);
+            console.warn('[BulletSprites] Missing bullet config for', id, '- returning null');
+          }
+          return null;
+        }
+        var lvl = Number.isFinite(bulletLevel) ? Math.max(1, Math.floor(bulletLevel)) : 1;
+        var idx = Math.min(levels.length - 1, lvl - 1);
+        return levels[idx] || null;
       },
     };
 
@@ -828,6 +1008,7 @@
       SupercomputerSprites: SupercomputerSprites,
       DronSprites: DronSprites,
       BonusBoxSprites: BonusBoxSprites,
+      BulletSprites: BulletSprites,
     };
   }
 

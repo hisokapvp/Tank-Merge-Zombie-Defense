@@ -8,12 +8,38 @@
 
 ## Что править
 
-- Танки: `bodies`/`cannons`/`levels` в `tanks.json`.
+- Танки: top-level `tank_lvl1..tank_lvl60` в `tanks.json` (без `bodies/cannons/levels`).
+- Пули: `assets/bullet.json` + общий атлас `assets/bullet_atlas.png`.
 - Зомби: `types`, `deathCommon`, `spawn` в `zombies.json`.
 - Окружение: `fence.json`, `decor.json`.
 - Земля/подложка: `ground.json`.
 - Supercomputer: `supercomputer.json` (`animations`, `glitch`, `stats`, `offsetY`).
 - BonusBox/crate: `bonusbox.json` (`atlas`, `frames[]`, `animations.drop/idle/hover/press`).
+
+### Tanks (`assets/tanks.json`)
+
+- Ключи уровней: `tank_lvlN` (например `tank_lvl1`, `tank_lvl60`).
+- Каждый `tank_lvlN` содержит минимум:
+	- `stats: { moveSpeed, attackSpeed, baseDamage }`
+	- `body: { src, frame, frames, anchor, scale, animSpeed/frameRateFps }`
+	- `cannon: { src, frame, frames, anchor, scale, animSpeed/frameRateFps, fireFrame, muzzle, recoil }`
+- Опционально:
+	- `aura` (та же clip-схема)
+	- `bulletId` (default `bullet_base`)
+	- `bulletLevel` (default `1`)
+- Runtime: `TankSprites.getTank(level)` + `pickBody/pickCannon/pickAura`; fallback по прошлым уровням не используется.
+- Если запрошен уровень выше максимального в JSON — runtime clamp до max и пишет warning один раз.
+
+### Bullets (`assets/bullet.json`)
+
+- Корень: `atlas` + `bullets`.
+- `bullets[bulletId].levels[]` — уровни с параметрами:
+	- `bulletSprite`, `impactSprite` (clip-конфиги)
+	- `addDamage`, `aoe`, `sfx`
+- Рендер-правила:
+	- bullet и impact кадры берутся только из `assets/bullet_atlas.png`
+	- impact всегда рисуется по центру точки попадания (anchor из конфига impact игнорируется)
+- Runtime: `BulletSprites.getBullet(bulletId, bulletLevel)`; при отсутствии `bullet_base`/пустых levels игра не падает, выстрел становится no-op с warning.
 
 ### Supercomputer (`assets/supercomputer.json`)
 
