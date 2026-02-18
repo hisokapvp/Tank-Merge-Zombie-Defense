@@ -8,7 +8,7 @@
 ## Куда идти по задаче
 
 - Рендер/Canvas/FPS → `docs/ai/SYSTEMS/render.md`
-- Combat FX policy (`tank -> zombie`: без shoot/hit VFX/SFX, weather SFX не затрагивается) → `docs/ai/SYSTEMS/render.md`
+- Combat FX policy (`tank -> zombie`: включены projectile/impact VFX и shoot SFX; weather SFX не затрагивается) → `docs/ai/SYSTEMS/render.md`
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`

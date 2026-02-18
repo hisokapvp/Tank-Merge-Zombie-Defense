@@ -1,5 +1,5 @@
 {
-  "atlas": "bullet_atlas_1.png",
+  "atlas": "bullet_atlas.png",
   "bullets": {
     "bullet_base": {
       "levels": [
@@ -9,19 +9,19 @@
           "sfx": "shootNormal",
           "projectileKind": "ap",
           "bulletSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
             "frames": 10,
             "frameRateFps": 20,
             "anchor": { "x": 0.5, "y": 0.5 },
-            "scale": 1
+            "scale": 0.2
           },
           "impactSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
             "frames": 9,
             "frameRateFps": 20,
-            "scale": 1
+            "scale": 0.5
           }
         },
         {
@@ -30,7 +30,7 @@
           "sfx": "shootHeavy",
           "projectileKind": "he",
           "bulletSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
             "frames": 10,
             "frameRateFps": 20,
@@ -38,7 +38,7 @@
             "scale": 1
           },
           "impactSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
             "frames": 9,
             "frameRateFps": 20,
@@ -51,7 +51,7 @@
           "sfx": "shootHeavy2",
           "projectileKind": "tesla",
           "bulletSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
             "frames": 10,
             "frameRateFps": 20,
@@ -59,7 +59,7 @@
             "scale": 1
           },
           "impactSprite": {
-            "src": "bullet_atlas_1.png",
+            "src": "bullet_atlas.png",
             "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
             "frames": 9,
             "frameRateFps": 20,

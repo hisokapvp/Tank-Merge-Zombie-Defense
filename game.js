@@ -5038,7 +5038,7 @@ function releaseProjectile(p){
 }
 
 function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
-  const isTankAttackingZombie = true;
+  const isTankAttackingZombie = false;
   const powerTier = tank.powerTier ?? computePowerTier(getComputerLevel());
   const effectIntensity = 1 + powerTier * 0.25;
   const baseTargets = Array.isArray(targets) && targets.length ? targets : (target ? [target] : []);
