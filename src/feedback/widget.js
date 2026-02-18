@@ -1,5 +1,5 @@
 /**
- * Feedback Widget — floating button + localStorage persistence.
+ * Feedback Widget — programmatic modal + localStorage persistence.
  */
 (function (global) {
   'use strict';
@@ -11,7 +11,8 @@
   var dirty = false;
   var flushTimer = null;
   var modalEl = null;
-  var buttonEl = null;
+  var initialized = false;
+  var actionsBound = false;
 
   function nowIso() {
     return new Date().toISOString();
@@ -20,6 +21,12 @@
   function safeParse(raw, fb) {
     try { return raw ? JSON.parse(raw) : fb; }
     catch (_) { return fb; }
+  }
+
+  function t(key, vars) {
+    var i18n = global.Game && global.Game.I18n;
+    if (i18n && typeof i18n.t === 'function') return i18n.t(key, vars || {});
+    return key;
   }
 
   function load() {
@@ -98,11 +105,6 @@
     var style = global.document.createElement('style');
     style.id = 'feedbackWidgetStyles';
     style.textContent =
-      '.feedbackBtn{' +
-      'position:fixed;right:16px;bottom:16px;z-index:9999;' +
-      'background:#ffb872;color:#1b1008;border:none;border-radius:999px;' +
-      'padding:10px 14px;font-weight:700;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.25);' +
-      '}' +
       '.feedbackModal{' +
       'position:fixed;inset:0;display:none;align-items:center;justify-content:center;' +
       'background:rgba(6,10,18,.55);z-index:9999;' +
@@ -132,62 +134,98 @@
   }
 
   function ensureModal() {
-    if (!global.document) return null;
+    if (!global.document || !global.document.body) return null;
     if (modalEl) return modalEl;
+
     modalEl = global.document.createElement('div');
     modalEl.className = 'feedbackModal';
     modalEl.setAttribute('role', 'dialog');
     modalEl.setAttribute('aria-modal', 'true');
+    modalEl.setAttribute('aria-labelledby', 'feedbackTitle');
     modalEl.innerHTML =
       '<div class="feedbackPanel">' +
-        '<h3>Feedback</h3>' +
-        '<textarea id="feedbackMessage" placeholder="Tell us what happened..."></textarea>' +
+        '<h3 id="feedbackTitle"></h3>' +
+        '<textarea id="feedbackMessage"></textarea>' +
         '<div class="feedbackRow">' +
-          '<label for="feedbackCategory">Category</label>' +
+          '<label for="feedbackCategory" id="feedbackCategoryLabel"></label>' +
           '<select id="feedbackCategory">' +
-            '<option value="general">General</option>' +
-            '<option value="bug">Bug</option>' +
-            '<option value="balance">Balance</option>' +
-            '<option value="ui">UI</option>' +
+            '<option value="general" id="feedbackCategoryGeneral"></option>' +
+            '<option value="bug" id="feedbackCategoryBug"></option>' +
+            '<option value="balance" id="feedbackCategoryBalance"></option>' +
+            '<option value="ui" id="feedbackCategoryUi"></option>' +
           '</select>' +
-          '<label for="feedbackRating">Rating</label>' +
+          '<label for="feedbackRating" id="feedbackRatingLabel"></label>' +
           '<input id="feedbackRating" type="number" min="1" max="5" value="5" style="width:60px" />' +
         '</div>' +
         '<div class="feedbackActions">' +
-          '<button type="button" class="secondary" id="feedbackCancel">Cancel</button>' +
-          '<button type="button" id="feedbackSubmit">Send</button>' +
+          '<button type="button" class="secondary" id="feedbackCancel"></button>' +
+          '<button type="button" id="feedbackSubmit"></button>' +
         '</div>' +
         '<div id="feedbackStatus" style="margin-top:8px;font-size:12px;color:#9fb3d9"></div>' +
       '</div>';
+
+    global.document.body.appendChild(modalEl);
+    bindModalActions();
+    refreshTexts();
+    return modalEl;
+  }
+
+  function bindModalActions() {
+    if (!modalEl || actionsBound) return;
 
     modalEl.addEventListener('click', function (e) {
       if (e.target === modalEl) hideModal();
     });
 
-    global.document.body.appendChild(modalEl);
-    bindModalActions(modalEl);
-    return modalEl;
-  }
-
-  function bindModalActions(modal) {
-    var cancelBtn = modal.querySelector('#feedbackCancel');
-    var submitBtn = modal.querySelector('#feedbackSubmit');
+    var cancelBtn = modalEl.querySelector('#feedbackCancel');
+    var submitBtn = modalEl.querySelector('#feedbackSubmit');
     if (cancelBtn) cancelBtn.addEventListener('click', function () { hideModal(); });
-    if (submitBtn) submitBtn.addEventListener('click', function () { handleSubmit(modal); });
+    if (submitBtn) submitBtn.addEventListener('click', function () { handleSubmit(); });
+
+    actionsBound = true;
   }
 
-  function handleSubmit(modal) {
-    var msgEl = modal.querySelector('#feedbackMessage');
-    var catEl = modal.querySelector('#feedbackCategory');
-    var ratingEl = modal.querySelector('#feedbackRating');
-    var statusEl = modal.querySelector('#feedbackStatus');
+  function refreshTexts() {
+    if (!modalEl) return;
+
+    var titleEl = modalEl.querySelector('#feedbackTitle');
+    var msgEl = modalEl.querySelector('#feedbackMessage');
+    var categoryLabelEl = modalEl.querySelector('#feedbackCategoryLabel');
+    var ratingLabelEl = modalEl.querySelector('#feedbackRatingLabel');
+    var cancelEl = modalEl.querySelector('#feedbackCancel');
+    var submitEl = modalEl.querySelector('#feedbackSubmit');
+    var categoryGeneralEl = modalEl.querySelector('#feedbackCategoryGeneral');
+    var categoryBugEl = modalEl.querySelector('#feedbackCategoryBug');
+    var categoryBalanceEl = modalEl.querySelector('#feedbackCategoryBalance');
+    var categoryUiEl = modalEl.querySelector('#feedbackCategoryUi');
+
+    if (titleEl) titleEl.textContent = t('feedbackTitle');
+    if (msgEl) msgEl.setAttribute('placeholder', t('feedbackMessagePlaceholder'));
+    if (categoryLabelEl) categoryLabelEl.textContent = t('feedbackCategoryLabel');
+    if (ratingLabelEl) ratingLabelEl.textContent = t('feedbackRatingLabel');
+    if (cancelEl) cancelEl.textContent = t('feedbackCancel');
+    if (submitEl) submitEl.textContent = t('feedbackSend');
+    if (categoryGeneralEl) categoryGeneralEl.textContent = t('feedbackCategoryGeneral');
+    if (categoryBugEl) categoryBugEl.textContent = t('feedbackCategoryBug');
+    if (categoryBalanceEl) categoryBalanceEl.textContent = t('feedbackCategoryBalance');
+    if (categoryUiEl) categoryUiEl.textContent = t('feedbackCategoryUi');
+  }
+
+  function handleSubmit() {
+    if (!modalEl) return;
+    var msgEl = modalEl.querySelector('#feedbackMessage');
+    var catEl = modalEl.querySelector('#feedbackCategory');
+    var ratingEl = modalEl.querySelector('#feedbackRating');
+    var statusEl = modalEl.querySelector('#feedbackStatus');
     var message = msgEl ? msgEl.value : '';
     var category = catEl ? catEl.value : 'general';
     var rating = ratingEl ? ratingEl.value : null;
     var result = submitFeedback({ message: message, category: category, rating: rating });
+
     if (statusEl) {
-      statusEl.textContent = result.ok ? 'Thanks! Feedback saved locally.' : 'Please add a short message.';
+      statusEl.textContent = result.ok ? t('feedbackSuccess') : t('feedbackValidationMessageRequired');
     }
+
     if (result.ok) {
       if (msgEl) msgEl.value = '';
       if (ratingEl) ratingEl.value = '5';
@@ -195,10 +233,12 @@
     }
   }
 
-  function showModal() {
+  function open() {
+    ensureInit();
     ensureStyles();
     var modal = ensureModal();
     if (!modal) return;
+    refreshTexts();
     modal.classList.add('active');
 
     if (global.Game && global.Game.TelemetryLogger) {
@@ -209,38 +249,41 @@
     }
   }
 
-  function hideModal() {
-    if (modalEl) modalEl.classList.remove('active');
+  function showModal() {
+    open();
   }
 
-  function ensureButton() {
-    if (!global.document || buttonEl) return;
-    buttonEl = global.document.createElement('button');
-    buttonEl.id = 'feedbackBtn';
-    buttonEl.className = 'feedbackBtn';
-    buttonEl.type = 'button';
-    buttonEl.textContent = 'Feedback';
-    buttonEl.setAttribute('aria-label', 'Feedback');
-    buttonEl.addEventListener('click', function () { showModal(); });
-    global.document.body.appendChild(buttonEl);
+  function hideModal() {
+    if (!modalEl) return;
+    modalEl.classList.remove('active');
+  }
+
+  function destroy() {
+    if (modalEl && modalEl.parentNode) {
+      modalEl.parentNode.removeChild(modalEl);
+    }
+    modalEl = null;
+    actionsBound = false;
+  }
+
+  function ensureInit() {
+    if (initialized) return;
+    initialized = true;
+    load();
   }
 
   function init() {
-    load();
-    if (!global.document || !global.document.body) {
-      if (global.setTimeout) {
-        setTimeout(init, 50);
-      }
-      return;
-    }
-    ensureStyles();
-    ensureButton();
-    ensureModal();
+    ensureInit();
   }
 
   global.Game = global.Game || {};
   global.Game.FeedbackWidget = {
     init: init,
+    open: open,
+    showModal: showModal,
+    hideModal: hideModal,
+    destroy: destroy,
+    refreshTexts: refreshTexts,
     submitFeedback: submitFeedback,
     getEntries: getEntries,
     _STORAGE_KEY: STORAGE_KEY,
@@ -248,7 +291,7 @@
 
   if (global.setTimeout) {
     setTimeout(function () {
-      try { init(); } catch (_) {}
+      try { ensureInit(); } catch (_) {}
     }, 0);
   }
 

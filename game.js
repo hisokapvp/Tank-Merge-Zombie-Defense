@@ -32,6 +32,7 @@ const ui = {
   menuOverlay: document.getElementById('menuOverlay'),
   menuContinue: document.getElementById('menuContinue'),
   menuNew: document.getElementById('menuNew'),
+  menuFeedback: document.getElementById('menuFeedback'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
   menuSfxValue: document.getElementById('menuSfxValue'),
@@ -623,6 +624,9 @@ function setLanguage(lang){
     document.documentElement.lang = lang;
   }
   applyTranslations();
+  if (window.Game && window.Game.FeedbackWidget && typeof window.Game.FeedbackWidget.refreshTexts === 'function') {
+    window.Game.FeedbackWidget.refreshTexts();
+  }
   updateUI();
 }
 
@@ -3357,6 +3361,7 @@ function restoreFullState(saved){
   if (saved.crate && state.cells[saved.crate.cellIndex]) {
     const cell = state.cells[saved.crate.cellIndex];
     state.crate = {
+      id: 'crate_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       x: cell.x + cell.w / 2,
       y: cell.y + cell.h / 2,
       targetY: cell.y + cell.h / 2,
@@ -5481,6 +5486,7 @@ function spawnCrate(){
   const targetY = cell.y + cell.h / 2;
   const size = BAL.crateSize;
   state.crate = {
+    id: 'crate_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     x: targetX,
     y: -size,
     targetY,
@@ -6446,15 +6452,24 @@ function closeCrateModal(){
 
 function grantCrateTank(level, preferredIndex = null){
   const Garage = window.Game && window.Game.Garage;
-  let cell = null;
-  if (Number.isFinite(preferredIndex) && Garage && Garage.isCellAvailableForTank(state.cells[preferredIndex], state))
-    cell = state.cells[preferredIndex];
-  if (!cell && Garage) {
-    const idx = Garage.findFreeCell(state);
-    if (idx != null) cell = state.cells[idx];
+  if (!Number.isFinite(preferredIndex)) {
+    console.warn('[Crate] Invalid crate slot id for reward grant:', preferredIndex);
+    return false;
   }
-  if (!cell) cell = pickEmptyCell();
-  if (!cell || (Garage && !Garage.isCellAvailableForTank(cell, state))) return false;
+  const slotId = preferredIndex | 0;
+  const cell = state.cells[slotId];
+  if (!cell) {
+    console.warn('[Crate] Reward slot is missing, grant skipped:', slotId);
+    return false;
+  }
+  if (cell.tank) {
+    console.warn('[Crate] Reward slot already occupied, grant skipped:', slotId);
+    return false;
+  }
+  if (Garage && !Garage.isCellAvailableForTank(cell, state)) {
+    console.warn('[Crate] Reward slot is unavailable, grant skipped:', slotId);
+    return false;
+  }
   cell.tank = makeTank(level, false);
   recordTankLevel(level);
   return true;
@@ -6462,16 +6477,33 @@ function grantCrateTank(level, preferredIndex = null){
 
 function claimCrateReward(){
   if (!state.crate || state.crate.claiming) return;
+  const crateSnapshot = state.crate;
+  const crateId = crateSnapshot.id;
+  const crateSlotId = crateSnapshot.cellIndex;
+  const rewardLevel = crateSnapshot.rewardLevel ?? 1;
+
+  if (!Number.isFinite(crateSlotId) || !state.cells[crateSlotId]) {
+    console.warn('[Crate] Cannot claim reward: invalid crate slot id:', crateSlotId);
+    return;
+  }
+
   state.crate.claiming = true;
   if (ui.crateGet){
     ui.crateGet.disabled = true;
     ui.crateGet.textContent = t('crateAdLoading');
   }
-  const rewardLevel = state.crate.rewardLevel ?? 1;
-  const crateCellIndex = state.crate.cellIndex;
+
   window.setTimeout(() => {
-    grantCrateTank(rewardLevel, crateCellIndex);
+    if (!state.crate || state.crate.id !== crateId) {
+      console.warn('[Crate] Claim skipped: crate already removed or replaced before reward grant.', {
+        crateId,
+        crateSlotId,
+      });
+      closeCrateModal();
+      return;
+    }
     state.crate = null;
+    grantCrateTank(rewardLevel, crateSlotId);
     closeCrateModal();
   }, 1200);
 }

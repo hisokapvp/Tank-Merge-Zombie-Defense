@@ -21,6 +21,20 @@
 - Если сохранения нет, кнопка `Продолжить` остаётся disabled.
 - Проверка выполняется в runtime при `updateMenuState()` на основе `getSavedProgress()`.
 
+## Main menu: Feedback entrypoint
+
+- Кнопка `#menuFeedback` находится в `#menuOverlay` рядом с `Continue/New game`.
+- Клик по `#menuFeedback` вызывает `Game.FeedbackWidget.open()` (привязка в `src/core/bootstrap.js`).
+- Кнопка доступна только в main menu (отдельной HUD/floating кнопки нет).
+
+## Crate reward: spawn в crate-slot
+
+- Выдача crate-награды выполняется в `game.js` (`claimCrateReward` → `grantCrateTank`).
+- На момент начала claim фиксируется `crateSlotId` (слот, где стоял crate).
+- После успешного reward: crate удаляется, затем наградной танк создаётся строго в `crateSlotId`.
+- Fallback-ветка «найти любой свободный слот» запрещена и не используется.
+- При race/двойном вызове (crate уже удалён/заменён, невалидный или занятый слот) происходит `console.warn` и безопасный return без краша.
+
 ## Supercomputer menu flow
 
 - Основной вход в дерево улучшений: icon-only `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
@@ -71,7 +85,13 @@
 - Lesson Progress panel: `src/ui/lessonProgress.js` + блок `#lessonProgressPanel` в `index.html`.
 - SRS календарь/планировщик: `src/scheduler/srs.js` + `src/ui/calendar/*` (ленивая загрузка из `lessonProgress.js`).
 - Anki: `src/tools/anki/importer.js`, `src/tools/anki/anki_export.js`, кнопка `#export-anki`.
-- Feedback widget: `src/feedback/widget.js` (floating button, локальный storage, telemetry hooks).
+- Feedback widget: `src/feedback/widget.js` (programmatic modal `open()`/`showModal()`, локальный storage, telemetry hooks).
+
+### Feedback i18n keys
+
+- Main menu button: `menuFeedback`.
+- Modal texts: `feedbackTitle`, `feedbackCategoryLabel`, `feedbackRatingLabel`, `feedbackMessagePlaceholder`, `feedbackCancel`, `feedbackSend`, `feedbackValidationMessageRequired`, `feedbackSuccess`.
+- Category names: `feedbackCategoryGeneral`, `feedbackCategoryBug`, `feedbackCategoryBalance`, `feedbackCategoryUi`.
 - Debug UI-панели: `src/ui/adminFlags.js`, `src/ui/analyticsPanel.js`, `src/ui/funnelPanel.js`, `src/ui/experimentsPanel.js`, `src/ui/bugTriage.js`.
 
 ## Shop bulk-buy

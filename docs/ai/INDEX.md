@@ -13,6 +13,8 @@
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
 - Main menu gating (`Continue` доступна при наличии любого валидного сохранения) → `docs/ai/SYSTEMS/ui.md`
+- Main menu feedback (`#menuFeedback` -> `Game.FeedbackWidget.open()`) + feedback i18n keys (`feedback*`) → `docs/ai/SYSTEMS/ui.md`
+- Crate reward spawn policy (reward всегда в `crateSlotId`, без fallback в другой слот; race-safe skip with log) → `game.js` + `docs/ai/SYSTEMS/ui.md`
 - Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
 - Supercomputer + Boost UI (`#supercomputerBtn` icon-only + aria-label, root tiles в один ряд с сохранением IDs, active boost icons рядом со спрайтом supercomputer, Esc/back routing, tabs `Орудия/Базы/Стены` с дефолтом `Орудия`) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/assets.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
@@ -57,7 +59,7 @@
 - `game.js` — runtime логика fence HP/урона/ремонта/уровней (`applyFenceSegmentDamage`, `tryRepairFenceSegmentAt`, `tryUpgradeFenceLevel`).
 - `src/ui/` — UI-модули, модалки, панели.
 - `src/ui/supercomputerMenu.js` — root/child supercomputer overlays (A11y open/close, Esc/back routing).
-- `src/feedback/` — in-game feedback widget.
+- `src/feedback/` — in-game feedback widget (programmatic modal `open()`/`showModal()`, без floating button).
 - `src/perf/` — профилирование и лимиты.
 - `src/i18n/` — RU/EN строки.
 - `assets/` — JSON-конфиги и изображения.

@@ -70,6 +70,12 @@
       opts.setMenuOpen(false);
     });
 
+    opts.ui.menuFeedback && opts.ui.menuFeedback.addEventListener('click', function () {
+      var feedbackWidget = windowObj.Game && windowObj.Game.FeedbackWidget;
+      if (!feedbackWidget || typeof feedbackWidget.open !== 'function') return;
+      feedbackWidget.open();
+    });
+
     opts.ui.menuSfx && opts.ui.menuSfx.addEventListener('input', function (e) {
       var value = Number(e.target.value) / 100;
       var settings = getSettings();

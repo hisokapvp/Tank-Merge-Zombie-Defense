@@ -195,6 +195,21 @@ Merge + tower defense на canvas.
 - Лимита на количество активных иконок нет: UI рисует все активные бусты.
 - Повторная активация того же `boostId` сбрасывает `remainingSec` до полной длительности, без дублирования иконок.
 
+## Feedback (main menu)
+
+- Реализация виджета: `src/feedback/widget.js`.
+- Floating-кнопка отключена: модалка открывается программно через `Game.FeedbackWidget.open()` (алиас `showModal()`).
+- Кнопка в main menu: `#menuFeedback` (`data-i18n="menuFeedback"`) в `index.html`, клик привязан в `src/core/bootstrap.js`.
+- Все тексты feedback-модалки берутся из i18n ключей: `feedbackTitle`, `feedbackCategoryLabel`, `feedbackRatingLabel`, `feedbackMessagePlaceholder`, `feedbackCancel`, `feedbackSend`, `feedbackValidationMessageRequired`, `feedbackSuccess`, `feedbackCategory*`.
+- Где менять тексты и категории: `src/i18n/ru.json`, `src/i18n/en.json` (fallback: `src/i18n/fallbackStrings.js`).
+
+## Crate reward spawn rule
+
+- Правило выдачи награды: после reward crate удаляется и танк спавнится строго в тот же слот (`crateSlotId`), где стоял crate.
+- Точка логики: `game.js` (`claimCrateReward` + `grantCrateTank`).
+- Альтернативный fallback в другой свободный слот не используется.
+- При race/двойном вызове (crate удалён/заменён, невалидный слот, занятый слот) выдача безопасно пропускается с `console.warn`, без краша.
+
 ## Глоссарий терминов
 
 - RU: `улучшение`, `Очки улучшений`, `Древо улучшений`.
