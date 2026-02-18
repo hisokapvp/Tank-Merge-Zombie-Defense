@@ -4740,6 +4740,7 @@ function resetProjectile(p){
   p.effectIntensity = 1;
   p.shotId = 0;
   p.life = 0;
+  p.isTankAttackingZombie = false;
 }
 
 const projectilePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
@@ -4751,6 +4752,7 @@ function releaseProjectile(p){
 }
 
 function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
+  const isTankAttackingZombie = true;
   const powerTier = tank.powerTier ?? computePowerTier(getComputerLevel());
   const effectIntensity = 1 + powerTier * 0.25;
   const baseTargets = Array.isArray(targets) && targets.length ? targets : (target ? [target] : []);
@@ -4796,6 +4798,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
           effectIntensity, shotId,
+          isTankAttackingZombie,
         });
       }
     } else {
@@ -4811,6 +4814,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
           level: tank.level, dmg: splitDmg,
           aoe: stats.aoe, prof: stats.prof,
           effectIntensity, shotId,
+          isTankAttackingZombie,
         });
       }
     }
@@ -4824,11 +4828,13 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
     spawnBurst();
   }
   tank.cooldown = 1 / (stats.fr * speedMult());
-  const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
-  const burstAlpha = Math.min(0.85, 0.55 * (0.9 + 0.1 * effectIntensity));
-  burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
-  const shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
-  playSfx(shootClip);
+  if (!isTankAttackingZombie){
+    const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
+    const burstAlpha = Math.min(0.85, 0.55 * (0.9 + 0.1 * effectIntensity));
+    burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
+    const shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
+    playSfx(shootClip);
+  }
 }
 
 function tankOrbitState(cell, timeSec){
@@ -4873,6 +4879,7 @@ function spawnProjectile(p){
   b.effectIntensity = p.effectIntensity ?? 1;
   b.shotId = p.shotId ?? 0;
   b.life = 2.0;
+  b.isTankAttackingZombie = p.isTankAttackingZombie === true;
   state.projectiles.push(b);
 }
 
@@ -4913,15 +4920,17 @@ function stepProjectiles(dt){
     b.y += vy * b.speed * dt;
 
     // trail particles (scaled by effectIntensity)
-    const trailColor = b.level >= 12 ? 'rgba(186,140,255,.18)' : b.trail;
-    const ei = b.effectIntensity ?? 1;
-    const trailR = Math.min(4, Math.max(1.5, b.r * 0.55 * ei));
-    const trailAlpha = Math.min(MAX_TRAIL_ALPHA, 0.25 * (0.9 + 0.1 * ei));
-    const trailColorAdj = trailColor.replace(/,\s*[\d.]+\)\s*$/, `,${trailAlpha})`);
-    particle(b.x - vx*8, b.y - vy*8, trailR, trailColorAdj, 0.25);
+    if (b.isTankAttackingZombie !== true){
+      const trailColor = b.level >= 12 ? 'rgba(186,140,255,.18)' : b.trail;
+      const ei = b.effectIntensity ?? 1;
+      const trailR = Math.min(4, Math.max(1.5, b.r * 0.55 * ei));
+      const trailAlpha = Math.min(MAX_TRAIL_ALPHA, 0.25 * (0.9 + 0.1 * ei));
+      const trailColorAdj = trailColor.replace(/,\s*[\d.]+\)\s*$/, `,${trailAlpha})`);
+      particle(b.x - vx*8, b.y - vy*8, trailR, trailColorAdj, 0.25);
+    }
 
     if (dist < Math.max(10, b.r*2.2)){
-      impactAt(b.x, b.y, b);
+      impactAt(b.x, b.y, b, { suppressCombatFx: b.isTankAttackingZombie === true });
       releaseProjectile(b);
       continue;
     }
@@ -4939,7 +4948,8 @@ function critChanceFromTankLevel(level){
   return percent / 100;
 }
 
-function impactAt(x,y,b){
+function impactAt(x,y,b,opts){
+  const suppressCombatFx = !!(opts && opts.suppressCombatFx);
   const mods = getMods();
   const attackMult = getZombieAttackMultipliers();
   const damageMul = attackMult.damageMult;
@@ -4977,22 +4987,25 @@ function impactAt(x,y,b){
   }
 
   if (b.kind === 'tesla'){
-    chainLightning(x,y,b);
+    chainLightning(x,y,b, { suppressCombatFx });
   }
 
-  // Visual impact rings (scale by effectIntensity)
-  const ei = b.effectIntensity ?? 1;
-  const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
-  state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
-  burst(x, y, impactCount, b.glow);
-  if (b.dmg > 80){
-    state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
+  if (!suppressCombatFx){
+    // Visual impact rings (scale by effectIntensity)
+    const ei = b.effectIntensity ?? 1;
+    const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
+    state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind});
+    burst(x, y, impactCount, b.glow);
+    if (b.dmg > 80){
+      state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow'});
+    }
   }
 }
 
-function chainLightning(x,y,b){
-    const attackMult = getZombieAttackMultipliers();
-    const damageMul = attackMult.damageMult;
+function chainLightning(x,y,b,opts){
+  const suppressCombatFx = !!(opts && opts.suppressCombatFx);
+  const attackMult = getZombieAttackMultipliers();
+  const damageMul = attackMult.damageMult;
   const range = b.prof?.chainRange ?? 84;
   const jumps = b.prof?.chainJumps ?? 3;
   const mul = b.prof?.chainMul ?? 0.45;
@@ -5016,8 +5029,10 @@ function chainLightning(x,y,b){
     hit.add(best.id);
     const p = zombiePos(best);
 
-    // visual bolt
-    state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
+    if (!suppressCombatFx){
+      // visual bolt
+      state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
+    }
 
     const baseChainDmg = b.dmg * mul;
     const tankLevel = b.level ?? 1;
@@ -7667,6 +7682,7 @@ function drawProjectiles(){
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     for (const b of state.projectiles){
+      if (b.isTankAttackingZombie === true) continue;
       ctx.fillStyle = b.glow;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r * 2.2, 0, Math.PI * 2);
@@ -7676,6 +7692,7 @@ function drawProjectiles(){
   }
 
   for (const b of state.projectiles){
+    if (b.isTankAttackingZombie === true) continue;
     // core
     ctx.fillStyle = b.color;
     ctx.beginPath();

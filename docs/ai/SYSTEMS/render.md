@@ -129,6 +129,13 @@
 	- `weatherLeadOutSec`: за это время до конца атаки погода выключается
 	- Множители на фазе атаки: `targetAliveMult`, `speedMult`, `damageMult`
 
+## Combat FX policy
+
+- Только для ветки `tank -> zombie`: не создаются shoot/hit VFX и не проигрываются shoot/hit SFX.
+- Под отключение попадают muzzle/tracer(trail)/impact/explosion/hit sparks и визуал projectile в этой ветке.
+- Не меняются: урон, death-анимации и `damageNumbers`.
+- Weather SFX (`rain`/`lightning`/`thunder`) к этому отключению не относятся и работают как раньше.
+
 ## Риски
 
 - Не добавлять бизнес-логику в `draw()`.
