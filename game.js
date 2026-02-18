@@ -6227,6 +6227,7 @@ canvas.addEventListener('pointerdown', (e)=>{
       state,
       x: p.x,
       y: p.y,
+      nowSec: nowSec(),
       balScale,
       dronConfig: getDronRuntimeConfig(),
       fenceRepairCost: getFenceRepairCostCoins(),
@@ -6429,7 +6430,6 @@ function draw(){
   drawTankTrack();
   drawZombieFence();
   drawSupercomputer();
-  drawDrones();
   drawBoard();
   drawOrbitingTanks();
   drawCrate();
@@ -6439,6 +6439,7 @@ function draw(){
   drawImpacts();
   drawParticles();
   drawDamageNumbers();
+  drawDrones();
   drawWeather();
   drawAttackModeEveningDim();
   drawLevelUpVfx();
@@ -8120,6 +8121,8 @@ function loop(now){
         nowSec: nowSec(),
         fenceRepairCost: getFenceRepairCostCoins(),
         dronConfig: getDronRuntimeConfig(),
+        fenceOrigin: center,
+        worldBounds: { minX: 0, minY: 0, maxX: viewSize.w, maxY: viewSize.h },
       });
     }
   }

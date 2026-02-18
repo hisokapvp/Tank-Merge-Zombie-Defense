@@ -149,7 +149,8 @@
 
 ## Dron render layer
 
-- Дроны рисуются отдельным world-layer (`drawDrones`) после `drawSupercomputer`.
+- Дроны рисуются отдельным world-layer (`drawDrones`) выше gameplay-слоёв (`board/decor/tanks/zombies/projectiles/particles/damageNumbers`) и ниже weather (`rain/lightning`).
+- Порядок слоя меняется только перестановкой вызова `drawDrones()` в `game.js/draw()`.
 - Тело дрона: из `DronSprites` (`assets/dron.json`), fallback — простая фигура.
 - Иконки режимов (`⏳`/`🔧`) рисуются в том же проходе с hitbox-геометрией из `iconSize` + `iconsOffsetY`.
 - Рендер не содержит бизнес-логики ремонта; логика выбора/резервов/ремонта живёт в `src/mechanics/drones.js`.

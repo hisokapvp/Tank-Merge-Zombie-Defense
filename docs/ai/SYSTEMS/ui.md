@@ -80,8 +80,14 @@
 
 - Над каждым дроном рисуются world-space иконки режимов: `⏳` (standby) и `🔧` (repair).
 - Hit-test выполняется по world-space прямоугольникам, размер строго из `assets/dron.json.iconSize`, смещение по Y из `iconsOffsetY`.
-- `🔧` disabled, если нет валидной цели ремонта или монет меньше стоимости полного ремонта выбранного сегмента.
-- Клик по disabled `🔧` не меняет режим.
+- `🔧` не блокируется отсутствием целей/монет: режим repair можно включить всегда.
+- Проверка/списание монет выполняются только в фактическом `repair_work` тике, когда реально растёт `hp` сегмента.
+- При нехватке монет в `repair_work`: тик ремонта не применяется, дрон остаётся в `repair_work` и повторяет попытку на следующих тиках (без UI/SFX спама).
+- State machine repair-режима: `repair_patrol` → `repair_moveToTarget` → `repair_work`.
+- В `repair_patrol` дрон идёт по периметру fence со скоростью `0.5x` от `moveSpeedPxSec(level)` и сканирует повреждения строго раз в `0.5s`.
+- Таргетинг: выбирается сегмент с максимальным `missingHp` (`maxHp-hp`), tie-break — меньшая дистанция до дрона.
+- Анти-дубль между дронами: цель claim'ится по `segmentId` в `state.fence.repairClaims`; сегменты с чужим claim пропускаются.
+- Точки входа: `src/mechanics/drones.js` (`handlePointerDown`, `stepRepairWork`, `pickBestRepairTarget`, claim helpers), `game.js` (`canvas.pointerdown` с `DronesApi.handlePointerDown`).
 
 ## Debug: Add Dron
 
