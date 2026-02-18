@@ -13,15 +13,30 @@
 - Новая кнопка/панель: HTML + CSS + `src/ui/*`.
 - Новая модалка: обязательно через `Game.A11y` (focus trap, Escape).
 - Поведение кнопок: `src/ui/buttonBehavior.js` + `.uiButtonBehavior`.
-- Offline modal: эталон — settings modal; текст `Money/Деньги` и суммы с `$`/`⭐`.
+- Offline modal отключена в runtime и не участвует в UI-loop/hit-test.
+
+## Main menu: Continue gating
+
+- Кнопка `Продолжить` в `#menuOverlay` активна для любого валидного сохранения.
+- Если сохранения нет, кнопка `Продолжить` остаётся disabled.
+- Проверка выполняется в runtime при `updateMenuState()` на основе `getSavedProgress()`.
 
 ## Supercomputer menu flow
 
 - Основной вход в таланты: `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
 - Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо талантов`).
 - Child overlays: `#modsHangarOverlay`, `#modsTankWallOverlay`, плюс существующий `#talentOverlay` как child-ветка.
+- Единый стиль кнопок supercomputer: класс `.scButton` применяется в root-меню и в релевантных action/tab кнопках child overlays (без изменения layout-контейнеров).
+- Единый контейнер supercomputer-модалок: класс `.scModal` у `#modsTankWallOverlay` и у modal-панели `#talentOverlay` (через `src/ui/supercomputerMenu.js`), чтобы размер модалки `Модификации танков и стен` соответствовал `Древу талантов`.
 - Правило `Esc`: в root — закрыть supercomputer UI и снять его pause-lock; в child — шаг назад в root, pause-lock сохраняется.
 - Реализация: `index.html` (разметка), `src/ui/supercomputerMenu.js` (modal routing), `src/accessibility/a11y.js` (focus trap + Esc), `src/systems/pauseManager.js` + `game.js` (единый menu pause lock между settings/supercomputer).
+
+### Tabs в «Модификации танков и стен»
+
+- Разметка: `tablist` + `tab` + `tabpanel` для 3 вкладок в порядке слева направо: `Орудия`, `Базы`, `Стены`.
+- Дефолт при каждом открытии `#modsTankWallOverlay`: активна `Орудия` (`weapons`) вне зависимости от выбора в прошлом открытии.
+- Состояние вкладки не сохраняется между открытиями (без localStorage/state carry-over).
+- Tab-кнопки остаются focusable (button + `role="tab"`, `aria-selected`, `tabindex`), `Esc`/back/focus trap работают по прежним правилам supercomputer child overlay.
 
 ### Вкладка «Стены» (минимально функциональная)
 
@@ -34,7 +49,7 @@
 
 ## Фактические UI-подсистемы в рантайме
 
-- Rewarded ads: `src/ui/adService.js` (заглушка Promise API для crate/boost/offline claim).
+- Rewarded ads: `src/ui/adService.js` (заглушка Promise API для crate/boost).
 - Lesson Progress panel: `src/ui/lessonProgress.js` + блок `#lessonProgressPanel` в `index.html`.
 - SRS календарь/планировщик: `src/scheduler/srs.js` + `src/ui/calendar/*` (ленивая загрузка из `lessonProgress.js`).
 - Anki: `src/tools/anki/importer.js`, `src/tools/anki/anki_export.js`, кнопка `#export-anki`.
@@ -115,4 +130,3 @@
 - Проверка Lesson Progress: repeat/export/import schedule, preview/export Anki.
 - Проверка level-up: модалка не закрывается сама и закрывается только вручную.
 - `node Test/pack1/mergePopup.test.js`
-- `node Test/pack9/offlineModal_ui_i18n.test.js`

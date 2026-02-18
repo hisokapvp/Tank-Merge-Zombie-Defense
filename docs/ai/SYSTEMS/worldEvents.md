@@ -40,6 +40,12 @@
 - При быстрых переключениях attackMode множитель не сбрасывается: продолжается движение от текущего значения к новому target.
 - Работает и для auto attackMode, и для `Force attackMode`.
 
+## New Game reset behavior
+
+- При `menuNew` runtime world-events сбрасывается до базового состояния до первого игрового тика.
+- Ключевое требование: `aliveMultCurrent` принудительно возвращается в `1`, чтобы начальный `targetAlive` не наследовался из активного `attackMode` прошлой сессии.
+- Также обнуляются активные окна attack/weather (`attackEndAt`, `weatherUntil`, `forceAttackActive`, blends).
+
 ## Evening dim
 
 - Параметр: `attackMode.eveningDimAlpha` (`0..1`, по умолчанию `0.16`).

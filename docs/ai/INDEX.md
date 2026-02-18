@@ -12,17 +12,19 @@
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
+- Main menu gating (`Continue` доступна при наличии любого валидного сохранения) → `docs/ai/SYSTEMS/ui.md`
 - Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
-- Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer) → `docs/ai/SYSTEMS/ui.md`
+- Supercomputer menu navigation (`#supercomputerBtn`, root/child overlays, Esc back, talents via supercomputer, tabs `Орудия/Базы/Стены` с дефолтом `Орудия` без запоминания) → `docs/ai/SYSTEMS/ui.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
-- Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
+- Zombie movement collision policy (коллизия только с целым fence и `decor.isWall`; вход через брич своей стороны (side-lock); после брича — прямое движение к supercomputer без внутреннего радиального clamp) → `docs/ai/SYSTEMS/combat.md`
+- Save/offline/continue flow (offline modal disabled) → `docs/ai/SYSTEMS/save.md`
 - Damage points (`totalDamageDealtRaw`, `damagePoints`) → `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `src/ui/supercomputerMenu.js`
 - Fence levels/armor/upgrade (`fenceLevel`, `armorFlat`, `damagePointsSpent`) → `docs/ai/SYSTEMS/fence.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `docs/ai/SYSTEMS/ui.md`
 - Fence breach side-knowledge (`getSideByPosition`, `breachesBySide`, side-limited `holeAabb` pass) → `docs/ai/SYSTEMS/fence.md` + `game.js` + `src/render/fenceLayout.js`
-- New Game reset (`menuNew`) и правило стартового `talentPoints` → `docs/ai/SYSTEMS/save.md` + `README.md`
+- New Game reset (`menuNew`): сброс world-events runtime (`aliveMultCurrent=1`) до первого спавна + правило стартового `talentPoints` → `docs/ai/SYSTEMS/worldEvents.md` + `docs/ai/SYSTEMS/save.md` + `README.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`
 - Генерация карты (ground stamps + decor placement) → `docs/map-generation.md` + `docs/ai/SYSTEMS/render.md`

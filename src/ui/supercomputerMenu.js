@@ -55,7 +55,52 @@
     var state = {
       isOpen: false,
       view: 'closed',
+      activeTankWallTab: 'weapons',
     };
+
+    var tankWallTabButtons = {
+      weapons: documentObj.getElementById('modsTankWallTabGuns'),
+      bases: documentObj.getElementById('modsTankWallTabBases'),
+      walls: documentObj.getElementById('modsTankWallTabWalls'),
+    };
+
+    var tankWallTabPanels = {
+      weapons: documentObj.getElementById('modsTankWallPanelGuns'),
+      bases: documentObj.getElementById('modsTankWallPanelBases'),
+      walls: documentObj.getElementById('modsTankWallPanelWalls'),
+    };
+
+    function applySharedTalentModalClass() {
+      var talentOverlay = documentObj.getElementById('talentOverlay');
+      if (!talentOverlay) return;
+      var panel = talentOverlay.querySelector('.modal');
+      if (!panel) return;
+      panel.classList.add('scModal');
+    }
+
+    function setTankWallTab(nextTab, options) {
+      var tab = nextTab === 'walls' || nextTab === 'bases' ? nextTab : 'weapons';
+      state.activeTankWallTab = tab;
+
+      Object.keys(tankWallTabButtons).forEach(function (key) {
+        var button = tankWallTabButtons[key];
+        if (!button) return;
+        var selected = key === tab;
+        button.setAttribute('aria-selected', selected ? 'true' : 'false');
+        button.setAttribute('tabindex', selected ? '0' : '-1');
+      });
+
+      Object.keys(tankWallTabPanels).forEach(function (key) {
+        var panel = tankWallTabPanels[key];
+        if (!panel) return;
+        panel.hidden = key !== tab;
+      });
+
+      var focusButton = options && options.focusButton;
+      if (focusButton) {
+        tankWallTabButtons[tab]?.focus();
+      }
+    }
 
     function updateDamagePointsLabel() {
       var damagePointsEl = documentObj.getElementById('modsTankWallDamagePoints');
@@ -121,12 +166,13 @@
     }
 
     function showTankWallMods() {
+      setTankWallTab('weapons');
       updateDamagePointsLabel();
       updateFenceStatsUI();
 
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, true, a11yOpen, a11yClose, {
-        initialFocus: documentObj.getElementById('modsTankWallTabBases'),
+        initialFocus: documentObj.getElementById('modsTankWallTabGuns'),
         onClose: backFromChild,
       });
       state.view = 'tankWall';
@@ -137,6 +183,7 @@
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       state.view = 'talents';
       openTalents({ onClose: backFromChild });
+      applySharedTalentModalClass();
     }
 
     function backFromChild() {
@@ -173,6 +220,9 @@
 
     documentObj.getElementById('modsTankWallClose')?.addEventListener('click', backFromChild);
     documentObj.getElementById('modsTankWallBack')?.addEventListener('click', backFromChild);
+    tankWallTabButtons.weapons?.addEventListener('click', function () { setTankWallTab('weapons', { focusButton: true }); });
+    tankWallTabButtons.bases?.addEventListener('click', function () { setTankWallTab('bases', { focusButton: true }); });
+    tankWallTabButtons.walls?.addEventListener('click', function () { setTankWallTab('walls', { focusButton: true }); });
     documentObj.getElementById('modsTankWallFenceUpgrade')?.addEventListener('click', function () {
       if (!upgradeFence()) return;
       updateDamagePointsLabel();

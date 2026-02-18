@@ -53,57 +53,10 @@
       opts.ui.langEn.addEventListener('click', function () { return opts.setLanguage('en'); });
     }
 
-    function presentOfflineRewards(rewards) {
-      var OfflineModal = windowObj.Game && windowObj.Game.OfflineModal;
-      var AdService = windowObj.Game && windowObj.Game.AdService;
-      if (!OfflineModal || !AdService) return;
-      if (!rewards || (rewards.coins === 0 && rewards.xp === 0)) return;
-      OfflineModal.showOfflineRewardsModal({
-        coins: rewards.coins,
-        xp: rewards.xp,
-        onConfirm: function () {
-          OfflineModal.setClaiming(true);
-          AdService.requestRewardedAd()
-            .then(function (result) {
-              if (result && result.success) {
-                getState().coins += rewards.coins;
-                if (getState().supercomputer) getState().supercomputer.xp += rewards.xp;
-                else getState().player.xp += rewards.xp;
-                opts.grantXP(0);
-                opts.meta.lastSeenAt = Date.now();
-                opts.saveProgress();
-                OfflineModal.hideModal();
-                opts.updateUI();
-              }
-            })
-            .catch(function () {})
-            .finally(function () {
-              OfflineModal.setClaiming(false);
-            });
-        },
-      });
-    }
-
-    function maybeShowOfflineRewardsFromMeta() {
-      var ContinueFlow = windowObj.Game && windowObj.Game.ContinueFlow;
-      var OfflineModal = windowObj.Game && windowObj.Game.OfflineModal;
-      var OfflineProgress = windowObj.Game && windowObj.Game.OfflineProgress;
-      if (!ContinueFlow || !OfflineModal || !OfflineProgress) return;
-      if (OfflineModal.isVisible && OfflineModal.isVisible()) return;
-      if (!ContinueFlow.shouldShowOfflineModal(opts.meta && opts.meta.lastSeenAt)) return;
-      var elapsed = ContinueFlow.getElapsedMs(opts.meta && opts.meta.lastSeenAt);
-      var rewards = OfflineProgress.computeOfflineRewards(getState(), elapsed);
-      presentOfflineRewards(rewards);
-    }
-
     opts.ui.menuContinue && opts.ui.menuContinue.addEventListener('click', function () {
       var ContinueFlow = windowObj.Game && windowObj.Game.ContinueFlow;
-      var OfflineModal = windowObj.Game && windowObj.Game.OfflineModal;
-      var AdService = windowObj.Game && windowObj.Game.AdService;
-      if (ContinueFlow && OfflineModal && AdService) {
-        ContinueFlow.onContinueClick(getState(), opts.meta, function () { return opts.setMenuOpen(false); }, function (rewards) {
-          presentOfflineRewards(rewards);
-        });
+      if (ContinueFlow) {
+        ContinueFlow.onContinueClick(getState(), opts.meta, function () { return opts.setMenuOpen(false); });
         return;
       }
       opts.setMenuOpen(false);
@@ -206,7 +159,7 @@
         return;
       }
       if (documentObj.visibilityState === 'visible') {
-        maybeShowOfflineRewardsFromMeta();
+        return;
       }
     });
 

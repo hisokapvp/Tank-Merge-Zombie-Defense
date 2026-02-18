@@ -5,14 +5,14 @@
 - Save/load: `src/persistence/storage.js`
 - Initial defaults/state shape: `src/persistence/initialState.js`
 - Offline модель: `src/persistence/offlineRewardModel.js`, `src/persistence/offlineProgress.js`
-- UX: `src/ui/continueFlow.js`, `src/ui/offlineModal.js`
+- UX: `src/ui/continueFlow.js` (offline modal отключена)
 - Boot integration: `src/core/bootstrap.js`
 
 ## Что править
 
 - Новые поля прогресса: сериализация + восстановление.
 - Offline формулы: сначала модель, потом runtime hooks.
-- Порог показа offline modal: `OFFLINE_THRESHOLD_MS`.
+- Порог offline-отсутствия: `OFFLINE_THRESHOLD_MS` (используется только в continue-flow логике).
 - Любые изменения схемы: синхронно `initialState` + `storage` + restore path в boot.
 
 ## Новые поля сейва
@@ -62,13 +62,12 @@
 - Сохранять backward compatibility save.
 - Не менять ключи сохранения без миграции.
 - Не ломать ветку `legacyProgress` при загрузке старых сейвов.
-- В offline claim-флоу всегда сбрасывать состояние `claiming` (включая reject/error ветки рекламы), чтобы модалка не зависала.
+- Offline modal/claim flow отключены в runtime (нет показа и ввода через canvas-loop).
 
 ## Мини-проверка
 
 - `node Test/pack8/offlineProgress.test.js`
-- `node Test/pack9/offlineModal_ui_i18n.test.js`
-- Ручной сценарий: пауза > 5 мин и возврат.
+- Ручной сценарий: пауза > 5 мин и возврат не должен открывать offline modal.
 
 ## New Game: правило стартового таланта
 

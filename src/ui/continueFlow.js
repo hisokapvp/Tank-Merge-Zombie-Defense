@@ -1,7 +1,7 @@
 /**
  * Логика кнопки «Продолжить»:
  * 1) Блокирующая синхронизация прогресса с сервером (syncProgressBlocking).
- * 2) При отсутствии > 5 минут — показывать модалку офлайн-награды.
+ * 2) При отсутствии > 5 минут — только продолжить игру (offline modal отключена).
  */
 (function (global) {
   'use strict';
@@ -13,8 +13,6 @@
   var SYNC_ENABLED = false; // Set to true when server API is available
 
   var Game = global.Game;
-  var computeOfflineRewards = Game && Game.OfflineProgress ? Game.OfflineProgress.computeOfflineRewards : function () { return { coins: 0, xp: 0, elapsedMsUsed: 0 }; };
-  var showOfflineModal = Game && Game.OfflineModal ? Game.OfflineModal.showOfflineRewardsModal : function () {};
   var isTankOnTrack = Game && Game.TrackQuery ? Game.TrackQuery.isTankOnTrack : function () { return false; };
 
   /**
@@ -171,21 +169,13 @@
    * @param {object} state — текущий state
    * @param {{ lastSeenAt?: number }} meta
    * @param {function} onCloseMenu
-   * @param {function} onShowOfflineModal — вызвать с { coins, xp, onConfirm }
+   * @param {function} _onShowOfflineModal — deprecated, не используется (offline modal отключена)
    */
-  function onContinueClick(state, meta, onCloseMenu, onShowOfflineModal) {
+  function onContinueClick(state, meta, onCloseMenu, _onShowOfflineModal) {
     // If sync is disabled, skip directly to continue flow
     if (!SYNC_ENABLED) {
       console.log('[ContinueFlow] Sync disabled, proceeding without server sync');
-      var elapsed = getElapsedMs(meta && meta.lastSeenAt);
-      if (elapsed <= OFFLINE_THRESHOLD_MS) {
-        onCloseMenu();
-        return;
-      }
-      var rewards = computeOfflineRewards(state, elapsed);
       onCloseMenu();
-      if (!rewards || (rewards.coins <= 0 && rewards.xp <= 0)) return;
-      if (onShowOfflineModal) onShowOfflineModal({ coins: rewards.coins, xp: rewards.xp });
       return;
     }
 
@@ -206,16 +196,8 @@
 
         if (result.status === 'ok') {
           hideSyncModal();
-          // Успех — продолжаем
-          var elapsed = getElapsedMs(meta && meta.lastSeenAt);
-          if (elapsed <= OFFLINE_THRESHOLD_MS) {
-            onCloseMenu();
-            return;
-          }
-          var rewards = computeOfflineRewards(state, elapsed);
+          // Успех — продолжаем (offline modal отключена)
           onCloseMenu();
-          if (!rewards || (rewards.coins <= 0 && rewards.xp <= 0)) return;
-          if (onShowOfflineModal) onShowOfflineModal({ coins: rewards.coins, xp: rewards.xp });
           return;
         }
 

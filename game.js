@@ -1219,6 +1219,22 @@ const worldEventsState = {
   aliveMultCurrent: 1,
 };
 
+function resetWorldEventsRuntimeForNewGame(){
+  const attackCfg = getWorldEventsAttackCfg();
+  const everySec = Number.isFinite(attackCfg.attackEverySec) ? Math.max(1, attackCfg.attackEverySec) : 75;
+  worldEventsState.attackStartAt = nowSec() + everySec;
+  worldEventsState.currentAttackStartAt = 0;
+  worldEventsState.attackEndAt = 0;
+  worldEventsState.forceAttackActive = false;
+  worldEventsState.eveningDimBlend = 0;
+  worldEventsState.weatherUntil = 0;
+  worldEventsState.weatherEnabled = false;
+  worldEventsState.lightningUntil = 0;
+  worldEventsState.nextLightningAt = 0;
+  worldEventsState.rainBlend = 0;
+  worldEventsState.aliveMultCurrent = 1;
+}
+
 const rainCache = {
   maxDrops: 0,
   x: [],
@@ -3679,85 +3695,54 @@ function zombiePos(z){
   };
 }
 
-function getWallDecors(){
-  if (Array.isArray(state.wallDecors) && state.wallDecors.length) return state.wallDecors;
-  if (!Array.isArray(state.decors) || !state.decors.length) return [];
-  return state.decors.filter((d) => !!(d && d.isWall));
-}
-
-function wallCollisionPenalty(x, y, zR, walls){
-  let penalty = 0;
-  for (let i = 0; i < walls.length; i++) {
-    const d = walls[i];
-    const blockR = Number.isFinite(d?.blockR) ? d.blockR : 0;
-    if (blockR <= 0) continue;
-    const minDist = zR + blockR;
-    const dx = x - d.x;
-    const dy = y - d.y;
-    const dist = Math.hypot(dx, dy);
-    const overlap = minDist - dist;
-    if (overlap > 0) penalty += overlap;
-  }
-  return penalty;
-}
-
 function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
-  if (z && z.breached) return { x: toX, y: toY };
-  const walls = getWallDecors();
-  if (!walls.length) return { x: toX, y: toY };
-  const zR = zombieCollisionRadius(z);
-  if (!Number.isFinite(zR) || zR <= 0) return { x: toX, y: toY };
-
+  if (!Number.isFinite(fromX) || !Number.isFinite(fromY) || !Number.isFinite(toX) || !Number.isFinite(toY)) {
+    return { x: fromX, y: fromY };
+  }
   const dx = toX - fromX;
   const dy = toY - fromY;
-  const maxStep = Math.max(1.25, (zR * 0.55) + (Math.max(0.001, dt) * 40));
+  const zR = zombieCollisionRadius(z);
+  const maxStep = Math.max(1.25, (Math.max(0.001, zR) * 0.55) + (Math.max(0.001, dt) * 40));
   const stepLen = Math.hypot(dx, dy);
   const stepMul = stepLen > maxStep ? (maxStep / Math.max(stepLen, 1e-6)) : 1;
-  const targetX = fromX + dx * stepMul;
-  const targetY = fromY + dy * stepMul;
+  let nextX = fromX + dx * stepMul;
+  let nextY = fromY + dy * stepMul;
 
-  const fullPenalty = wallCollisionPenalty(targetX, targetY, zR, walls);
-  if (fullPenalty <= 1e-4) return { x: targetX, y: targetY };
+  const walls = Array.isArray(state.wallDecors) ? state.wallDecors : null;
+  if (walls && walls.length) {
+    for (let pass = 0; pass < 2; pass++) {
+      let adjusted = false;
+      for (let i = 0; i < walls.length; i++) {
+        const wall = walls[i];
+        if (!wall || !wall.isWall) continue;
+        const wallR = Number.isFinite(wall.blockR) ? Math.max(0, wall.blockR) : 0;
+        if (wallR <= 0) continue;
 
-  const xOnlyX = targetX;
-  const xOnlyY = fromY;
-  const yOnlyX = fromX;
-  const yOnlyY = targetY;
+        const minDist = wallR + zR;
+        const offX = nextX - wall.x;
+        const offY = nextY - wall.y;
+        const distSq = offX * offX + offY * offY;
+        if (distSq >= minDist * minDist) continue;
 
-  const xPenalty = wallCollisionPenalty(xOnlyX, xOnlyY, zR, walls);
-  const yPenalty = wallCollisionPenalty(yOnlyX, yOnlyY, zR, walls);
-
-  let nx = fromX;
-  let ny = fromY;
-  if (xPenalty < yPenalty) {
-    nx = xOnlyX;
-    ny = xOnlyY;
-    z.wallSteerSign = Number.isFinite(z.wallSteerSign) ? z.wallSteerSign : (dy >= 0 ? 1 : -1);
-  } else {
-    nx = yOnlyX;
-    ny = yOnlyY;
-    z.wallSteerSign = Number.isFinite(z.wallSteerSign) ? z.wallSteerSign : (dx >= 0 ? 1 : -1);
-  }
-
-  const remainPenalty = wallCollisionPenalty(nx, ny, zR, walls);
-  if (remainPenalty > 1e-4) {
-    const sign = z.wallSteerSign || 1;
-    const tangentX = -dy;
-    const tangentY = dx;
-    const tangentLen = Math.hypot(tangentX, tangentY) || 1;
-    const sideStep = Math.min(maxStep, Math.max(0.75, zR * 0.4));
-    const tx = nx + (tangentX / tangentLen) * sideStep * sign;
-    const ty = ny + (tangentY / tangentLen) * sideStep * sign;
-    const sidePenalty = wallCollisionPenalty(tx, ty, zR, walls);
-    if (sidePenalty < remainPenalty) {
-      nx = tx;
-      ny = ty;
-    } else {
-      z.wallSteerSign = -sign;
+        const dist = Math.sqrt(Math.max(distSq, 0));
+        if (dist > 1e-6) {
+          const pushMul = minDist / dist;
+          nextX = wall.x + offX * pushMul;
+          nextY = wall.y + offY * pushMul;
+        } else {
+          const fallbackX = Math.abs(dx) > 1e-6 ? dx : (Math.cos(z.theta || 0) || 1);
+          const fallbackY = Math.abs(dy) > 1e-6 ? dy : (Math.sin(z.theta || 0) || 0);
+          const fallbackLen = Math.hypot(fallbackX, fallbackY) || 1;
+          nextX = wall.x + (fallbackX / fallbackLen) * minDist;
+          nextY = wall.y + (fallbackY / fallbackLen) * minDist;
+        }
+        adjusted = true;
+      }
+      if (!adjusted) break;
     }
   }
 
-  return { x: nx, y: ny };
+  return { x: nextX, y: nextY };
 }
 
 // All zombies use fixed visual size (no scaling by level).
@@ -4185,6 +4170,11 @@ function getBreachesForSide(sideKey){
   return [];
 }
 
+function hasAnyBreach(){
+  const breaches = ensureBreachesBySide();
+  return breaches.top.length > 0 || breaches.right.length > 0 || breaches.bottom.length > 0 || breaches.left.length > 0;
+}
+
 function pointInAabb(x, y, aabb){
   if (!aabb) return false;
   return x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
@@ -4196,6 +4186,20 @@ function getActiveBreachAtPoint(sideKey, x, y){
     const breach = list[i];
     if (!breach || !breach.holeAabb) continue;
     if (pointInAabb(x, y, breach.holeAabb)) return breach;
+  }
+  return null;
+}
+
+function getActiveBreachAtPointAnySide(x, y){
+  const breaches = ensureBreachesBySide();
+  const lists = [breaches.top, breaches.right, breaches.bottom, breaches.left];
+  for (let li = 0; li < lists.length; li++) {
+    const list = lists[li];
+    for (let i = 0; i < list.length; i++) {
+      const breach = list[i];
+      if (!breach || !breach.holeAabb) continue;
+      if (pointInAabb(x, y, breach.holeAabb)) return breach;
+    }
   }
   return null;
 }
@@ -4214,6 +4218,28 @@ function pickNearestBreachForSide(sideKey, x, y){
     if (d2 < bestDist) {
       bestDist = d2;
       best = breach;
+    }
+  }
+  return best;
+}
+
+function pickNearestBreachAnySide(x, y){
+  const breaches = ensureBreachesBySide();
+  const lists = [breaches.top, breaches.right, breaches.bottom, breaches.left];
+  let best = null;
+  let bestDist = Infinity;
+  for (let li = 0; li < lists.length; li++) {
+    const list = lists[li];
+    for (let i = 0; i < list.length; i++) {
+      const breach = list[i];
+      if (!breach || !breach.center) continue;
+      const dx = breach.center.x - x;
+      const dy = breach.center.y - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestDist) {
+        bestDist = d2;
+        best = breach;
+      }
     }
   }
   return best;
@@ -4364,16 +4390,7 @@ function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer)
 }
 
 function getFenceInnerLimit(z){
-  const tankTrackOuter = BAL.tankOrbitRadius + BAL.tankTrackWidth * 0.5 + zombieCollisionRadius(z);
-  const dx = Math.cos(z.theta ?? 0);
-  const dy = Math.sin(z.theta ?? 0);
-  const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
-  const legacyInner = tankTrackOuter / denom;
-  const sc = getComputerState();
-  if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return legacyInner;
-  const scInner = Math.hypot(sc.x - center.x, sc.y - center.y);
-  if (!Number.isFinite(scInner)) return legacyInner;
-  return Math.min(legacyInner, scInner);
+  return 0;
 }
 
 function applyFenceSegmentDamage(seg, amount){
@@ -4523,8 +4540,10 @@ function zombieFenceLimit(z){
 
   const localX = dx * (z.r || 0);
   const localY = dy * (z.r || 0);
-  const sideFromPosition = (z && z.side) || getSideByPosition(center.x + localX, center.y + localY);
-  const activeBreach = getActiveBreachAtPoint(sideFromPosition, localX, localY);
+  const worldX = center.x + localX;
+  const worldY = center.y + localY;
+  const sideAtPoint = getSideByPosition(worldX, worldY);
+  const activeBreach = getActiveBreachAtPoint(sideAtPoint, localX, localY);
   if (activeBreach) {
     z.breached = true;
     z.breachSegmentId = activeBreach.segmentId;
@@ -4611,7 +4630,6 @@ function stepZombies(dt){
   const attackActive = isZombieAttackModeActive();
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
-  const scTheta = scCoordsValid ? Math.atan2(sc.y - center.y, sc.x - center.x) : null;
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -4651,59 +4669,74 @@ function stepZombies(dt){
     z.side = getSideByPosition(prevX, prevY);
     const prevLocalX = prevX - center.x;
     const prevLocalY = prevY - center.y;
-    const sideBreaches = getBreachesForSide(z.side);
-    const nearestSideBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY);
-    const hasSideBreach = sideBreaches.length > 0;
+    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY);
     const allowSupercomputerTarget = !!z.breached;
 
     let radialSpeed = 0;
     if (shouldMove) {
-      if (!z.breached && nearestSideBreach && nearestSideBreach.center) {
-        const breachTheta = Math.atan2(nearestSideBreach.center.y, nearestSideBreach.center.x);
-        if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
-        const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
-        z.anchorTheta = smoothAngle(z.anchorTheta, breachTheta, anchorSteerAmt);
-      } else if ((allowSupercomputerTarget || hasSideBreach) && scCoordsValid && Number.isFinite(scTheta)) {
-        if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
-        const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
-        z.anchorTheta = smoothAngle(z.anchorTheta, scTheta, anchorSteerAmt);
+      if (z.breached && scCoordsValid) {
+        const toScX = sc.x - prevX;
+        const toScY = sc.y - prevY;
+        const distToSc = Math.hypot(toScX, toScY);
+        const blendToSc = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
+        const desiredX = distToSc > 1e-6 ? (prevX + toScX * blendToSc) : prevX;
+        const desiredY = distToSc > 1e-6 ? (prevY + toScY * blendToSc) : prevY;
+        const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
+        const relX = moved.x - center.x;
+        const relY = moved.y - center.y;
+        const movedR = Math.hypot(relX, relY);
+        if (Number.isFinite(movedR) && movedR > 0) {
+          z.theta = Math.atan2(relY, relX);
+          z.anchorTheta = z.theta;
+          z.r = movedR;
+          z.targetR = Math.hypot(sc.x - center.x, sc.y - center.y);
+        }
+        z.side = getSideByPosition(moved.x, moved.y);
+        radialSpeed = Math.hypot(moved.x - prevX, moved.y - prevY);
+      } else {
+        if (!z.breached && nearestBreach && nearestBreach.center) {
+          const breachTheta = Math.atan2(nearestBreach.center.y, nearestBreach.center.x);
+          if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
+          const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
+          z.anchorTheta = smoothAngle(z.anchorTheta, breachTheta, anchorSteerAmt);
+        }
+
+        z.swayPhase += dt * z.swaySpeed * slow * speedMul * balSpeedMul;
+        const swayOffset = Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
+        const desiredTheta = z.anchorTheta + swayOffset;
+
+        const blend = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
+        let desiredR = z.r + (z.targetR - z.r) * blend;
+        if (!z.breached) desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
+
+        z.theta = desiredTheta;
+        z.r = desiredR;
+
+        const fenceLimit = zombieFenceLimit(z);
+        if (z.targetR < fenceLimit) z.targetR = fenceLimit;
+        if (z.r < fenceLimit) z.r = fenceLimit;
+
+        const desiredX = center.x + Math.cos(z.theta) * z.r;
+        const desiredY = center.y + Math.sin(z.theta) * z.r;
+        const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
+        const relX = moved.x - center.x;
+        const relY = moved.y - center.y;
+        const movedR = Math.hypot(relX, relY);
+        if (Number.isFinite(movedR) && movedR > 0) {
+          z.theta = Math.atan2(relY, relX);
+          z.anchorTheta = z.theta - swayOffset;
+          z.r = Math.max(movedR, zombieFenceLimit(z));
+          if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
+        }
+        z.side = getSideByPosition(center.x + relX, center.y + relY);
+        radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
       }
-
-      z.swayPhase += dt * z.swaySpeed * slow * speedMul * balSpeedMul;
-      const swayOffset = Math.sin(z.swayPhase) * BAL.zombieSwayAmp;
-      const desiredTheta = z.anchorTheta + swayOffset;
-
-      const blend = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
-      let desiredR = z.r + (z.targetR - z.r) * blend;
-      desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
-
-      z.theta = desiredTheta;
-      z.r = desiredR;
-
-      const fenceLimit = zombieFenceLimit(z);
-      if (z.targetR < fenceLimit) z.targetR = fenceLimit;
-      if (z.r < fenceLimit) z.r = fenceLimit;
-
-      const desiredX = center.x + Math.cos(z.theta) * z.r;
-      const desiredY = center.y + Math.sin(z.theta) * z.r;
-      const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
-      const relX = moved.x - center.x;
-      const relY = moved.y - center.y;
-      const movedR = Math.hypot(relX, relY);
-      if (Number.isFinite(movedR) && movedR > 0) {
-        z.theta = Math.atan2(relY, relX);
-        z.anchorTheta = z.theta - swayOffset;
-        z.r = Math.max(movedR, zombieFenceLimit(z));
-        if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
-      }
-      z.side = getSideByPosition(center.x + relX, center.y + relY);
 
       const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
       const moving = Math.abs(dTheta) > 0.0005;
       const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
       z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
 
-      radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
       const walkAnimMul = z.type?.animSpeed ?? 1.0;
       const walkAnimAdvance = dt * walkAnimMul * (1.4 + radialSpeed * 2.0) * slow * speedMul * balSpeedMul;
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
@@ -5515,8 +5548,8 @@ function setMenuOpen(open){
 
 function updateMenuState(){
   if (ui.menuContinue){
-    const hasSave = !!getSavedProgress();
-    ui.menuContinue.disabled = !hasSave;
+    const saved = getSavedProgress();
+    ui.menuContinue.disabled = !saved;
   }
   updateMenuVolumes();
 }
@@ -5530,6 +5563,9 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  if (reason === 'new_game') {
+    resetWorldEventsRuntimeForNewGame();
+  }
   ensureDamageProgressState();
   ensureDamagePointsSpentState();
   // Clear popup seen-levels on New Game (T5)
@@ -6405,7 +6441,6 @@ canvas.addEventListener('pointerdown', (e)=>{
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
-  if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.handleInput(p)) return;
   if (isBlockingModalOpen()) return;
   if (DronesApi && typeof DronesApi.handlePointerDown === 'function') {
     const dronInput = DronesApi.handlePointerDown({
@@ -6633,10 +6668,6 @@ function draw(){
   // If sprites failed to load, show a small hint on canvas
   if (!ZombieSprites.ready){
     drawHint(t('hintSpritesOff'));
-  }
-
-  if (window.Game && window.Game.OfflineModal && window.Game.OfflineModal.isVisible()){
-    window.Game.OfflineModal.render(ctx, viewSize);
   }
 
   // Debug-only zombie animation preview
