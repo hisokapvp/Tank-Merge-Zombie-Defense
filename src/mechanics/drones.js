@@ -594,12 +594,20 @@
     var hpStart = clamp(Number(repair.startHp) || 0, 0, seg.maxHp);
     var paidProgress = clamp((Number(repair.coinsSpentPrev) || 0) / totalCost, 0, 1);
     var hpTarget = Math.round(hpStart + (repair.maxHp - hpStart) * paidProgress);
+    var wasBroken = !!seg.broken;
     seg.hp = clamp(hpTarget, 0, seg.maxHp);
     seg.broken = seg.hp <= 0;
+    if (seg.broken !== wasBroken && typeof runtimeOptions.onFenceSegmentStateChanged === 'function') {
+      runtimeOptions.onFenceSegmentStateChanged(seg);
+    }
 
     if (seg.hp >= seg.maxHp) {
+      var wasBrokenAtCap = !!seg.broken;
       seg.hp = seg.maxHp;
       seg.broken = false;
+      if (seg.broken !== wasBrokenAtCap && typeof runtimeOptions.onFenceSegmentStateChanged === 'function') {
+        runtimeOptions.onFenceSegmentStateChanged(seg);
+      }
       clearTargetAndClaim(state, drone);
       if (!tryAcquireRepairTarget(state, drone, runtimeOptions)) {
         drone.substate = SUBSTATE_REPAIR_PATROL;
@@ -670,6 +678,7 @@
         dronConfig: opts.dronConfig,
         fenceOrigin: opts.fenceOrigin,
         worldBounds: opts.worldBounds,
+        onFenceSegmentStateChanged: opts.onFenceSegmentStateChanged,
       }, drone);
     }
   }

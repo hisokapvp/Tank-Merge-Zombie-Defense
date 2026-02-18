@@ -21,6 +21,7 @@
 - Save/offline/continue flow → `docs/ai/SYSTEMS/save.md`
 - Damage points (`totalDamageDealtRaw`, `damagePoints`) → `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `src/ui/supercomputerMenu.js`
 - Fence levels/armor/upgrade (`fenceLevel`, `armorFlat`, `damagePointsSpent`) → `docs/ai/SYSTEMS/fence.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md` + `docs/ai/SYSTEMS/ui.md`
+- Fence breach side-knowledge (`getSideByPosition`, `breachesBySide`, side-limited `holeAabb` pass) → `docs/ai/SYSTEMS/fence.md` + `game.js` + `src/render/fenceLayout.js`
 - New Game reset (`menuNew`) и правило стартового `talentPoints` → `docs/ai/SYSTEMS/save.md` + `README.md`
 - Save/offline reward-claim resilience (ad fail-safe) → `docs/ai/SYSTEMS/save.md`
 - Ассеты/JSON/спрайты → `docs/ai/SYSTEMS/assets.md`

@@ -223,6 +223,7 @@ const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
 const DronesApi = GameApi?.Drones ?? null;
+const FenceSidesApi = GameApi?.FenceSides ?? null;
 
 function createInitialState(options){
   const opts = options || {};
@@ -3878,10 +3879,12 @@ function clampFenceSegmentsToMaxHp(maxHp){
   for (let i = 0; i < state.fenceSegments.length; i++) {
     const seg = state.fenceSegments[i];
     if (!seg) continue;
+    const wasBroken = !!seg.broken;
     seg.maxHp = maxHp;
     const hp = Number.isFinite(seg.hp) ? seg.hp : maxHp;
     seg.hp = clamp(hp, 0, maxHp);
     seg.broken = seg.hp <= 0;
+    if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
   }
 }
 
@@ -4042,6 +4045,41 @@ function getSideKeyForTheta(theta){
   return dx >= 0 ? 'right' : 'left';
 }
 
+function getSideByPosition(x, y){
+  if (FenceSidesApi && typeof FenceSidesApi.getSideByPosition === 'function') {
+    return FenceSidesApi.getSideByPosition(x, y, center.x, center.y);
+  }
+  const dx = x - center.x;
+  const dy = y - center.y;
+  if (Math.abs(dy) > Math.abs(dx)) return dy >= 0 ? 'bottom' : 'top';
+  return dx >= 0 ? 'right' : 'left';
+}
+
+function createEmptyBreachesBySide(){
+  return {
+    top: [],
+    right: [],
+    bottom: [],
+    left: [],
+  };
+}
+
+function ensureBreachesBySide(){
+  const src = state.fenceBreachesBySide;
+  if (!src || !Array.isArray(src.top) || !Array.isArray(src.right) || !Array.isArray(src.bottom) || !Array.isArray(src.left)) {
+    state.fenceBreachesBySide = createEmptyBreachesBySide();
+  }
+  return state.fenceBreachesBySide;
+}
+
+function ensureBreachIndexBySegment(){
+  const src = state.fenceBreachIndexBySegment;
+  if (!src || typeof src !== 'object') {
+    state.fenceBreachIndexBySegment = Object.create(null);
+  }
+  return state.fenceBreachIndexBySegment;
+}
+
 function getFenceSideKeyForSegment(seg){
   if (!seg) return null;
   if (seg.kind === 'sideTop') return 'top';
@@ -4057,16 +4095,138 @@ function getFenceSideKeyForSegment(seg){
   return null;
 }
 
-function getBrokenFenceSidesMap(){
-  const result = { top: false, right: false, bottom: false, left: false };
-  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return result;
+function removeFenceBreachBySegmentId(segmentId){
+  if (segmentId == null) return;
+  const key = String(segmentId);
+  const indexBySegment = ensureBreachIndexBySegment();
+  const entry = indexBySegment[key];
+  if (!entry) return;
+
+  const breaches = ensureBreachesBySide();
+  const list = breaches[entry.sideKey];
+  const idx = Number.isFinite(entry.listIndex) ? entry.listIndex : -1;
+  if (!Array.isArray(list) || idx < 0 || idx >= list.length) {
+    delete indexBySegment[key];
+    return;
+  }
+
+  const lastIdx = list.length - 1;
+  const last = list[lastIdx];
+  if (idx !== lastIdx) {
+    list[idx] = last;
+    if (last && last.segmentId != null) {
+      last.listIndex = idx;
+      indexBySegment[String(last.segmentId)] = last;
+    }
+  }
+  list.pop();
+  delete indexBySegment[key];
+}
+
+function upsertFenceBreachBySegment(seg){
+  if (!seg || seg.id == null || !seg.holeAabb) return;
+  const sideKey = getFenceSideKeyForSegment(seg);
+  if (sideKey !== 'top' && sideKey !== 'right' && sideKey !== 'bottom' && sideKey !== 'left') return;
+  const aabb = seg.holeAabb;
+  const centerX = (aabb.minX + aabb.maxX) * 0.5;
+  const centerY = (aabb.minY + aabb.maxY) * 0.5;
+
+  const breaches = ensureBreachesBySide();
+  const indexBySegment = ensureBreachIndexBySegment();
+  const segmentKey = String(seg.id);
+  const existing = indexBySegment[segmentKey];
+
+  if (existing && existing.sideKey !== sideKey) {
+    removeFenceBreachBySegmentId(seg.id);
+  }
+
+  const list = breaches[sideKey];
+  const active = indexBySegment[segmentKey];
+  if (active) {
+    active.holeAabb = aabb;
+    active.center.x = centerX;
+    active.center.y = centerY;
+    return;
+  }
+
+  const entry = {
+    segmentId: seg.id,
+    holeAabb: aabb,
+    center: { x: centerX, y: centerY },
+    sideKey,
+    listIndex: list.length,
+  };
+  list.push(entry);
+  indexBySegment[segmentKey] = entry;
+}
+
+function syncFenceBreachForSegment(seg){
+  if (!seg || seg.id == null) return;
+  if (seg.broken) upsertFenceBreachBySegment(seg);
+  else removeFenceBreachBySegmentId(seg.id);
+}
+
+function rebuildBreachesBySideFromFence(){
+  state.fenceBreachesBySide = createEmptyBreachesBySide();
+  state.fenceBreachIndexBySegment = Object.create(null);
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
   for (let i = 0; i < state.fenceSegments.length; i++) {
     const seg = state.fenceSegments[i];
     if (!seg || !seg.broken) continue;
-    const sideKey = getFenceSideKeyForSegment(seg);
-    if (sideKey) result[sideKey] = true;
+    upsertFenceBreachBySegment(seg);
   }
-  return result;
+}
+
+function getBreachesForSide(sideKey){
+  const breaches = ensureBreachesBySide();
+  if (sideKey === 'top' || sideKey === 'right' || sideKey === 'bottom' || sideKey === 'left') {
+    return breaches[sideKey];
+  }
+  return [];
+}
+
+function pointInAabb(x, y, aabb){
+  if (!aabb) return false;
+  return x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
+}
+
+function getActiveBreachAtPoint(sideKey, x, y){
+  const list = getBreachesForSide(sideKey);
+  for (let i = 0; i < list.length; i++) {
+    const breach = list[i];
+    if (!breach || !breach.holeAabb) continue;
+    if (pointInAabb(x, y, breach.holeAabb)) return breach;
+  }
+  return null;
+}
+
+function pickNearestBreachForSide(sideKey, x, y){
+  const list = getBreachesForSide(sideKey);
+  if (!list.length) return null;
+  let best = null;
+  let bestDist = Infinity;
+  for (let i = 0; i < list.length; i++) {
+    const breach = list[i];
+    if (!breach || !breach.center) continue;
+    const dx = breach.center.x - x;
+    const dy = breach.center.y - y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bestDist) {
+      bestDist = d2;
+      best = breach;
+    }
+  }
+  return best;
+}
+
+function getBrokenFenceSidesMap(){
+  const breaches = ensureBreachesBySide();
+  return {
+    top: breaches.top.length > 0,
+    right: breaches.right.length > 0,
+    bottom: breaches.bottom.length > 0,
+    left: breaches.left.length > 0,
+  };
 }
 
 function distancePointAabb(px, py, aabb){
@@ -4223,8 +4383,10 @@ function applyFenceSegmentDamage(seg, amount){
   const armorFlat = getFenceArmorFlat();
   const finalDamage = Math.max(0, incomingDamage - armorFlat);
   if (finalDamage <= 0) return false;
+  const wasBroken = !!seg.broken;
   seg.hp = clamp(seg.hp - finalDamage, 0, seg.maxHp);
   seg.broken = seg.hp <= 0;
+  if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
   return true;
 }
 
@@ -4294,8 +4456,10 @@ function tryRepairFenceSegmentAt(px, py){
     return true;
   }
   state.coins -= repair.costCoins;
+  const wasBroken = !!seg.broken;
   seg.hp = seg.maxHp;
   seg.broken = false;
+  if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
   popText(px, py, t('fenceRepairDone'), '#7dffb2');
   return true;
 }
@@ -4357,9 +4521,20 @@ function zombieFenceLimit(z){
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
   const outerLimit = outerFenceSide / denom + zombieCollisionRadius(z);
 
+  const localX = dx * (z.r || 0);
+  const localY = dy * (z.r || 0);
+  const sideFromPosition = (z && z.side) || getSideByPosition(center.x + localX, center.y + localY);
+  const activeBreach = getActiveBreachAtPoint(sideFromPosition, localX, localY);
+  if (activeBreach) {
+    z.breached = true;
+    z.breachSegmentId = activeBreach.segmentId;
+    return getFenceInnerLimit(z);
+  }
+
   const seg = getFenceSegmentForTheta(z.theta);
   if (seg && seg.broken && !z.breached && z.r <= outerLimit + Math.max(2, BAL.fenceWidth * 0.15)) {
     z.breached = true;
+    z.breachSegmentId = seg.id || null;
   }
   if (z.breached) return getFenceInnerLimit(z);
   if (seg && seg.broken) return getFenceInnerLimit(z);
@@ -4437,7 +4612,6 @@ function stepZombies(dt){
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
   const scTheta = scCoordsValid ? Math.atan2(sc.y - center.y, sc.x - center.x) : null;
-  const brokenFenceSides = getBrokenFenceSidesMap();
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -4471,15 +4645,25 @@ function stepZombies(dt){
     const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
 
     const shouldMove = !attackActive || z.attackState !== 'attack';
-    const zombieSideKey = z.spawnSideKey || getSideKeyForTheta(Number.isFinite(z.anchorTheta) ? z.anchorTheta : z.theta);
-    const canTargetSupercomputer = !!brokenFenceSides[zombieSideKey];
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
     const prevY = center.y + Math.sin(prevTheta) * z.r;
+    z.side = getSideByPosition(prevX, prevY);
+    const prevLocalX = prevX - center.x;
+    const prevLocalY = prevY - center.y;
+    const sideBreaches = getBreachesForSide(z.side);
+    const nearestSideBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY);
+    const hasSideBreach = sideBreaches.length > 0;
+    const allowSupercomputerTarget = !!z.breached;
 
     let radialSpeed = 0;
     if (shouldMove) {
-      if (canTargetSupercomputer && scCoordsValid && Number.isFinite(scTheta)) {
+      if (!z.breached && nearestSideBreach && nearestSideBreach.center) {
+        const breachTheta = Math.atan2(nearestSideBreach.center.y, nearestSideBreach.center.x);
+        if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
+        const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
+        z.anchorTheta = smoothAngle(z.anchorTheta, breachTheta, anchorSteerAmt);
+      } else if ((allowSupercomputerTarget || hasSideBreach) && scCoordsValid && Number.isFinite(scTheta)) {
         if (!Number.isFinite(z.anchorTheta)) z.anchorTheta = z.theta || 0;
         const anchorSteerAmt = clamp(dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul, 0, 1);
         z.anchorTheta = smoothAngle(z.anchorTheta, scTheta, anchorSteerAmt);
@@ -4512,6 +4696,7 @@ function stepZombies(dt){
         z.r = Math.max(movedR, zombieFenceLimit(z));
         if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
       }
+      z.side = getSideByPosition(center.x + relX, center.y + relY);
 
       const dTheta = Math.atan2(Math.sin(z.theta - prevTheta), Math.cos(z.theta - prevTheta));
       const moving = Math.abs(dTheta) > 0.0005;
@@ -4524,7 +4709,7 @@ function stepZombies(dt){
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
 
-    const targetNow = attackActive ? selectZombieAttackTargetForZombie(z, z.attackRangePx, canTargetSupercomputer) : null;
+    const targetNow = attackActive ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
     if (!attackActive) {
@@ -4548,7 +4733,7 @@ function stepZombies(dt){
       const attackHitTimeSec = attackDurationSec * z.attackHitAt;
 
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
-        const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, canTargetSupercomputer);
+        const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget);
         if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
           applyFenceSegmentDamage(hitTarget.seg, getZombieAttackDamage(z) * damageMul);
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
@@ -6840,6 +7025,7 @@ function drawZombieFence(){
         byId,
         sideMath: null,
       };
+      rebuildBreachesBySideFromFence();
       state.savedFenceState = null;
     }
     if (state.fenceSegmentsMeta && state.fenceSegmentsMeta.segmentMaxHp !== maxHp) {
@@ -8123,6 +8309,7 @@ function loop(now){
         dronConfig: getDronRuntimeConfig(),
         fenceOrigin: center,
         worldBounds: { minX: 0, minY: 0, maxX: viewSize.w, maxY: viewSize.h },
+        onFenceSegmentStateChanged: syncFenceBreachForSegment,
       });
     }
   }

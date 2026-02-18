@@ -53,3 +53,41 @@
 - На последнем уровне кнопка апгрейда недоступна.
 - После апгрейда HP сегментов не превышает новый `segmentMaxHp`.
 - При удалении `levels[]` в `assets/fence.json` fence работает через legacy `segmentMaxHp`.
+
+## Side by position
+
+- Для runtime-определения стороны используется `getSideByPosition(x, y)` относительно центра базы/layout.
+- Возвращаемые значения: `top | right | bottom | left`.
+- Правило квадранта: сравнение `abs(dy)` и `abs(dx)` от центра; при доминировании `dy` выбирается `top/bottom`, иначе `left/right`.
+- В `stepZombies` сторона зомби обновляется каждый тик: `z.side = getSideByPosition(zWorldX, zWorldY)`.
+
+## Breach registry by side
+
+- Runtime-структура: `breachesBySide` (эквивалент `{ top: [], right: [], bottom: [], left: [] }`) с доступом O(1) по стороне.
+- Элемент брича хранит минимум: `{ segmentId, holeAabb, center }`.
+- Обновление структуры выполняется при смене состояния сегмента fence:
+  - на разрушении сегмента (`broken = true`) сегмент регистрируется как breach на стороне сегмента;
+  - на восстановлении/ремонте (`broken = false`) breach удаляется.
+- При полном rebuild fence-layout структура `breachesBySide` пересобирается из текущих `state.fenceSegments`.
+
+## Zombie side-knowledge behavior
+
+- Базовое правило: зомби используют только брич своей текущей стороны (`z.side`); бричи других сторон игнорируются.
+- Если `breachesBySide[z.side]` не пуст:
+  - зомби выбирает ближайший breach по `center` на своей стороне;
+  - использует центр брича как промежуточную цель входа.
+- После входа внутрь базы (breach crossed / `z.breached=true`) зомби продолжает маршрут к `supercomputer`.
+- Если на своей стороне бричей нет, поведение остаётся прежним: зомби атакует fence-сегменты.
+
+## Collision rule in breach hole
+
+- Fence-block/collision отключается только внутри `holeAabb` активного брича на стороне текущего зомби.
+- Исключение не глобальное: зомби с другой стороны не получает проход через чужой `holeAabb`.
+- Визуальный проход и коллизия должны совпадать с геометрией из `src/render/fenceLayout.js` (`holeAabb` сегмента).
+
+## Точки интеграции в коде
+
+- Геометрия/границы отверстия: `src/render/fenceLayout.js` (`holeAabb`).
+- Runtime fence + breach registry + side-aware AI: `game.js`.
+- Пошаговый AI/движение зомби: `stepZombies` и `zombieFenceLimit` в `game.js`.
+- Изменение состояния сегмента при ремонте дронами: `src/mechanics/drones.js` (sync callback в runtime).

@@ -2,7 +2,7 @@
   "atlas": "dron_atlas.png",
   "png": "dron_atlas.png",
   "baseRepairSec": 5,
-  "iconSize": { "w": 20, "h": 20 },
+  "iconSize": { "w": 15, "h": 15 },
   "iconsOffsetY": -34,
   "anchor": { "x": 0.5, "y": 0.5 },
   "scale": 0.5,
