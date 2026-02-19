@@ -20,6 +20,10 @@
 - Input: `docs/ai/SYSTEMS/input.md`
 - Performance: `docs/ai/SYSTEMS/perf.md`
 
+## Текущие UI-акценты
+- Меню (big/small): last-click selected state без default selected на первом показе — `docs/ai/SYSTEMS/ui.md`.
+- Confirm выхода из small menu: отдельный view `menuExitConfirmView`, переиспользует текущий session-exit flow.
+
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`

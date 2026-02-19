@@ -50,6 +50,38 @@
 
     var storageApi = windowObj.Game && windowObj.Game.Storage;
     var activeSaveSlotIndex = -1;
+    var lastActiveButtonIdSmallMenu = null;
+
+    function getSmallMenuButtons() {
+      return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuFeedback, opts.ui.menuExit];
+    }
+
+    function setMenuButtonSelected(button, selected) {
+      if (!button || !button.classList) return;
+      button.classList.toggle('menuActionSelected', !!selected);
+      if (selected) {
+        button.classList.add('btnPrimary');
+        button.classList.remove('btnSecondary');
+        return;
+      }
+      button.classList.remove('btnPrimary');
+      button.classList.add('btnSecondary');
+    }
+
+    function applySmallMenuSelectedState() {
+      var buttons = getSmallMenuButtons();
+      for (var i = 0; i < buttons.length; i++) {
+        var button = buttons[i];
+        if (!button || !button.id) continue;
+        setMenuButtonSelected(button, button.id === lastActiveButtonIdSmallMenu);
+      }
+    }
+
+    function markSmallMenuButtonActive(buttonId) {
+      if (!buttonId) return;
+      lastActiveButtonIdSmallMenu = buttonId;
+      applySmallMenuSelectedState();
+    }
 
     function getSaveMeta() {
       if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
@@ -114,6 +146,7 @@
     function openMainMenuView() {
       activeSaveSlotIndex = -1;
       setMenuView('main');
+      applySmallMenuSelectedState();
     }
 
     function openSaveSlotsView() {
@@ -168,6 +201,7 @@
     }
 
     opts.ui.menuContinue && opts.ui.menuContinue.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuContinue');
       var ContinueFlow = windowObj.Game && windowObj.Game.ContinueFlow;
       if (ContinueFlow) {
         ContinueFlow.onContinueClick(getState(), opts.meta, function () { return opts.setMenuOpen(false); });
@@ -177,6 +211,7 @@
     });
 
     opts.ui.menuNew && opts.ui.menuNew.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuNew');
       localStorageObj.removeItem('progress');
       opts.resetGameState({ reason: 'new_game' });
       opts.meta.lastSeenAt = Date.now();
@@ -185,12 +220,14 @@
     });
 
     opts.ui.menuFeedback && opts.ui.menuFeedback.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuFeedback');
       var feedbackWidget = windowObj.Game && windowObj.Game.FeedbackWidget;
       if (!feedbackWidget || typeof feedbackWidget.open !== 'function') return;
       feedbackWidget.open();
     });
 
     opts.ui.menuSave && opts.ui.menuSave.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuSave');
       openSaveSlotsView();
     });
     opts.ui.menuSaveSlotsList && opts.ui.menuSaveSlotsList.addEventListener('click', function (event) {
@@ -235,9 +272,13 @@
     });
 
     opts.ui.menuExit && opts.ui.menuExit.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuExit');
       openExitConfirmView();
     });
     opts.ui.menuExitConfirmCancel && opts.ui.menuExitConfirmCancel.addEventListener('click', function () {
+      openMainMenuView();
+    });
+    opts.ui.menuExitConfirmClose && opts.ui.menuExitConfirmClose.addEventListener('click', function () {
       openMainMenuView();
     });
     opts.ui.menuExitConfirmLeave && opts.ui.menuExitConfirmLeave.addEventListener('click', function () {

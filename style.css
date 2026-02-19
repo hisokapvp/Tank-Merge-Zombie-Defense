@@ -339,8 +339,7 @@ body::after{
   grid-template-columns:repeat(3, minmax(0, 1fr));
   margin-top:10px;
 }
-#menuSaveSlotsView .menuInlineActions,
-#menuExitConfirmView .menuInlineActions{
+#menuSaveSlotsView .menuInlineActions{
   grid-template-columns:repeat(2, minmax(0, 1fr));
 }
 .menuSaveInput{

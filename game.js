@@ -160,6 +160,7 @@ const ui = {
   menuExitConfirmView: document.getElementById('menuExitConfirmView'),
   menuExitConfirmLeave: document.getElementById('menuExitConfirmLeave'),
   menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
+  menuExitConfirmClose: document.getElementById('menuExitConfirmClose'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
   menuSfxValue: document.getElementById('menuSfxValue'),
@@ -358,6 +359,7 @@ let audioSettingsController = null;
 let bootPromise = null;
 let bigMenuInitialized = false;
 let bigMenuStartPending = false;
+let lastActiveButtonIdBigMenu = null;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
@@ -6051,6 +6053,36 @@ function setBigMenuOpen(open){
   if (open) syncVolumeUIFromSettings();
 }
 
+function getBigMenuActionButtons(){
+  return [ui.bigMenuNew, ui.bigMenuLoad, ui.bigMenuSound, ui.bigMenuLanguage, ui.bigMenuFeedback, ui.bigMenuDevs];
+}
+
+function setMenuActionButtonSelected(button, selected){
+  if (!button || !button.classList) return;
+  button.classList.toggle('menuActionSelected', !!selected);
+  if (selected) {
+    button.classList.add('btnPrimary');
+    button.classList.remove('btnSecondary');
+    return;
+  }
+  button.classList.remove('btnPrimary');
+  button.classList.add('btnSecondary');
+}
+
+function applyBigMenuSelectedState(){
+  const buttons = getBigMenuActionButtons();
+  for (const button of buttons) {
+    if (!button || !button.id) continue;
+    setMenuActionButtonSelected(button, button.id === lastActiveButtonIdBigMenu);
+  }
+}
+
+function markBigMenuButtonActive(buttonId){
+  if (!buttonId) return;
+  lastActiveButtonIdBigMenu = buttonId;
+  applyBigMenuSelectedState();
+}
+
 function closeBigMenuPanels(){
   const panels = [ui.bigMenuSoundPanel, ui.bigMenuLanguagePanel, ui.bigMenuDevsPanel];
   for (const panel of panels) {
@@ -6194,7 +6226,7 @@ function applyBigMenuLanguage(lang){
 }
 
 function setBigMenuActionButtonsDisabled(disabled){
-  const buttons = [ui.bigMenuNew, ui.bigMenuLoad, ui.bigMenuSound, ui.bigMenuLanguage, ui.bigMenuFeedback, ui.bigMenuDevs];
+  const buttons = getBigMenuActionButtons();
   for (const btn of buttons) {
     if (!btn) continue;
     btn.disabled = !!disabled;
@@ -6312,12 +6344,30 @@ function initBigMainMenu(){
   if (bigMenuInitialized) return;
   bigMenuInitialized = true;
 
-  if (ui.bigMenuNew) ui.bigMenuNew.addEventListener('click', () => { startFromBigMenu('new'); });
-  if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => { startFromBigMenu('load'); });
-  if (ui.bigMenuFeedback) ui.bigMenuFeedback.addEventListener('click', triggerBigMenuFeedback);
-  if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuSoundPanel); });
-  if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuLanguagePanel); });
-  if (ui.bigMenuDevs) ui.bigMenuDevs.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuDevsPanel); });
+  if (ui.bigMenuNew) ui.bigMenuNew.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuNew');
+    startFromBigMenu('new');
+  });
+  if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuLoad');
+    startFromBigMenu('load');
+  });
+  if (ui.bigMenuFeedback) ui.bigMenuFeedback.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuFeedback');
+    triggerBigMenuFeedback();
+  });
+  if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuSound');
+    toggleBigMenuPanel(ui.bigMenuSoundPanel);
+  });
+  if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuLanguage');
+    toggleBigMenuPanel(ui.bigMenuLanguagePanel);
+  });
+  if (ui.bigMenuDevs) ui.bigMenuDevs.addEventListener('click', () => {
+    markBigMenuButtonActive('bigMenuDevs');
+    toggleBigMenuPanel(ui.bigMenuDevsPanel);
+  });
 
   if (ui.bigMenuSfx) {
     ui.bigMenuSfx.addEventListener('input', function (e) {

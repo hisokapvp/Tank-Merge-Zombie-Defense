@@ -13,7 +13,7 @@
   "menuSaveSlotName": "Имя слота",
   "menuSaveAction": "Сохранить",
   "menuSaveSuccess": "Игра успешно сохранена",
-  "menuExitConfirm": "Выйти без сохранения?",
+  "menuExitConfirm": "Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?",
   "menuExitConfirmLeave": "Выйти",
   "menuExitConfirmCancel": "Отмена",
   "menuLanguage": "Язык",
