@@ -37,6 +37,7 @@
 
 - Кнопка `#menuFeedback` находится в `#menuOverlay` рядом с `Continue/New game`.
 - Клик по `#menuFeedback` вызывает `Game.FeedbackWidget.open()` (привязка в `src/core/bootstrap.js`).
+- `#menuFeedback` должен оставаться последней строкой in-session меню; для инварианта допускается re-append в конец контейнера.
 - Кнопка доступна только в main menu (отдельной HUD/floating кнопки нет).
 
 ## Crate reward: spawn в crate-slot
@@ -52,12 +53,13 @@
 - Основной вход в дерево улучшений: icon-only `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
 - Для icon-only `#supercomputerBtn` локализованный `aria-label`/`title` берётся из ключа `supercomputerBtn`.
 - Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо улучшений`).
-- Root-пункты оформлены как tile (`иконка сверху + текст снизу`) в один ряд с `flex-wrap`; `id` остаются прежними: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
+- Root-пункты оформлены как tile (`иконка сверху + текст снизу`) всегда в один ряд без wrap; `id` остаются прежними: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
 - Child overlays: `#modsHangarOverlay`, `#modsTankWallOverlay`, плюс существующий `#talentOverlay` как child-ветка.
 - Единый стиль кнопок supercomputer: класс `.scButton` применяется в root-меню и в релевантных action/tab кнопках child overlays (без изменения layout-контейнеров).
 - Единый контейнер supercomputer-модалок: класс `.scModal` у `#modsTankWallOverlay` и у modal-панели `#talentOverlay` (через `src/ui/supercomputerMenu.js`), чтобы размер модалки `Модификации танков и стен` соответствовал `Древу талантов`.
 - Правило `Esc`: в root — закрыть supercomputer UI и снять его pause-lock; в child — шаг назад в root, pause-lock сохраняется.
 - Реализация: `index.html` (разметка), `src/ui/supercomputerMenu.js` (modal routing), `src/accessibility/a11y.js` (focus trap + Esc), `src/systems/pauseManager.js` + `game.js` (единый menu pause lock между settings/supercomputer).
+- Детальные CSS-правила/чеклист: `docs/supercomputer-ui.md`.
 
 ## Critical modal flow
 
@@ -77,7 +79,14 @@
 - Разметка: `tablist` + `tab` + `tabpanel` для 3 вкладок в порядке слева направо: `Орудия`, `Базы`, `Стены`.
 - Дефолт при каждом открытии `#modsTankWallOverlay`: активна `Орудия` (`weapons`) вне зависимости от выбора в прошлом открытии.
 - Состояние вкладки не сохраняется между открытиями (без localStorage/state carry-over).
+- Для `.scTab` запрещены любые тени (`box-shadow`, `filter/drop-shadow`, псевдо-эффекты тени); визуальный hover/active сигнал остаётся фоновым (`background`).
 - Tab-кнопки остаются focusable (button + `role="tab"`, `aria-selected`, `tabindex`), `Esc`/back/focus trap работают по прежним правилам supercomputer child overlay.
+
+### Root tiles layout
+
+- Контейнер root tiles (`.scRootTiles`) работает в `flex-wrap: nowrap`; элементы (`.scRootTile`) сжимаются через `flex: 1 1 0` и `min-width: 0`.
+- Лейблы (`.scRootTile__label`) без переносов (`white-space: nowrap`) и с fallback `overflow: hidden; text-overflow: ellipsis;`.
+- Шрифт лейблов допускает только авто-уменьшение до минимума через `clamp(min, vw, base)`; увеличение выше базового размера запрещено.
 
 ## Boost UI возле supercomputer
 

@@ -75,6 +75,9 @@
       if (!feedbackWidget || typeof feedbackWidget.open !== 'function') return;
       feedbackWidget.open();
     });
+    if (opts.ui.menuFeedback && opts.ui.menuFeedback.parentElement) {
+      opts.ui.menuFeedback.parentElement.appendChild(opts.ui.menuFeedback);
+    }
 
     opts.ui.menuSfx && opts.ui.menuSfx.addEventListener('input', function (e) {
       var value = Number(e.target.value) / 100;

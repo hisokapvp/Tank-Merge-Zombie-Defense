@@ -176,6 +176,7 @@ Merge + tower defense на canvas.
 - `Esc` в root-меню суперкомпьютера закрывает меню и снимает menu-pause (если settings уже не открыт).
 - `Esc` в дочерних окнах суперкомпьютера (`mods*` и upgrade tree) делает шаг назад в root-меню, пауза сохраняется.
 - Реализация: разметка в `index.html`, логика в `src/ui/supercomputerMenu.js` + orchestration в `game.js`, modal/a11y через `src/accessibility/a11y.js`, pause lock через `src/systems/pauseManager.js`.
+- UI-правила для tabs/tiles и порядок feedback в in-session меню: `docs/supercomputer-ui.md`.
 
 ## Critical mode (5% HP порог)
 
@@ -216,6 +217,7 @@ Merge + tower defense на canvas.
 - Реализация виджета: `src/feedback/widget.js`.
 - Floating-кнопка отключена: модалка открывается программно через `Game.FeedbackWidget.open()` (алиас `showModal()`).
 - Кнопка в main menu: `#menuFeedback` (`data-i18n="menuFeedback"`) в `index.html`, клик привязан в `src/core/bootstrap.js`.
+- Кнопка `#menuFeedback` в in-session меню (`#menuOverlay`) всегда последняя в списке действий.
 - Все тексты feedback-модалки берутся из i18n ключей: `feedbackTitle`, `feedbackCategoryLabel`, `feedbackRatingLabel`, `feedbackMessagePlaceholder`, `feedbackCancel`, `feedbackSend`, `feedbackValidationMessageRequired`, `feedbackSuccess`, `feedbackCategory*`.
 - Где менять тексты и категории: `src/i18n/ru.json`, `src/i18n/en.json` (fallback: `src/i18n/fallbackStrings.js`).
 
