@@ -67,6 +67,15 @@
 - Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов. Если мешают скругления рамки, использовать `overflow:hidden` у контейнера с `border-radius` и оставлять линию на `width:100%`.
 - Проверка: открыть `Модификации танков и стен`, убедиться, что у divider нет видимых зазоров слева/справа относительно внутренней рамки.
 
+## Merge popup (новый уровень танка)
+- Точка входа pop-up: `src/ui/mergePopup.js` (`Game.MergePopup.show(level)`), preview/render: `src/ui/mergePreview/mergePreviewModel.js` + `src/ui/mergePreview/mergePreviewRenderer.js`.
+- Локальное условие удаления FX: `PREVIEW_RENDER_OPTS = { showRightHullShotFx: false }` в `src/ui/mergePopup.js`, опция передаётся только в `MergePreviewRenderer.render(...)` из merge popup.
+- Правило: отключён только right-side hull shot FX (`tankIndex === 1`) в preview-рендере pop-up; пушечная стрельба/SFX и остальные loop FX pop-up не меняются.
+
+### QA (ручной)
+- Открыть pop-up нового уровня танка и проверить, что справа нет боковой shot-вспышки/трассера от правого корпуса.
+- Убедиться, что остальные эффекты pop-up (основной fire/SFX и loop-анимации) визуально/аудио работают как раньше.
+
 ## Мини-проверка
 - Кнопки работают мышью и touch.
 - Фокус и закрытие модалок проходят через `Game.A11y`.

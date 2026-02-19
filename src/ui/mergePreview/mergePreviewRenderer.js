@@ -28,8 +28,9 @@
 		}
 	}
 
-	function render(ctx, model, state, phase) {
+	function render(ctx, model, state, phase, opts) {
 		if (!ctx || !model) return;
+		opts = opts || {};
 		var TankPortrait = global.Game && global.Game.TankPortrait;
 		if (!TankPortrait || !TankPortrait.renderTankPortrait) return;
 
@@ -40,6 +41,7 @@
 
 		var showResult = state !== 1 || phase > 0.7;
 		var showSides = state === 1;
+		var showRightHullShotFx = opts.showRightHullShotFx !== false;
 
 		var leftX = model.tanks[0].x;
 		var rightX = model.tanks[1].x;
@@ -75,7 +77,7 @@
 			});
 		}
 
-		drawShots(ctx, model, showSides, showSides, showResult);
+		drawShots(ctx, model, showSides, showSides && showRightHullShotFx, showResult);
 	}
 
 	global.Game = global.Game || {};

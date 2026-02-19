@@ -22,6 +22,9 @@
   var animStartTime = 0;
   var previewModel = null;
   var usePreview = false;
+  // QA (manual): in merge popup, right-side hull shot trace/flash must be absent;
+  // cannon fire/SFX and other popup loops remain unchanged.
+  var PREVIEW_RENDER_OPTS = { showRightHullShotFx: false };
   var lastFrameTime = 0;
   var lastCanvasW = 0;
   var lastCanvasH = 0;
@@ -326,11 +329,11 @@
         var phasePreview = Math.min(1, elapsedPreview / (totalPreviewSec * 0.35));
         applyPreviewPositions(phasePreview);
         global.Game.MergePreviewModel.update(previewModel, dt);
-        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, phasePreview);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, phasePreview, PREVIEW_RENDER_OPTS);
       } else if (currentState === STATE.SHOWCASE) {
         applyPreviewPositions(1);
         global.Game.MergePreviewModel.update(previewModel, dt);
-        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, 1);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, 1, PREVIEW_RENDER_OPTS);
       }
       return;
     }
