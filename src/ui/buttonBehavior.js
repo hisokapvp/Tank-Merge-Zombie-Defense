@@ -3,6 +3,62 @@
 
   var BEHAVIOR_CLASS = 'uiButtonBehavior';
   var PRESSED_CLASS = 'is-pressed';
+  var lastHoverSfxAt = -Infinity;
+
+  function getAudioUiConfig() {
+    var cfg = global.Game && global.Game.Config && global.Game.Config.AudioUi;
+    return cfg || {};
+  }
+
+  function asPositiveNumber(value, fallback) {
+    var num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  function findRuntimePlaySfx() {
+    if (typeof global.playSfx === 'function') return global.playSfx;
+    if (global.Game && global.Game.AudioRuntime && typeof global.Game.AudioRuntime.playSfx === 'function') {
+      return global.Game.AudioRuntime.playSfx;
+    }
+    return null;
+  }
+
+  function findFallbackPlaySfx() {
+    if (global.Game && global.Game.Audio && typeof global.Game.Audio.playSfx === 'function') {
+      return global.Game.Audio.playSfx;
+    }
+    if (global.Game && global.Game.AudioSettingsController && typeof global.Game.AudioSettingsController.playSfx === 'function') {
+      return global.Game.AudioSettingsController.playSfx;
+    }
+    return null;
+  }
+
+  function playUiSfx(id, volumeMult) {
+    var runtimePlaySfx = findRuntimePlaySfx();
+    if (runtimePlaySfx) {
+      try {
+        if (runtimePlaySfx.length >= 2) {
+          runtimePlaySfx(id, { volumeMult: volumeMult, channel: 'ui' });
+          return;
+        }
+        runtimePlaySfx(id, { volumeMult: volumeMult });
+        return;
+      } catch (_) {}
+      try {
+        runtimePlaySfx(id);
+        return;
+      } catch (_) {}
+    }
+
+    var fallbackPlaySfx = findFallbackPlaySfx();
+    if (fallbackPlaySfx) {
+      try {
+        fallbackPlaySfx(id, { volumeMult: volumeMult });
+      } catch (_) {
+        try { fallbackPlaySfx(id); } catch (_) {}
+      }
+    }
+  }
 
   function isButtonLike(el) {
     if (!el || el.nodeType !== 1) return false;
@@ -42,8 +98,33 @@
     var target = event.target && event.target.closest
       ? event.target.closest('.' + BEHAVIOR_CLASS)
       : null;
-    if (!target || isDisabled(target)) return;
+    if (!target) return;
+    var cfg = getAudioUiConfig();
+    var baseMult = asPositiveNumber(cfg.UI_SFX_VOLUME_MULT, 0.5);
+    if (isDisabled(target)) {
+      var disabledMult = asPositiveNumber(cfg.UI_DISABLED_CLICK_VOLUME_MULT, 1.0);
+      playUiSfx('uiClickOnDisable', baseMult * disabledMult);
+      return;
+    }
+    playUiSfx('uiClickOnEnabled', baseMult);
     target.classList.add(PRESSED_CLASS);
+  }
+
+  function handlePointerEnter(event) {
+    if (event && event.pointerType === 'touch') return;
+    var target = event.target && event.target.closest
+      ? event.target.closest('.' + BEHAVIOR_CLASS)
+      : null;
+    if (!target || isDisabled(target)) return;
+
+    var now = performance.now();
+    var cfg = getAudioUiConfig();
+    var cooldownMs = Math.max(0, asPositiveNumber(cfg.UI_HOVER_COOLDOWN_MS, 100));
+    if (now - lastHoverSfxAt < cooldownMs) return;
+    lastHoverSfxAt = now;
+
+    var baseMult = asPositiveNumber(cfg.UI_SFX_VOLUME_MULT, 0.5);
+    playUiSfx('uiHover', baseMult);
   }
 
   function handlePointerUp() {
@@ -71,6 +152,7 @@
     }
 
     document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('pointerenter', handlePointerEnter, true);
     document.addEventListener('pointerup', handlePointerUp, true);
     document.addEventListener('pointercancel', handlePointerCancel, true);
     document.addEventListener('lostpointercapture', handlePointerCancel, true);

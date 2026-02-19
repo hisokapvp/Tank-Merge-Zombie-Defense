@@ -8,6 +8,7 @@
 
   var SFX_DEDUP_MS = 80;
   var SFX_POOL_SIZE = 6;
+  var SFX_AUDIO_PROBE = null;
   var SFX_SOURCES = {
     shootNormal: 'assets/sfx/shoot_normal.ogg',
     shootHeavy: 'assets/sfx/shoot_heavy.ogg',
@@ -15,7 +16,50 @@
     levelUp: 'assets/sfx/level_up.ogg',
     applyTalents: 'assets/sfx/apply_talents.ogg',
     activeAbility: 'assets/sfx/active_ability.ogg',
+    uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
+    uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
+    uiClickOnDisable: ['assets/sfx/ui_click_disabled.ogg', 'assets/sfx/ui_click_disabled.mp3'],
+    tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
+    tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
   };
+
+  function sfxSourceToMime(source) {
+    var normalized = String(source || '').toLowerCase();
+    if (normalized.endsWith('.ogg')) return 'audio/ogg';
+    if (normalized.endsWith('.wav')) return 'audio/wav';
+    if (normalized.endsWith('.mp3')) return 'audio/mpeg';
+    return '';
+  }
+
+  function canPlaySfxSource(source) {
+    if (typeof Audio === 'undefined') return true;
+    try {
+      if (!SFX_AUDIO_PROBE) SFX_AUDIO_PROBE = new Audio();
+      if (!SFX_AUDIO_PROBE || typeof SFX_AUDIO_PROBE.canPlayType !== 'function') return true;
+      var mime = sfxSourceToMime(source);
+      if (!mime) return true;
+      var support = SFX_AUDIO_PROBE.canPlayType(mime);
+      return support === 'probably' || support === 'maybe';
+    } catch (_) {
+      return true;
+    }
+  }
+
+  function pickSupportedSource(src) {
+    if (Array.isArray(src)) {
+      for (var i = 0; i < src.length; i++) {
+        var candidate = src[i];
+        if (typeof candidate !== 'string' || !candidate) continue;
+        if (canPlaySfxSource(candidate)) return candidate;
+      }
+      for (var j = 0; j < src.length; j++) {
+        if (typeof src[j] === 'string' && src[j]) return src[j];
+      }
+      return '';
+    }
+    if (typeof src === 'string' && src) return src;
+    return '';
+  }
 
   function clampVolume(value, fallback, clampFn) {
     var safeClamp = typeof clampFn === 'function'
@@ -100,7 +144,7 @@
 
     function getSfxPool(id) {
       if (!sfxPools[id]) {
-        var src = SFX_SOURCES[id];
+        var src = pickSupportedSource(SFX_SOURCES[id]);
         if (!src) return null;
         var players = [];
         var vol = clampVolume(settings.sfxVolume, DEFAULT_SETTINGS.sfxVolume, clampFn);
@@ -115,8 +159,14 @@
       return sfxPools[id];
     }
 
-    function playSfx(id) {
-      var vol = clampVolume(settings.sfxVolume, DEFAULT_SETTINGS.sfxVolume, clampFn);
+    function playSfx(id, opts) {
+      var volumeMult = 1;
+      if (opts && typeof opts === 'object' && opts.volumeMult != null) {
+        volumeMult = Number(opts.volumeMult);
+      }
+      if (!Number.isFinite(volumeMult)) volumeMult = 1;
+      var baseVol = clampVolume(settings.sfxVolume, DEFAULT_SETTINGS.sfxVolume, clampFn);
+      var vol = clampVolume(baseVol * volumeMult, baseVol, clampFn);
       var now = performance.now();
       if (sfxLastPlayed[id] != null && now - sfxLastPlayed[id] < SFX_DEDUP_MS) return;
       sfxLastPlayed[id] = now;

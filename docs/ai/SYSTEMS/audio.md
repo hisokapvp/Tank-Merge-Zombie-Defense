@@ -11,3 +11,10 @@
 - Сохранять корректную паузу/возобновление и mute-поведение.
 - Не запускать SFX в tight-loop без throttling.
 - Для critical modal использовать политику `CriticalAudioPolicy`: allowlist SFX + restore предыдущего состояния аудио при закрытии.
+
+## UI SFX (централизованно)
+- UI-звуки используют id: `uiHover`, `uiClickOnEnabled`, `uiClickOnDisable`, `tankToTrack`, `tankToHangar`.
+- В `src/audio/settingsAudio.js` источник SFX может быть строкой (`.ogg`) или массивом источников в приоритетном порядке (например `['...ogg', '...mp3']`).
+- Для массивов выбирается первый поддерживаемый формат через `Audio().canPlayType(...)`; если поддержку определить нельзя, берётся первый элемент массива.
+- `playSfx(id, opts)` поддерживает `opts.volumeMult` (обратная совместимость с `playSfx(id)` обязательна), итоговая громкость всегда clamp `0..1`.
+- Hover SFX должен быть throttled через cooldown (минимум 100ms), чтобы избежать спама в плотных pointer-сценариях.

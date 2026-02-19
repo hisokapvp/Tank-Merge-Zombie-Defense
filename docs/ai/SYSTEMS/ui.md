@@ -38,6 +38,13 @@
 - Press/hover-эффекты должны быть визуальными (яркость/scale иконки), не менять якорную позицию кнопки.
 - При изменениях в unified button behavior (`.uiButtonBehavior`) обязательно сохранять исключение для HUD-кнопки суперкомпьютера.
 
+## Unified button behavior и UI SFX
+- Hover/click UI SFX централизованы в `src/ui/buttonBehavior.js`; не дублировать обработчики по модалкам/экранам.
+- Hover SFX запускается только для `mouse` (`pointerenter`, capture) и с глобальным cooldown.
+- Click SFX запускается на `pointerdown` (capture), с разными id для enabled/disabled состояния.
+- Для disabled-кнопок воспроизводится только disabled-click SFX; `is-pressed` не проставляется.
+- Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
+
 ## Мини-проверка
 - Кнопки работают мышью и touch.
 - Фокус и закрытие модалок проходят через `Game.A11y`.

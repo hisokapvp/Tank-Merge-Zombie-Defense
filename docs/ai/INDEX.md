@@ -32,6 +32,7 @@
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
+- UI SFX параметры (volume/cooldown): `src/config/audioUi.js`
 
 ## Runtime reset (partial)
 - Оркестратор partial reset: `src/core/worldReset.js`
