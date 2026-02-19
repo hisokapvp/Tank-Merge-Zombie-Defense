@@ -216,6 +216,9 @@ body::after{
   flex-direction:column;
   gap:10px;
 }
+.bigMenuActionWithPanel{
+  position:relative;
+}
 .bigMenuActions .btn{
   width:100%;
   min-height:48px;
@@ -243,6 +246,13 @@ body::after{
 .bigMenuSubpanel.bigMenuSubpanelHidden{
   display:none;
 }
+.bigMenuSubpanel.bigMenuSubpanelFloating{
+  position:absolute;
+  top:calc(100% + 8px);
+  left:0;
+  right:0;
+  z-index:3;
+}
 .bigMenuSubpanelTitle{
   font-size:12px;
   font-weight:800;
@@ -252,14 +262,47 @@ body::after{
 }
 .bigMenuLangActions{
   display:flex;
+  flex-direction:column;
   gap:10px;
 }
 .bigMenuLangActions .btn{
-  flex:1;
+  width:100%;
 }
 .bigMenuDevsText{
   font-size:13px;
   color:var(--muted);
+}
+.creditsModal__panel{
+  width:min(560px, 92vw);
+  max-height:85vh;
+  display:flex;
+  flex-direction:column;
+}
+.creditsModal__list{
+  margin-top:10px;
+  max-height:min(52vh, 420px);
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.creditsModal__item{
+  border:1px solid rgba(255, 184, 114, 0.14);
+  border-radius:12px;
+  background:rgba(13, 9, 6, 0.72);
+  padding:10px 12px;
+}
+.creditsModal__name{
+  font-weight:800;
+}
+.creditsModal__role{
+  margin-top:4px;
+  color:var(--muted);
+}
+.creditsModal__empty{
+  text-align:center;
+  color:var(--muted);
+  padding:12px 8px;
 }
 .menuBackdrop{
   position:absolute;

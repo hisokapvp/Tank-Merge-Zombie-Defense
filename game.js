@@ -126,19 +126,23 @@ const ui = {
   bigMenuNew: document.getElementById('bigMenuNew'),
   bigMenuLoad: document.getElementById('bigMenuLoad'),
   bigMenuSound: document.getElementById('bigMenuSound'),
+  bigMenuLanguageWrap: document.getElementById('bigMenuLanguageWrap'),
   bigMenuLanguage: document.getElementById('bigMenuLanguage'),
   bigMenuFeedback: document.getElementById('bigMenuFeedback'),
   bigMenuDevs: document.getElementById('bigMenuDevs'),
   bigMenuLoadHint: document.getElementById('bigMenuLoadHint'),
   bigMenuSoundPanel: document.getElementById('bigMenuSoundPanel'),
   bigMenuLanguagePanel: document.getElementById('bigMenuLanguagePanel'),
-  bigMenuDevsPanel: document.getElementById('bigMenuDevsPanel'),
   bigMenuSfx: document.getElementById('bigMenuSfx'),
   bigMenuMusic: document.getElementById('bigMenuMusic'),
   bigMenuSfxValue: document.getElementById('bigMenuSfxValue'),
   bigMenuMusicValue: document.getElementById('bigMenuMusicValue'),
   bigMenuLangRu: document.getElementById('bigMenuLangRu'),
   bigMenuLangEn: document.getElementById('bigMenuLangEn'),
+  creditsModal: document.getElementById('creditsModal'),
+  creditsModalTitle: document.getElementById('creditsModalTitle'),
+  creditsModalClose: document.getElementById('creditsModalClose'),
+  creditsModalList: document.getElementById('creditsModalList'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
   menuOverlay: document.getElementById('menuOverlay'),
@@ -360,6 +364,10 @@ let bootPromise = null;
 let bigMenuInitialized = false;
 let bigMenuStartPending = false;
 let lastActiveButtonIdBigMenu = null;
+let bigMenuLanguageOutsideListener = null;
+let creditsEscListener = null;
+let creditsDataLoaded = false;
+let creditsData = [];
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
@@ -6083,13 +6091,44 @@ function markBigMenuButtonActive(buttonId){
   applyBigMenuSelectedState();
 }
 
+function removeBigMenuLanguageOutsideListener(){
+  if (!bigMenuLanguageOutsideListener) return;
+  document.removeEventListener('pointerdown', bigMenuLanguageOutsideListener, true);
+  bigMenuLanguageOutsideListener = null;
+}
+
+function closeBigMenuLanguagePanel(){
+  if (!ui.bigMenuLanguagePanel) return;
+  ui.bigMenuLanguagePanel.classList.add('bigMenuSubpanelHidden');
+  ui.bigMenuLanguagePanel.setAttribute('aria-hidden', 'true');
+  removeBigMenuLanguageOutsideListener();
+}
+
+function toggleBigMenuLanguagePanel(){
+  if (!ui.bigMenuLanguagePanel) return;
+  const shouldOpen = ui.bigMenuLanguagePanel.classList.contains('bigMenuSubpanelHidden');
+  closeBigMenuPanels();
+  if (!shouldOpen) return;
+  ui.bigMenuLanguagePanel.classList.remove('bigMenuSubpanelHidden');
+  ui.bigMenuLanguagePanel.setAttribute('aria-hidden', 'false');
+  if (!bigMenuLanguageOutsideListener) {
+    bigMenuLanguageOutsideListener = function (event) {
+      if (!ui.bigMenuLanguageWrap) return;
+      if (ui.bigMenuLanguageWrap.contains(event.target)) return;
+      closeBigMenuLanguagePanel();
+    };
+    document.addEventListener('pointerdown', bigMenuLanguageOutsideListener, true);
+  }
+}
+
 function closeBigMenuPanels(){
-  const panels = [ui.bigMenuSoundPanel, ui.bigMenuLanguagePanel, ui.bigMenuDevsPanel];
+  const panels = [ui.bigMenuSoundPanel];
   for (const panel of panels) {
     if (!panel) continue;
     panel.classList.add('bigMenuSubpanelHidden');
     panel.setAttribute('aria-hidden', 'true');
   }
+  closeBigMenuLanguagePanel();
 }
 
 function toggleBigMenuPanel(panel){
@@ -6104,6 +6143,123 @@ function toggleBigMenuPanel(panel){
 
 function updateBigMenuVolumeState(){
   syncVolumeUIFromSettings();
+}
+
+function applyBigMenuLanguageSelectedState(){
+  if (!ui.bigMenuLangRu || !ui.bigMenuLangEn) return;
+  const lang = getCurrentLang();
+  setMenuActionButtonSelected(ui.bigMenuLangRu, lang === 'ru');
+  setMenuActionButtonSelected(ui.bigMenuLangEn, lang === 'en');
+  ui.bigMenuLangRu.setAttribute('aria-pressed', (lang === 'ru').toString());
+  ui.bigMenuLangEn.setAttribute('aria-pressed', (lang === 'en').toString());
+}
+
+function getCreditsRole(item, lang){
+  if (!item || typeof item !== 'object') return '';
+  if (lang === 'en') {
+    if (typeof item.role_en === 'string' && item.role_en.trim()) return item.role_en.trim();
+    if (typeof item.role_ru === 'string' && item.role_ru.trim()) return item.role_ru.trim();
+    return '';
+  }
+  if (typeof item.role_ru === 'string' && item.role_ru.trim()) return item.role_ru.trim();
+  if (typeof item.role_en === 'string' && item.role_en.trim()) return item.role_en.trim();
+  return '';
+}
+
+async function loadCreditsData(){
+  if (creditsDataLoaded) return creditsData;
+  try {
+    const response = await fetch('assets/credits.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error('credits.json load failed');
+    const parsed = await response.json();
+    if (!Array.isArray(parsed)) {
+      creditsData = [];
+      creditsDataLoaded = true;
+      return creditsData;
+    }
+    const normalized = [];
+    for (let i = 0; i < parsed.length; i++) {
+      const item = parsed[i];
+      if (!item || typeof item !== 'object') continue;
+      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      if (!name) continue;
+      normalized.push({
+        name: name,
+        role_ru: typeof item.role_ru === 'string' ? item.role_ru.trim() : '',
+        role_en: typeof item.role_en === 'string' ? item.role_en.trim() : '',
+      });
+    }
+    creditsData = normalized;
+  } catch (e) {
+    creditsData = [];
+  }
+  creditsDataLoaded = true;
+  return creditsData;
+}
+
+function renderCreditsModalList(items){
+  if (!ui.creditsModalList) return;
+  ui.creditsModalList.innerHTML = '';
+  if (!Array.isArray(items) || !items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'creditsModal__empty';
+    empty.textContent = t('creditsModalEmpty');
+    ui.creditsModalList.appendChild(empty);
+    return;
+  }
+
+  const lang = getCurrentLang();
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const row = document.createElement('div');
+    row.className = 'creditsModal__item';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'creditsModal__name';
+    nameEl.textContent = item.name;
+
+    const roleEl = document.createElement('div');
+    roleEl.className = 'creditsModal__role';
+    roleEl.textContent = getCreditsRole(item, lang);
+
+    row.appendChild(nameEl);
+    row.appendChild(roleEl);
+    ui.creditsModalList.appendChild(row);
+  }
+}
+
+function closeCreditsModal(){
+  if (!ui.creditsModal) return;
+  ui.creditsModal.classList.add('hidden');
+  ui.creditsModal.setAttribute('aria-hidden', 'true');
+  a11yClose(ui.creditsModal);
+  if (creditsEscListener) {
+    document.removeEventListener('keydown', creditsEscListener);
+    creditsEscListener = null;
+  }
+}
+
+async function openCreditsModal(){
+  if (!ui.creditsModal) return;
+  closeBigMenuPanels();
+  if (ui.creditsModalTitle) ui.creditsModalTitle.textContent = t('creditsModalTitle');
+  if (ui.creditsModalList) {
+    ui.creditsModalList.innerHTML = '';
+  }
+  ui.creditsModal.classList.remove('hidden');
+  ui.creditsModal.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.creditsModal, { initialFocus: ui.creditsModalClose, onClose: closeCreditsModal });
+  if (!creditsEscListener) {
+    creditsEscListener = function (event) {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closeCreditsModal();
+    };
+    document.addEventListener('keydown', creditsEscListener);
+  }
+  const data = await loadCreditsData();
+  if (!ui.creditsModal || ui.creditsModal.classList.contains('hidden')) return;
+  renderCreditsModalList(data);
 }
 
 function hasSaves(){
@@ -6188,18 +6344,12 @@ function renderBigMenuTexts(){
 
   const languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
   if (languageTitle) languageTitle.textContent = t('menuLanguage');
-
-  const devsTitle = ui.bigMenuOverlay.querySelector('#bigMenuDevsPanel .bigMenuSubpanelTitle');
-  if (devsTitle) devsTitle.textContent = t('bigMenuDevs');
-  const devsText = ui.bigMenuOverlay.querySelector('#bigMenuDevsPanel .bigMenuDevsText');
-  if (devsText) devsText.innerHTML = t('bigMenuDevsText');
-
-  if (ui.bigMenuLangRu && ui.bigMenuLangEn) {
-    const lang = getCurrentLang();
-    ui.bigMenuLangRu.classList.toggle('active', lang === 'ru');
-    ui.bigMenuLangEn.classList.toggle('active', lang === 'en');
-    ui.bigMenuLangRu.setAttribute('aria-pressed', (lang === 'ru').toString());
-    ui.bigMenuLangEn.setAttribute('aria-pressed', (lang === 'en').toString());
+  if (ui.bigMenuLangRu) ui.bigMenuLangRu.textContent = t('languageRussian');
+  if (ui.bigMenuLangEn) ui.bigMenuLangEn.textContent = t('languageEnglish');
+  applyBigMenuLanguageSelectedState();
+  if (ui.creditsModalTitle) ui.creditsModalTitle.textContent = t('creditsModalTitle');
+  if (ui.creditsModal && !ui.creditsModal.classList.contains('hidden')) {
+    renderCreditsModalList(creditsData);
   }
 }
 
@@ -6223,6 +6373,7 @@ function applyBigMenuLanguage(lang){
     localStorage.setItem('lang', getCurrentLang());
   } catch (e) {}
   renderBigMenuTexts();
+  closeBigMenuLanguagePanel();
 }
 
 function setBigMenuActionButtonsDisabled(disabled){
@@ -6362,11 +6513,11 @@ function initBigMainMenu(){
   });
   if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', () => {
     markBigMenuButtonActive('bigMenuLanguage');
-    toggleBigMenuPanel(ui.bigMenuLanguagePanel);
+    toggleBigMenuLanguagePanel();
   });
   if (ui.bigMenuDevs) ui.bigMenuDevs.addEventListener('click', () => {
     markBigMenuButtonActive('bigMenuDevs');
-    toggleBigMenuPanel(ui.bigMenuDevsPanel);
+    openCreditsModal();
   });
 
   if (ui.bigMenuSfx) {
@@ -6385,6 +6536,11 @@ function initBigMainMenu(){
   }
   if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', () => applyBigMenuLanguage('ru'));
   if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => applyBigMenuLanguage('en'));
+  if (ui.creditsModalClose) {
+    ui.creditsModalClose.addEventListener('click', function () {
+      closeCreditsModal();
+    });
+  }
 }
 
 function spawnInitialTanksLvl1(targetState, count = 2){
