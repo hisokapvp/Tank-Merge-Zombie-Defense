@@ -1506,6 +1506,9 @@ body.menu-open .stageUi .hudItem{
   padding:12px;
   background:rgba(0,0,0,.18);
 }
+#modsTankWallOverlay .scTabPanels{
+  padding-top:0;
+}
 .scTabPanel{
   display:flex;
   flex-direction:column;

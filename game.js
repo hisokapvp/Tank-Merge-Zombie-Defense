@@ -1296,10 +1296,17 @@ function setSfxSources(id, sources){
   SFX_SOURCES[id] = next.slice();
 }
 
-function playSfx(id){
+function playSfx(id, opts){
+  const channelOverride = opts && typeof opts === 'object' && typeof opts.channel === 'string'
+    ? opts.channel
+    : '';
+  const effectiveChannel = channelOverride || sfxChannelOf(id);
   if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
-  if (simulationPaused && sfxChannelOf(id) === 'gameplay') return;
-  const vol = resolveSfxPlaybackVolume(id, 1);
+  if (simulationPaused && effectiveChannel === 'gameplay') return;
+  const volumeMul = opts && typeof opts === 'object' && Number.isFinite(opts.volumeMult)
+    ? clamp(opts.volumeMult, 0, 1)
+    : 1;
+  const vol = resolveSfxPlaybackVolume(id, volumeMul);
   const now = performance.now();
   if (SFX_LAST_PLAYED[id] != null && now - SFX_LAST_PLAYED[id] < SFX_DEDUP_MS) return;
   SFX_LAST_PLAYED[id] = now;
@@ -1324,6 +1331,40 @@ function playSfx(id){
     try { player.currentTime = 0; } catch (e) {}
     player.play().catch(() => {});
   }catch(e){}
+}
+
+function shouldPlayTankTrackSfx(opts){
+  if (opts && typeof opts.playSfx === 'boolean') return opts.playSfx;
+  return !!(opts && opts.cause === 'user');
+}
+
+function setTankOnTrackState(tank, nextOnTrack, opts){
+  const Garage = window.Game && window.Game.Garage;
+  if (Garage && typeof Garage.setTankOnTrack === 'function') {
+    return Garage.setTankOnTrack(tank, nextOnTrack, opts);
+  }
+  if (!tank || typeof tank !== 'object') return false;
+  const next = !!nextOnTrack;
+  const prev = !!tank.onTrack;
+  if (prev === next) return false;
+  tank.onTrack = next;
+  if (shouldPlayTankTrackSfx(opts)) {
+    const cfg = window.Game && window.Game.Config && window.Game.Config.AudioUi;
+    const uiMult = Number.isFinite(Number(cfg && cfg.UI_SFX_VOLUME_MULT))
+      ? Math.max(0, Number(cfg.UI_SFX_VOLUME_MULT))
+      : 0.5;
+    playSfx(next ? 'tankToTrack' : 'tankToHangar', { volumeMult: uiMult, channel: 'ui' });
+  }
+  return true;
+}
+
+function silenceAllTanksTrackSfx(cause){
+  if (!state || !Array.isArray(state.cells)) return;
+  for (let i = 0; i < state.cells.length; i++) {
+    const tank = state.cells[i] && state.cells[i].tank;
+    if (!tank) continue;
+    setTankOnTrackState(tank, false, { cause: cause || 'reset', playSfx: false });
+  }
 }
 const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
@@ -6679,6 +6720,7 @@ function resetGameState(options){
   const opts = options || {};
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
   const wasCollapsed = state.debug?.collapsed;
+  silenceAllTanksTrackSfx(reason === 'reset' ? 'reset' : 'restore');
   closeCriticalModal();
   criticalFlowActive = false;
   clearMergeFxQueue();
@@ -7623,10 +7665,11 @@ canvas.addEventListener('pointerdown', (e)=>{
   const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
   if (trackCell !== null){
     const trackTank = state.cells[trackCell].tank;
-    trackTank.onTrack = false;
-    trackTank.cooldown = 0;
-    playSfx('tankToHangar');
-    popText(p.x, p.y, t('popHangar'), '#eaf1ff');
+    const changed = setTankOnTrackState(trackTank, false, { cause: 'user' });
+    if (changed) {
+      trackTank.cooldown = 0;
+      popText(p.x, p.y, t('popHangar'), '#eaf1ff');
+    }
     return;
   }
   const c = cellAt(p.x, p.y);
@@ -7643,10 +7686,11 @@ canvas.addEventListener('pointerdown', (e)=>{
   }
   if (!c || !c.tank) return;
   if (c.tank.onTrack){
-    c.tank.onTrack = false;
-    c.tank.cooldown = 0;
-    playSfx('tankToHangar');
-    popText(p.x, p.y, t('popHangar'), '#eaf1ff');
+    const changed = setTankOnTrackState(c.tank, false, { cause: 'user' });
+    if (changed) {
+      c.tank.cooldown = 0;
+      popText(p.x, p.y, t('popHangar'), '#eaf1ff');
+    }
     return;
   }
   state.dragging = {
@@ -7691,12 +7735,13 @@ canvas.addEventListener('pointerup', (e)=>{
   from.tank = state.dragging.tank;
 
   if (!state.dragging.moved){
-    from.tank.onTrack = true;
-    const mods = getMods();
-    const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
-    from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
-    playSfx('tankToTrack');
-    popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
+    const changed = setTankOnTrackState(from.tank, true, { cause: 'user' });
+    if (changed) {
+      const mods = getMods();
+      const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+      from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
+      popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
+    }
     state.selectedHangarCellIndex = from.i;
   } else if (target){
     const targetHasBox = state.crate && state.crate.cellIndex === target.i;

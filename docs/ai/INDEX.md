@@ -32,6 +32,7 @@
 - `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.
 - Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
 - Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
+- Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

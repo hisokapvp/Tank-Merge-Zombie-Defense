@@ -18,3 +18,10 @@
 - Для массивов выбирается первый поддерживаемый формат через `Audio().canPlayType(...)`; если поддержку определить нельзя, берётся первый элемент массива.
 - `playSfx(id, opts)` поддерживает `opts.volumeMult` (обратная совместимость с `playSfx(id)` обязательна), итоговая громкость всегда clamp `0..1`.
 - Hover SFX должен быть throttled через cooldown (минимум 100ms), чтобы избежать спама в плотных pointer-сценариях.
+
+## Tank onTrack toggle SFX
+- Единая точка смены `tank.onTrack`: `Game.Garage.setTankOnTrack(tank, nextOnTrack, opts)` в `src/mechanics/garage.js`.
+- `tankToTrack` и `tankToHangar` играют только внутри `setTankOnTrack`, чтобы не было задвоений.
+- `opts.cause: 'user'` включает SFX; `reset`, `restore`, `system` выключают SFX по умолчанию.
+- Для toggle-SFX использовать `playSfx(id, { volumeMult: UI_SFX_VOLUME_MULT, channel: 'ui' })`.
+- QA: user-toggle да (по одному звуку), reset/restore нет.

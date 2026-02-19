@@ -60,6 +60,37 @@
     return found;
   }
 
+  function getUiSfxVolumeMult() {
+    var cfg = global.Game && global.Game.Config && global.Game.Config.AudioUi;
+    var value = Number(cfg && cfg.UI_SFX_VOLUME_MULT);
+    return Number.isFinite(value) && value > 0 ? value : 0.5;
+  }
+
+  function shouldPlayTrackSfx(opts) {
+    if (opts && typeof opts.playSfx === 'boolean') return opts.playSfx;
+    var cause = opts && typeof opts.cause === 'string' ? opts.cause : 'system';
+    return cause === 'user';
+  }
+
+  function playTrackSfx(id) {
+    if (!id) return;
+    var play = global.playSfx;
+    if (typeof play !== 'function') return;
+    play(id, { volumeMult: getUiSfxVolumeMult(), channel: 'ui' });
+  }
+
+  function setTankOnTrack(tank, nextOnTrack, opts) {
+    if (!tank || typeof tank !== 'object') return false;
+    var prevOnTrack = !!tank.onTrack;
+    var next = !!nextOnTrack;
+    if (prevOnTrack === next) return false;
+
+    tank.onTrack = next;
+    if (!shouldPlayTrackSfx(opts)) return true;
+    playTrackSfx(next ? 'tankToTrack' : 'tankToHangar');
+    return true;
+  }
+
   global.Game = global.Game || {};
   global.Game.Garage = {
     isCellAvailableForTank,
@@ -67,5 +98,6 @@
     hasFreeCell,
     countFreeCells,
     findFreeCells,
+    setTankOnTrack,
   };
 })(typeof window !== 'undefined' ? window : this);

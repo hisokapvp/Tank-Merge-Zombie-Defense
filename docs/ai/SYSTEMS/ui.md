@@ -55,6 +55,12 @@
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
 - Disabled toast правило: если у кнопки `data-disabled-reason="noSaves"`, показывается «Нет сохранений/No saves», иначе «Недоступно/Unavailable». Сообщение показывается через единый helper `src/ui/toast.js` (один DOM, таймер перезапускается, без бесконечного stacking).
 
+## Tank onTrack toggle
+- User-action переключения `tank.onTrack` выполняются из `canvas` pointer handlers в `game.js`, но само изменение состояния делается через единый entrypoint `setTankOnTrackState(...)` -> `Game.Garage.setTankOnTrack(...)`.
+- Прямые присваивания `tank.onTrack = ...` для UI-toggle не использовать.
+- По user-action использовать `cause: 'user'` (SFX включены), по системным сценариям (`reset`, `restore`) использовать `playSfx: false`/соответствующий cause.
+- В reset-пути (`resetGameState`) перед очисткой состояния применяется подавление track-SFX, чтобы при программных изменениях звуки не воспроизводились.
+
 ## Supercomputer tabs divider
 - Разделитель под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay` — это нижняя граница `.scTabs`.
 - Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов. Если мешают скругления рамки, использовать `overflow:hidden` у контейнера с `border-radius` и оставлять линию на `width:100%`.
