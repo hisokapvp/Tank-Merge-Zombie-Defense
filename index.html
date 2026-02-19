@@ -212,6 +212,21 @@
             </div>
           </div>
         </div>
+        <div class="levelModal levelModal_onTop hidden" id="criticalOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop"></div>
+          <div class="levelModal__panel criticalModal" role="dialog" aria-modal="true" aria-labelledby="criticalTitle" tabindex="-1">
+            <button class="levelModal__close hidden" id="criticalCloseX" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="criticalTitle" data-i18n="criticalTitle">Критическое состояние</div>
+            <pre class="criticalModal__log" id="criticalLog" aria-live="polite"></pre>
+            <div class="criticalModal__actions criticalModal__actions_single">
+              <button id="criticalSkipBtn" class="btn btnSecondary" type="button" data-i18n="criticalSkip">Пропустить</button>
+            </div>
+            <div class="criticalModal__actions">
+              <button id="criticalRestartBtn" class="btn btnPrimary hidden" type="button" data-i18n="criticalRestart">Перезапустить симуляцию</button>
+              <button id="criticalSaveExitBtn" class="btn btnSecondary hidden" type="button" data-i18n="criticalSaveExit">Сохранить прогресс и выйти</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -334,6 +349,7 @@
   <script src="src/persistence/offlineProgress.js"></script>
   <script src="src/render/canvasRoot.js"></script>
   <script src="src/config/layoutTuning.js"></script>
+  <script src="src/config/criticalModalTuning.js"></script>
   <script src="src/config/worldEvents.js"></script>
   <script src="src/render/layout/hangarLayout.js"></script>
   <script src="src/render/fenceLayout.js"></script>
@@ -371,6 +387,7 @@
   <script src="src/ui/debugPanel.js"></script>
   <script src="src/ui/modals.js"></script>
   <script src="src/ui/supercomputerMenu.js"></script>
+  <script src="src/ui/criticalModal.js"></script>
   <script src="src/systems/pauseManager.js"></script>
   <script src="src/systems/depthSort.js"></script>
   <script src="src/perf/objectPool.js"></script>

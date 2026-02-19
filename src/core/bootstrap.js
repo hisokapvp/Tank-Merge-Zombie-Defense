@@ -152,7 +152,9 @@
     if (opts.DebugPanelEnabled) opts.initDebugPanel();
     if (opts.DebugPanelEnabled && windowObj.Game && windowObj.Game.AdminFlags) windowObj.Game.AdminFlags.init();
 
-    if (getState().cells[0] && getState().cells[1] && !getState().cells.some(function (c) { return c.tank; })) {
+    if (typeof opts.ensureStarterTanks === 'function') {
+      opts.ensureStarterTanks(getState(), 2);
+    } else if (getState().cells[0] && getState().cells[1] && !getState().cells.some(function (c) { return c.tank; })) {
       getState().cells[0].tank = opts.makeTank(1, true);
       getState().cells[1].tank = opts.makeTank(1, true);
       opts.recordTankLevel(1);

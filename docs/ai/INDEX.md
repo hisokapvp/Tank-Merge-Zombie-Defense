@@ -17,6 +17,7 @@
 - Crate reward spawn policy (reward всегда в `crateSlotId`, без fallback в другой слот; race-safe skip with log) → `game.js` + `docs/ai/SYSTEMS/ui.md`
 - Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
 - Supercomputer + Boost UI (`#supercomputerBtn` icon-only + aria-label, root tiles в один ряд с сохранением IDs, active boost icons рядом со спрайтом supercomputer, Esc/back routing, tabs `Орудия/Базы/Стены` с дефолтом `Орудия`) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/assets.md`
+- Critical mode (5% HP clamp, `criticalFlowActive`, autosave с очисткой `cells[].tank`, critical modal actions `exit/restart`) → `docs/critical-mode.md` + `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/save.md`
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
@@ -59,6 +60,8 @@
 - `game.js` — runtime логика fence HP/урона/ремонта/уровней (`applyFenceSegmentDamage`, `tryRepairFenceSegmentAt`, `tryUpgradeFenceLevel`).
 - `src/ui/` — UI-модули, модалки, панели.
 - `src/ui/supercomputerMenu.js` — root/child supercomputer overlays (A11y open/close, Esc/back routing).
+- `src/ui/criticalModal.js` — critical overlay controller (`open/close/isOpen`, typewriter/skip/final actions).
+- `src/config/criticalModalTuning.js` — tuning (`charsPerSec`, `linePauseMs`, `afterFinishPauseMs`).
 - `src/feedback/` — in-game feedback widget (programmatic modal `open()`/`showModal()`, без floating button).
 - `src/perf/` — профилирование и лимиты.
 - `src/i18n/` — RU/EN строки.

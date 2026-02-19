@@ -177,6 +177,16 @@ Merge + tower defense на canvas.
 - `Esc` в дочерних окнах суперкомпьютера (`mods*` и upgrade tree) делает шаг назад в root-меню, пауза сохраняется.
 - Реализация: разметка в `index.html`, логика в `src/ui/supercomputerMenu.js` + orchestration в `game.js`, modal/a11y через `src/accessibility/a11y.js`, pause lock через `src/systems/pauseManager.js`.
 
+## Critical mode (5% HP порог)
+
+- При первом пересечении порога `supercomputer.hp <= maxHp * 0.05` HP клампится ровно к `5%`, включается `criticalFlowActive`, открывается critical modal и ставится menu-pause lock.
+- При входе в critical выполняется автосейв с предварительной очисткой танков (`cells[].tank = null`).
+- Кнопки critical modal:
+	- `Перезапустить симуляцию` — partial reset (танки очищаются, забор восстанавливается до `segment maxHp` при сохранённом `fenceLevel`, supercomputer HP восстанавливается), затем гарантируется `2x tank_lvl1` и игра продолжается.
+	- `×` и `Сохранить прогресс и выйти` — повторная попытка сейва и `location.reload()` в большое меню.
+- После загрузки любого сейва без танков автоматически вызывается спавн `2x tank_lvl1`.
+- Детальный сценарий и edge-cases: `docs/critical-mode.md`.
+
 ## Boost UI
 
 - HUD-блок `Boost` удалён; активные бусты рисуются рядом со спрайтом supercomputer в screen-space.

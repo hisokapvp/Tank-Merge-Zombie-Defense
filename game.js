@@ -546,6 +546,7 @@ const PauseManagerApi = GameApi.PauseManager ?? null;
 const DepthSortApi = GameApi.DepthSort ?? null;
 const AutoMergeApi = GameApi.AutoMerge ?? null;
 const SupercomputerMenuApi = GameApi.SupercomputerMenu ?? null;
+const CriticalModalApi = GameApi.CriticalModal ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
@@ -720,8 +721,10 @@ let gameplayAudioFadeToken = 0;
 let pauseManager = null;
 let simulationPaused = false;
 let lastPauseReasons = { menuOpen: false, tabInactive: false };
-let menuPauseLocks = { settings: !!(state && state.ui && state.ui.menuOpen), supercomputer: false };
+let menuPauseLocks = { settings: !!(state && state.ui && state.ui.menuOpen), supercomputer: false, critical: false };
 let supercomputerMenuController = null;
+let criticalModalController = null;
+let criticalFlowActive = false;
 let SFX_AUDIO_PROBE = null;
 
 function sfxChannelOf(id){
@@ -4549,6 +4552,7 @@ function isBlockingModalOpen(){
     'supercomputerMenuOverlay',
     'modsHangarOverlay',
     'modsTankWallOverlay',
+    'criticalOverlay',
     'mergePopupModal',
     'achievementsModal',
     'achievementPopup',
@@ -5829,10 +5833,141 @@ function initBigMainMenu(){
   if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => setLanguage('en'));
 }
 
+function spawnInitialTanksLvl1(targetState, count = 2){
+  const stateRef = targetState || state;
+  if (!stateRef || !Array.isArray(stateRef.cells) || !stateRef.cells.length) return 0;
+  const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 2;
+  if (requested <= 0) return 0;
+  if (stateRef.cells.some((cell) => cell && cell.tank)) return 0;
+
+  const Garage = window.Game && window.Game.Garage;
+  const preferredIndices = [0, 1];
+  let spawned = 0;
+
+  function trySpawnAtCell(cell){
+    if (!cell || cell.tank) return false;
+    if (Garage && typeof Garage.isCellAvailableForTank === 'function' && !Garage.isCellAvailableForTank(cell, stateRef)) {
+      return false;
+    }
+    cell.tank = makeTank(1, true);
+    spawned += 1;
+    return true;
+  }
+
+  for (let i = 0; i < preferredIndices.length && spawned < requested; i++) {
+    const idx = preferredIndices[i];
+    if (!Number.isFinite(idx)) continue;
+    trySpawnAtCell(stateRef.cells[idx]);
+  }
+  for (let i = 0; i < stateRef.cells.length && spawned < requested; i++) {
+    trySpawnAtCell(stateRef.cells[i]);
+  }
+  if (spawned > 0) recordTankLevel(1);
+  return spawned;
+}
+
+function clearAllTanksFromCells(targetState){
+  const stateRef = targetState || state;
+  if (!stateRef || !Array.isArray(stateRef.cells)) return;
+  for (let i = 0; i < stateRef.cells.length; i++) {
+    const cell = stateRef.cells[i];
+    if (!cell) continue;
+    cell.tank = null;
+  }
+}
+
+function forceAutosaveSafely(){
+  try {
+    meta.lastSeenAt = Date.now();
+    saveProgress();
+  } catch (e) {}
+}
+
+function restoreFenceSegmentsToMaxHp(){
+  const maxHp = getFenceSegmentMaxHp();
+  if (Array.isArray(state.fenceSegments)) {
+    for (let i = 0; i < state.fenceSegments.length; i++) {
+      const seg = state.fenceSegments[i];
+      if (!seg) continue;
+      const wasBroken = !!seg.broken;
+      seg.maxHp = maxHp;
+      seg.hp = maxHp;
+      seg.broken = false;
+      seg.reservedByDroneId = null;
+      if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
+    }
+  }
+  if (state.fenceSegmentsMeta) state.fenceSegmentsMeta.segmentMaxHp = maxHp;
+  rebuildBreachesBySideFromFence();
+}
+
+function restoreSupercomputerAfterCritical(){
+  const sc = getComputerState();
+  if (!sc) return;
+  sc.hp = Math.max(1, Number.isFinite(sc.maxHp) ? sc.maxHp : 1);
+  sc.state = 'idle';
+  sc.animElapsedSec = 0;
+  sc.glitchLoopsRemaining = 0;
+  sc.pendingBuildTank = false;
+  sc.wantsBuildTank = false;
+  sc.destroyedAt = 0;
+}
+
+function getCriticalModalController(){
+  if (criticalModalController || !CriticalModalApi || typeof CriticalModalApi.createController !== 'function') {
+    return criticalModalController;
+  }
+  criticalModalController = CriticalModalApi.createController({
+    documentObj: document,
+    a11yOpen,
+    a11yClose,
+    translate: t,
+  });
+  return criticalModalController;
+}
+
+function closeCriticalModal(){
+  const controller = getCriticalModalController();
+  if (!controller || typeof controller.close !== 'function') return;
+  controller.close();
+}
+
+function performCriticalRestart(){
+  clearAllTanksFromCells(state);
+  restoreFenceSegmentsToMaxHp();
+  restoreSupercomputerAfterCritical();
+  spawnInitialTanksLvl1(state, 2);
+  closeCriticalModal();
+  setMenuPauseSource('critical', false);
+  criticalFlowActive = false;
+  updateUI();
+}
+
+function handleCriticalSaveAndExit(){
+  forceAutosaveSafely();
+  location.reload();
+}
+
+function openCriticalModal(){
+  const controller = getCriticalModalController();
+  if (!controller || typeof controller.open !== 'function') return;
+  clearAllTanksFromCells(state);
+  forceAutosaveSafely();
+  const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
+  controller.open({
+    hasDrones,
+    onSaveExit: handleCriticalSaveAndExit,
+    onRestart: performCriticalRestart,
+  });
+}
+
 function resetGameState(options){
   const opts = options || {};
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
   const wasCollapsed = state.debug?.collapsed;
+  closeCriticalModal();
+  setMenuPauseSource('critical', false);
+  criticalFlowActive = false;
   clearMergeFxQueue();
   if (state.projectiles && state.projectiles.length){
     for (const p of state.projectiles) releaseProjectile(p);
@@ -5877,11 +6012,7 @@ function resetGameState(options){
 
   resizeCanvas();
   state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
-  if (state.cells[0] && state.cells[1] && !state.cells.some(c=>c.tank)){
-    state.cells[0].tank = makeTank(1, true);
-    state.cells[1].tank = makeTank(1, true);
-    recordTankLevel(1);
-  }
+  spawnInitialTanksLvl1(state, 2);
   refreshTanksPowerTier();
   updateDamagePointsUI();
 
@@ -8649,13 +8780,30 @@ function setSupercomputerWantsBuildTank(wantsBuildTank){
 function applySupercomputerDamage(baseDamage){
   const sc = getComputerState();
   if (!sc) return { finalDamage: 0, hp: 0, destroyedNow: false };
-  if (supercomputerController && supercomputerController.applyDamage) {
-    return supercomputerController.applyDamage(sc, baseDamage, SupercomputerSprites.config);
+  if (criticalFlowActive) {
+    return { finalDamage: 0, hp: sc.hp, destroyedNow: false, clampedCritical: true };
   }
+
   const incoming = Number.isFinite(baseDamage) ? Math.max(0, baseDamage) : 0;
   const armorFlat = Number.isFinite(sc.armorFlat) ? Math.max(0, sc.armorFlat) : 0;
   const finalDamage = Math.max(0, incoming - armorFlat);
-  const prevHp = Number.isFinite(sc.hp) ? sc.hp : 0;
+  const prevHp = Number.isFinite(sc.hp) ? Math.max(0, sc.hp) : 0;
+  const maxHp = Number.isFinite(sc.maxHp) && sc.maxHp > 0 ? sc.maxHp : Math.max(1, prevHp);
+  const hpThreshold = maxHp * 0.05;
+
+  if (prevHp > hpThreshold && (prevHp - finalDamage) <= hpThreshold) {
+    const appliedToThreshold = Math.max(0, prevHp - hpThreshold);
+    sc.hp = hpThreshold;
+    criticalFlowActive = true;
+    setMenuPauseSource('critical', true);
+    openCriticalModal();
+    return { finalDamage: appliedToThreshold, hp: sc.hp, destroyedNow: false, clampedCritical: true };
+  }
+
+  if (supercomputerController && supercomputerController.applyDamage) {
+    return supercomputerController.applyDamage(sc, baseDamage, SupercomputerSprites.config);
+  }
+
   sc.hp = Math.max(0, prevHp - finalDamage);
   const destroyedNow = prevHp > 0 && sc.hp === 0;
   if (destroyedNow) {
@@ -8929,6 +9077,7 @@ async function boot(){
         DebugPanelEnabled,
         initDebugPanel,
         makeTank,
+        ensureStarterTanks: spawnInitialTanksLvl1,
         recordTankLevel,
         ZombieSprites,
         getZombieSpawnBalanceConfig,

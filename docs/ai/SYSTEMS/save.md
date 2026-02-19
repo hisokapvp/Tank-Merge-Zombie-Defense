@@ -96,3 +96,15 @@
 	- RU: `Очки урона: {count}`
 	- EN: `Damage points: {count}`
 	- где `{count} = floor(totalDamageDealtRaw / 10000)`.
+
+## Critical autosave contract
+
+- При входе в critical flow (`openCriticalModal`) перед автосейвом выполняется очистка всех танков в `cells[]` (`cell.tank = null`).
+- Затем вызывается save в `try/catch`: ошибка сохранения не должна ронять runtime.
+- Кнопки `×` и `Сохранить прогресс и выйти` выполняют повторную попытку save перед `location.reload()`.
+
+## Load without tanks: auto-spawn 2x lvl1
+
+- После применения loaded state (deserialize + restore) и до старта симуляции вызывается общий helper `spawnInitialTanksLvl1(state, 2)`.
+- Если в `cells[]` уже есть танки — helper no-op.
+- Если танков нет — гарантированно создаются 2 стартовых `tank_lvl1` по тем же правилам размещения, что и стартовый сценарий.

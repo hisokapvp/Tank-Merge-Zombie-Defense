@@ -59,6 +59,19 @@
 - Правило `Esc`: в root — закрыть supercomputer UI и снять его pause-lock; в child — шаг назад в root, pause-lock сохраняется.
 - Реализация: `index.html` (разметка), `src/ui/supercomputerMenu.js` (modal routing), `src/accessibility/a11y.js` (focus trap + Esc), `src/systems/pauseManager.js` + `game.js` (единый menu pause lock между settings/supercomputer).
 
+## Critical modal flow
+
+- Overlay: `#criticalOverlay` в `index.html`, контроллер: `src/ui/criticalModal.js`.
+- API контроллера: `open({ hasDrones, onSaveExit, onRestart })`, `close()`, `isOpen()`.
+- При open модалка регистрируется в A11y-стеке через `Game.A11y.openModal(...)`, поэтому Tab/Esc работают как для остальных модалок.
+- Typewriter:
+	- скорость/паузы берутся из `src/config/criticalModalTuning.js` (`charsPerSec`, `linePauseMs`, `afterFinishPauseMs`),
+	- `Пропустить` мгновенно допечатывает лог, скрывается, затем показываются финальные кнопки,
+	- контейнер лога автоскроллится вниз после каждого append.
+- Кнопки:
+	- `×` и `Сохранить прогресс и выйти` → повторный save attempt и `location.reload()`,
+	- `Перезапустить симуляцию` → partial reset и продолжение сессии.
+
 ### Tabs в «Модификации танков и стен»
 
 - Разметка: `tablist` + `tab` + `tabpanel` для 3 вкладок в порядке слева направо: `Орудия`, `Базы`, `Стены`.

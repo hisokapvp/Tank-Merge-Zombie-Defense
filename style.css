@@ -623,6 +623,38 @@ body.menu-open .stageUi .hudItem{
   filter:brightness(1.15);
   transform:scale(1.05);
 }
+.criticalModal{
+  width:min(640px, 92%);
+  max-height:min(86vh, 620px);
+  text-align:left;
+}
+.criticalModal__log{
+  margin:0;
+  min-height:220px;
+  max-height:min(54vh, 420px);
+  overflow:auto;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(5, 10, 18, 0.55);
+  color:var(--text);
+  font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size:12px;
+  line-height:1.45;
+  white-space:pre-wrap;
+}
+.criticalModal__actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+.criticalModal__actions_single{
+  margin-top:2px;
+}
+.criticalModal__actions .btn{
+  min-width:220px;
+}
 .btn{
   position:relative;
   padding:12px 12px;

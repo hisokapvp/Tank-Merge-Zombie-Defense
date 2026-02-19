@@ -59,6 +59,10 @@
 
 - Формула урона: `finalDamage = max(0, baseDamage - armorFlat)`.
 - Обновление HP: `hp = max(0, hp - finalDamage)`.
+- Critical threshold clamp:
+	- при первом пересечении `hp <= maxHp * 0.05` HP клампится ровно на `maxHp * 0.05`,
+	- активируется `criticalFlowActive` и открывается critical modal,
+	- дальнейший урон по supercomputer игнорируется, пока critical flow не завершён (restart/reload).
 - При `hp==0`: состояние `destroy` → `destroyed` без game over и без паузы симуляции.
 - State machine: `idle/work`, `glitch`, `buildTank`, `destroy/destroyed`.
 - `glitch` использует `chancePerSecond`, `minLoops/maxLoops`, `cooldownSec`.
