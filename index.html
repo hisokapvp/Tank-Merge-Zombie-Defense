@@ -31,9 +31,6 @@
             <div class="xpValue" id="xpText">0/0</div>
           </div>
 
-          <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">
-            <span class="supercomputerHudBtn__icon" aria-hidden="true">🖥</span>
-          </button>
           <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
           <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
             <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
@@ -52,6 +49,9 @@
           </div>
           </div>
         </div>
+        <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">
+          <span class="supercomputerHudBtn__icon" aria-hidden="true">🖥</span>
+        </button>
         <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
           <div class="menuBackdrop"></div>
           <div class="menuPanel" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
@@ -155,15 +155,15 @@
             <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Меню суперкомпьютера</div>
             <div class="levelModal__actions scRootTiles">
               <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true">🏭</span>
+                <span class="scRootTile__icon" aria-hidden="true"></span>
                 <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
               </button>
               <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true">🛡</span>
+                <span class="scRootTile__icon" aria-hidden="true"></span>
                 <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
               </button>
               <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true">⚙</span>
+                <span class="scRootTile__icon" aria-hidden="true"></span>
                 <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Древо улучшений</span>
               </button>
             </div>

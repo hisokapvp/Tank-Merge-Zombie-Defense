@@ -45,10 +45,24 @@
 ### Supercomputer (`assets/supercomputer.json`)
 
 - Основные поля: `atlas`, `offsetY`, `anchor`, `renderScale`, `hpBar`.
+- `boostIcons`: screen-space layout для группы boost-иконок рядом со спрайтом supercomputer:
+	- `anchor`: `top|bottom` (базовая сторона спрайта)
+	- `offsetX`, `offsetY`: смещения группы
+	- `maxPerRow`: лимит иконок в строке
+	- `gapX`, `gapY`: интервалы между иконками/рядами
 - `animations`: `idle/work`, `glitch`, `buildTank`, `destroy` с кадрами/скоростью (`x,y,w,h,frames,frameRateFps,loop`).
 - `glitch`: `chancePerSecond`, `minLoops`, `maxLoops`, `cooldownSec`.
 - `stats`: data-driven формулы `maxHp`/`armorFlat` по `computerLevel`.
 - Runtime: `SupercomputerSprites.load()` в `src/render/spriteLoaders.js`.
+
+### Supercomputer root tile icons (`assets/computer_icons/*`)
+
+- Файлы template-иконок (128x128 PNG):
+	- `assets/computer_icons/hangar_mods_template.png`
+	- `assets/computer_icons/tank_wall_mods_template.png`
+	- `assets/computer_icons/talent_tree_template.png`
+- Подключение выполняется через CSS по ID tiles root-меню supercomputer.
+- Пользователь может заменять PNG напрямую без изменения JS/HTML логики.
 
 ### Boost icons (`assets/boost_icons.json`)
 

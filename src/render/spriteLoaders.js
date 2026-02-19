@@ -725,6 +725,10 @@
           var glitchRaw = data && data.glitch && typeof data.glitch === 'object' ? data.glitch : {};
           var minLoops = Number.isFinite(glitchRaw.minLoops) ? Math.max(1, Math.floor(glitchRaw.minLoops)) : 1;
           var maxLoops = Number.isFinite(glitchRaw.maxLoops) ? Math.max(minLoops, Math.floor(glitchRaw.maxLoops)) : minLoops;
+          var boostIconsRaw = data && data.boostIcons && typeof data.boostIcons === 'object' ? data.boostIcons : {};
+          var boostIconsAnchor = boostIconsRaw.anchor === 'top' || boostIconsRaw.anchor === 'bottom'
+            ? boostIconsRaw.anchor
+            : 'top';
 
           this.config = {
             atlas: data && data.atlas ? data.atlas : 'decor.png',
@@ -743,6 +747,14 @@
                   offsetY: Number.isFinite(data.hpBar.offsetY) ? data.hpBar.offsetY : -56,
                 }
               : { width: 92, height: 8, offsetY: -56 },
+            boostIcons: {
+              anchor: boostIconsAnchor,
+              offsetX: Number.isFinite(boostIconsRaw.offsetX) ? boostIconsRaw.offsetX : 0,
+              offsetY: Number.isFinite(boostIconsRaw.offsetY) ? boostIconsRaw.offsetY : -10,
+              maxPerRow: Number.isFinite(boostIconsRaw.maxPerRow) ? Math.max(1, Math.floor(boostIconsRaw.maxPerRow)) : 4,
+              gapX: Number.isFinite(boostIconsRaw.gapX) ? Math.max(0, boostIconsRaw.gapX) : 6,
+              gapY: Number.isFinite(boostIconsRaw.gapY) ? Math.max(0, boostIconsRaw.gapY) : 6,
+            },
             animations: {
               idle: idleClip,
               work: workClip,

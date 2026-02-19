@@ -27,6 +27,16 @@
 - `offsetY`: `assets/supercomputer.json.offsetY` с fallback на `src/config/layoutTuning.js` (`supercomputerOffsetY`).
 - HP bar рисуется в world-space над объектом; только текущее HP (`hp/maxHp`) без дополнительных панелей.
 
+### Boost icons around supercomputer
+
+- Рендер boost-иконок (`drawSupercomputerBoostIcons` в `game.js`) работает в screen-space вокруг спрайта supercomputer.
+- Конфиг layout берётся из `assets/supercomputer.json.boostIcons`:
+	- `anchor`, `offsetX`, `offsetY`
+	- `maxPerRow`, `gapX`, `gapY`
+- Иконки раскладываются в ряды: каждая строка центрируется по `rowWidth`, затем центрируется вся группа относительно спрайта.
+- Группа растёт по rows вниз от верхней anchor-базы (`anchor: top` + `offsetY`).
+- В hot path layout не пересчитывается каждый кадр: пересчёт только при изменении набора активных бустов, scale, позиции/размера спрайта или параметров `boostIcons`.
+
 ## Ground layer (atlas tile 16x16)
 
 - Source config: `assets/ground.json`.

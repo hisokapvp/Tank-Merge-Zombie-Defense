@@ -558,6 +558,32 @@ let isAutoMergeBusy = false;
 let autoMergeBusyTimeout = null;
 let mergeFxQueue = [];
 let mergeFxQueueTimer = null;
+const SUPERCOMPUTER_FALLBACK_BOUNDS = { w: 68, h: 62, anchorX: 0.5, anchorY: 42 / 62 };
+const supercomputerHudRuntime = {
+  activeDefs: [],
+  activeRemainingSec: [],
+  layout: {
+    activeKey: '',
+    count: 0,
+    iconSize: 0,
+    gapX: 0,
+    gapY: 0,
+    timerOffset: 0,
+    fontSize: 0,
+    maxPerRow: 0,
+    baseX: NaN,
+    baseY: NaN,
+    positions: [],
+    boostBBox: null,
+    spriteMetrics: null,
+  },
+  button: {
+    lastTransform: '',
+    lastVisible: true,
+    width: 42,
+    height: 42,
+  },
+};
 const autoMergeHudSlot = {
   parent: ui.autoMergeBtn ? ui.autoMergeBtn.parentElement : null,
   nextSibling: ui.autoMergeBtn ? ui.autoMergeBtn.nextElementSibling : null,
@@ -6084,6 +6110,7 @@ function updateUI(){
   updateTalentUI();
   updateStageAbilitySlots();
   updateDismantleButton();
+  updateSupercomputerHudButtonPosition();
   if (DebugPanelEnabled && state.debug?.refreshZombieCounts) state.debug.refreshZombieCounts();
 }
 
@@ -7412,6 +7439,242 @@ function getBoostEffectUntil(def){
   return 0;
 }
 
+function getSupercomputerBoostIconsConfig(){
+  const cfg = SupercomputerSprites?.config?.boostIcons;
+  return {
+    anchor: cfg && (cfg.anchor === 'top' || cfg.anchor === 'bottom') ? cfg.anchor : 'top',
+    offsetX: Number.isFinite(cfg && cfg.offsetX) ? cfg.offsetX : 0,
+    offsetY: Number.isFinite(cfg && cfg.offsetY) ? cfg.offsetY : -10,
+    maxPerRow: Number.isFinite(cfg && cfg.maxPerRow) ? Math.max(1, Math.floor(cfg.maxPerRow)) : 4,
+    gapX: Number.isFinite(cfg && cfg.gapX) ? Math.max(0, cfg.gapX) : 6,
+    gapY: Number.isFinite(cfg && cfg.gapY) ? Math.max(0, cfg.gapY) : 6,
+  };
+}
+
+function collectActiveSupercomputerBoosts(now){
+  const defs = supercomputerHudRuntime.activeDefs;
+  const remaining = supercomputerHudRuntime.activeRemainingSec;
+  defs.length = 0;
+  remaining.length = 0;
+
+  let activeKey = '';
+  for (let i = 0; i < BOOST_EFFECT_DEFS.length; i++) {
+    const def = BOOST_EFFECT_DEFS[i];
+    const until = getBoostEffectUntil(def);
+    const remainingSec = until - now;
+    if (remainingSec <= 0) continue;
+    defs.push(def);
+    remaining.push(remainingSec);
+    activeKey += activeKey ? ('|' + def.boostId) : def.boostId;
+  }
+
+  return {
+    activeKey,
+    count: defs.length,
+  };
+}
+
+function resolveSupercomputerSpriteMetrics(sc){
+  const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
+  const stateName = sc.state === 'idle' ? 'work' : sc.state;
+  const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
+  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
+  const scale = scaleCfg * balScale;
+
+  let width = SUPERCOMPUTER_FALLBACK_BOUNDS.w * balScale;
+  let height = SUPERCOMPUTER_FALLBACK_BOUNDS.h * balScale;
+  let anchorX = SUPERCOMPUTER_FALLBACK_BOUNDS.anchorX;
+  let anchorY = SUPERCOMPUTER_FALLBACK_BOUNDS.anchorY;
+
+  if (SupercomputerSprites.ready && SupercomputerSprites.atlasImg && anim) {
+    width = anim.w * scale;
+    height = anim.h * scale;
+    const anchor = config && config.anchor ? config.anchor : { x: 0.5, y: 0.75 };
+    anchorX = Number.isFinite(anchor.x) ? anchor.x : 0.5;
+    anchorY = Number.isFinite(anchor.y) ? anchor.y : 0.75;
+  }
+
+  const left = sc.x - width * anchorX;
+  const top = sc.y - height * anchorY;
+
+  return {
+    centerX: left + width * 0.5,
+    centerY: top + height * 0.5,
+    width,
+    height,
+    halfW: width * 0.5,
+    halfH: height * 0.5,
+  };
+}
+
+function rectsOverlap(a, b){
+  if (!a || !b) return false;
+  return !(a.maxX <= b.minX || a.minX >= b.maxX || a.maxY <= b.minY || a.minY >= b.maxY);
+}
+
+function ensureSupercomputerBoostLayout(now){
+  const sc = getComputerState();
+  if (!sc) return null;
+
+  const activeState = collectActiveSupercomputerBoosts(now);
+  const layout = supercomputerHudRuntime.layout;
+  const spriteMetrics = resolveSupercomputerSpriteMetrics(sc);
+  layout.spriteMetrics = spriteMetrics;
+
+  if (activeState.count <= 0) {
+    layout.activeKey = '';
+    layout.count = 0;
+    layout.positions.length = 0;
+    layout.boostBBox = null;
+    return {
+      sc,
+      spriteMetrics,
+      activeCount: 0,
+      iconSize: Math.max(16, Math.round(24 * balScale)),
+      gapY: Math.max(0, Math.round(6 * balScale)),
+    };
+  }
+
+  const cfg = getSupercomputerBoostIconsConfig();
+  const iconSize = Math.max(16, Math.round(24 * balScale));
+  const gapX = Math.max(0, Math.round(cfg.gapX * balScale));
+  const gapY = Math.max(0, Math.round(cfg.gapY * balScale));
+  const timerOffset = Math.max(10, Math.round(12 * balScale));
+  const fontSize = Math.max(10, Math.round(11 * balScale));
+  const maxPerRow = Math.max(1, Math.floor(cfg.maxPerRow));
+
+  const baseX = spriteMetrics.centerX + Math.round(cfg.offsetX * balScale);
+  let baseY = cfg.anchor === 'bottom'
+    ? (spriteMetrics.centerY + spriteMetrics.halfH)
+    : (spriteMetrics.centerY - spriteMetrics.halfH);
+  baseY += Math.round(cfg.offsetY * balScale);
+
+  const layoutDirty =
+    layout.activeKey !== activeState.activeKey ||
+    layout.count !== activeState.count ||
+    layout.iconSize !== iconSize ||
+    layout.gapX !== gapX ||
+    layout.gapY !== gapY ||
+    layout.timerOffset !== timerOffset ||
+    layout.fontSize !== fontSize ||
+    layout.maxPerRow !== maxPerRow ||
+    layout.baseX !== baseX ||
+    layout.baseY !== baseY;
+
+  if (layoutDirty) {
+    const rowsCount = Math.ceil(activeState.count / maxPerRow);
+    const groupHeight = rowsCount * iconSize + Math.max(0, rowsCount - 1) * gapY;
+    const rowStepY = iconSize + gapY;
+    const colStepX = iconSize + gapX;
+    const groupTopY = baseY - groupHeight;
+
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+    let idx = 0;
+
+    for (let row = 0; row < rowsCount; row++) {
+      const rowCount = Math.min(maxPerRow, activeState.count - row * maxPerRow);
+      const rowWidth = rowCount * iconSize + Math.max(0, rowCount - 1) * gapX;
+      const rowStartX = -rowWidth * 0.5 + iconSize * 0.5;
+      const rowY = groupTopY + row * rowStepY + iconSize * 0.5;
+
+      for (let col = 0; col < rowCount; col++) {
+        const pos = layout.positions[idx] || (layout.positions[idx] = { x: 0, y: 0 });
+        pos.x = baseX + rowStartX + col * colStepX;
+        pos.y = rowY;
+
+        const iconLeft = pos.x - iconSize * 0.5;
+        const iconTop = pos.y - iconSize * 0.5;
+        const iconRight = pos.x + iconSize * 0.5;
+        const labelBottom = pos.y + iconSize * 0.5 + 2 + fontSize;
+
+        if (iconLeft < minX) minX = iconLeft;
+        if (iconTop < minY) minY = iconTop;
+        if (iconRight > maxX) maxX = iconRight;
+        if (labelBottom > maxY) maxY = labelBottom;
+        idx += 1;
+      }
+    }
+
+    layout.positions.length = activeState.count;
+    if (!layout.boostBBox) layout.boostBBox = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    layout.boostBBox.minX = minX;
+    layout.boostBBox.minY = minY;
+    layout.boostBBox.maxX = maxX;
+    layout.boostBBox.maxY = maxY;
+    layout.activeKey = activeState.activeKey;
+    layout.count = activeState.count;
+    layout.iconSize = iconSize;
+    layout.gapX = gapX;
+    layout.gapY = gapY;
+    layout.timerOffset = timerOffset;
+    layout.fontSize = fontSize;
+    layout.maxPerRow = maxPerRow;
+    layout.baseX = baseX;
+    layout.baseY = baseY;
+  }
+
+  return {
+    sc,
+    spriteMetrics,
+    activeCount: activeState.count,
+    iconSize,
+    gapY,
+  };
+}
+
+function updateSupercomputerHudButtonPosition(){
+  if (!ui.supercomputerBtn) return;
+
+  const now = nowSec();
+  const layoutResult = ensureSupercomputerBoostLayout(now);
+  const spriteMetrics = layoutResult && layoutResult.spriteMetrics;
+  if (!layoutResult || !spriteMetrics) {
+    if (supercomputerHudRuntime.button.lastVisible !== false) {
+      ui.supercomputerBtn.style.visibility = 'hidden';
+      supercomputerHudRuntime.button.lastVisible = false;
+    }
+    return;
+  }
+
+  const btnState = supercomputerHudRuntime.button;
+  const btnW = Math.max(36, ui.supercomputerBtn.offsetWidth || btnState.width || 42);
+  const btnH = Math.max(36, ui.supercomputerBtn.offsetHeight || btnState.height || 42);
+  btnState.width = btnW;
+  btnState.height = btnH;
+
+  const btnMargin = 10;
+  let x = spriteMetrics.centerX + spriteMetrics.halfW + btnMargin;
+  let y = spriteMetrics.centerY - btnH * 0.5;
+
+  const boostBBox = supercomputerHudRuntime.layout.boostBBox;
+  const buttonBox = {
+    minX: x,
+    minY: y,
+    maxX: x + btnW,
+    maxY: y + btnH,
+  };
+  if (rectsOverlap(buttonBox, boostBBox)) {
+    y += supercomputerHudRuntime.layout.iconSize + supercomputerHudRuntime.layout.gapY;
+  }
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const xPx = Math.round(canvasRect.left + x);
+  const yPx = Math.round(canvasRect.top + y);
+  const nextTransform = 'translate3d(' + xPx + 'px,' + yPx + 'px,0)';
+
+  if (btnState.lastTransform !== nextTransform) {
+    ui.supercomputerBtn.style.transform = nextTransform;
+    btnState.lastTransform = nextTransform;
+  }
+  if (btnState.lastVisible !== true) {
+    ui.supercomputerBtn.style.visibility = 'visible';
+    btnState.lastVisible = true;
+  }
+}
+
 function isValidBoostFrame(frame){
   return !!(
     frame &&
@@ -7423,28 +7686,28 @@ function isValidBoostFrame(frame){
 }
 
 function drawSupercomputerBoostIcons(){
-  const sc = getComputerState();
-  if (!sc) return;
   if (!BoostIconsSprites || !BoostIconsSprites.ready || !BoostIconsSprites.atlasImg || !BoostIconsSprites.boosts) return;
+
+  const layoutResult = ensureSupercomputerBoostLayout(nowSec());
+  if (!layoutResult || layoutResult.activeCount <= 0) return;
 
   const atlas = BoostIconsSprites.atlasImg;
   const boostsConfig = BoostIconsSprites.boosts;
   const now = nowSec();
-  const iconSize = Math.max(16, Math.round(24 * balScale));
-  const gap = Math.max(4, Math.round(6 * balScale));
-  const timerOffset = Math.max(10, Math.round(12 * balScale));
-  const stepY = iconSize + gap + timerOffset;
-  const offsetX = Math.round(52 * balScale);
-  const offsetY = Math.round(-58 * balScale);
+  const iconSize = supercomputerHudRuntime.layout.iconSize;
+  const fontSize = supercomputerHudRuntime.layout.fontSize;
+  const defs = supercomputerHudRuntime.activeDefs;
+  const positions = supercomputerHudRuntime.layout.positions;
 
-  let activeIdx = 0;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.font = '700 ' + Math.max(10, Math.round(11 * balScale)) + 'px Roboto, Arial, sans-serif';
+  ctx.font = '700 ' + fontSize + 'px Roboto, Arial, sans-serif';
 
-  for (let i = 0; i < BOOST_EFFECT_DEFS.length; i++) {
-    const def = BOOST_EFFECT_DEFS[i];
+  for (let i = 0; i < defs.length; i++) {
+    const def = defs[i];
+    const pos = positions[i];
+    if (!pos) continue;
     const until = getBoostEffectUntil(def);
     const remainingSec = until - now;
     if (remainingSec <= 0) continue;
@@ -7453,8 +7716,8 @@ function drawSupercomputerBoostIcons(){
     const iconFrames = boostCfg && Array.isArray(boostCfg.iconFrames) ? boostCfg.iconFrames : null;
     const overlayFrames = boostCfg && Array.isArray(boostCfg.cooldownOverlayFrames) ? boostCfg.cooldownOverlayFrames : null;
     const iconFrame = iconFrames && iconFrames.length > 0 ? iconFrames[0] : null;
-    const x = sc.x + offsetX;
-    const y = sc.y + offsetY + activeIdx * stepY;
+    const x = pos.x;
+    const y = pos.y;
 
     ctx.fillStyle = 'rgba(10, 8, 6, 0.62)';
     rr(ctx, x - iconSize * 0.5, y - iconSize * 0.5, iconSize, iconSize, Math.max(4, Math.round(5 * balScale)));
@@ -7495,8 +7758,6 @@ function drawSupercomputerBoostIcons(){
 
     ctx.fillStyle = 'rgba(255, 245, 224, 0.98)';
     ctx.fillText(String(Math.ceil(remainingSec)), x, y + iconSize * 0.5 + 2);
-
-    activeIdx += 1;
   }
 
   ctx.restore();

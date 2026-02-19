@@ -50,10 +50,12 @@
 
 ## Supercomputer menu flow
 
-- Основной вход в дерево улучшений: icon-only `#supercomputerBtn` (HUD) и canvas hit-test по supercomputer в `game.js`.
+- Основной вход в дерево улучшений: icon-only `#supercomputerBtn` и canvas hit-test по supercomputer в `game.js`.
+- `#supercomputerBtn` вынесена из правого HUD-списка и позиционируется в screen-space справа от спрайта supercomputer через `transform: translate3d(...)`.
 - Для icon-only `#supercomputerBtn` локализованный `aria-label`/`title` берётся из ключа `supercomputerBtn`.
 - Root overlay: `#supercomputerMenuOverlay` (3 пункта: `Модификации ангара`, `Модификации танков и стен`, `Древо улучшений`).
 - Root-пункты оформлены как tile (`иконка сверху + текст снизу`) всегда в один ряд без wrap; `id` остаются прежними: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
+- Иконки root-tiles задаются через CSS background-image и файлы `assets/computer_icons/*.png` (`hangar_mods_template.png`, `tank_wall_mods_template.png`, `talent_tree_template.png`).
 - Child overlays: `#modsHangarOverlay`, `#modsTankWallOverlay`, плюс существующий `#talentOverlay` как child-ветка.
 - Единый стиль кнопок supercomputer: класс `.scButton` применяется в root-меню и в релевантных action/tab кнопках child overlays (без изменения layout-контейнеров).
 - Единый контейнер supercomputer-модалок: класс `.scModal` у `#modsTankWallOverlay` и у modal-панели `#talentOverlay` (через `src/ui/supercomputerMenu.js`), чтобы размер модалки `Модификации танков и стен` соответствовал `Древу талантов`.
@@ -92,11 +94,13 @@
 
 - HUD-окно `Boost` удалено: активные бусты отображаются рядом со спрайтом supercomputer в screen-space.
 - Источник ассетов: `assets/boost_icons.json` + `assets/boost_icons_atlas.png`; загрузчик `BoostIconsSprites` в `src/render/spriteLoaders.js`.
-- Каждый активный буст рисуется как `icon + ceil(remainingSec)` в вертикальной колонке с `gap`.
+- Layout группы берётся из `assets/supercomputer.json.boostIcons` (`anchor/offsetX/offsetY/maxPerRow/gapX/gapY`).
+- Каждый активный буст рисуется как `icon + ceil(remainingSec)`, иконки раскладываются по рядам (`maxPerRow`) с центрированием каждого ряда и всей группы относительно спрайта.
 - Overlay-кадр cooldown выбирается как `idx = floor(clamp(1 - remainingSec/secondsTotal, 0..1) * (K-1))`.
 - Если `cooldownOverlayFrames` отсутствует/невалиден (`K < 2`) — UI продолжает рисовать иконку и таймер без overlay.
 - Лимит на количество одновременно активных boost-иконок отсутствует.
 - Повторный boost того же `boostId` не создаёт второй элемент: обновляется `remainingSec` текущего.
+- Для floating-кнопки supercomputer есть safeguard: при пересечении с bbox boost-группы кнопка сдвигается вниз на `iconH + gapY`.
 
 ## Термины UI/i18n
 

@@ -769,7 +769,13 @@ body.menu-open .stageUi .hudItem{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  align-self:flex-end;
+  position:absolute;
+  left:0;
+  top:0;
+  transform:translate3d(0,0,0);
+  will-change:transform;
+  z-index:4;
+  pointer-events:auto;
   overflow:hidden;
 }
 .stageUi .supercomputerHudBtn{
@@ -823,8 +829,18 @@ body.menu-open .stageUi .hudItem{
   border-radius:10px;
   background:rgba(255,255,255,0.08);
   border:1px solid rgba(255,255,255,0.16);
-  font-size:calc(var(--scTileIconSize) * 0.56);
-  line-height:1;
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+}
+#supercomputerOpenHangarMods .scRootTile__icon{
+  background-image:url("assets/computer_icons/hangar_mods_template.png");
+}
+#supercomputerOpenTankWallMods .scRootTile__icon{
+  background-image:url("assets/computer_icons/tank_wall_mods_template.png");
+}
+#supercomputerOpenTalents .scRootTile__icon{
+  background-image:url("assets/computer_icons/talent_tree_template.png");
 }
 .scRootTile__label{
   width:100%;

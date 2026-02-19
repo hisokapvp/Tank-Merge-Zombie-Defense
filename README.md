@@ -170,13 +170,16 @@ Merge + tower defense на canvas.
 
 ## Навигация через суперкомпьютер
 
-- В правом HUD вход идёт через icon-only кнопку `#supercomputerBtn`; локализованный `aria-label` и `title` берутся из ключа `supercomputerBtn`.
+- Вход идёт через icon-only кнопку `#supercomputerBtn`, позиционируемую в screen-space справа от спрайта supercomputer (не в правом HUD-списке).
+- Локализованный `aria-label` и `title` для `#supercomputerBtn` берутся из ключа `supercomputerBtn`.
 - Root-меню суперкомпьютера содержит 3 tile-пункта в один ряд: `Модификации ангара`, `Модификации танков и стен`, `Древо улучшений`.
 - У tile-пунктов сохраняются прежние IDs: `supercomputerOpenHangarMods`, `supercomputerOpenTankWallMods`, `supercomputerOpenTalents`.
+- Иконки tiles берутся из файлов `assets/computer_icons/*`; замена PNG на диске меняет иконку без правки кода.
 - `Esc` в root-меню суперкомпьютера закрывает меню и снимает menu-pause (если settings уже не открыт).
 - `Esc` в дочерних окнах суперкомпьютера (`mods*` и upgrade tree) делает шаг назад в root-меню, пауза сохраняется.
 - Реализация: разметка в `index.html`, логика в `src/ui/supercomputerMenu.js` + orchestration в `game.js`, modal/a11y через `src/accessibility/a11y.js`, pause lock через `src/systems/pauseManager.js`.
 - UI-правила для tabs/tiles и порядок feedback в in-session меню: `docs/supercomputer-ui.md`.
+- HUD-правила supercomputer (boost layout + кнопка + template icons): `docs/supercomputer-hud.md`.
 
 ## Critical mode (5% HP порог)
 
@@ -192,6 +195,8 @@ Merge + tower defense на canvas.
 
 - HUD-блок `Boost` удалён; активные бусты рисуются рядом со спрайтом supercomputer в screen-space.
 - Ассеты: `assets/boost_icons.json` + `assets/boost_icons_atlas.png`.
+- Layout берёт параметры из `assets/supercomputer.json.boostIcons`: `anchor`, `offsetX`, `offsetY`, `maxPerRow`, `gapX`, `gapY`.
+- Иконки раскладываются по рядам с центрированием каждой строки и центрированием всей группы относительно спрайта supercomputer.
 - JSON-схема:
 
 ```json
