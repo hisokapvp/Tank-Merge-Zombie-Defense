@@ -6,6 +6,9 @@
 - Добавлен контракт на отсутствие дублирования main loop/таймеров при повторном restart.
 - MergePopup SHOWCASE: удалён дополнительный правобоковой shot FX в `src/ui/mergePopup.js`.
 - В pop-up нового уровня танка сохранены штатная анимация и shoot SFX.
+- Полностью удалён legacy-виджет отзывов: menu entry points, связанная модалка и соответствующие i18n-ключи.
+- Achievements modal переведён на single-open accordion с toggler `+`/`−`.
+- Исправлен transform-конфликт `#supercomputerBtn` с unified button behavior (нет смещения кнопки при клике).
 
 ## 2026-02-13
 - Документация для AI-агентов сжата и унифицирована.

@@ -37,7 +37,6 @@ systems:
       - style.css
       - src/ui
       - src/accessibility/a11y.js
-      - src/feedback/widget.js
       - src/scheduler/srs.js
       - src/lessons/catalog.js
       - src/tools/anki

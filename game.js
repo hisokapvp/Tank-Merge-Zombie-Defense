@@ -128,7 +128,6 @@ const ui = {
   bigMenuSound: document.getElementById('bigMenuSound'),
   bigMenuLanguageWrap: document.getElementById('bigMenuLanguageWrap'),
   bigMenuLanguage: document.getElementById('bigMenuLanguage'),
-  bigMenuFeedback: document.getElementById('bigMenuFeedback'),
   bigMenuDevs: document.getElementById('bigMenuDevs'),
   bigMenuLoadHint: document.getElementById('bigMenuLoadHint'),
   bigMenuSoundPanel: document.getElementById('bigMenuSoundPanel'),
@@ -149,7 +148,6 @@ const ui = {
   menuContinue: document.getElementById('menuContinue'),
   menuNew: document.getElementById('menuNew'),
   menuSave: document.getElementById('menuSave'),
-  menuFeedback: document.getElementById('menuFeedback'),
   menuExit: document.getElementById('menuExit'),
   menuMainView: document.getElementById('menuMainView'),
   menuSaveSlotsView: document.getElementById('menuSaveSlotsView'),
@@ -164,7 +162,6 @@ const ui = {
   menuExitConfirmView: document.getElementById('menuExitConfirmView'),
   menuExitConfirmLeave: document.getElementById('menuExitConfirmLeave'),
   menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
-  menuExitConfirmClose: document.getElementById('menuExitConfirmClose'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
   menuSfxValue: document.getElementById('menuSfxValue'),
@@ -793,9 +790,6 @@ function setLanguage(lang){
     document.documentElement.lang = lang;
   }
   applyTranslations();
-  if (window.Game && window.Game.FeedbackWidget && typeof window.Game.FeedbackWidget.refreshTexts === 'function') {
-    window.Game.FeedbackWidget.refreshTexts();
-  }
   updateUI();
 }
 
@@ -6062,7 +6056,7 @@ function setBigMenuOpen(open){
 }
 
 function getBigMenuActionButtons(){
-  return [ui.bigMenuNew, ui.bigMenuLoad, ui.bigMenuSound, ui.bigMenuLanguage, ui.bigMenuFeedback, ui.bigMenuDevs];
+  return [ui.bigMenuNew, ui.bigMenuLoad, ui.bigMenuSound, ui.bigMenuLanguage, ui.bigMenuDevs];
 }
 
 function setMenuActionButtonSelected(button, selected){
@@ -6324,7 +6318,6 @@ function renderBigMenuTexts(){
   if (ui.bigMenuLoad) ui.bigMenuLoad.textContent = t('bigMenuLoad');
   if (ui.bigMenuSound) ui.bigMenuSound.textContent = t('bigMenuSound');
   if (ui.bigMenuLanguage) ui.bigMenuLanguage.textContent = t('menuLanguage');
-  if (ui.bigMenuFeedback) ui.bigMenuFeedback.textContent = t('menuFeedback');
   if (ui.bigMenuDevs) ui.bigMenuDevs.textContent = t('bigMenuDevs');
 
   if (ui.bigMenuLoadHint) {
@@ -6383,17 +6376,6 @@ function setBigMenuActionButtonsDisabled(disabled){
     btn.disabled = !!disabled;
   }
   if (!disabled) updateBigMenuLoadState();
-}
-
-function triggerBigMenuFeedback(){
-  const feedbackBtn = document.getElementById('feedbackBtn');
-  if (feedbackBtn && typeof feedbackBtn.click === 'function') {
-    feedbackBtn.click();
-    return;
-  }
-  if (window.Game && window.Game.FeedbackWidget && typeof window.Game.FeedbackWidget.open === 'function') {
-    window.Game.FeedbackWidget.open();
-  }
 }
 
 function stopAndResetSessionToBigMenu(){
@@ -6502,10 +6484,6 @@ function initBigMainMenu(){
   if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => {
     markBigMenuButtonActive('bigMenuLoad');
     startFromBigMenu('load');
-  });
-  if (ui.bigMenuFeedback) ui.bigMenuFeedback.addEventListener('click', () => {
-    markBigMenuButtonActive('bigMenuFeedback');
-    triggerBigMenuFeedback();
   });
   if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => {
     markBigMenuButtonActive('bigMenuSound');
@@ -6832,9 +6810,6 @@ function updateUI(){
   updateAchievementToastState();
   applyUnlockPulseState(nowMs);
 
-  if (ui.achievementsModal && !ui.achievementsModal.classList.contains('hidden')) {
-    renderAchievementsList();
-  }
   updateProgressUI();
   updateTalentUI();
   updateStageAbilitySlots();
@@ -8395,6 +8370,7 @@ function updateSupercomputerHudButtonPosition(){
   const nextTransform = 'translate3d(' + xPx + 'px,' + yPx + 'px,0)';
 
   if (btnState.lastTransform !== nextTransform) {
+    ui.supercomputerBtn.style.setProperty('--supercomputer-btn-transform', nextTransform);
     ui.supercomputerBtn.style.transform = nextTransform;
     btnState.lastTransform = nextTransform;
   }

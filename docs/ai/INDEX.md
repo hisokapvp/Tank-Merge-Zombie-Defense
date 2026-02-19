@@ -25,6 +25,9 @@
 - Confirm выхода из small menu: отдельный view `menuExitConfirmView`, переиспользует текущий session-exit flow.
 - Big menu: пункт `Devs` переименован в `Credits/Создатели` и открывает `creditsModal` со списком из `assets/credits.json`.
 - Big menu language panel: подкнопки языка рендерятся прямо под кнопкой `Язык/Language`; active состояния `Русский/Английский` зависят только от текущей локали.
+- Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).
+- Achievements modal: accordion single-open с toggler `+`/`−`, по умолчанию всё закрыто при открытии.
+- `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

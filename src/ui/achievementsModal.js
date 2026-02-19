@@ -45,6 +45,7 @@
         var toggleBtn = row.querySelector('.achievementToggleBtn[data-achievement-toggle]');
         if (toggleBtn) {
           toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          toggleBtn.textContent = isOpen ? '−' : '+';
         }
       }
       if (!hasOpenRow) openAchievementId = null;

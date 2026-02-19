@@ -262,11 +262,12 @@ body::after{
 }
 .bigMenuLangActions{
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
   gap:10px;
 }
 .bigMenuLangActions .btn{
-  width:100%;
+  flex:1 1 0;
+  width:auto;
 }
 .bigMenuDevsText{
   font-size:13px;
@@ -619,7 +620,7 @@ body.menu-open .stageUi .hudItem{
 }
 .levelModal.levelModal_onTop{
   position:fixed;
-  z-index:65;
+  z-index:13010;
 }
 .levelModal.hidden{
   display:none;
@@ -878,10 +879,20 @@ body.menu-open .stageUi .hudItem{
 .supercomputerHudBtn:active{
   filter:brightness(0.98);
 }
+.supercomputerHudBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+.supercomputerHudBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed{
+  transform:var(--supercomputer-btn-transform, translate3d(0,0,0)) !important;
+  box-shadow:var(--btnShadow) !important;
+}
+.supercomputerHudBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active .supercomputerHudBtn__icon,
+.supercomputerHudBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed .supercomputerHudBtn__icon{
+  transform:scale(0.94);
+}
 .supercomputerHudBtn__icon{
   font-size:20px;
   line-height:1;
   pointer-events:none;
+  transition:transform .12s ease;
 }
 .scRootTiles{
   display:flex;

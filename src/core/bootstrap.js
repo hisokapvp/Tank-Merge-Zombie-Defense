@@ -53,7 +53,7 @@
     var lastActiveButtonIdSmallMenu = null;
 
     function getSmallMenuButtons() {
-      return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuFeedback, opts.ui.menuExit];
+      return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuExit];
     }
 
     function setMenuButtonSelected(button, selected) {
@@ -219,13 +219,6 @@
       opts.setMenuOpen(false);
     });
 
-    opts.ui.menuFeedback && opts.ui.menuFeedback.addEventListener('click', function () {
-      markSmallMenuButtonActive('menuFeedback');
-      var feedbackWidget = windowObj.Game && windowObj.Game.FeedbackWidget;
-      if (!feedbackWidget || typeof feedbackWidget.open !== 'function') return;
-      feedbackWidget.open();
-    });
-
     opts.ui.menuSave && opts.ui.menuSave.addEventListener('click', function () {
       markSmallMenuButtonActive('menuSave');
       openSaveSlotsView();
@@ -276,9 +269,6 @@
       openExitConfirmView();
     });
     opts.ui.menuExitConfirmCancel && opts.ui.menuExitConfirmCancel.addEventListener('click', function () {
-      openMainMenuView();
-    });
-    opts.ui.menuExitConfirmClose && opts.ui.menuExitConfirmClose.addEventListener('click', function () {
       openMainMenuView();
     });
     opts.ui.menuExitConfirmLeave && opts.ui.menuExitConfirmLeave.addEventListener('click', function () {
