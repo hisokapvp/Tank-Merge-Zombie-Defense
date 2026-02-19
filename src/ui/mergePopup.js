@@ -52,10 +52,6 @@
     }
   }
 
-  /* ── particles / flashes ── */
-  var particles = [];
-  var muzzleFlashes = [];
-
   /* ═══════════════ Persistence ═══════════════ */
   function loadSeenLevels() {
     var storage = global.Game && global.Game.MergePopupSeenLevels;
@@ -226,8 +222,6 @@
     currentState = STATE.MERGE_ANIM;
     animStartTime = performance.now();
     lastFrameTime = animStartTime;
-    particles = [];
-    muzzleFlashes = [];
     startRenderLoop();
 
     if (mergeTimeout) clearTimeout(mergeTimeout);
@@ -309,23 +303,6 @@
       var sfxId = level >= 20 ? 'shootHeavy' : 'shootNormal';
       global.playSfx(sfxId);
     }
-    muzzleFlashes.push({
-      x: canvas.width / 2 + 20,
-      y: canvas.height / 2 - 10,
-      life: 0.15,
-      maxLife: 0.15
-    });
-    for (var i = 0; i < 6; i++) {
-      particles.push({
-        x: canvas.width / 2 + 25,
-        y: canvas.height / 2 - 10 + (Math.random() - 0.5) * 8,
-        vx: 180 + Math.random() * 120,
-        vy: (Math.random() - 0.5) * 60,
-        r: 2 + Math.random() * 2,
-        life: 0.3 + Math.random() * 0.2,
-        color: level >= 20 ? '#ff6b35' : '#ffd700'
-      });
-    }
   }
 
   /* ═══════════════ Render ═══════════════ */
@@ -369,50 +346,6 @@
       drawShowcaseScene(showcaseElapsed);
     }
 
-    // Muzzle flashes
-    var nextFlashes = [];
-    for (var i = 0; i < muzzleFlashes.length; i++) {
-      var f = muzzleFlashes[i];
-      f.life -= dt;
-      if (f.life > 0) {
-        var alpha = f.life / f.maxLife;
-        ctxPopup.save();
-        ctxPopup.globalAlpha = alpha;
-        ctxPopup.fillStyle = '#fff';
-        ctxPopup.beginPath();
-        ctxPopup.arc(f.x, f.y, 8 * alpha + 4, 0, Math.PI * 2);
-        ctxPopup.fill();
-        ctxPopup.fillStyle = '#ffd700';
-        ctxPopup.beginPath();
-        ctxPopup.arc(f.x, f.y, 4 * alpha + 2, 0, Math.PI * 2);
-        ctxPopup.fill();
-        ctxPopup.restore();
-        nextFlashes.push(f);
-      }
-    }
-    muzzleFlashes = nextFlashes;
-
-    // Particles
-    var nextParticles = [];
-    for (var j = 0; j < particles.length; j++) {
-      var p = particles[j];
-      p.life -= dt;
-      if (p.life > 0) {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.r *= 0.96;
-        var pAlpha = Math.min(1, p.life * 3);
-        ctxPopup.save();
-        ctxPopup.globalAlpha = pAlpha;
-        ctxPopup.fillStyle = p.color;
-        ctxPopup.beginPath();
-        ctxPopup.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctxPopup.fill();
-        ctxPopup.restore();
-        nextParticles.push(p);
-      }
-    }
-    particles = nextParticles;
   }
 
   /* ═══════════════ Scene drawing ═══════════════ */

@@ -192,6 +192,13 @@
 - Правило consume: очередь читается только когда `pause.reasons.menuOpen === false` и `pause.reasons.tabInactive === false`.
 - Показ реализован non-modal toast (`#achievementToast`, `role="status"`, `aria-live="polite"`), без focus trap и без перехвата `Esc`.
 
+## MergePopup SHOWCASE shot FX
+
+- Файл: `src/ui/mergePopup.js`.
+- В SHOWCASE удалён дополнительный визуальный shot FX, который выходил из правого борта корпуса (`muzzleFlashes`/`particles` из popup-рендера).
+- Сохранено штатное поведение pop-up: движение танка, штатная анимация стрельбы и shoot SFX.
+- Визуальный критерий проверки: в pop-up нового уровня танка нет вспышек/частиц из правого борта корпуса.
+
 ### Achievements modal list (collapse)
 
 - Контейнер: `#achievementsList` в `index.html`; UI-контроллер: `src/ui/achievementsModal.js`.
