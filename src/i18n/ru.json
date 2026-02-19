@@ -13,6 +13,8 @@
   "menu.save.col.date": "Дата",
   "menu.save.col.action": "Сохранить",
   "menu.save.toast.saved": "Сохранено",
+  "ui.toast.noSaves": "Нет сохранений",
+  "ui.toast.unavailable": "Недоступно",
   "menuExit": "Выход",
   "common.back": "Назад",
   "menuBack": "Назад",

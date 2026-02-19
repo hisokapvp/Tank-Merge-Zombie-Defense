@@ -322,7 +322,7 @@
         <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
         <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
           <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
-          <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuSubpanelHidden bigMenuSubpanelFloating" aria-hidden="true">
+          <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
             <div class="bigMenuLangActions">
               <button id="bigMenuLangRu" class="btn btnSecondary" type="button">Русский</button>
               <button id="bigMenuLangEn" class="btn btnSecondary" type="button">Английский</button>
@@ -331,7 +331,6 @@
         </div>
         <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
       </div>
-      <div id="bigMenuLoadHint" class="bigMenuLoadHint" aria-hidden="true">Нет сохранения</div>
 
       <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
         <div class="bigMenuSubpanelTitle">Звук</div>
@@ -399,6 +398,7 @@
   <script src="src/ui/adService.js"></script>
   <script src="src/ui/continueFlow.js"></script>
   <script src="src/ui/shopUI.js"></script>
+  <script src="src/ui/toast.js"></script>
   <script src="src/ui/mergePreview/mergePreviewModel.js"></script>
   <script src="src/ui/mergePreview/mergePreviewRenderer.js"></script>
   <script src="src/ui/mergePopup/mergePopupSeenLevels.js"></script>

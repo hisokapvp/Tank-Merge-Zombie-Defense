@@ -129,7 +129,6 @@ const ui = {
   bigMenuLanguageWrap: document.getElementById('bigMenuLanguageWrap'),
   bigMenuLanguage: document.getElementById('bigMenuLanguage'),
   bigMenuDevs: document.getElementById('bigMenuDevs'),
-  bigMenuLoadHint: document.getElementById('bigMenuLoadHint'),
   bigMenuSoundPanel: document.getElementById('bigMenuSoundPanel'),
   bigMenuLanguagePanel: document.getElementById('bigMenuLanguagePanel'),
   bigMenuSfx: document.getElementById('bigMenuSfx'),
@@ -855,9 +854,14 @@ const SFX_CHANNELS = {
   shootNormal: 'gameplay',
   shootHeavy: 'gameplay',
   shootHeavy2: 'gameplay',
+  tankToTrack: 'gameplay',
+  tankToHangar: 'gameplay',
   activeAbility: 'gameplay',
   thunder: 'gameplay',
   rainLoop: 'gameplay',
+  uiHover: 'ui',
+  uiClickOnEnabled: 'ui',
+  uiClickOnDisable: 'ui',
   levelUp: 'ui',
   applyTalents: 'ui',
 };
@@ -1325,6 +1329,11 @@ const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
   shootHeavy: 'assets/sfx/shoot_heavy.ogg',
   shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
+  uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
+  uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
+  uiClickOnDisable: ['assets/sfx/ui_click_disabled.ogg', 'assets/sfx/ui_click_disabled.mp3'],
+  tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
+  tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
   levelUp: 'assets/sfx/level_up.ogg',
   applyTalents: 'assets/sfx/apply_talents.ogg',
   activeAbility: 'assets/sfx/active_ability.ogg',
@@ -6089,17 +6098,19 @@ function removeBigMenuLanguageOutsideListener(){
 
 function closeBigMenuLanguagePanel(){
   if (!ui.bigMenuLanguagePanel) return;
-  ui.bigMenuLanguagePanel.classList.add('bigMenuSubpanelHidden');
+  ui.bigMenuLanguagePanel.classList.remove('is-open');
+  ui.bigMenuLanguagePanel.classList.add('bigMenuLanguagePanelClosed');
   ui.bigMenuLanguagePanel.setAttribute('aria-hidden', 'true');
   removeBigMenuLanguageOutsideListener();
 }
 
 function toggleBigMenuLanguagePanel(){
   if (!ui.bigMenuLanguagePanel) return;
-  const shouldOpen = ui.bigMenuLanguagePanel.classList.contains('bigMenuSubpanelHidden');
+  const shouldOpen = !ui.bigMenuLanguagePanel.classList.contains('is-open');
   closeBigMenuPanels();
   if (!shouldOpen) return;
-  ui.bigMenuLanguagePanel.classList.remove('bigMenuSubpanelHidden');
+  ui.bigMenuLanguagePanel.classList.remove('bigMenuLanguagePanelClosed');
+  ui.bigMenuLanguagePanel.classList.add('is-open');
   ui.bigMenuLanguagePanel.setAttribute('aria-hidden', 'false');
   if (!bigMenuLanguageOutsideListener) {
     bigMenuLanguageOutsideListener = function (event) {
@@ -6254,46 +6265,22 @@ async function openCreditsModal(){
 
 function hasSaves(){
   const storageApi = window.Game && window.Game.Storage;
-  const rawKey = (storageApi && storageApi.SAVE_SLOTS_META_KEY) || 'saveSlotsMeta_v1';
-  const slotsCount = Number.isFinite(storageApi && storageApi.SAVE_SLOTS_COUNT)
-    ? Math.max(1, Math.floor(storageApi.SAVE_SLOTS_COUNT))
-    : 10;
-  const maxLen = Number.isFinite(storageApi && storageApi.SAVE_SLOT_NAME_MAX_LEN)
-    ? Math.max(1, Math.floor(storageApi.SAVE_SLOT_NAME_MAX_LEN))
-    : 20;
-  const getDefaultSlotName = storageApi && typeof storageApi.getDefaultSlotName === 'function'
-    ? storageApi.getDefaultSlotName
-    : function (index) { return `Слот ${index + 1}`; };
-  const safeParse = storageApi && typeof storageApi.safeParse === 'function'
-    ? storageApi.safeParse
-    : function (raw, fallback) {
-      try {
-        if (raw == null || raw === '') return fallback;
-        return JSON.parse(raw);
-      } catch (e) {
-        return fallback;
-      }
-    };
-
-  let raw = null;
-  try {
-    raw = localStorage.getItem(rawKey);
-  } catch (e) {
-    raw = null;
+  if (storageApi && typeof storageApi.hasAnySaves === 'function') {
+    try {
+      return !!storageApi.hasAnySaves();
+    } catch (e) {
+      return false;
+    }
   }
-  if (!raw) return false;
 
-  const parsed = safeParse(raw, null);
-  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.slots)) return false;
-
-  for (let i = 0; i < slotsCount; i++) {
-    const slot = parsed.slots[i];
-    const fallbackName = getDefaultSlotName(i);
-    let name = slot && typeof slot === 'object' && typeof slot.name === 'string' ? slot.name : '';
-    name = name.trim();
-    if (name.length > maxLen) name = name.slice(0, maxLen);
-    const normalized = name.length ? name : fallbackName;
-    if (normalized !== fallbackName) return true;
+  if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
+    const meta = storageApi.loadSaveSlotsMeta();
+    const slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const ts = Number(slot && slot.lastSavedAt);
+      if (Number.isFinite(ts) && ts > 0) return true;
+    }
   }
   return false;
 }
@@ -6316,9 +6303,6 @@ function renderBigMenuTexts(){
   if (ui.bigMenuLanguage) ui.bigMenuLanguage.textContent = t('menuLanguage');
   if (ui.bigMenuDevs) ui.bigMenuDevs.textContent = t('bigMenuDevs');
 
-  if (ui.bigMenuLoadHint) {
-    ui.bigMenuLoadHint.textContent = noSaveText;
-  }
   if (ui.bigMenuLoad) {
     if (hasSave) ui.bigMenuLoad.removeAttribute('title');
     else ui.bigMenuLoad.setAttribute('title', noSaveText);
@@ -6345,14 +6329,12 @@ function renderBigMenuTexts(){
 function updateBigMenuLoadState(){
   const hasSave = hasSaves();
   if (ui.bigMenuLoad) {
-    ui.bigMenuLoad.disabled = !hasSave;
+    ui.bigMenuLoad.disabled = false;
+    ui.bigMenuLoad.setAttribute('aria-disabled', hasSave ? 'false' : 'true');
+    if (hasSave) ui.bigMenuLoad.removeAttribute('data-disabled-reason');
+    else ui.bigMenuLoad.setAttribute('data-disabled-reason', 'noSaves');
     if (hasSave) ui.bigMenuLoad.removeAttribute('title');
     else ui.bigMenuLoad.setAttribute('title', t('bigMenuNoSave'));
-  }
-  if (ui.bigMenuLoadHint) {
-    ui.bigMenuLoadHint.textContent = t('bigMenuNoSave');
-    ui.bigMenuLoadHint.classList.toggle('bigMenuLoadHintVisible', !hasSave);
-    ui.bigMenuLoadHint.setAttribute('aria-hidden', hasSave ? 'true' : 'false');
   }
 }
 
@@ -6431,7 +6413,7 @@ function resumeSessionRuntime(){
 async function startFromBigMenu(mode){
   if (bigMenuStartPending) return;
   if (mode === 'load' && !hasSaves()) return;
-  if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.disabled) return;
+  if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.getAttribute('aria-disabled') === 'true') return;
   const wasStopped = sessionRuntimeStopped;
   bigMenuStartPending = true;
   setBigMenuActionButtonsDisabled(true);
@@ -7643,6 +7625,7 @@ canvas.addEventListener('pointerdown', (e)=>{
     const trackTank = state.cells[trackCell].tank;
     trackTank.onTrack = false;
     trackTank.cooldown = 0;
+    playSfx('tankToHangar');
     popText(p.x, p.y, t('popHangar'), '#eaf1ff');
     return;
   }
@@ -7662,6 +7645,7 @@ canvas.addEventListener('pointerdown', (e)=>{
   if (c.tank.onTrack){
     c.tank.onTrack = false;
     c.tank.cooldown = 0;
+    playSfx('tankToHangar');
     popText(p.x, p.y, t('popHangar'), '#eaf1ff');
     return;
   }
@@ -7711,6 +7695,7 @@ canvas.addEventListener('pointerup', (e)=>{
     const mods = getMods();
     const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
     from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
+    playSfx('tankToTrack');
     popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
     state.selectedHangarCellIndex = from.i;
   } else if (target){

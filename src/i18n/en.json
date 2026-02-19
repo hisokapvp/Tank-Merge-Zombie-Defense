@@ -13,6 +13,8 @@
   "menu.save.col.date": "Date",
   "menu.save.col.action": "Save",
   "menu.save.toast.saved": "Saved",
+  "ui.toast.noSaves": "No saves",
+  "ui.toast.unavailable": "Unavailable",
   "menuExit": "Exit",
   "common.back": "Back",
   "menuBack": "Back",

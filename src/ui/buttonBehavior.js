@@ -73,6 +73,22 @@
     return el.getAttribute && el.getAttribute('aria-disabled') === 'true';
   }
 
+  function getDisabledToastText(target) {
+    var reason = target && target.getAttribute ? target.getAttribute('data-disabled-reason') : '';
+    var i18n = global.Game && global.Game.I18n;
+    var t = i18n && typeof i18n.t === 'function' ? i18n.t : null;
+    if (reason === 'noSaves') {
+      return t ? t('ui.toast.noSaves') : 'Нет сохранений';
+    }
+    return t ? t('ui.toast.unavailable') : 'Недоступно';
+  }
+
+  function showDisabledToast(target) {
+    var toastApi = global.Game && global.Game.Toast;
+    if (!toastApi || typeof toastApi.show !== 'function') return;
+    toastApi.show(getDisabledToastText(target), 1400);
+  }
+
   function decorateElement(el) {
     if (!isButtonLike(el)) return;
     el.classList.add(BEHAVIOR_CLASS);
@@ -104,6 +120,7 @@
     if (isDisabled(target)) {
       var disabledMult = asPositiveNumber(cfg.UI_DISABLED_CLICK_VOLUME_MULT, 1.0);
       playUiSfx('uiClickOnDisable', baseMult * disabledMult);
+      showDisabledToast(target);
       return;
     }
     playUiSfx('uiClickOnEnabled', baseMult);
@@ -152,7 +169,7 @@
     }
 
     document.addEventListener('pointerdown', handlePointerDown, true);
-    document.addEventListener('pointerenter', handlePointerEnter, true);
+    document.addEventListener('pointerover', handlePointerEnter, true);
     document.addEventListener('pointerup', handlePointerUp, true);
     document.addEventListener('pointercancel', handlePointerCancel, true);
     document.addEventListener('lostpointercapture', handlePointerCancel, true);

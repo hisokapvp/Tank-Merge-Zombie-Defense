@@ -26,9 +26,12 @@
 - Small menu Save view: отдельный подрежим `smallMenuSaveView` с таблицей 10 слотов, inline edit имени и timestamp `lastSavedAt`.
 - Big menu: пункт `Devs` переименован в `Credits/Создатели` и открывает `creditsModal` со списком из `assets/credits.json`.
 - Big menu language panel: подкнопки языка рендерятся прямо под кнопкой `Язык/Language`; active состояния `Русский/Английский` зависят только от текущей локали.
+- Big menu `Load`: состояние доступности вычисляется по `saveSlotsMeta_v1.lastSavedAt` (через `hasAnySaves()`), disabled реализован как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`), без постоянного текста «Нет сохранений».
 - Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).
 - Achievements modal: accordion single-open с toggler `+`/`−`, по умолчанию всё закрыто при открытии.
 - `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.
+- Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
+- Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

@@ -135,8 +135,12 @@
     }
 
     function showSaveToast(messageKey) {
-      if (!opts.ui.smallMenuSaveToast) return;
       var text = opts.t(messageKey || 'menu.save.toast.saved');
+      var toastApi = windowObj.Game && windowObj.Game.Toast;
+      if (toastApi && typeof toastApi.show === 'function') {
+        toastApi.show(text, 1400);
+      }
+      if (!opts.ui.smallMenuSaveToast) return;
       opts.ui.smallMenuSaveToast.textContent = text;
       opts.ui.smallMenuSaveToast.classList.add('is-visible');
       if (saveToastTimer != null) {

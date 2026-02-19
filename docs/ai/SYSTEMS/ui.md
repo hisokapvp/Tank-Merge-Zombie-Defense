@@ -40,6 +40,7 @@
 - Подпанель языка закрывается при выборе языка и по outside click; outside-listener снимается при закрытии.
 - В big menu больше нет пункта для отправки отзывов; действия: `New`, `Load`, `Sound`, `Language`, `Credits`.
 - Пункт `Credits/Создатели` открывает `creditsModal` (закрытие по `×` и `Esc`) и рендерит список участников из `assets/credits.json`.
+- Для `Load` в big menu нет постоянного текста «Нет сохранений». Доступность отражает `saveSlotsMeta_v1.lastSavedAt`: при отсутствии сейвов ставятся `aria-disabled="true"` и `data-disabled-reason="noSaves"`, при наличии — атрибут reason убирается.
 
 ## HUD: supercomputer button
 - `#supercomputerBtn` позиционируется runtime-логикой через `transform: translate3d(...)`; не применять к нему layout-сдвиги (`top/left`) на active/pressed.
@@ -52,6 +53,12 @@
 - Click SFX запускается на `pointerdown` (capture), с разными id для enabled/disabled состояния.
 - Для disabled-кнопок воспроизводится только disabled-click SFX; `is-pressed` не проставляется.
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
+- Disabled toast правило: если у кнопки `data-disabled-reason="noSaves"`, показывается «Нет сохранений/No saves», иначе «Недоступно/Unavailable». Сообщение показывается через единый helper `src/ui/toast.js` (один DOM, таймер перезапускается, без бесконечного stacking).
+
+## Supercomputer tabs divider
+- Разделитель под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay` — это нижняя граница `.scTabs`.
+- Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов. Если мешают скругления рамки, использовать `overflow:hidden` у контейнера с `border-radius` и оставлять линию на `width:100%`.
+- Проверка: открыть `Модификации танков и стен`, убедиться, что у divider нет видимых зазоров слева/справа относительно внутренней рамки.
 
 ## Мини-проверка
 - Кнопки работают мышью и touch.

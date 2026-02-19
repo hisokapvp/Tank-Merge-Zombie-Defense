@@ -19,3 +19,5 @@
 - `lastSavedAt` хранится как timestamp в миллисекундах (`Date.now()`), для пустого значения используется `null`.
 - API обновления имени: `setSlotName(slotIndex, name)` (sanitize + fallback на default slot name).
 - API обновления даты: `markSlotSaved(slotIndex, timestampMs)` — загружает meta, обновляет `lastSavedAt`, сохраняет обратно в `saveSlotsMeta_v1`.
+- API проверки наличия сейвов: `hasAnySaves()` — возвращает `true`, если хотя бы у одного слота `lastSavedAt != null`.
+- Big menu `Load` обязан использовать именно этот критерий (`lastSavedAt`), а не имя слота/другие эвристики.

@@ -123,6 +123,17 @@
     return meta;
   }
 
+  function hasAnySaves() {
+    var meta = loadSaveSlotsMeta();
+    var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i];
+      if (!slot || typeof slot !== 'object') continue;
+      if (sanitizeLastSavedAt(slot.lastSavedAt) != null) return true;
+    }
+    return false;
+  }
+
   /**
    * Сериализуем только то, что нужно для восстановления и офлайн-расчёта.
    * @param {object} state
@@ -288,6 +299,7 @@
     loadSaveSlotsMeta: loadSaveSlotsMeta,
     setSlotName: setSlotName,
     markSlotSaved: markSlotSaved,
+    hasAnySaves: hasAnySaves,
     getDefaultSlotName: getDefaultSlotName,
     safeParse: safeParse,
   };
