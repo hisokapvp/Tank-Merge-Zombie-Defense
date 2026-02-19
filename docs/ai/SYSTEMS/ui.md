@@ -37,8 +37,29 @@
 
 - Кнопка `#menuFeedback` находится в `#menuOverlay` рядом с `Continue/New game`.
 - Клик по `#menuFeedback` вызывает `Game.FeedbackWidget.open()` (привязка в `src/core/bootstrap.js`).
-- `#menuFeedback` должен оставаться последней строкой in-session меню; для инварианта допускается re-append в конец контейнера.
+- `#menuFeedback` находится в списке действий small menu выше `#menuExit`.
 - Кнопка доступна только в main menu (отдельной HUD/floating кнопки нет).
+
+## In-session small menu: Save/Exit
+
+- Языковой переключатель удалён из `#menuOverlay` (язык остаётся только в big menu `#bigMenuOverlay`).
+- Новые пункты in-session меню: `#menuSave` и `#menuExit`.
+- `#menuExit` должен оставаться последней кнопкой списка действий (ниже `#menuFeedback`).
+
+### `#menuSave` states
+
+- `SaveSlotsList`: список из 10 слотов (`1..10`).
+- `SaveSlotEdit(i)`: input имени + кнопки `Сохранить / Назад / Закрыть`.
+- Пустой слот визуально отмечается только opacity текста (`.menuSaveSlotNameEmpty`), без дополнительных иконок.
+- Keyboard в edit-view:
+	- `Enter` → сохранить имя,
+	- `Esc` → назад к списку.
+
+### `#menuExit` state
+
+- Открывает confirm-view с текстом `Выйти без сохранения?` и кнопками `Выйти / Отмена`.
+- `Отмена` возвращает в main-view small menu.
+- `Выйти` переводит пользователя в big menu без page reload и вызывает runtime reset (подробно в `SYSTEMS/save.md`).
 
 ## Crate reward: spawn в crate-slot
 

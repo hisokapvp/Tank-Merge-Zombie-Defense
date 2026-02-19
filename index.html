@@ -58,19 +58,15 @@
             <div class="menuHeader">
               <div class="menuTitle" id="menuTitle" data-i18n="menuTitle">Merge Tank: Zombie invasion</div>
             </div>
-            <div class="menuActions">
+            <div class="menuActions" id="menuMainActions">
               <button id="menuContinue" class="btn btnPrimary" type="button" data-i18n="menuContinue">Продолжить</button>
               <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
+              <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
               <button id="menuFeedback" class="btn btnSecondary" type="button" data-i18n="menuFeedback">Обратная связь</button>
+              <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
             </div>
+            <div id="menuMainView" class="menuView">
             <div class="menuSettings">
-              <div class="menuRow">
-                <div class="menuLabel" data-i18n="menuLanguage">Язык</div>
-                <div class="langSwitch" aria-label="Language switcher">
-                  <button class="langBtn" type="button" data-lang="ru" id="langRu">РУ</button>
-                  <button class="langBtn" type="button" data-lang="en" id="langEn">EN</button>
-                </div>
-              </div>
               <div class="menuRow">
                 <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
                 <div class="menuSlider">
@@ -84,6 +80,37 @@
                   <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
                   <span class="menuValue" id="menuMusicValue">60%</span>
                 </div>
+              </div>
+            </div>
+            </div>
+
+            <div id="menuSaveSlotsView" class="menuView hidden" aria-hidden="true">
+              <div class="menuSaveSlotsList" id="menuSaveSlotsList"></div>
+              <div class="menuInlineActions">
+                <button id="menuSaveBack" class="btn btnSecondary" type="button" data-i18n="menuBack">Назад</button>
+                <button id="menuSaveClose" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+              </div>
+            </div>
+
+            <div id="menuSaveSlotEditView" class="menuView hidden" aria-hidden="true">
+              <div class="menuRow">
+                <label class="menuLabel" for="menuSaveSlotInput" data-i18n="menuSaveSlotName">Имя слота</label>
+                <input id="menuSaveSlotInput" class="menuSaveInput" type="text" maxlength="20" />
+              </div>
+              <div class="menuInlineActions">
+                <button id="menuSaveSlotSave" class="btn btnPrimary" type="button" data-i18n="menuSaveAction">Сохранить</button>
+                <button id="menuSaveSlotBack" class="btn btnSecondary" type="button" data-i18n="menuBack">Назад</button>
+                <button id="menuSaveSlotClose" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+              </div>
+            </div>
+
+            <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
+              <div class="menuRow">
+                <div class="menuExitText" data-i18n="menuExitConfirm">Выйти без сохранения?</div>
+              </div>
+              <div class="menuInlineActions">
+                <button id="menuExitConfirmLeave" class="btn btnPrimary" type="button" data-i18n="menuExitConfirmLeave">Выйти</button>
+                <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
               </div>
             </div>
           </div>

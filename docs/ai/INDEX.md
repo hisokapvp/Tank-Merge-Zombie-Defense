@@ -14,6 +14,7 @@
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
 - Main menu gating (big start menu блокирует boot/loop до выбора `Новая игра`/`Загрузить`; `Загрузить` доступна при валидном сохранении) → `docs/ai/SYSTEMS/ui.md` + `docs/main-menu.md`
 - Main menu feedback (`#menuFeedback` -> `Game.FeedbackWidget.open()`) + feedback i18n keys (`feedback*`) → `docs/ai/SYSTEMS/ui.md`
+- In-session small menu (`#menuOverlay`): removed language switch, `Сохранить` (10 name-only slots in `saveSlotsMeta_v1`), `Выход` (confirm + runtime reset without reload, remove `progress` only) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/save.md` + `docs/main-menu.md`
 - Crate reward spawn policy (reward всегда в `crateSlotId`, без fallback в другой слот; race-safe skip with log) → `game.js` + `docs/ai/SYSTEMS/ui.md`
 - Achievement unlock toast queue/highlight UX (`unlockedNow -> state.achievements.popupQueue -> pause-gated consume`) → `docs/ai/SYSTEMS/ui.md`
 - Supercomputer + Boost UI (`#supercomputerBtn` плавающая кнопка справа от спрайта в screen-space, root tiles всегда в 1 ряд без wrap, tabs `Орудия/Базы/Стены` без теней при сохранении фоновой hover/active подсветки, active boost icons rows+group centering по `supercomputer.json.boostIcons`, Esc/back routing, дефолт `Орудия`) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/assets.md` + `docs/ai/SYSTEMS/render.md` + `docs/supercomputer-ui.md` + `docs/supercomputer-hud.md`

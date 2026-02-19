@@ -13,6 +13,18 @@ Merge + tower defense на canvas.
 - `boot/loop` запускаются только после выбора `Новая игра` или `Загрузить`.
 - Подробное поведение и порядок кнопок: `docs/main-menu.md`.
 
+## Small menu (in-session)
+
+- In-session меню паузы (`#menuOverlay`) больше не содержит переключатель языка.
+- Добавлен пункт `Сохранить`:
+	- 10 слотов (`1..10`), хранится только имя в `localStorage['saveSlotsMeta_v1']`;
+	- формат key: `{ slots: [{ name: string }, ... 10] }`;
+	- имя: `maxLen=20`, `trim`, пустое значение => `Слот N`.
+- Добавлен пункт `Выход`:
+	- confirm `Выйти без сохранения?` (`Выйти`/`Отмена`);
+	- `Выйти` делает runtime reset без перезагрузки страницы, удаляет только `localStorage['progress']`, затем показывает big menu.
+- Не сбрасываются: язык, громкость, `saveSlotsMeta_v1`.
+
 ## Где настраивать карту
 
 - Ground tiles/stamps: `assets/ground.json`
@@ -222,7 +234,7 @@ Merge + tower defense на canvas.
 - Реализация виджета: `src/feedback/widget.js`.
 - Floating-кнопка отключена: модалка открывается программно через `Game.FeedbackWidget.open()` (алиас `showModal()`).
 - Кнопка в main menu: `#menuFeedback` (`data-i18n="menuFeedback"`) в `index.html`, клик привязан в `src/core/bootstrap.js`.
-- Кнопка `#menuFeedback` в in-session меню (`#menuOverlay`) всегда последняя в списке действий.
+- Кнопка `#menuFeedback` в in-session меню (`#menuOverlay`) находится выше кнопки `#menuExit`.
 - Все тексты feedback-модалки берутся из i18n ключей: `feedbackTitle`, `feedbackCategoryLabel`, `feedbackRatingLabel`, `feedbackMessagePlaceholder`, `feedbackCancel`, `feedbackSend`, `feedbackValidationMessageRequired`, `feedbackSuccess`, `feedbackCategory*`.
 - Где менять тексты и категории: `src/i18n/ru.json`, `src/i18n/en.json` (fallback: `src/i18n/fallbackStrings.js`).
 

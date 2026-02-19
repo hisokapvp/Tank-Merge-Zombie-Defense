@@ -48,9 +48,117 @@
     }
     getState().player.modsDirty = true;
 
-    if (opts.ui.langRu && opts.ui.langEn) {
-      opts.ui.langRu.addEventListener('click', function () { return opts.setLanguage('ru'); });
-      opts.ui.langEn.addEventListener('click', function () { return opts.setLanguage('en'); });
+    var storageApi = windowObj.Game && windowObj.Game.Storage;
+    var activeSaveSlotIndex = -1;
+
+    function getSaveMeta() {
+      if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
+        return storageApi.loadSaveSlotsMeta();
+      }
+      return { slots: [] };
+    }
+
+    function defaultSlotName(index) {
+      if (storageApi && typeof storageApi.getDefaultSlotName === 'function') {
+        return storageApi.getDefaultSlotName(index);
+      }
+      return 'Слот ' + (index + 1);
+    }
+
+    function setMenuView(viewName) {
+      var views = {
+        main: opts.ui.menuMainView,
+        slots: opts.ui.menuSaveSlotsView,
+        edit: opts.ui.menuSaveSlotEditView,
+        exit: opts.ui.menuExitConfirmView,
+      };
+      Object.keys(views).forEach(function (key) {
+        var el = views[key];
+        if (!el) return;
+        var visible = key === viewName;
+        el.classList.toggle('hidden', !visible);
+        el.setAttribute('aria-hidden', (!visible).toString());
+      });
+    }
+
+    function renderSaveSlotsList() {
+      if (!opts.ui.menuSaveSlotsList) return;
+      var meta = getSaveMeta();
+      var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+      opts.ui.menuSaveSlotsList.innerHTML = '';
+      for (var i = 0; i < 10; i++) {
+        var slot = slots[i] || { name: defaultSlotName(i) };
+        var currentName = typeof slot.name === 'string' ? slot.name : defaultSlotName(i);
+        var fallbackName = defaultSlotName(i);
+        var isEmpty = currentName === fallbackName;
+
+        var button = documentObj.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btnSecondary menuSaveSlotBtn';
+        button.setAttribute('data-slot-index', String(i));
+
+        var indexEl = documentObj.createElement('span');
+        indexEl.className = 'menuSaveSlotIndex';
+        indexEl.textContent = String(i + 1);
+
+        var nameEl = documentObj.createElement('span');
+        nameEl.className = 'menuSaveSlotName' + (isEmpty ? ' menuSaveSlotNameEmpty' : '');
+        nameEl.textContent = currentName;
+
+        button.appendChild(indexEl);
+        button.appendChild(nameEl);
+        opts.ui.menuSaveSlotsList.appendChild(button);
+      }
+    }
+
+    function openMainMenuView() {
+      activeSaveSlotIndex = -1;
+      setMenuView('main');
+    }
+
+    function openSaveSlotsView() {
+      renderSaveSlotsList();
+      setMenuView('slots');
+    }
+
+    function openSaveSlotEdit(index) {
+      activeSaveSlotIndex = index;
+      var meta = getSaveMeta();
+      var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+      var slot = slots[index] || { name: defaultSlotName(index) };
+      if (opts.ui.menuSaveSlotInput) {
+        opts.ui.menuSaveSlotInput.maxLength = 20;
+        opts.ui.menuSaveSlotInput.value = typeof slot.name === 'string' ? slot.name : defaultSlotName(index);
+        opts.ui.menuSaveSlotInput.focus();
+        opts.ui.menuSaveSlotInput.select();
+      }
+      setMenuView('edit');
+    }
+
+    function saveCurrentSlotName() {
+      if (activeSaveSlotIndex < 0 || activeSaveSlotIndex > 9 || !storageApi || typeof storageApi.setSlotName !== 'function') {
+        return;
+      }
+      var value = opts.ui.menuSaveSlotInput ? opts.ui.menuSaveSlotInput.value : '';
+      if (typeof value === 'string' && value.length > 20) value = value.slice(0, 20);
+      var meta = storageApi.setSlotName(activeSaveSlotIndex, value);
+      if (opts.ui.menuSaveSlotInput && meta && Array.isArray(meta.slots) && meta.slots[activeSaveSlotIndex]) {
+        opts.ui.menuSaveSlotInput.value = meta.slots[activeSaveSlotIndex].name;
+      }
+      windowObj.alert(opts.t('menuSaveSuccess'));
+      renderSaveSlotsList();
+      if (opts.ui.menuSaveSlotInput) {
+        opts.ui.menuSaveSlotInput.focus();
+      }
+    }
+
+    function openMenuOverlayMain() {
+      openMainMenuView();
+      opts.setMenuOpen(true);
+    }
+
+    function openExitConfirmView() {
+      setMenuView('exit');
     }
 
     opts.ui.menuContinue && opts.ui.menuContinue.addEventListener('click', function () {
@@ -75,9 +183,66 @@
       if (!feedbackWidget || typeof feedbackWidget.open !== 'function') return;
       feedbackWidget.open();
     });
-    if (opts.ui.menuFeedback && opts.ui.menuFeedback.parentElement) {
-      opts.ui.menuFeedback.parentElement.appendChild(opts.ui.menuFeedback);
-    }
+
+    opts.ui.menuSave && opts.ui.menuSave.addEventListener('click', function () {
+      openSaveSlotsView();
+    });
+    opts.ui.menuSaveSlotsList && opts.ui.menuSaveSlotsList.addEventListener('click', function (event) {
+      var target = event.target;
+      if (!target || typeof target.closest !== 'function') return;
+      var slotBtn = target.closest('[data-slot-index]');
+      if (!slotBtn) return;
+      var slotIndex = Number(slotBtn.getAttribute('data-slot-index'));
+      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return;
+      openSaveSlotEdit(slotIndex);
+    });
+
+    opts.ui.menuSaveBack && opts.ui.menuSaveBack.addEventListener('click', function () {
+      openMainMenuView();
+    });
+    opts.ui.menuSaveClose && opts.ui.menuSaveClose.addEventListener('click', function () {
+      openMainMenuView();
+      opts.setMenuOpen(false);
+    });
+
+    opts.ui.menuSaveSlotSave && opts.ui.menuSaveSlotSave.addEventListener('click', function () {
+      saveCurrentSlotName();
+    });
+    opts.ui.menuSaveSlotBack && opts.ui.menuSaveSlotBack.addEventListener('click', function () {
+      openSaveSlotsView();
+    });
+    opts.ui.menuSaveSlotClose && opts.ui.menuSaveSlotClose.addEventListener('click', function () {
+      openMainMenuView();
+      opts.setMenuOpen(false);
+    });
+    opts.ui.menuSaveSlotInput && opts.ui.menuSaveSlotInput.addEventListener('input', function (event) {
+      if (event.target.value.length > 20) event.target.value = event.target.value.slice(0, 20);
+    });
+    opts.ui.menuSaveSlotInput && opts.ui.menuSaveSlotInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveCurrentSlotName();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        openSaveSlotsView();
+      }
+    });
+
+    opts.ui.menuExit && opts.ui.menuExit.addEventListener('click', function () {
+      openExitConfirmView();
+    });
+    opts.ui.menuExitConfirmCancel && opts.ui.menuExitConfirmCancel.addEventListener('click', function () {
+      openMainMenuView();
+    });
+    opts.ui.menuExitConfirmLeave && opts.ui.menuExitConfirmLeave.addEventListener('click', function () {
+      openMainMenuView();
+      if (typeof opts.stopAndResetSessionToBigMenu === 'function') {
+        opts.stopAndResetSessionToBigMenu();
+      }
+      if (typeof opts.updateBigMenuLoadState === 'function') {
+        opts.updateBigMenuLoadState();
+      }
+    });
 
     opts.ui.menuSfx && opts.ui.menuSfx.addEventListener('input', function (e) {
       var value = Number(e.target.value) / 100;
@@ -101,7 +266,9 @@
       if (typeof opts.openSupercomputerMenu === 'function') return opts.openSupercomputerMenu();
       return opts.openTalents();
     });
-    opts.ui.settingsBtn && opts.ui.settingsBtn.addEventListener('click', function () { return opts.setMenuOpen(true); });
+    opts.ui.settingsBtn && opts.ui.settingsBtn.addEventListener('click', function () {
+      return openMenuOverlayMain();
+    });
 
     var settingsTooltip = documentObj.getElementById('settingsTooltip');
     if (opts.ui.settingsBtn && settingsTooltip) {
@@ -229,7 +396,11 @@
     opts.ensureZombieCount();
     opts.updateUI();
     opts.setMenuOpen(true);
-    windowObj.requestAnimationFrame(opts.loop);
+    if (typeof opts.startLoop === 'function') {
+      opts.startLoop();
+    } else {
+      windowObj.requestAnimationFrame(opts.loop);
+    }
   }
 
   global.Game = global.Game || {};

@@ -6,6 +6,9 @@
 
   var SAVE_KEY = 'progress';
   var SAVE_VERSION = 2;
+  var SAVE_SLOTS_META_KEY = 'saveSlotsMeta_v1';
+  var SAVE_SLOTS_COUNT = 10;
+  var SAVE_SLOT_NAME_MAX_LEN = 20;
 
   function normalizeTotalDamageDealtRaw(value) {
     if (!Number.isFinite(value)) return 0;
@@ -29,6 +32,72 @@
     } catch (e) {
       return fallback;
     }
+  }
+
+  function getDefaultSlotName(index) {
+    return 'Слот ' + (index + 1);
+  }
+
+  function sanitizeSlotName(index, name) {
+    var text = typeof name === 'string' ? name : '';
+    text = text.trim();
+    if (text.length > SAVE_SLOT_NAME_MAX_LEN) {
+      text = text.slice(0, SAVE_SLOT_NAME_MAX_LEN);
+    }
+    if (!text.length) return getDefaultSlotName(index);
+    return text;
+  }
+
+  function createDefaultSaveSlotsMeta() {
+    var slots = [];
+    for (var i = 0; i < SAVE_SLOTS_COUNT; i++) {
+      slots.push({ name: getDefaultSlotName(i) });
+    }
+    return { slots: slots };
+  }
+
+  function normalizeSaveSlotsMeta(payload) {
+    var normalized = createDefaultSaveSlotsMeta();
+    if (!payload || typeof payload !== 'object' || !Array.isArray(payload.slots)) return normalized;
+    for (var i = 0; i < SAVE_SLOTS_COUNT; i++) {
+      var src = payload.slots[i];
+      var name = src && typeof src === 'object' ? src.name : '';
+      normalized.slots[i].name = sanitizeSlotName(i, name);
+    }
+    return normalized;
+  }
+
+  function saveSaveSlotsMeta(meta) {
+    if (!global.localStorage) return;
+    global.localStorage.setItem(SAVE_SLOTS_META_KEY, JSON.stringify(meta));
+  }
+
+  function loadSaveSlotsMeta() {
+    var raw = null;
+    try {
+      raw = global.localStorage && global.localStorage.getItem(SAVE_SLOTS_META_KEY);
+    } catch (e) {
+      raw = null;
+    }
+    var parsed = safeParse(raw, null);
+    var normalized = normalizeSaveSlotsMeta(parsed);
+    try {
+      saveSaveSlotsMeta(normalized);
+    } catch (e2) {}
+    return normalized;
+  }
+
+  function setSlotName(index, name) {
+    var slotIndex = Number(index);
+    if (!Number.isFinite(slotIndex)) return loadSaveSlotsMeta();
+    slotIndex = Math.floor(slotIndex);
+    if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return loadSaveSlotsMeta();
+    var meta = loadSaveSlotsMeta();
+    meta.slots[slotIndex].name = sanitizeSlotName(slotIndex, name);
+    try {
+      saveSaveSlotsMeta(meta);
+    } catch (e) {}
+    return meta;
   }
 
   /**
@@ -188,8 +257,14 @@
   global.Game.Storage = {
     SAVE_KEY: SAVE_KEY,
     SAVE_VERSION: SAVE_VERSION,
+    SAVE_SLOTS_META_KEY: SAVE_SLOTS_META_KEY,
+    SAVE_SLOTS_COUNT: SAVE_SLOTS_COUNT,
+    SAVE_SLOT_NAME_MAX_LEN: SAVE_SLOT_NAME_MAX_LEN,
     loadGame: loadGame,
     saveGame: saveGame,
+    loadSaveSlotsMeta: loadSaveSlotsMeta,
+    setSlotName: setSlotName,
+    getDefaultSlotName: getDefaultSlotName,
     safeParse: safeParse,
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -17,6 +17,17 @@
 
 ## Новые поля сейва
 
+- `saveSlotsMeta_v1` (отдельный meta-key, не часть `progress`):
+	- ключ: `localStorage['saveSlotsMeta_v1']`,
+	- формат: `{ slots: [{ name: string }, ... 10] }`,
+	- хранит только имена слотов для UI small menu,
+	- правило default для пустого имени: `Слот N`, `N = index + 1`,
+	- имя ограничено `maxLen=20`.
+
+- API в `src/persistence/storage.js`:
+	- `loadSaveSlotsMeta()` — загрузка + repair/normalize до 10 валидных слотов,
+	- `setSlotName(index, name)` — apply `trim/maxLen/default` и запись в key.
+
 - `supercomputer`:
 	- `computerLevel`, `xp`, `xpToNext`, `maxLevel`,
 	- `hp`, `maxHp`, `armorFlat`,
@@ -102,6 +113,16 @@
 - При входе в critical flow (`openCriticalModal`) перед автосейвом выполняется очистка всех танков в `cells[]` (`cell.tank = null`).
 - Затем вызывается save в `try/catch`: ошибка сохранения не должна ронять runtime.
 - Кнопки `×` и `Сохранить прогресс и выйти` выполняют повторную попытку save перед `location.reload()`.
+
+## In-session `Выход` (small menu)
+
+- `Выход` из `#menuOverlay` работает без `location.reload()`:
+	- runtime-циклы и трекаемые timer/RAF задачи останавливаются,
+	- выполняется runtime reset в чистое состояние,
+	- показывается `#bigMenuOverlay`.
+- Storage-эффект:
+	- удаляется только `localStorage['progress']`,
+	- не удаляются `localStorage['lang']`, аудио-настройки и `localStorage['saveSlotsMeta_v1']`.
 
 ## Load without tanks: auto-spawn 2x lvl1
 

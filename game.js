@@ -6,6 +6,101 @@ ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
 const SeededRngApi = GameApi?.SeededRng ?? null;
 
+const RuntimeTasks = (() => {
+  const native = {
+    setTimeout: window.setTimeout.bind(window),
+    clearTimeout: window.clearTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    clearInterval: window.clearInterval.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  };
+  const timeoutIds = new Set();
+  const intervalIds = new Set();
+  const rafIds = new Set();
+  let installed = false;
+  let suspended = false;
+
+  function install() {
+    if (installed) return;
+    installed = true;
+    window.setTimeout = function (handler, delay) {
+      if (suspended) return 0;
+      const args = Array.prototype.slice.call(arguments, 2);
+      const id = native.setTimeout(function () {
+        timeoutIds.delete(id);
+        if (typeof handler === 'function') {
+          handler.apply(window, args);
+        } else {
+          try { (0, eval)(handler); } catch (_) {}
+        }
+      }, delay);
+      timeoutIds.add(id);
+      return id;
+    };
+    window.clearTimeout = function (id) {
+      timeoutIds.delete(id);
+      return native.clearTimeout(id);
+    };
+    window.setInterval = function (handler, delay) {
+      if (suspended) return 0;
+      const args = Array.prototype.slice.call(arguments, 2);
+      const id = native.setInterval(function () {
+        if (typeof handler === 'function') {
+          handler.apply(window, args);
+        } else {
+          try { (0, eval)(handler); } catch (_) {}
+        }
+      }, delay);
+      intervalIds.add(id);
+      return id;
+    };
+    window.clearInterval = function (id) {
+      intervalIds.delete(id);
+      return native.clearInterval(id);
+    };
+    window.requestAnimationFrame = function (callback) {
+      if (suspended) return 0;
+      const id = native.requestAnimationFrame(function (ts) {
+        rafIds.delete(id);
+        callback(ts);
+      });
+      rafIds.add(id);
+      return id;
+    };
+    window.cancelAnimationFrame = function (id) {
+      rafIds.delete(id);
+      return native.cancelAnimationFrame(id);
+    };
+  }
+
+  function clearAll() {
+    timeoutIds.forEach(function (id) { native.clearTimeout(id); });
+    timeoutIds.clear();
+    intervalIds.forEach(function (id) { native.clearInterval(id); });
+    intervalIds.clear();
+    rafIds.forEach(function (id) { native.cancelAnimationFrame(id); });
+    rafIds.clear();
+  }
+
+  function suspendAll() {
+    suspended = true;
+  }
+
+  function resumeAll() {
+    suspended = false;
+  }
+
+  return {
+    install,
+    clearAll,
+    suspendAll,
+    resumeAll,
+  };
+})();
+
+RuntimeTasks.install();
+
 const ui = {
   coins: document.getElementById('coins'),
   zcount: document.getElementById('zcount'),
@@ -49,7 +144,22 @@ const ui = {
   menuOverlay: document.getElementById('menuOverlay'),
   menuContinue: document.getElementById('menuContinue'),
   menuNew: document.getElementById('menuNew'),
+  menuSave: document.getElementById('menuSave'),
   menuFeedback: document.getElementById('menuFeedback'),
+  menuExit: document.getElementById('menuExit'),
+  menuMainView: document.getElementById('menuMainView'),
+  menuSaveSlotsView: document.getElementById('menuSaveSlotsView'),
+  menuSaveSlotsList: document.getElementById('menuSaveSlotsList'),
+  menuSaveBack: document.getElementById('menuSaveBack'),
+  menuSaveClose: document.getElementById('menuSaveClose'),
+  menuSaveSlotEditView: document.getElementById('menuSaveSlotEditView'),
+  menuSaveSlotInput: document.getElementById('menuSaveSlotInput'),
+  menuSaveSlotSave: document.getElementById('menuSaveSlotSave'),
+  menuSaveSlotBack: document.getElementById('menuSaveSlotBack'),
+  menuSaveSlotClose: document.getElementById('menuSaveSlotClose'),
+  menuExitConfirmView: document.getElementById('menuExitConfirmView'),
+  menuExitConfirmLeave: document.getElementById('menuExitConfirmLeave'),
+  menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
   menuSfxValue: document.getElementById('menuSfxValue'),
@@ -5790,20 +5900,77 @@ function triggerBigMenuFeedback(){
   }
 }
 
+function stopAndResetSessionToBigMenu(){
+  sessionRuntimeStopped = true;
+  RuntimeTasks.suspendAll();
+  if (mainLoopRafId) {
+    cancelAnimationFrame(mainLoopRafId);
+    mainLoopRafId = 0;
+  }
+
+  setMenuPauseSource('settings', false);
+  setMenuPauseSource('supercomputer', false);
+  setMenuPauseSource('critical', false);
+  closeBigMenuPanels();
+  closeSupercomputerMenu();
+  closeTalents();
+  closeLevelModal();
+  closeBoostModal();
+  closeResetTalentsModal();
+  closeCrateModal();
+  closeDismantleModal();
+  closeAchievementsModal();
+  closeCriticalModal();
+  if (window.Game && window.Game.MergePopup && typeof window.Game.MergePopup.close === 'function') {
+    window.Game.MergePopup.close();
+  }
+
+  clearMergeFxQueue();
+  RuntimeTasks.clearAll();
+
+  if (window.Game && window.Game.TelemetryLogger && typeof window.Game.TelemetryLogger.stopAutoFlush === 'function') {
+    window.Game.TelemetryLogger.stopAutoFlush();
+  }
+
+  try {
+    localStorage.removeItem('progress');
+  } catch (e) {}
+
+  resetGameState({ reason: 'reset' });
+  meta.lastSeenAt = null;
+  setMenuOpen(false);
+  updateBigMenuLoadState();
+  setBigMenuOpen(true);
+}
+
+function resumeSessionRuntime(){
+  RuntimeTasks.resumeAll();
+  sessionRuntimeStopped = false;
+  last = performance.now();
+  lastFrameTs = last;
+  lastProgressSave = 0;
+  if (window.Game && window.Game.TelemetryLogger && typeof window.Game.TelemetryLogger.startAutoFlush === 'function') {
+    window.Game.TelemetryLogger.startAutoFlush();
+  }
+}
+
 async function startFromBigMenu(mode){
   if (bigMenuStartPending) return;
   if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.disabled) return;
+  const wasStopped = sessionRuntimeStopped;
   bigMenuStartPending = true;
   setBigMenuActionButtonsDisabled(true);
   closeBigMenuPanels();
   setBigMenuOpen(false);
   try {
+    if (wasStopped) resumeSessionRuntime();
     await boot();
     if (mode === 'new') {
       resetGameState({ reason: 'new_game' });
       meta.lastSeenAt = Date.now();
       saveProgress();
     }
+    if (wasStopped) scheduleMainLoop();
     setMenuOpen(false);
   } catch (err) {
     console.error('Big menu start failed', err);
@@ -9107,11 +9274,23 @@ let lastFrameTs = last;
 let fpsAvg = 60;
 let lastProgressSave = 0;
 let qualityLow = false;
+let mainLoopRafId = 0;
+let sessionRuntimeStopped = false;
+
+function scheduleMainLoop(){
+  if (sessionRuntimeStopped || mainLoopRafId) return;
+  mainLoopRafId = requestAnimationFrame(function (ts) {
+    mainLoopRafId = 0;
+    loop(ts);
+  });
+}
+
 function loop(now){
+  if (sessionRuntimeStopped) return;
   const mm = getMobileMode();
   const fpsCap = mm && mm.getFpsCap ? mm.getFpsCap() : 0;
   if (fpsCap > 0 && (now - lastFrameTs) < (1000 / fpsCap)){
-    requestAnimationFrame(loop);
+    scheduleMainLoop();
     return;
   }
   lastFrameTs = now;
@@ -9194,7 +9373,7 @@ function loop(now){
   updateUI();
   draw();
 
-  requestAnimationFrame(loop);
+  scheduleMainLoop();
 }
 
 // ---------- Debug Panel (?debug=1) ----------
@@ -9337,6 +9516,8 @@ async function boot(){
         openTalents,
         openSupercomputerMenu,
         setMenuOpen,
+        stopAndResetSessionToBigMenu,
+        updateBigMenuLoadState,
         t,
         resetGameState,
         nowSec,
@@ -9364,6 +9545,7 @@ async function boot(){
         ensureZombieCount,
         acceptLevelReward,
         loop,
+        startLoop: scheduleMainLoop,
       });
       rebuildGroundLayer();
       return;
