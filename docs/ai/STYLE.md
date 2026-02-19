@@ -1,24 +1,19 @@
-# STYLE — обязательные правила
+﻿# Стиль изменений (обязательно)
 
 ## Код
+- В `src/*`: только IIFE, `'use strict'`, `global.Game.*`; без `import/export`.
+- Исправлять причину проблемы, не симптом.
+- Не менять публичные API и формат данных без необходимости.
 
-- Новую логику добавлять в `src/*`; `game.js` не раздувать.
-- `draw()` только рисует; бизнес-логика и I/O вне рендера.
-- Hot path (`loop`, `draw`, `step*`) без лишних аллокаций; использовать pooling.
-- Доступ к `localStorage` через системные модули (`Storage`, `Flags`, `Telemetry`, `Experiments`).
+## UI/i18n
+- Пользовательские строки менять синхронно: `src/i18n/ru.json` и `src/i18n/en.json`.
+- Контент хранить в `assets/*.json`, не хардкодить в UI.
 
-## UI/i18n/a11y
+## Хранилище и безопасность
+- Новые `localStorage`-ключи только через: `src/persistence/storage.js`, `src/flags/flags.js`, `src/telemetry/telemetry.js`, `src/experiments/experiments.js`.
+- Debug/admin-функции  только в debug-режиме (`?debug=1`).
 
-- Все пользовательские строки: `src/i18n/ru.json` + `src/i18n/en.json` синхронно.
-- Интерактивные элементы — `button`, модалки — `role="dialog"` + `aria-modal="true"`.
-- Новая модалка обязательно интегрируется с `Game.A11y`.
-
-## Доки и проверки
-
-- Любая функциональная правка обновляет `docs/ai/INDEX.md` и затронутый `SYSTEMS/*.md`.
-- Перед merge: `bash ci/check_style.sh` и `bash ci/run_tests.sh`.
-
-## DoD
-
-- Код, тесты и документация синхронизированы.
-- Нет устаревших путей в `docs/ai/*`.
+## Проверки
+- `node Test/tests.js`
+- `bash ci/check_style.sh`
+- `bash ci/run_tests.sh`
