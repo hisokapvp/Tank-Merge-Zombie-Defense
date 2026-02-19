@@ -21,6 +21,7 @@
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
+- Achievements modal UI (title-only default, `+` collapse, single-open) → `docs/ai/SYSTEMS/ui.md` + `docs/achievements-ui.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Zombie movement collision policy (коллизия только с целым fence и `decor.isWall`; вход через брич своей стороны (side-lock); после брича — прямое движение к supercomputer без внутреннего радиального clamp) → `docs/ai/SYSTEMS/combat.md`
 - Save/offline/continue flow (offline modal disabled) → `docs/ai/SYSTEMS/save.md`

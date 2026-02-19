@@ -547,6 +547,7 @@ const DepthSortApi = GameApi.DepthSort ?? null;
 const AutoMergeApi = GameApi.AutoMerge ?? null;
 const SupercomputerMenuApi = GameApi.SupercomputerMenu ?? null;
 const CriticalModalApi = GameApi.CriticalModal ?? null;
+const AchievementsModalApi = GameApi.AchievementsModal ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
@@ -724,6 +725,7 @@ let lastPauseReasons = { menuOpen: false, tabInactive: false };
 let menuPauseLocks = { settings: !!(state && state.ui && state.ui.menuOpen), supercomputer: false, critical: false };
 let supercomputerMenuController = null;
 let criticalModalController = null;
+let achievementsModalController = null;
 let criticalFlowActive = false;
 let SFX_AUDIO_PROBE = null;
 
@@ -6278,34 +6280,40 @@ function getAchievementById(id){
   return null;
 }
 
+function ensureAchievementsModalController(){
+  if (achievementsModalController) return achievementsModalController;
+  if (!AchievementsModalApi || typeof AchievementsModalApi.createController !== 'function') return null;
+  achievementsModalController = AchievementsModalApi.createController({
+    documentObj: document,
+    listEl: ui.achievementsList,
+    translate: t,
+  });
+  return achievementsModalController;
+}
+
 function renderAchievementsList(){
   if (!ui.achievementsList) return;
+  const controller = ensureAchievementsModalController();
+  if (!controller || typeof controller.renderList !== 'function') return;
   const defs = getAchievementDefinitions();
   const ach = ensureAchievementsState();
   recalculateAchievementsAndQueuePopups();
-  ui.achievementsList.innerHTML = '';
-  for (let i = 0; i < defs.length; i++) {
-    const def = defs[i];
-    const done = !!ach.unlocked[def.id];
-    const row = document.createElement('div');
-    row.className = `achievementRow ${done ? 'done' : ''}`;
-    const progressRaw = (AchievementsApi && AchievementsApi.getProgressValue)
-      ? AchievementsApi.getProgressValue(state, def.progressType)
-      : (def.progressType === 'merges' ? ach.totalMerges : ach.totalPurchased);
-    const progress = clamp(progressRaw || 0, 0, def.target);
-    const status = done ? t('achievementStatusDone') : t('achievementStatusTodo');
-    row.innerHTML = `
-      <div class="achievementName">${t(def.titleKey)}</div>
-      <div class="achievementMeta">${t('achievementProgress', { value: progress, target: def.target })}</div>
-      <div class="achievementMeta">${status}</div>
-      <div class="achievementMeta">${t('achievementReward', { reward: t(def.rewardKey) })}</div>
-    `;
-    ui.achievementsList.appendChild(row);
-  }
+  controller.renderList({
+    defs,
+    unlocked: ach.unlocked,
+    getProgress: (def) => {
+      if (AchievementsApi && AchievementsApi.getProgressValue) {
+        return AchievementsApi.getProgressValue(state, def.progressType);
+      }
+      return def.progressType === 'merges' ? ach.totalMerges : ach.totalPurchased;
+    },
+  });
 }
 
 function openAchievementsModal(){
   if (!ui.achievementsModal) return;
+  const controller = ensureAchievementsModalController();
+  if (controller && typeof controller.collapseAll === 'function') controller.collapseAll();
   renderAchievementsList();
   ui.achievementsModal.classList.remove('hidden');
   ui.achievementsModal.setAttribute('aria-hidden', 'false');

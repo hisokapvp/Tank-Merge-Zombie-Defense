@@ -235,6 +235,7 @@ Merge + tower defense на canvas.
 ## Достижения и merge-прогресс
 
 - Правила успешного merge и инкремента `totalMerges`: `docs/achievements.md`.
+- UI списка достижений (collapse + single-open + a11y): `docs/achievements-ui.md`.
 - Пороги `creator_novice/pro/expert`: `100/400/1000` (auto-merge unlock roadmap PACK2/3).
 
 ## New Game reset и стартовые таланты

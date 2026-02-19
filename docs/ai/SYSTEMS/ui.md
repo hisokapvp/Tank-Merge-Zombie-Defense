@@ -135,6 +135,15 @@
 - Правило consume: очередь читается только когда `pause.reasons.menuOpen === false` и `pause.reasons.tabInactive === false`.
 - Показ реализован non-modal toast (`#achievementToast`, `role="status"`, `aria-live="polite"`), без focus trap и без перехвата `Esc`.
 
+### Achievements modal list (collapse)
+
+- Контейнер: `#achievementsList` в `index.html`; UI-контроллер: `src/ui/achievementsModal.js`.
+- По умолчанию отображается только `title` достижения; блок описания (`progress/status/reward`) скрыт.
+- У каждой строки есть кнопка `+` справа (`button[type="button"]`) с `aria-expanded` и `aria-controls="achievementDesc_<id>"`.
+- Блок описания имеет `id="achievementDesc_<id>"` и переключает `aria-hidden` + CSS-класс `is-collapsed`.
+- Single-open правило: одновременно раскрыт только один элемент; повторный клик по открытому элементу сворачивает его.
+- Обработчик кликов один на контейнере списка (event delegation), без подписки на каждую строку.
+
 ### Mapping unlock → UI
 
 | Achievement id | Toast | Highlight/pulse |
