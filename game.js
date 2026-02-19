@@ -658,6 +658,7 @@ const AutoMergeApi = GameApi.AutoMerge ?? null;
 const SupercomputerMenuApi = GameApi.SupercomputerMenu ?? null;
 const CriticalModalApi = GameApi.CriticalModal ?? null;
 const AchievementsModalApi = GameApi.AchievementsModal ?? null;
+const WorldResetApi = GameApi.WorldReset ?? null;
 const AUTO_MERGE_COOLDOWN_MS = AutoMergeApi && Number.isFinite(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)
   ? Math.max(200, Math.min(400, Math.floor(AutoMergeApi.AUTO_MERGE_COOLDOWN_MS)))
   : 300;
@@ -6442,14 +6443,56 @@ function closeCriticalModal(){
   exitCriticalPause();
 }
 
-function performCriticalRestart(){
-  clearAllTanksFromCells(state);
+function resetWorldRuntimeState(){
+  if (WorldResetApi && typeof WorldResetApi.resetWorldRuntimeState === 'function') {
+    WorldResetApi.resetWorldRuntimeState({
+      resetWorldRuntime: function () {
+        resetGameState({ reason: 'reset' });
+      },
+    });
+    return;
+  }
+  resetGameState({ reason: 'reset' });
+}
+
+function finalizePartialRestartRestore(){
+  ensureTalentState();
+  ensureAchievementsState();
+
+  const sc = getComputerState();
+  sc.xpToNext = xpNeededForLevel(sc.computerLevel);
+  if (supercomputerController && supercomputerController.syncLevel) {
+    supercomputerController.syncLevel(sc, SupercomputerSprites.config);
+  }
+
+  state.player.modsDirty = true;
+  refreshTanksPowerTier();
   restoreFenceSegmentsToMaxHp();
   restoreSupercomputerAfterCritical();
-  spawnInitialTanksLvl1(state, 2);
-  closeCriticalModal();
   criticalFlowActive = false;
+  updateDamagePointsUI();
+  closeCriticalModal();
   updateUI();
+}
+
+function restartSimulationPartial(){
+  if (WorldResetApi && typeof WorldResetApi.restartSimulationPartial === 'function') {
+    WorldResetApi.restartSimulationPartial({
+      getState: function () { return state; },
+      resetWorldRuntime: resetWorldRuntimeState,
+      onAfterRestore: function () {
+        finalizePartialRestartRestore();
+      },
+    });
+    return;
+  }
+
+  resetWorldRuntimeState();
+  finalizePartialRestartRestore();
+}
+
+function performCriticalRestart(){
+  restartSimulationPartial();
 }
 
 function handleCriticalSaveAndExit(){

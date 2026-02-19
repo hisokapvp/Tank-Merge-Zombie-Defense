@@ -38,17 +38,31 @@
       criticalSessionActive: false,
     };
 
+    function setElementVisibility(el, visible) {
+      if (!el) return;
+      var isVisible = !!visible;
+      el.classList.toggle('hidden', !isVisible);
+      el.setAttribute('aria-hidden', (!isVisible).toString());
+      if (isVisible) {
+        el.style.display = '';
+        el.removeAttribute('hidden');
+        return;
+      }
+      el.style.display = 'none';
+      el.setAttribute('hidden', 'hidden');
+    }
+
     function setFinalActionsVisible(visible) {
-      closeXBtn.classList.toggle('hidden', !visible);
-      restartBtn.classList.toggle('hidden', !visible);
-      saveExitBtn.classList.toggle('hidden', !visible);
+      setElementVisibility(closeXBtn, visible);
+      setElementVisibility(restartBtn, visible);
+      setElementVisibility(saveExitBtn, visible);
       closeXBtn.disabled = !visible;
       restartBtn.disabled = !visible;
       saveExitBtn.disabled = !visible;
     }
 
     function setSkipVisible(visible) {
-      skipBtn.classList.toggle('hidden', !visible);
+      setElementVisibility(skipBtn, visible);
       skipBtn.disabled = !visible;
     }
 
@@ -178,14 +192,16 @@
 
     function handleSaveExit() {
       if (state.isTyping) return;
+      var onSaveExit = state.onSaveExit;
       closeInternal();
-      if (typeof state.onSaveExit === 'function') state.onSaveExit();
+      if (typeof onSaveExit === 'function') onSaveExit();
     }
 
     function handleRestart() {
       if (state.isTyping) return;
+      var onRestart = state.onRestart;
       closeInternal();
-      if (typeof state.onRestart === 'function') state.onRestart();
+      if (typeof onRestart === 'function') onRestart();
     }
 
     function closeInternal() {

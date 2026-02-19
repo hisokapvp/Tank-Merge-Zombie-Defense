@@ -23,3 +23,8 @@
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
+
+## Runtime reset (partial)
+- Оркестратор partial reset: `src/core/worldReset.js`
+- Кнопка `Перезапустить симуляцию`: `src/ui/criticalModal.js` -> `game.js` (`restartSimulationPartial`)
+- Контракт: runtime мира сбрасывается как `reset`, но сохраняются achievements/upgrades/mods/supercomputer progression.
