@@ -270,6 +270,48 @@
     </div>
   </div>
 
+  <div id="bigMenuOverlay" class="bigMenuOverlay" aria-hidden="false">
+    <div class="bigMenuPanel" role="dialog" aria-modal="true" aria-labelledby="bigMenuTitle" tabindex="-1">
+      <div class="bigMenuTitle" id="bigMenuTitle">Merge Tank: Zombie invasion</div>
+      <div class="bigMenuActions" aria-label="Главное меню">
+        <button id="bigMenuNew" class="btn btnPrimary" type="button">Новая игра</button>
+        <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
+        <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+        <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
+        <button id="bigMenuFeedback" class="btn btnSecondary" type="button">Обратная связь</button>
+        <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
+      </div>
+      <div id="bigMenuLoadHint" class="bigMenuLoadHint" aria-hidden="true">Нет сохранения</div>
+
+      <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
+        <div class="bigMenuSubpanelTitle">Звук</div>
+        <label class="bigMenuSubpanelRow" for="bigMenuSfx">
+          <span>Эффекты</span>
+          <span id="bigMenuSfxValue">75%</span>
+        </label>
+        <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
+        <label class="bigMenuSubpanelRow" for="bigMenuMusic">
+          <span>Музыка</span>
+          <span id="bigMenuMusicValue">60%</span>
+        </label>
+        <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+      </div>
+
+      <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
+        <div class="bigMenuSubpanelTitle">Язык</div>
+        <div class="bigMenuLangActions">
+          <button id="bigMenuLangRu" class="btn btnSecondary" type="button">РУ</button>
+          <button id="bigMenuLangEn" class="btn btnSecondary" type="button">EN</button>
+        </div>
+      </div>
+
+      <div id="bigMenuDevsPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
+        <div class="bigMenuSubpanelTitle">Devs</div>
+        <div class="bigMenuDevsText">Debug и dev-фичи доступны в режиме <strong>?debug=1</strong>.</div>
+      </div>
+    </div>
+  </div>
+
   <script src="src/utils/numberFormat.js"></script>
   <script src="src/utils/telemetry.js"></script>
   <script src="src/utils/eventTelemetry.js"></script>

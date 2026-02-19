@@ -178,6 +178,99 @@ body::after{
 .menuOverlay.hidden{
   display:none;
 }
+.bigMenuOverlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(4, 3, 2, 0.9);
+  backdrop-filter:blur(5px);
+  z-index:12000;
+}
+.bigMenuOverlay.bigMenuOverlayHidden{
+  display:none;
+}
+.bigMenuPanel{
+  width:min(560px, 92vw);
+  max-height:92vh;
+  overflow:auto;
+  padding:24px;
+  border-radius:22px;
+  border:2px solid rgba(255, 184, 114, 0.28);
+  background:linear-gradient(160deg, rgba(30,20,14,.98), rgba(12,9,7,.98));
+  box-shadow:0 18px 0 rgba(0,0,0,.45), 0 28px 46px rgba(0,0,0,.58);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.bigMenuTitle{
+  font-size:clamp(20px, 2.2vw, 28px);
+  font-weight:900;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  text-align:center;
+}
+.bigMenuActions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.bigMenuActions .btn{
+  width:100%;
+  min-height:48px;
+}
+.bigMenuLoadHint{
+  min-height:20px;
+  text-align:center;
+  color:#ffc8a3;
+  font-size:13px;
+  font-weight:700;
+  visibility:hidden;
+}
+.bigMenuLoadHint.bigMenuLoadHintVisible{
+  visibility:visible;
+}
+.bigMenuSubpanel{
+  border:1px solid rgba(255, 184, 114, 0.16);
+  border-radius:14px;
+  background:rgba(13, 9, 6, 0.7);
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.bigMenuSubpanel.bigMenuSubpanelHidden{
+  display:none;
+}
+.bigMenuSubpanelTitle{
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+}
+.bigMenuSubpanelRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:13px;
+  color:var(--text);
+}
+.bigMenuSubpanel input[type="range"]{
+  width:100%;
+}
+.bigMenuLangActions{
+  display:flex;
+  gap:10px;
+}
+.bigMenuLangActions .btn{
+  flex:1;
+}
+.bigMenuDevsText{
+  font-size:13px;
+  color:var(--muted);
+}
 .menuBackdrop{
   position:absolute;
   inset:0;

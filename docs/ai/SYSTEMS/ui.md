@@ -17,9 +17,21 @@
 
 ## Main menu: Continue gating
 
+- Перед первым запуском игры показывается отдельный стартовый `#bigMenuOverlay`.
+- Пока открыт big menu, `boot()`/`loop()` не запускаются.
+- `boot()` стартует только после выбора `Новая игра` (`#bigMenuNew`) или `Загрузить` (`#bigMenuLoad`).
+- После `await boot()` in-session меню принудительно закрывается через `setMenuOpen(false)`, чтобы сессия начиналась сразу в игре.
+- Big menu и in-session menu — разные контуры UI: `#bigMenuOverlay` для старта, `#menuOverlay` (gear/ESC) для паузы в ходе сессии.
+
 - Кнопка `Продолжить` в `#menuOverlay` активна для любого валидного сохранения.
 - Если сохранения нет, кнопка `Продолжить` остаётся disabled.
 - Проверка выполняется в runtime при `updateMenuState()` на основе `getSavedProgress()`.
+
+### Big menu: Загрузить
+
+- Источник сохранения: `localStorage['progress']` (через `getSavedProgress()`/Storage API).
+- Если сохранения нет: `#bigMenuLoad` disabled, подсказка и `title` содержат ровно текст `Нет сохранения`.
+- Если сохранение есть: `#bigMenuLoad` enabled, подсказка скрыта.
 
 ## Main menu: Feedback entrypoint
 

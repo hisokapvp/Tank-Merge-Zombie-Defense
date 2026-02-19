@@ -7,6 +7,12 @@ Merge + tower defense на canvas.
 1. Открыть `index.html` в браузере.
 2. Или запустить `npx serve .` и открыть `http://localhost:3000`.
 
+## Главное меню (big menu)
+
+- При открытии страницы сначала показывается большой стартовый экран (`#bigMenuOverlay`).
+- `boot/loop` запускаются только после выбора `Новая игра` или `Загрузить`.
+- Подробное поведение и порядок кнопок: `docs/main-menu.md`.
+
 ## Где настраивать карту
 
 - Ground tiles/stamps: `assets/ground.json`

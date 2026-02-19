@@ -27,6 +27,23 @@ const ui = {
   achievementPopupReward: document.getElementById('achievementPopupReward'),
   achievementToast: document.getElementById('achievementToast'),
   settingsBtn: document.getElementById('settingsBtn'),
+  bigMenuOverlay: document.getElementById('bigMenuOverlay'),
+  bigMenuNew: document.getElementById('bigMenuNew'),
+  bigMenuLoad: document.getElementById('bigMenuLoad'),
+  bigMenuSound: document.getElementById('bigMenuSound'),
+  bigMenuLanguage: document.getElementById('bigMenuLanguage'),
+  bigMenuFeedback: document.getElementById('bigMenuFeedback'),
+  bigMenuDevs: document.getElementById('bigMenuDevs'),
+  bigMenuLoadHint: document.getElementById('bigMenuLoadHint'),
+  bigMenuSoundPanel: document.getElementById('bigMenuSoundPanel'),
+  bigMenuLanguagePanel: document.getElementById('bigMenuLanguagePanel'),
+  bigMenuDevsPanel: document.getElementById('bigMenuDevsPanel'),
+  bigMenuSfx: document.getElementById('bigMenuSfx'),
+  bigMenuMusic: document.getElementById('bigMenuMusic'),
+  bigMenuSfxValue: document.getElementById('bigMenuSfxValue'),
+  bigMenuMusicValue: document.getElementById('bigMenuMusicValue'),
+  bigMenuLangRu: document.getElementById('bigMenuLangRu'),
+  bigMenuLangEn: document.getElementById('bigMenuLangEn'),
   langRu: document.getElementById('langRu'),
   langEn: document.getElementById('langEn'),
   menuOverlay: document.getElementById('menuOverlay'),
@@ -228,6 +245,9 @@ const DEFAULT_SETTINGS = audioDefaultsFromApi
 
 let settings = { ...DEFAULT_SETTINGS };
 let audioSettingsController = null;
+let bootPromise = null;
+let bigMenuInitialized = false;
+let bigMenuStartPending = false;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
@@ -5673,6 +5693,142 @@ function updateMenuState(){
   updateMenuVolumes();
 }
 
+function setBigMenuOpen(open){
+  if (!ui.bigMenuOverlay) return;
+  ui.bigMenuOverlay.classList.toggle('bigMenuOverlayHidden', !open);
+  ui.bigMenuOverlay.setAttribute('aria-hidden', (!open).toString());
+}
+
+function closeBigMenuPanels(){
+  const panels = [ui.bigMenuSoundPanel, ui.bigMenuLanguagePanel, ui.bigMenuDevsPanel];
+  for (const panel of panels) {
+    if (!panel) continue;
+    panel.classList.add('bigMenuSubpanelHidden');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function toggleBigMenuPanel(panel){
+  if (!panel) return;
+  const shouldOpen = panel.classList.contains('bigMenuSubpanelHidden');
+  closeBigMenuPanels();
+  if (shouldOpen) {
+    panel.classList.remove('bigMenuSubpanelHidden');
+    panel.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function updateBigMenuVolumeState(){
+  if (ui.bigMenuSfx) ui.bigMenuSfx.value = String(Math.round(clamp(settings.sfxVolume ?? 0.75, 0, 1) * 100));
+  if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(Math.round(clamp(settings.musicVolume ?? 0.6, 0, 1) * 100));
+  if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${Math.round(clamp(settings.sfxVolume ?? 0.75, 0, 1) * 100)}%`;
+  if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${Math.round(clamp(settings.musicVolume ?? 0.6, 0, 1) * 100)}%`;
+}
+
+function updateBigMenuLoadState(){
+  const hasSave = !!getSavedProgress();
+  if (ui.bigMenuLoad) {
+    ui.bigMenuLoad.disabled = !hasSave;
+    if (hasSave) ui.bigMenuLoad.removeAttribute('title');
+    else ui.bigMenuLoad.setAttribute('title', 'Нет сохранения');
+  }
+  if (ui.bigMenuLoadHint) {
+    ui.bigMenuLoadHint.classList.toggle('bigMenuLoadHintVisible', !hasSave);
+    ui.bigMenuLoadHint.setAttribute('aria-hidden', hasSave ? 'true' : 'false');
+  }
+}
+
+function setBigMenuActionButtonsDisabled(disabled){
+  const buttons = [ui.bigMenuNew, ui.bigMenuLoad, ui.bigMenuSound, ui.bigMenuLanguage, ui.bigMenuFeedback, ui.bigMenuDevs];
+  for (const btn of buttons) {
+    if (!btn) continue;
+    btn.disabled = !!disabled;
+  }
+  if (!disabled) updateBigMenuLoadState();
+}
+
+function triggerBigMenuFeedback(){
+  const feedbackBtn = document.getElementById('feedbackBtn');
+  if (feedbackBtn && typeof feedbackBtn.click === 'function') {
+    feedbackBtn.click();
+    return;
+  }
+  if (window.Game && window.Game.FeedbackWidget && typeof window.Game.FeedbackWidget.open === 'function') {
+    window.Game.FeedbackWidget.open();
+  }
+}
+
+async function startFromBigMenu(mode){
+  if (bigMenuStartPending) return;
+  if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.disabled) return;
+  bigMenuStartPending = true;
+  setBigMenuActionButtonsDisabled(true);
+  closeBigMenuPanels();
+  setBigMenuOpen(false);
+  try {
+    await boot();
+    if (mode === 'new') {
+      resetGameState({ reason: 'new_game' });
+      meta.lastSeenAt = Date.now();
+      saveProgress();
+    }
+    setMenuOpen(false);
+  } catch (err) {
+    console.error('Big menu start failed', err);
+    setBigMenuOpen(true);
+    updateBigMenuLoadState();
+  } finally {
+    bigMenuStartPending = false;
+    setBigMenuActionButtonsDisabled(false);
+  }
+}
+
+function initBigMainMenu(){
+  if (!ui.bigMenuOverlay) {
+    boot();
+    return;
+  }
+  loadSettings();
+  const savedLang = localStorage.getItem('lang');
+  if (savedLang) setLanguage(savedLang);
+  updateBigMenuVolumeState();
+  updateBigMenuLoadState();
+  setBigMenuOpen(true);
+
+  if (bigMenuInitialized) return;
+  bigMenuInitialized = true;
+
+  if (ui.bigMenuNew) ui.bigMenuNew.addEventListener('click', () => { startFromBigMenu('new'); });
+  if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => { startFromBigMenu('load'); });
+  if (ui.bigMenuFeedback) ui.bigMenuFeedback.addEventListener('click', triggerBigMenuFeedback);
+  if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuSoundPanel); });
+  if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuLanguagePanel); });
+  if (ui.bigMenuDevs) ui.bigMenuDevs.addEventListener('click', () => { toggleBigMenuPanel(ui.bigMenuDevsPanel); });
+
+  if (ui.bigMenuSfx) {
+    ui.bigMenuSfx.addEventListener('input', function (e) {
+      const value = Number(e.target.value) / 100;
+      settings.sfxVolume = clamp(value, 0, 1);
+      applyAudioSettings();
+      updateMenuVolumes();
+      updateBigMenuVolumeState();
+      saveSettings();
+    });
+  }
+  if (ui.bigMenuMusic) {
+    ui.bigMenuMusic.addEventListener('input', function (e) {
+      const value = Number(e.target.value) / 100;
+      settings.musicVolume = clamp(value, 0, 1);
+      applyAudioSettings();
+      updateMenuVolumes();
+      updateBigMenuVolumeState();
+      saveSettings();
+    });
+  }
+  if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', () => setLanguage('ru'));
+  if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => setLanguage('en'));
+}
+
 function resetGameState(options){
   const opts = options || {};
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
@@ -8716,87 +8872,93 @@ function initDebugPanel(){
 
 // ---------- Boot ----------
 async function boot(){
-  // Load balance config
-  try {
-    const balRes = await fetch('assets/balance.json', { cache: 'no-store' });
-    if (balRes.ok) {
-      const balData = await balRes.json();
-      BalanceConfig = {
-        zombie: balData.zombie || {},
-        zombieOverrides: balData.zombieOverrides || {},
-        tank: balData.tank || {},
-        tankOverrides: balData.tankOverrides || {},
-      };
-    }
-  } catch (e) { console.warn('balance.json load failed:', e); }
+  if (bootPromise) return bootPromise;
+  bootPromise = (async function runBootFlow() {
+    try {
+      const balRes = await fetch('assets/balance.json', { cache: 'no-store' });
+      if (balRes.ok) {
+        const balData = await balRes.json();
+        BalanceConfig = {
+          zombie: balData.zombie || {},
+          zombieOverrides: balData.zombieOverrides || {},
+          tank: balData.tank || {},
+          tankOverrides: balData.tankOverrides || {},
+        };
+      }
+    } catch (e) { console.warn('balance.json load failed:', e); }
 
-  await GroundSprites.load().catch(function () {});
-  rebuildGroundLayer();
-  if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
-    await BootstrapApi.runBoot({
-      windowObj: window,
-      documentObj: document,
-      localStorageObj: localStorage,
-      getState: () => state,
-      getSettings: () => settings,
-      loadSettings,
-      setLanguage,
-      currentLang,
-      getI18n,
-      applyTranslations,
-      updateUI,
-      ensureProgressUI,
-      initTalentDefs,
-      applySavedProgress,
-      getSavedProgress,
-      ensureTalentState,
-      xpNeededForLevel,
-      ui,
-      meta,
-      grantXP,
-      saveProgress,
-      clamp,
-      settings,
-      applyAudioSettings,
-      updateMenuVolumes,
-      saveSettings,
-      openTalents,
-      openSupercomputerMenu,
-      setMenuOpen,
-      t,
-      resetGameState,
-      nowSec,
-      BAL,
-      resizeCanvas,
-      restoreFullState,
-      DebugPanelEnabled,
-      initDebugPanel,
-      makeTank,
-      recordTankLevel,
-      ZombieSprites,
-      getZombieSpawnBalanceConfig,
-      TankSprites,
-      BulletSprites,
-      BoostIconsSprites,
-      FenceSprites,
-      DecorSprites,
-      SupercomputerSprites,
-      DronSprites,
-      BonusBoxSprites,
-      onSupercomputerConfigLoaded: initBoard,
-      onDecorSpritesLoaded: initDecors,
-      GroundSprites,
-      ensureZombieCount,
-      acceptLevelReward,
-      loop,
-    });
+    await GroundSprites.load().catch(function () {});
     rebuildGroundLayer();
-    return;
-  }
-  throw new Error('Bootstrap module unavailable');
+    if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
+      await BootstrapApi.runBoot({
+        windowObj: window,
+        documentObj: document,
+        localStorageObj: localStorage,
+        getState: () => state,
+        getSettings: () => settings,
+        loadSettings,
+        setLanguage,
+        currentLang,
+        getI18n,
+        applyTranslations,
+        updateUI,
+        ensureProgressUI,
+        initTalentDefs,
+        applySavedProgress,
+        getSavedProgress,
+        ensureTalentState,
+        xpNeededForLevel,
+        ui,
+        meta,
+        grantXP,
+        saveProgress,
+        clamp,
+        settings,
+        applyAudioSettings,
+        updateMenuVolumes,
+        saveSettings,
+        openTalents,
+        openSupercomputerMenu,
+        setMenuOpen,
+        t,
+        resetGameState,
+        nowSec,
+        BAL,
+        resizeCanvas,
+        restoreFullState,
+        DebugPanelEnabled,
+        initDebugPanel,
+        makeTank,
+        recordTankLevel,
+        ZombieSprites,
+        getZombieSpawnBalanceConfig,
+        TankSprites,
+        BulletSprites,
+        BoostIconsSprites,
+        FenceSprites,
+        DecorSprites,
+        SupercomputerSprites,
+        DronSprites,
+        BonusBoxSprites,
+        onSupercomputerConfigLoaded: initBoard,
+        onDecorSpritesLoaded: initDecors,
+        GroundSprites,
+        ensureZombieCount,
+        acceptLevelReward,
+        loop,
+      });
+      rebuildGroundLayer();
+      return;
+    }
+    throw new Error('Bootstrap module unavailable');
+  })().catch(function (err) {
+    bootPromise = null;
+    throw err;
+  });
+  return bootPromise;
 }
 
-boot();
+initBigMainMenu();
 
 /*
 assets/zombies.json example:
