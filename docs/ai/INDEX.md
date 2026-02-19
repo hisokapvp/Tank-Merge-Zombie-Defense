@@ -42,4 +42,6 @@
 ## Runtime reset (partial)
 - Оркестратор partial reset: `src/core/worldReset.js`
 - Кнопка `Перезапустить симуляцию`: `src/ui/criticalModal.js` -> `game.js` (`restartSimulationPartial`)
-- Контракт: runtime мира сбрасывается как `reset`, но сохраняются achievements/upgrades/mods/supercomputer progression.
+- Контракт: runtime мира сбрасывается как `reset`, но сохраняются achievements/upgrades/mods/supercomputer progression и `drones` progression.
+- Позиции дронов не считаются частью snapshot-контракта: после restore выполняется принудительный телепорт к `supercomputer`; при отсутствии валидных координат `supercomputer` используется fallback `(0, 0)` без throw.
+- После partial restore обязательно принудительно сбрасываются `attackMode` runtime (таймеры/мультипликаторы) и zombie target к дефолту из `assets/zombies.json`.

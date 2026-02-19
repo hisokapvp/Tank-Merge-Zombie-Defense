@@ -10,8 +10,15 @@
 - Новые ключи `localStorage` добавлять только в разрешённых модулях.
 - При изменении формата сейва обеспечить миграцию и fallback.
 - Для офлайн-наград сохранять цепочку `offlineProgress -> offlineModal -> continueFlow`.
-- Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression.
-- Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset.
+- Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression, drones progression.
+- Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset, затем в `onAfterRestore` выполняется обязательное доведение runtime.
+
+## Partial reset: post-restore контракт
+- Оркестратор snapshot/restore: `src/core/worldReset.js` (`takeProgressSnapshot`, `restoreProgressSnapshot`).
+- `drones` входят в progress snapshot, но их позиции не считаются сохранёнными: после restore в `game.js` выполняется телепорт к `supercomputer` с фиксированным offset-паттерном.
+- Если `supercomputer` не найден или координаты невалидны, используется fallback позиция `(0, 0)` без прерывания сценария.
+- В `onAfterRestore` обязательно сбрасывать zombie runtime к дефолту из `assets/zombies.json` (`spawn.targetAlive`) и пересинхронизировать живую популяцию.
+- В `onAfterRestore` обязательно сбрасывать `attackMode` к состоянию off/default: таймеры, ramp-мультипликатор `targetAlive`, погодные/event runtime флаги и связанные эффекты.
 
 ## Save slots meta (`saveSlotsMeta_v1`)
 - Метаданные слотов хранятся в `src/persistence/storage.js` в том же ключе `saveSlotsMeta_v1` (без новых ключей).

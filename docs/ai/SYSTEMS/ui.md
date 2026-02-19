@@ -13,6 +13,7 @@
 - Debug-панели и admin-кнопки оставлять за `?debug=1`.
 - Для critical modal: вход/выход должен включать/снимать hard pause через `PauseManager`, skip-кнопка видна только во время typing.
 - Кнопка `Перезапустить симуляцию` должна вызывать partial reset runtime мира без запуска второго main loop.
+- Для `Перезапустить симуляцию` в `restartSimulationPartial(..., { onAfterRestore })` обязательно выполнять post-restore доведение: телепорт дронов к `supercomputer` (с fallback `(0,0)`), сброс zombie target к дефолту из `assets/zombies.json`, сброс `attackMode` runtime к off/default.
 
 ## Меню и confirm выхода
 - Small menu confirm выхода живёт в `menuExitConfirmView` (`index.html`), обработчики — `src/core/bootstrap.js`.

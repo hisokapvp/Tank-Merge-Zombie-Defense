@@ -1682,6 +1682,97 @@ function resetWorldEventsRuntimeForNewGame(){
   worldEventsState.waveNumber = 0;
 }
 
+function getDefaultZombieTargetAlive(){
+  const spawnCfg = ZombieSprites && ZombieSprites.spawnConfig && typeof ZombieSprites.spawnConfig === 'object'
+    ? ZombieSprites.spawnConfig
+    : null;
+  if (Number.isFinite(spawnCfg && spawnCfg.targetAlive)) {
+    return Math.max(1, Math.floor(spawnCfg.targetAlive));
+  }
+  if (Number.isFinite(BAL && BAL.zombieCountTarget)) {
+    return Math.max(1, Math.floor(BAL.zombieCountTarget));
+  }
+  return 1;
+}
+
+function resetZombieAndAttackModeToDefaultAfterRestore(){
+  resetWorldEventsRuntimeForNewGame();
+
+  const defaultTargetAlive = getDefaultZombieTargetAlive();
+  BAL.zombieCountTarget = defaultTargetAlive;
+
+  state.zombieWaveAtkMult = 1;
+  if (!state.activeEffects || typeof state.activeEffects !== 'object') {
+    state.activeEffects = { attackUntil: 0, speedUntil: 0, economyUntil: 0 };
+  } else {
+    state.activeEffects.attackUntil = 0;
+    state.activeEffects.speedUntil = 0;
+    state.activeEffects.economyUntil = 0;
+  }
+
+  if (Array.isArray(state.zombies)) state.zombies.length = 0;
+  state.nextZombieRenderOrder = 1;
+
+  worldEventsState.aliveMultCurrent = 1;
+  worldEventsState.rainBlend = 0;
+  stopLoopSfx('rainLoop');
+
+  ensureZombieCount();
+}
+
+function normalizeAndTeleportDronesAfterRestore(stateRef){
+  const targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (!targetState || !Array.isArray(targetState.drones) || !targetState.drones.length) return;
+
+  if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
+    DronesApi.restoreSavedDrones(targetState, targetState.drones);
+  }
+
+  const sc = targetState.supercomputer && typeof targetState.supercomputer === 'object'
+    ? targetState.supercomputer
+    : null;
+  const baseX = Number.isFinite(sc && sc.x) ? sc.x : 0;
+  const baseY = Number.isFinite(sc && sc.y) ? sc.y : 0;
+  const cols = 5;
+  const stepX = 18;
+  const stepY = 14;
+
+  for (let i = 0; i < targetState.drones.length; i++) {
+    const drone = targetState.drones[i];
+    if (!drone || typeof drone !== 'object') continue;
+
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const offsetX = (col - ((cols - 1) * 0.5)) * stepX;
+    const offsetY = (-stepY * 0.5) + row * stepY;
+    const nextX = baseX + offsetX;
+    const nextY = baseY + offsetY;
+
+    if (!drone.basePos || typeof drone.basePos !== 'object') drone.basePos = { x: nextX, y: nextY };
+    else {
+      drone.basePos.x = nextX;
+      drone.basePos.y = nextY;
+    }
+
+    if (!drone.pos || typeof drone.pos !== 'object') drone.pos = { x: nextX, y: nextY };
+    else {
+      drone.pos.x = nextX;
+      drone.pos.y = nextY;
+    }
+
+    drone.targetSegmentId = null;
+    drone.reservedSegmentId = null;
+    drone.repair = null;
+    if (drone.mode === 'repair') drone.substate = DronesApi && DronesApi.SUBSTATE_REPAIR_PATROL ? DronesApi.SUBSTATE_REPAIR_PATROL : 'repair_patrol';
+    drone.nextRepairScanAtSec = 0;
+  }
+}
+
+function finalizePartialRestartPostRestore(stateRef){
+  normalizeAndTeleportDronesAfterRestore(stateRef);
+  resetZombieAndAttackModeToDefaultAfterRestore();
+}
+
 const rainCache = {
   maxDrops: 0,
   x: [],
@@ -6683,7 +6774,8 @@ function restartSimulationPartial(){
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
       resetWorldRuntime: resetWorldRuntimeState,
-      onAfterRestore: function () {
+      onAfterRestore: function (restoredState) {
+        finalizePartialRestartPostRestore(restoredState);
         finalizePartialRestartRestore();
       },
     });
@@ -6691,6 +6783,7 @@ function restartSimulationPartial(){
   }
 
   resetWorldRuntimeState();
+  finalizePartialRestartPostRestore(state);
   finalizePartialRestartRestore();
 }
 

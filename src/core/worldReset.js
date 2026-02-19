@@ -55,6 +55,7 @@
         eventShown50: !!supercomputer.eventShown50,
         eventShown60: !!supercomputer.eventShown60,
       },
+      drones: cloneObject(src.drones, []),
     };
   }
 
@@ -93,6 +94,8 @@
     target.supercomputer.eventShown40 = !!supercomputer.eventShown40;
     target.supercomputer.eventShown50 = !!supercomputer.eventShown50;
     target.supercomputer.eventShown60 = !!supercomputer.eventShown60;
+
+    target.drones = cloneObject(src.drones, []);
   }
 
   function resetWorldRuntimeState(options) {
