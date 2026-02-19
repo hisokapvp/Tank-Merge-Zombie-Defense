@@ -22,6 +22,10 @@
     var a11yOpen = opts.a11yOpen;
     var a11yClose = opts.a11yClose;
     var translate = typeof opts.translate === 'function' ? opts.translate : function (key) { return key || ''; };
+    var enterCriticalPause = typeof opts.enterCriticalPause === 'function' ? opts.enterCriticalPause : null;
+    var exitCriticalPause = typeof opts.exitCriticalPause === 'function' ? opts.exitCriticalPause : null;
+    var applyCriticalAudioPolicy = typeof opts.applyCriticalAudioPolicy === 'function' ? opts.applyCriticalAudioPolicy : null;
+    var restoreAudioAfterCritical = typeof opts.restoreAudioAfterCritical === 'function' ? opts.restoreAudioAfterCritical : null;
 
     var state = {
       isOpen: false,
@@ -31,6 +35,7 @@
       onSaveExit: null,
       onRestart: null,
       lines: [],
+      criticalSessionActive: false,
     };
 
     function setFinalActionsVisible(visible) {
@@ -54,6 +59,30 @@
     function appendText(text) {
       logEl.textContent += text;
       scrollToBottom();
+    }
+
+    function buildFinalLogText() {
+      var text = '';
+      var linePrefix = '';
+      for (var i = 0; i < state.lines.length; i++) {
+        text += linePrefix + state.lines[i] + '\n';
+        linePrefix = '\n';
+      }
+      return text;
+    }
+
+    function enterCriticalMode() {
+      if (state.criticalSessionActive) return;
+      if (enterCriticalPause) enterCriticalPause();
+      if (applyCriticalAudioPolicy) applyCriticalAudioPolicy();
+      state.criticalSessionActive = true;
+    }
+
+    function exitCriticalMode() {
+      if (!state.criticalSessionActive) return;
+      if (restoreAudioAfterCritical) restoreAudioAfterCritical();
+      if (exitCriticalPause) exitCriticalPause();
+      state.criticalSessionActive = false;
     }
 
     function setOverlayOpen(open, initialFocus, onClose) {
@@ -99,6 +128,7 @@
 
     async function printAll(token) {
       state.isTyping = true;
+      setSkipVisible(true);
       var charsPerTick = 1;
       var delayMs = Math.max(16, Math.round(1000 / charsPerSec));
       var linePrefix = '';
@@ -137,16 +167,24 @@
     function finishTypingImmediately() {
       if (!state.isOpen || !state.isTyping || state.skipRequested) return;
       state.skipRequested = true;
+      state.token += 1;
+      logEl.textContent = buildFinalLogText();
+      scrollToBottom();
+      state.isTyping = false;
       setSkipVisible(false);
+      setFinalActionsVisible(true);
+      restartBtn.focus();
     }
 
     function handleSaveExit() {
       if (state.isTyping) return;
+      closeInternal();
       if (typeof state.onSaveExit === 'function') state.onSaveExit();
     }
 
     function handleRestart() {
       if (state.isTyping) return;
+      closeInternal();
       if (typeof state.onRestart === 'function') state.onRestart();
     }
 
@@ -156,8 +194,9 @@
       state.isOpen = false;
       state.isTyping = false;
       state.skipRequested = false;
+      exitCriticalMode();
       setOverlayOpen(false);
-      setSkipVisible(true);
+      setSkipVisible(false);
       setFinalActionsVisible(false);
       logEl.textContent = '';
       state.onSaveExit = null;
@@ -168,6 +207,7 @@
     async function open(openOptions) {
       var params = openOptions || {};
       if (state.isOpen) return;
+      enterCriticalMode();
       state.token += 1;
       var token = state.token;
       state.isOpen = true;
@@ -178,7 +218,7 @@
       state.lines = buildLines(!!params.hasDrones);
       logEl.textContent = '';
       setFinalActionsVisible(false);
-      setSkipVisible(true);
+      setSkipVisible(false);
       setOverlayOpen(true, skipBtn, function () {
         handleSaveExit();
       });

@@ -10,16 +10,18 @@
     var reasons = {
       menuOpen: false,
       tabInactive: false,
+      criticalPause: false,
     };
+    var criticalPauseDepth = 0;
 
     function isPaused() {
-      return !!(reasons.menuOpen || reasons.tabInactive);
+      return !!(reasons.menuOpen || reasons.tabInactive || reasons.criticalPause);
     }
 
     function emit(cause) {
       onChange({
         paused: isPaused(),
-        reasons: { menuOpen: !!reasons.menuOpen, tabInactive: !!reasons.tabInactive },
+        reasons: { menuOpen: !!reasons.menuOpen, tabInactive: !!reasons.tabInactive, criticalPause: !!reasons.criticalPause },
         cause: cause || 'unknown',
       });
     }
@@ -38,6 +40,25 @@
 
     function setTabInactive(inactive) {
       setReason('tabInactive', inactive, 'tab');
+    }
+
+    function enterCriticalPause() {
+      criticalPauseDepth += 1;
+      if (criticalPauseDepth === 1) {
+        setReason('criticalPause', true, 'critical_enter');
+      }
+    }
+
+    function exitCriticalPause() {
+      if (criticalPauseDepth <= 0) {
+        criticalPauseDepth = 0;
+        setReason('criticalPause', false, 'critical_exit');
+        return;
+      }
+      criticalPauseDepth -= 1;
+      if (criticalPauseDepth === 0) {
+        setReason('criticalPause', false, 'critical_exit');
+      }
     }
 
     function onVisibilityChange() {
@@ -91,7 +112,7 @@
     }
 
     function getReasons() {
-      return { menuOpen: !!reasons.menuOpen, tabInactive: !!reasons.tabInactive };
+      return { menuOpen: !!reasons.menuOpen, tabInactive: !!reasons.tabInactive, criticalPause: !!reasons.criticalPause };
     }
 
     return {
@@ -101,6 +122,8 @@
       getReasons: getReasons,
       setMenuOpen: setMenuOpen,
       setTabInactive: setTabInactive,
+      enterCriticalPause: enterCriticalPause,
+      exitCriticalPause: exitCriticalPause,
     };
   }
 

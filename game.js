@@ -814,9 +814,16 @@ function applyAudioSettings(){
   const sfxVolume = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
   settings.musicVolume = musicVolume;
   settings.sfxVolume = sfxVolume;
+  const criticalPolicy = getCriticalAudioPolicy();
+  const muteMusicForCritical = criticalAudioActive && criticalPolicy.muteAllOnCritical;
+  const criticalTrackId = criticalPolicy.criticalMusic.enabled ? criticalPolicy.criticalMusic.trackId : '';
 
   document.querySelectorAll('audio[data-audio="music"]').forEach(el => {
     el.volume = musicVolume;
+    if (muteMusicForCritical) {
+      const isCriticalTrack = criticalTrackId && el.id === criticalTrackId;
+      el.muted = !isCriticalTrack;
+    }
   });
   document.querySelectorAll('audio[data-audio="sfx"]').forEach(el => {
     el.volume = sfxVolume;
@@ -825,13 +832,13 @@ function applyAudioSettings(){
     const pool = SFX_POOLS[id];
     if (!pool || !pool.players) return;
     for (const player of pool.players) {
-      player.volume = sfxVolume;
+      player.volume = resolveSfxPlaybackVolume(id, 1);
     }
   });
   Object.keys(LOOP_SFX_PLAYERS).forEach(id => {
     const player = LOOP_SFX_PLAYERS[id];
     if (!player) return;
-    player.volume = sfxVolume;
+    player.volume = resolveSfxPlaybackVolume(id, 1);
   });
 }
 
@@ -864,6 +871,9 @@ let criticalModalController = null;
 let achievementsModalController = null;
 let criticalFlowActive = false;
 let SFX_AUDIO_PROBE = null;
+let criticalAudioActive = false;
+let criticalAudioSnapshot = null;
+let criticalMusicRuntime = null;
 
 function sfxChannelOf(id){
   return SFX_CHANNELS[id] || 'gameplay';
@@ -951,7 +961,7 @@ function setSimulationPaused(nextPaused, reasons){
     return;
   }
   simulationPaused = paused;
-  lastPauseReasons = reasons || { menuOpen: false, tabInactive: false };
+  lastPauseReasons = reasons || { menuOpen: false, tabInactive: false, criticalPause: false };
   setSimulationClockPaused(paused);
   if (paused) {
     if (lastPauseReasons && lastPauseReasons.tabInactive) {
@@ -966,7 +976,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.critical);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -976,6 +986,159 @@ function setMenuPauseSource(source, open){
   if (!source || !Object.prototype.hasOwnProperty.call(menuPauseLocks, source)) return;
   menuPauseLocks[source] = !!open;
   recomputeMenuPauseLock();
+}
+
+function enterCriticalPause(){
+  if (pauseManager && typeof pauseManager.enterCriticalPause === 'function') {
+    pauseManager.enterCriticalPause();
+    return;
+  }
+  setMenuPauseSource('critical', true);
+}
+
+function exitCriticalPause(){
+  if (pauseManager && typeof pauseManager.exitCriticalPause === 'function') {
+    pauseManager.exitCriticalPause();
+    return;
+  }
+  setMenuPauseSource('critical', false);
+}
+
+function getCriticalAudioPolicy(){
+  const policy = GameApi && GameApi.Config ? GameApi.Config.CriticalAudioPolicy : null;
+  const allowedRaw = Array.isArray(policy && policy.allowedSfx) ? policy.allowedSfx : [];
+  const allowedSfx = [];
+  const seen = new Set();
+  for (let i = 0; i < allowedRaw.length; i++) {
+    const id = typeof allowedRaw[i] === 'string' ? allowedRaw[i].trim() : '';
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    allowedSfx.push(id);
+  }
+  const criticalMusicRaw = policy && typeof policy.criticalMusic === 'object' ? policy.criticalMusic : {};
+  const trackId = typeof criticalMusicRaw.trackId === 'string' ? criticalMusicRaw.trackId.trim() : '';
+  return {
+    muteAllOnCritical: policy ? policy.muteAllOnCritical !== false : true,
+    allowedSfx,
+    criticalMusic: {
+      enabled: !!(criticalMusicRaw && criticalMusicRaw.enabled && trackId),
+      trackId,
+    },
+  };
+}
+
+function isCriticalSfxAllowed(id){
+  if (!criticalAudioActive) return true;
+  const sfxId = typeof id === 'string' ? id : '';
+  if (!sfxId) return false;
+  const policy = getCriticalAudioPolicy();
+  if (!policy.allowedSfx.length) return false;
+  return policy.allowedSfx.indexOf(sfxId) !== -1;
+}
+
+function resolveSfxPlaybackVolume(id, volumeMul){
+  const base = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  const mul = Number.isFinite(volumeMul) ? clamp(volumeMul, 0, 1) : 1;
+  if (!criticalAudioActive) return base * mul;
+  const policy = getCriticalAudioPolicy();
+  if (!isCriticalSfxAllowed(id)) return 0;
+  if (!policy.muteAllOnCritical) return base * mul;
+  return base * mul;
+}
+
+function pauseAllSfxPlayers(){
+  Object.keys(SFX_POOLS).forEach((id) => {
+    const pool = SFX_POOLS[id];
+    if (!pool || !Array.isArray(pool.players)) return;
+    for (let i = 0; i < pool.players.length; i++) {
+      const player = pool.players[i];
+      if (!player) continue;
+      player.volume = 0;
+      if (!player.paused) player.pause();
+    }
+  });
+  Object.keys(LOOP_SFX_PLAYERS).forEach((id) => {
+    const player = LOOP_SFX_PLAYERS[id];
+    if (!player) return;
+    player.volume = 0;
+    if (!player.paused) player.pause();
+  });
+}
+
+function applyCriticalAudioPolicy(){
+  if (criticalAudioActive) return;
+  const policy = getCriticalAudioPolicy();
+  const musicNodes = Array.from(document.querySelectorAll('audio[data-audio="music"]'));
+  criticalAudioSnapshot = {
+    music: musicNodes.map((el) => {
+      let currentTime = 0;
+      try { currentTime = el.currentTime; } catch (e) {}
+      return {
+        el,
+        muted: !!el.muted,
+        volume: Number.isFinite(el.volume) ? el.volume : 1,
+        paused: !!el.paused,
+        currentTime,
+      };
+    }),
+  };
+  criticalAudioActive = true;
+  if (policy.muteAllOnCritical) {
+    for (let i = 0; i < criticalAudioSnapshot.music.length; i++) {
+      const entry = criticalAudioSnapshot.music[i];
+      if (!entry || !entry.el) continue;
+      entry.el.muted = true;
+      entry.el.pause();
+    }
+  }
+  pauseAllSfxPlayers();
+
+  criticalMusicRuntime = null;
+  if (policy.criticalMusic.enabled && policy.criticalMusic.trackId) {
+    const trackEl = document.getElementById(policy.criticalMusic.trackId);
+    if (trackEl && typeof trackEl.play === 'function') {
+      trackEl.muted = false;
+      trackEl.volume = clamp(settings.musicVolume ?? DEFAULT_SETTINGS.musicVolume, 0, 1);
+      trackEl.play().catch(() => {});
+      criticalMusicRuntime = { el: trackEl };
+    }
+  }
+}
+
+function restoreAudioAfterCritical(){
+  if (!criticalAudioActive) return;
+  const snapshot = criticalAudioSnapshot;
+  criticalAudioActive = false;
+  criticalAudioSnapshot = null;
+
+  if (criticalMusicRuntime && criticalMusicRuntime.el) {
+    const criticalTrack = criticalMusicRuntime.el;
+    const shouldContinue = snapshot && Array.isArray(snapshot.music)
+      ? snapshot.music.some((entry) => entry && entry.el === criticalTrack && !entry.paused)
+      : false;
+    if (!shouldContinue) {
+      criticalTrack.pause();
+      try { criticalTrack.currentTime = 0; } catch (e) {}
+    }
+  }
+  criticalMusicRuntime = null;
+
+  if (snapshot && Array.isArray(snapshot.music)) {
+    for (let i = 0; i < snapshot.music.length; i++) {
+      const entry = snapshot.music[i];
+      if (!entry || !entry.el) continue;
+      entry.el.muted = !!entry.muted;
+      entry.el.volume = Number.isFinite(entry.volume) ? entry.volume : entry.el.volume;
+      try { entry.el.currentTime = Number.isFinite(entry.currentTime) ? Math.max(0, entry.currentTime) : entry.el.currentTime; } catch (e) {}
+      if (!entry.paused) {
+        entry.el.play().catch(() => {});
+      } else {
+        entry.el.pause();
+      }
+    }
+  }
+
+  applyAudioSettings();
 }
 
 function sfxSourceToMime(source){
@@ -1072,13 +1235,13 @@ function getLoopSfxPlayer(id){
 }
 
 function playLoopSfx(id, volumeMul){
+  if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
   if (simulationPaused && sfxChannelOf(id) === 'gameplay') return;
-  const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
-  const mul = Number.isFinite(volumeMul) ? clamp(volumeMul, 0, 1) : 1;
+  const vol = resolveSfxPlaybackVolume(id, volumeMul);
   try {
     const player = getLoopSfxPlayer(id);
     if (!player) return;
-    player.volume = vol * mul;
+    player.volume = vol;
     if (!player.paused) return;
     player.play().catch(() => {});
   } catch (e) {}
@@ -1086,11 +1249,10 @@ function playLoopSfx(id, volumeMul){
 
 function setLoopSfxVolume(id, volumeMul){
   try {
+    if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
     const player = LOOP_SFX_PLAYERS[id];
     if (!player || player.paused) return;
-    const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
-    const mul = Number.isFinite(volumeMul) ? clamp(volumeMul, 0, 1) : 1;
-    player.volume = vol * mul;
+    player.volume = resolveSfxPlaybackVolume(id, volumeMul);
   } catch (e) {}
 }
 
@@ -1130,8 +1292,9 @@ function setSfxSources(id, sources){
 }
 
 function playSfx(id){
+  if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
   if (simulationPaused && sfxChannelOf(id) === 'gameplay') return;
-  const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  const vol = resolveSfxPlaybackVolume(id, 1);
   const now = performance.now();
   if (SFX_LAST_PLAYED[id] != null && now - SFX_LAST_PLAYED[id] < SFX_DEDUP_MS) return;
   SFX_LAST_PLAYED[id] = now;
@@ -6059,7 +6222,7 @@ function stopAndResetSessionToBigMenu(){
 
   setMenuPauseSource('settings', false);
   setMenuPauseSource('supercomputer', false);
-  setMenuPauseSource('critical', false);
+  exitCriticalPause();
   closeBigMenuPanels();
   closeSupercomputerMenu();
   closeTalents();
@@ -6262,14 +6425,21 @@ function getCriticalModalController(){
     a11yOpen,
     a11yClose,
     translate: t,
+    enterCriticalPause,
+    exitCriticalPause,
+    applyCriticalAudioPolicy,
+    restoreAudioAfterCritical,
   });
   return criticalModalController;
 }
 
 function closeCriticalModal(){
   const controller = getCriticalModalController();
-  if (!controller || typeof controller.close !== 'function') return;
-  controller.close();
+  if (controller && typeof controller.close === 'function') {
+    controller.close();
+  }
+  restoreAudioAfterCritical();
+  exitCriticalPause();
 }
 
 function performCriticalRestart(){
@@ -6278,7 +6448,6 @@ function performCriticalRestart(){
   restoreSupercomputerAfterCritical();
   spawnInitialTanksLvl1(state, 2);
   closeCriticalModal();
-  setMenuPauseSource('critical', false);
   criticalFlowActive = false;
   updateUI();
 }
@@ -6306,7 +6475,6 @@ function resetGameState(options){
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
   const wasCollapsed = state.debug?.collapsed;
   closeCriticalModal();
-  setMenuPauseSource('critical', false);
   criticalFlowActive = false;
   clearMergeFxQueue();
   if (state.projectiles && state.projectiles.length){
@@ -7409,7 +7577,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     documentObj: document,
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.critical) {
         setMenuOpen(true);
       }
     },
@@ -9376,7 +9544,6 @@ function applySupercomputerDamage(baseDamage){
     const appliedToThreshold = Math.max(0, prevHp - hpThreshold);
     sc.hp = hpThreshold;
     criticalFlowActive = true;
-    setMenuPauseSource('critical', true);
     openCriticalModal();
     return { finalDamage: appliedToThreshold, hp: sc.hp, destroyedNow: false, clampedCritical: true };
   }
@@ -9486,7 +9653,7 @@ function loop(now){
       (state && state.ui && state.ui.menuOpen) ||
       (supercomputerMenuController && typeof supercomputerMenuController.isOpen === 'function' && supercomputerMenuController.isOpen())
     );
-  setSimulationPaused(paused, pauseManager && pauseManager.getReasons ? pauseManager.getReasons() : { menuOpen: !!state.ui.menuOpen, tabInactive: false });
+  setSimulationPaused(paused, pauseManager && pauseManager.getReasons ? pauseManager.getReasons() : { menuOpen: !!state.ui.menuOpen, tabInactive: false, criticalPause: false });
   if (!paused){
     updateWorldEvents(effDt);
     ensureZombieCount();

@@ -19,3 +19,7 @@
 - Telemetry/Flags: `docs/ai/SYSTEMS/telemetry.md`
 - Input: `docs/ai/SYSTEMS/input.md`
 - Performance: `docs/ai/SYSTEMS/perf.md`
+
+## Важные конфиги
+- Critical modal typing: `src/config/criticalModalTuning.js`
+- Critical modal audio policy: `src/config/criticalAudioPolicy.js`
