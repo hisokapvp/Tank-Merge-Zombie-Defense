@@ -12,7 +12,7 @@
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
-- Main menu gating + language source of truth (big start menu блокирует boot/loop до выбора `Новая игра`/`Загрузить`; `Загрузить` доступна при валидном сохранении; язык читается из `localStorage['lang']`, применяется глобально и live-обновляет big menu) → `docs/ai/SYSTEMS/ui.md` + `docs/main-menu.md`
+- Main menu gating + language source of truth (big start menu блокирует boot/loop до выбора `Новая игра`/`Загрузить`; `Загрузить` временно доступна по `hasSaves()` через `saveSlotsMeta_v1` + guard в handler; язык читается из `localStorage['lang']`, применяется глобально и live-обновляет big menu) → `docs/ai/SYSTEMS/ui.md` + `docs/main-menu.md`
 - Main menu feedback (`#menuFeedback` -> `Game.FeedbackWidget.open()`) + feedback i18n keys (`feedback*`) → `docs/ai/SYSTEMS/ui.md`
 - In-session small menu (`#menuOverlay`): removed language switch, `Сохранить` (10 name-only slots in `saveSlotsMeta_v1`), `Выход` (confirm + runtime reset without reload, remove `progress` only) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/save.md` + `docs/main-menu.md`
 - Crate reward spawn policy (reward всегда в `crateSlotId`, без fallback в другой слот; race-safe skip with log) → `game.js` + `docs/ai/SYSTEMS/ui.md`

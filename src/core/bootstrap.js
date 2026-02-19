@@ -147,6 +147,9 @@
       }
       windowObj.alert(opts.t('menuSaveSuccess'));
       renderSaveSlotsList();
+      if (typeof opts.updateBigMenuLoadState === 'function') {
+        opts.updateBigMenuLoadState();
+      }
       if (opts.ui.menuSaveSlotInput) {
         opts.ui.menuSaveSlotInput.focus();
       }
@@ -154,6 +157,9 @@
 
     function openMenuOverlayMain() {
       openMainMenuView();
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      }
       opts.setMenuOpen(true);
     }
 
@@ -245,20 +251,36 @@
     });
 
     opts.ui.menuSfx && opts.ui.menuSfx.addEventListener('input', function (e) {
-      var value = Number(e.target.value) / 100;
-      var settings = getSettings();
-      settings.sfxVolume = opts.clamp(value, 0, 1);
-      opts.applyAudioSettings();
-      opts.updateMenuVolumes();
+      if (typeof opts.setVolume === 'function') {
+        opts.setVolume('sfx', e.target.value, 'percent');
+      } else {
+        var value = Number(e.target.value) / 100;
+        var settings = getSettings();
+        settings.sfxVolume = opts.clamp(value, 0, 1);
+        opts.applyAudioSettings();
+      }
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        opts.updateMenuVolumes();
+      }
       opts.saveSettings();
     });
 
     opts.ui.menuMusic && opts.ui.menuMusic.addEventListener('input', function (e) {
-      var value = Number(e.target.value) / 100;
-      var settings = getSettings();
-      settings.musicVolume = opts.clamp(value, 0, 1);
-      opts.applyAudioSettings();
-      opts.updateMenuVolumes();
+      if (typeof opts.setVolume === 'function') {
+        opts.setVolume('music', e.target.value, 'percent');
+      } else {
+        var value = Number(e.target.value) / 100;
+        var settings = getSettings();
+        settings.musicVolume = opts.clamp(value, 0, 1);
+        opts.applyAudioSettings();
+      }
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        opts.updateMenuVolumes();
+      }
       opts.saveSettings();
     });
 

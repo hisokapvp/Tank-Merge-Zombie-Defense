@@ -327,16 +327,20 @@
 
       <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
         <div class="bigMenuSubpanelTitle">Звук</div>
-        <label class="bigMenuSubpanelRow" for="bigMenuSfx">
-          <span>Эффекты</span>
-          <span id="bigMenuSfxValue">75%</span>
-        </label>
-        <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
-        <label class="bigMenuSubpanelRow" for="bigMenuMusic">
-          <span>Музыка</span>
-          <span id="bigMenuMusicValue">60%</span>
-        </label>
-        <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+        <div class="menuRow">
+          <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
+          <div class="menuSlider">
+            <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
+            <span class="menuValue" id="bigMenuSfxValue">75%</span>
+          </div>
+        </div>
+        <div class="menuRow">
+          <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
+          <div class="menuSlider">
+            <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+            <span class="menuValue" id="bigMenuMusicValue">60%</span>
+          </div>
+        </div>
       </div>
 
       <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">

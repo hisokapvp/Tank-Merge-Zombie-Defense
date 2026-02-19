@@ -12,11 +12,14 @@
    - После boot сразу выполняет reset в режим новой игры.
    - In-session меню закрывается (`setMenuOpen(false)`), игрок сразу попадает в сессию.
 2. `#bigMenuLoad` — **Загрузить**
-   - Запускает boot.
-   - Загружает прогресс из `localStorage['progress']` через обычный runtime-пайплайн загрузки.
+   - Доступна только при временном критерии `hasSaves()` (см. ниже).
+   - При клике дополнительно проверяется guard `hasSaves()`; если критерий не пройден — запуск загрузки не выполняется.
+   - Если доступна: запускает boot и загружает прогресс из `localStorage['progress']` через обычный runtime-пайплайн загрузки.
    - In-session меню закрывается (`setMenuOpen(false)`), игрок сразу попадает в сессию.
 3. `#bigMenuSound` — **Звук**
-   - Открывает простую вложенную панель со слайдерами SFX/Music.
+   - Открывает вложенную панель со слайдерами SFX/Music.
+   - Big menu использует тот же slider-компонент (`.menuRow/.menuLabel/.menuSlider/.menuValue`), что и in-session small menu.
+   - Диапазон UI: `0..100%`, `input` применяет изменения сразу (live apply).
 4. `#bigMenuLanguage` — **Язык**
    - Открывает простую вложенную панель выбора `РУ/EN`.
    - Выбор языка вызывает глобальный setter `setLanguage(...)` и обновляет видимые тексты big menu в рантайме без reload.
@@ -28,14 +31,26 @@
 
 ## Логика `Загрузить`
 
-- Проверка делается по `getSavedProgress()` (источник — `localStorage['progress']`/Storage API).
-- Если сохранения нет:
+- Временная проверка делается по `hasSaves()` через `localStorage['saveSlotsMeta_v1']`.
+- Критерий `hasSaves()`:
+   - ключ `saveSlotsMeta_v1` существует и парсится в валидный объект `{ slots: [...] }`;
+   - есть хотя бы один слот, где `name !== defaultName(index)` (default: `Слот N`).
+- Если критерий не пройден:
   - `#bigMenuLoad` переводится в `disabled`;
   - показывается подсказка с текстом: **«Нет сохранения»**;
-  - у кнопки выставляется `title="Нет сохранения"`.
-- Если сохранение есть:
+   - у кнопки выставляется `title="Нет сохранения"`;
+   - handler `#bigMenuLoad` не стартует загрузку (доп. guard).
+- Если критерий пройден:
   - кнопка `#bigMenuLoad` активна;
   - подсказка скрыта.
+
+## Громкость (общий источник big/small)
+
+- Источник хранения: `localStorage['settings']`.
+- Поля: `settings.sfxVolume`, `settings.musicVolume` (нативный формат `0..1`).
+- UI-формат в обоих меню: `0..100%` с конверсией в `0..1` при записи.
+- Единый API: `getVolume(kind, format)` / `setVolume(kind, value, format)` + `syncVolumeUIFromSettings()`.
+- Минимальная синхронизация: при открытии `big menu` и `small menu` вызывается `syncVolumeUIFromSettings()`.
 
 ## Язык и порядок инициализации
 

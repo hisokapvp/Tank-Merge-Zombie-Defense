@@ -12,6 +12,15 @@
 - Настройки громкости и связь с UI — в `src/audio/settingsAudio.js`.
 - Причины паузы/возобновления звука — в `src/systems/pauseManager.js`.
 
+## Громкость: формат и источник
+
+- Source of truth: `localStorage['settings']`.
+- Поля хранения: `settings.sfxVolume`, `settings.musicVolume` (нативный диапазон `0..1`).
+- UI-формат (small/big menu): `0..100%`.
+- Конверсия: `UI percent -> value01` при записи; `value01 -> percent` при отображении.
+- Единый runtime API: `getVolume(kind, format)` / `setVolume(kind, value, format)` + `syncVolumeUIFromSettings()`.
+- Применение громкости должно происходить на `input` (live apply), затем — persist в `settings`.
+
 ## Каналы
 
 - `gameplay`: боевые и worldEvents звуки (например `shoot*`, `thunder`, `rainLoop`, `activeAbility`).

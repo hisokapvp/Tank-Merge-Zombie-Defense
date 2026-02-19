@@ -46,6 +46,13 @@ bash ci/release_checklist.sh
 - Источник учёта: только applied damage по зомби от источника `tank` (без overkill).
 - Хранение: `totalDamageDealtRaw`, `damagePointsSpent`, `fenceLevel` в save payload (`progress`), backward-compatible загрузка старых сейвов.
 
+## Настройки звука
+
+- Хранилище: `localStorage['settings']`.
+- Поля: `settings.sfxVolume`, `settings.musicVolume` (нативный формат `0..1`).
+- UI-формат в меню: `0..100%`.
+- Применение изменения: live на `input`, затем persist в тот же `settings`.
+
 ## Fence levels
 
 - Текущий уровень стен: `state.fenceLevel` (default `1`).

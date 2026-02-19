@@ -1168,19 +1168,62 @@ const SFX_SOURCES = {
   rainLoop: DEFAULT_RAIN_LOOP_SOURCES.slice(),
 };
 
+function normalizeVolumeKind(kind){
+  return kind === 'music' ? 'music' : 'sfx';
+}
+
+function getVolumeSettingKey(kind){
+  return normalizeVolumeKind(kind) === 'music' ? 'musicVolume' : 'sfxVolume';
+}
+
+function getDefaultVolume(kind){
+  const key = getVolumeSettingKey(kind);
+  return clamp(DEFAULT_SETTINGS[key], 0, 1);
+}
+
+function toVolumePercent(value01){
+  return Math.round(clamp(value01, 0, 1) * 100);
+}
+
+function toVolume01(value, format){
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  if (format === 'percent') return clamp(numeric / 100, 0, 1);
+  return clamp(numeric, 0, 1);
+}
+
+function getVolume(kind, format){
+  const key = getVolumeSettingKey(kind);
+  const fallback = getDefaultVolume(kind);
+  const value01 = clamp(settings[key] ?? fallback, 0, 1);
+  if (format === 'percent') return toVolumePercent(value01);
+  return value01;
+}
+
+function setVolume(kind, value, format){
+  const key = getVolumeSettingKey(kind);
+  settings[key] = toVolume01(value, format);
+  applyAudioSettings();
+  return settings[key];
+}
+
+function syncVolumeUIFromSettings(){
+  const sfxPercent = getVolume('sfx', 'percent');
+  const musicPercent = getVolume('music', 'percent');
+
+  if (ui.menuMusic) ui.menuMusic.value = String(musicPercent);
+  if (ui.menuSfx) ui.menuSfx.value = String(sfxPercent);
+  if (ui.menuMusicValue) ui.menuMusicValue.textContent = `${musicPercent}%`;
+  if (ui.menuSfxValue) ui.menuSfxValue.textContent = `${sfxPercent}%`;
+
+  if (ui.bigMenuSfx) ui.bigMenuSfx.value = String(sfxPercent);
+  if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(musicPercent);
+  if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${sfxPercent}%`;
+  if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${musicPercent}%`;
+}
+
 function updateMenuVolumes(){
-  if (ui.menuMusic){
-    ui.menuMusic.value = Math.round((settings.musicVolume ?? 0) * 100);
-  }
-  if (ui.menuSfx){
-    ui.menuSfx.value = Math.round((settings.sfxVolume ?? 0) * 100);
-  }
-  if (ui.menuMusicValue){
-    ui.menuMusicValue.textContent = `${Math.round((settings.musicVolume ?? 0) * 100)}%`;
-  }
-  if (ui.menuSfxValue){
-    ui.menuSfxValue.textContent = `${Math.round((settings.sfxVolume ?? 0) * 100)}%`;
-  }
+  syncVolumeUIFromSettings();
 }
 
 function applyTranslations(){
@@ -5804,6 +5847,7 @@ function stepParticles(dt){
 }
 
 function setMenuOpen(open){
+  if (open) syncVolumeUIFromSettings();
   setMenuPauseSource('settings', !!open);
   if (UIModals && typeof UIModals.setMenuOpen === 'function') {
     UIModals.setMenuOpen({
@@ -5840,6 +5884,7 @@ function setBigMenuOpen(open){
   if (!ui.bigMenuOverlay) return;
   ui.bigMenuOverlay.classList.toggle('bigMenuOverlayHidden', !open);
   ui.bigMenuOverlay.setAttribute('aria-hidden', (!open).toString());
+  if (open) syncVolumeUIFromSettings();
 }
 
 function closeBigMenuPanels(){
@@ -5862,16 +5907,59 @@ function toggleBigMenuPanel(panel){
 }
 
 function updateBigMenuVolumeState(){
-  if (ui.bigMenuSfx) ui.bigMenuSfx.value = String(Math.round(clamp(settings.sfxVolume ?? 0.75, 0, 1) * 100));
-  if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(Math.round(clamp(settings.musicVolume ?? 0.6, 0, 1) * 100));
-  if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${Math.round(clamp(settings.sfxVolume ?? 0.75, 0, 1) * 100)}%`;
-  if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${Math.round(clamp(settings.musicVolume ?? 0.6, 0, 1) * 100)}%`;
+  syncVolumeUIFromSettings();
+}
+
+function hasSaves(){
+  const storageApi = window.Game && window.Game.Storage;
+  const rawKey = (storageApi && storageApi.SAVE_SLOTS_META_KEY) || 'saveSlotsMeta_v1';
+  const slotsCount = Number.isFinite(storageApi && storageApi.SAVE_SLOTS_COUNT)
+    ? Math.max(1, Math.floor(storageApi.SAVE_SLOTS_COUNT))
+    : 10;
+  const maxLen = Number.isFinite(storageApi && storageApi.SAVE_SLOT_NAME_MAX_LEN)
+    ? Math.max(1, Math.floor(storageApi.SAVE_SLOT_NAME_MAX_LEN))
+    : 20;
+  const getDefaultSlotName = storageApi && typeof storageApi.getDefaultSlotName === 'function'
+    ? storageApi.getDefaultSlotName
+    : function (index) { return `Слот ${index + 1}`; };
+  const safeParse = storageApi && typeof storageApi.safeParse === 'function'
+    ? storageApi.safeParse
+    : function (raw, fallback) {
+      try {
+        if (raw == null || raw === '') return fallback;
+        return JSON.parse(raw);
+      } catch (e) {
+        return fallback;
+      }
+    };
+
+  let raw = null;
+  try {
+    raw = localStorage.getItem(rawKey);
+  } catch (e) {
+    raw = null;
+  }
+  if (!raw) return false;
+
+  const parsed = safeParse(raw, null);
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.slots)) return false;
+
+  for (let i = 0; i < slotsCount; i++) {
+    const slot = parsed.slots[i];
+    const fallbackName = getDefaultSlotName(i);
+    let name = slot && typeof slot === 'object' && typeof slot.name === 'string' ? slot.name : '';
+    name = name.trim();
+    if (name.length > maxLen) name = name.slice(0, maxLen);
+    const normalized = name.length ? name : fallbackName;
+    if (normalized !== fallbackName) return true;
+  }
+  return false;
 }
 
 function renderBigMenuTexts(){
   if (!ui.bigMenuOverlay) return;
 
-  const hasSave = !!getSavedProgress();
+  const hasSave = hasSaves();
   const noSaveText = t('bigMenuNoSave');
 
   const bigMenuTitle = document.getElementById('bigMenuTitle');
@@ -5897,9 +5985,10 @@ function renderBigMenuTexts(){
 
   const soundTitle = ui.bigMenuOverlay.querySelector('#bigMenuSoundPanel .bigMenuSubpanelTitle');
   if (soundTitle) soundTitle.textContent = t('bigMenuSound');
-  const soundLabels = ui.bigMenuOverlay.querySelectorAll('#bigMenuSoundPanel .bigMenuSubpanelRow > span:first-child');
-  if (soundLabels[0]) soundLabels[0].textContent = t('bigMenuSfx');
-  if (soundLabels[1]) soundLabels[1].textContent = t('bigMenuMusic');
+  const soundSfxLabel = ui.bigMenuOverlay.querySelector('#bigMenuSfxLabel');
+  const soundMusicLabel = ui.bigMenuOverlay.querySelector('#bigMenuMusicLabel');
+  if (soundSfxLabel) soundSfxLabel.textContent = t('bigMenuSfx');
+  if (soundMusicLabel) soundMusicLabel.textContent = t('bigMenuMusic');
 
   const languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
   if (languageTitle) languageTitle.textContent = t('menuLanguage');
@@ -5919,7 +6008,7 @@ function renderBigMenuTexts(){
 }
 
 function updateBigMenuLoadState(){
-  const hasSave = !!getSavedProgress();
+  const hasSave = hasSaves();
   if (ui.bigMenuLoad) {
     ui.bigMenuLoad.disabled = !hasSave;
     if (hasSave) ui.bigMenuLoad.removeAttribute('title');
@@ -6016,6 +6105,7 @@ function resumeSessionRuntime(){
 
 async function startFromBigMenu(mode){
   if (bigMenuStartPending) return;
+  if (mode === 'load' && !hasSaves()) return;
   if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.disabled) return;
   const wasStopped = sessionRuntimeStopped;
   bigMenuStartPending = true;
@@ -6067,21 +6157,15 @@ function initBigMainMenu(){
 
   if (ui.bigMenuSfx) {
     ui.bigMenuSfx.addEventListener('input', function (e) {
-      const value = Number(e.target.value) / 100;
-      settings.sfxVolume = clamp(value, 0, 1);
-      applyAudioSettings();
-      updateMenuVolumes();
-      updateBigMenuVolumeState();
+      setVolume('sfx', e.target.value, 'percent');
+      syncVolumeUIFromSettings();
       saveSettings();
     });
   }
   if (ui.bigMenuMusic) {
     ui.bigMenuMusic.addEventListener('input', function (e) {
-      const value = Number(e.target.value) / 100;
-      settings.musicVolume = clamp(value, 0, 1);
-      applyAudioSettings();
-      updateMenuVolumes();
-      updateBigMenuVolumeState();
+      setVolume('music', e.target.value, 'percent');
+      syncVolumeUIFromSettings();
       saveSettings();
     });
   }
@@ -9571,8 +9655,11 @@ async function boot(){
         saveProgress,
         clamp,
         settings,
+        getVolume,
+        setVolume,
         applyAudioSettings,
         updateMenuVolumes,
+        syncVolumeUIFromSettings,
         saveSettings,
         openTalents,
         openSupercomputerMenu,

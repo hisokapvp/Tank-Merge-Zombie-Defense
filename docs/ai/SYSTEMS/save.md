@@ -28,6 +28,12 @@
 	- `loadSaveSlotsMeta()` — загрузка + repair/normalize до 10 валидных слотов,
 	- `setSlotName(index, name)` — apply `trim/maxLen/default` и запись в key.
 
+### Временный критерий `hasSaves()` для big menu `Загрузить`
+
+- Кнопка `#bigMenuLoad` считается доступной не по `progress`, а по метаданным слотов.
+- Проверка: key `saveSlotsMeta_v1` существует и валиден (`{ slots: [...] }`), и есть минимум один слот с `name !== defaultName(index)`.
+- Даже при `disabled` остаётся handler-guard: `#bigMenuLoad` не должен запускать загрузку, если `hasSaves() === false`.
+
 - `supercomputer`:
 	- `computerLevel`, `xp`, `xpToNext`, `maxLevel`,
 	- `hp`, `maxHp`, `armorFlat`,

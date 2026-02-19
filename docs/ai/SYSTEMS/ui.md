@@ -31,9 +31,19 @@
 
 ### Big menu: Загрузить
 
-- Источник сохранения: `localStorage['progress']` (через `getSavedProgress()`/Storage API).
-- Если сохранения нет: `#bigMenuLoad` disabled, подсказка и `title` содержат ровно текст `Нет сохранения`.
-- Если сохранение есть: `#bigMenuLoad` enabled, подсказка скрыта.
+- Временный критерий доступности: `hasSaves()` на базе `localStorage['saveSlotsMeta_v1']`.
+- `hasSaves()` возвращает `true`, если key существует/валиден и есть минимум один слот с именем `name !== defaultName(index)`.
+- Если критерий не пройден: `#bigMenuLoad` disabled, подсказка и `title` содержат ровно текст `Нет сохранения`.
+- В handler `#bigMenuLoad` есть дополнительный guard на `hasSaves()` (защита помимо `disabled`).
+- Если критерий пройден: `#bigMenuLoad` enabled, подсказка скрыта.
+
+### Big/small menu: sound sliders
+
+- Big menu использует тот же slider-компонент, что и small menu (`.menuRow/.menuLabel/.menuSlider/.menuValue`).
+- UI-диапазон громкости в обоих меню: `0..100%`; запись в runtime/storage — в нативном формате `0..1`.
+- Изменение слайдера обрабатывается по `input` (live apply, без ожидания `change`).
+- Источник настроек общий (`localStorage['settings']`), синхронизация UI выполняется через `syncVolumeUIFromSettings()`.
+- Минимальная гарантия синка: вызов при открытии `#bigMenuOverlay` и `#menuOverlay`.
 
 ### Big menu: language live-update
 
