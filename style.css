@@ -345,6 +345,15 @@ body::after{
   display:grid;
   gap:10px;
 }
+.smallMenuRoot.is-hidden,
+.smallMenuSaveView{
+  display:none;
+}
+.smallMenuSaveView.is-active{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 .menuView.hidden{
   display:none;
 }
@@ -400,6 +409,100 @@ body::after{
   text-align:center;
   color:var(--text);
   font-weight:700;
+}
+.smallMenuSaveView__header{
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+}
+.smallMenuSaveView__subtitle{
+  font-size:12px;
+  color:var(--muted);
+}
+.smallMenuSaveTable{
+  border:1px solid rgba(255, 184, 114, 0.18);
+  border-radius:12px;
+  overflow:hidden;
+  background:rgba(12, 8, 6, 0.72);
+}
+.smallMenuSaveTable__row{
+  display:grid;
+  grid-template-columns:44px minmax(0, 1fr) 148px 110px;
+  align-items:center;
+  min-height:36px;
+}
+.smallMenuSaveTable__row_head{
+  min-height:34px;
+  background:rgba(255, 184, 114, 0.12);
+  border-bottom:1px solid rgba(255, 184, 114, 0.16);
+}
+.smallMenuSaveTable__body .smallMenuSaveTable__row{
+  border-bottom:1px solid rgba(255, 184, 114, 0.08);
+}
+.smallMenuSaveTable__body .smallMenuSaveTable__row:last-child{
+  border-bottom:none;
+}
+.smallMenuSaveTable__body .smallMenuSaveTable__row:nth-child(even){
+  background:rgba(255, 255, 255, 0.03);
+}
+.smallMenuSaveTable__cell{
+  padding:7px 8px;
+  text-align:left;
+  font-size:12px;
+}
+.smallMenuSaveTable__row_head .smallMenuSaveTable__cell{
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  font-size:11px;
+}
+.smallMenuSaveTable__cell_num{
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.smallMenuSaveTable__cell_date{
+  font-variant-numeric:tabular-nums;
+}
+.smallMenuSaveTable__cell_name{
+  min-width:0;
+}
+.smallMenuSaveNameText{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.smallMenuSaveNameInput{
+  width:100%;
+  min-height:28px;
+  border-radius:8px;
+  border:1px solid rgba(255, 184, 114, 0.28);
+  background:rgba(6,5,4,.78);
+  color:var(--text);
+  padding:4px 8px;
+  font:inherit;
+}
+.smallMenuSaveSlotBtn{
+  width:100%;
+  min-height:28px;
+  font-size:12px;
+  padding:5px 8px;
+}
+.smallMenuSaveToast{
+  min-height:18px;
+  color:var(--accent2);
+  font-size:12px;
+  font-weight:700;
+  opacity:0;
+  transition:opacity .12s ease;
+}
+.smallMenuSaveToast.is-visible{
+  opacity:1;
+}
+.smallMenuSaveActions{
+  grid-template-columns:1fr;
 }
 .menuRow{
   display:flex;

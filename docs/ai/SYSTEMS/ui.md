@@ -20,6 +20,14 @@
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
 
+## Small menu Save view
+- Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
+- При входе в Save view скрывается root small menu (`#smallMenuRootView.is-hidden`), показывается только save-view (`.smallMenuSaveView.is-active`), pause остаётся через обычный menu lock (`setMenuOpen(true)` + `PauseManager.setMenuOpen`).
+- Таблица слотов всегда рендерит 10 строк (`1..10`) с колонками: `№`, `Имя`, `Дата`, `Сохранить`.
+- Inline edit имени включается по `pointerdown` по строке (кроме кнопки `Сохранить`), Enter/blur = commit, Esc = cancel; commit идёт через `Game.Storage.setSlotName`.
+- Кнопка строки `Сохранить` обновляет дату через `Game.Storage.markSlotSaved(index, Date.now())`, обновляет строку и показывает краткий toast (`menu.save.toast.saved`).
+- Кнопка `Назад` в save-view возвращает в root small menu без отдельного снятия паузы; правила pause определяются состоянием открытия small menu в целом.
+
 ## Состояние подсветки кнопок меню
 - Big menu и small menu хранят last-click состояние раздельно (без shared state между меню).
 - На первом показе меню selected-подсветки нет; selected появляется только после клика.

@@ -12,3 +12,10 @@
 - Для офлайн-наград сохранять цепочку `offlineProgress -> offlineModal -> continueFlow`.
 - Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression.
 - Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset.
+
+## Save slots meta (`saveSlotsMeta_v1`)
+- Метаданные слотов хранятся в `src/persistence/storage.js` в том же ключе `saveSlotsMeta_v1` (без новых ключей).
+- Нормализованный формат на слот: `{ name: string, lastSavedAt: number|null }`.
+- `lastSavedAt` хранится как timestamp в миллисекундах (`Date.now()`), для пустого значения используется `null`.
+- API обновления имени: `setSlotName(slotIndex, name)` (sanitize + fallback на default slot name).
+- API обновления даты: `markSlotSaved(slotIndex, timestampMs)` — загружает meta, обновляет `lastSavedAt`, сохраняет обратно в `saveSlotsMeta_v1`.

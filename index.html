@@ -58,58 +58,60 @@
             <div class="menuHeader">
               <div class="menuTitle" id="menuTitle" data-i18n="menuTitle">Merge Tank: Zombie invasion</div>
             </div>
-            <div class="menuActions" id="menuMainActions">
-              <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">Продолжить</button>
-              <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
-              <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
-              <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
-            </div>
-            <div id="menuMainView" class="menuView">
-            <div class="menuSettings">
-              <div class="menuRow">
-                <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
-                <div class="menuSlider">
-                  <input id="menuSfx" type="range" min="0" max="100" step="1" value="75" />
-                  <span class="menuValue" id="menuSfxValue">75%</span>
+            <div id="smallMenuRootView" class="smallMenuRoot">
+              <div class="menuActions" id="menuMainActions">
+                <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">Продолжить</button>
+                <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
+                <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
+                <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
+              </div>
+              <div id="menuMainView" class="menuView">
+              <div class="menuSettings">
+                <div class="menuRow">
+                  <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
+                  <div class="menuSlider">
+                    <input id="menuSfx" type="range" min="0" max="100" step="1" value="75" />
+                    <span class="menuValue" id="menuSfxValue">75%</span>
+                  </div>
+                </div>
+                <div class="menuRow">
+                  <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">Громкость музыки</label>
+                  <div class="menuSlider">
+                    <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
+                    <span class="menuValue" id="menuMusicValue">60%</span>
+                  </div>
                 </div>
               </div>
-              <div class="menuRow">
-                <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">Громкость музыки</label>
-                <div class="menuSlider">
-                  <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
-                  <span class="menuValue" id="menuMusicValue">60%</span>
+              </div>
+
+              <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
+                <div class="menuRow">
+                  <div class="menuExitText" data-i18n="menuExitConfirm">Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?</div>
+                </div>
+                <div class="menuInlineActions">
+                  <button id="menuExitConfirmLeave" class="btn btnPrimary" type="button" data-i18n="menuExitConfirmLeave">Выйти</button>
+                  <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
                 </div>
               </div>
             </div>
-            </div>
 
-            <div id="menuSaveSlotsView" class="menuView hidden" aria-hidden="true">
-              <div class="menuSaveSlotsList" id="menuSaveSlotsList"></div>
-              <div class="menuInlineActions">
-                <button id="menuSaveBack" class="btn btnSecondary" type="button" data-i18n="menuBack">Назад</button>
-                <button id="menuSaveClose" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+            <div id="smallMenuSaveView" class="smallMenuSaveView" aria-hidden="true">
+              <div class="smallMenuSaveView__header" data-i18n="menu.save.title">Сохранение</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.save.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveTable" role="table" aria-label="Save slots">
+                <div class="smallMenuSaveTable__head" role="rowgroup">
+                  <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.save.col.number">№</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.save.col.name">Имя</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.save.col.date">Дата</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.save.col.action">Сохранить</div>
+                  </div>
+                </div>
+                <div id="smallMenuSaveRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
               </div>
-            </div>
-
-            <div id="menuSaveSlotEditView" class="menuView hidden" aria-hidden="true">
-              <div class="menuRow">
-                <label class="menuLabel" for="menuSaveSlotInput" data-i18n="menuSaveSlotName">Имя слота</label>
-                <input id="menuSaveSlotInput" class="menuSaveInput" type="text" maxlength="20" />
-              </div>
-              <div class="menuInlineActions">
-                <button id="menuSaveSlotSave" class="btn btnPrimary" type="button" data-i18n="menuSaveAction">Сохранить</button>
-                <button id="menuSaveSlotBack" class="btn btnSecondary" type="button" data-i18n="menuBack">Назад</button>
-                <button id="menuSaveSlotClose" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
-              </div>
-            </div>
-
-            <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
-              <div class="menuRow">
-                <div class="menuExitText" data-i18n="menuExitConfirm">Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?</div>
-              </div>
-              <div class="menuInlineActions">
-                <button id="menuExitConfirmLeave" class="btn btnPrimary" type="button" data-i18n="menuExitConfirmLeave">Выйти</button>
-                <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
+              <div id="smallMenuSaveToast" class="smallMenuSaveToast" aria-live="polite" aria-atomic="true"></div>
+              <div class="menuInlineActions smallMenuSaveActions">
+                <button id="smallMenuSaveBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
               </div>
             </div>
           </div>
