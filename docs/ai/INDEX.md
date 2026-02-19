@@ -33,7 +33,8 @@
 - Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
 - Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 - Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.
-- Merge popup нового уровня танка: локально отключён только right-side hull shot FX через опцию preview renderer; остальные popup FX/SFX и gameplay-эффекты не затронуты.
+- Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
+- Exit из small menu в big menu приводит приложение к состоянию первого запуска через reload shell после очистки transient `progress` (слоты сохранений не удаляются).
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

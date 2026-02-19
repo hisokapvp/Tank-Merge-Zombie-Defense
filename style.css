@@ -1455,6 +1455,8 @@ body.menu-open .stageUi .hudItem{
 }
 #modsTankWallOverlay .levelModal__panel.scModal{
   --mods-sc-pad-x: 18px;
+  padding-left:0;
+  padding-right:0;
 }
 .scTabs{
   display:flex;
@@ -1465,8 +1467,14 @@ body.menu-open .stageUi .hudItem{
   border-bottom:1px solid rgba(255,255,255,.16);
 }
 #modsTankWallOverlay .scTabs{
-  margin:12px calc(var(--mods-sc-pad-x) * -1) 0;
+  margin:12px 0 0;
   padding:0 var(--mods-sc-pad-x);
+}
+#modsTankWallOverlay .levelModal__panel.scModal > .levelModal__title,
+#modsTankWallOverlay .levelModal__panel.scModal > .scTabPanels,
+#modsTankWallOverlay .levelModal__panel.scModal > .levelModal__actions{
+  margin-left:var(--mods-sc-pad-x);
+  margin-right:var(--mods-sc-pad-x);
 }
 .scTab{
   margin-bottom:-1px;

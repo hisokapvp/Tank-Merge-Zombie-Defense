@@ -135,8 +135,10 @@
     shot.y = tank.y + tank.muzzleY * tank.scale;
   }
 
-  function update(model, dt) {
+  function update(model, dt, opts) {
     if (!dt || dt <= 0) return;
+    opts = opts || {};
+    var disableRightHullShotFx = opts.disableRightHullShotFx === true;
     model.time += dt;
 
     for (var i = 0; i < model.tanks.length; i++) {
@@ -151,14 +153,16 @@
       if (tank.cannonFrames > 1) {
         tank.cannonAnim += dt * tank.cannonSpeed;
         tank.cannonFrame = Math.floor(tank.cannonAnim) % tank.cannonFrames;
-        if (tank.cannonFrame === tank.fireFrame && prevFrame !== tank.fireFrame) {
+        if (tank.cannonFrame === tank.fireFrame && prevFrame !== tank.fireFrame && !(disableRightHullShotFx && i === 1)) {
           spawnShot(model, i);
         }
       } else {
         tank.fireTimer -= dt;
         if (tank.fireTimer <= 0) {
           tank.fireTimer = tank.fireCooldown;
-          spawnShot(model, i);
+          if (!(disableRightHullShotFx && i === 1)) {
+            spawnShot(model, i);
+          }
         }
       }
 

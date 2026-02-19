@@ -19,6 +19,7 @@
 - Small menu confirm выхода живёт в `menuExitConfirmView` (`index.html`), обработчики — `src/core/bootstrap.js`.
 - В small menu больше нет пункта для отправки отзывов; действия: `Continue`, `New`, `Save`, `Exit`.
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
+- `stopAndResetSessionToBigMenu` приводит приложение к состоянию первого запуска через перезагрузку страницы (`window.location.reload`) после очистки transient `progress` (слотовые сохранения не затрагиваются).
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
 
 ## Small menu Save view
@@ -64,12 +65,12 @@
 
 ## Supercomputer tabs divider
 - Разделитель под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay` — это нижняя граница `.scTabs`.
-- Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов. Если мешают скругления рамки, использовать `overflow:hidden` у контейнера с `border-radius` и оставлять линию на `width:100%`.
+- Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов; для `#modsTankWallOverlay` это делается через нулевые боковые padding у panel и явные `margin-left/right` для прямых дочерних блоков (`title`, `scTabPanels`, footer-actions), без negative margin у `.scTabs`.
 - Проверка: открыть `Модификации танков и стен`, убедиться, что у divider нет видимых зазоров слева/справа относительно внутренней рамки.
 
 ## Merge popup (новый уровень танка)
 - Точка входа pop-up: `src/ui/mergePopup.js` (`Game.MergePopup.show(level)`), preview/render: `src/ui/mergePreview/mergePreviewModel.js` + `src/ui/mergePreview/mergePreviewRenderer.js`.
-- Локальное условие удаления FX: `PREVIEW_RENDER_OPTS = { showRightHullShotFx: false }` в `src/ui/mergePopup.js`, опция передаётся только в `MergePreviewRenderer.render(...)` из merge popup.
+- Локальное условие удаления FX: `PREVIEW_UPDATE_OPTS = { disableRightHullShotFx: true }` и `PREVIEW_RENDER_OPTS = { showRightHullShotFx: false }` в `src/ui/mergePopup.js`; опции передаются только в preview model/renderer из merge popup.
 - Правило: отключён только right-side hull shot FX (`tankIndex === 1`) в preview-рендере pop-up; пушечная стрельба/SFX и остальные loop FX pop-up не меняются.
 
 ### QA (ручной)

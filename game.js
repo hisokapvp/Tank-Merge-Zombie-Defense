@@ -6524,6 +6524,15 @@ function stopAndResetSessionToBigMenu(){
     localStorage.removeItem('progress');
   } catch (e) {}
 
+  if (ctx && canvas) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (typeof window !== 'undefined' && window.location && typeof window.location.reload === 'function') {
+    window.location.reload();
+    return;
+  }
+
   resetGameState({ reason: 'reset' });
   meta.lastSeenAt = null;
   setMenuOpen(false);

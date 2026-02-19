@@ -5,27 +5,27 @@
 	'use strict';
 
 	function drawShots(ctx, model, showA, showB, showR) {
-		for (var i = 0; i < model.shots.length; i++) {
-			var shot = model.shots[i];
-			if (!shot.active) continue;
-			if (shot.tankIndex === 0 && !showA) continue;
-			if (shot.tankIndex === 1 && !showB) continue;
-			if (shot.tankIndex === 2 && !showR) continue;
-			var alpha = Math.max(0, shot.life / shot.maxLife);
-			ctx.save();
-			ctx.globalAlpha = alpha;
-			ctx.strokeStyle = 'rgba(255,220,120,0.9)';
-			ctx.lineWidth = 1.5;
-			ctx.beginPath();
-			ctx.moveTo(shot.x, shot.y);
-			ctx.lineTo(shot.x + shot.dx * 16, shot.y + shot.dy * 16);
-			ctx.stroke();
-			ctx.fillStyle = 'rgba(255,255,200,0.9)';
-			ctx.beginPath();
-			ctx.arc(shot.x, shot.y, 2 + 3 * alpha, 0, Math.PI * 2);
-			ctx.fill();
-			ctx.restore();
-		}
+		// for (var i = 0; i < model.shots.length; i++) {
+		// 	var shot = model.shots[i];
+		// 	if (!shot.active) continue;
+		// 	if (shot.tankIndex === 0 && !showA) continue;
+		// 	if (shot.tankIndex === 1 && !showB) continue;
+		// 	if (shot.tankIndex === 2 && !showR) continue;
+		// 	var alpha = Math.max(0, shot.life / shot.maxLife);
+		// 	ctx.save();
+		// 	ctx.globalAlpha = alpha;
+		// 	ctx.strokeStyle = 'rgba(255,220,120,0.9)';
+		// 	ctx.lineWidth = 1.5;
+		// 	ctx.beginPath();
+		// 	ctx.moveTo(shot.x, shot.y);
+		// 	ctx.lineTo(shot.x + shot.dx * 16, shot.y + shot.dy * 16);
+		// 	ctx.stroke();
+		// 	ctx.fillStyle = 'rgba(255,255,200,0.9)';
+		// 	ctx.beginPath();
+		// 	ctx.arc(shot.x, shot.y, 2 + 3 * alpha, 0, Math.PI * 2);
+		// 	ctx.fill();
+		// 	ctx.restore();
+		// }
 	}
 
 	function render(ctx, model, state, phase, opts) {
