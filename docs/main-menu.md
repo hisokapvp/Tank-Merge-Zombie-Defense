@@ -19,6 +19,8 @@
    - Открывает простую вложенную панель со слайдерами SFX/Music.
 4. `#bigMenuLanguage` — **Язык**
    - Открывает простую вложенную панель выбора `РУ/EN`.
+   - Выбор языка вызывает глобальный setter `setLanguage(...)` и обновляет видимые тексты big menu в рантайме без reload.
+   - Источник истины языка — `localStorage['lang']`.
 5. `#bigMenuFeedback` — **Обратная связь**
    - Пробует программно кликнуть `#feedbackBtn` (если существует), иначе вызывает `Game.FeedbackWidget.open()`.
 6. `#bigMenuDevs` — **Devs**
@@ -34,6 +36,12 @@
 - Если сохранение есть:
   - кнопка `#bigMenuLoad` активна;
   - подсказка скрыта.
+
+## Язык и порядок инициализации
+
+- Ключ языка: `localStorage['lang']`.
+- Порядок init для big menu: `прочитать lang -> setLanguage(lang|default) -> renderBigMenuTexts() -> показать overlay`.
+- Быстрое переключение `РУ/EN` поддерживается через единый рендер всех видимых текстов big menu (без смешивания строк из разных языков).
 
 ## In-session small menu (`#menuOverlay`)
 

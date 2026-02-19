@@ -12,7 +12,7 @@
 - Тюнинг зазоров ангара/трека/забора → `src/config/layoutTuning.js` + `docs/ai/SYSTEMS/render.md`
 - Input/drag-drop/hit-test → `docs/ai/SYSTEMS/input.md`
 - UI/modals/i18n/a11y → `docs/ai/SYSTEMS/ui.md`
-- Main menu gating (big start menu блокирует boot/loop до выбора `Новая игра`/`Загрузить`; `Загрузить` доступна при валидном сохранении) → `docs/ai/SYSTEMS/ui.md` + `docs/main-menu.md`
+- Main menu gating + language source of truth (big start menu блокирует boot/loop до выбора `Новая игра`/`Загрузить`; `Загрузить` доступна при валидном сохранении; язык читается из `localStorage['lang']`, применяется глобально и live-обновляет big menu) → `docs/ai/SYSTEMS/ui.md` + `docs/main-menu.md`
 - Main menu feedback (`#menuFeedback` -> `Game.FeedbackWidget.open()`) + feedback i18n keys (`feedback*`) → `docs/ai/SYSTEMS/ui.md`
 - In-session small menu (`#menuOverlay`): removed language switch, `Сохранить` (10 name-only slots in `saveSlotsMeta_v1`), `Выход` (confirm + runtime reset without reload, remove `progress` only) → `docs/ai/SYSTEMS/ui.md` + `docs/ai/SYSTEMS/save.md` + `docs/main-menu.md`
 - Crate reward spawn policy (reward всегда в `crateSlotId`, без fallback в другой слот; race-safe skip with log) → `game.js` + `docs/ai/SYSTEMS/ui.md`
@@ -22,6 +22,7 @@
 - Баланс боя/спавн/экономика/прогресс → `docs/ai/SYSTEMS/combat.md`
 - Supercomputer (config/state machine/уровень) → `docs/supercomputer.md` + `docs/ai/SYSTEMS/combat.md` + `docs/ai/SYSTEMS/render.md`
 - Achievements/progress (`state.stats` counters, creator_* purchases, engineer_* merges; bulk-buy + auto-merge tiers) → `docs/ai/SYSTEMS/achievements.md` + `docs/achievements.md`
+- Achievements reward copy (`creator_*`/`engineer_*`) берётся из i18n (`src/i18n/ru.json`, `src/i18n/en.json`); обновлены формулировки bulk-create/auto-merge reward → `docs/ai/SYSTEMS/achievements.md`
 - Achievements modal UI (title-only default, `+` collapse, single-open) → `docs/ai/SYSTEMS/ui.md` + `docs/achievements-ui.md`
 - Zombie AI state machine / target selector (`supercomputer` приоритет, `fence` по пути) → `docs/zombie-ai.md` + `docs/ai/SYSTEMS/combat.md`
 - Zombie movement collision policy (коллизия только с целым fence и `decor.isWall`; вход через брич своей стороны (side-lock); после брича — прямое движение к supercomputer без внутреннего радиального clamp) → `docs/ai/SYSTEMS/combat.md`

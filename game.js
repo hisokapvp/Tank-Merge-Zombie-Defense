@@ -1221,6 +1221,7 @@ function applyTranslations(){
   if (langSwitch){
     langSwitch.setAttribute('aria-label', t('menuLanguage'));
   }
+  renderBigMenuTexts();
   updateTalentUI();
   updateLevelModal();
   updateDamagePointsUI();
@@ -5867,17 +5868,76 @@ function updateBigMenuVolumeState(){
   if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${Math.round(clamp(settings.musicVolume ?? 0.6, 0, 1) * 100)}%`;
 }
 
+function renderBigMenuTexts(){
+  if (!ui.bigMenuOverlay) return;
+
+  const hasSave = !!getSavedProgress();
+  const noSaveText = t('bigMenuNoSave');
+
+  const bigMenuTitle = document.getElementById('bigMenuTitle');
+  if (bigMenuTitle) bigMenuTitle.textContent = t('menuTitle');
+
+  const bigMenuActions = ui.bigMenuOverlay.querySelector('.bigMenuActions');
+  if (bigMenuActions) bigMenuActions.setAttribute('aria-label', t('menuSubtitle'));
+
+  if (ui.bigMenuNew) ui.bigMenuNew.textContent = t('menuNew');
+  if (ui.bigMenuLoad) ui.bigMenuLoad.textContent = t('bigMenuLoad');
+  if (ui.bigMenuSound) ui.bigMenuSound.textContent = t('bigMenuSound');
+  if (ui.bigMenuLanguage) ui.bigMenuLanguage.textContent = t('menuLanguage');
+  if (ui.bigMenuFeedback) ui.bigMenuFeedback.textContent = t('menuFeedback');
+  if (ui.bigMenuDevs) ui.bigMenuDevs.textContent = t('bigMenuDevs');
+
+  if (ui.bigMenuLoadHint) {
+    ui.bigMenuLoadHint.textContent = noSaveText;
+  }
+  if (ui.bigMenuLoad) {
+    if (hasSave) ui.bigMenuLoad.removeAttribute('title');
+    else ui.bigMenuLoad.setAttribute('title', noSaveText);
+  }
+
+  const soundTitle = ui.bigMenuOverlay.querySelector('#bigMenuSoundPanel .bigMenuSubpanelTitle');
+  if (soundTitle) soundTitle.textContent = t('bigMenuSound');
+  const soundLabels = ui.bigMenuOverlay.querySelectorAll('#bigMenuSoundPanel .bigMenuSubpanelRow > span:first-child');
+  if (soundLabels[0]) soundLabels[0].textContent = t('bigMenuSfx');
+  if (soundLabels[1]) soundLabels[1].textContent = t('bigMenuMusic');
+
+  const languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
+  if (languageTitle) languageTitle.textContent = t('menuLanguage');
+
+  const devsTitle = ui.bigMenuOverlay.querySelector('#bigMenuDevsPanel .bigMenuSubpanelTitle');
+  if (devsTitle) devsTitle.textContent = t('bigMenuDevs');
+  const devsText = ui.bigMenuOverlay.querySelector('#bigMenuDevsPanel .bigMenuDevsText');
+  if (devsText) devsText.innerHTML = t('bigMenuDevsText');
+
+  if (ui.bigMenuLangRu && ui.bigMenuLangEn) {
+    const lang = getCurrentLang();
+    ui.bigMenuLangRu.classList.toggle('active', lang === 'ru');
+    ui.bigMenuLangEn.classList.toggle('active', lang === 'en');
+    ui.bigMenuLangRu.setAttribute('aria-pressed', (lang === 'ru').toString());
+    ui.bigMenuLangEn.setAttribute('aria-pressed', (lang === 'en').toString());
+  }
+}
+
 function updateBigMenuLoadState(){
   const hasSave = !!getSavedProgress();
   if (ui.bigMenuLoad) {
     ui.bigMenuLoad.disabled = !hasSave;
     if (hasSave) ui.bigMenuLoad.removeAttribute('title');
-    else ui.bigMenuLoad.setAttribute('title', 'Нет сохранения');
+    else ui.bigMenuLoad.setAttribute('title', t('bigMenuNoSave'));
   }
   if (ui.bigMenuLoadHint) {
+    ui.bigMenuLoadHint.textContent = t('bigMenuNoSave');
     ui.bigMenuLoadHint.classList.toggle('bigMenuLoadHintVisible', !hasSave);
     ui.bigMenuLoadHint.setAttribute('aria-hidden', hasSave ? 'true' : 'false');
   }
+}
+
+function applyBigMenuLanguage(lang){
+  setLanguage(lang);
+  try {
+    localStorage.setItem('lang', getCurrentLang());
+  } catch (e) {}
+  renderBigMenuTexts();
 }
 
 function setBigMenuActionButtonsDisabled(disabled){
@@ -5989,7 +6049,8 @@ function initBigMainMenu(){
   }
   loadSettings();
   const savedLang = localStorage.getItem('lang');
-  if (savedLang) setLanguage(savedLang);
+  setLanguage(savedLang || getCurrentLang());
+  renderBigMenuTexts();
   updateBigMenuVolumeState();
   updateBigMenuLoadState();
   setBigMenuOpen(true);
@@ -6024,8 +6085,8 @@ function initBigMainMenu(){
       saveSettings();
     });
   }
-  if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', () => setLanguage('ru'));
-  if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => setLanguage('en'));
+  if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', () => applyBigMenuLanguage('ru'));
+  if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => applyBigMenuLanguage('en'));
 }
 
 function spawnInitialTanksLvl1(targetState, count = 2){

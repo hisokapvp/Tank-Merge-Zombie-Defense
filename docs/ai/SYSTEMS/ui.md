@@ -22,6 +22,8 @@
 - `boot()` стартует только после выбора `Новая игра` (`#bigMenuNew`) или `Загрузить` (`#bigMenuLoad`).
 - После `await boot()` in-session меню принудительно закрывается через `setMenuOpen(false)`, чтобы сессия начиналась сразу в игре.
 - Big menu и in-session menu — разные контуры UI: `#bigMenuOverlay` для старта, `#menuOverlay` (gear/ESC) для паузы в ходе сессии.
+- Язык для big menu/in-game берётся из `localStorage['lang']` через общий `setLanguage(...)`; это же значение считается source of truth.
+- Порядок инициализации big menu: `прочитать lang -> применить setLanguage -> отрендерить тексты big menu -> показать overlay`.
 
 - Кнопка `Продолжить` в `#menuOverlay` активна для любого валидного сохранения.
 - Если сохранения нет, кнопка `Продолжить` остаётся disabled.
@@ -32,6 +34,12 @@
 - Источник сохранения: `localStorage['progress']` (через `getSavedProgress()`/Storage API).
 - Если сохранения нет: `#bigMenuLoad` disabled, подсказка и `title` содержат ровно текст `Нет сохранения`.
 - Если сохранение есть: `#bigMenuLoad` enabled, подсказка скрыта.
+
+### Big menu: language live-update
+
+- Переключатель языка (`#bigMenuLangRu`/`#bigMenuLangEn`) вызывает глобальный `setLanguage(...)`.
+- После смены языка big menu обновляется сразу (единый ререндер видимых текстов), без page reload.
+- Быстрые переключения `RU <-> EN` не должны оставлять mixed строки: ререндер заполняет весь видимый набор текстовых нод.
 
 ## Main menu: Feedback entrypoint
 
@@ -128,6 +136,11 @@
 - RU: `Древо улучшений`, `Очки улучшений`, `Сбросить улучшения`.
 - EN: `Upgrade Tree`, `Upgrade points`, `Reset upgrades`.
 - Ключи: `talentsBtn`, `supercomputerTalentsBtn`, `talentTreeTitle`, `talentPoints`, `levelModalTalent`, `talentResetAll`, `talentResetModalText`.
+
+## i18n: achievement rewards
+
+- Формулировки наград creator/engineer (`bulk-create`/`semi-auto merge`) задаются только в `src/i18n/ru.json` и `src/i18n/en.json`.
+- Тексты наград обновлены; UI достижений должен брать их из i18n, без хардкода в runtime.
 
 ### Вкладка «Стены» (минимально функциональная)
 
