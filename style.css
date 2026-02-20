@@ -1525,6 +1525,64 @@ body.menu-open .stageUi .hudItem{
 .scTabPanel[hidden]{
   display:none;
 }
+.scGunsTable{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.scGunsTable__head,
+.scGunsTable__row{
+  display:grid;
+  grid-template-columns: 84px 48px 1fr 1fr 120px 200px;
+  gap:8px;
+  align-items:center;
+}
+.scGunsTable__head{
+  font-size:12px;
+  color:var(--muted);
+  padding:4px 8px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+}
+.scGunsTable__rows{
+  max-height:44vh;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+}
+.scGunsTable__row{
+  padding:6px 8px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.02);
+}
+.scGunsTable__row:nth-child(even){
+  background:rgba(255,255,255,.04);
+}
+.scGunsTable__cell{
+  font-size:12px;
+}
+.scGunsTable__cell_level,
+.scGunsTable__cell_upgrade{
+  text-align:center;
+}
+.scGunsTable__cell_actions{
+  display:flex;
+  gap:6px;
+  justify-content:flex-end;
+}
+.scGunsActionBtn{
+  min-height:28px;
+  padding:4px 8px;
+}
+.scGunsTable__sprite{
+  width:40px;
+  height:24px;
+  object-fit:contain;
+  image-rendering:pixelated;
+}
+.scGunsTable__spriteFallback{
+  color:var(--muted);
+  font-size:11px;
+}
 .talentTreeBody{
   padding:10px 14px 14px;
 }

@@ -60,6 +60,7 @@
         talentsApplied: [],
         talentsPending: [],
         activeCooldowns: [0, 0, 0],
+        cannonUpgradesApplied: Array(maxLevel).fill(0),
         mods: null,
         modsDirty: true,
         eventShown40: false,

@@ -54,3 +54,12 @@
 - Load (`big menu Load` и `small menu Load`) использует тот же список 10 статичных слотов, пустые слоты disabled.
 - Autosave в слот `10` (`index 9`) выполняется только при входе суперкомпьютера в critical-режим.
 - Ошибка autosave не блокирует critical flow: только warning/toast, runtime продолжается.
+
+## Cannon upgrades state
+- Постоянное состояние апгрейдов орудий хранится в `state.player.cannonUpgradesApplied`.
+- Формат: массив длиной `60`, индекс `i` соответствует уровню танка `L=i+1`, значение — число применённых улучшений (`>=0`).
+- Поле сериализуется в слотовый payload через `player` и восстанавливается при `loadSlot`/`restoreFullState`.
+- Backward compatibility:
+	- для старых save без поля выполняется fallback на `Array(60).fill(0)`;
+	- игра не падает при отсутствии поля, улучшения считаются нулевыми.
+- `pending`-улучшения **не сохраняются**: это только UI-состояние внутри открытого `supercomputerMenu`.

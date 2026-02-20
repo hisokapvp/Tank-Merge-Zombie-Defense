@@ -71,6 +71,24 @@
 - Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов; для `#modsTankWallOverlay` это делается через нулевые боковые padding у panel и явные `margin-left/right` для прямых дочерних блоков (`title`, `scTabPanels`, footer-actions), без negative margin у `.scTabs`.
 - Проверка: открыть `Модификации танков и стен`, убедиться, что у divider нет видимых зазоров слева/справа относительно внутренней рамки.
 
+## Supercomputer: таб `Орудия`
+- Реализация: `src/ui/supercomputerMenu.js`, панель `#modsTankWallPanelGuns`.
+- Таблица рендерит 60 строк (`1..60`) и 6 колонок:
+	- sprite `cannon.src` (по уровню танка, fallback-текст при отсутствии),
+	- уровень `L`,
+	- `attackSpeed` (базовое / текущее),
+	- `baseDamage` (базовое / текущее),
+	- уровень улучшения (`applied` и `+pending`),
+	- действия `+`, `-`, `Улучшить`.
+- `pendingUpgradesByLevel` — локальное UI-состояние (живет только пока открыт supercomputer menu, сбрасывается при полном закрытии).
+- `reservedDamagePoints` считается как сумма стоимости всех pending-шагов по всем уровням с учётом текущего `applied`.
+- Кнопка `+` увеличивает pending только если `availableDamagePoints - reservedDamagePoints >= nextStepCost`.
+- Кнопка `-` уменьшает pending до нуля и освобождает reserve.
+- Кнопка `Улучшить`:
+	- disabled при `pending=0`;
+	- при `pending>0` повторно валидирует доступные очки,
+	- списывает очки, применяет апгрейд в state и сбрасывает pending для выбранного уровня.
+
 ## Merge popup (новый уровень танка)
 - Точка входа pop-up: `src/ui/mergePopup.js` (`Game.MergePopup.show(level)`), preview/render: `src/ui/mergePreview/mergePreviewModel.js` + `src/ui/mergePreview/mergePreviewRenderer.js`.
 - Локальное условие удаления FX: `PREVIEW_UPDATE_OPTS = { disableRightHullShotFx: true }` и `PREVIEW_RENDER_OPTS = { showRightHullShotFx: false }` в `src/ui/mergePopup.js`; опции передаются только в preview model/renderer из merge popup.

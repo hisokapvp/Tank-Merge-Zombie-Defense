@@ -184,6 +184,7 @@ const ui = {
 };
 
 const MAX_TANK_LEVEL = 60;
+const CANNON_UPGRADES_LEVELS = 60;
 const ProgressionApi = GameApi?.Progression ?? null;
 function computePowerTier(computerLevel){
   if (ProgressionApi && ProgressionApi.computePowerTier) {
@@ -196,6 +197,92 @@ function computePowerTier(computerLevel){
   if (lvl < 40) return 3;
   if (lvl < 50) return 4;
   return 5;
+}
+
+function createFallbackCannonUpgrades(levels){
+  const totalLevels = Number.isFinite(levels) ? Math.max(1, Math.floor(levels)) : CANNON_UPGRADES_LEVELS;
+  const fallback = [];
+  for (let i = 0; i < totalLevels; i++) {
+    const level = i + 1;
+    const costBase = 2 + Math.floor(i * 0.5);
+    const costStep = 1 + Math.floor(i * 0.33);
+    const damageMulPerUpgrade = Number((0.01 + i * 0.00035).toFixed(5));
+    const attackSpeedMulPerUpgrade = Number((0.008 + i * 0.00025).toFixed(5));
+    fallback.push([level, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]);
+  }
+  return fallback;
+}
+
+function sanitizeCannonUpgradeRow(row, index){
+  if (!Array.isArray(row) || row.length < 5) return null;
+  const tankLevel = Number(row[0]);
+  const costBase = Number(row[1]);
+  const costStep = Number(row[2]);
+  const damageMulPerUpgrade = Number(row[3]);
+  const attackSpeedMulPerUpgrade = Number(row[4]);
+  if (!Number.isFinite(tankLevel) || tankLevel !== index + 1) return null;
+  if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return null;
+  if (!Number.isFinite(damageMulPerUpgrade) || !Number.isFinite(attackSpeedMulPerUpgrade)) return null;
+  return [
+    tankLevel,
+    Math.max(0, Math.floor(costBase)),
+    Math.max(0, Math.floor(costStep)),
+    Math.max(0, damageMulPerUpgrade),
+    Math.max(0, attackSpeedMulPerUpgrade),
+  ];
+}
+
+function normalizeCannonUpgradesConfig(raw){
+  if (!Array.isArray(raw) || raw.length !== CANNON_UPGRADES_LEVELS) return null;
+  const normalized = [];
+  for (let i = 0; i < CANNON_UPGRADES_LEVELS; i++) {
+    const row = sanitizeCannonUpgradeRow(raw[i], i);
+    if (!row) return null;
+    normalized.push(row);
+  }
+  return normalized;
+}
+
+let CannonUpgradesBalance = createFallbackCannonUpgrades(CANNON_UPGRADES_LEVELS);
+
+function getCannonUpgradeConfig(){
+  return Array.isArray(CannonUpgradesBalance) ? CannonUpgradesBalance : createFallbackCannonUpgrades(CANNON_UPGRADES_LEVELS);
+}
+
+function getCannonUpgradeRow(level){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
+  const cfg = getCannonUpgradeConfig();
+  return cfg[lvl - 1] || null;
+}
+
+function normalizeAppliedCannonUpgrade(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
+function ensureCannonUpgradesAppliedState(){
+  if (!state.player || typeof state.player !== 'object') {
+    state.player = {};
+  }
+  const source = Array.isArray(state.player.cannonUpgradesApplied) ? state.player.cannonUpgradesApplied : [];
+  if (source.length !== CANNON_UPGRADES_LEVELS) {
+    state.player.cannonUpgradesApplied = Array(CANNON_UPGRADES_LEVELS).fill(0);
+    for (let i = 0; i < Math.min(source.length, CANNON_UPGRADES_LEVELS); i++) {
+      state.player.cannonUpgradesApplied[i] = normalizeAppliedCannonUpgrade(source[i]);
+    }
+    return state.player.cannonUpgradesApplied;
+  }
+  state.player.cannonUpgradesApplied = source;
+  return source;
+}
+
+function getAppliedCannonUpgradeLevel(level){
+  const applied = ensureCannonUpgradesAppliedState();
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
+  const idx = lvl - 1;
+  const value = normalizeAppliedCannonUpgrade(applied[idx]);
+  if (applied[idx] !== value) applied[idx] = value;
+  return value;
 }
 
 function refreshTanksPowerTier(){
@@ -324,6 +411,8 @@ const BASE_BAL = {
 
 // --- Balance config (loaded from assets/balance.json) ---
 let BalanceConfig = { zombie: {}, zombieOverrides: {}, tank: {}, tankOverrides: {} };
+GameApi.Balance = GameApi.Balance || {};
+GameApi.Balance.CannonUpgrades = getCannonUpgradeConfig();
 
 function getZombieBalanceMul(typeId, key) {
   const base = Number.isFinite(BalanceConfig.zombie?.[key]) ? BalanceConfig.zombie[key] : 1;
@@ -334,8 +423,17 @@ function getZombieBalanceMul(typeId, key) {
 function getTankBalanceMul(level, key) {
   const base = Number.isFinite(BalanceConfig.tank?.[key]) ? BalanceConfig.tank[key] : 1;
   const over = BalanceConfig.tankOverrides?.['level_' + level];
-  if (over && Number.isFinite(over[key])) return over[key];
-  return base;
+  const baseMul = over && Number.isFinite(over[key]) ? over[key] : base;
+  if (key !== 'attackDamageMul' && key !== 'attackSpeedMul') {
+    return baseMul;
+  }
+  const row = getCannonUpgradeRow(level);
+  if (!row) return baseMul;
+  const applied = getAppliedCannonUpgradeLevel(level);
+  if (applied <= 0) return baseMul;
+  const perUpgradeMul = key === 'attackDamageMul' ? Number(row[3]) : Number(row[4]);
+  if (!Number.isFinite(perUpgradeMul) || perUpgradeMul <= 0) return baseMul;
+  return baseMul * (1 + applied * perUpgradeMul);
 }
 
 const compact = true;
@@ -438,6 +536,7 @@ function createInitialState(options){
       talentsApplied: [],
       talentsPending: [],
       activeCooldowns: [0, 0, 0],
+      cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
       mods: null,
       modsDirty: true,
       eventShown40: false,
@@ -485,6 +584,7 @@ function createInitialState(options){
 
 let state = createInitialState();
 let meta = { lastSeenAt: null };
+ensureCannonUpgradesAppliedState();
 
 function normalizeTotalDamageDealtRaw(value){
   if (!Number.isFinite(value)) return 0;
@@ -514,6 +614,47 @@ function getAvailableDamagePoints(){
 
 function getDamagePoints(){
   return getAvailableDamagePoints();
+}
+
+function getCannonUpgradeStepCost(level, appliedIndex){
+  const row = getCannonUpgradeRow(level);
+  if (!row) return 0;
+  const costBase = Number(row[1]);
+  const costStep = Number(row[2]);
+  const idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
+  if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return 0;
+  return Math.max(0, Math.floor(costBase + costStep * idx));
+}
+
+function getCannonUpgradeTotalCost(level, pendingCount){
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return 0;
+  const applied = getAppliedCannonUpgradeLevel(level);
+  let total = 0;
+  for (let k = 0; k < count; k++) {
+    total += getCannonUpgradeStepCost(level, applied + k);
+  }
+  return total;
+}
+
+function applyCannonUpgrade(level, pendingCount){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return { ok: false, error: 'no_pending' };
+  const totalCost = getCannonUpgradeTotalCost(lvl, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
+
+  const applied = ensureCannonUpgradesAppliedState();
+  applied[lvl - 1] = normalizeAppliedCannonUpgrade(applied[lvl - 1]) + count;
+  state.damagePointsSpent = ensureDamagePointsSpentState() + totalCost;
+  state.player.modsDirty = true;
+  updateDamagePointsUI();
+  return {
+    ok: true,
+    totalCost: totalCost,
+    appliedLevel: applied[lvl - 1],
+  };
 }
 
 function updateDamagePointsUI(){
@@ -3742,6 +3883,7 @@ function ensureTalentState(){
   if (!Array.isArray(p.activeCooldowns) || p.activeCooldowns.length !== 3){
     p.activeCooldowns = [0, 0, 0];
   }
+  ensureCannonUpgradesAppliedState();
   p.modsDirty = true;
 }
 
@@ -3763,6 +3905,7 @@ function saveProgress(){
       talentsApplied: p.talentsApplied,
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
+      cannonUpgradesApplied: ensureCannonUpgradesAppliedState(),
       eventShown40: sc.eventShown40,
       eventShown50: sc.eventShown50,
       eventShown60: sc.eventShown60,
@@ -3807,6 +3950,7 @@ function restoreFullState(saved){
     Object.assign(getComputerState(), saved.supercomputer);
   }
   if (saved.player) Object.assign(state.player, saved.player);
+  ensureCannonUpgradesAppliedState();
   if (!saved.supercomputer) {
     const sc = getComputerState();
     if (Number.isFinite(saved.computerLevel)) sc.computerLevel = Math.max(1, Math.floor(saved.computerLevel));
@@ -3923,6 +4067,8 @@ function applySavedProgress(data){
   if (Array.isArray(playerData.talentsApplied)) state.player.talentsApplied = playerData.talentsApplied;
   if (Array.isArray(playerData.talentsPending)) state.player.talentsPending = playerData.talentsPending;
   if (Array.isArray(playerData.activeCooldowns)) state.player.activeCooldowns = playerData.activeCooldowns;
+  if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
+  ensureCannonUpgradesAppliedState();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(getComputerState(), SupercomputerSprites.config);
   }
@@ -6858,6 +7004,7 @@ function resetGameState(options){
   }
   ensureDamageProgressState();
   ensureDamagePointsSpentState();
+  ensureCannonUpgradesAppliedState();
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();
@@ -7693,6 +7840,10 @@ function getSupercomputerMenuController(){
       setMenuPauseSource('supercomputer', !!open);
     },
     getDamagePoints: getDamagePoints,
+    getAppliedCannonUpgradeLevel: getAppliedCannonUpgradeLevel,
+    getCannonUpgradeStepCost: getCannonUpgradeStepCost,
+    getCannonUpgradeConfig: getCannonUpgradeConfig,
+    applyCannonUpgrade: applyCannonUpgrade,
     getFenceStats: getFenceStats,
     upgradeFence: tryUpgradeFenceLevel,
     translate: t,
@@ -10170,6 +10321,22 @@ async function boot(){
         };
       }
     } catch (e) { console.warn('balance.json load failed:', e); }
+
+    try {
+      const cannonRes = await fetch('assets/balance/cannonUpgrades.json', { cache: 'no-store' });
+      if (!cannonRes.ok) throw new Error('HTTP ' + cannonRes.status);
+      const cannonData = await cannonRes.json();
+      const normalizedCannon = normalizeCannonUpgradesConfig(cannonData);
+      if (!normalizedCannon) throw new Error('validation_failed');
+      CannonUpgradesBalance = normalizedCannon;
+      GameApi.Balance = GameApi.Balance || {};
+      GameApi.Balance.CannonUpgrades = CannonUpgradesBalance;
+    } catch (e) {
+      CannonUpgradesBalance = createFallbackCannonUpgrades(CANNON_UPGRADES_LEVELS);
+      GameApi.Balance = GameApi.Balance || {};
+      GameApi.Balance.CannonUpgrades = CannonUpgradesBalance;
+      console.warn('[Balance] using fallback CannonUpgrades:', e);
+    }
 
     await GroundSprites.load().catch(function () {});
     rebuildGroundLayer();

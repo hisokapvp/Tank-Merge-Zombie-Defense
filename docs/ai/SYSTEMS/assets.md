@@ -11,3 +11,21 @@
 - Сохранять обратную совместимость полей для загрузки старых сейвов.
 - Для визуальных изменений проверять соответствующий loader/renderer в `src/render/*`.
 - Для `assets/credits.json` учитываются поля элемента: `name`, `role_ru`, `role_en`.
+
+## `assets/balance/cannonUpgrades.json`
+- Формат: массив из **60** строк по уровням танка `1..60`.
+- Формат строки: `[tankLevel, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]`.
+- Ограничения валидации runtime:
+	- длина массива строго `60`;
+	- `tankLevel` строго по порядку `1..60`;
+	- все значения числовые (`Number.isFinite`), без `NaN`;
+	- при ошибке чтения/валидации используется fallback-конфиг и лог `using fallback CannonUpgrades`.
+- Формула стоимости шага улучшения уровня `L`:
+	- пусть `u0` — уже применённые улучшения на уровне,
+	- стоимость шага `k` (где `k` начинается с `1`) равна:
+		- `cost(k) = costBase(L) + costStep(L) * (u0 + k - 1)`.
+- Формула общей стоимости применения `pending` шагов:
+	- `total = Σ cost(k), k=1..pending`.
+- Формула эффекта в боёвке для уровня `L`:
+	- `attackDamageMul_final = attackDamageMul_base * (1 + applied(L) * damageMulPerUpgrade(L))`;
+	- `attackSpeedMul_final = attackSpeedMul_base * (1 + applied(L) * attackSpeedMulPerUpgrade(L))`.

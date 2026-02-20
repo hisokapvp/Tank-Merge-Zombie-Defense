@@ -42,6 +42,11 @@
     return 'Слот ' + (index + 1);
   }
 
+  function getSlotName(slotMeta, index) {
+    var name = slotMeta && typeof slotMeta === 'object' ? slotMeta.name : '';
+    return sanitizeSlotName(index, name);
+  }
+
   function sanitizeSlotName(index, name) {
     if (index === AUTO_SLOT_INDEX) return AUTO_SLOT_NAME;
     var text = typeof name === 'string' ? name : '';
