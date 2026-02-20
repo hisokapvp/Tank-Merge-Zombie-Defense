@@ -27,6 +27,15 @@ const root = path.resolve(__dirname, '../..');
 const gamePath = path.join(root, 'game.js');
 const content = fs.readFileSync(gamePath, 'utf8');
 
+global.window = global;
+global.Game = { Config: { LayoutTuning: {} } };
+global.balScale = 1;
+global.center = { x: 500, y: 500 };
+global.getSideByPosition = () => 'right';
+global.getActiveBreachAtPoint = () => null;
+global.getFenceInnerLimit = () => 1000;
+global.getFenceSegmentForTheta = () => ({ broken: false });
+
 function extractFunctionBody(name) {
   const re = new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\n\\}');
   const match = content.match(re) || content.match(new RegExp('function\\s+' + name + '\\s*\\([^)]*\\)\\s*\\{([\\s\\S]*?)\\}'));

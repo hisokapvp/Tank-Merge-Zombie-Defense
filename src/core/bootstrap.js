@@ -417,21 +417,20 @@
 
     opts.ui.menuNew && opts.ui.menuNew.addEventListener('click', function () {
       markSmallMenuButtonActive('menuNew');
+      // localStorageObj.removeItem('progress'); opts.resetGameState({ reason: 'new_game' });
       openNewConfirmView();
     });
-    opts.ui.menuNewConfirmBack && opts.ui.menuNewConfirmBack.addEventListener('click', function () {
-      openMainMenuView();
-    });
     opts.ui.menuNewConfirmStart && opts.ui.menuNewConfirmStart.addEventListener('click', function () {
-      if (typeof opts.unlockSessionStartGate === 'function') {
-        opts.unlockSessionStartGate();
-      }
+      if (typeof opts.unlockSessionStartGate === 'function') opts.unlockSessionStartGate();
       localStorageObj.removeItem('progress');
       opts.resetGameState({ reason: 'new_game' });
       opts.meta.lastSeenAt = Date.now();
       opts.saveProgress();
       openMainMenuView();
       opts.setMenuOpen(false);
+    });
+    opts.ui.menuNewConfirmBack && opts.ui.menuNewConfirmBack.addEventListener('click', function () {
+      openMainMenuView();
     });
 
     opts.ui.menuSave && opts.ui.menuSave.addEventListener('click', function () {

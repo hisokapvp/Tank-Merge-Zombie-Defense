@@ -58,7 +58,13 @@
 - Press/hover-эффекты должны быть визуальными (яркость/scale иконки), не менять якорную позицию кнопки.
 - При изменениях в unified button behavior (`.uiButtonBehavior`) обязательно сохранять исключение для HUD-кнопки суперкомпьютера.
 - `.supercomputerHudBtn` по умолчанию скрыта (`visibility:hidden`) и показывается только после первого успешного расчёта позиции в `updateSupercomputerHudButtonPosition()`; это исключает появление в `(0,0)`.
-- Для `.supercomputerHudBtn.uiButtonBehavior` запрещён transition по `transform` (оставляем `box-shadow/filter/...`), чтобы убрать визуальный «полёт» при обновлении координат.
+- Для `.supercomputerHudBtn` и `.supercomputerHudBtn.uiButtonBehavior` запрещён `transition` по `transform` и запрещён `transition: all`; допускаются только визуальные свойства (`box-shadow/filter/background-color/border-color/opacity`), чтобы убрать визуальный «полёт» при обновлении координат.
+
+## HUD: XP bar
+- Fill `#xpBar.xpFill` фиксирован: `background: #14a13d` (без gradient).
+- Empty-часть (`.xpBar`) должна оставаться серой в общем HUD-стиле (используем штатный нейтральный серый фон, без случайных цветов).
+- Анимация прогресса только через CSS transition `width` у fill-элемента в диапазоне `200–300ms`.
+- JS-обновление должно менять именно `xpBar.style.width = 'NN%'` и писать значение только при фактическом изменении процента (чтобы не перезапускать transition на каждом тике).
 
 ## Supercomputer: root tiles
 - Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).

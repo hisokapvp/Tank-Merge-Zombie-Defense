@@ -1019,6 +1019,7 @@ const SFX_CHANNELS = {
   uiClickOnDisable: 'ui',
   uiSliderPreview: 'ui',
   levelUp: 'ui',
+  mergeNewMaxLevel: 'ui',
   applyTalents: 'ui',
 };
 const UI_SLIDER_PREVIEW_THROTTLE_MS = 160;
@@ -1549,6 +1550,7 @@ const SFX_SOURCES = {
   tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
   tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
   levelUp: 'assets/sfx/level_up.ogg',
+  mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
   applyTalents: 'assets/sfx/apply_talents.ogg',
   activeAbility: 'assets/sfx/active_ability.ogg',
   thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
@@ -7597,7 +7599,7 @@ function ensureProgressUI(){
 
   const wrap = document.createElement('div');
   wrap.id = 'xpWrap';
-  wrap.className = 'xpPanel';
+  wrap.className = 'xpPanel hudPanel';
 
   wrap.innerHTML = `
     <div class="xpLabel" id="lvlText">${t('levelLabel')}: 1</div>
@@ -7618,10 +7620,12 @@ function updateProgressUI(){
 
   const need = Math.max(1, p.xpToNext);
   const pct = clamp(p.xp / need, 0, 1) * 100;
+  const pctRounded = Math.round(pct * 10) / 10;
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   lvlText.textContent = `${t('levelLabel')}: ${p.computerLevel}`;
   xpText.textContent = `${fmt(p.xp)}/${fmt(need)}`;
-  xpBar.style.width = `${pct}%`;
+  const nextWidth = `${pctRounded}%`;
+  if (xpBar.style.width !== nextWidth) xpBar.style.width = nextWidth;
 }
 
 function ensureTalentUI(){
@@ -9890,6 +9894,7 @@ function drawZombieFallback(x,y,z){
     ctx.globalAlpha = 0.22 + 0.06 * Math.sin(nowSec() * 3);
     ctx.fillStyle = 'rgba(200,80,80,.3)';
     ctx.beginPath();
+    // draw effect
     ctx.ellipse(0, 0, 14 * s, 8 * s, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,100,100,.22)';
@@ -9900,9 +9905,8 @@ function drawZombieFallback(x,y,z){
 
   if (!qualityLow && !isDying){
     // shadow
-    ctx.save();
+    ctx.save(); ctx.beginPath();
     ctx.fillStyle = 'rgba(0,0,0,.20)';
-    ctx.beginPath();
     ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();

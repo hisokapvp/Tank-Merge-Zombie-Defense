@@ -43,6 +43,10 @@ function makeDocument() {
       set(v) { this._id = v; if (v) elements[v] = this; }
     });
   }
+  Element.prototype.addEventListener = function (event, f) {
+    this._listeners = this._listeners || {};
+    this._listeners[event] = f;
+  };
   Element.prototype.appendChild = function (child) {
     this.children.push(child);
   };

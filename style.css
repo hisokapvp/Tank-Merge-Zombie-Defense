@@ -73,6 +73,12 @@ body::after{
 }
 .hudItem .k{font-size:10px;color:var(--muted)}
 .hudItem .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:12px}
+.hudPanel{
+  border:2px solid rgba(255, 184, 114, 0.14);
+  border-radius:10px;
+  background:linear-gradient(160deg, rgba(45,28,18,.92), rgba(18,12,9,.92));
+  box-shadow:0 6px 0 rgba(0,0,0,.26);
+}
 
 .layout{
   display:grid;
@@ -1011,6 +1017,7 @@ body.menu-open .stageUi .hudItem{
   pointer-events:auto;
   overflow:hidden;
   visibility:hidden;
+  transition-property:box-shadow, filter, background-color, border-color, opacity;
 }
 .supercomputerHudBtn.uiButtonBehavior{
   transition:
@@ -1028,7 +1035,6 @@ body.menu-open .stageUi .hudItem{
 }
 .supercomputerHudBtn:hover,
 .supercomputerHudBtn:active{
-  transform:none;
   box-shadow:var(--btnShadow);
 }
 .supercomputerHudBtn:hover{
@@ -1189,11 +1195,7 @@ body.menu-open .stageUi .hudItem{
   display:flex;
   align-items:center;
   gap:10px;
-  padding:8px 10px;
-  border-radius:16px;
-  background:rgba(255,255,255,.08);
-  border:2px solid rgba(0,0,0,.22);
-  box-shadow:0 8px 0 rgba(0,0,0,.16);
+  padding:6px 8px;
 }
 .xpLabel,
 .xpValue{
@@ -1205,14 +1207,16 @@ body.menu-open .stageUi .hudItem{
   width:100%;
   max-width:100%;
   height:10px;
-  background:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.14);
+  border:1px solid var(--line);
   border-radius:8px;
   overflow:hidden;
 }
 .xpFill{
   height:100%;
   width:0%;
-  background:linear-gradient(90deg,#7dffb2,#6ea8ff);
+  background:#14a13d;
+  transition:width 240ms ease;
 }
 
 .overlay{

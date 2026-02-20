@@ -19,6 +19,9 @@
 - Полный локальный прогон: `bash hooks/pre-commit` (style + все test packs).
 - Релизные проверки: `bash ci/release_checklist.sh`, `bash ops/release/build_release.sh`, `bash ops/release/post_release_checks.sh`.
 - На Windows для `bash`-скриптов используй Git Bash/WSL; `node ...` команды кроссплатформенные.
+- Если в WSL ошибка `execvpe(/bin/bash) failed`, проверь наличие bash в дистро или используй:
+  `& "C:\Program Files\Git\bin\bash.exe" -lc "./ci/run_tests.sh"` в PowerShell.
+- При написании новых тестов в `Test/*` всегда мокай глобалы (`window`, `Game`, `BAL`, `center`) для Node-окружения.
 
 ## Project Conventions
 - При функциональных изменениях обновляй `docs/ai/INDEX.md` и затронутый `docs/ai/SYSTEMS/*`.

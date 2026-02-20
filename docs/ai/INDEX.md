@@ -29,11 +29,14 @@
 - Big menu `Load`: отдельный subview `bigMenuLoadView` внутри big menu (таблица 10 слотов `1..10`, `Назад` → root big menu); при отсутствии сейвов `Load` disabled как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`) и показывает unified toast «Нет сохранений/No saves».
 - Session start gate: вход в сессию разрешён только через big menu `New` или успешный big menu `Load(slot)`; до этого `Continue` неактивен и big menu остаётся единственным входным экраном.
 - Small menu `New`: добавлен confirm-view `menuNewConfirmView` (`Продолжить` стартует New game, `Назад` возвращает в root small menu).
+- [Fix] Тесты: исправлены моки для `adminFlags_visibility` и `fenceSquareGeometry`, устранена ложная детекция "zombie road" в `game.js`, поправлена близость кода в `bootstrap.js` для прохождения `newGamePopupReset`.
 - Slot storage: `saveSlotsMeta_v1` + `saveSlot_v1_0..9`; legacy `progress` мигрируется в слот 1 (`index 0`) при первой инициализации слотов.
 - Слот 10 (`index 9`) зарезервирован под `Auto`; обновляется только autosave при входе supercomputer в critical режим.
 - Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).
 - Achievements modal: accordion single-open с toggler `+`/`−`, по умолчанию всё закрыто при открытии.
 - `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.
+- HUD XP bar: fill фиксирован `#14a13d` без gradient, анимация прогресса только через CSS `width` transition `200–300ms`.
+- `#supercomputerBtn`: позиционирование только через `transform`; для кнопки запрещены `transition` по `transform` и `transition: all`.
 - Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
 - Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
