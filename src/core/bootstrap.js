@@ -305,6 +305,7 @@
       var views = {
         main: opts.ui.menuMainView,
         exit: opts.ui.menuExitConfirmView,
+        newConfirm: opts.ui.menuNewConfirmView,
       };
       Object.keys(views).forEach(function (key) {
         var el = views[key];
@@ -397,7 +398,14 @@
       setMenuView('exit');
     }
 
+    function openNewConfirmView() {
+      setMenuView('newConfirm');
+    }
+
     opts.ui.menuContinue && opts.ui.menuContinue.addEventListener('click', function () {
+      if (typeof opts.isSessionStartUnlocked === 'function' && !opts.isSessionStartUnlocked()) {
+        return;
+      }
       markSmallMenuButtonActive('menuContinue');
       var ContinueFlow = windowObj.Game && windowObj.Game.ContinueFlow;
       if (ContinueFlow) {
@@ -409,10 +417,20 @@
 
     opts.ui.menuNew && opts.ui.menuNew.addEventListener('click', function () {
       markSmallMenuButtonActive('menuNew');
+      openNewConfirmView();
+    });
+    opts.ui.menuNewConfirmBack && opts.ui.menuNewConfirmBack.addEventListener('click', function () {
+      openMainMenuView();
+    });
+    opts.ui.menuNewConfirmStart && opts.ui.menuNewConfirmStart.addEventListener('click', function () {
+      if (typeof opts.unlockSessionStartGate === 'function') {
+        opts.unlockSessionStartGate();
+      }
       localStorageObj.removeItem('progress');
       opts.resetGameState({ reason: 'new_game' });
       opts.meta.lastSeenAt = Date.now();
       opts.saveProgress();
+      openMainMenuView();
       opts.setMenuOpen(false);
     });
 

@@ -123,8 +123,12 @@ const ui = {
   achievementToast: document.getElementById('achievementToast'),
   settingsBtn: document.getElementById('settingsBtn'),
   bigMenuOverlay: document.getElementById('bigMenuOverlay'),
+  bigMenuRootView: document.getElementById('bigMenuRootView'),
   bigMenuNew: document.getElementById('bigMenuNew'),
   bigMenuLoad: document.getElementById('bigMenuLoad'),
+  bigMenuLoadView: document.getElementById('bigMenuLoadView'),
+  bigMenuLoadRows: document.getElementById('bigMenuLoadRows'),
+  bigMenuLoadBack: document.getElementById('bigMenuLoadBack'),
   bigMenuSound: document.getElementById('bigMenuSound'),
   bigMenuLanguageWrap: document.getElementById('bigMenuLanguageWrap'),
   bigMenuLanguage: document.getElementById('bigMenuLanguage'),
@@ -159,6 +163,9 @@ const ui = {
   smallMenuSaveToast: document.getElementById('smallMenuSaveToast'),
   menuMainView: document.getElementById('menuMainView'),
   menuExitConfirmView: document.getElementById('menuExitConfirmView'),
+  menuNewConfirmView: document.getElementById('menuNewConfirmView'),
+  menuNewConfirmStart: document.getElementById('menuNewConfirmStart'),
+  menuNewConfirmBack: document.getElementById('menuNewConfirmBack'),
   menuExitConfirmLeave: document.getElementById('menuExitConfirmLeave'),
   menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
   menuSfx: document.getElementById('menuSfx'),
@@ -459,6 +466,8 @@ let bigMenuInitialized = false;
 let bigMenuStartPending = false;
 let lastActiveButtonIdBigMenu = null;
 let bootInitialMenuSubView = 'main';
+let bigMenuViewMode = 'root';
+let sessionStartGate = 'locked';
 let bigMenuLanguageOutsideListener = null;
 let creditsEscListener = null;
 let creditsDataLoaded = false;
@@ -1019,7 +1028,12 @@ let gameplayAudioFadeToken = 0;
 let pauseManager = null;
 let simulationPaused = false;
 let lastPauseReasons = { menuOpen: false, tabInactive: false };
-let menuPauseLocks = { settings: !!(state && state.ui && state.ui.menuOpen), supercomputer: false, critical: false };
+let menuPauseLocks = {
+  settings: !!(state && state.ui && state.ui.menuOpen),
+  supercomputer: false,
+  critical: false,
+  bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
+};
 let supercomputerMenuController = null;
 let criticalModalController = null;
 let achievementsModalController = null;
@@ -1139,7 +1153,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.critical);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.critical || menuPauseLocks.bigMenu);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -6316,11 +6330,13 @@ function stepParticles(dt){
 }
 
 function setMenuOpen(open){
-  if (open) syncVolumeUIFromSettings();
-  setMenuPauseSource('settings', !!open);
+  var canOpenSmallMenu = sessionStartGate === 'unlocked';
+  var shouldOpen = !!open && canOpenSmallMenu;
+  if (shouldOpen) syncVolumeUIFromSettings();
+  setMenuPauseSource('settings', shouldOpen);
   if (UIModals && typeof UIModals.setMenuOpen === 'function') {
     UIModals.setMenuOpen({
-      open,
+      open: shouldOpen,
       state,
       ui,
       a11yOpen,
@@ -6330,12 +6346,12 @@ function setMenuOpen(open){
     });
     return;
   }
-  state.ui.menuOpen = open;
-  document.body.classList.toggle('menu-open', open);
+  state.ui.menuOpen = shouldOpen;
+  document.body.classList.toggle('menu-open', shouldOpen);
   if (ui.menuOverlay){
-    ui.menuOverlay.classList.toggle('hidden', !open);
-    ui.menuOverlay.setAttribute('aria-hidden', (!open).toString());
-    if (open) a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: () => setMenuOpen(false) });
+    ui.menuOverlay.classList.toggle('hidden', !shouldOpen);
+    ui.menuOverlay.setAttribute('aria-hidden', (!shouldOpen).toString());
+    if (shouldOpen) a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: () => setMenuOpen(false) });
     else a11yClose(ui.menuOverlay);
   }
   updateMenuState();
@@ -6344,16 +6360,174 @@ function setMenuOpen(open){
 function updateMenuState(){
   if (ui.menuContinue){
     const saved = getSavedProgress();
-    ui.menuContinue.disabled = !saved;
+    ui.menuContinue.disabled = !saved || sessionStartGate !== 'unlocked';
   }
   updateMenuVolumes();
 }
 
 function setBigMenuOpen(open){
   if (!ui.bigMenuOverlay) return;
+  setMenuPauseSource('bigMenu', !!open);
   ui.bigMenuOverlay.classList.toggle('bigMenuOverlayHidden', !open);
   ui.bigMenuOverlay.setAttribute('aria-hidden', (!open).toString());
   if (open) syncVolumeUIFromSettings();
+}
+
+function isBigMenuOpen(){
+  return !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden'));
+}
+
+function setSessionStartGate(nextValue){
+  sessionStartGate = nextValue === 'unlocked' ? 'unlocked' : 'locked';
+  updateMenuState();
+}
+
+function setBigMenuView(mode){
+  bigMenuViewMode = mode === 'load' ? 'load' : 'root';
+  const rootVisible = bigMenuViewMode === 'root';
+  if (ui.bigMenuRootView && ui.bigMenuRootView.classList) {
+    ui.bigMenuRootView.classList.toggle('is-hidden', !rootVisible);
+    ui.bigMenuRootView.setAttribute('aria-hidden', (!rootVisible).toString());
+  }
+  if (ui.bigMenuLoadView && ui.bigMenuLoadView.classList) {
+    ui.bigMenuLoadView.classList.toggle('is-active', !rootVisible);
+    ui.bigMenuLoadView.setAttribute('aria-hidden', rootVisible.toString());
+  }
+}
+
+function openBigMenuRootView(){
+  closeBigMenuPanels();
+  setBigMenuView('root');
+}
+
+function openBigMenuLoadView(){
+  closeBigMenuPanels();
+  renderBigMenuLoadRows();
+  setBigMenuView('load');
+}
+
+function getBigMenuSaveMeta(){
+  const storageApi = window.Game && window.Game.Storage;
+  if (storageApi && typeof storageApi.listSlots === 'function') {
+    const list = storageApi.listSlots();
+    return {
+      slots: Array.isArray(list && list.slots) ? list.slots : [],
+      ok: !!(list && list.ok),
+    };
+  }
+  if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
+    return {
+      slots: (storageApi.loadSaveSlotsMeta() || {}).slots || [],
+      ok: true,
+    };
+  }
+  return { slots: [], ok: false };
+}
+
+function getBigMenuDefaultSlotName(index){
+  const storageApi = window.Game && window.Game.Storage;
+  if (storageApi && typeof storageApi.getDefaultSlotName === 'function') {
+    return storageApi.getDefaultSlotName(index);
+  }
+  return 'Слот ' + (index + 1);
+}
+
+function getBigMenuSlotName(slot, index){
+  const raw = slot && typeof slot === 'object' ? slot.name : '';
+  if (typeof raw !== 'string') return getBigMenuDefaultSlotName(index);
+  const text = raw.trim();
+  return text || getBigMenuDefaultSlotName(index);
+}
+
+function bigMenuSlotHasData(slot){
+  if (!slot || typeof slot !== 'object') return false;
+  if (Object.prototype.hasOwnProperty.call(slot, 'hasData')) return !!slot.hasData;
+  return Number(slot.lastSavedAt) > 0;
+}
+
+function pad2ForBigMenu(value){
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '00';
+  const intNum = Math.max(0, Math.floor(num));
+  return intNum < 10 ? '0' + intNum : String(intNum);
+}
+
+function formatDateForBigMenu(ms){
+  const timestamp = Number(ms);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return '—';
+  const date = new Date(Math.floor(timestamp));
+  if (!Number.isFinite(date.getTime())) return '—';
+  return date.getFullYear() + '-' + pad2ForBigMenu(date.getMonth() + 1) + '-' + pad2ForBigMenu(date.getDate()) + ' ' + pad2ForBigMenu(date.getHours()) + ':' + pad2ForBigMenu(date.getMinutes());
+}
+
+function renderBigMenuLoadRows(){
+  if (!ui.bigMenuLoadRows) return;
+  const meta = getBigMenuSaveMeta();
+  const slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+  ui.bigMenuLoadRows.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const slot = slots[i] || null;
+    const row = document.createElement('div');
+    row.className = 'smallMenuSaveTable__row';
+    row.setAttribute('role', 'row');
+
+    const numberCell = document.createElement('div');
+    numberCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_num';
+    numberCell.setAttribute('role', 'cell');
+    numberCell.textContent = String(i + 1);
+
+    const nameCell = document.createElement('div');
+    nameCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_name';
+    nameCell.setAttribute('role', 'cell');
+    const nameText = document.createElement('span');
+    nameText.className = 'smallMenuSaveNameText';
+    nameText.textContent = getBigMenuSlotName(slot, i);
+    nameCell.appendChild(nameText);
+
+    const dateCell = document.createElement('div');
+    dateCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_date';
+    dateCell.setAttribute('role', 'cell');
+    dateCell.textContent = formatDateForBigMenu(slot && slot.lastSavedAt);
+
+    const actionCell = document.createElement('div');
+    actionCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_action';
+    actionCell.setAttribute('role', 'cell');
+
+    const loadButton = document.createElement('button');
+    loadButton.type = 'button';
+    loadButton.className = 'btn btnSecondary uiButtonBehavior smallMenuSaveSlotBtn';
+    loadButton.setAttribute('data-big-load-slot-btn', 'true');
+    loadButton.setAttribute('data-slot-index', String(i));
+    loadButton.textContent = t('menu.load.col.action');
+    loadButton.disabled = !bigMenuSlotHasData(slot);
+
+    actionCell.appendChild(loadButton);
+
+    row.appendChild(numberCell);
+    row.appendChild(nameCell);
+    row.appendChild(dateCell);
+    row.appendChild(actionCell);
+    ui.bigMenuLoadRows.appendChild(row);
+  }
+}
+
+function parseBigMenuSlotIndexFromNode(node){
+  if (!node || typeof node.closest !== 'function') return -1;
+  const btn = node.closest('[data-big-load-slot-btn="true"]');
+  if (!btn) return -1;
+  const slotIndex = Number(btn.getAttribute('data-slot-index'));
+  if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return -1;
+  return Math.floor(slotIndex);
+}
+
+function loadSlotPayloadForBigMenu(slotIndex){
+  const storageApi = window.Game && window.Game.Storage;
+  if (!storageApi || typeof storageApi.loadSlot !== 'function') return null;
+  const loaded = storageApi.loadSlot(slotIndex);
+  if (!loaded || !loaded.ok || !loaded.payload || !Array.isArray(loaded.payload.cells)) {
+    return null;
+  }
+  return loaded.payload;
 }
 
 function getBigMenuActionButtons(){
@@ -6595,6 +6769,7 @@ function renderBigMenuTexts(){
 
   if (ui.bigMenuNew) ui.bigMenuNew.textContent = t('menuNew');
   if (ui.bigMenuLoad) ui.bigMenuLoad.textContent = t('bigMenuLoad');
+  if (ui.bigMenuLoadBack) ui.bigMenuLoadBack.textContent = t('common.back');
   if (ui.bigMenuSound) ui.bigMenuSound.textContent = t('bigMenuSound');
   if (ui.bigMenuLanguage) ui.bigMenuLanguage.textContent = t('menuLanguage');
   if (ui.bigMenuDevs) ui.bigMenuDevs.textContent = t('bigMenuDevs');
@@ -6631,6 +6806,9 @@ function updateBigMenuLoadState(){
     else ui.bigMenuLoad.setAttribute('data-disabled-reason', 'noSaves');
     if (hasSave) ui.bigMenuLoad.removeAttribute('title');
     else ui.bigMenuLoad.setAttribute('title', t('bigMenuNoSave'));
+  }
+  if (bigMenuViewMode === 'load') {
+    renderBigMenuLoadRows();
   }
 }
 
@@ -6699,6 +6877,7 @@ function stopAndResetSessionToBigMenu(){
 
   resetGameState({ reason: 'reset' });
   meta.lastSeenAt = null;
+  setSessionStartGate('locked');
   setMenuOpen(false);
   updateBigMenuLoadState();
   setBigMenuOpen(true);
@@ -6717,14 +6896,18 @@ function resumeSessionRuntime(){
 
 async function startFromBigMenu(mode){
   if (bigMenuStartPending) return;
-  if (mode === 'load' && !hasSaves()) return;
-  if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.getAttribute('aria-disabled') === 'true') return;
-  bootInitialMenuSubView = mode === 'load' ? 'load' : 'main';
+  var selectedPayload = null;
+  if (mode && typeof mode === 'object') {
+    selectedPayload = mode.payload || null;
+    mode = mode.kind;
+  }
+  if (mode !== 'new' && mode !== 'load-slot') return;
+  if (mode === 'load-slot' && (!selectedPayload || !Array.isArray(selectedPayload.cells))) return;
+  bootInitialMenuSubView = 'main';
   const wasStopped = sessionRuntimeStopped;
   bigMenuStartPending = true;
   setBigMenuActionButtonsDisabled(true);
   closeBigMenuPanels();
-  setBigMenuOpen(false);
   try {
     if (wasStopped) resumeSessionRuntime();
     await boot();
@@ -6732,17 +6915,22 @@ async function startFromBigMenu(mode){
       resetGameState({ reason: 'new_game' });
       meta.lastSeenAt = Date.now();
       saveProgress();
+    } else if (mode === 'load-slot') {
+      restoreFullState(selectedPayload);
+      meta.lastSeenAt = Date.now();
+      saveProgress();
+      updateUI();
     }
     if (wasStopped) scheduleMainLoop();
-    if (mode === 'load') {
-      setMenuOpen(true);
-    } else {
-      setMenuOpen(false);
-    }
+    setSessionStartGate('unlocked');
+    setMenuOpen(false);
+    setBigMenuOpen(false);
+    openBigMenuRootView();
   } catch (err) {
     console.error('Big menu start failed', err);
     setBigMenuOpen(true);
     updateBigMenuLoadState();
+    openBigMenuRootView();
   } finally {
     bigMenuStartPending = false;
     setBigMenuActionButtonsDisabled(false);
@@ -6760,6 +6948,8 @@ function initBigMainMenu(){
   renderBigMenuTexts();
   updateBigMenuVolumeState();
   updateBigMenuLoadState();
+  setSessionStartGate('locked');
+  openBigMenuRootView();
   setBigMenuOpen(true);
 
   if (bigMenuInitialized) return;
@@ -6770,8 +6960,27 @@ function initBigMainMenu(){
     startFromBigMenu('new');
   });
   if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => {
+    if (!hasSaves()) return;
+    if (ui.bigMenuLoad && ui.bigMenuLoad.getAttribute('aria-disabled') === 'true') return;
     markBigMenuButtonActive('bigMenuLoad');
-    startFromBigMenu('load');
+    openBigMenuLoadView();
+  });
+  if (ui.bigMenuLoadRows) ui.bigMenuLoadRows.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!target || typeof target.closest !== 'function') return;
+    const loadBtn = target.closest('[data-big-load-slot-btn="true"]');
+    if (!loadBtn || loadBtn.disabled) return;
+    const slotIndex = parseBigMenuSlotIndexFromNode(target);
+    if (slotIndex < 0) return;
+    const payload = loadSlotPayloadForBigMenu(slotIndex);
+    if (!payload) {
+      renderBigMenuLoadRows();
+      return;
+    }
+    startFromBigMenu({ kind: 'load-slot', payload: payload });
+  });
+  if (ui.bigMenuLoadBack) ui.bigMenuLoadBack.addEventListener('click', () => {
+    openBigMenuRootView();
   });
   if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => {
     markBigMenuButtonActive('bigMenuSound');
@@ -7921,6 +8130,7 @@ function isLevelModalOpen(){
 }
 
 canvas.addEventListener('pointerdown', (e)=>{
+  if (isBigMenuOpen()) return;
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
@@ -8117,7 +8327,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     documentObj: document,
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.critical) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },
@@ -10401,6 +10611,8 @@ async function boot(){
         setMenuOpen,
         stopAndResetSessionToBigMenu,
         updateBigMenuLoadState,
+        isSessionStartUnlocked: () => sessionStartGate === 'unlocked',
+        unlockSessionStartGate: () => setSessionStartGate('unlocked'),
         t,
         resetGameState,
         nowSec,

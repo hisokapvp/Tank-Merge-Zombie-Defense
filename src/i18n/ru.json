@@ -35,6 +35,8 @@
   "menuExitConfirm": "Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?",
   "menuExitConfirmLeave": "Выйти",
   "menuExitConfirmCancel": "Отмена",
+  "menuNewConfirm": "Если Вы начнёте новую игру, весь прогресс будет потерян. Уверены что хотите начать новую игру?",
+  "menuNewConfirmContinue": "Продолжить",
   "menuLanguage": "Язык",
   "bigMenuLoad": "Загрузить",
   "bigMenuSound": "Звук",

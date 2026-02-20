@@ -17,11 +17,13 @@
 
 ## Меню и confirm выхода
 - Small menu confirm выхода живёт в `menuExitConfirmView` (`index.html`), обработчики — `src/core/bootstrap.js`.
+- Small menu confirm для `New` живёт в `menuNewConfirmView` (`index.html`): `Продолжить` запускает `New game`, `Назад` возвращает в root small menu.
 - В small menu больше нет пункта для отправки отзывов; действия: `Continue`, `New`, `Save`, `Load`, `Exit`.
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
 - `stopAndResetSessionToBigMenu` приводит приложение к состоянию первого запуска через перезагрузку страницы (`window.location.reload`) после очистки transient `progress` (слотовые сохранения не затрагиваются).
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
 - Лейаут `#menuExitConfirmView .menuInlineActions`: `display:flex`, `justify-content:center`, фиксированный `gap` (12px), кнопки `Выйти/Отмена` одинаковой ширины через `clamp(...)` с mobile-override.
+- Пока `sessionStartGate=locked`, `Continue` в small menu недоступен; в сессию можно войти только через big menu `New` или успешный `Load(slot)`.
 
 ## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
@@ -46,7 +48,10 @@
 - В big menu больше нет пункта для отправки отзывов; действия: `New`, `Load`, `Sound`, `Language`, `Credits`.
 - Пункт `Credits/Создатели` открывает `creditsModal` (закрытие по `×` и `Esc`) и рендерит список участников из `assets/credits.json`.
 - Для `Load` в big menu нет постоянного текста «Нет сохранений». Доступность отражает `Game.Storage.hasAnySaves()` по фактическому наличию payload в слотах: при отсутствии сейвов ставятся `aria-disabled="true"` и `data-disabled-reason="noSaves"`, при наличии — атрибут reason убирается.
-- Big menu `Load` открывает тот же общий список слотов (Load view), что и кнопка `Load/Загрузка` в small menu.
+- Big menu `Load` открывает отдельный subview `bigMenuLoadView` внутри big menu: таблица слотов всегда 10 строк (`1..10`), колонки `№/Имя/Дата/Загрузить`, `Назад` возвращает в root big menu.
+- `Load(slot)` в big menu вызывает `Game.Storage.loadSlot(index)`; при успехе закрывает big menu, снимает gate (`sessionStartGate=unlocked`) и запускает сессию.
+- `Back` в `bigMenuLoadView` не закрывает big menu и не снимает menu lock; возвращает только на root big menu.
+- При открытом big menu gameplay всегда заблокирован (input + симуляция) через menu lock (`PauseManager` / `setMenuOpen`-источник big menu).
 
 ## HUD: supercomputer button
 - `#supercomputerBtn` позиционируется runtime-логикой через `transform: translate3d(...)`; не применять к нему layout-сдвиги (`top/left`) на active/pressed.

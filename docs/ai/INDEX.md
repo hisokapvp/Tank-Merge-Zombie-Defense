@@ -26,7 +26,9 @@
 - Small menu Save/Load views: подрежимы `smallMenuSaveView` и `smallMenuLoadView` с общим списком 10 статичных слотов (`1..10`), inline edit имени только в Save для слотов `1..9`.
 - Big menu: пункт `Devs` переименован в `Credits/Создатели` и открывает `creditsModal` со списком из `assets/credits.json`.
 - Big menu language panel: подкнопки языка рендерятся прямо под кнопкой `Язык/Language`; active состояния `Русский/Английский` зависят только от текущей локали.
-- Big menu `Load`: открывает тот же общий список слотов, что small menu `Load`; доступность вычисляется через `Game.Storage.hasAnySaves()` (по фактическому наличию slot payload), disabled реализован как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`).
+- Big menu `Load`: отдельный subview `bigMenuLoadView` внутри big menu (таблица 10 слотов `1..10`, `Назад` → root big menu); при отсутствии сейвов `Load` disabled как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`) и показывает unified toast «Нет сохранений/No saves».
+- Session start gate: вход в сессию разрешён только через big menu `New` или успешный big menu `Load(slot)`; до этого `Continue` неактивен и big menu остаётся единственным входным экраном.
+- Small menu `New`: добавлен confirm-view `menuNewConfirmView` (`Продолжить` стартует New game, `Назад` возвращает в root small menu).
 - Slot storage: `saveSlotsMeta_v1` + `saveSlot_v1_0..9`; legacy `progress` мигрируется в слот 1 (`index 0`) при первой инициализации слотов.
 - Слот 10 (`index 9`) зарезервирован под `Auto`; обновляется только autosave при входе supercomputer в critical режим.
 - Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).

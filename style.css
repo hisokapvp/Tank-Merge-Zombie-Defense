@@ -217,6 +217,9 @@ body::after{
   flex-direction:column;
   gap:10px;
 }
+.bigMenuRootView.is-hidden{
+  display:none;
+}
 .bigMenuActionWithPanel{
   position:relative;
 }
@@ -430,7 +433,8 @@ body::after{
   flex-wrap:nowrap;
   gap:12px;
 }
-#menuExitConfirmView .menuInlineActions .btn{
+#menuExitConfirmView .menuInlineActions .btn,
+#menuNewConfirmView .menuInlineActions .btn{
   width:clamp(132px, 32vw, 180px);
   min-width:132px;
 }

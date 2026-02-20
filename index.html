@@ -94,6 +94,16 @@
                   <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
                 </div>
               </div>
+
+              <div id="menuNewConfirmView" class="menuView hidden" aria-hidden="true">
+                <div class="menuRow">
+                  <div class="menuExitText" data-i18n="menuNewConfirm">Если Вы начнёте новую игру, весь прогресс будет потерян. Уверены что хотите начать новую игру?</div>
+                </div>
+                <div class="menuInlineActions">
+                  <button id="menuNewConfirmStart" class="btn btnPrimary" type="button" data-i18n="menuNewConfirmContinue">Продолжить</button>
+                  <button id="menuNewConfirmBack" class="btn btnSecondary" type="button" data-i18n="common.back">Назад</button>
+                </div>
+              </div>
             </div>
 
             <div id="smallMenuSaveView" class="smallMenuSaveView" aria-hidden="true">
@@ -336,37 +346,58 @@
   <div id="bigMenuOverlay" class="bigMenuOverlay" aria-hidden="false">
     <div class="bigMenuPanel" role="dialog" aria-modal="true" aria-labelledby="bigMenuTitle" tabindex="-1">
       <div class="bigMenuTitle" id="bigMenuTitle">Merge Tank: Zombie invasion</div>
-      <div class="bigMenuActions" aria-label="Главное меню">
-        <button id="bigMenuNew" class="btn btnSecondary" type="button">Новая игра</button>
-        <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
-        <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
-        <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
-          <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
-          <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
-            <div class="bigMenuLangActions">
-              <button id="bigMenuLangRu" class="btn btnSecondary" type="button">Русский</button>
-              <button id="bigMenuLangEn" class="btn btnSecondary" type="button">Английский</button>
+      <div id="bigMenuRootView" class="bigMenuRootView" aria-hidden="false">
+        <div class="bigMenuActions" aria-label="Главное меню">
+          <button id="bigMenuNew" class="btn btnSecondary" type="button">Новая игра</button>
+          <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
+          <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+          <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
+            <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
+            <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
+              <div class="bigMenuLangActions">
+                <button id="bigMenuLangRu" class="btn btnSecondary" type="button">Русский</button>
+                <button id="bigMenuLangEn" class="btn btnSecondary" type="button">Английский</button>
+              </div>
+            </div>
+          </div>
+          <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
+        </div>
+
+        <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
+          <div class="bigMenuSubpanelTitle">Звук</div>
+          <div class="menuRow">
+            <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
+            <div class="menuSlider">
+              <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
+              <span class="menuValue" id="bigMenuSfxValue">75%</span>
+            </div>
+          </div>
+          <div class="menuRow">
+            <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
+            <div class="menuSlider">
+              <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+              <span class="menuValue" id="bigMenuMusicValue">60%</span>
             </div>
           </div>
         </div>
-        <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
       </div>
 
-      <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
-        <div class="bigMenuSubpanelTitle">Звук</div>
-        <div class="menuRow">
-          <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
-          <div class="menuSlider">
-            <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
-            <span class="menuValue" id="bigMenuSfxValue">75%</span>
+      <div id="bigMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
+        <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
+        <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+        <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
+          <div class="smallMenuSaveTable__head" role="rowgroup">
+            <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+            </div>
           </div>
+          <div id="bigMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
         </div>
-        <div class="menuRow">
-          <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
-          <div class="menuSlider">
-            <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
-            <span class="menuValue" id="bigMenuMusicValue">60%</span>
-          </div>
+        <div class="menuInlineActions smallMenuSaveActions">
+          <button id="bigMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
         </div>
       </div>
 
