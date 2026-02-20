@@ -12,6 +12,15 @@
 - Для визуальных изменений проверять соответствующий loader/renderer в `src/render/*`.
 - Для `assets/credits.json` учитываются поля элемента: `name`, `role_ru`, `role_en`.
 
+## `assets/tanks.json` (UI-параметры)
+- Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
+- Ключ `ui.onTrackIconOpacity`:
+	- диапазон: `0..1`;
+	- default: `0.45`;
+	- назначение: dim-непрозрачность иконки танка в слоте при `onTrack=true`.
+- Нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.ui.onTrackIconOpacity`, clamp `0..1`).
+- Fallback: при отсутствии или невалидном значении runtime использует `0.45`.
+
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.
 - Формат строки: `[tankLevel, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]`.

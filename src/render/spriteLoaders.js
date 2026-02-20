@@ -276,6 +276,9 @@
           var normalized = {
             _readme: rawCfg && rawCfg._readme ? rawCfg._readme : '',
             tankScale: Number.isFinite(rawCfg && rawCfg.tankScale) ? rawCfg.tankScale : 1,
+            ui: {
+              onTrackIconOpacity: clamp01(rawCfg && rawCfg.ui && rawCfg.ui.onTrackIconOpacity, 0.45),
+            },
           };
           var maxLevel = 0;
           var levelsFound = 0;

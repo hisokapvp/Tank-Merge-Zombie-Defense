@@ -1008,9 +1008,12 @@ const SFX_CHANNELS = {
   uiHover: 'ui',
   uiClickOnEnabled: 'ui',
   uiClickOnDisable: 'ui',
+  uiSliderPreview: 'ui',
   levelUp: 'ui',
   applyTalents: 'ui',
 };
+const UI_SLIDER_PREVIEW_THROTTLE_MS = 160;
+let lastUiSliderPreviewSfxAt = -Infinity;
 let gameplayAudioSnapshots = [];
 let gameplayAudioFadeToken = 0;
 let pauseManager = null;
@@ -1028,6 +1031,15 @@ let criticalMusicRuntime = null;
 
 function sfxChannelOf(id){
   return SFX_CHANNELS[id] || 'gameplay';
+}
+
+function playUiSliderPreviewSfxThrottled(){
+  var now = (typeof performance !== 'undefined' && performance && typeof performance.now === 'function')
+    ? performance.now()
+    : Date.now();
+  if (now - lastUiSliderPreviewSfxAt < UI_SLIDER_PREVIEW_THROTTLE_MS) return;
+  lastUiSliderPreviewSfxAt = now;
+  playSfx('uiSliderPreview', { channel: 'ui' });
 }
 
 function stopGameplayFade(){
@@ -1519,6 +1531,7 @@ const SFX_SOURCES = {
   uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
   uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
   uiClickOnDisable: ['assets/sfx/ui_click_disabled.ogg', 'assets/sfx/ui_click_disabled.mp3'],
+  uiSliderPreview: ['assets/sfx/ui_slider_preview_TEMPLATE.ogg'],
   tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
   tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
   levelUp: 'assets/sfx/level_up.ogg',
@@ -6776,6 +6789,7 @@ function initBigMainMenu(){
   if (ui.bigMenuSfx) {
     ui.bigMenuSfx.addEventListener('input', function (e) {
       setVolume('sfx', e.target.value, 'percent');
+      playUiSliderPreviewSfxThrottled();
       syncVolumeUIFromSettings();
       saveSettings();
     });
@@ -9101,9 +9115,18 @@ function drawTankIcon(x,y,level,mutedSlot=false){
   drawTankIconTo(ctx, x, y, level, mutedSlot);
 }
 
+function getOnTrackIconOpacity(){
+  var opacity = TankSprites && TankSprites.config && TankSprites.config.ui
+    ? Number(TankSprites.config.ui.onTrackIconOpacity)
+    : NaN;
+  if (!Number.isFinite(opacity)) return 0.45;
+  return clamp(opacity, 0, 1);
+}
+
 function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
+  const onTrackIconOpacity = mutedSlot ? getOnTrackIconOpacity() : 0;
   if (body && cannon){
     const bodyW = body.cfg.frame?.w ?? body.img.width;
     const bodyH = body.cfg.frame?.h ?? body.img.height;
@@ -9114,7 +9137,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
-    targetCtx.globalAlpha = mutedSlot ? 0.6 : 0.92;
+    targetCtx.globalAlpha = mutedSlot ? onTrackIconOpacity : 0.92;
     const drawW = bodyW * scale;
     const drawH = bodyH * scale;
     const bodyAnchor = body.cfg.anchor || {x:0.5, y:0.6};
@@ -9162,7 +9185,7 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.save();
   targetCtx.translate(x, y);
   targetCtx.scale(0.52 * balScale * scaleMul, 0.52 * balScale * scaleMul);
-  targetCtx.globalAlpha = mutedSlot ? 0.65 : 0.95;
+  targetCtx.globalAlpha = mutedSlot ? onTrackIconOpacity : 0.95;
   targetCtx.fillStyle = 'rgba(0,0,0,.35)';
   rr(targetCtx, -22, -8, 44, 10, 5);
   targetCtx.fill();
@@ -10371,6 +10394,7 @@ async function boot(){
         applyAudioSettings,
         updateMenuVolumes,
         syncVolumeUIFromSettings,
+        playUiSliderPreviewSfxThrottled,
         saveSettings,
         openTalents,
         openSupercomputerMenu,

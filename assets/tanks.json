@@ -2,6 +2,9 @@
   "_readme": "Новая схема: ключи tank_lvl1..tank_lvl60. Каждый уровень независим, без fallback-наследования.",
   "tankScale": 2.5,
   "maxLevel": 60,
+  "ui": {
+    "onTrackIconOpacity": 0.35
+  },
 
   "tank_lvl1": {
     "stats": {

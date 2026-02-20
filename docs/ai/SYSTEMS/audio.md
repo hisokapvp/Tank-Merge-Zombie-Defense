@@ -13,11 +13,19 @@
 - Для critical modal использовать политику `CriticalAudioPolicy`: allowlist SFX + restore предыдущего состояния аудио при закрытии.
 
 ## UI SFX (централизованно)
-- UI-звуки используют id: `uiHover`, `uiClickOnEnabled`, `uiClickOnDisable`, `tankToTrack`, `tankToHangar`.
+- UI-звуки используют id: `uiHover`, `uiClickOnEnabled`, `uiClickOnDisable`, `uiSliderPreview`, `tankToTrack`, `tankToHangar`.
 - В `src/audio/settingsAudio.js` источник SFX может быть строкой (`.ogg`) или массивом источников в приоритетном порядке (например `['...ogg', '...mp3']`).
 - Для массивов выбирается первый поддерживаемый формат через `Audio().canPlayType(...)`; если поддержку определить нельзя, берётся первый элемент массива.
 - `playSfx(id, opts)` поддерживает `opts.volumeMult` (обратная совместимость с `playSfx(id)` обязательна), итоговая громкость всегда clamp `0..1`.
 - Hover SFX должен быть throttled через cooldown (минимум 100ms), чтобы избежать спама в плотных pointer-сценариях.
+- Hover SFX должен запускаться однократно при входе на кнопку: переходы между child-элементами внутри той же кнопки не должны повторно триггерить звук (`relatedTarget` guard).
+
+## Slider preview SFX
+- Ассет: `assets/sfx/ui_slider_preview_TEMPLATE.ogg` (template-файл, можно заменить без правки кода).
+- Регистрация id: `uiSliderPreview` в `src/audio/settingsAudio.js` и runtime-реестре `game.js`.
+- Точка вызова: обработчики `input` для SFX-слайдеров в `src/core/bootstrap.js` (`menuSfx`) и `game.js` (`bigMenuSfx`).
+- Правило по частоте: throttling `160ms` (допустимый диапазон `120–200ms`) через helper `playUiSliderPreviewSfxThrottled()`.
+- Ожидаемое поведение: preview играет с текущей `sfxVolume` (и стандартным UI channel), без звуковой «дроби» при перетаскивании.
 
 ## Tank onTrack toggle SFX
 - Единая точка смены `tank.onTrack`: `Game.Garage.setTankOnTrack(tank, nextOnTrack, opts)` в `src/mechanics/garage.js`.

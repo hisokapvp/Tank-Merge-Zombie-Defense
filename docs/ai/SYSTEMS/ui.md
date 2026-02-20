@@ -21,6 +21,7 @@
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
 - `stopAndResetSessionToBigMenu` приводит приложение к состоянию первого запуска через перезагрузку страницы (`window.location.reload`) после очистки transient `progress` (слотовые сохранения не затрагиваются).
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
+- Лейаут `#menuExitConfirmView .menuInlineActions`: `display:flex`, `justify-content:center`, фиксированный `gap` (12px), кнопки `Выйти/Отмена` одинаковой ширины через `clamp(...)` с mobile-override.
 
 ## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
@@ -51,10 +52,25 @@
 - `#supercomputerBtn` позиционируется runtime-логикой через `transform: translate3d(...)`; не применять к нему layout-сдвиги (`top/left`) на active/pressed.
 - Press/hover-эффекты должны быть визуальными (яркость/scale иконки), не менять якорную позицию кнопки.
 - При изменениях в unified button behavior (`.uiButtonBehavior`) обязательно сохранять исключение для HUD-кнопки суперкомпьютера.
+- `.supercomputerHudBtn` по умолчанию скрыта (`visibility:hidden`) и показывается только после первого успешного расчёта позиции в `updateSupercomputerHudButtonPosition()`; это исключает появление в `(0,0)`.
+- Для `.supercomputerHudBtn.uiButtonBehavior` запрещён transition по `transform` (оставляем `box-shadow/filter/...`), чтобы убрать визуальный «полёт» при обновлении координат.
+
+## Supercomputer: root tiles
+- Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).
+- Label `.scRootTile__label`: одна строка (`white-space:nowrap`), без `ellipsis`, с минимальным шрифтом `14px` desktop и `12px` mobile через `clamp(...)` + media rules.
+- Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), а фактический размер идёт через `--scTileIconSize` + `clamp(...)`; целевой baseline около `96px` на стандартном экране.
+
+## On-track dim (иконка в слоте)
+- Источник параметра: `assets/tanks.json` → `ui.onTrackIconOpacity`.
+- Диапазон: `0..1`; default: `0.45`.
+- Применение: `src/render/spriteLoaders.js` нормализует в `TankSprites.config.ui.onTrackIconOpacity`, а `game.js` использует значение в `drawTankIconTo(...)` вместо хардкода.
+- Fallback: при отсутствии/невалидном значении используется `0.45`, итоговое значение всегда clamp `0..1`.
 
 ## Unified button behavior и UI SFX
 - Hover/click UI SFX централизованы в `src/ui/buttonBehavior.js`; не дублировать обработчики по модалкам/экранам.
-- Hover SFX запускается только для `mouse` (`pointerenter`, capture) и с глобальным cooldown.
+- Hover SFX запускается только для `mouse` (`pointerover`, capture) и с глобальным cooldown.
+- Защита от повторов на дочерних элементах: если `relatedTarget` остаётся внутри той же `.uiButtonBehavior`, hover SFX не проигрывается.
+- Hover SFX не запускается для disabled и hidden-элементов.
 - Click SFX запускается на `pointerdown` (capture), с разными id для enabled/disabled состояния.
 - Для disabled-кнопок воспроизводится только disabled-click SFX; `is-pressed` не проставляется.
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).

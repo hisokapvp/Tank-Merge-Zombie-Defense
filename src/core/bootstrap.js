@@ -492,6 +492,9 @@
       } else {
         opts.updateMenuVolumes();
       }
+      if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
+        opts.playUiSliderPreviewSfxThrottled();
+      }
       opts.saveSettings();
     });
 

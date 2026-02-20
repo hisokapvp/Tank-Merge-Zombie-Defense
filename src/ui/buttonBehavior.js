@@ -73,6 +73,15 @@
     return el.getAttribute && el.getAttribute('aria-disabled') === 'true';
   }
 
+  function isHidden(el) {
+    if (!el || !el.isConnected) return true;
+    if (el.hidden) return true;
+    if (typeof global.getComputedStyle !== 'function') return false;
+    var style = global.getComputedStyle(el);
+    if (!style) return false;
+    return style.display === 'none' || style.visibility === 'hidden';
+  }
+
   function getDisabledToastText(target) {
     var reason = target && target.getAttribute ? target.getAttribute('data-disabled-reason') : '';
     var i18n = global.Game && global.Game.I18n;
@@ -132,7 +141,12 @@
     var target = event.target && event.target.closest
       ? event.target.closest('.' + BEHAVIOR_CLASS)
       : null;
-    if (!target || isDisabled(target)) return;
+    if (!target || isDisabled(target) || isHidden(target)) return;
+
+    var relatedButton = event && event.relatedTarget && event.relatedTarget.closest
+      ? event.relatedTarget.closest('.' + BEHAVIOR_CLASS)
+      : null;
+    if (relatedButton && relatedButton === target) return;
 
     var now = performance.now();
     var cfg = getAudioUiConfig();
