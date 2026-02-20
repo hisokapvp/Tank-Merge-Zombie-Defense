@@ -36,6 +36,9 @@
     var getCannonUpgradeStepCost = typeof opts.getCannonUpgradeStepCost === 'function'
       ? opts.getCannonUpgradeStepCost
       : function (_level, _appliedIndex) { return 0; };
+    var getCannonUpgradeIconFrames = typeof opts.getCannonUpgradeIconFrames === 'function'
+      ? opts.getCannonUpgradeIconFrames
+      : function () { return 1; };
     var getCannonUpgradeConfig = typeof opts.getCannonUpgradeConfig === 'function'
       ? opts.getCannonUpgradeConfig
       : function () { return []; };
@@ -60,6 +63,7 @@
       if (key === 'modsGunsColAttackSpeed') return 'Attack speed';
       if (key === 'modsGunsColDamage') return 'Damage';
       if (key === 'modsGunsColUpgradeLevel') return 'Upgrade level';
+      if (key === 'modsGunsColCost') return 'Cost';
       if (key === 'modsGunsColActions') return 'Actions';
       if (key === 'modsGunsUpgrade') return 'Upgrade';
       if (key === 'modsGunsReservedLabel') return 'Reserved points: ' + (vars && vars.count != null ? vars.count : 0);
@@ -79,6 +83,8 @@
       view: 'closed',
       activeTankWallTab: 'weapons',
       pendingUpgradesByLevel: Array(60).fill(0),
+      iconTickerId: null,
+      iconTickerFrame: 0,
     };
 
     var tankWallTabButtons = {
@@ -129,6 +135,9 @@
 
       if (tab === 'weapons') {
         renderGunsPanel();
+        startGunsIconTicker();
+      } else {
+        stopGunsIconTicker();
       }
 
       var focusButton = options && options.focusButton;
@@ -166,24 +175,29 @@
       if (state.pendingUpgradesByLevel.length !== size) {
         var next = Array(size).fill(0);
         for (var i = 0; i < Math.min(size, state.pendingUpgradesByLevel.length); i++) {
-          next[i] = Math.max(0, Math.floor(state.pendingUpgradesByLevel[i] || 0));
+          next[i] = toSafeNonNegativeInt(state.pendingUpgradesByLevel[i]);
         }
         state.pendingUpgradesByLevel = next;
       }
     }
 
+    function toSafeNonNegativeInt(value) {
+      if (!Number.isFinite(value)) return 0;
+      if (value <= 0) return 0;
+      if (value >= Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+      return Math.floor(value);
+    }
+
     function getPendingAt(level) {
       ensurePendingLevelsSize();
       var idx = Math.max(1, Math.floor(level || 1)) - 1;
-      var value = state.pendingUpgradesByLevel[idx];
-      if (!Number.isFinite(value)) return 0;
-      return Math.max(0, Math.floor(value));
+      return toSafeNonNegativeInt(state.pendingUpgradesByLevel[idx]);
     }
 
     function setPendingAt(level, value) {
       ensurePendingLevelsSize();
       var idx = Math.max(1, Math.floor(level || 1)) - 1;
-      state.pendingUpgradesByLevel[idx] = Math.max(0, Math.floor(value || 0));
+      state.pendingUpgradesByLevel[idx] = toSafeNonNegativeInt(value);
     }
 
     function resetPendingUpgrades() {
@@ -194,14 +208,14 @@
     }
 
     function getPendingCost(level, pendingCount) {
-      var count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+      var count = toSafeNonNegativeInt(pendingCount);
       if (count <= 0) return 0;
-      var applied = Math.max(0, Math.floor(getAppliedCannonUpgradeLevel(level) || 0));
+      var applied = toSafeNonNegativeInt(getAppliedCannonUpgradeLevel(level));
       var total = 0;
       for (var i = 0; i < count; i++) {
-        total += Math.max(0, Math.floor(getCannonUpgradeStepCost(level, applied + i) || 0));
+        total += toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + i));
       }
-      return total;
+      return toSafeNonNegativeInt(total);
     }
 
     function getReservedDamagePoints() {
@@ -210,7 +224,66 @@
       for (var i = 0; i < state.pendingUpgradesByLevel.length; i++) {
         total += getPendingCost(i + 1, state.pendingUpgradesByLevel[i]);
       }
-      return total;
+      return toSafeNonNegativeInt(total);
+    }
+
+    function formatCompact(value) {
+      var num = toSafeNonNegativeInt(value);
+      var nf = global.Game && global.Game.NumberFormat ? global.Game.NumberFormat : null;
+      if (nf && typeof nf.formatCompactRu === 'function') return nf.formatCompactRu(num);
+      return String(num);
+    }
+
+    function getTotalSpentForLevel(level, applied) {
+      var row = getCannonUpgradeConfig()[Math.max(0, Math.floor(level) - 1)] || [level, 0, 0, 0, 0, 1];
+      var costBase = toSafeNonNegativeInt(Number(row[1]));
+      var costStep = toSafeNonNegativeInt(Number(row[2]));
+      var u = toSafeNonNegativeInt(applied);
+      if (u <= 0) return 0;
+      var baseSum = u * costBase;
+      var progressive = costStep * u * (u - 1) / 2;
+      return toSafeNonNegativeInt(baseSum + progressive);
+    }
+
+    function isElementVerticallyVisible(element, viewport) {
+      if (!element || !viewport) return false;
+      var rowTop = element.offsetTop;
+      var rowBottom = rowTop + element.offsetHeight;
+      var viewTop = viewport.scrollTop;
+      var viewBottom = viewTop + viewport.clientHeight;
+      return rowBottom >= viewTop && rowTop <= viewBottom;
+    }
+
+    function tickGunsIconSprites() {
+      if (!gunsUi.rows || state.view !== 'tankWall' || state.activeTankWallTab !== 'weapons') return;
+      state.iconTickerFrame = (state.iconTickerFrame + 1) % 1000000;
+      var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteAnim[data-anim-frames]');
+      if (!animatedNodes || !animatedNodes.length) return;
+      for (var i = 0; i < animatedNodes.length; i++) {
+        var node = animatedNodes[i];
+        var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
+        if (frames <= 1) continue;
+        var rowNode = node.closest('.scGunsTable__row');
+        if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
+        var frameW = toSafeNonNegativeInt(Number(node.getAttribute('data-frame-w')));
+        var baseX = Number(node.getAttribute('data-frame-x'));
+        var baseY = Number(node.getAttribute('data-frame-y'));
+        if (frameW <= 0 || !Number.isFinite(baseX) || !Number.isFinite(baseY)) continue;
+        var frameIndex = state.iconTickerFrame % frames;
+        var spriteX = Math.floor(baseX + frameW * frameIndex);
+        node.style.backgroundPosition = '-' + String(spriteX) + 'px -' + String(Math.floor(baseY)) + 'px';
+      }
+    }
+
+    function startGunsIconTicker() {
+      if (state.iconTickerId != null) return;
+      state.iconTickerId = global.setInterval(tickGunsIconSprites, 120);
+    }
+
+    function stopGunsIconTicker() {
+      if (state.iconTickerId == null) return;
+      global.clearInterval(state.iconTickerId);
+      state.iconTickerId = null;
     }
 
     function formatNumber(value) {
@@ -264,6 +337,7 @@
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsGunsColAttackSpeed') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsGunsColDamage') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_cost">' + translate('modsGunsColCost') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_actions">' + translate('modsGunsColActions') + '</div>';
 
       var tableRows = documentObj.createElement('div');
@@ -285,10 +359,10 @@
         if (!Number.isFinite(level) || level < 1 || level > getGunsLevelsCount()) return;
         var action = actionBtn.getAttribute('data-guns-action');
         if (action === 'plus') {
-          var applied = Math.max(0, Math.floor(getAppliedCannonUpgradeLevel(level) || 0));
+          var applied = toSafeNonNegativeInt(getAppliedCannonUpgradeLevel(level));
           var pending = getPendingAt(level);
-          var nextCost = Math.max(0, Math.floor(getCannonUpgradeStepCost(level, applied + pending) || 0));
-          var available = Math.max(0, Math.floor(getDamagePoints()));
+          var nextCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
+          var available = toSafeNonNegativeInt(getDamagePoints());
           var reserved = getReservedDamagePoints();
           if (available - reserved < nextCost) {
             if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
@@ -311,7 +385,7 @@
           var applyPending = getPendingAt(level);
           if (applyPending <= 0) return;
           var totalCost = getPendingCost(level, applyPending);
-          var pointsAvailable = Math.max(0, Math.floor(getDamagePoints()));
+          var pointsAvailable = toSafeNonNegativeInt(getDamagePoints());
           if (pointsAvailable < totalCost) {
             if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
               global.Game.Toast.show(translate('modsGunsNotEnoughDamagePoints'), 1200);
@@ -341,7 +415,7 @@
       var cfg = getCannonUpgradeConfig();
       var levelsCount = getGunsLevelsCount();
       var rowsHtml = '';
-      var availablePoints = Math.max(0, Math.floor(getDamagePoints()));
+      var availablePoints = toSafeNonNegativeInt(getDamagePoints());
       var reservedPoints = getReservedDamagePoints();
 
       for (var i = 0; i < levelsCount; i++) {
@@ -349,7 +423,7 @@
         var rowCfg = cfg[i] || [level, 0, 0, 0, 0];
         var damageMulPer = Number(rowCfg[3]) || 0;
         var speedMulPer = Number(rowCfg[4]) || 0;
-        var applied = Math.max(0, Math.floor(getAppliedCannonUpgradeLevel(level) || 0));
+        var applied = toSafeNonNegativeInt(getAppliedCannonUpgradeLevel(level));
         var pending = getPendingAt(level);
         var viewData = getTankLevelViewData(level);
         var baseAttackSpeed = viewData.baseAttackSpeed;
@@ -360,7 +434,8 @@
         var currentDamage = Number.isFinite(baseDamage)
           ? baseDamage * (1 + applied * damageMulPer)
           : null;
-        var nextStepCost = Math.max(0, Math.floor(getCannonUpgradeStepCost(level, applied + pending) || 0));
+        var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
+        var totalSpent = getTotalSpentForLevel(level, applied);
         var canAdd = (availablePoints - reservedPoints) >= nextStepCost;
         var canMinus = pending > 0;
         var totalPendingCost = getPendingCost(level, pending);
@@ -371,7 +446,28 @@
         var spriteHtml = '';
         if (viewData.cannonSprite && viewData.cannonSprite.img && viewData.cannonSprite.cfg) {
           var src = viewData.cannonSprite.img.currentSrc || viewData.cannonSprite.img.src || '';
-          spriteHtml = '<img class="scGunsTable__sprite" src="' + src + '" alt="" />';
+          var frame = viewData.cannonSprite.cfg.frame || { x: 0, y: 0, w: 64, h: 64 };
+          var frameX = Number.isFinite(frame.x) ? Math.floor(frame.x) : 0;
+          var frameY = Number.isFinite(frame.y) ? Math.floor(frame.y) : 0;
+          var frameW = Number.isFinite(frame.w) && frame.w > 0 ? Math.floor(frame.w) : 64;
+          var frameH = Number.isFinite(frame.h) && frame.h > 0 ? Math.floor(frame.h) : 64;
+          var spriteFrames = Number.isFinite(viewData.cannonSprite.cfg.frames) && viewData.cannonSprite.cfg.frames >= 1
+            ? Math.floor(viewData.cannonSprite.cfg.frames)
+            : 1;
+          var balanceFrames = toSafeNonNegativeInt(getCannonUpgradeIconFrames(level));
+          if (balanceFrames <= 0) balanceFrames = 1;
+          var animFrames = Math.max(1, Math.min(spriteFrames, balanceFrames));
+          var fitScale = Math.min(1, Math.min(40 / frameW, 24 / frameH));
+          spriteHtml = '' +
+            '<span class="scGunsTable__spriteBox">' +
+              '<span class="scGunsTable__spriteAnim"' +
+                ' data-anim-frames="' + String(animFrames) + '"' +
+                ' data-frame-x="' + String(frameX) + '"' +
+                ' data-frame-y="' + String(frameY) + '"' +
+                ' data-frame-w="' + String(frameW) + '"' +
+                ' style="background-image:url(' + src + ');background-position:-' + String(frameX) + 'px -' + String(frameY) + 'px;width:' + String(frameW) + 'px;height:' + String(frameH) + 'px;transform:scale(' + String(fitScale) + ');"' +
+              '></span>' +
+            '</span>';
         } else {
           spriteHtml = '<span class="scGunsTable__spriteFallback">' + translate('modsGunsNoSprite') + '</span>';
         }
@@ -382,6 +478,7 @@
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseAttackSpeed) + ' / ' + formatNumber(currentAttackSpeed) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseDamage) + ' / ' + formatNumber(currentDamage) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + ' / ' + formatCompact(totalSpent) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
               '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
               '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
@@ -391,6 +488,7 @@
       }
 
       gunsUi.rows.innerHTML = rowsHtml;
+      tickGunsIconSprites();
     }
 
     function updateFenceStatsUI() {
@@ -431,6 +529,7 @@
       if (!state.isOpen) {
         resetPendingUpgrades();
       }
+      stopGunsIconTicker();
       if (state.view === 'talents' && closeTalents) closeTalents();
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);
@@ -465,6 +564,7 @@
         onClose: backFromChild,
       });
       state.view = 'tankWall';
+      startGunsIconTicker();
     }
 
     function showTalents() {
@@ -484,6 +584,7 @@
     function closeAll() {
       if (!state.isOpen) return;
       if (state.view === 'talents' && closeTalents) closeTalents();
+      stopGunsIconTicker();
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);

@@ -86,7 +86,7 @@ function click(el) {
   el._listeners.click();
 }
 
-test('ADP-1: hidden on prod host even with debug=1', () => {
+test('ADP-1: shown on prod host when debug=1', () => {
   global.document = makeDocument();
   global.location = { hostname: 'example.com', protocol: 'https:', search: '?debug=1' };
   global.Game = {
@@ -96,9 +96,8 @@ test('ADP-1: hidden on prod host even with debug=1', () => {
   const panel = global.document.createElement('div');
   panel.id = 'debugSectionLogs';
   loadModule('src/ui/adminDamagePoints.js');
-  assertEqual(global.Game.AdminDamagePoints.isDevOnly(), false, 'isDevOnly false');
   global.Game.AdminDamagePoints.init();
-  assertEqual(global.document.getElementById('adminDamagePoints'), null, 'adminDamagePoints not created');
+  assert(!!global.document.getElementById('adminDamagePoints'), 'adminDamagePoints created');
 });
 
 test('ADP-2: shown on localhost and controls update value with clamp', () => {
@@ -117,7 +116,6 @@ test('ADP-2: shown on localhost and controls update value with clamp', () => {
   panel.id = 'debugSectionLogs';
 
   loadModule('src/ui/adminDamagePoints.js');
-  assertEqual(global.Game.AdminDamagePoints.isDevOnly(), true, 'isDevOnly true');
   global.Game.AdminDamagePoints.init();
 
   const root = global.document.getElementById('adminDamagePoints');

@@ -89,7 +89,7 @@
 
 ## Debug panel extension: Damage Points
 - Реализация: `src/ui/adminDamagePoints.js`, инициализация из `src/core/bootstrap.js` рядом с `AdminFlags`.
-- Gating: блок рисуется только при `?debug=1` и только в dev-only окружении (localhost/file/.local), в контейнер `#debugSectionLogs`.
+- Gating: блок рисуется при `?debug=1` (или `?debug=true`) в контейнер `#debugSectionLogs`.
 - Контролы: `input type="number"` + кнопки `+Add`/`-Add`; delta парсится как `Math.floor(Number(value))`, нечисловой ввод трактуется как `0`.
 - Изменение значения: `+Add`/`-Add` обновляют игровое состояние, значение clamp `>= 0`, после изменения вызывается refresh `supercomputer` UI (доступность `+`/`Улучшить`, reserve/points labels).
 
@@ -106,21 +106,36 @@
 
 ## Supercomputer: таб `Орудия`
 - Реализация: `src/ui/supercomputerMenu.js`, панель `#modsTankWallPanelGuns`.
-- Таблица рендерит 60 строк (`1..60`) и 6 колонок:
+- Таблица рендерит 60 строк (`1..60`) и 7 колонок:
 	- sprite `cannon.src` (по уровню танка, fallback-текст при отсутствии),
 	- уровень `L`,
 	- `attackSpeed` (базовое / текущее),
 	- `baseDamage` (базовое / текущее),
 	- уровень улучшения (`applied` и `+pending`),
+	- стоимость `next / totalSpent`,
 	- действия `+`, `-`, `Улучшить`.
 - `pendingUpgradesByLevel` — локальное UI-состояние (живет только пока открыт supercomputer menu, сбрасывается при полном закрытии).
 - `reservedDamagePoints` считается как сумма стоимости всех pending-шагов по всем уровням с учётом текущего `applied`.
+- Расчёт стоимости для уровня `L`:
+	- `applied = state.player.cannonUpgradesApplied[L]`;
+	- `pending = pendingByLevel[L]`;
+	- `u0 = applied + pending`;
+	- `next = costBase(L) + costStep(L) * u0`;
+	- `totalSpent = applied * costBase(L) + costStep(L) * applied * (applied - 1) / 2` (только `applied`, без `pending`).
+- Обновление значений:
+	- при `+/-` pending меняется только `next`;
+	- после `Улучшить` (`Apply`) меняются и `applied`, и `totalSpent`.
 - Кнопка `+` увеличивает pending только если `availableDamagePoints - reservedDamagePoints >= nextStepCost`.
 - Кнопка `-` уменьшает pending до нуля и освобождает reserve.
 - Кнопка `Улучшить`:
 	- disabled при `pending=0`;
 	- при `pending>0` повторно валидирует доступные очки,
 	- списывает очки, применяет апгрейд в state и сбрасывает pending для выбранного уровня.
+- Иконки орудий:
+	- источник кадра — текущий `cannon` spritesheet (`TankSprites.pickCannon(level)`);
+	- число кадров берётся из `iconFrames` (fallback `1`), при `iconFrames=1` анимации нет;
+	- используется один shared ticker (`setInterval`) на весь таб `Орудия`, без 60 отдельных `requestAnimationFrame`/таймеров;
+	- ticker активен только пока открыт `Supercomputer -> Орудия`, и останавливается при закрытии/переключении таба.
 
 ## Merge popup (новый уровень танка)
 - Точка входа pop-up: `src/ui/mergePopup.js` (`Game.MergePopup.show(level)`), preview/render: `src/ui/mergePreview/mergePreviewModel.js` + `src/ui/mergePreview/mergePreviewRenderer.js`.

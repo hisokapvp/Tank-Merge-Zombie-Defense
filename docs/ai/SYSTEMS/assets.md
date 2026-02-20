@@ -23,12 +23,19 @@
 
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.
-- Формат строки: `[tankLevel, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]`.
+- Формат строки (backward compatible):
+	- старый: `[tankLevel, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]`;
+	- новый: `[tankLevel, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade, iconFrames]`.
 - Ограничения валидации runtime:
 	- длина массива строго `60`;
 	- `tankLevel` строго по порядку `1..60`;
+	- длина строки: только `5` или `6`;
 	- все значения числовые (`Number.isFinite`), без `NaN`;
+	- `iconFrames`: если `Number.isFinite(x) && x >= 1`, то берётся `Math.floor(x)`, иначе fallback `1`;
 	- при ошибке чтения/валидации используется fallback-конфиг и лог `using fallback CannonUpgrades`.
+- Поведение совместимости:
+	- при старом формате (5 полей) `iconFrames` автоматически считается равным `1`;
+	- при невалидном `iconFrames` конфиг не валится, применяется безопасный `1`.
 - Формула стоимости шага улучшения уровня `L`:
 	- пусть `u0` — уже применённые улучшения на уровне,
 	- стоимость шага `k` (где `k` начинается с `1`) равна:

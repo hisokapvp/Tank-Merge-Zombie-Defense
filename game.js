@@ -215,18 +215,22 @@ function createFallbackCannonUpgrades(levels){
     const costStep = 1 + Math.floor(i * 0.33);
     const damageMulPerUpgrade = Number((0.01 + i * 0.00035).toFixed(5));
     const attackSpeedMulPerUpgrade = Number((0.008 + i * 0.00025).toFixed(5));
-    fallback.push([level, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade]);
+    fallback.push([level, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade, 1]);
   }
   return fallback;
 }
 
 function sanitizeCannonUpgradeRow(row, index){
-  if (!Array.isArray(row) || row.length < 5) return null;
+  if (!Array.isArray(row) || (row.length !== 5 && row.length !== 6)) return null;
   const tankLevel = Number(row[0]);
   const costBase = Number(row[1]);
   const costStep = Number(row[2]);
   const damageMulPerUpgrade = Number(row[3]);
   const attackSpeedMulPerUpgrade = Number(row[4]);
+  const rawIconFrames = Number(row[5]);
+  const iconFrames = Number.isFinite(rawIconFrames) && rawIconFrames >= 1
+    ? Math.floor(rawIconFrames)
+    : 1;
   if (!Number.isFinite(tankLevel) || tankLevel !== index + 1) return null;
   if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return null;
   if (!Number.isFinite(damageMulPerUpgrade) || !Number.isFinite(attackSpeedMulPerUpgrade)) return null;
@@ -236,6 +240,7 @@ function sanitizeCannonUpgradeRow(row, index){
     Math.max(0, Math.floor(costStep)),
     Math.max(0, damageMulPerUpgrade),
     Math.max(0, attackSpeedMulPerUpgrade),
+    iconFrames,
   ];
 }
 
@@ -641,6 +646,14 @@ function getCannonUpgradeStepCost(level, appliedIndex){
   const idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
   if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return 0;
   return Math.max(0, Math.floor(costBase + costStep * idx));
+}
+
+function getCannonUpgradeIconFrames(level){
+  const row = getCannonUpgradeRow(level);
+  if (!row) return 1;
+  const value = Number(row[5]);
+  if (!Number.isFinite(value) || value < 1) return 1;
+  return Math.floor(value);
 }
 
 function getCannonUpgradeTotalCost(level, pendingCount){
@@ -2131,6 +2144,7 @@ function initBoard(){
   sc.offsetY = configOffset;
   sc.x = hangarCenterX;
   sc.y = hangarBottomY + sc.offsetY;
+  updateSupercomputerHudButtonPosition();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(sc, SupercomputerSprites.config);
   }
@@ -8110,6 +8124,7 @@ function getSupercomputerMenuController(){
     getDamagePoints: getDamagePoints,
     getAppliedCannonUpgradeLevel: getAppliedCannonUpgradeLevel,
     getCannonUpgradeStepCost: getCannonUpgradeStepCost,
+    getCannonUpgradeIconFrames: getCannonUpgradeIconFrames,
     getCannonUpgradeConfig: getCannonUpgradeConfig,
     applyCannonUpgrade: applyCannonUpgrade,
     getFenceStats: getFenceStats,
@@ -8905,8 +8920,10 @@ function updateSupercomputerHudButtonPosition(){
 
   const now = nowSec();
   const layoutResult = ensureSupercomputerBoostLayout(now);
-  const spriteMetrics = layoutResult && layoutResult.spriteMetrics;
-  if (!layoutResult || !spriteMetrics) {
+  const spriteMetrics = layoutResult && layoutResult.spriteMetrics
+    ? layoutResult.spriteMetrics
+    : resolveSupercomputerSpriteMetrics(getComputerState());
+  if (!spriteMetrics) {
     if (supercomputerHudRuntime.button.lastVisible !== false) {
       ui.supercomputerBtn.style.visibility = 'hidden';
       supercomputerHudRuntime.button.lastVisible = false;

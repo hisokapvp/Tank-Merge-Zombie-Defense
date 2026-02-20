@@ -35,7 +35,7 @@
   }
 
   function init() {
-    if (!isDebugMode() || !isDevOnly()) return;
+    if (!isDebugMode()) return;
     if (!global.document || !global.Game) return;
     if (typeof global.Game.getDamagePoints !== 'function') return;
     if (typeof global.Game.debugAdjustDamagePoints !== 'function') return;

@@ -97,6 +97,7 @@
   "modsGunsColAttackSpeed": "Скорость атаки",
   "modsGunsColDamage": "Базовый урон",
   "modsGunsColUpgradeLevel": "Уровень улучш.",
+  "modsGunsColCost": "Стоимость",
   "modsGunsColActions": "Действия",
   "modsGunsUpgrade": "Улучшить",
   "modsGunsNotEnoughDamagePoints": "Недостаточно очков",

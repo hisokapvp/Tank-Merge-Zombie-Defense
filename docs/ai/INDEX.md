@@ -40,6 +40,7 @@
 - Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
 - Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
+- `Орудия`: добавлена колонка `Стоимость` (`next / totalSpent`) и поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` для аним-иконок через shared ticker.
 - Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.
 - On-track dim иконки в слоте настраивается параметром `assets/tanks.json -> ui.onTrackIconOpacity` (нормализация в `TankSprites.config.ui`).
 - Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
@@ -47,7 +48,7 @@
 - Supercomputer root tiles: 3-в-ряд без переноса, label в одну строку с min font, размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
-- Debug panel: добавлен gated dev-only блок `Damage Points` (`?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
+- Debug panel: добавлен блок `Damage Points` (доступен при `?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

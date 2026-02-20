@@ -97,6 +97,7 @@
   "modsGunsColAttackSpeed": "Attack speed",
   "modsGunsColDamage": "Base damage",
   "modsGunsColUpgradeLevel": "Upgrade level",
+  "modsGunsColCost": "Cost",
   "modsGunsColActions": "Actions",
   "modsGunsUpgrade": "Upgrade",
   "modsGunsNotEnoughDamagePoints": "Not enough points",

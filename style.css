@@ -1579,7 +1579,7 @@ body.menu-open .stageUi .hudItem{
 .scGunsTable__head,
 .scGunsTable__row{
   display:grid;
-  grid-template-columns: 84px 48px 1fr 1fr 120px 200px;
+  grid-template-columns: 84px 48px 1fr 1fr 120px 128px 200px;
   gap:8px;
   align-items:center;
 }
@@ -1610,6 +1610,9 @@ body.menu-open .stageUi .hudItem{
 .scGunsTable__cell_upgrade{
   text-align:center;
 }
+.scGunsTable__cell_cost{
+  text-align:center;
+}
 .scGunsTable__cell_actions{
   display:flex;
   gap:6px;
@@ -1619,10 +1622,18 @@ body.menu-open .stageUi .hudItem{
   min-height:28px;
   padding:4px 8px;
 }
-.scGunsTable__sprite{
+.scGunsTable__spriteBox{
   width:40px;
   height:24px;
-  object-fit:contain;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.scGunsTable__spriteAnim{
+  display:block;
+  transform-origin:center;
+  background-repeat:no-repeat;
   image-rendering:pixelated;
 }
 .scGunsTable__spriteFallback{
