@@ -20,6 +20,7 @@
     uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
     uiClickOnDisable: ['assets/sfx/ui_click_disabled.ogg', 'assets/sfx/ui_click_disabled.mp3'],
     uiSliderPreview: ['assets/sfx/ui_slider_preview_TEMPLATE.ogg'],
+    mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
     tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
     tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
   };

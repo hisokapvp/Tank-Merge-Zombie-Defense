@@ -3186,7 +3186,8 @@ function playMergeFxNow(context){
       vy: (Math.random() - 0.5) * 80,
     });
   }
-  playSfx('levelUp');
+  const sfxId = context && typeof context.sfxId === 'string' && context.sfxId ? context.sfxId : 'levelUp';
+  playSfx(sfxId);
 }
 
 function flushMergeFxQueue(){
@@ -3241,21 +3242,27 @@ function performMerge(fromIdx, toIdx, opts){
     b.tank = null;
   }
 
-  playMergeFx({
-    resultCellIndex: resultCellIndex,
-    resultTankId: resultCell.tank && resultCell.tank.id,
-  });
+  const oldMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
 
   processAchievementProgress('merges', 1);
   recordTankLevel(lvl);
+  const newMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: fromLevel, toLevel: lvl });
   if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_merge', { level: lvl });
 
   // Show merge popup for first time achieving this level
+  let mergePopupShown = false;
   if (window.Game && window.Game.MergePopup) {
-    window.Game.MergePopup.show(lvl);
+    mergePopupShown = !!window.Game.MergePopup.show(lvl);
   }
+
+  const isNewMaxLevelMergePopup = newMaxLevel > oldMaxLevel && mergePopupShown;
+  playMergeFx({
+    resultCellIndex: resultCellIndex,
+    resultTankId: resultCell.tank && resultCell.tank.id,
+    sfxId: isNewMaxLevelMergePopup ? 'mergeNewMaxLevel' : 'levelUp',
+  });
 
   popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
