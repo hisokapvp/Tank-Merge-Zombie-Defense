@@ -36,19 +36,19 @@
 
   function init() {
     if (!isDebugMode()) return;
-    if (!global.document || !global.Game) return;
-    if (typeof global.Game.getDamagePoints !== 'function') return;
-    if (typeof global.Game.debugAdjustDamagePoints !== 'function') return;
 
     function mount() {
+      if (!global.document || !global.Game) return false;
+      if (typeof global.Game.getDamagePoints !== 'function') return false;
+      if (typeof global.Game.debugAdjustDamagePoints !== 'function') return false;
+
       var panel = global.document.getElementById('debugSectionLogs');
       if (!panel || global.document.getElementById('adminDamagePoints')) return false;
 
       var root = global.document.createElement('div');
       root.id = 'adminDamagePoints';
       root.className = 'debugTools';
-      root.style.marginTop = '8px';
-      root.style.display = 'block';
+      root.style.cssText = 'margin-top:8px;display:block;padding:8px;border:1px solid rgba(255,184,114,.2);border-radius:8px;background:rgba(0,0,0,.15);';
 
       var title = global.document.createElement('div');
       title.className = 'debugRow';
@@ -57,9 +57,12 @@
 
       var header = global.document.createElement('div');
       header.className = 'debugRow';
+      header.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:6px;';
 
       var label = global.document.createElement('span');
       label.className = 'debugLabel';
+      label.style.display = 'inline';
+      label.style.marginRight = '4px';
       label.textContent = 'Damage Points';
 
       var input = global.document.createElement('input');
@@ -69,7 +72,7 @@
       input.value = '1';
       input.className = 'debugSelect';
       input.style.width = '90px';
-      input.style.marginLeft = '6px';
+      input.style.marginBottom = '0';
 
       var addBtn = global.document.createElement('button');
       addBtn.id = 'adminDamagePointsAdd';
@@ -94,6 +97,7 @@
       value.className = 'debugRow';
       value.style.fontSize = '10px';
       value.style.color = 'var(--muted)';
+      value.style.marginBottom = '0';
       root.appendChild(value);
 
       function refreshValue() {
@@ -130,12 +134,19 @@
 
     if (mount()) return;
     var attempts = 0;
-    var maxAttempts = 12;
+    var maxAttempts = 20;
     function tryMountLater() {
       if (mount()) return;
       attempts += 1;
-      if (attempts >= maxAttempts) return;
-      global.setTimeout(tryMountLater, 100);
+      if (attempts >= maxAttempts) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[AdminDamagePoints] mount failed after ' + maxAttempts + ' attempts. ' +
+            'getDamagePoints=' + typeof (global.Game && global.Game.getDamagePoints) + ', ' +
+            'debugSectionLogs=' + !!global.document.getElementById('debugSectionLogs'));
+        }
+        return;
+      }
+      global.setTimeout(tryMountLater, 150);
     }
     tryMountLater();
   }

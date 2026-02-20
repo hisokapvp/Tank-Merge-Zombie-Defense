@@ -55,6 +55,7 @@
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
 - UI SFX параметры (volume/cooldown): `src/config/audioUi.js`
+- Layout tuning (иконки/спрайты): `src/config/layoutTuning.js` (`weaponIconW`, `weaponIconH`)
 - Баланс апгрейдов орудий: `assets/balance/cannonUpgrades.json` (runtime fallback при ошибках загрузки/валидации)
 
 ## Runtime reset (partial)

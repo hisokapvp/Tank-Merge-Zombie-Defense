@@ -290,16 +290,25 @@
       });
       if (!img || !img.complete) return;
 
-      if (node.width !== frameW) node.width = frameW;
-      if (node.height !== frameH) node.height = frameH;
+      var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+      var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
+      var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 60;
+
+      if (node.width !== iconW) node.width = iconW;
+      if (node.height !== iconH) node.height = iconH;
 
       var ctx = node.getContext('2d');
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, frameW, frameH);
+      ctx.clearRect(0, 0, iconW, iconH);
       var safeFrame = Math.max(0, toSafeNonNegativeInt(frameIndex) % frames);
       var spriteX = Math.floor(baseX + frameW * safeFrame);
-      ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, 0, 0, frameW, frameH);
+      var drawScale = Math.min(iconW / frameW, iconH / frameH);
+      var drawW = frameW * drawScale;
+      var drawH = frameH * drawScale;
+      var dx = Math.round((iconW - drawW) * 0.5);
+      var dy = Math.round((iconH - drawH) * 0.5);
+      ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, dx, dy, drawW, drawH);
     }
 
     function tickGunsIconSprites() {
@@ -499,11 +508,15 @@
           var balanceFrames = toSafeNonNegativeInt(getCannonUpgradeIconFrames(level));
           if (balanceFrames <= 0) balanceFrames = 1;
           var animFrames = Math.max(1, Math.min(spriteFrames, balanceFrames));
+          var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+          var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
+          var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
           spriteHtml = '' +
-            '<span class="scGunsTable__spriteBox">' +
+            '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
               '<canvas class="scGunsTable__spriteCanvas"' +
-                ' width="' + String(frameW) + '"' +
-                ' height="' + String(frameH) + '"' +
+                ' width="' + String(iconW) + '"' +
+                ' height="' + String(iconH) + '"' +
+                ' style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px"' +
                 ' data-anim-frames="' + String(animFrames) + '"' +
                 ' data-sprite-src="' + src + '"' +
                 ' data-frame-x="' + String(frameX) + '"' +

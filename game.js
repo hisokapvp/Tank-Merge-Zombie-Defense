@@ -6,98 +6,7 @@ ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
 const SeededRngApi = GameApi?.SeededRng ?? null;
 
-const RuntimeTasks = (() => {
-  const native = {
-    setTimeout: window.setTimeout.bind(window),
-    clearTimeout: window.clearTimeout.bind(window),
-    setInterval: window.setInterval.bind(window),
-    clearInterval: window.clearInterval.bind(window),
-    requestAnimationFrame: window.requestAnimationFrame.bind(window),
-    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
-  };
-  const timeoutIds = new Set();
-  const intervalIds = new Set();
-  const rafIds = new Set();
-  let installed = false;
-  let suspended = false;
-
-  function install() {
-    if (installed) return;
-    installed = true;
-    window.setTimeout = function (handler, delay) {
-      if (suspended) return 0;
-      const args = Array.prototype.slice.call(arguments, 2);
-      const id = native.setTimeout(function () {
-        timeoutIds.delete(id);
-        if (typeof handler === 'function') {
-          handler.apply(window, args);
-        } else {
-          try { (0, eval)(handler); } catch (_) {}
-        }
-      }, delay);
-      timeoutIds.add(id);
-      return id;
-    };
-    window.clearTimeout = function (id) {
-      timeoutIds.delete(id);
-      return native.clearTimeout(id);
-    };
-    window.setInterval = function (handler, delay) {
-      if (suspended) return 0;
-      const args = Array.prototype.slice.call(arguments, 2);
-      const id = native.setInterval(function () {
-        if (typeof handler === 'function') {
-          handler.apply(window, args);
-        } else {
-          try { (0, eval)(handler); } catch (_) {}
-        }
-      }, delay);
-      intervalIds.add(id);
-      return id;
-    };
-    window.clearInterval = function (id) {
-      intervalIds.delete(id);
-      return native.clearInterval(id);
-    };
-    window.requestAnimationFrame = function (callback) {
-      if (suspended) return 0;
-      const id = native.requestAnimationFrame(function (ts) {
-        rafIds.delete(id);
-        callback(ts);
-      });
-      rafIds.add(id);
-      return id;
-    };
-    window.cancelAnimationFrame = function (id) {
-      rafIds.delete(id);
-      return native.cancelAnimationFrame(id);
-    };
-  }
-
-  function clearAll() {
-    timeoutIds.forEach(function (id) { native.clearTimeout(id); });
-    timeoutIds.clear();
-    intervalIds.forEach(function (id) { native.clearInterval(id); });
-    intervalIds.clear();
-    rafIds.forEach(function (id) { native.cancelAnimationFrame(id); });
-    rafIds.clear();
-  }
-
-  function suspendAll() {
-    suspended = true;
-  }
-
-  function resumeAll() {
-    suspended = false;
-  }
-
-  return {
-    install,
-    clearAll,
-    suspendAll,
-    resumeAll,
-  };
-})();
+const RuntimeTasks = GameApi.RuntimeTasks || { install(){}, clearAll(){}, suspendAll(){}, resumeAll(){} };
 
 RuntimeTasks.install();
 
@@ -206,55 +115,27 @@ function computePowerTier(computerLevel){
   return 5;
 }
 
+const CannonUpgradesApi = GameApi?.CannonUpgrades ?? null;
+
 function createFallbackCannonUpgrades(levels){
-  const totalLevels = Number.isFinite(levels) ? Math.max(1, Math.floor(levels)) : CANNON_UPGRADES_LEVELS;
-  const fallback = [];
-  for (let i = 0; i < totalLevels; i++) {
-    const level = i + 1;
-    const costBase = 2 + Math.floor(i * 0.5);
-    const costStep = 1 + Math.floor(i * 0.33);
-    const damageMulPerUpgrade = Number((0.01 + i * 0.00035).toFixed(5));
-    const attackSpeedMulPerUpgrade = Number((0.008 + i * 0.00025).toFixed(5));
-    fallback.push([level, costBase, costStep, damageMulPerUpgrade, attackSpeedMulPerUpgrade, 1]);
-  }
-  return fallback;
+  return CannonUpgradesApi
+    ? CannonUpgradesApi.createFallbackCannonUpgrades(levels ?? CANNON_UPGRADES_LEVELS)
+    : [];
 }
 
 function sanitizeCannonUpgradeRow(row, index){
-  if (!Array.isArray(row) || (row.length !== 5 && row.length !== 6)) return null;
-  const tankLevel = Number(row[0]);
-  const costBase = Number(row[1]);
-  const costStep = Number(row[2]);
-  const damageMulPerUpgrade = Number(row[3]);
-  const attackSpeedMulPerUpgrade = Number(row[4]);
-  const rawIconFrames = Number(row[5]);
-  const iconFrames = Number.isFinite(rawIconFrames) && rawIconFrames >= 1
-    ? Math.floor(rawIconFrames)
-    : 1;
-  if (!Number.isFinite(tankLevel) || tankLevel !== index + 1) return null;
-  if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return null;
-  if (!Number.isFinite(damageMulPerUpgrade) || !Number.isFinite(attackSpeedMulPerUpgrade)) return null;
-  return [
-    tankLevel,
-    Math.max(0, Math.floor(costBase)),
-    Math.max(0, Math.floor(costStep)),
-    Math.max(0, damageMulPerUpgrade),
-    Math.max(0, attackSpeedMulPerUpgrade),
-    iconFrames,
-  ];
+  return CannonUpgradesApi ? CannonUpgradesApi.sanitizeCannonUpgradeRow(row, index) : null;
 }
 
 function normalizeCannonUpgradesConfig(raw){
-  if (!Array.isArray(raw) || raw.length !== CANNON_UPGRADES_LEVELS) return null;
-  const normalized = [];
-  for (let i = 0; i < CANNON_UPGRADES_LEVELS; i++) {
-    const row = sanitizeCannonUpgradeRow(raw[i], i);
-    if (!row) return null;
-    normalized.push(row);
-  }
-  return normalized;
+  return CannonUpgradesApi
+    ? CannonUpgradesApi.normalizeCannonUpgradesConfig(raw, CANNON_UPGRADES_LEVELS)
+    : null;
 }
 
+function normalizeAppliedCannonUpgrade(value){
+  return CannonUpgradesApi ? CannonUpgradesApi.normalizeAppliedCannonUpgrade(value) : (Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0);
+}
 let CannonUpgradesBalance = createFallbackCannonUpgrades(CANNON_UPGRADES_LEVELS);
 
 function getCannonUpgradeConfig(){
@@ -488,105 +369,30 @@ function createInitialState(options){
   const reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
   const initialState = InitialStateApi && InitialStateApi.createInitialState
     ? InitialStateApi.createInitialState({ maxLevel: MAX_TANK_LEVEL, reason })
-    : {
-    coins: 120,
-    kills: 0,
-    totalDamageDealtRaw: 0,
-    zombieWaveAtkMult: 1,
-    damagePointsSpent: 0,
-    fenceLevel: 1,
-    cells: [],
-    boardRect: {x:0,y:0,w:0,h:0},
-    zombies: [],
-    projectiles: [],
-    impacts: [],     // rings + bolts
-    decals: [],      // e.g., toxic pools
-    particles: [],
-    damageNumbers: [],
-    drones: [],
-    decors: [],
-      wallDecors: [],
-    mapSeeds: {
-      stampsSeed: null,
-      decorSeed: null,
-    },
-    nextZombieRenderOrder: 1,
-    fenceSegments: [],
-    fenceSegmentsMeta: null,
-    savedFenceState: null,
-    crate: null,
-    nextCrateAt: 0,
-    dragging: null,
-    boostUntil: 0,
-    empUntil: 0,
-    activeEffects: {
-      attackUntil: 0,
-      speedUntil: 0,
-      economyUntil: 0,
-    },
-    supercomputer: {
-      computerLevel: 1,
-      xp: 0,
-      xpToNext: 500,
-      maxLevel: 60,
-      hp: 920,
-      maxHp: 920,
-      armorFlat: 2,
-      x: 0,
-      y: 0,
-      offsetY: 64,
-      state: 'idle',
-      animElapsedSec: 0,
-      glitchLoopsRemaining: 0,
-      glitchCooldownUntil: 0,
-      wantsBuildTank: false,
-      pendingBuildTank: false,
-      eventShown40: false,
-      eventShown50: false,
-      eventShown60: false,
-    },
-    player: {
-      talentPoints: 0,
-      damagePoints: 0,
-      talentsApplied: [],
-      talentsPending: [],
-      activeCooldowns: [0, 0, 0],
-      cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
-      mods: null,
-      modsDirty: true,
-      eventShown40: false,
-      eventShown50: false,
-      eventShown60: false,
-    },
-    endgameVisuals: false,
-    maxTankLevelAchieved: 1,
-    buyCounts: {},
-    buyPrices: {},
-    achievements: {
-      unlocked: {},
-      popupQueue: [],
-      totalPurchased: 0,
-      totalMerges: 0,
-    },
-    ui: {
-      talentsOpen: false,
-      talentBranch: 0,
-      levelReward: null,
-      levelRewardTimer: 0,
-      menuOpen: true,
-      toast: {
-        active: null,
-        queue: [],
-      },
-      unlockFx: {
-        autoMergeUntilMs: 0,
-        bulkBuyUntilMs: 0,
-      },
-    },
-    selectedHangarCellIndex: null,
-    isDismantleMode: false,
-    selectedTankIds: [],
-  };
+    : { coins: 120, kills: 0, totalDamageDealtRaw: 0, zombieWaveAtkMult: 1,
+        damagePointsSpent: 0, fenceLevel: 1, cells: [], boardRect: {x:0,y:0,w:0,h:0},
+        zombies: [], projectiles: [], impacts: [], decals: [], particles: [],
+        damageNumbers: [], drones: [], decors: [], wallDecors: [],
+        mapSeeds: { stampsSeed: null, decorSeed: null }, nextZombieRenderOrder: 1,
+        fenceSegments: [], fenceSegmentsMeta: null, savedFenceState: null,
+        crate: null, nextCrateAt: 0, dragging: null, boostUntil: 0, empUntil: 0,
+        activeEffects: { attackUntil: 0, speedUntil: 0, economyUntil: 0 },
+        supercomputer: { computerLevel: 1, xp: 0, xpToNext: 500, maxLevel: MAX_TANK_LEVEL,
+          hp: 920, maxHp: 920, armorFlat: 2, x: 0, y: 0, offsetY: 64,
+          state: 'idle', animElapsedSec: 0, glitchLoopsRemaining: 0,
+          glitchCooldownUntil: 0, wantsBuildTank: false, pendingBuildTank: false,
+          eventShown40: false, eventShown50: false, eventShown60: false },
+        player: { talentPoints: 0, damagePoints: 0, talentsApplied: [],
+          talentsPending: [], activeCooldowns: [0,0,0],
+          cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
+          mods: null, modsDirty: true,
+          eventShown40: false, eventShown50: false, eventShown60: false },
+        endgameVisuals: false, maxTankLevelAchieved: 1, buyCounts: {}, buyPrices: {},
+        achievements: { unlocked: {}, popupQueue: [], totalPurchased: 0, totalMerges: 0 },
+        ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
+          menuOpen: true, toast: { active: null, queue: [] },
+          unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
+        selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [] };
   if (reason === 'new_game') {
     if (!initialState.player || typeof initialState.player !== 'object') {
       initialState.player = { talentPoints: 1 };
@@ -831,7 +637,6 @@ if (SupercomputerApi && typeof SupercomputerApi.createController === 'function')
   supercomputerController = SupercomputerApi.createController({ nowSec: nowSec, random: Math.random, maxLevel: MAX_TANK_LEVEL });
 }
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
-const FENCE_HIT_INTERVAL_MS = 500;
 const FENCE_DEFAULT_SEGMENT_HP = 200;
 const FENCE_DEFAULT_REPAIR_COST = 100;
 const ZOMBIE_DEFAULT_ATTACK_DAMAGE = 8;
@@ -891,7 +696,7 @@ const supercomputerHudRuntime = {
   },
   button: {
     lastTransform: '',
-    lastVisible: true,
+    lastVisible: false,
     width: 42,
     height: 42,
   },
@@ -3088,10 +2893,6 @@ function calculateAffordableBuyCount(limit){
   return { count, totalCost };
 }
 
-function getBulkBuyPlan(){
-  return getBulkBuyPlanByMode(buyBulkMode());
-}
-
 function getBulkBuyPlanByMode(mode){
   const Garage = window.Game && window.Game.Garage;
   const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
@@ -3313,10 +3114,6 @@ function performMerge(fromIdx, toIdx, opts){
 
   popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
   return true;
-}
-
-function mergeCells(fromIdx, toIdx){
-  return performMerge(fromIdx, toIdx, { placeResult: 'original' });
 }
 
 function findTankCellIndex(tankRef){
@@ -3722,12 +3519,6 @@ function pendingCost(){
   return p.talentsPending.reduce((sum, r) => sum + r, 0);
 }
 
-function resetTalentSelections(){
-  const p = state.player;
-  p.talentsPending.fill(0);
-  updateTalentUI();
-}
-
 function resetAllTalents(){
   const p = state.player;
   let refund = 0;
@@ -3761,8 +3552,6 @@ function doApplyTalentSelections(){
   updateTalentUI();
 }
 
-const APPLY_VFX_FLASH_MS = 120;
-const APPLY_VFX_FLOW_MS = 380;
 const APPLY_VFX_TOTAL_MS = 520;
 let applyTalentBusy = false;
 
@@ -4329,8 +4118,6 @@ function assignZombieSlot(z, slotIndex, slotCount){
   const fenceLimit = zombieFenceLimit(z);
   z.targetR = fenceLimit + (Math.random()*2-1)*Math.min(4, BAL.zombieTrackWidth * 0.2);
 }
-
-const MAX_ZOMBIE_LEVEL = 60;
 
 function toSafeInt(value, fallback){
   if (ZombieSpawnApi && ZombieSpawnApi.toSafeInt) {
@@ -5004,11 +4791,6 @@ function getBreachesForSide(sideKey){
   return [];
 }
 
-function hasAnyBreach(){
-  const breaches = ensureBreachesBySide();
-  return breaches.top.length > 0 || breaches.right.length > 0 || breaches.bottom.length > 0 || breaches.left.length > 0;
-}
-
 function pointInAabb(x, y, aabb){
   if (!aabb) return false;
   return x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
@@ -5020,20 +4802,6 @@ function getActiveBreachAtPoint(sideKey, x, y){
     const breach = list[i];
     if (!breach || !breach.holeAabb) continue;
     if (pointInAabb(x, y, breach.holeAabb)) return breach;
-  }
-  return null;
-}
-
-function getActiveBreachAtPointAnySide(x, y){
-  const breaches = ensureBreachesBySide();
-  const lists = [breaches.top, breaches.right, breaches.bottom, breaches.left];
-  for (let li = 0; li < lists.length; li++) {
-    const list = lists[li];
-    for (let i = 0; i < list.length; i++) {
-      const breach = list[i];
-      if (!breach || !breach.holeAabb) continue;
-      if (pointInAabb(x, y, breach.holeAabb)) return breach;
-    }
   }
   return null;
 }
@@ -5057,27 +4825,6 @@ function pickNearestBreachForSide(sideKey, x, y){
   return best;
 }
 
-function pickNearestBreachAnySide(x, y){
-  const breaches = ensureBreachesBySide();
-  const lists = [breaches.top, breaches.right, breaches.bottom, breaches.left];
-  let best = null;
-  let bestDist = Infinity;
-  for (let li = 0; li < lists.length; li++) {
-    const list = lists[li];
-    for (let i = 0; i < list.length; i++) {
-      const breach = list[i];
-      if (!breach || !breach.center) continue;
-      const dx = breach.center.x - x;
-      const dy = breach.center.y - y;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestDist) {
-        bestDist = d2;
-        best = breach;
-      }
-    }
-  }
-  return best;
-}
 
 function getBrokenFenceSidesMap(){
   const breaches = ensureBreachesBySide();
@@ -5329,45 +5076,6 @@ function tryRepairFenceSegmentAt(px, py){
 
 function resolveFenceFrameScale(frame){
   return Number.isFinite(frame?.scale) ? frame.scale : 1;
-}
-
-function getFenceCollisionPadding(){
-  const spriteKeys = resolveFenceSpriteKeys();
-  if (!FenceSprites.ready || !spriteKeys) return 0;
-
-  const entries = [
-    { id: spriteKeys.cornerTL, kind: 'cornerTL' },
-    { id: spriteKeys.cornerTR, kind: 'cornerTR' },
-    { id: spriteKeys.cornerBR, kind: 'cornerBR' },
-    { id: spriteKeys.cornerBL, kind: 'cornerBL' },
-    { id: spriteKeys.sideTop, kind: 'sideTop' },
-    { id: spriteKeys.sideRight, kind: 'sideRight' },
-    { id: spriteKeys.sideBottom, kind: 'sideBottom' },
-    { id: spriteKeys.sideLeft, kind: 'sideLeft' },
-  ];
-
-  let maxOutward = 0;
-  for (const entry of entries){
-    const frame = FenceSprites.pickFrame(entry.id);
-    if (!frame) continue;
-
-    const drawScale = (BAL.fenceWidth / Math.max(frame.w, frame.h)) * 1.2 * resolveFenceFrameScale(frame);
-    const drawW = frame.w * drawScale;
-    const drawH = frame.h * drawScale;
-    const ax = frame.anchor?.x ?? 0.5;
-    const ay = frame.anchor?.y ?? 0.5;
-
-    if (entry.kind === 'sideTop') maxOutward = Math.max(maxOutward, drawH * ay);
-    else if (entry.kind === 'sideBottom') maxOutward = Math.max(maxOutward, drawH * (1 - ay));
-    else if (entry.kind === 'sideLeft') maxOutward = Math.max(maxOutward, drawW * ax);
-    else if (entry.kind === 'sideRight') maxOutward = Math.max(maxOutward, drawW * (1 - ax));
-    else if (entry.kind === 'cornerTL') maxOutward = Math.max(maxOutward, drawW * ax, drawH * ay);
-    else if (entry.kind === 'cornerTR') maxOutward = Math.max(maxOutward, drawW * (1 - ax), drawH * ay);
-    else if (entry.kind === 'cornerBR') maxOutward = Math.max(maxOutward, drawW * (1 - ax), drawH * (1 - ay));
-    else if (entry.kind === 'cornerBL') maxOutward = Math.max(maxOutward, drawW * ax, drawH * (1 - ay));
-  }
-
-  return maxOutward;
 }
 
 function zombieFenceLimit(z){
@@ -7637,10 +7345,6 @@ function closeAchievementPopup(){
   a11yClose(ui.achievementPopup);
 }
 
-function maybeShowNextAchievementPopup(){
-  return;
-}
-
 function ensureProgressUI(){
   const topbar = document.querySelector('.stageUiRight') || document.querySelector('.stageCanvas') || document.body;
   if (document.getElementById('xpWrap')) return;
@@ -8405,7 +8109,6 @@ function draw(){
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
   drawBackground();
-  drawTrack();
   drawTankTrack();
   drawZombieFence();
   drawSupercomputer();
@@ -8586,15 +8289,6 @@ function drawDecorZombieLayer(){
     if (item.kind === 'decor') drawDecorSpriteAt(item.ref);
     else if (item.kind === 'zombie') drawZombieEntity(item.ref, item.x, item.zY);
   }
-}
-
-function drawDecors(){
-  if (!state.decors || !state.decors.length) return;
-  for (let i = 0; i < state.decors.length; i++) drawDecorSpriteAt(state.decors[i]);
-}
-
-function drawTrack(){
-  // Zombie track visuals intentionally disabled.
 }
 
 function drawTankTrack(){
@@ -9808,13 +9502,6 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   }
 
   ctx.restore();
-}
-
-function drawZombies(){
-  for (const z of state.zombies){
-    const p = zombiePos(z);
-    drawZombieEntity(z, p.x, p.y);
-  }
 }
 
 function drawZombieEntity(z, x, y){

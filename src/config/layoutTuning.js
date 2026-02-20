@@ -8,6 +8,9 @@
     trackToHangarGapPx: 0,
     trackToFenceGapPx: 30,
     supercomputerOffsetY: 64,
+    /** Ширина/высота иконки оружия в UI (суперкомпьютер, модалки). */
+    weaponIconW: 70,
+    weaponIconH: 70,
     zombieFenceOffsetPxBySide: {
       top: 20,
       right: 10,
