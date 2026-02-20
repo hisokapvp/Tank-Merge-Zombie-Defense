@@ -1,7 +1,7 @@
 # Project Guidelines
 
 ## Code Style
-- Перед правками прочитай `docs/ai/INDEX.md`, затем профильный `docs/ai/SYSTEMS/*.md` (и `docs/ai/PLAYBOOKS/*` для типовых задач).
+- Перед правками прочитай `docs/ai/INDEX.md`, затем `docs/ai/ARCHITECTURE.md`, потом профильный `docs/ai/SYSTEMS/*.md` (и `docs/ai/PLAYBOOKS/*` для типовых задач).
 - В `src/*` используй только IIFE + `'use strict'` + `global.Game.*`; без `import/export`.
 - Новую логику добавляй в `src/*`, не раздувай `game.js`; точки входа: `index.html`, `game.js`, `src/core/bootstrap.js`.
 - На hot path (`loop`/`draw`/`step*`) избегай лишних аллокаций; `draw()` должен только рисовать.
@@ -13,11 +13,13 @@
 - `src/core/bootstrap.js` связывает DOM и runtime через `Game.*` API (continue flow, UI-события, audio sliders).
 - Поток офлайн-наград: `src/persistence/offlineProgress.js` → `src/ui/offlineModal.js` → `src/ui/continueFlow.js`.
 - Для системной ориентации используй `docs/ai/ARCHITECTURE.md` и целевые файлы в `docs/ai/SYSTEMS/*`.
+- Для быстрого исследования `game.js` см. карту файла: `docs/ai/GAME_JS_MAP.md` — в ней перечислены ключевые функции и примерные диапазоны строк, где они находятся.
 
 ## Build and Test
 - Основные проверки: `node Test/tests.js`, `bash ci/check_style.sh`, `bash ci/run_tests.sh`.
 - Полный локальный прогон: `bash hooks/pre-commit` (style + все test packs).
-- Релизные проверки: `bash ci/release_checklist.sh`, `bash ops/release/build_release.sh`, `bash ops/release/post_release_checks.sh`.
+- Релизные проверки: `bash ci/release_checklist.sh`, `bash ops/release/build_release.sh`, `bash ops/release/post_release_checks.sh`, `bash ops/release/check_release_integrity.sh <zip_path>`.
+- Ops-мониторинг: `node ops/monitoring/health_check.js --root .`, `node ops/monitoring/telemetry_retention.js --self-test`.
 - На Windows для `bash`-скриптов используй Git Bash/WSL; `node ...` команды кроссплатформенные.
 - Если в WSL ошибка `execvpe(/bin/bash) failed`, проверь наличие bash в дистро или используй:
   `& "C:\Program Files\Git\bin\bash.exe" -lc "./ci/run_tests.sh"` в PowerShell.
