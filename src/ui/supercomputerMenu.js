@@ -106,6 +106,7 @@
       rows: null,
       initialized: false,
     };
+    var gunsSpriteImageCache = Object.create(null);
 
     function applySharedTalentModalClass() {
       var talentOverlay = documentObj.getElementById('talentOverlay');
@@ -254,24 +255,65 @@
       return rowBottom >= viewTop && rowTop <= viewBottom;
     }
 
+    function getSpriteImageForSrc(src, onReady) {
+      if (!src || typeof src !== 'string') return null;
+      var cached = gunsSpriteImageCache[src] || null;
+      if (cached && cached.complete) return cached;
+      if (!cached) {
+        cached = new global.Image();
+        cached.decoding = 'async';
+        cached.src = src;
+        gunsSpriteImageCache[src] = cached;
+      }
+      if (typeof onReady === 'function') {
+        var once = function () {
+          cached.removeEventListener('load', once);
+          onReady(cached);
+        };
+        cached.addEventListener('load', once);
+      }
+      return cached;
+    }
+
+    function drawGunsSpriteCanvas(node, frameIndex) {
+      if (!node) return;
+      var src = node.getAttribute('data-sprite-src') || '';
+      var frameW = toSafeNonNegativeInt(Number(node.getAttribute('data-frame-w')));
+      var frameH = toSafeNonNegativeInt(Number(node.getAttribute('data-frame-h')));
+      var baseX = Number(node.getAttribute('data-frame-x'));
+      var baseY = Number(node.getAttribute('data-frame-y'));
+      var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
+      if (!src || frameW <= 0 || frameH <= 0 || !Number.isFinite(baseX) || !Number.isFinite(baseY)) return;
+      if (frames <= 0) frames = 1;
+      var img = getSpriteImageForSrc(src, function () {
+        drawGunsSpriteCanvas(node, frameIndex);
+      });
+      if (!img || !img.complete) return;
+
+      if (node.width !== frameW) node.width = frameW;
+      if (node.height !== frameH) node.height = frameH;
+
+      var ctx = node.getContext('2d');
+      if (!ctx) return;
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, frameW, frameH);
+      var safeFrame = Math.max(0, toSafeNonNegativeInt(frameIndex) % frames);
+      var spriteX = Math.floor(baseX + frameW * safeFrame);
+      ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, 0, 0, frameW, frameH);
+    }
+
     function tickGunsIconSprites() {
       if (!gunsUi.rows || state.view !== 'tankWall' || state.activeTankWallTab !== 'weapons') return;
       state.iconTickerFrame = (state.iconTickerFrame + 1) % 1000000;
-      var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteAnim[data-anim-frames]');
+      var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
       if (!animatedNodes || !animatedNodes.length) return;
       for (var i = 0; i < animatedNodes.length; i++) {
         var node = animatedNodes[i];
         var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
-        if (frames <= 1) continue;
         var rowNode = node.closest('.scGunsTable__row');
         if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
-        var frameW = toSafeNonNegativeInt(Number(node.getAttribute('data-frame-w')));
-        var baseX = Number(node.getAttribute('data-frame-x'));
-        var baseY = Number(node.getAttribute('data-frame-y'));
-        if (frameW <= 0 || !Number.isFinite(baseX) || !Number.isFinite(baseY)) continue;
-        var frameIndex = state.iconTickerFrame % frames;
-        var spriteX = Math.floor(baseX + frameW * frameIndex);
-        node.style.backgroundPosition = '-' + String(spriteX) + 'px -' + String(Math.floor(baseY)) + 'px';
+        var frameIndex = frames <= 1 ? 0 : (state.iconTickerFrame % frames);
+        drawGunsSpriteCanvas(node, frameIndex);
       }
     }
 
@@ -457,16 +499,18 @@
           var balanceFrames = toSafeNonNegativeInt(getCannonUpgradeIconFrames(level));
           if (balanceFrames <= 0) balanceFrames = 1;
           var animFrames = Math.max(1, Math.min(spriteFrames, balanceFrames));
-          var fitScale = Math.min(1, Math.min(40 / frameW, 24 / frameH));
           spriteHtml = '' +
             '<span class="scGunsTable__spriteBox">' +
-              '<span class="scGunsTable__spriteAnim"' +
+              '<canvas class="scGunsTable__spriteCanvas"' +
+                ' width="' + String(frameW) + '"' +
+                ' height="' + String(frameH) + '"' +
                 ' data-anim-frames="' + String(animFrames) + '"' +
+                ' data-sprite-src="' + src + '"' +
                 ' data-frame-x="' + String(frameX) + '"' +
                 ' data-frame-y="' + String(frameY) + '"' +
                 ' data-frame-w="' + String(frameW) + '"' +
-                ' style="background-image:url(' + src + ');background-position:-' + String(frameX) + 'px -' + String(frameY) + 'px;width:' + String(frameW) + 'px;height:' + String(frameH) + 'px;transform:scale(' + String(fitScale) + ');"' +
-              '></span>' +
+                ' data-frame-h="' + String(frameH) + '"' +
+              '></canvas>' +
             '</span>';
         } else {
           spriteHtml = '<span class="scGunsTable__spriteFallback">' + translate('modsGunsNoSprite') + '</span>';

@@ -8920,9 +8920,26 @@ function updateSupercomputerHudButtonPosition(){
 
   const now = nowSec();
   const layoutResult = ensureSupercomputerBoostLayout(now);
-  const spriteMetrics = layoutResult && layoutResult.spriteMetrics
+  let spriteMetrics = layoutResult && layoutResult.spriteMetrics
     ? layoutResult.spriteMetrics
     : resolveSupercomputerSpriteMetrics(getComputerState());
+  if (!spriteMetrics) {
+    const sc = getComputerState();
+    if (sc && Number.isFinite(sc.x) && Number.isFinite(sc.y)) {
+      const fallbackBounds = {
+        w: SUPERCOMPUTER_FALLBACK_BOUNDS.w * balScale,
+        h: SUPERCOMPUTER_FALLBACK_BOUNDS.h * balScale,
+      };
+      spriteMetrics = {
+        centerX: sc.x,
+        centerY: sc.y,
+        width: fallbackBounds.w,
+        height: fallbackBounds.h,
+        halfW: fallbackBounds.w * 0.5,
+        halfH: fallbackBounds.h * 0.5,
+      };
+    }
+  }
   if (!spriteMetrics) {
     if (supercomputerHudRuntime.button.lastVisible !== false) {
       ui.supercomputerBtn.style.visibility = 'hidden';
@@ -8953,8 +8970,10 @@ function updateSupercomputerHudButtonPosition(){
   }
 
   const canvasRect = canvas.getBoundingClientRect();
-  const xPx = Math.round(canvasRect.left + x);
-  const yPx = Math.round(canvasRect.top + y);
+  const stageCanvasEl = canvas && canvas.parentElement ? canvas.parentElement : null;
+  const stageRect = stageCanvasEl ? stageCanvasEl.getBoundingClientRect() : canvasRect;
+  const xPx = Math.round(canvasRect.left - stageRect.left + x);
+  const yPx = Math.round(canvasRect.top - stageRect.top + y);
   const nextTransform = 'translate3d(' + xPx + 'px,' + yPx + 'px,0)';
 
   if (btnState.lastTransform !== nextTransform) {

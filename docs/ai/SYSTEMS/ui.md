@@ -68,8 +68,14 @@
 
 ## Supercomputer: root tiles
 - Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).
-- Label `.scRootTile__label`: одна строка (`white-space:nowrap`), без `ellipsis`, с минимальным шрифтом `14px` desktop и `12px` mobile через `clamp(...)` + media rules.
+- Label `.scRootTile__label`: одна строка (`white-space:nowrap`) с защитой layout (`overflow:hidden` + `text-overflow:ellipsis`), auto-shrink через `clamp(...)` с минимальным размером `12px` на всех брейкпоинтах.
 - Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), а фактический размер идёт через `--scTileIconSize` + `clamp(...)`; целевой baseline около `96px` на стандартном экране.
+
+## Supercomputer: modal layout
+- `supercomputer` модалки (`#supercomputerMenuOverlay`, `#modsHangarOverlay`, `#modsTankWallOverlay`) оформляются как `large modal` по паттерну дерева улучшений: panel с классом `.scModal`.
+- Размеры модалки должны быть адаптивными и ограниченными viewport: паттерн `width:min(96vw, 1060px)` и `max-height:min(90vh, 920px)`.
+- Внешний overlay не скроллится (`overflow:hidden`), скролл разрешён только внутри `.scModal__body` (`overflow:auto`, `min-height:0`, `flex:1`).
+- Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll.
 
 ## On-track dim (иконка в слоте)
 - Источник параметра: `assets/tanks.json` → `ui.onTrackIconOpacity`.

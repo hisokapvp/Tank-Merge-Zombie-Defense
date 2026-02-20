@@ -208,33 +208,37 @@
         </div>
         <div class="levelModal hidden" id="supercomputerMenuOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-supercomputer-root-close="true"></div>
-          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
+          <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
             <button class="levelModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Меню суперкомпьютера</div>
-            <div class="levelModal__actions scRootTiles">
-              <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true"></span>
-                <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
-              </button>
-              <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true"></span>
-                <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
-              </button>
-              <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
-                <span class="scRootTile__icon" aria-hidden="true"></span>
-                <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Древо улучшений</span>
-              </button>
+            <div class="scModal__body">
+              <div class="levelModal__actions scRootTiles">
+                <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
+                  <span class="scRootTile__icon" aria-hidden="true"></span>
+                  <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
+                </button>
+                <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
+                  <span class="scRootTile__icon" aria-hidden="true"></span>
+                  <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
+                </button>
+                <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
+                  <span class="scRootTile__icon" aria-hidden="true"></span>
+                  <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Древо улучшений</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
         <div class="levelModal hidden" id="modsHangarOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-mods-hangar-close="true"></div>
-          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
+          <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
             <button class="levelModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">Улучшения ячеек ангара</div>
-            <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
-            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
-              <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+            <div class="scModal__body">
+              <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+              <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+              </div>
             </div>
           </div>
         </div>
@@ -248,25 +252,27 @@
               <button id="modsTankWallTabBases" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelBases" tabindex="-1" data-i18n="modsTabBases">Базы</button>
               <button id="modsTankWallTabWalls" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelWalls" tabindex="-1" data-i18n="modsTabWalls">Стены</button>
             </div>
-            <div class="scTabPanels">
-              <section class="scTabPanel" id="modsTankWallPanelGuns" role="tabpanel" aria-labelledby="modsTankWallTabGuns">
-                <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+            <div class="scModal__body">
+              <div class="scTabPanels">
+                <section class="scTabPanel" id="modsTankWallPanelGuns" role="tabpanel" aria-labelledby="modsTankWallTabGuns">
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                </section>
+                <section class="scTabPanel" id="modsTankWallPanelBases" role="tabpanel" aria-labelledby="modsTankWallTabBases" hidden>
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                </section>
+                <section class="scTabPanel" id="modsTankWallPanelWalls" role="tabpanel" aria-labelledby="modsTankWallTabWalls" hidden>
+                  <div class="levelModal__line" id="modsTankWallDamagePoints">Очки урона: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceLevel">Уровень стен: 1</div>
+                  <div class="levelModal__line" id="modsTankWallFenceHp">HP сегмента: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceArmor">Броня: 0</div>
+                  <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                    <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">Улучшить</button>
+                  </div>
+                </section>
+              </div>
+              <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
               </section>
-              <section class="scTabPanel" id="modsTankWallPanelBases" role="tabpanel" aria-labelledby="modsTankWallTabBases" hidden>
-                <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
-              </section>
-              <section class="scTabPanel" id="modsTankWallPanelWalls" role="tabpanel" aria-labelledby="modsTankWallTabWalls" hidden>
-                <div class="levelModal__line" id="modsTankWallDamagePoints">Очки урона: 0</div>
-                <div class="levelModal__line" id="modsTankWallFenceLevel">Уровень стен: 1</div>
-                <div class="levelModal__line" id="modsTankWallFenceHp">HP сегмента: 0</div>
-                <div class="levelModal__line" id="modsTankWallFenceArmor">Броня: 0</div>
-                <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
-                  <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">Улучшить</button>
-                </div>
-              </section>
-            </div>
-            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
-              <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
             </div>
           </div>
         </div>
