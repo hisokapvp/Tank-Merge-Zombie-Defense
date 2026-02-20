@@ -57,6 +57,7 @@
       },
       player: {
         talentPoints: 0,
+        damagePoints: 0,
         talentsApplied: [],
         talentsPending: [],
         activeCooldowns: [0, 0, 0],

@@ -63,3 +63,9 @@
 	- для старых save без поля выполняется fallback на `Array(60).fill(0)`;
 	- игра не падает при отсутствии поля, улучшения считаются нулевыми.
 - `pending`-улучшения **не сохраняются**: это только UI-состояние внутри открытого `supercomputerMenu`.
+
+## Damage Points в save state
+- Runtime-источник доступных очков: `state.totalDamageDealtRaw` и `state.damagePointsSpent`.
+- Явное поле в `player`: `state.player.damagePoints` (нормализованное `>=0`, синхронизируется при расчёте доступных очков).
+- Слоты сохраняют/восстанавливают `state.player.damagePoints` в составе `player` через `src/persistence/storage.js` (`serializeState -> player`) и `restoreFullState`.
+- Debug-изменения очков (`+Add/-Add`) меняют игровое состояние и попадают в slot payload без новых ключей `localStorage`.

@@ -591,6 +591,7 @@
 
     if (opts.DebugPanelEnabled) opts.initDebugPanel();
     if (opts.DebugPanelEnabled && windowObj.Game && windowObj.Game.AdminFlags) windowObj.Game.AdminFlags.init();
+    if (opts.DebugPanelEnabled && windowObj.Game && windowObj.Game.AdminDamagePoints) windowObj.Game.AdminDamagePoints.init();
 
     if (typeof opts.ensureStarterTanks === 'function') {
       opts.ensureStarterTanks(getState(), 2);

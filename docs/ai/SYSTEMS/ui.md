@@ -87,6 +87,12 @@
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
 - Disabled toast правило: если у кнопки `data-disabled-reason="noSaves"`, показывается «Нет сохранений/No saves», иначе «Недоступно/Unavailable». Сообщение показывается через единый helper `src/ui/toast.js` (один DOM, таймер перезапускается, без бесконечного stacking).
 
+## Debug panel extension: Damage Points
+- Реализация: `src/ui/adminDamagePoints.js`, инициализация из `src/core/bootstrap.js` рядом с `AdminFlags`.
+- Gating: блок рисуется только при `?debug=1` и только в dev-only окружении (localhost/file/.local), в контейнер `#debugSectionLogs`.
+- Контролы: `input type="number"` + кнопки `+Add`/`-Add`; delta парсится как `Math.floor(Number(value))`, нечисловой ввод трактуется как `0`.
+- Изменение значения: `+Add`/`-Add` обновляют игровое состояние, значение clamp `>= 0`, после изменения вызывается refresh `supercomputer` UI (доступность `+`/`Улучшить`, reserve/points labels).
+
 ## Tank onTrack toggle
 - User-action переключения `tank.onTrack` выполняются из `canvas` pointer handlers в `game.js`, но само изменение состояния делается через единый entrypoint `setTankOnTrackState(...)` -> `Game.Garage.setTankOnTrack(...)`.
 - Прямые присваивания `tank.onTrack = ...` для UI-toggle не использовать.

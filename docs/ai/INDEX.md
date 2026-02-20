@@ -47,6 +47,7 @@
 - Supercomputer root tiles: 3-в-ряд без переноса, label в одну строку с min font, размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
+- Debug panel: добавлен gated dev-only блок `Damage Points` (`?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

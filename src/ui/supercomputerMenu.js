@@ -341,6 +341,8 @@
       var cfg = getCannonUpgradeConfig();
       var levelsCount = getGunsLevelsCount();
       var rowsHtml = '';
+      var availablePoints = Math.max(0, Math.floor(getDamagePoints()));
+      var reservedPoints = getReservedDamagePoints();
 
       for (var i = 0; i < levelsCount; i++) {
         var level = i + 1;
@@ -358,10 +360,14 @@
         var currentDamage = Number.isFinite(baseDamage)
           ? baseDamage * (1 + applied * damageMulPer)
           : null;
+        var nextStepCost = Math.max(0, Math.floor(getCannonUpgradeStepCost(level, applied + pending) || 0));
+        var canAdd = (availablePoints - reservedPoints) >= nextStepCost;
+        var canMinus = pending > 0;
+        var totalPendingCost = getPendingCost(level, pending);
         var upgradeText = pending > 0
           ? String(applied) + ' (+' + String(pending) + ')'
           : String(applied);
-        var canApply = pending > 0;
+        var canApply = pending > 0 && availablePoints >= totalPendingCost;
         var spriteHtml = '';
         if (viewData.cannonSprite && viewData.cannonSprite.img && viewData.cannonSprite.cfg) {
           var src = viewData.cannonSprite.img.currentSrc || viewData.cannonSprite.img.src || '';
@@ -377,8 +383,8 @@
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseDamage) + ' / ' + formatNumber(currentDamage) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="plus" data-level="' + String(level) + '">+</button>' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="minus" data-level="' + String(level) + '">-</button>' +
+              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
+              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
               '<button type="button" class="btn btnPrimary uiButtonBehavior scGunsActionBtn" data-guns-action="apply" data-level="' + String(level) + '"' + (canApply ? '' : ' disabled') + '>' + translate('modsGunsUpgrade') + '</button>' +
             '</div>' +
           '</div>';

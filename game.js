@@ -542,6 +542,7 @@ function createInitialState(options){
     },
     player: {
       talentPoints: 0,
+      damagePoints: 0,
       talentsApplied: [],
       talentsPending: [],
       activeCooldowns: [0, 0, 0],
@@ -615,10 +616,17 @@ function ensureDamagePointsSpentState(){
   return state.damagePointsSpent;
 }
 
-function getAvailableDamagePoints(){
+function ensurePlayerDamagePointsState(){
+  if (!state.player || typeof state.player !== 'object') state.player = {};
   const totalDamagePoints = Math.floor(ensureDamageProgressState() / 10000);
   const spent = ensureDamagePointsSpentState();
-  return Math.max(0, totalDamagePoints - spent);
+  const available = Math.max(0, totalDamagePoints - spent);
+  state.player.damagePoints = available;
+  return available;
+}
+
+function getAvailableDamagePoints(){
+  return ensurePlayerDamagePointsState();
 }
 
 function getDamagePoints(){
@@ -687,6 +695,29 @@ function addTankDamageDealt(appliedDamage){
 }
 
 GameApi.getDamagePoints = getDamagePoints;
+
+function debugAdjustDamagePoints(deltaValue){
+  const delta = Math.floor(Number(deltaValue));
+  if (!Number.isFinite(delta) || delta === 0) {
+    return { ok: true, changed: false, damagePoints: getAvailableDamagePoints() };
+  }
+  const current = getAvailableDamagePoints();
+  const next = Math.max(0, current + delta);
+  if (next === current) {
+    return { ok: true, changed: false, damagePoints: current };
+  }
+
+  const spent = ensureDamagePointsSpentState();
+  const raw = ensureDamageProgressState();
+  const remainder = raw % 10000;
+  const requiredTotalDamagePoints = Math.max(0, spent + next);
+  state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(requiredTotalDamagePoints * 10000 + remainder);
+  state.player.modsDirty = true;
+  updateDamagePointsUI();
+  return { ok: true, changed: true, damagePoints: getAvailableDamagePoints() };
+}
+
+GameApi.debugAdjustDamagePoints = debugAdjustDamagePoints;
 
 let supercomputerController = null;
 
@@ -3981,6 +4012,7 @@ function restoreFullState(saved){
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
   state.zombieWaveAtkMult = Number.isFinite(saved.zombieWaveAtkMult) ? Math.max(0, saved.zombieWaveAtkMult) : 1;
   state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
+  ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
     Object.assign(getComputerState(), saved.supercomputer);
@@ -4103,6 +4135,7 @@ function applySavedProgress(data){
   if (Array.isArray(playerData.talentsApplied)) state.player.talentsApplied = playerData.talentsApplied;
   if (Array.isArray(playerData.talentsPending)) state.player.talentsPending = playerData.talentsPending;
   if (Array.isArray(playerData.activeCooldowns)) state.player.activeCooldowns = playerData.activeCooldowns;
+  if (Number.isFinite(playerData.damagePoints)) state.player.damagePoints = Math.max(0, Math.floor(playerData.damagePoints));
   if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
   ensureCannonUpgradesAppliedState();
   if (supercomputerController && supercomputerController.syncLevel) {
@@ -4134,6 +4167,7 @@ function applySavedProgress(data){
   }
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(totalDamageDealtRaw);
   state.damagePointsSpent = normalizeDamagePointsSpent(data.damagePointsSpent);
+  ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(data.fenceLevel) ? Math.max(1, Math.floor(data.fenceLevel)) : 1;
   state.zombieWaveAtkMult = Number.isFinite(data.zombieWaveAtkMult) ? Math.max(0, data.zombieWaveAtkMult) : 1;
   return true;
