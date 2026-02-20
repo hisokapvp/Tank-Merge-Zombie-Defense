@@ -3,6 +3,11 @@
 ## Где править
 - Конфиг: `src/config/worldEvents.js`
 - Логика: `src/systems/*`, `src/mechanics/levelFlow.js`
+- Runtime weather/attack: `src/systems/worldEventsRuntime.js`
+
+## Интеграция
+- `game.js` использует `ensureWorldEventsRuntimeController()` и делегирует в `Game.WorldEventsRuntime` функции weather/attack (`updateWorldEvents`, `drawWeather`, lightning/ramp helpers).
+- При отсутствии runtime-модуля остаётся fallback-логика в `game.js`.
 
 ## Правила
 - Параметры `attackMode`, `targetAlive`, ramp и force-сценарии менять как единый набор.

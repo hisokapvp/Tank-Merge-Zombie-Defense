@@ -8,6 +8,14 @@
 - Конфиг: `src/config/*` (audioUi, criticalAudioPolicy, criticalModalTuning, layoutTuning, worldEvents)
 - Поддержка: `src/analytics/*`, `src/telemetry/*`, `src/flags/*`, `src/experiments/*`
 
+## Извлечённые runtime-блоки из `game.js`
+- Audio/SFX pool runtime: `src/audio/sfxPoolRuntime.js` (`Game.SfxPoolRuntime`).
+- Weather/attack world events runtime: `src/systems/worldEventsRuntime.js` (`Game.WorldEventsRuntime`).
+- Zombie render runtime: `src/render/zombieRender.js` (`Game.ZombieRender`).
+- Crate runtime: `src/mechanics/crateRuntime.js` (`Game.CrateRuntime`).
+- Big menu runtime: `src/ui/bigMenuRuntime.js` (`Game.BigMenuRuntime`).
+- В `game.js` используются `ensure*RuntimeController()` с fallback на встроенную реализацию, если модуль недоступен.
+
 ## Контракты
 - В `src/*` использовать IIFE + `'use strict'` + `global.Game.*`.
 - Не раздувать `game.js`: новая логика должна жить в `src/*`.

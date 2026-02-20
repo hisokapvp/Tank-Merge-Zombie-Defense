@@ -302,7 +302,6 @@ const BASE_BAL = {
   crateSize: 34,
 };
 
-// --- Balance config (loaded from assets/balance.json) ---
 let BalanceConfig = { zombie: {}, zombieOverrides: {}, tank: {}, tankOverrides: {} };
 GameApi.Balance = GameApi.Balance || {};
 GameApi.Balance.CannonUpgrades = getCannonUpgradeConfig();
@@ -358,6 +357,12 @@ let bigMenuLanguageOutsideListener = null;
 let creditsEscListener = null;
 let creditsDataLoaded = false;
 let creditsData = [];
+
+let sfxPoolRuntimeController = null;
+let worldEventsRuntimeController = null;
+let crateRuntimeController = null;
+let zombieRenderRuntimeController = null;
+let bigMenuRuntimeController = null;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
@@ -893,17 +898,40 @@ let criticalAudioActive = false;
 let criticalAudioSnapshot = null;
 let criticalMusicRuntime = null;
 
+function ensureSfxPoolRuntimeController(){
+  if (sfxPoolRuntimeController) return sfxPoolRuntimeController;
+  const api = GameApi && GameApi.SfxPoolRuntime;
+  if (!api || typeof api.createController !== 'function') return null;
+  sfxPoolRuntimeController = api.createController({
+    sfxLastPlayed: SFX_LAST_PLAYED,
+    sfxDedupMs: SFX_DEDUP_MS,
+    sfxPoolSize: SFX_POOL_SIZE,
+    sfxPools: SFX_POOLS,
+    loopSfxPlayers: LOOP_SFX_PLAYERS,
+    sfxResolvedSourceLists: SFX_RESOLVED_SOURCE_LISTS,
+    sfxAudioProbe: SFX_AUDIO_PROBE,
+    uiSliderPreviewThrottleMs: UI_SLIDER_PREVIEW_THROTTLE_MS,
+    lastUiSliderPreviewSfxAt: lastUiSliderPreviewSfxAt,
+    setLastUiSliderPreviewSfxAt(value){ lastUiSliderPreviewSfxAt = value; },
+    setSfxAudioProbe(value){ SFX_AUDIO_PROBE = value; },
+    getDefaultSettings(){ return DEFAULT_SETTINGS; },
+    getSettings(){ return settings; },
+    clamp: clamp,
+    resolveSfxPlaybackVolume: resolveSfxPlaybackVolume,
+    isCriticalAudioActive(){ return criticalAudioActive; },
+    isCriticalSfxAllowed: isCriticalSfxAllowed,
+    isSimulationPaused(){ return simulationPaused; },
+    getDefaultRainLoopSources(){ return DEFAULT_RAIN_LOOP_SOURCES; },
+  });
+  return sfxPoolRuntimeController;
+}
+
 function sfxChannelOf(id){
-  return SFX_CHANNELS[id] || 'gameplay';
+  return ensureSfxPoolRuntimeController()?.sfxChannelOf(id) || 'gameplay';
 }
 
 function playUiSliderPreviewSfxThrottled(){
-  var now = (typeof performance !== 'undefined' && performance && typeof performance.now === 'function')
-    ? performance.now()
-    : Date.now();
-  if (now - lastUiSliderPreviewSfxAt < UI_SLIDER_PREVIEW_THROTTLE_MS) return;
-  lastUiSliderPreviewSfxAt = now;
-  playSfx('uiSliderPreview', { channel: 'ui' });
+  ensureSfxPoolRuntimeController()?.playUiSliderPreviewSfxThrottled();
 }
 
 function stopGameplayFade(){
@@ -1229,130 +1257,35 @@ function enableAudioFallback(player, sourceList){
 }
 
 function getSfxPool(id){
-  if (!SFX_POOLS[id]) {
-    const sources = resolveSfxSourceList(id);
-    const src = sources[0];
-    if (!src) return null;
-    const players = [];
-    const vol = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
-    for (let i = 0; i < SFX_POOL_SIZE; i++) {
-      const player = new Audio(src);
-      player.preload = 'auto';
-      player.volume = vol;
-      enableAudioFallback(player, sources);
-      players.push(player);
-    }
-    SFX_POOLS[id] = { players, cursor: 0 };
-  }
-  return SFX_POOLS[id];
+  return ensureSfxPoolRuntimeController()?.getSfxPool(id) || null;
 }
 
 function getLoopSfxPlayer(id){
-  if (!LOOP_SFX_PLAYERS[id]) {
-    const sources = resolveSfxSourceList(id);
-    const src = sources[0];
-    if (!src) return null;
-    const player = new Audio(src);
-    player.preload = 'auto';
-    player.loop = true;
-    enableAudioFallback(player, sources);
-    LOOP_SFX_PLAYERS[id] = player;
-  }
-  return LOOP_SFX_PLAYERS[id];
+  return ensureSfxPoolRuntimeController()?.getLoopSfxPlayer(id) || null;
 }
 
 function playLoopSfx(id, volumeMul){
-  if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
-  if (simulationPaused && sfxChannelOf(id) === 'gameplay') return;
-  const vol = resolveSfxPlaybackVolume(id, volumeMul);
-  try {
-    const player = getLoopSfxPlayer(id);
-    if (!player) return;
-    player.volume = vol;
-    if (!player.paused) return;
-    player.play().catch(() => {});
-  } catch (e) {}
+  ensureSfxPoolRuntimeController()?.playLoopSfx(id, volumeMul);
 }
 
 function setLoopSfxVolume(id, volumeMul){
-  try {
-    if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
-    const player = LOOP_SFX_PLAYERS[id];
-    if (!player || player.paused) return;
-    player.volume = resolveSfxPlaybackVolume(id, volumeMul);
-  } catch (e) {}
+  ensureSfxPoolRuntimeController()?.setLoopSfxVolume(id, volumeMul);
 }
 
 function stopLoopSfx(id){
-  try {
-    const player = LOOP_SFX_PLAYERS[id];
-    if (!player) return;
-    player.pause();
-    try { player.currentTime = 0; } catch (e) {}
-  } catch (e) {}
+  ensureSfxPoolRuntimeController()?.stopLoopSfx(id);
 }
 
 function normalizedSfxSources(value, fallbackList){
-  const fallback = Array.isArray(fallbackList) ? fallbackList.filter((s) => typeof s === 'string' && s.length > 0) : [];
-  if (Array.isArray(value)) {
-    const list = value.filter((s) => typeof s === 'string' && s.length > 0);
-    return list.length ? list : fallback;
-  }
-  if (typeof value === 'string' && value.length > 0) return [value];
-  return fallback;
+  return ensureSfxPoolRuntimeController()?.normalizedSfxSources(value, fallbackList) || [];
 }
 
 function setSfxSources(id, sources){
-  const next = normalizedSfxSources(sources, []);
-  if (!next.length) return;
-  const prevRaw = SFX_SOURCES[id];
-  const prev = Array.isArray(prevRaw)
-    ? prevRaw.filter((s) => typeof s === 'string' && s.length > 0)
-    : (typeof prevRaw === 'string' && prevRaw.length > 0 ? [prevRaw] : []);
-  if (prev.length === next.length && prev.every((s, i) => s === next[i])) return;
-
-  stopLoopSfx(id);
-  delete LOOP_SFX_PLAYERS[id];
-  delete SFX_POOLS[id];
-  delete SFX_RESOLVED_SOURCE_LISTS[id];
-  SFX_SOURCES[id] = next.slice();
+  ensureSfxPoolRuntimeController()?.setSfxSources(id, sources);
 }
 
 function playSfx(id, opts){
-  const channelOverride = opts && typeof opts === 'object' && typeof opts.channel === 'string'
-    ? opts.channel
-    : '';
-  const effectiveChannel = channelOverride || sfxChannelOf(id);
-  if (criticalAudioActive && !isCriticalSfxAllowed(id)) return;
-  if (simulationPaused && effectiveChannel === 'gameplay') return;
-  const volumeMul = opts && typeof opts === 'object' && Number.isFinite(opts.volumeMult)
-    ? clamp(opts.volumeMult, 0, 1)
-    : 1;
-  const vol = resolveSfxPlaybackVolume(id, volumeMul);
-  const now = performance.now();
-  if (SFX_LAST_PLAYED[id] != null && now - SFX_LAST_PLAYED[id] < SFX_DEDUP_MS) return;
-  SFX_LAST_PLAYED[id] = now;
-  try{
-    const pool = getSfxPool(id);
-    if (!pool || !pool.players || !pool.players.length) return;
-    let player = null;
-    for (let i = 0; i < pool.players.length; i++) {
-      const idx = (pool.cursor + i) % pool.players.length;
-      const candidate = pool.players[idx];
-      if (candidate.ended || candidate.paused) {
-        player = candidate;
-        pool.cursor = (idx + 1) % pool.players.length;
-        break;
-      }
-    }
-    if (!player) {
-      player = pool.players[pool.cursor];
-      pool.cursor = (pool.cursor + 1) % pool.players.length;
-    }
-    player.volume = vol;
-    try { player.currentTime = 0; } catch (e) {}
-    player.play().catch(() => {});
-  }catch(e){}
+  ensureSfxPoolRuntimeController()?.playSfx(id, opts);
 }
 
 function shouldPlayTankTrackSfx(opts){
@@ -2272,317 +2205,77 @@ function rebuildGroundLayer(){
   }
 }
 
+function ensureWorldEventsRuntimeController(){
+  if (worldEventsRuntimeController) return worldEventsRuntimeController;
+  const api = GameApi && GameApi.WorldEventsRuntime;
+  if (!api || typeof api.createController !== 'function') return null;
+  worldEventsRuntimeController = api.createController({
+    getState(){ return state; },
+    getWorldEventsCfg(){ return WorldEventsCfg; },
+    getWorldEventsState(){ return worldEventsState; },
+    getRainCache(){ return rainCache; },
+    getViewSize(){ return viewSize; },
+    getCtx(){ return ctx; },
+    clamp: clamp,
+    nowSec: nowSec,
+    playSfx: playSfx,
+    playLoopSfx: playLoopSfx,
+    setLoopSfxVolume: setLoopSfxVolume,
+    stopLoopSfx: stopLoopSfx,
+    normalizedSfxSources: normalizedSfxSources,
+    setSfxSources: setSfxSources,
+    getDefaultRainLoopSources(){ return DEFAULT_RAIN_LOOP_SOURCES; },
+  });
+  return worldEventsRuntimeController;
+}
+
 function getWorldEventsAttackCfg(){
-  const cfg = WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {};
-  const debugForceAttack = !!(state && state.debug && (
-    typeof state.debug.forceAttackMode === 'boolean'
-      ? state.debug.forceAttackMode
-      : (typeof state.debug.forceDisableAttackMode === 'boolean' ? !state.debug.forceDisableAttackMode : false)
-  ));
-  const autoEnabled = !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled);
-  return {
-    enabled: autoEnabled,
-    forceEnabled: debugForceAttack,
-    attackEverySec: Number.isFinite(cfg.attackEverySec) ? Math.max(1, cfg.attackEverySec) : 75,
-    attackDurationSec: Number.isFinite(cfg.attackDurationSec) ? Math.max(1, cfg.attackDurationSec) : 20,
-    weatherLeadInSec: Number.isFinite(cfg.weatherLeadInSec) ? Math.max(0, cfg.weatherLeadInSec) : 5,
-    weatherLeadOutSec: Number.isFinite(cfg.weatherLeadOutSec) ? Math.max(0, cfg.weatherLeadOutSec) : 3,
-    targetAliveMult: Number.isFinite(cfg.targetAliveMult) ? Math.max(0.1, cfg.targetAliveMult) : 1,
-    targetAliveRampSec: Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 2,
-    speedMult: Number.isFinite(cfg.speedMult) ? Math.max(0.1, cfg.speedMult) : 1,
-    damageMult: Number.isFinite(cfg.damageMult) ? Math.max(0.1, cfg.damageMult) : 1,
-    safeWaves: Number.isFinite(cfg.safeWaves) ? Math.max(0, Math.floor(cfg.safeWaves)) : 3,
-    eveningDimAlpha: Number.isFinite(cfg.eveningDimAlpha) ? clamp(cfg.eveningDimAlpha, 0, 1) : 0.16,
-    eveningTransitionSec: Number.isFinite(cfg.eveningTransitionSec) ? clamp(cfg.eveningTransitionSec, 0.1, 30) : 4,
-  };
+  return ensureWorldEventsRuntimeController()?.getWorldEventsAttackCfg() || null;
 }
 
 function getWeatherCfg(){
-  const cfg = WorldEventsCfg && WorldEventsCfg.weather ? WorldEventsCfg.weather : {};
-  const lightning = cfg.lightning || {};
-  const rain = cfg.rain || {};
-  const debugForceWeather = !!(state && state.debug && (
-    typeof state.debug.forceWeather === 'boolean'
-      ? state.debug.forceWeather
-      : (typeof state.debug.forceDisableWeather === 'boolean' ? !state.debug.forceDisableWeather : false)
-  ));
-  const hasInterval = Number.isFinite(lightning.intervalMinSec) || Number.isFinite(lightning.intervalMaxSec);
-  const minSec = Number.isFinite(lightning.intervalMinSec) ? Math.max(0.1, lightning.intervalMinSec) : 8;
-  const maxSec = Number.isFinite(lightning.intervalMaxSec) ? Math.max(minSec, lightning.intervalMaxSec) : Math.max(minSec, 20);
-  const rainLoopSources = normalizedSfxSources(
-    rain.sfxLoopSources,
-    normalizedSfxSources(rain.sfxLoopFile, DEFAULT_RAIN_LOOP_SOURCES)
-  );
-  const autoEnabled = !!(WorldEventsCfg && WorldEventsCfg.enabled && cfg.enabled);
-  const forceAttack = !!(state && state.debug && (
-    typeof state.debug.forceAttackMode === 'boolean'
-      ? state.debug.forceAttackMode
-      : (typeof state.debug.forceDisableAttackMode === 'boolean' ? !state.debug.forceDisableAttackMode : false)
-  ));
-  return {
-    enabled: autoEnabled || debugForceWeather || forceAttack,
-    forceEnabled: debugForceWeather,
-    rain: {
-      ...rain,
-      sfxLoopSources: rainLoopSources,
-    },
-    lightning: {
-      ...lightning,
-      intervalMinSec: minSec,
-      intervalMaxSec: maxSec,
-      useInterval: hasInterval,
-    },
-    thunder: cfg.thunder || {},
-  };
+  return ensureWorldEventsRuntimeController()?.getWeatherCfg() || null;
 }
 
 function configureRainLoopSfx(rainCfg){
-  const rain = rainCfg || {};
-  const sources = normalizedSfxSources(
-    rain.sfxLoopSources,
-    normalizedSfxSources(rain.sfxLoopFile, DEFAULT_RAIN_LOOP_SOURCES)
-  );
-  setSfxSources('rainLoop', sources);
+  ensureWorldEventsRuntimeController()?.configureRainLoopSfx(rainCfg);
 }
 
 function scheduleNextLightning(now, lightningCfg){
-  const minSec = Number.isFinite(lightningCfg?.intervalMinSec) ? Math.max(0.1, lightningCfg.intervalMinSec) : 8;
-  const maxSec = Number.isFinite(lightningCfg?.intervalMaxSec) ? Math.max(minSec, lightningCfg.intervalMaxSec) : Math.max(minSec, 20);
-  const delay = minSec + Math.random() * (maxSec - minSec);
-  worldEventsState.nextLightningAt = now + delay;
+  ensureWorldEventsRuntimeController()?.scheduleNextLightning(now, lightningCfg);
 }
 
 function processWeatherLightning(now, dt, weatherCfg){
-  const lightningCfg = weatherCfg && weatherCfg.lightning ? weatherCfg.lightning : {};
-  if (!worldEventsState.weatherEnabled || !lightningCfg.enabled) return;
-
-  const flashDur = Number.isFinite(lightningCfg.flashDurationSec) ? Math.max(0.03, lightningCfg.flashDurationSec) : 0.12;
-  let shouldFlash = false;
-  if (lightningCfg.useInterval) {
-    if (!Number.isFinite(worldEventsState.nextLightningAt) || worldEventsState.nextLightningAt <= 0) {
-      scheduleNextLightning(now, lightningCfg);
-    }
-    if (now >= worldEventsState.nextLightningAt) {
-      shouldFlash = true;
-      scheduleNextLightning(now, lightningCfg);
-    }
-  } else {
-    const chancePerSec = Number.isFinite(lightningCfg.chancePerSec) ? Math.max(0, lightningCfg.chancePerSec) : 0.14;
-    if (now >= (worldEventsState.lightningUntil || 0) && Math.random() < chancePerSec * Math.max(0.001, dt)) {
-      shouldFlash = true;
-    }
-  }
-
-  if (!shouldFlash) return;
-  worldEventsState.lightningUntil = now + flashDur;
-  if (weatherCfg.thunder && weatherCfg.thunder.enabled) {
-    playSfx(weatherCfg.thunder.sfxId || 'thunder');
-  }
+  ensureWorldEventsRuntimeController()?.processWeatherLightning(now, dt, weatherCfg);
 }
 
 function isZombieAttackModeActive(){
-  const attackCfg = getWorldEventsAttackCfg();
-  if (attackCfg.forceEnabled) return true;
-  return nowSec() < (worldEventsState.attackEndAt || 0);
+  return !!ensureWorldEventsRuntimeController()?.isZombieAttackModeActive();
 }
 
 function desiredAliveMultTarget(attackCfg){
-  const cfg = attackCfg || getWorldEventsAttackCfg();
-  const attackActive = isZombieAttackModeActive();
-  const enabled = !!(cfg.enabled || cfg.forceEnabled);
-  if (!enabled || !attackActive) return 1;
-  return Number.isFinite(cfg.targetAliveMult) ? Math.max(0, cfg.targetAliveMult) : 1;
+  return ensureWorldEventsRuntimeController()?.desiredAliveMultTarget(attackCfg) || 1;
 }
 
 function updateDesiredAliveMultCurrent(dt, attackCfg){
-  const cfg = attackCfg || getWorldEventsAttackCfg();
-  const target = desiredAliveMultTarget(cfg);
-  const rampSec = Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 0;
-  const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-  const currentRaw = Number.isFinite(worldEventsState.aliveMultCurrent) ? worldEventsState.aliveMultCurrent : 1;
-  const current = Math.max(0, currentRaw);
-
-  let next = target;
-  if (rampSec > 0 && safeDt > 0) {
-    const delta = target - current;
-    const speed = Math.abs(delta) / rampSec;
-    const step = speed * safeDt;
-    if (step >= Math.abs(delta)) next = target;
-    else next = current + Math.sign(delta) * step;
-  }
-
-  if (!Number.isFinite(next)) next = target;
-  worldEventsState.aliveMultCurrent = Math.max(0, next);
+  ensureWorldEventsRuntimeController()?.updateDesiredAliveMultCurrent(dt, attackCfg);
 }
 
 function getZombieAttackMultipliers(){
-  const attackCfg = getWorldEventsAttackCfg();
-  const attackActive = isZombieAttackModeActive();
-  const aliveMultCurrent = Number.isFinite(worldEventsState.aliveMultCurrent)
-    ? Math.max(0, worldEventsState.aliveMultCurrent)
-    : 1;
-  if ((!attackCfg.enabled && !attackCfg.forceEnabled) || !attackActive) {
-    return { targetAliveMult: aliveMultCurrent, speedMult: 1, damageMult: 1 };
-  }
-  return {
-    targetAliveMult: aliveMultCurrent,
-    speedMult: attackCfg.speedMult,
-    damageMult: attackCfg.damageMult,
-  };
+  return ensureWorldEventsRuntimeController()?.getZombieAttackMultipliers()
+    || { targetAliveMult: 1, speedMult: 1, damageMult: 1 };
 }
 
 function updateWorldEvents(dt){
-  const attackCfg = getWorldEventsAttackCfg();
-  const weatherCfg = getWeatherCfg();
-  const rainCfg = weatherCfg.rain || {};
-  configureRainLoopSfx(rainCfg);
-  const now = nowSec();
-  const prevWeatherEnabled = !!worldEventsState.weatherEnabled;
-
-  const attackAutoEnabled = !!attackCfg.enabled;
-  const forceAttackEnabled = !!attackCfg.forceEnabled;
-
-  if (forceAttackEnabled) {
-    if (!worldEventsState.forceAttackActive) {
-      worldEventsState.currentAttackStartAt = now;
-    }
-    worldEventsState.forceAttackActive = true;
-    worldEventsState.attackEndAt = Number.POSITIVE_INFINITY;
-  } else if (!attackAutoEnabled) {
-    worldEventsState.forceAttackActive = false;
-    worldEventsState.currentAttackStartAt = 0;
-    worldEventsState.attackEndAt = 0;
-    worldEventsState.weatherUntil = 0;
-    worldEventsState.weatherEnabled = !!(weatherCfg.enabled || weatherCfg.forceEnabled);
-  } else {
-    if (worldEventsState.forceAttackActive) {
-      worldEventsState.currentAttackStartAt = 0;
-      worldEventsState.attackEndAt = 0;
-      worldEventsState.attackStartAt = now + attackCfg.attackEverySec;
-    }
-    worldEventsState.forceAttackActive = false;
-    if (!Number.isFinite(worldEventsState.attackStartAt) || worldEventsState.attackStartAt <= 0) {
-      worldEventsState.attackStartAt = now + attackCfg.attackEverySec;
-    }
-
-    if (now >= worldEventsState.attackStartAt) {
-      const startAt = worldEventsState.attackStartAt;
-      worldEventsState.currentAttackStartAt = startAt;
-      worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
-      worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
-      worldEventsState.waveNumber = Math.max(0, Math.floor(worldEventsState.waveNumber || 0)) + 1;
-      if (worldEventsState.waveNumber > attackCfg.safeWaves) {
-        state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
-      }
-    }
-
-    if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
-      worldEventsState.currentAttackStartAt = 0;
-    }
-
-    const inLeadIn = now >= (worldEventsState.attackStartAt - attackCfg.weatherLeadInSec) && now < worldEventsState.attackStartAt;
-    const inAttackWindow = worldEventsState.currentAttackStartAt > 0 && now >= worldEventsState.currentAttackStartAt && now < worldEventsState.attackEndAt;
-    const inLeadOut = inAttackWindow && now >= (worldEventsState.attackEndAt - attackCfg.weatherLeadOutSec);
-    worldEventsState.weatherEnabled = weatherCfg.enabled && (inLeadIn || (inAttackWindow && !inLeadOut));
-  }
-
-  if (forceAttackEnabled) {
-    worldEventsState.weatherEnabled = true;
-  }
-  if (weatherCfg.forceEnabled) {
-    worldEventsState.weatherEnabled = true;
-  }
-
-  updateDesiredAliveMultCurrent(dt, attackCfg);
-
-  if (!worldEventsState.weatherEnabled) {
-    worldEventsState.lightningUntil = 0;
-    worldEventsState.nextLightningAt = 0;
-  }
-
-  const rainActive = !!(worldEventsState.weatherEnabled && rainCfg.enabled !== false);
-  if (!prevWeatherEnabled && rainActive) {
-    worldEventsState.rainBlend = 0;
-    playLoopSfx('rainLoop', 0);
-  }
-  if (prevWeatherEnabled && !rainActive) {
-    worldEventsState.rainBlend = 0;
-    stopLoopSfx('rainLoop');
-  }
-
-  // Gradual rain fade-in (same duration as evening transition)
-  if (rainActive) {
-    const rainTransitionSec = Number.isFinite(attackCfg.eveningTransitionSec) ? Math.max(0.1, attackCfg.eveningTransitionSec) : 4;
-    const rainStep = Math.min(1, Math.max(0, dt) / rainTransitionSec);
-    worldEventsState.rainBlend = clamp((worldEventsState.rainBlend || 0) + rainStep, 0, 1);
-    setLoopSfxVolume('rainLoop', worldEventsState.rainBlend);
-  }
-
-  processWeatherLightning(now, dt, weatherCfg);
-
-  const attackActive = isZombieAttackModeActive();
-  const eveningTarget = attackActive ? 1 : 0;
-  const transitionSec = Number.isFinite(attackCfg.eveningTransitionSec) ? Math.max(0.1, attackCfg.eveningTransitionSec) : 4;
-  const blend = Number.isFinite(worldEventsState.eveningDimBlend) ? worldEventsState.eveningDimBlend : 0;
-  const step = Math.min(1, Math.max(0, dt) / transitionSec);
-  worldEventsState.eveningDimBlend = blend + (eveningTarget - blend) * step;
+  ensureWorldEventsRuntimeController()?.updateWorldEvents(dt);
 }
 
 function ensureRainCache(requiredCount){
-  const count = Math.max(0, Math.floor(requiredCount));
-  if (rainCache.maxDrops >= count) return;
-  for (let i = rainCache.maxDrops; i < count; i++) {
-    rainCache.x[i] = Math.random();
-    rainCache.y[i] = Math.random();
-    rainCache.speed[i] = 0.65 + Math.random() * 0.7;
-    rainCache.len[i] = 0.7 + Math.random() * 0.8;
-  }
-  rainCache.maxDrops = count;
+  ensureWorldEventsRuntimeController()?.ensureRainCache(requiredCount);
 }
 
 function drawWeather(){
-  const weatherCfg = getWeatherCfg();
-  if (!weatherCfg.enabled || !worldEventsState.weatherEnabled) return;
-
-  const rainCfg = weatherCfg.rain || {};
-  if (rainCfg.enabled !== false) {
-    const density = Number.isFinite(rainCfg.density) ? Math.max(0, rainCfg.density) : 0.16;
-    const dropCount = Math.floor(viewSize.w * density);
-    ensureRainCache(dropCount);
-    const speedMin = Number.isFinite(rainCfg.speedMin) ? rainCfg.speedMin : 520;
-    const speedMax = Number.isFinite(rainCfg.speedMax) ? rainCfg.speedMax : 760;
-    const lenMin = Number.isFinite(rainCfg.lengthMin) ? rainCfg.lengthMin : 10;
-    const lenMax = Number.isFinite(rainCfg.lengthMax) ? rainCfg.lengthMax : 18;
-    const alpha = Number.isFinite(rainCfg.alpha) ? clamp(rainCfg.alpha, 0.05, 0.6) : 0.26;
-    const rainBlend = clamp(worldEventsState.rainBlend || 0, 0, 1);
-    const effectiveAlpha = alpha * rainBlend;
-    if (effectiveAlpha < 0.01) { /* skip drawing if fully transparent */ }
-    else {
-    const t = nowSec();
-    ctx.save();
-    ctx.strokeStyle = `rgba(180,205,255,${effectiveAlpha})`;
-    ctx.lineWidth = 1;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < dropCount; i++) {
-      const sx = rainCache.x[i] * viewSize.w;
-      const speed = speedMin + (speedMax - speedMin) * rainCache.speed[i];
-      const y = ((rainCache.y[i] * (viewSize.h + 30)) + (t * speed)) % (viewSize.h + 30) - 20;
-      const len = lenMin + (lenMax - lenMin) * rainCache.len[i];
-      ctx.beginPath();
-      ctx.moveTo(sx, y);
-      ctx.lineTo(sx - len * 0.22, y + len);
-      ctx.stroke();
-    }
-    ctx.restore();
-    }
-  }
-
-  if (nowSec() < (worldEventsState.lightningUntil || 0)) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(228,238,255,0.22)';
-    ctx.fillRect(0, 0, viewSize.w, viewSize.h);
-    ctx.restore();
-  }
+  ensureWorldEventsRuntimeController()?.drawWeather();
 }
 
 function makeTank(level, onTrack = false){
@@ -5913,115 +5606,54 @@ function stepDecals(dt){
   state.decals = next;
 }
 
+function ensureCrateRuntimeController(){
+  if (crateRuntimeController) return crateRuntimeController;
+  const api = GameApi && GameApi.CrateRuntime;
+  if (!api || typeof api.createController !== 'function') return null;
+  crateRuntimeController = api.createController({
+    getState(){ return state; },
+    getBalance(){ return BAL; },
+    getBonusBoxSprites(){ return BonusBoxSprites; },
+    nowSec: nowSec,
+  });
+  return crateRuntimeController;
+}
+
 // ---------- Crates ----------
 function pickCrateRewardLevel(){
-  const levels = state.cells.map(c => c.tank?.level).filter(Boolean);
-  const maxLevel = Math.max(state.maxTankLevelAchieved || 1, levels.length ? Math.max(...levels) : 1);
-  if (maxLevel <= 1) return 1;
-  const minLevel = Math.max(1, maxLevel - 4);
-  const maxReward = Math.max(1, maxLevel - 3);
-  const upper = Math.max(minLevel, maxReward);
-  return minLevel + Math.floor(Math.random() * (upper - minLevel + 1));
+  return ensureCrateRuntimeController()?.pickCrateRewardLevel() || 1;
 }
 
 function pickEmptyCell(){
-  const Garage = window.Game && window.Game.Garage;
-  const empty = Garage
-    ? state.cells.filter(c => Garage.isCellAvailableForTank(c, state))
-    : state.cells.filter(c => !c.tank);
-  if (!empty.length) return null;
-  return empty[Math.floor(Math.random() * empty.length)];
+  return ensureCrateRuntimeController()?.pickEmptyCell() || null;
 }
 
 function spawnCrate(){
-  const cell = pickEmptyCell();
-  if (!cell) return false;
-  const targetX = cell.x + cell.w / 2;
-  const targetY = cell.y + cell.h / 2;
-  const size = BAL.crateSize;
-  state.crate = {
-    id: 'crate_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-    x: targetX,
-    y: -size,
-    targetY,
-    size,
-    pulse: 0,
-    animState: 'drop',
-    animTimeSec: 0,
-    isHover: false,
-    isAlive: true,
-    rewardLevel: pickCrateRewardLevel(),
-    cellIndex: cell.i,
-    claiming: false,
-  };
-  return true;
+  return !!ensureCrateRuntimeController()?.spawnCrate();
 }
 
 function getCrateAnimation(stateName){
-  if (!(BonusBoxSprites && typeof BonusBoxSprites.getAnimation === 'function')) return null;
-  return BonusBoxSprites.getAnimation(stateName) || BonusBoxSprites.getAnimation('idle');
+  return ensureCrateRuntimeController()?.getCrateAnimation(stateName) || null;
 }
 
 function setCrateAnimationState(crate, nextState, resetTime){
-  if (!crate || typeof nextState !== 'string' || !nextState.length) return;
-  if (crate.animState !== nextState) {
-    crate.animState = nextState;
-    crate.animTimeSec = 0;
-    return;
-  }
-  if (resetTime) crate.animTimeSec = 0;
+  ensureCrateRuntimeController()?.setCrateAnimationState(crate, nextState, resetTime);
 }
 
 function syncCrateHoverAt(x, y){
-  const c = state.crate;
-  if (!c || c.isAlive === false) return;
-  const hovered = crateHitTest(x, y);
-  if (hovered === c.isHover) return;
-  c.isHover = hovered;
-  if (hovered) {
-    if (c.animState !== 'press' && c.animState !== 'drop') {
-      setCrateAnimationState(c, 'hover', true);
-    }
-    return;
-  }
-  if (c.animState === 'hover') setCrateAnimationState(c, 'idle', true);
+  ensureCrateRuntimeController()?.syncCrateHoverAt(x, y);
 }
 
 function maybeSpawnCrate(){
-  const now = nowSec();
-  if (!state.nextCrateAt) state.nextCrateAt = now + BAL.crateIntervalSec;
-  if (!state.crate && now >= state.nextCrateAt){
-    spawnCrate();
-    state.nextCrateAt = now + BAL.crateIntervalSec;
-  }
+  ensureCrateRuntimeController()?.maybeSpawnCrate();
 }
 
 function stepCrate(dt){
-  if (!state.crate) return;
-  const c = state.crate;
-  c.y = Math.min(c.targetY, c.y + BAL.crateDropSpeed * dt);
-  c.pulse += dt * 4;
-  c.animTimeSec = Number.isFinite(c.animTimeSec) ? (c.animTimeSec + dt) : dt;
-
-  const anim = getCrateAnimation(c.animState);
-  if (!anim || anim.loop !== false) return;
-  const frameCount = Math.max(1, Array.isArray(anim.frames) ? anim.frames.length : 1);
-  const fps = Math.max(0.01, Number(anim.frameRateFps) || 1);
-  const durationSec = frameCount / fps;
-  if (c.animTimeSec < durationSec) return;
-
-  if (c.animState === 'drop') {
-    setCrateAnimationState(c, 'idle', true);
-  } else if (c.animState === 'press') {
-    setCrateAnimationState(c, c.isHover ? 'hover' : 'idle', true);
-  }
+  ensureCrateRuntimeController()?.stepCrate(dt);
 }
 
 function crateHitTest(x,y){
-  if (!state.crate) return false;
-  const c = state.crate;
-  const half = c.size * 0.5;
-  return x >= c.x - half && x <= c.x + half && y >= c.y - half && y <= c.y + half;
+  return !!ensureCrateRuntimeController()?.crateHitTest(x, y);
 }
 
 // ---------- Kills / respawn ----------
@@ -6130,16 +5762,45 @@ function updateMenuState(){
   updateMenuVolumes();
 }
 
+function ensureBigMenuRuntimeController(){
+  if (bigMenuRuntimeController) return bigMenuRuntimeController;
+  const api = GameApi && GameApi.BigMenuRuntime;
+  if (!api || typeof api.createController !== 'function') return null;
+  bigMenuRuntimeController = api.createController({
+    getUi(){ return ui; },
+    t: t,
+    a11yOpen: a11yOpen,
+    a11yClose: a11yClose,
+    setMenuPauseSource: setMenuPauseSource,
+    syncVolumeUIFromSettings: syncVolumeUIFromSettings,
+    getCurrentLang: getCurrentLang,
+    setLanguage: setLanguage,
+    loadSettings: loadSettings,
+    saveSettings: saveSettings,
+    setVolume: setVolume,
+    playUiSliderPreviewSfxThrottled: playUiSliderPreviewSfxThrottled,
+    boot: boot,
+    resetGameState: resetGameState,
+    restoreFullState: restoreFullState,
+    saveProgress: saveProgress,
+    updateUI: updateUI,
+    setMenuOpen: setMenuOpen,
+    resumeSessionRuntime: resumeSessionRuntime,
+    scheduleMainLoop: scheduleMainLoop,
+    getSessionRuntimeStopped(){ return !!sessionRuntimeStopped; },
+    setSessionStartGate: setSessionStartGate,
+    setBootInitialMenuSubView(value){ bootInitialMenuSubView = value; },
+    setMetaLastSeenAt(value){ meta.lastSeenAt = value; },
+  });
+  return bigMenuRuntimeController;
+}
+
 function setBigMenuOpen(open){
-  if (!ui.bigMenuOverlay) return;
-  setMenuPauseSource('bigMenu', !!open);
-  ui.bigMenuOverlay.classList.toggle('bigMenuOverlayHidden', !open);
-  ui.bigMenuOverlay.setAttribute('aria-hidden', (!open).toString());
-  if (open) syncVolumeUIFromSettings();
+  ensureBigMenuRuntimeController()?.setBigMenuOpen(open);
 }
 
 function isBigMenuOpen(){
-  return !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden'));
+  return !!ensureBigMenuRuntimeController()?.isBigMenuOpen();
 }
 
 function setSessionStartGate(nextValue){
@@ -6148,27 +5809,15 @@ function setSessionStartGate(nextValue){
 }
 
 function setBigMenuView(mode){
-  bigMenuViewMode = mode === 'load' ? 'load' : 'root';
-  const rootVisible = bigMenuViewMode === 'root';
-  if (ui.bigMenuRootView && ui.bigMenuRootView.classList) {
-    ui.bigMenuRootView.classList.toggle('is-hidden', !rootVisible);
-    ui.bigMenuRootView.setAttribute('aria-hidden', (!rootVisible).toString());
-  }
-  if (ui.bigMenuLoadView && ui.bigMenuLoadView.classList) {
-    ui.bigMenuLoadView.classList.toggle('is-active', !rootVisible);
-    ui.bigMenuLoadView.setAttribute('aria-hidden', rootVisible.toString());
-  }
+  ensureBigMenuRuntimeController()?.setBigMenuView(mode);
 }
 
 function openBigMenuRootView(){
-  closeBigMenuPanels();
-  setBigMenuView('root');
+  ensureBigMenuRuntimeController()?.openBigMenuRootView();
 }
 
 function openBigMenuLoadView(){
-  closeBigMenuPanels();
-  renderBigMenuLoadRows();
-  setBigMenuView('load');
+  ensureBigMenuRuntimeController()?.openBigMenuLoadView();
 }
 
 function getBigMenuSaveMeta(){
@@ -6226,54 +5875,7 @@ function formatDateForBigMenu(ms){
 }
 
 function renderBigMenuLoadRows(){
-  if (!ui.bigMenuLoadRows) return;
-  const meta = getBigMenuSaveMeta();
-  const slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
-  ui.bigMenuLoadRows.innerHTML = '';
-  for (let i = 0; i < 10; i++) {
-    const slot = slots[i] || null;
-    const row = document.createElement('div');
-    row.className = 'smallMenuSaveTable__row';
-    row.setAttribute('role', 'row');
-
-    const numberCell = document.createElement('div');
-    numberCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_num';
-    numberCell.setAttribute('role', 'cell');
-    numberCell.textContent = String(i + 1);
-
-    const nameCell = document.createElement('div');
-    nameCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_name';
-    nameCell.setAttribute('role', 'cell');
-    const nameText = document.createElement('span');
-    nameText.className = 'smallMenuSaveNameText';
-    nameText.textContent = getBigMenuSlotName(slot, i);
-    nameCell.appendChild(nameText);
-
-    const dateCell = document.createElement('div');
-    dateCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_date';
-    dateCell.setAttribute('role', 'cell');
-    dateCell.textContent = formatDateForBigMenu(slot && slot.lastSavedAt);
-
-    const actionCell = document.createElement('div');
-    actionCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_action';
-    actionCell.setAttribute('role', 'cell');
-
-    const loadButton = document.createElement('button');
-    loadButton.type = 'button';
-    loadButton.className = 'btn btnSecondary uiButtonBehavior smallMenuSaveSlotBtn';
-    loadButton.setAttribute('data-big-load-slot-btn', 'true');
-    loadButton.setAttribute('data-slot-index', String(i));
-    loadButton.textContent = t('menu.load.col.action');
-    loadButton.disabled = !bigMenuSlotHasData(slot);
-
-    actionCell.appendChild(loadButton);
-
-    row.appendChild(numberCell);
-    row.appendChild(nameCell);
-    row.appendChild(dateCell);
-    row.appendChild(actionCell);
-    ui.bigMenuLoadRows.appendChild(row);
-  }
+  ensureBigMenuRuntimeController()?.renderBigMenuLoadRows();
 }
 
 function parseBigMenuSlotIndexFromNode(node){
@@ -6358,23 +5960,11 @@ function toggleBigMenuLanguagePanel(){
 }
 
 function closeBigMenuPanels(){
-  const panels = [ui.bigMenuSoundPanel];
-  for (const panel of panels) {
-    if (!panel) continue;
-    panel.classList.add('bigMenuSubpanelHidden');
-    panel.setAttribute('aria-hidden', 'true');
-  }
-  closeBigMenuLanguagePanel();
+  ensureBigMenuRuntimeController()?.closeBigMenuPanels();
 }
 
 function toggleBigMenuPanel(panel){
-  if (!panel) return;
-  const shouldOpen = panel.classList.contains('bigMenuSubpanelHidden');
-  closeBigMenuPanels();
-  if (shouldOpen) {
-    panel.classList.remove('bigMenuSubpanelHidden');
-    panel.setAttribute('aria-hidden', 'false');
-  }
+  ensureBigMenuRuntimeController()?.toggleBigMenuPanel(panel);
 }
 
 function updateBigMenuVolumeState(){
@@ -6465,37 +6055,11 @@ function renderCreditsModalList(items){
 }
 
 function closeCreditsModal(){
-  if (!ui.creditsModal) return;
-  ui.creditsModal.classList.add('hidden');
-  ui.creditsModal.setAttribute('aria-hidden', 'true');
-  a11yClose(ui.creditsModal);
-  if (creditsEscListener) {
-    document.removeEventListener('keydown', creditsEscListener);
-    creditsEscListener = null;
-  }
+  ensureBigMenuRuntimeController()?.closeCreditsModal();
 }
 
 async function openCreditsModal(){
-  if (!ui.creditsModal) return;
-  closeBigMenuPanels();
-  if (ui.creditsModalTitle) ui.creditsModalTitle.textContent = t('creditsModalTitle');
-  if (ui.creditsModalList) {
-    ui.creditsModalList.innerHTML = '';
-  }
-  ui.creditsModal.classList.remove('hidden');
-  ui.creditsModal.setAttribute('aria-hidden', 'false');
-  a11yOpen(ui.creditsModal, { initialFocus: ui.creditsModalClose, onClose: closeCreditsModal });
-  if (!creditsEscListener) {
-    creditsEscListener = function (event) {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      closeCreditsModal();
-    };
-    document.addEventListener('keydown', creditsEscListener);
-  }
-  const data = await loadCreditsData();
-  if (!ui.creditsModal || ui.creditsModal.classList.contains('hidden')) return;
-  renderCreditsModalList(data);
+  await ensureBigMenuRuntimeController()?.openCreditsModal();
 }
 
 function hasSaves(){
@@ -6521,60 +6085,11 @@ function hasSaves(){
 }
 
 function renderBigMenuTexts(){
-  if (!ui.bigMenuOverlay) return;
-
-  const hasSave = hasSaves();
-  const noSaveText = t('bigMenuNoSave');
-
-  const bigMenuTitle = document.getElementById('bigMenuTitle');
-  if (bigMenuTitle) bigMenuTitle.textContent = t('menuTitle');
-
-  const bigMenuActions = ui.bigMenuOverlay.querySelector('.bigMenuActions');
-  if (bigMenuActions) bigMenuActions.setAttribute('aria-label', t('menuSubtitle'));
-
-  if (ui.bigMenuNew) ui.bigMenuNew.textContent = t('menuNew');
-  if (ui.bigMenuLoad) ui.bigMenuLoad.textContent = t('bigMenuLoad');
-  if (ui.bigMenuLoadBack) ui.bigMenuLoadBack.textContent = t('common.back');
-  if (ui.bigMenuSound) ui.bigMenuSound.textContent = t('bigMenuSound');
-  if (ui.bigMenuLanguage) ui.bigMenuLanguage.textContent = t('menuLanguage');
-  if (ui.bigMenuDevs) ui.bigMenuDevs.textContent = t('bigMenuDevs');
-
-  if (ui.bigMenuLoad) {
-    if (hasSave) ui.bigMenuLoad.removeAttribute('title');
-    else ui.bigMenuLoad.setAttribute('title', noSaveText);
-  }
-
-  const soundTitle = ui.bigMenuOverlay.querySelector('#bigMenuSoundPanel .bigMenuSubpanelTitle');
-  if (soundTitle) soundTitle.textContent = t('bigMenuSound');
-  const soundSfxLabel = ui.bigMenuOverlay.querySelector('#bigMenuSfxLabel');
-  const soundMusicLabel = ui.bigMenuOverlay.querySelector('#bigMenuMusicLabel');
-  if (soundSfxLabel) soundSfxLabel.textContent = t('bigMenuSfx');
-  if (soundMusicLabel) soundMusicLabel.textContent = t('bigMenuMusic');
-
-  const languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
-  if (languageTitle) languageTitle.textContent = t('menuLanguage');
-  if (ui.bigMenuLangRu) ui.bigMenuLangRu.textContent = t('languageRussian');
-  if (ui.bigMenuLangEn) ui.bigMenuLangEn.textContent = t('languageEnglish');
-  applyBigMenuLanguageSelectedState();
-  if (ui.creditsModalTitle) ui.creditsModalTitle.textContent = t('creditsModalTitle');
-  if (ui.creditsModal && !ui.creditsModal.classList.contains('hidden')) {
-    renderCreditsModalList(creditsData);
-  }
+  ensureBigMenuRuntimeController()?.renderBigMenuTexts();
 }
 
 function updateBigMenuLoadState(){
-  const hasSave = hasSaves();
-  if (ui.bigMenuLoad) {
-    ui.bigMenuLoad.disabled = false;
-    ui.bigMenuLoad.setAttribute('aria-disabled', hasSave ? 'false' : 'true');
-    if (hasSave) ui.bigMenuLoad.removeAttribute('data-disabled-reason');
-    else ui.bigMenuLoad.setAttribute('data-disabled-reason', 'noSaves');
-    if (hasSave) ui.bigMenuLoad.removeAttribute('title');
-    else ui.bigMenuLoad.setAttribute('title', t('bigMenuNoSave'));
-  }
-  if (bigMenuViewMode === 'load') {
-    renderBigMenuLoadRows();
-  }
+  ensureBigMenuRuntimeController()?.updateBigMenuLoadState();
 }
 
 function applyBigMenuLanguage(lang){
@@ -6660,128 +6175,11 @@ function resumeSessionRuntime(){
 }
 
 async function startFromBigMenu(mode){
-  if (bigMenuStartPending) return;
-  var selectedPayload = null;
-  if (mode && typeof mode === 'object') {
-    selectedPayload = mode.payload || null;
-    mode = mode.kind;
-  }
-  if (mode !== 'new' && mode !== 'load-slot') return;
-  if (mode === 'load-slot' && (!selectedPayload || !Array.isArray(selectedPayload.cells))) return;
-  bootInitialMenuSubView = 'main';
-  const wasStopped = sessionRuntimeStopped;
-  bigMenuStartPending = true;
-  setBigMenuActionButtonsDisabled(true);
-  closeBigMenuPanels();
-  try {
-    if (wasStopped) resumeSessionRuntime();
-    await boot();
-    if (mode === 'new') {
-      resetGameState({ reason: 'new_game' });
-      meta.lastSeenAt = Date.now();
-      saveProgress();
-    } else if (mode === 'load-slot') {
-      restoreFullState(selectedPayload);
-      meta.lastSeenAt = Date.now();
-      saveProgress();
-      updateUI();
-    }
-    if (wasStopped) scheduleMainLoop();
-    setSessionStartGate('unlocked');
-    setMenuOpen(false);
-    setBigMenuOpen(false);
-    openBigMenuRootView();
-  } catch (err) {
-    console.error('Big menu start failed', err);
-    setBigMenuOpen(true);
-    updateBigMenuLoadState();
-    openBigMenuRootView();
-  } finally {
-    bigMenuStartPending = false;
-    setBigMenuActionButtonsDisabled(false);
-  }
+  await ensureBigMenuRuntimeController()?.startFromBigMenu(mode);
 }
 
 function initBigMainMenu(){
-  if (!ui.bigMenuOverlay) {
-    boot();
-    return;
-  }
-  loadSettings();
-  const savedLang = localStorage.getItem('lang');
-  setLanguage(savedLang || getCurrentLang());
-  renderBigMenuTexts();
-  updateBigMenuVolumeState();
-  updateBigMenuLoadState();
-  setSessionStartGate('locked');
-  openBigMenuRootView();
-  setBigMenuOpen(true);
-
-  if (bigMenuInitialized) return;
-  bigMenuInitialized = true;
-
-  if (ui.bigMenuNew) ui.bigMenuNew.addEventListener('click', () => {
-    markBigMenuButtonActive('bigMenuNew');
-    startFromBigMenu('new');
-  });
-  if (ui.bigMenuLoad) ui.bigMenuLoad.addEventListener('click', () => {
-    if (!hasSaves()) return;
-    if (ui.bigMenuLoad && ui.bigMenuLoad.getAttribute('aria-disabled') === 'true') return;
-    markBigMenuButtonActive('bigMenuLoad');
-    openBigMenuLoadView();
-  });
-  if (ui.bigMenuLoadRows) ui.bigMenuLoadRows.addEventListener('click', (event) => {
-    const target = event.target;
-    if (!target || typeof target.closest !== 'function') return;
-    const loadBtn = target.closest('[data-big-load-slot-btn="true"]');
-    if (!loadBtn || loadBtn.disabled) return;
-    const slotIndex = parseBigMenuSlotIndexFromNode(target);
-    if (slotIndex < 0) return;
-    const payload = loadSlotPayloadForBigMenu(slotIndex);
-    if (!payload) {
-      renderBigMenuLoadRows();
-      return;
-    }
-    startFromBigMenu({ kind: 'load-slot', payload: payload });
-  });
-  if (ui.bigMenuLoadBack) ui.bigMenuLoadBack.addEventListener('click', () => {
-    openBigMenuRootView();
-  });
-  if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', () => {
-    markBigMenuButtonActive('bigMenuSound');
-    toggleBigMenuPanel(ui.bigMenuSoundPanel);
-  });
-  if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', () => {
-    markBigMenuButtonActive('bigMenuLanguage');
-    toggleBigMenuLanguagePanel();
-  });
-  if (ui.bigMenuDevs) ui.bigMenuDevs.addEventListener('click', () => {
-    markBigMenuButtonActive('bigMenuDevs');
-    openCreditsModal();
-  });
-
-  if (ui.bigMenuSfx) {
-    ui.bigMenuSfx.addEventListener('input', function (e) {
-      setVolume('sfx', e.target.value, 'percent');
-      playUiSliderPreviewSfxThrottled();
-      syncVolumeUIFromSettings();
-      saveSettings();
-    });
-  }
-  if (ui.bigMenuMusic) {
-    ui.bigMenuMusic.addEventListener('input', function (e) {
-      setVolume('music', e.target.value, 'percent');
-      syncVolumeUIFromSettings();
-      saveSettings();
-    });
-  }
-  if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', () => applyBigMenuLanguage('ru'));
-  if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', () => applyBigMenuLanguage('en'));
-  if (ui.creditsModalClose) {
-    ui.creditsModalClose.addEventListener('click', function () {
-      closeCreditsModal();
-    });
-  }
+  ensureBigMenuRuntimeController()?.initBigMainMenu();
 }
 
 function spawnInitialTanksLvl1(targetState, count = 2){
@@ -9504,207 +8902,37 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   ctx.restore();
 }
 
+function ensureZombieRenderRuntimeController(){
+  if (zombieRenderRuntimeController) return zombieRenderRuntimeController;
+  const api = GameApi && GameApi.ZombieRender;
+  if (!api || typeof api.createController !== 'function') return null;
+  zombieRenderRuntimeController = api.createController({
+    getCtx(){ return ctx; },
+    getZombieSprites(){ return ZombieSprites; },
+    getBalance(){ return BAL; },
+    getCenter(){ return center; },
+    getState(){ return state; },
+    nowSec: nowSec,
+    clamp: clamp,
+    shade: shade,
+    zombieLevelScale: zombieLevelScale,
+    getZombieBalanceMul: getZombieBalanceMul,
+    getZombieDefaultAttackFps(){ return ZOMBIE_DEFAULT_ATTACK_FPS; },
+    isQualityLow(){ return !!qualityLow; },
+  });
+  return zombieRenderRuntimeController;
+}
+
 function drawZombieEntity(z, x, y){
-  if (ZombieSprites.ready && ZombieSprites.atlasImg && z.type){
-    drawZombieSprite(x, y, z);
-  } else {
-    drawZombieFallback(x, y, z);
-  }
+  ensureZombieRenderRuntimeController()?.drawZombieEntity(z, x, y);
 }
 
 function drawZombieSprite(x,y,z){
-  const img = ZombieSprites.atlasImg;
-  const t = z.type;
-  const f = t.frame;
-  const a = t.anchor;
-  const facing = x >= center.x ? -1 : 1;
-
-  const isDying = z.state === 'dying';
-  const hasDeathAnim = isDying && z.deathAnim;
-  const hasAttackAnim = !isDying && z.attackState === 'attack' && t.attack;
-  
-  // Determine which frame to draw
-  let fx, fy, fw, fh;
-  if (hasDeathAnim) {
-    // Use death animation frame
-    const da = z.deathAnim;
-    const frameIndex = Math.floor(z.deathFrame || 0);
-    fx = da.x + frameIndex * da.w;
-    fy = da.y;
-    fw = da.w;
-    fh = da.h;
-  } else if (hasAttackAnim) {
-    const aa = t.attack;
-    const frames = aa.frames || 1;
-    const typeId = t.id || '';
-    const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
-    const attackFps = Math.max(0.01, (z.attackFrameRateFps || ZOMBIE_DEFAULT_ATTACK_FPS) * balAtkSpd);
-    const frameIndex = Math.min(frames - 1, Math.floor((z.attackAnimTimeSec || 0) * attackFps));
-    fx = aa.x + frameIndex * aa.w;
-    fy = aa.y;
-    fw = aa.w;
-    fh = aa.h;
-  } else {
-    // Use walk animation frame
-    const frames = t.frames || 1;
-    const frameIndex = Math.floor(z.walkAnimFrame || z.anim || 0) % frames;
-    fx = f.x + frameIndex * f.w;
-    fy = f.y;
-    fw = f.w;
-    fh = f.h;
-  }
-
-  const scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * zombieLevelScale(z);
-  const baseW = hasDeathAnim ? z.deathAnim.w : (hasAttackAnim ? t.attack.w : f.w);
-  const baseH = hasDeathAnim ? z.deathAnim.h : (hasAttackAnim ? t.attack.h : f.h);
-  const w = baseW * scale;
-  const h = baseH * scale;
-
-  const walkPhase = z.walkAnimFrame || z.anim || 0;
-  const bobPhase = hasAttackAnim ? (z.attackAnimTimeSec || 0) * Math.max(0.01, z.attackFrameRateFps || ZOMBIE_DEFAULT_ATTACK_FPS) : walkPhase;
-  const bob = hasDeathAnim ? 0 : Math.sin(bobPhase) * BAL.zombieBobAmp;
-  const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
-  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
-  const rot = face + (t.rotation ?? 0);
-  
-  // Death effects: keep opacity to avoid transparent corpses
-  const death = isDying ? (z.deathProgress ?? 0) : 0;
-  const deathScale = hasDeathAnim ? 1 : (1 - death * 0.22);
-  const deathTilt = hasDeathAnim ? 0 : (death * 1.1);
-  const deathAlpha = 1;
-
-  if (state.endgameVisuals && !isDying){
-    ctx.save();
-    ctx.translate(x, y + bob + groundOffset);
-    ctx.globalAlpha = 0.2 + 0.08 * Math.sin(nowSec() * 3);
-    ctx.fillStyle = 'rgba(200,80,80,.35)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, w * 0.5, h * 0.35, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,100,100,.25)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  if (!qualityLow && !isDying){
-    // shadow (without rotation)
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.20)';
-    ctx.beginPath();
-    ctx.ellipse(
-      x,
-      y + BAL.zombieShadowY + groundOffset,
-      BAL.zombieShadowW * scale,
-      BAL.zombieShadowH * scale,
-      0, 0, Math.PI * 2
-    );
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // body
-  ctx.save();
-  ctx.translate(x, y + bob + groundOffset);
-  ctx.globalAlpha = deathAlpha;
-  ctx.scale(facing * deathScale, deathScale);
-  ctx.rotate(rot * facing + deathTilt * facing);
-  ctx.drawImage(
-    img,
-    fx, fy, fw, fh,
-    -w * a.x,
-    -h * a.y,
-    w, h
-  );
-  ctx.restore();
-
-  if ((z.level ?? 1) > 1 && !isDying){
-    const ring = clamp((z.level ?? 1) - 1, 1, 6);
-    ctx.save();
-    ctx.strokeStyle = `rgba(185,139,255,${0.08 + ring * 0.02})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y + bob + groundOffset, w * 0.36, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
+  ensureZombieRenderRuntimeController()?.drawZombieSprite(x, y, z);
 }
 
 function drawZombieFallback(x,y,z){
-  const walkPhase = z.walkAnimFrame || z.anim || 0;
-  const bob = Math.sin(walkPhase) * BAL.zombieBobAmp;
-  const groundOffset = BAL.zombieGroundOffset * zombieLevelScale(z);
-  const face = z.heading ?? (z.theta + (z.omega >= 0 ? Math.PI/2 : -Math.PI/2));
-  const facing = x >= center.x ? -1 : 1;
-  const s = BAL.zombieScaleMul * zombieLevelScale(z);
-  const levelBoost = clamp((z.level ?? 1) - 1, 0, 6);
-  const isDying = z.state === 'dying';
-  const skinTone = state.endgameVisuals && !isDying ? shade('#c85050', levelBoost * 8) : shade('#3cbe78', levelBoost * 10);
-  const death = isDying ? (z.deathProgress ?? 0) : 0;
-  const deathScale = 1 - death * 0.22;
-  const deathTilt = death * 1.1;
-
-  if (state.endgameVisuals && z.state !== 'dying'){
-    ctx.save();
-    ctx.translate(x, y + bob + groundOffset);
-    ctx.globalAlpha = 0.22 + 0.06 * Math.sin(nowSec() * 3);
-    ctx.fillStyle = 'rgba(200,80,80,.3)';
-    ctx.beginPath();
-    // draw effect
-    ctx.ellipse(0, 0, 14 * s, 8 * s, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,100,100,.22)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  if (!qualityLow && !isDying){
-    // shadow
-    ctx.save(); ctx.beginPath();
-    ctx.fillStyle = 'rgba(0,0,0,.20)';
-    ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW*s, BAL.zombieShadowH*s, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  ctx.save();
-  ctx.translate(x, y + bob + groundOffset);
-  ctx.globalAlpha = 1;
-  ctx.rotate(face * facing + deathTilt * facing);
-  ctx.scale(s * facing * deathScale, s * deathScale);
-
-  // ragged head
-  ctx.globalAlpha = 0.95;
-  ctx.fillStyle = skinTone;
-  ctx.strokeStyle = 'rgba(255,255,255,.10)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-12, -6);
-  ctx.quadraticCurveTo(-2, -20, 10, -14);
-  ctx.quadraticCurveTo(20, -6, 12, 8);
-  ctx.quadraticCurveTo(4, 20, -10, 14);
-  ctx.quadraticCurveTo(-22, 8, -12, -6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // eyes
-  ctx.fillStyle = 'rgba(0,0,0,.62)';
-  ctx.fillRect(-5, -6, 2, 2);
-  ctx.fillRect(3, -7, 2, 2);
-
-  // mouth
-  ctx.strokeStyle = 'rgba(0,0,0,.45)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-4, 2);
-  ctx.lineTo(6, 3);
-  ctx.stroke();
-
-  ctx.restore();
-
+  ensureZombieRenderRuntimeController()?.drawZombieFallback(x, y, z);
 }
 
 function drawProjectiles(){

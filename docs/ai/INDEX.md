@@ -20,6 +20,13 @@
 - Input: `docs/ai/SYSTEMS/input.md`
 - Performance: `docs/ai/SYSTEMS/perf.md`
 
+## Extraction status (2026-02-20)
+- Big Menu runtime вынесен в `src/ui/bigMenuRuntime.js` (делегирование из `game.js`, API имён сохранён).
+- World Events runtime вынесен в `src/systems/worldEventsRuntime.js`.
+- Zombie rendering вынесен в `src/render/zombieRender.js`.
+- Crate runtime вынесен в `src/mechanics/crateRuntime.js`.
+- SFX pool runtime вынесен в `src/audio/sfxPoolRuntime.js`.
+
 ## Текущие UI-акценты
 - Меню (big/small): last-click selected state без default selected на первом показе — `docs/ai/SYSTEMS/ui.md`.
 - Confirm выхода из small menu: отдельный view `menuExitConfirmView`, переиспользует текущий session-exit flow.

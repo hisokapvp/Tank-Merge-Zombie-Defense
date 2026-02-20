@@ -3,9 +3,14 @@
 ## Где править
 - Разметка: `index.html`
 - Логика UI: `src/ui/*`
+- Big menu runtime: `src/ui/bigMenuRuntime.js`
 - Инициализация: `src/core/bootstrap.js`
 - Critical modal: `src/ui/criticalModal.js`
 - Restart simulation flow: `game.js` (`restartSimulationPartial`) + `src/core/worldReset.js`
+
+## Интеграция
+- Big menu функции (`setBigMenuOpen`, `openBigMenuLoadView`, `renderBigMenuTexts`, `startFromBigMenu`, `initBigMainMenu`) в `game.js` делегируются в `Game.BigMenuRuntime` через `ensureBigMenuRuntimeController()`.
+- Runtime crate-логика вынесена в `src/mechanics/crateRuntime.js`; в `game.js` crate entrypoints делегируются через `ensureCrateRuntimeController()`.
 
 ## Правила
 - Не добавлять тексты мимо `src/i18n/ru.json` и `src/i18n/en.json`.

@@ -2,9 +2,14 @@
 
 ## Где править
 - Логика звука: `src/audio/settingsAudio.js`
+- Runtime SFX pool/controller: `src/audio/sfxPoolRuntime.js`
 - Runtime playback/mute hooks: `game.js` (`playSfx`, `playLoopSfx`, `applyAudioSettings`)
 - Конфиг критического режима: `src/config/criticalAudioPolicy.js`
 - UI-слайдеры: `index.html`, `src/ui/*`
+
+## Интеграция
+- `game.js` подключает `Game.SfxPoolRuntime.createController(...)` через `ensureSfxPoolRuntimeController()`.
+- Публичные точки (`playSfx`, `playLoopSfx`, `stopLoopSfx`, `setSfxSources`, `normalizedSfxSources`) сначала делегируют в runtime-модуль, затем fallback на встроенную реализацию.
 
 ## Правила
 - Каналы и уровни громкости менять через единый модуль аудио.

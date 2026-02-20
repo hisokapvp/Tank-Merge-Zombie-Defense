@@ -1,9 +1,14 @@
 # game.js — Структурная карта (~9 500 строк)
 
-> **ВНИМАНИЕ**: Номера строк здесь приблизительны.  
-> Файл был сокращён с 10 749 до ~9 500 строк (извлечены RuntimeTasks, CannonUpgrades; удалён мёртвый код ~120 строк; компактифицирован createInitialState).  
-> Извлечённые модули: `src/core/runtimeTasks.js` (Game.RuntimeTasks), `src/mechanics/cannonUpgrades.js` (Game.CannonUpgrades), `src/persistence/initialState.js` (Game.InitialState — обновлён).  
+> **ВНИМАНИЕ**: Номера строк здесь приблизительны.
+> Файл был сокращён с 10 749 до ~9 500 строк (извлечены RuntimeTasks, CannonUpgrades; удалён мёртвый код ~120 строк; компактифицирован createInitialState).
+> Извлечённые модули: `src/core/runtimeTasks.js` (Game.RuntimeTasks), `src/mechanics/cannonUpgrades.js` (Game.CannonUpgrades), `src/persistence/initialState.js` (Game.InitialState — обновлён).
+> Дополнительно вынесены крупные runtime-блоки: `src/audio/sfxPoolRuntime.js`, `src/systems/worldEventsRuntime.js`, `src/render/zombieRender.js`, `src/mechanics/crateRuntime.js`, `src/ui/bigMenuRuntime.js`.
 > Для точных номеров строк используйте grep.
+
+## Extraction status (2026-02-20)
+- В `game.js` для 5 систем добавлены `ensure*RuntimeController()` и делегирование вызовов в `Game.*Runtime.createController(...)`.
+- Встроенная логика в `game.js` оставлена как fallback (поведение не зависит жёстко от порядка/наличия runtime-скриптов).
 
 ---
 
@@ -51,7 +56,7 @@
 | Диапазон | Описание |
 |---|---|
 | 1000–1070 | `loadSettings`, `saveSettings`, `applyAudioSettings`, `audioSettingsController` |
-| 1070–1600 | SFX system: pools, dedup, channels, `playSfx`, `playLoopSfx`, `stopLoopSfx`, gameplay audio fade, critical audio policy |
+| 1070–1600 | SFX system: pools, dedup, channels, `playSfx`, `playLoopSfx`, `stopLoopSfx`, gameplay audio fade, critical audio policy; делегирование в `Game.SfxPoolRuntime` |
 | 1600–1690 | `SFX_SOURCES`, volume helpers (`getVolume`, `setVolume`, `syncVolumeUIFromSettings`) |
 
 ### i18n
@@ -68,7 +73,7 @@
 | Диапазон | Описание |
 |---|---|
 | 1960–2010 | `WorldEventsCfg`, `worldEventsState`, `groundLayer` |
-| 2530–2840 | Weather system: rain, lightning, evening dim, attack mode cycling |
+| 2530–2840 | Weather system: rain, lightning, evening dim, attack mode cycling; делегирование в `Game.WorldEventsRuntime` |
 
 ### Canvas / Layout / Board / Decor
 | Диапазон | Описание |
@@ -110,7 +115,7 @@
 | Диапазон | Описание |
 |---|---|
 | 6371–6500 | `setMenuOpen`, `setBigMenuOpen`, `setSessionStartGate`, `setBigMenuView` |
-| 6451–7000 | Big Menu: save/load rows, language panel, credits modal, `startFromBigMenu` |
+| 6451–7000 | Big Menu: save/load rows, language panel, credits modal, `startFromBigMenu`; делегирование в `Game.BigMenuRuntime` |
 | 7001–7100 | `initBigMainMenu()` — привязка событий Big Menu |
 | 7347–7410 | `a11yOpen`, `a11yClose`, `updateUI()` |
 | 7409–7465 | Auto-merge button, dismantle button |
@@ -145,7 +150,7 @@
 | 9370–9500 | `drawTankIcon`, `drawTankIconTo` |
 | 9503–9640 | `computeAuraBand`, `AuraStyleByBand`, `drawTankAura`, `drawTankAuraSprite` |
 | 9634–9810 | `drawTank` — полный рендер танка (sprite + vector fallback) |
-| 9814–10020 | `drawZombieEntity`, `drawZombieSprite`, `drawZombieFallback` |
+| 9814–10020 | `drawZombieEntity`, `drawZombieSprite`, `drawZombieFallback`; делегирование в `Game.ZombieRender` |
 | 10024–10070 | `drawProjectiles` |
 | 10067–10120 | `drawImpacts` |
 | 10121–10200 | `drawCrate`, `drawDecals` |
