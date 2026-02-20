@@ -147,11 +147,15 @@ const ui = {
   menuContinue: document.getElementById('menuContinue'),
   menuNew: document.getElementById('menuNew'),
   menuSave: document.getElementById('menuSave'),
+  menuLoad: document.getElementById('menuLoad'),
   menuExit: document.getElementById('menuExit'),
   smallMenuRootView: document.getElementById('smallMenuRootView'),
   smallMenuSaveView: document.getElementById('smallMenuSaveView'),
+  smallMenuLoadView: document.getElementById('smallMenuLoadView'),
   smallMenuSaveRows: document.getElementById('smallMenuSaveRows'),
+  smallMenuLoadRows: document.getElementById('smallMenuLoadRows'),
   smallMenuSaveBack: document.getElementById('smallMenuSaveBack'),
+  smallMenuLoadBack: document.getElementById('smallMenuLoadBack'),
   smallMenuSaveToast: document.getElementById('smallMenuSaveToast'),
   menuMainView: document.getElementById('menuMainView'),
   menuExitConfirmView: document.getElementById('menuExitConfirmView'),
@@ -356,6 +360,7 @@ let bootPromise = null;
 let bigMenuInitialized = false;
 let bigMenuStartPending = false;
 let lastActiveButtonIdBigMenu = null;
+let bootInitialMenuSubView = 'main';
 let bigMenuLanguageOutsideListener = null;
 let creditsEscListener = null;
 let creditsDataLoaded = false;
@@ -6555,6 +6560,7 @@ async function startFromBigMenu(mode){
   if (bigMenuStartPending) return;
   if (mode === 'load' && !hasSaves()) return;
   if (mode === 'load' && ui.bigMenuLoad && ui.bigMenuLoad.getAttribute('aria-disabled') === 'true') return;
+  bootInitialMenuSubView = mode === 'load' ? 'load' : 'main';
   const wasStopped = sessionRuntimeStopped;
   bigMenuStartPending = true;
   setBigMenuActionButtonsDisabled(true);
@@ -6569,7 +6575,11 @@ async function startFromBigMenu(mode){
       saveProgress();
     }
     if (wasStopped) scheduleMainLoop();
-    setMenuOpen(false);
+    if (mode === 'load') {
+      setMenuOpen(true);
+    } else {
+      setMenuOpen(false);
+    }
   } catch (err) {
     console.error('Big menu start failed', err);
     setBigMenuOpen(true);
@@ -6686,8 +6696,22 @@ function clearAllTanksFromCells(targetState){
 function forceAutosaveSafely(){
   try {
     meta.lastSeenAt = Date.now();
-    saveProgress();
-  } catch (e) {}
+    const storageApi = window.Game && window.Game.Storage;
+    if (!storageApi || typeof storageApi.saveSlot !== 'function') {
+      saveProgress();
+      return;
+    }
+    const autoIndex = Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+    const result = storageApi.saveSlot(autoIndex, state);
+    if (!result || !result.ok) {
+      console.warn('Autosave failed:', result && result.error ? result.error : 'unknown');
+      if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+        window.Game.Toast.show(t('menu.save.toast.error'), 1800);
+      }
+    }
+  } catch (e) {
+    console.warn('Autosave failed:', e);
+  }
 }
 
 function restoreFenceSegmentsToMaxHp(){
@@ -6801,15 +6825,14 @@ function performCriticalRestart(){
 }
 
 function handleCriticalSaveAndExit(){
-  forceAutosaveSafely();
   location.reload();
 }
 
 function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
-  clearAllTanksFromCells(state);
   forceAutosaveSafely();
+  clearAllTanksFromCells(state);
   const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
   controller.open({
     hasDrones,
@@ -10160,6 +10183,7 @@ async function boot(){
         loadSettings,
         setLanguage,
         currentLang,
+        initialMenuSubView: bootInitialMenuSubView,
         getI18n,
         applyTranslations,
         updateUI,

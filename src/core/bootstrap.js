@@ -50,11 +50,13 @@
 
     var storageApi = windowObj.Game && windowObj.Game.Storage;
     var activeInlineEditSlotIndex = -1;
+    var activeSlotViewMode = 'none';
     var saveToastTimer = null;
     var lastActiveButtonIdSmallMenu = null;
+    var AUTO_SLOT_INDEX = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
 
     function getSmallMenuButtons() {
-      return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuExit];
+      return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuLoad, opts.ui.menuExit];
     }
 
     function setMenuButtonSelected(button, selected) {
@@ -85,10 +87,20 @@
     }
 
     function getSaveMeta() {
-      if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
-        return storageApi.loadSaveSlotsMeta();
+      if (storageApi && typeof storageApi.listSlots === 'function') {
+        var list = storageApi.listSlots();
+        return {
+          slots: Array.isArray(list && list.slots) ? list.slots : [],
+          ok: !!(list && list.ok),
+        };
       }
-      return { slots: [] };
+      if (storageApi && typeof storageApi.loadSaveSlotsMeta === 'function') {
+        return {
+          slots: (storageApi.loadSaveSlotsMeta() || {}).slots || [],
+          ok: true,
+        };
+      }
+      return { slots: [], ok: false };
     }
 
     function defaultSlotName(index) {
@@ -103,6 +115,12 @@
       if (typeof raw !== 'string') return defaultSlotName(index);
       var text = raw.trim();
       return text || defaultSlotName(index);
+    }
+
+    function slotHasData(slot) {
+      if (!slot || typeof slot !== 'object') return false;
+      if (Object.prototype.hasOwnProperty.call(slot, 'hasData')) return !!slot.hasData;
+      return Number(slot.lastSavedAt) > 0;
     }
 
     function pad2(value) {
@@ -120,14 +138,21 @@
       return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) + ' ' + pad2(date.getHours()) + ':' + pad2(date.getMinutes());
     }
 
-    function setSaveViewOpen(open) {
-      var visible = !!open;
+    function setSlotViewsOpen(mode) {
+      activeSlotViewMode = mode === 'save' || mode === 'load' ? mode : 'none';
+      var visible = activeSlotViewMode !== 'none';
       if (opts.ui.smallMenuRootView && opts.ui.smallMenuRootView.classList) {
         opts.ui.smallMenuRootView.classList.toggle('is-hidden', visible);
       }
       if (opts.ui.smallMenuSaveView && opts.ui.smallMenuSaveView.classList) {
-        opts.ui.smallMenuSaveView.classList.toggle('is-active', visible);
-        opts.ui.smallMenuSaveView.setAttribute('aria-hidden', (!visible).toString());
+        var saveVisible = activeSlotViewMode === 'save';
+        opts.ui.smallMenuSaveView.classList.toggle('is-active', saveVisible);
+        opts.ui.smallMenuSaveView.setAttribute('aria-hidden', (!saveVisible).toString());
+      }
+      if (opts.ui.smallMenuLoadView && opts.ui.smallMenuLoadView.classList) {
+        var loadVisible = activeSlotViewMode === 'load';
+        opts.ui.smallMenuLoadView.classList.toggle('is-active', loadVisible);
+        opts.ui.smallMenuLoadView.setAttribute('aria-hidden', (!loadVisible).toString());
       }
       if (!visible) {
         activeInlineEditSlotIndex = -1;
@@ -164,11 +189,12 @@
       return slotIndex;
     }
 
-    function renderSaveRows() {
-      if (!opts.ui.smallMenuSaveRows) return;
+    function renderSlotRows(mode) {
+      var targetRows = mode === 'load' ? opts.ui.smallMenuLoadRows : opts.ui.smallMenuSaveRows;
+      if (!targetRows) return;
       var meta = getSaveMeta();
       var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
-      opts.ui.smallMenuSaveRows.innerHTML = '';
+      targetRows.innerHTML = '';
 
       for (var i = 0; i < 10; i++) {
         var row = documentObj.createElement('div');
@@ -204,9 +230,19 @@
         var saveButton = documentObj.createElement('button');
         saveButton.type = 'button';
         saveButton.className = 'btn btnSecondary uiButtonBehavior smallMenuSaveSlotBtn';
-        saveButton.setAttribute('data-save-slot-btn', 'true');
+        if (mode === 'load') {
+          saveButton.setAttribute('data-load-slot-btn', 'true');
+        } else {
+          saveButton.setAttribute('data-save-slot-btn', 'true');
+        }
         saveButton.setAttribute('data-slot-index', String(i));
-        saveButton.textContent = opts.t('menu.save.col.action');
+        if (mode === 'load') {
+          saveButton.textContent = opts.t('menu.load.col.action');
+          saveButton.disabled = !slotHasData(slot);
+        } else {
+          saveButton.textContent = opts.t('menu.save.col.action');
+          saveButton.disabled = i === AUTO_SLOT_INDEX;
+        }
 
         actionCell.appendChild(saveButton);
 
@@ -215,12 +251,12 @@
         row.appendChild(dateCell);
         row.appendChild(actionCell);
 
-        opts.ui.smallMenuSaveRows.appendChild(row);
+        targetRows.appendChild(row);
       }
     }
 
     function openNameInlineEdit(slotIndex) {
-      if (!opts.ui.smallMenuSaveRows) return;
+      if (!opts.ui.smallMenuSaveRows || slotIndex === AUTO_SLOT_INDEX) return;
       var row = opts.ui.smallMenuSaveRows.querySelector('[data-slot-index="' + String(slotIndex) + '"]');
       if (!row) return;
       var nameCell = row.querySelector('.smallMenuSaveTable__cell_name');
@@ -245,7 +281,7 @@
           storageApi.setSlotName(slotIndex, input.value);
         }
         activeInlineEditSlotIndex = -1;
-        renderSaveRows();
+        renderSlotRows('save');
       }
 
       input.addEventListener('keydown', function (event) {
@@ -280,17 +316,73 @@
     }
 
     function openMainMenuView() {
-      setSaveViewOpen(false);
+      setSlotViewsOpen('none');
       setMenuView('main');
       applySmallMenuSelectedState();
     }
 
     function openSaveView() {
-      setSaveViewOpen(true);
-      renderSaveRows();
+      setSlotViewsOpen('save');
+      renderSlotRows('save');
       if (typeof opts.updateBigMenuLoadState === 'function') {
         opts.updateBigMenuLoadState();
       }
+    }
+
+    function openLoadView() {
+      setSlotViewsOpen('load');
+      renderSlotRows('load');
+      if (typeof opts.updateBigMenuLoadState === 'function') {
+        opts.updateBigMenuLoadState();
+      }
+    }
+
+    function performSaveToSlot(slotIndex) {
+      if (!storageApi || typeof storageApi.saveSlot !== 'function') {
+        showSaveToast('menu.save.toast.error');
+        return false;
+      }
+      var result = storageApi.saveSlot(slotIndex, getState());
+      if (!result || !result.ok) {
+        showSaveToast('menu.save.toast.error');
+        return false;
+      }
+      if (opts.meta) opts.meta.lastSeenAt = Date.now();
+      if (typeof opts.saveProgress === 'function') {
+        try { opts.saveProgress(); } catch (_) {}
+      }
+      renderSlotRows('save');
+      showSaveToast('menu.save.toast.saved');
+      if (typeof opts.updateBigMenuLoadState === 'function') {
+        opts.updateBigMenuLoadState();
+      }
+      return true;
+    }
+
+    function performLoadFromSlot(slotIndex) {
+      if (!storageApi || typeof storageApi.loadSlot !== 'function') {
+        showSaveToast('menu.load.toast.error');
+        return false;
+      }
+      var loaded = storageApi.loadSlot(slotIndex);
+      if (!loaded || !loaded.ok || !loaded.payload || !Array.isArray(loaded.payload.cells)) {
+        showSaveToast('menu.load.toast.error');
+        renderSlotRows('load');
+        return false;
+      }
+      if (typeof opts.restoreFullState === 'function') {
+        opts.restoreFullState(loaded.payload);
+      }
+      if (opts.meta) opts.meta.lastSeenAt = Date.now();
+      if (typeof opts.saveProgress === 'function') {
+        try { opts.saveProgress(); } catch (_) {}
+      }
+      if (typeof opts.updateUI === 'function') {
+        opts.updateUI();
+      }
+      showSaveToast('menu.load.toast.loaded');
+      opts.setMenuOpen(false);
+      return true;
     }
 
     function openMenuOverlayMain() {
@@ -328,13 +420,17 @@
       markSmallMenuButtonActive('menuSave');
       openSaveView();
     });
+    opts.ui.menuLoad && opts.ui.menuLoad.addEventListener('click', function () {
+      markSmallMenuButtonActive('menuLoad');
+      openLoadView();
+    });
     opts.ui.smallMenuSaveRows && opts.ui.smallMenuSaveRows.addEventListener('pointerdown', function (event) {
       var target = event.target;
       if (!target || typeof target.closest !== 'function') return;
       if (target.closest('[data-save-slot-btn="true"]')) return;
       if (activeInlineEditSlotIndex >= 0) return;
       var slotIndex = parseSlotIndexFromNode(target);
-      if (slotIndex < 0) return;
+      if (slotIndex < 0 || slotIndex === AUTO_SLOT_INDEX) return;
       event.preventDefault();
       openNameInlineEdit(slotIndex);
     });
@@ -345,17 +441,23 @@
       if (!saveBtn) return;
       var slotIndex = Number(saveBtn.getAttribute('data-slot-index'));
       if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return;
-      if (storageApi && typeof storageApi.markSlotSaved === 'function') {
-        storageApi.markSlotSaved(slotIndex, Date.now());
-      }
-      renderSaveRows();
-      showSaveToast('menu.save.toast.saved');
-      if (typeof opts.updateBigMenuLoadState === 'function') {
-        opts.updateBigMenuLoadState();
-      }
+      performSaveToSlot(slotIndex);
+    });
+    opts.ui.smallMenuLoadRows && opts.ui.smallMenuLoadRows.addEventListener('click', function (event) {
+      var target = event.target;
+      if (!target || typeof target.closest !== 'function') return;
+      var loadBtn = target.closest('[data-load-slot-btn="true"]');
+      if (!loadBtn) return;
+      if (loadBtn.disabled) return;
+      var slotIndex = Number(loadBtn.getAttribute('data-slot-index'));
+      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return;
+      performLoadFromSlot(slotIndex);
     });
 
     opts.ui.smallMenuSaveBack && opts.ui.smallMenuSaveBack.addEventListener('click', function () {
+      openMainMenuView();
+    });
+    opts.ui.smallMenuLoadBack && opts.ui.smallMenuLoadBack.addEventListener('click', function () {
       openMainMenuView();
     });
 
@@ -540,6 +642,12 @@
     if (windowObj.Game && windowObj.Game.LessonProgress) windowObj.Game.LessonProgress.init();
     if (windowObj.Game && windowObj.Game.AnkiExport) windowObj.Game.AnkiExport.hookUI();
     if (windowObj.Game && windowObj.Game.ZombieAnimPreview) windowObj.Game.ZombieAnimPreview.init();
+
+    if (opts.initialMenuSubView === 'load') {
+      openLoadView();
+    } else {
+      openMainMenuView();
+    }
 
     opts.ensureZombieCount();
     opts.updateUI();

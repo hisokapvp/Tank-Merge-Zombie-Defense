@@ -23,10 +23,12 @@
 ## Текущие UI-акценты
 - Меню (big/small): last-click selected state без default selected на первом показе — `docs/ai/SYSTEMS/ui.md`.
 - Confirm выхода из small menu: отдельный view `menuExitConfirmView`, переиспользует текущий session-exit flow.
-- Small menu Save view: отдельный подрежим `smallMenuSaveView` с таблицей 10 слотов, inline edit имени и timestamp `lastSavedAt`.
+- Small menu Save/Load views: подрежимы `smallMenuSaveView` и `smallMenuLoadView` с общим списком 10 статичных слотов (`1..10`), inline edit имени только в Save для слотов `1..9`.
 - Big menu: пункт `Devs` переименован в `Credits/Создатели` и открывает `creditsModal` со списком из `assets/credits.json`.
 - Big menu language panel: подкнопки языка рендерятся прямо под кнопкой `Язык/Language`; active состояния `Русский/Английский` зависят только от текущей локали.
-- Big menu `Load`: состояние доступности вычисляется по `saveSlotsMeta_v1.lastSavedAt` (через `hasAnySaves()`), disabled реализован как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`), без постоянного текста «Нет сохранений».
+- Big menu `Load`: открывает тот же общий список слотов, что small menu `Load`; доступность вычисляется через `Game.Storage.hasAnySaves()` (по фактическому наличию slot payload), disabled реализован как project-disabled (`aria-disabled` + `data-disabled-reason="noSaves"`).
+- Slot storage: `saveSlotsMeta_v1` + `saveSlot_v1_0..9`; legacy `progress` мигрируется в слот 1 (`index 0`) при первой инициализации слотов.
+- Слот 10 (`index 9`) зарезервирован под `Auto`; обновляется только autosave при входе supercomputer в critical режим.
 - Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).
 - Achievements modal: accordion single-open с toggler `+`/`−`, по умолчанию всё закрыто при открытии.
 - `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.

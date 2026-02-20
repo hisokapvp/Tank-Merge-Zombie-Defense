@@ -63,6 +63,7 @@
                 <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">Продолжить</button>
                 <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
                 <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
+                <button id="menuLoad" class="btn btnSecondary" type="button" data-i18n="menuLoad">Загрузка</button>
                 <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
               </div>
               <div id="menuMainView" class="menuView">
@@ -112,6 +113,25 @@
               <div id="smallMenuSaveToast" class="smallMenuSaveToast" aria-live="polite" aria-atomic="true"></div>
               <div class="menuInlineActions smallMenuSaveActions">
                 <button id="smallMenuSaveBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+              </div>
+            </div>
+
+            <div id="smallMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
+              <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
+                <div class="smallMenuSaveTable__head" role="rowgroup">
+                  <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+                  </div>
+                </div>
+                <div id="smallMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
+              </div>
+              <div class="menuInlineActions smallMenuSaveActions">
+                <button id="smallMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
               </div>
             </div>
           </div>

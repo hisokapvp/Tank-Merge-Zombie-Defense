@@ -7,8 +7,11 @@
   var SAVE_KEY = 'progress';
   var SAVE_VERSION = 2;
   var SAVE_SLOTS_META_KEY = 'saveSlotsMeta_v1';
+  var SAVE_SLOT_KEY_PREFIX = 'saveSlot_v1_';
   var SAVE_SLOTS_COUNT = 10;
   var SAVE_SLOT_NAME_MAX_LEN = 20;
+  var AUTO_SLOT_INDEX = 9;
+  var AUTO_SLOT_NAME = 'Auto';
 
   function normalizeTotalDamageDealtRaw(value) {
     if (!Number.isFinite(value)) return 0;
@@ -35,10 +38,12 @@
   }
 
   function getDefaultSlotName(index) {
+    if (index === AUTO_SLOT_INDEX) return AUTO_SLOT_NAME;
     return 'Слот ' + (index + 1);
   }
 
   function sanitizeSlotName(index, name) {
+    if (index === AUTO_SLOT_INDEX) return AUTO_SLOT_NAME;
     var text = typeof name === 'string' ? name : '';
     text = text.trim();
     if (text.length > SAVE_SLOT_NAME_MAX_LEN) {
@@ -78,60 +83,280 @@
   }
 
   function saveSaveSlotsMeta(meta) {
-    if (!global.localStorage) return;
+    if (!global.localStorage) return false;
     global.localStorage.setItem(SAVE_SLOTS_META_KEY, JSON.stringify(meta));
+    return true;
+  }
+
+  function reportStorageError(scope, error) {
+    try {
+      var details = error && error.message ? error.message : String(error || 'unknown');
+      if (global.console && typeof global.console.warn === 'function') {
+        global.console.warn('[Storage][' + scope + '] ' + details);
+      }
+    } catch (_) {}
+  }
+
+  function getSlotDataKey(index) {
+    return SAVE_SLOT_KEY_PREFIX + String(index);
+  }
+
+  function safeGetItem(key) {
+    try {
+      if (!global.localStorage) return { ok: false, value: null, error: 'no_local_storage' };
+      return { ok: true, value: global.localStorage.getItem(key), error: null };
+    } catch (e) {
+      reportStorageError('getItem:' + key, e);
+      return { ok: false, value: null, error: e };
+    }
+  }
+
+  function safeSetItem(key, value) {
+    try {
+      if (!global.localStorage) return { ok: false, error: 'no_local_storage' };
+      global.localStorage.setItem(key, value);
+      return { ok: true, error: null };
+    } catch (e) {
+      reportStorageError('setItem:' + key, e);
+      return { ok: false, error: e };
+    }
+  }
+
+  function safeRemoveItem(key) {
+    try {
+      if (!global.localStorage) return { ok: false, error: 'no_local_storage' };
+      global.localStorage.removeItem(key);
+      return { ok: true, error: null };
+    } catch (e) {
+      reportStorageError('removeItem:' + key, e);
+      return { ok: false, error: e };
+    }
+  }
+
+  function readMetaRaw() {
+    var metaRead = safeGetItem(SAVE_SLOTS_META_KEY);
+    if (!metaRead.ok) return { ok: false, meta: createDefaultSaveSlotsMeta(), hadRaw: false, error: metaRead.error };
+    var hadRaw = metaRead.value != null && metaRead.value !== '';
+    var parsed = safeParse(metaRead.value, null);
+    return { ok: true, meta: normalizeSaveSlotsMeta(parsed), hadRaw: hadRaw, error: null };
+  }
+
+  function writeMetaSafe(meta) {
+    var normalized = normalizeSaveSlotsMeta(meta);
+    var res = safeSetItem(SAVE_SLOTS_META_KEY, JSON.stringify(normalized));
+    return { ok: !!res.ok, meta: normalized, error: res.error || null };
+  }
+
+  function hasAnySlotPayloadRaw() {
+    for (var i = 0; i < SAVE_SLOTS_COUNT; i++) {
+      var slotRead = safeGetItem(getSlotDataKey(i));
+      if (!slotRead.ok) continue;
+      if (slotRead.value != null && slotRead.value !== '') return true;
+    }
+    return false;
+  }
+
+  function updateMetaField(index, updates) {
+    var slotIndex = Number(index);
+    if (!Number.isFinite(slotIndex)) return { ok: false, meta: loadSaveSlotsMeta(), error: 'invalid_index' };
+    slotIndex = Math.floor(slotIndex);
+    if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return { ok: false, meta: loadSaveSlotsMeta(), error: 'out_of_range' };
+    var meta = loadSaveSlotsMeta();
+    var slot = meta.slots[slotIndex] || { name: getDefaultSlotName(slotIndex), lastSavedAt: null };
+    if (updates && Object.prototype.hasOwnProperty.call(updates, 'name')) {
+      slot.name = sanitizeSlotName(slotIndex, updates.name);
+    }
+    if (updates && Object.prototype.hasOwnProperty.call(updates, 'lastSavedAt')) {
+      slot.lastSavedAt = sanitizeLastSavedAt(updates.lastSavedAt);
+    }
+    meta.slots[slotIndex] = slot;
+    var writeMeta = writeMetaSafe(meta);
+    if (!writeMeta.ok) {
+      return { ok: false, meta: writeMeta.meta, error: writeMeta.error };
+    }
+    return { ok: true, meta: writeMeta.meta, error: null };
+  }
+
+  function migrateLegacyProgressIfNeeded() {
+    var metaRead = readMetaRaw();
+    var meta = metaRead.meta;
+    var hasSlotData = hasAnySlotPayloadRaw();
+    if (metaRead.hadRaw || hasSlotData) {
+      writeMetaSafe(meta);
+      return { ok: true, migrated: false, meta: meta, error: null };
+    }
+
+    var legacyRead = safeGetItem(SAVE_KEY);
+    if (!legacyRead.ok || !legacyRead.value) {
+      writeMetaSafe(meta);
+      return { ok: true, migrated: false, meta: meta, error: null };
+    }
+
+    var legacyParsed = safeParse(legacyRead.value, null);
+    if (!legacyParsed || typeof legacyParsed !== 'object') {
+      writeMetaSafe(meta);
+      return { ok: true, migrated: false, meta: meta, error: null };
+    }
+
+    var slotWrite = safeSetItem(getSlotDataKey(0), JSON.stringify(legacyParsed));
+    if (!slotWrite.ok) {
+      writeMetaSafe(meta);
+      return { ok: false, migrated: false, meta: meta, error: slotWrite.error };
+    }
+
+    meta.slots[0].name = sanitizeSlotName(0, meta.slots[0].name);
+    meta.slots[0].lastSavedAt = Date.now();
+    var metaWrite = writeMetaSafe(meta);
+    return { ok: !!metaWrite.ok, migrated: !!metaWrite.ok, meta: metaWrite.meta, error: metaWrite.error || null };
+  }
+
+  function loadSlotPayloadRaw(index) {
+    var slotIndex = Number(index);
+    if (!Number.isFinite(slotIndex)) return { ok: false, payload: null, error: 'invalid_index' };
+    slotIndex = Math.floor(slotIndex);
+    if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return { ok: false, payload: null, error: 'out_of_range' };
+    var read = safeGetItem(getSlotDataKey(slotIndex));
+    if (!read.ok) return { ok: false, payload: null, error: read.error };
+    if (!read.value) return { ok: true, payload: null, error: null };
+    var parsed = safeParse(read.value, null);
+    if (!parsed || typeof parsed !== 'object') {
+      reportStorageError('loadSlot:parse:' + slotIndex, new Error('Invalid slot JSON'));
+      return { ok: false, payload: null, error: 'parse_error' };
+    }
+    return { ok: true, payload: parsed, error: null };
+  }
+
+  var slotStorageBackend = {
+    listSlots: function () {
+      var migration = migrateLegacyProgressIfNeeded();
+      var meta = migration.meta || createDefaultSaveSlotsMeta();
+      var slots = [];
+      for (var i = 0; i < SAVE_SLOTS_COUNT; i++) {
+        var slotPayload = loadSlotPayloadRaw(i);
+        var slotMeta = meta.slots[i] || { name: getDefaultSlotName(i), lastSavedAt: null };
+        slots.push({
+          index: i,
+          name: getSlotName(slotMeta, i),
+          lastSavedAt: sanitizeLastSavedAt(slotMeta.lastSavedAt),
+          hasData: !!slotPayload.payload,
+          isAuto: i === AUTO_SLOT_INDEX,
+        });
+      }
+      if (!migration.ok) return { ok: false, meta: meta, slots: slots, error: migration.error };
+      return { ok: true, meta: meta, slots: slots, error: null };
+    },
+    saveSlot: function (index, payload) {
+      var slotIndex = Number(index);
+      if (!Number.isFinite(slotIndex)) return { ok: false, error: 'invalid_index' };
+      slotIndex = Math.floor(slotIndex);
+      if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return { ok: false, error: 'out_of_range' };
+
+      migrateLegacyProgressIfNeeded();
+      var serialized = serializeState(payload || {});
+      serialized.version = 1;
+      var write = safeSetItem(getSlotDataKey(slotIndex), JSON.stringify(serialized));
+      if (!write.ok) return { ok: false, error: write.error };
+
+      var nameToSet = slotIndex === AUTO_SLOT_INDEX ? AUTO_SLOT_NAME : undefined;
+      var metaRes = updateMetaField(slotIndex, {
+        name: nameToSet,
+        lastSavedAt: Date.now(),
+      });
+      if (!metaRes.ok) return { ok: false, error: metaRes.error };
+      return { ok: true, error: null };
+    },
+    loadSlot: function (index) {
+      migrateLegacyProgressIfNeeded();
+      var loaded = loadSlotPayloadRaw(index);
+      if (!loaded.ok) return { ok: false, payload: null, error: loaded.error };
+      return { ok: true, payload: loaded.payload, error: null };
+    },
+    deleteSlot: function (index) {
+      migrateLegacyProgressIfNeeded();
+      if (index == null) {
+        var hadError = null;
+        for (var i = 0; i < SAVE_SLOTS_COUNT; i++) {
+          var remove = safeRemoveItem(getSlotDataKey(i));
+          if (!remove.ok && !hadError) hadError = remove.error;
+        }
+        var resetMeta = writeMetaSafe(createDefaultSaveSlotsMeta());
+        if (!resetMeta.ok && !hadError) hadError = resetMeta.error;
+        return { ok: !hadError, error: hadError };
+      }
+      var slotIndex = Number(index);
+      if (!Number.isFinite(slotIndex)) return { ok: false, error: 'invalid_index' };
+      slotIndex = Math.floor(slotIndex);
+      if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return { ok: false, error: 'out_of_range' };
+      var removeOne = safeRemoveItem(getSlotDataKey(slotIndex));
+      if (!removeOne.ok) return { ok: false, error: removeOne.error };
+      var metaRes = updateMetaField(slotIndex, {
+        name: getDefaultSlotName(slotIndex),
+        lastSavedAt: null,
+      });
+      if (!metaRes.ok) return { ok: false, error: metaRes.error };
+      return { ok: true, error: null };
+    },
+  };
+
+  var activeSlotsBackend = slotStorageBackend;
+
+  function setSlotsBackend(backend) {
+    if (!backend || typeof backend !== 'object') return false;
+    if (typeof backend.listSlots !== 'function') return false;
+    if (typeof backend.saveSlot !== 'function') return false;
+    if (typeof backend.loadSlot !== 'function') return false;
+    activeSlotsBackend = backend;
+    return true;
+  }
+
+  function getSlotsBackend() {
+    return activeSlotsBackend;
   }
 
   function loadSaveSlotsMeta() {
-    var raw = null;
-    try {
-      raw = global.localStorage && global.localStorage.getItem(SAVE_SLOTS_META_KEY);
-    } catch (e) {
-      raw = null;
-    }
-    var parsed = safeParse(raw, null);
-    var normalized = normalizeSaveSlotsMeta(parsed);
-    try {
-      saveSaveSlotsMeta(normalized);
-    } catch (e2) {}
-    return normalized;
+    var list = activeSlotsBackend.listSlots();
+    if (list && list.meta) return normalizeSaveSlotsMeta(list.meta);
+    return createDefaultSaveSlotsMeta();
   }
 
   function setSlotName(index, name) {
-    var slotIndex = Number(index);
-    if (!Number.isFinite(slotIndex)) return loadSaveSlotsMeta();
-    slotIndex = Math.floor(slotIndex);
-    if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return loadSaveSlotsMeta();
-    var meta = loadSaveSlotsMeta();
-    meta.slots[slotIndex].name = sanitizeSlotName(slotIndex, name);
-    try {
-      saveSaveSlotsMeta(meta);
-    } catch (e) {}
-    return meta;
+    var res = updateMetaField(index, { name: name });
+    return res && res.meta ? res.meta : loadSaveSlotsMeta();
   }
 
   function markSlotSaved(index, timestampMs) {
-    var slotIndex = Number(index);
-    if (!Number.isFinite(slotIndex)) return loadSaveSlotsMeta();
-    slotIndex = Math.floor(slotIndex);
-    if (slotIndex < 0 || slotIndex >= SAVE_SLOTS_COUNT) return loadSaveSlotsMeta();
-    var meta = loadSaveSlotsMeta();
-    meta.slots[slotIndex].lastSavedAt = sanitizeLastSavedAt(timestampMs);
-    try {
-      saveSaveSlotsMeta(meta);
-    } catch (e) {}
-    return meta;
+    var res = updateMetaField(index, { lastSavedAt: timestampMs });
+    return res && res.meta ? res.meta : loadSaveSlotsMeta();
   }
 
   function hasAnySaves() {
-    var meta = loadSaveSlotsMeta();
-    var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
+    var list = activeSlotsBackend.listSlots();
+    var slots = Array.isArray(list && list.slots) ? list.slots : [];
     for (var i = 0; i < slots.length; i++) {
-      var slot = slots[i];
-      if (!slot || typeof slot !== 'object') continue;
-      if (sanitizeLastSavedAt(slot.lastSavedAt) != null) return true;
+      if (slots[i] && slots[i].hasData) return true;
     }
     return false;
+  }
+
+  function listSlots() {
+    var result = activeSlotsBackend.listSlots();
+    if (!result || typeof result !== 'object') {
+      return { ok: false, meta: createDefaultSaveSlotsMeta(), slots: [], error: 'backend_invalid_response' };
+    }
+    return result;
+  }
+
+  function saveSlot(index, payload) {
+    return activeSlotsBackend.saveSlot(index, payload);
+  }
+
+  function loadSlot(index) {
+    return activeSlotsBackend.loadSlot(index);
+  }
+
+  function deleteSlot(index) {
+    if (!activeSlotsBackend.deleteSlot) return { ok: false, error: 'not_supported' };
+    return activeSlotsBackend.deleteSlot(index);
   }
 
   /**
@@ -255,6 +480,7 @@
    */
   function loadGame() {
     try {
+      migrateLegacyProgressIfNeeded();
       var raw = global.localStorage && global.localStorage.getItem(SAVE_KEY);
       if (!raw) return null;
       var data = safeParse(raw, null);
@@ -280,7 +506,9 @@
       payload.lastSeenAt = meta && meta.lastSeenAt != null ? meta.lastSeenAt : payload.lastSeenAt;
       payload.version = SAVE_VERSION;
       if (global.localStorage) global.localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
-    } catch (e) {}
+    } catch (e) {
+      reportStorageError('saveGame', e);
+    }
     // Persist telemetry lifetime together with game save
     if (global.Game && global.Game.Telemetry && global.Game.Telemetry.saveLifetime) {
       try { global.Game.Telemetry.saveLifetime(); } catch (_) {}
@@ -292,15 +520,24 @@
     SAVE_KEY: SAVE_KEY,
     SAVE_VERSION: SAVE_VERSION,
     SAVE_SLOTS_META_KEY: SAVE_SLOTS_META_KEY,
+    SAVE_SLOT_KEY_PREFIX: SAVE_SLOT_KEY_PREFIX,
     SAVE_SLOTS_COUNT: SAVE_SLOTS_COUNT,
     SAVE_SLOT_NAME_MAX_LEN: SAVE_SLOT_NAME_MAX_LEN,
+    AUTO_SLOT_INDEX: AUTO_SLOT_INDEX,
     loadGame: loadGame,
     saveGame: saveGame,
+    listSlots: listSlots,
+    saveSlot: saveSlot,
+    loadSlot: loadSlot,
+    deleteSlot: deleteSlot,
     loadSaveSlotsMeta: loadSaveSlotsMeta,
     setSlotName: setSlotName,
     markSlotSaved: markSlotSaved,
     hasAnySaves: hasAnySaves,
     getDefaultSlotName: getDefaultSlotName,
     safeParse: safeParse,
+    setSlotsBackend: setSlotsBackend,
+    getSlotsBackend: getSlotsBackend,
+    reportStorageError: reportStorageError,
   };
 })(typeof window !== 'undefined' ? window : this);

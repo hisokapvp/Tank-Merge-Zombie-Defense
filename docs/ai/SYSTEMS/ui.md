@@ -17,18 +17,20 @@
 
 ## Меню и confirm выхода
 - Small menu confirm выхода живёт в `menuExitConfirmView` (`index.html`), обработчики — `src/core/bootstrap.js`.
-- В small menu больше нет пункта для отправки отзывов; действия: `Continue`, `New`, `Save`, `Exit`.
+- В small menu больше нет пункта для отправки отзывов; действия: `Continue`, `New`, `Save`, `Load`, `Exit`.
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
 - `stopAndResetSessionToBigMenu` приводит приложение к состоянию первого запуска через перезагрузку страницы (`window.location.reload`) после очистки transient `progress` (слотовые сохранения не затрагиваются).
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
 
-## Small menu Save view
+## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
-- При входе в Save view скрывается root small menu (`#smallMenuRootView.is-hidden`), показывается только save-view (`.smallMenuSaveView.is-active`), pause остаётся через обычный menu lock (`setMenuOpen(true)` + `PauseManager.setMenuOpen`).
-- Таблица слотов всегда рендерит 10 строк (`1..10`) с колонками: `№`, `Имя`, `Дата`, `Сохранить`.
-- Inline edit имени включается по `pointerdown` по строке (кроме кнопки `Сохранить`), Enter/blur = commit, Esc = cancel; commit идёт через `Game.Storage.setSlotName`.
-- Кнопка строки `Сохранить` обновляет дату через `Game.Storage.markSlotSaved(index, Date.now())`, обновляет строку и показывает краткий toast (`menu.save.toast.saved`).
-- Кнопка `Назад` в save-view возвращает в root small menu без отдельного снятия паузы; правила pause определяются состоянием открытия small menu в целом.
+- Load-view — соседний подрежим small menu: `#smallMenuLoadView` в `index.html`, использует тот же table-layout (`smallMenuSaveTable__*`) и тот же renderer в `src/core/bootstrap.js`.
+- При входе в Save/Load view скрывается root small menu (`#smallMenuRootView.is-hidden`), показывается только активный subview (`.smallMenuSaveView.is-active`), pause остаётся через обычный menu lock (`setMenuOpen(true)` + `PauseManager.setMenuOpen`).
+- Таблица слотов всегда рендерит 10 строк (`1..10`) с колонками: `№`, `Имя`, `Дата`, `Сохранить/Загрузить`.
+- Inline edit имени включается по `pointerdown` по строке (кроме кнопки `Сохранить`) только для слотов `1..9`; Enter/blur = commit, Esc = cancel; commit идёт через `Game.Storage.setSlotName`.
+- Кнопка `Сохранить` вызывает `Game.Storage.saveSlot(index, state)`; слот `10` (Auto) в Save view read-only (кнопка disabled).
+- Кнопка `Загрузить` вызывает `Game.Storage.loadSlot(index)`; пустой слот остаётся disabled.
+- Кнопка `Назад` в save/load-view возвращает в root small menu без отдельного снятия паузы; правила pause определяются состоянием открытия small menu в целом.
 
 ## Состояние подсветки кнопок меню
 - Big menu и small menu хранят last-click состояние раздельно (без shared state между меню).
@@ -42,7 +44,8 @@
 - Подпанель языка закрывается при выборе языка и по outside click; outside-listener снимается при закрытии.
 - В big menu больше нет пункта для отправки отзывов; действия: `New`, `Load`, `Sound`, `Language`, `Credits`.
 - Пункт `Credits/Создатели` открывает `creditsModal` (закрытие по `×` и `Esc`) и рендерит список участников из `assets/credits.json`.
-- Для `Load` в big menu нет постоянного текста «Нет сохранений». Доступность отражает `saveSlotsMeta_v1.lastSavedAt`: при отсутствии сейвов ставятся `aria-disabled="true"` и `data-disabled-reason="noSaves"`, при наличии — атрибут reason убирается.
+- Для `Load` в big menu нет постоянного текста «Нет сохранений». Доступность отражает `Game.Storage.hasAnySaves()` по фактическому наличию payload в слотах: при отсутствии сейвов ставятся `aria-disabled="true"` и `data-disabled-reason="noSaves"`, при наличии — атрибут reason убирается.
+- Big menu `Load` открывает тот же общий список слотов (Load view), что и кнопка `Load/Загрузка` в small menu.
 
 ## HUD: supercomputer button
 - `#supercomputerBtn` позиционируется runtime-логикой через `transform: translate3d(...)`; не применять к нему layout-сдвиги (`top/left`) на active/pressed.
