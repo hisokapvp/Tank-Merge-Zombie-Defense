@@ -52,6 +52,7 @@
   "languageEnglish": "English",
   "menuSfx": "SFX volume",
   "menuMusic": "Music volume",
+  "sound.trackLoop": "Track loop volume",
   "hudCoins": "Money",
   "hudKills": "Monsters defeated",
   "hudSprites": "Sprites",

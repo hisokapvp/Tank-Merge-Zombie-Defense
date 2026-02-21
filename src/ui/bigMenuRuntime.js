@@ -452,9 +452,11 @@
       var soundTitle = ui.bigMenuOverlay.querySelector('#bigMenuSoundPanel .bigMenuSubpanelTitle');
       var soundSfxLabel = ui.bigMenuOverlay.querySelector('#bigMenuSfxLabel');
       var soundMusicLabel = ui.bigMenuOverlay.querySelector('#bigMenuMusicLabel');
+      var soundTrackLoopLabel = ui.bigMenuOverlay.querySelector('#bigMenuTrackLoopLabel');
       if (soundTitle) soundTitle.textContent = deps.t('bigMenuSound');
       if (soundSfxLabel) soundSfxLabel.textContent = deps.t('bigMenuSfx');
       if (soundMusicLabel) soundMusicLabel.textContent = deps.t('bigMenuMusic');
+      if (soundTrackLoopLabel) soundTrackLoopLabel.textContent = deps.t('sound.trackLoop');
 
       var languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
       if (languageTitle) languageTitle.textContent = deps.t('menuLanguage');
@@ -619,6 +621,16 @@
       if (ui.bigMenuMusic) {
         ui.bigMenuMusic.addEventListener('input', function (e) {
           deps.setVolume('music', e.target.value, 'percent');
+          deps.syncVolumeUIFromSettings();
+          deps.saveSettings();
+        });
+      }
+      if (ui.bigMenuTrackLoop) {
+        ui.bigMenuTrackLoop.addEventListener('input', function (e) {
+          if (typeof deps.setTrackLoopVolumeMul === 'function') {
+            deps.setTrackLoopVolumeMul(e.target.value, 'percent');
+          }
+          deps.playUiSliderPreviewSfxThrottled();
           deps.syncVolumeUIFromSettings();
           deps.saveSettings();
         });

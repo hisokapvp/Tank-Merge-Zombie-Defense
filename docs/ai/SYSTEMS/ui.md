@@ -38,6 +38,13 @@
 - Явный выбор для confirm считается только после пользовательского действия: `pointerdown/click`, фокус и подтверждение с клавиатуры (`Enter`/`Space`) или навигация стрелками (`ArrowLeft/Right/Up/Down`).
 - Пока `sessionStartGate=locked`, `Continue` в small menu недоступен; в сессию можно войти только через big menu `New` или успешный `Load(slot)`.
 
+## Sound menu: track loop slider
+- В `index.html` добавлен слайдер `#menuTrackLoop`/`#menuTrackLoopValue` (small menu) и `#bigMenuTrackLoop`/`#bigMenuTrackLoopValue` (big menu Sound panel).
+- i18n key для label: `sound.trackLoop` (`ru/en` + `fallbackStrings`).
+- Диапазон UI: `0..110` (то есть `trackLoopVolumeMul` в диапазоне `0..1.1`).
+- Привязка small menu: `src/core/bootstrap.js` (`input` → `setTrackLoopVolumeMul` → `syncVolumeUIFromSettings` → `saveSettings`).
+- Привязка big menu: `src/ui/bigMenuRuntime.js` (`input` → `setTrackLoopVolumeMul` → `syncVolumeUIFromSettings` → `saveSettings`).
+
 ## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
 - Load-view — соседний подрежим small menu: `#smallMenuLoadView` в `index.html`, использует тот же table-layout (`smallMenuSaveTable__*`) и тот же renderer в `src/core/bootstrap.js`.
@@ -177,6 +184,12 @@
 	- число кадров берётся из `iconFrames` (fallback `1`), при `iconFrames=1` анимации нет;
 	- используется один shared ticker (`setInterval`) на весь таб `Орудия`, без 60 отдельных `requestAnimationFrame`/таймеров;
 	- ticker активен только пока открыт `Supercomputer -> Орудия`, и останавливается при закрытии/переключении таба.
+	- поворот иконок задаётся единой константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js` и применяется в `drawGunsSpriteCanvas(...)` через `ctx.translate(center)` + `ctx.rotate(...)`; `imageSmoothingEnabled` остаётся `false`.
+
+## Zombie extra VFX policy
+- Дополнительные ауры/свечения/кольца для зомби отключены в коде рендера (`src/render/zombieRender.js`) через флаг `DISABLE_ZOMBIE_AURAS = true`.
+- Отключаются только zombie-ветки overlay VFX (endgame glow + level ring), базовый спрайт/анимация/тени/логика боя не изменяются.
+- `assets/zombies.json` для этого не используется и не должен редактироваться.
 
 ## Merge popup (новый уровень танка)
 - Точка входа pop-up: `src/ui/mergePopup.js` (`Game.MergePopup.show(level)`), preview/render: `src/ui/mergePreview/mergePreviewModel.js` + `src/ui/mergePreview/mergePreviewRenderer.js`.

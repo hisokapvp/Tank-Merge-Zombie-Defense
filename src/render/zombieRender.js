@@ -1,6 +1,8 @@
 (function (global) {
   'use strict';
 
+  var DISABLE_ZOMBIE_AURAS = true;
+
   function createController(deps) {
     deps = deps || {};
 
@@ -79,7 +81,7 @@
 
       var state = deps.getState();
       var qualityLow = deps.isQualityLow();
-      if (state.endgameVisuals && !isDying) {
+      if (!DISABLE_ZOMBIE_AURAS && state.endgameVisuals && !isDying) {
         ctx.save();
         ctx.translate(x, y + bob + groundOffset);
         ctx.globalAlpha = 0.2 + 0.08 * Math.sin(deps.nowSec() * 3);
@@ -122,7 +124,7 @@
       );
       ctx.restore();
 
-      if ((z.level ?? 1) > 1 && !isDying) {
+      if (!DISABLE_ZOMBIE_AURAS && (z.level ?? 1) > 1 && !isDying) {
         var ring = deps.clamp((z.level ?? 1) - 1, 1, 6);
         ctx.save();
         ctx.strokeStyle = 'rgba(185,139,255,' + (0.08 + ring * 0.02) + ')';
@@ -153,7 +155,7 @@
       var deathScale = 1 - death * 0.22;
       var deathTilt = death * 1.1;
 
-      if (state.endgameVisuals && z.state !== 'dying') {
+      if (!DISABLE_ZOMBIE_AURAS && state.endgameVisuals && z.state !== 'dying') {
         ctx.save();
         ctx.translate(x, y + bob + groundOffset);
         ctx.globalAlpha = 0.22 + 0.06 * Math.sin(deps.nowSec() * 3);
@@ -220,7 +222,7 @@
       ctx.lineTo(23, 12 + Math.sin(walkPhase + 1.1) * 2.5);
       ctx.stroke();
 
-      if (levelBoost > 0 && !isDying) {
+      if (!DISABLE_ZOMBIE_AURAS && levelBoost > 0 && !isDying) {
         ctx.strokeStyle = 'rgba(185,139,255,.35)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();

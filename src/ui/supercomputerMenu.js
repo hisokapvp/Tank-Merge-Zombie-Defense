@@ -1,6 +1,8 @@
 (function (global) {
   'use strict';
 
+  var WEAPON_ICON_ROT_DEG = -90;
+
   function setOverlayOpen(overlay, open, a11yOpen, a11yClose, options) {
     if (!overlay) return;
     var nextOpen = !!open;
@@ -411,9 +413,13 @@
       var drawScale = Math.min(iconW / frameW, iconH / frameH);
       var drawW = frameW * drawScale;
       var drawH = frameH * drawScale;
-      var dx = Math.round((iconW - drawW) * 0.5);
-      var dy = Math.round((iconH - drawH) * 0.5);
-      ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, dx, dy, drawW, drawH);
+      var cx = Math.round(iconW * 0.5);
+      var cy = Math.round(iconH * 0.5);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(WEAPON_ICON_ROT_DEG * Math.PI / 180);
+      ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
+      ctx.restore();
     }
 
     function tickGunsIconSprites() {

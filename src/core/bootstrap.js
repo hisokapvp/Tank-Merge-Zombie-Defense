@@ -652,6 +652,21 @@
       opts.saveSettings();
     });
 
+    opts.ui.menuTrackLoop && opts.ui.menuTrackLoop.addEventListener('input', function (e) {
+      if (typeof opts.setTrackLoopVolumeMul === 'function') {
+        opts.setTrackLoopVolumeMul(e.target.value, 'percent');
+      }
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        opts.updateMenuVolumes();
+      }
+      if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
+        opts.playUiSliderPreviewSfxThrottled();
+      }
+      opts.saveSettings();
+    });
+
     opts.ui.supercomputerBtn && opts.ui.supercomputerBtn.addEventListener('click', function () {
       if (typeof opts.openSupercomputerMenu === 'function') return opts.openSupercomputerMenu();
       return opts.openTalents();
@@ -723,6 +738,9 @@
 
     documentObj.addEventListener('visibilitychange', function () {
       if (documentObj.visibilityState === 'hidden' && windowObj.Game && windowObj.Game.Storage) {
+        if (typeof opts.stopTrackLoopSfxImmediate === 'function') {
+          opts.stopTrackLoopSfxImmediate();
+        }
         opts.meta.lastSeenAt = Date.now();
         windowObj.Game.Storage.saveGame(getState(), opts.meta);
         return;
@@ -733,6 +751,9 @@
     });
 
     windowObj.addEventListener('pagehide', function () {
+      if (typeof opts.stopTrackLoopSfxImmediate === 'function') {
+        opts.stopTrackLoopSfxImmediate();
+      }
       if (windowObj.Game && windowObj.Game.Storage) {
         opts.meta.lastSeenAt = Date.now();
         windowObj.Game.Storage.saveGame(getState(), opts.meta);

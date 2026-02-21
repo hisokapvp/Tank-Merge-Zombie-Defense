@@ -58,8 +58,12 @@
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
+- Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; отдельный множитель `settings.trackLoopVolumeMul` (`0..1.1`) применяется мультипликативно к global SFX.
+- Sound menu: добавлен отдельный slider `sound.trackLoop` в small menu и big menu sound panel (`#menuTrackLoop`, `#bigMenuTrackLoop`).
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
 - Debug panel: добавлен блок `Damage Points` (доступен при `?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
+- Zombie extra VFX policy: дополнительные zombie aura/glow/ring отключены в `src/render/zombieRender.js` через кодовый флаг `DISABLE_ZOMBIE_AURAS` (без правок `assets/zombies.json`).
+- Supercomputer weapons icons: единый поворот настраивается константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js`.
 
 ## Важные конфиги
 - Critical modal typing: `src/config/criticalModalTuning.js`

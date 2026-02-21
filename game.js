@@ -46,8 +46,10 @@ const ui = {
   bigMenuLanguagePanel: document.getElementById('bigMenuLanguagePanel'),
   bigMenuSfx: document.getElementById('bigMenuSfx'),
   bigMenuMusic: document.getElementById('bigMenuMusic'),
+  bigMenuTrackLoop: document.getElementById('bigMenuTrackLoop'),
   bigMenuSfxValue: document.getElementById('bigMenuSfxValue'),
   bigMenuMusicValue: document.getElementById('bigMenuMusicValue'),
+  bigMenuTrackLoopValue: document.getElementById('bigMenuTrackLoopValue'),
   bigMenuLangRu: document.getElementById('bigMenuLangRu'),
   bigMenuLangEn: document.getElementById('bigMenuLangEn'),
   creditsModal: document.getElementById('creditsModal'),
@@ -79,8 +81,10 @@ const ui = {
   menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
+  menuTrackLoop: document.getElementById('menuTrackLoop'),
   menuSfxValue: document.getElementById('menuSfxValue'),
   menuMusicValue: document.getElementById('menuMusicValue'),
+  menuTrackLoopValue: document.getElementById('menuTrackLoopValue'),
   crateModal: document.getElementById('crateModal'),
   crateClose: document.getElementById('crateClose'),
   crateGet: document.getElementById('crateGet'),
@@ -368,11 +372,15 @@ const backgroundLayer = {
 };
 
 const audioDefaultsFromApi = GameApi?.AudioSettings?.DEFAULT_SETTINGS;
+const TRACK_LOOP_ID = 'trackLoop';
+const DEFAULT_TRACK_LOOP_SOURCES = ['assets/sfx/Sound_42494300 1633713642 (mp3cut.net).mp3'];
+const TRACK_LOOP_VOLUME_MUL_MAX = 1.1;
 const DEFAULT_SETTINGS = audioDefaultsFromApi
   ? { ...audioDefaultsFromApi }
   : {
       sfxVolume: 0.75,
       musicVolume: 0.6,
+      trackLoopVolumeMul: 1.9,
     };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -931,8 +939,10 @@ function saveSettings(){
 function applyAudioSettings(){
   const musicVolume = clamp(settings.musicVolume ?? DEFAULT_SETTINGS.musicVolume, 0, 1);
   const sfxVolume = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
+  const trackLoopVolumeMul = clamp(settings.trackLoopVolumeMul ?? DEFAULT_SETTINGS.trackLoopVolumeMul ?? 1, 0, TRACK_LOOP_VOLUME_MUL_MAX);
   settings.musicVolume = musicVolume;
   settings.sfxVolume = sfxVolume;
+  settings.trackLoopVolumeMul = trackLoopVolumeMul;
   const criticalPolicy = getCriticalAudioPolicy();
   const muteMusicForCritical = criticalAudioActive && criticalPolicy.muteAllOnCritical;
   const criticalTrackId = criticalPolicy.criticalMusic.enabled ? criticalPolicy.criticalMusic.trackId : '';
@@ -973,6 +983,7 @@ const SFX_CHANNELS = {
   shootNormal: 'gameplay',
   shootHeavy: 'gameplay',
   shootHeavy2: 'gameplay',
+  trackLoop: 'gameplay',
   tankToTrack: 'gameplay',
   tankToHangar: 'gameplay',
   activeAbility: 'gameplay',
@@ -1032,6 +1043,7 @@ function ensureSfxPoolRuntimeController(){
     isCriticalSfxAllowed: isCriticalSfxAllowed,
     isSimulationPaused(){ return simulationPaused; },
     getDefaultRainLoopSources(){ return DEFAULT_RAIN_LOOP_SOURCES; },
+    getDefaultTrackLoopSources(){ return DEFAULT_TRACK_LOOP_SOURCES; },
   });
   return sfxPoolRuntimeController;
 }
@@ -1203,12 +1215,16 @@ function isCriticalSfxAllowed(id){
 
 function resolveSfxPlaybackVolume(id, volumeMul){
   const base = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
-  const mul = Number.isFinite(volumeMul) ? clamp(volumeMul, 0, 1) : 1;
-  if (!criticalAudioActive) return base * mul;
+  const mul = Number.isFinite(volumeMul) ? Math.max(0, Number(volumeMul)) : 1;
+  const trackLoopMul = id === TRACK_LOOP_ID
+    ? clamp(settings.trackLoopVolumeMul ?? DEFAULT_SETTINGS.trackLoopVolumeMul ?? 1, 0, TRACK_LOOP_VOLUME_MUL_MAX)
+    : 1;
+  const final = base * mul * trackLoopMul;
+  if (!criticalAudioActive) return final;
   const policy = getCriticalAudioPolicy();
   if (!isCriticalSfxAllowed(id)) return 0;
-  if (!policy.muteAllOnCritical) return base * mul;
-  return base * mul;
+  if (!policy.muteAllOnCritical) return final;
+  return final;
 }
 
 function pauseAllSfxPlayers(){
@@ -1431,6 +1447,38 @@ function silenceAllTanksTrackSfx(cause){
     setTankOnTrackState(tank, false, { cause: cause || 'reset', playSfx: false });
   }
 }
+
+let trackLoopPlaying = false;
+let trackLoopHasTankOnTrack = false;
+
+function hasAnyTankOnTrack(){
+  if (!state || !Array.isArray(state.cells)) return false;
+  for (let i = 0; i < state.cells.length; i++) {
+    const tank = state.cells[i] && state.cells[i].tank;
+    if (tank && tank.onTrack === true) return true;
+  }
+  return false;
+}
+
+function stopTrackLoopSfxImmediate(){
+  stopLoopSfx(TRACK_LOOP_ID);
+  trackLoopPlaying = false;
+}
+
+function syncTrackLoopSfxState(paused){
+  trackLoopHasTankOnTrack = hasAnyTankOnTrack();
+  const shouldPlay = trackLoopHasTankOnTrack && !paused;
+  if (shouldPlay && !trackLoopPlaying) {
+    playLoopSfx(TRACK_LOOP_ID, 1);
+    trackLoopPlaying = true;
+  } else if (!shouldPlay && trackLoopPlaying) {
+    stopTrackLoopSfxImmediate();
+  }
+  if (shouldPlay) {
+    setLoopSfxVolume(TRACK_LOOP_ID, 1);
+  }
+}
+
 const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
   shootHeavy: 'assets/sfx/shoot_heavy.ogg',
@@ -1441,6 +1489,7 @@ const SFX_SOURCES = {
   uiSliderPreview: ['assets/sfx/ui_slider_preview_TEMPLATE.ogg'],
   tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
   tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
+  trackLoop: DEFAULT_TRACK_LOOP_SOURCES.slice(),
   levelUp: 'assets/sfx/level_up.ogg',
   mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
   applyTalents: 'assets/sfx/apply_talents.ogg',
@@ -1473,6 +1522,20 @@ function toVolume01(value, format){
   return clamp(numeric, 0, 1);
 }
 
+function toTrackLoopVolumeMul(value, format){
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  if (format === 'percent') return clamp(numeric / 100, 0, TRACK_LOOP_VOLUME_MUL_MAX);
+  return clamp(numeric, 0, TRACK_LOOP_VOLUME_MUL_MAX);
+}
+
+function setTrackLoopVolumeMul(value, format){
+  settings.trackLoopVolumeMul = toTrackLoopVolumeMul(value, format);
+  applyAudioSettings();
+  setLoopSfxVolume(TRACK_LOOP_ID, 1);
+  return settings.trackLoopVolumeMul;
+}
+
 function getVolume(kind, format){
   const key = getVolumeSettingKey(kind);
   const fallback = getDefaultVolume(kind);
@@ -1491,16 +1554,21 @@ function setVolume(kind, value, format){
 function syncVolumeUIFromSettings(){
   const sfxPercent = getVolume('sfx', 'percent');
   const musicPercent = getVolume('music', 'percent');
+  const trackLoopPercent = Math.round(clamp(settings.trackLoopVolumeMul ?? DEFAULT_SETTINGS.trackLoopVolumeMul ?? 1, 0, TRACK_LOOP_VOLUME_MUL_MAX) * 100);
 
   if (ui.menuMusic) ui.menuMusic.value = String(musicPercent);
   if (ui.menuSfx) ui.menuSfx.value = String(sfxPercent);
+  if (ui.menuTrackLoop) ui.menuTrackLoop.value = String(trackLoopPercent);
   if (ui.menuMusicValue) ui.menuMusicValue.textContent = `${musicPercent}%`;
   if (ui.menuSfxValue) ui.menuSfxValue.textContent = `${sfxPercent}%`;
+  if (ui.menuTrackLoopValue) ui.menuTrackLoopValue.textContent = `${trackLoopPercent}%`;
 
   if (ui.bigMenuSfx) ui.bigMenuSfx.value = String(sfxPercent);
   if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(musicPercent);
+  if (ui.bigMenuTrackLoop) ui.bigMenuTrackLoop.value = String(trackLoopPercent);
   if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${sfxPercent}%`;
   if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${musicPercent}%`;
+  if (ui.bigMenuTrackLoopValue) ui.bigMenuTrackLoopValue.textContent = `${trackLoopPercent}%`;
 }
 
 function updateMenuVolumes(){
@@ -5901,6 +5969,7 @@ function stepParticles(dt){
 function setMenuOpen(open){
   var canOpenSmallMenu = sessionStartGate === 'unlocked';
   var shouldOpen = !!open && canOpenSmallMenu;
+  if (shouldOpen) stopTrackLoopSfxImmediate();
   if (shouldOpen) syncVolumeUIFromSettings();
   setMenuPauseSource('settings', shouldOpen);
   if (UIModals && typeof UIModals.setMenuOpen === 'function') {
@@ -5950,6 +6019,7 @@ function ensureBigMenuRuntimeController(){
     loadSettings: loadSettings,
     saveSettings: saveSettings,
     setVolume: setVolume,
+    setTrackLoopVolumeMul: setTrackLoopVolumeMul,
     playUiSliderPreviewSfxThrottled: playUiSliderPreviewSfxThrottled,
     boot: boot,
     resetGameState: resetGameState,
@@ -5968,6 +6038,7 @@ function ensureBigMenuRuntimeController(){
 }
 
 function setBigMenuOpen(open){
+  if (open) stopTrackLoopSfxImmediate();
   ensureBigMenuRuntimeController()?.setBigMenuOpen(open);
 }
 
@@ -6284,6 +6355,7 @@ function setBigMenuActionButtonsDisabled(disabled){
 
 function stopAndResetSessionToBigMenu(){
   sessionRuntimeStopped = true;
+  stopTrackLoopSfxImmediate();
   RuntimeTasks.suspendAll();
   if (mainLoopRafId) {
     cancelAnimationFrame(mainLoopRafId);
@@ -6624,6 +6696,7 @@ function finalizePartialRestartRestore(){
 }
 
 function restartSimulationPartial(){
+  stopTrackLoopSfxImmediate();
   if (WorldResetApi && typeof WorldResetApi.restartSimulationPartial === 'function') {
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
@@ -6701,6 +6774,7 @@ function resetGameState(options){
   const opts = options || {};
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
   const wasCollapsed = state.debug?.collapsed;
+  stopTrackLoopSfxImmediate();
   silenceAllTanksTrackSfx(reason === 'reset' ? 'reset' : 'restore');
   closeCriticalModal();
   criticalFlowActive = false;
@@ -9806,6 +9880,7 @@ function loop(now){
       (supercomputerMenuController && typeof supercomputerMenuController.isOpen === 'function' && supercomputerMenuController.isOpen())
     );
   setSimulationPaused(paused, pauseManager && pauseManager.getReasons ? pauseManager.getReasons() : { menuOpen: !!state.ui.menuOpen, tabInactive: false, criticalPause: false });
+  syncTrackLoopSfxState(paused);
   if (!paused){
     updateWorldEvents(effDt);
     ensureZombieCount();
@@ -9993,10 +10068,12 @@ async function boot(){
         settings,
         getVolume,
         setVolume,
+        setTrackLoopVolumeMul,
         applyAudioSettings,
         updateMenuVolumes,
         syncVolumeUIFromSettings,
         playUiSliderPreviewSfxThrottled,
+        stopTrackLoopSfxImmediate,
         saveSettings,
         openTalents,
         openSupercomputerMenu,
