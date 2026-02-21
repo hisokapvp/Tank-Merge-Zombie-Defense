@@ -546,6 +546,45 @@ function applyCannonUpgrade(level, pendingCount){
   };
 }
 
+function getFenceUpgradeTotalCost(level, pendingCount){
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return 0;
+  const applied = getAppliedFenceUpgradeLevel(level);
+  let total = 0;
+  for (let k = 0; k < count; k++) {
+    total += getUpgradeStepCost(level, applied + k);
+  }
+  return total;
+}
+
+function applyFenceUpgrade(level, pendingCount){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) : 1;
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return { ok: false, error: 'no_pending' };
+  const totalCost = getFenceUpgradeTotalCost(lvl, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
+
+  const applied = ensureFenceUpgradesAppliedState();
+  applied[lvl - 1] = normalizeAppliedFenceUpgrade(applied[lvl - 1]) + count;
+  state.damagePointsSpent = ensureDamagePointsSpentState() + totalCost;
+  state.player.modsDirty = true;
+
+  const currentLevel = getFenceLevelIndex() + 1;
+  if (lvl === currentLevel) {
+    const maxHp = getFenceSegmentMaxHp();
+    clampFenceSegmentsToMaxHp(maxHp);
+    if (state.fenceSegmentsMeta) state.fenceSegmentsMeta.segmentMaxHp = maxHp;
+  }
+
+  updateDamagePointsUI();
+  return {
+    ok: true,
+    totalCost: totalCost,
+    appliedLevel: applied[lvl - 1],
+  };
+}
+
 function updateDamagePointsUI(){
   const controller = getSupercomputerMenuController();
   if (controller && typeof controller.refreshTankWallIfVisible === 'function') {
@@ -4196,6 +4235,23 @@ function getCurrentFenceLevelConfig(){
   return levels[index] || levels[0];
 }
 
+function getFenceStatsForLevel(level, appliedIndex){
+  const levels = getFenceLevels();
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(levels.length, Math.floor(level))) : 1;
+  const levelCfg = levels[lvl - 1] || levels[0];
+  const baseHp = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
+  const baseArmor = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
+  const applied = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
+  const currentHp = Math.max(1, Math.round(baseHp * Math.pow(FENCE_HP_MUL, applied)));
+  const currentArmor = Math.max(0, Math.round(baseArmor * Math.pow(FENCE_ARMOR_MUL, applied)));
+  return {
+    baseHp: baseHp,
+    baseArmor: baseArmor,
+    currentHp: currentHp,
+    currentArmor: currentArmor,
+  };
+}
+
 function getFenceSegmentMaxHp(){
   const levelCfg = getCurrentFenceLevelConfig();
   const base = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
@@ -7308,7 +7364,12 @@ function getSupercomputerMenuController(){
     getCannonUpgradeIconFrames: getCannonUpgradeIconFrames,
     getCannonUpgradeConfig: getCannonUpgradeConfig,
     applyCannonUpgrade: applyCannonUpgrade,
+    getAppliedFenceUpgradeLevel: getAppliedFenceUpgradeLevel,
+    applyFenceUpgrade: applyFenceUpgrade,
+    getFenceLevels: getFenceLevels,
+    getFenceConfig: getFenceConfig,
     getFenceStats: getFenceStats,
+    getFenceStatsForLevel: getFenceStatsForLevel,
     upgradeFence: tryUpgradeFenceLevel,
     translate: t,
   });

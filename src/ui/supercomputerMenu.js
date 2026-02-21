@@ -55,6 +55,11 @@
         upgradeCostDamagePoints: null,
       };
     };
+    var getFenceLevels = typeof opts.getFenceLevels === 'function' ? opts.getFenceLevels : function () { return []; };
+    var getFenceConfig = typeof opts.getFenceConfig === 'function' ? opts.getFenceConfig : function () { return {}; };
+    var getFenceStatsForLevel = typeof opts.getFenceStatsForLevel === 'function' ? opts.getFenceStatsForLevel : function () { return { baseHp: 0, baseArmor: 0, currentHp: 0, currentArmor: 0 }; };
+    var getAppliedFenceUpgradeLevel = typeof opts.getAppliedFenceUpgradeLevel === 'function' ? opts.getAppliedFenceUpgradeLevel : function () { return 0; };
+    var applyFenceUpgrade = typeof opts.applyFenceUpgrade === 'function' ? opts.applyFenceUpgrade : function () { return { ok: false }; };
     var upgradeFence = typeof opts.upgradeFence === 'function' ? opts.upgradeFence : function () { return false; };
     var translate = typeof opts.translate === 'function' ? opts.translate : function (_, vars) {
       var key = _ || '';
@@ -69,9 +74,13 @@
       if (key === 'modsGunsReservedLabel') return 'Reserved points: ' + (vars && vars.count != null ? vars.count : 0);
       if (key === 'modsGunsNotEnoughDamagePoints') return 'Not enough damage points';
       if (key === 'modsGunsNoSprite') return 'No sprite';
+      if (key === 'modsTabWalls') return 'Walls';
       if (key === 'modsWallsLevelLabel') return 'Wall level: ' + (vars && vars.level != null ? vars.level : 1);
       if (key === 'modsWallsSegmentHpLabel') return 'Segment HP: ' + (vars && vars.hp != null ? vars.hp : 0);
       if (key === 'modsWallsArmorLabel') return 'Armor: ' + (vars && vars.armor != null ? vars.armor : 0);
+      if (key === 'modsWallsUpgradesLabel') return 'Upgrades';
+      if (key === 'modsWallsCostLabel') return 'Cost';
+      if (key === 'modsWallsActionLabel') return 'Action';
       if (key === 'modsWallsUpgradeCost') return 'Upgrade (' + (vars && vars.cost != null ? vars.cost : 0) + ')';
       if (key === 'modsWallsUpgradeMax') return 'Max level';
       if (key === 'modsWallsUpgrade') return 'Upgrade';
@@ -83,6 +92,7 @@
       view: 'closed',
       activeTankWallTab: 'weapons',
       pendingUpgradesByLevel: Array(60).fill(0),
+      pendingFenceUpgradesByLevel: Array(60).fill(0),
       iconTickerId: null,
       iconTickerFrame: 0,
     };
@@ -100,6 +110,13 @@
     };
 
     var gunsUi = {
+      root: null,
+      points: null,
+      reserve: null,
+      rows: null,
+      initialized: false,
+    };
+    var wallsUi = {
       root: null,
       points: null,
       reserve: null,
@@ -137,6 +154,9 @@
       if (tab === 'weapons') {
         renderGunsPanel();
         startGunsIconTicker();
+      } else if (tab === 'walls') {
+        renderWallsPanel();
+        startGunsIconTicker();
       } else {
         stopGunsIconTicker();
       }
@@ -158,6 +178,12 @@
       }
       if (gunsUi.reserve) {
         gunsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedDamagePoints() });
+      }
+      if (wallsUi.points) {
+        wallsUi.points.textContent = translate('damagePointsLabel', { count: count });
+      }
+      if (wallsUi.reserve) {
+        wallsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedFenceDamagePoints() });
       }
     }
 
@@ -228,6 +254,79 @@
       return toSafeNonNegativeInt(total);
     }
 
+    function getFenceLevelsCount() {
+      var levels = getFenceLevels();
+      if (!Array.isArray(levels) || !levels.length) return 60;
+      return Math.max(1, Math.min(60, levels.length));
+    }
+
+    function ensurePendingFenceLevelsSize() {
+      var size = getFenceLevelsCount();
+      if (!Array.isArray(state.pendingFenceUpgradesByLevel)) {
+        state.pendingFenceUpgradesByLevel = Array(size).fill(0);
+        return;
+      }
+      if (state.pendingFenceUpgradesByLevel.length !== size) {
+        var next = Array(size).fill(0);
+        for (var i = 0; i < Math.min(size, state.pendingFenceUpgradesByLevel.length); i++) {
+          next[i] = toSafeNonNegativeInt(state.pendingFenceUpgradesByLevel[i]);
+        }
+        state.pendingFenceUpgradesByLevel = next;
+      }
+    }
+
+    function getPendingFenceAt(level) {
+      ensurePendingFenceLevelsSize();
+      var idx = Math.max(1, Math.floor(level || 1)) - 1;
+      return toSafeNonNegativeInt(state.pendingFenceUpgradesByLevel[idx]);
+    }
+
+    function setPendingFenceAt(level, value) {
+      ensurePendingFenceLevelsSize();
+      var idx = Math.max(1, Math.floor(level || 1)) - 1;
+      state.pendingFenceUpgradesByLevel[idx] = toSafeNonNegativeInt(value);
+    }
+
+    function resetPendingFenceUpgrades() {
+      ensurePendingFenceLevelsSize();
+      for (var i = 0; i < state.pendingFenceUpgradesByLevel.length; i++) {
+        state.pendingFenceUpgradesByLevel[i] = 0;
+      }
+    }
+
+    function getPendingFenceCost(level, pendingCount) {
+      var count = toSafeNonNegativeInt(pendingCount);
+      if (count <= 0) return 0;
+      var applied = toSafeNonNegativeInt(getAppliedFenceUpgradeLevel(level));
+      var total = 0;
+      for (var i = 0; i < count; i++) {
+        total += toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + i));
+      }
+      return toSafeNonNegativeInt(total);
+    }
+
+    function getReservedFenceDamagePoints() {
+      ensurePendingFenceLevelsSize();
+      var total = 0;
+      for (var i = 0; i < state.pendingFenceUpgradesByLevel.length; i++) {
+        total += getPendingFenceCost(i + 1, state.pendingFenceUpgradesByLevel[i]);
+      }
+      return toSafeNonNegativeInt(total);
+    }
+
+    function getTotalSpentForFenceLevel(level, applied) {
+      var levels = getFenceLevels();
+      var row = levels[Math.max(0, Math.floor(level) - 1)] || { upgradeCostDamagePoints: 0 };
+      var costBase = toSafeNonNegativeInt(Number(row.upgradeCostDamagePoints));
+      var u = toSafeNonNegativeInt(applied);
+      if (u <= 0) return 0;
+      var total = 0;
+      for (var i = 0; i < u; i++) {
+        total += toSafeNonNegativeInt(getCannonUpgradeStepCost(level, i));
+      }
+      return toSafeNonNegativeInt(total);
+    }
+
     function formatCompact(value) {
       var num = toSafeNonNegativeInt(value);
       var nf = global.Game && global.Game.NumberFormat ? global.Game.NumberFormat : null;
@@ -292,7 +391,7 @@
 
       var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
       var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
-      var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 60;
+      var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
 
       if (node.width !== iconW) node.width = iconW;
       if (node.height !== iconH) node.height = iconH;
@@ -312,17 +411,31 @@
     }
 
     function tickGunsIconSprites() {
-      if (!gunsUi.rows || state.view !== 'tankWall' || state.activeTankWallTab !== 'weapons') return;
+      if (state.view !== 'tankWall') return;
       state.iconTickerFrame = (state.iconTickerFrame + 1) % 1000000;
-      var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
-      if (!animatedNodes || !animatedNodes.length) return;
-      for (var i = 0; i < animatedNodes.length; i++) {
-        var node = animatedNodes[i];
-        var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
-        var rowNode = node.closest('.scGunsTable__row');
-        if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
-        var frameIndex = frames <= 1 ? 0 : (state.iconTickerFrame % frames);
-        drawGunsSpriteCanvas(node, frameIndex);
+      
+      if (state.activeTankWallTab === 'weapons' && gunsUi.rows) {
+        var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
+        if (animatedNodes && animatedNodes.length) {
+          for (var i = 0; i < animatedNodes.length; i++) {
+            var node = animatedNodes[i];
+            var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
+            var rowNode = node.closest('.scGunsTable__row');
+            if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
+            var frameIndex = frames <= 1 ? 0 : (state.iconTickerFrame % frames);
+            drawGunsSpriteCanvas(node, frameIndex);
+          }
+        }
+      } else if (state.activeTankWallTab === 'walls' && wallsUi.rows) {
+        var wallNodes = wallsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas');
+        if (wallNodes && wallNodes.length) {
+          for (var j = 0; j < wallNodes.length; j++) {
+            var wNode = wallNodes[j];
+            var wRowNode = wNode.closest('.scGunsTable__row');
+            if (wRowNode && !isElementVerticallyVisible(wRowNode, wallsUi.rows)) continue;
+            drawGunsSpriteCanvas(wNode, 0);
+          }
+        }
       }
     }
 
@@ -413,6 +526,7 @@
           var applied = toSafeNonNegativeInt(getAppliedCannonUpgradeLevel(level));
           var pending = getPendingAt(level);
           var nextCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
+          if (nextCost <= 0 || nextCost >= Number.MAX_SAFE_INTEGER) return;
           var available = toSafeNonNegativeInt(getDamagePoints());
           var reserved = getReservedDamagePoints();
           if (available - reserved < nextCost) {
@@ -487,7 +601,7 @@
           : null;
         var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
         var totalSpent = getTotalSpentForLevel(level, applied);
-        var canAdd = (availablePoints - reservedPoints) >= nextStepCost;
+        var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
         var canMinus = pending > 0;
         var totalPendingCost = getPendingCost(level, pending);
         var upgradeText = pending > 0
@@ -548,43 +662,204 @@
       tickGunsIconSprites();
     }
 
-    function updateFenceStatsUI() {
-      var stats = getFenceStats() || {};
-      var levelEl = documentObj.getElementById('modsTankWallFenceLevel');
-      var hpEl = documentObj.getElementById('modsTankWallFenceHp');
-      var armorEl = documentObj.getElementById('modsTankWallFenceArmor');
-      var upgradeBtn = documentObj.getElementById('modsTankWallFenceUpgrade');
+    function ensureWallsPanelUI() {
+      if (wallsUi.initialized) return;
+      var panel = tankWallTabPanels.walls;
+      if (!panel) return;
 
-      if (levelEl) {
-        levelEl.textContent = translate('modsWallsLevelLabel', {
-          level: Math.max(1, Math.floor(stats.level || 1)),
-        });
-      }
-      if (hpEl) {
-        hpEl.textContent = translate('modsWallsSegmentHpLabel', {
-          hp: Math.max(1, Math.floor(stats.segmentMaxHp || 0)),
-        });
-      }
-      if (armorEl) {
-        armorEl.textContent = translate('modsWallsArmorLabel', {
-          armor: Math.max(0, Math.floor(stats.armorFlat || 0)),
-        });
-      }
-      if (upgradeBtn) {
-        if (stats.hasNextLevel) {
-          var cost = Math.max(0, Math.floor(stats.upgradeCostDamagePoints || 0));
-          upgradeBtn.textContent = translate('modsWallsUpgradeCost', { cost: cost });
-          upgradeBtn.disabled = !stats.canUpgrade;
-        } else {
-          upgradeBtn.textContent = translate('modsWallsUpgradeMax');
-          upgradeBtn.disabled = true;
+      panel.innerHTML = '';
+
+      var pointsLine = documentObj.createElement('div');
+      pointsLine.className = 'levelModal__line';
+      pointsLine.id = 'modsTankWallWallsDamagePoints';
+
+      var reserveLine = documentObj.createElement('div');
+      reserveLine.className = 'levelModal__line';
+      reserveLine.id = 'modsTankWallWallsReserved';
+
+      var tableWrap = documentObj.createElement('div');
+      tableWrap.className = 'scGunsTable';
+
+      var tableHead = documentObj.createElement('div');
+      tableHead.className = 'scGunsTable__head';
+      tableHead.innerHTML = '' +
+        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabWalls') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_level">' + translate('modsGunsColLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsWallsSegmentHpLabel', {hp:''}).replace(':', '').trim() + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsWallsArmorLabel', {armor:''}).replace(':', '').trim() + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_cost">' + translate('modsGunsColCost') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_actions">' + translate('modsGunsColActions') + '</div>';
+
+      var tableRows = documentObj.createElement('div');
+      tableRows.className = 'scGunsTable__rows';
+
+      tableWrap.appendChild(tableHead);
+      tableWrap.appendChild(tableRows);
+
+      panel.appendChild(pointsLine);
+      panel.appendChild(reserveLine);
+      panel.appendChild(tableWrap);
+
+      panel.addEventListener('click', function (evt) {
+        var target = evt.target;
+        if (!target || typeof target.closest !== 'function') return;
+        var actionBtn = target.closest('[data-walls-action]');
+        if (!actionBtn) return;
+        var level = Number(actionBtn.getAttribute('data-level'));
+        if (!Number.isFinite(level) || level < 1 || level > getFenceLevelsCount()) return;
+        var action = actionBtn.getAttribute('data-walls-action');
+        if (action === 'plus') {
+          var applied = toSafeNonNegativeInt(getAppliedFenceUpgradeLevel(level));
+          var pending = getPendingFenceAt(level);
+          var nextCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
+          if (nextCost <= 0 || nextCost >= Number.MAX_SAFE_INTEGER) return;
+          var available = toSafeNonNegativeInt(getDamagePoints());
+          var reserved = getReservedFenceDamagePoints();
+          if (available - reserved < nextCost) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(translate('modsGunsNotEnoughDamagePoints'), 1200);
+            }
+            return;
+          }
+          setPendingFenceAt(level, pending + 1);
+          renderWallsPanel();
+          return;
+        }
+        if (action === 'minus') {
+          var currentPending = getPendingFenceAt(level);
+          if (currentPending <= 0) return;
+          setPendingFenceAt(level, currentPending - 1);
+          renderWallsPanel();
+          return;
+        }
+        if (action === 'apply') {
+          var applyPending = getPendingFenceAt(level);
+          if (applyPending <= 0) return;
+          var totalCost = getPendingFenceCost(level, applyPending);
+          var pointsAvailable = toSafeNonNegativeInt(getDamagePoints());
+          if (pointsAvailable < totalCost) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(translate('modsGunsNotEnoughDamagePoints'), 1200);
+            }
+            return;
+          }
+          var result = applyFenceUpgrade(level, applyPending);
+          if (!result || !result.ok) return;
+          setPendingFenceAt(level, 0);
+          renderWallsPanel();
+        }
+      });
+
+      wallsUi.root = panel;
+      wallsUi.points = pointsLine;
+      wallsUi.reserve = reserveLine;
+      wallsUi.rows = tableRows;
+      wallsUi.initialized = true;
+    }
+
+    function renderWallsPanel() {
+      ensureWallsPanelUI();
+      if (!wallsUi.initialized || !wallsUi.rows) return;
+      ensurePendingFenceLevelsSize();
+      updateDamagePointsLabel();
+
+      var levels = getFenceLevels();
+      var cfg = getFenceConfig();
+      var levelsCount = getFenceLevelsCount();
+      var rowsHtml = '';
+      var availablePoints = toSafeNonNegativeInt(getDamagePoints());
+      var reservedPoints = getReservedFenceDamagePoints();
+
+      var frames = cfg.frames || [];
+      var sideTopFrame = null;
+      for (var j = 0; j < frames.length; j++) {
+        if (frames[j].id === 'sideTop') {
+          sideTopFrame = frames[j];
+          break;
         }
       }
+
+      for (var i = 0; i < levelsCount; i++) {
+        var level = i + 1;
+        var rowCfg = levels[i] || { segmentMaxHp: 0, armorFlat: 0, upgradeCostDamagePoints: 0 };
+        var applied = toSafeNonNegativeInt(getAppliedFenceUpgradeLevel(level));
+        var pending = getPendingFenceAt(level);
+        
+        var stats = getFenceStatsForLevel(level, applied);
+        var baseHp = stats.baseHp;
+        var baseArmor = stats.baseArmor;
+        var currentHp = stats.currentHp;
+        var currentArmor = stats.currentArmor;
+        
+        var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
+        var totalSpent = getTotalSpentForFenceLevel(level, applied);
+        var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
+        var canMinus = pending > 0;
+        var totalPendingCost = getPendingFenceCost(level, pending);
+        var upgradeText = pending > 0
+          ? String(applied) + ' (+' + String(pending) + ')'
+          : String(applied);
+        var canApply = pending > 0 && availablePoints >= totalPendingCost;
+        
+        var spriteHtml = '';
+        if (sideTopFrame) {
+          var atlasName = rowCfg.atlas || cfg.atlas || 'fence_atlas.png';
+          var src = 'assets/' + atlasName;
+          var frameX = Number.isFinite(sideTopFrame.x) ? Math.floor(sideTopFrame.x) : 0;
+          var frameY = Number.isFinite(sideTopFrame.y) ? Math.floor(sideTopFrame.y) : 0;
+          var frameW = Number.isFinite(sideTopFrame.w) && sideTopFrame.w > 0 ? Math.floor(sideTopFrame.w) : 64;
+          var frameH = Number.isFinite(sideTopFrame.h) && sideTopFrame.h > 0 ? Math.floor(sideTopFrame.h) : 64;
+          
+          var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+          var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
+          var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
+          spriteHtml = '' +
+            '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
+              '<canvas class="scGunsTable__spriteCanvas"' +
+                ' width="' + String(iconW) + '"' +
+                ' height="' + String(iconH) + '"' +
+                ' style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px"' +
+                ' data-anim-frames="1"' +
+                ' data-sprite-src="' + src + '"' +
+                ' data-frame-x="' + String(frameX) + '"' +
+                ' data-frame-y="' + String(frameY) + '"' +
+                ' data-frame-w="' + String(frameW) + '"' +
+                ' data-frame-h="' + String(frameH) + '"' +
+              '></canvas>' +
+            '</span>';
+        } else {
+          spriteHtml = '<span class="scGunsTable__spriteFallback">' + translate('modsGunsNoSprite') + '</span>';
+        }
+        
+        rowsHtml += '' +
+          '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
+            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseHp) + ' / ' + formatNumber(currentHp) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseArmor) + ' / ' + formatNumber(currentArmor) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + ' / ' + formatCompact(totalSpent) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
+              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
+              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '<button type="button" class="btn btnPrimary uiButtonBehavior scGunsActionBtn" data-walls-action="apply" data-level="' + String(level) + '"' + (canApply ? '' : ' disabled') + '>' + translate('modsWallsUpgrade') + '</button>' +
+            '</div>' +
+          '</div>';
+      }
+
+      wallsUi.rows.innerHTML = rowsHtml;
+      tickGunsIconSprites();
+    }
+
+    function updateFenceStatsUI() {
+      // Deprecated, replaced by renderWallsPanel
     }
 
     function openRoot() {
       if (!state.isOpen) {
         resetPendingUpgrades();
+        resetPendingFenceUpgrades();
       }
       stopGunsIconTicker();
       if (state.view === 'talents' && closeTalents) closeTalents();
@@ -611,8 +886,10 @@
     function showTankWallMods() {
       setTankWallTab('weapons');
       ensurePendingLevelsSize();
+      ensurePendingFenceLevelsSize();
       updateDamagePointsLabel();
       renderGunsPanel();
+      renderWallsPanel();
       updateFenceStatsUI();
 
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
@@ -646,6 +923,7 @@
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);
       resetPendingUpgrades();
+      resetPendingFenceUpgrades();
       state.isOpen = false;
       state.view = 'closed';
       onPauseLockChange(false);
@@ -689,12 +967,14 @@
         if (!state.isOpen || state.view !== 'tankWall') return;
         updateDamagePointsLabel();
         renderGunsPanel();
+        renderWallsPanel();
         updateFenceStatsUI();
       },
       refreshTankWallIfVisible: function () {
         if (!state.isOpen || state.view !== 'tankWall') return;
         updateDamagePointsLabel();
         renderGunsPanel();
+        renderWallsPanel();
         updateFenceStatsUI();
       },
     };

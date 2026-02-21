@@ -98,6 +98,15 @@
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
 - Disabled toast правило: если у кнопки `data-disabled-reason="noSaves"`, показывается «Нет сохранений/No saves», иначе «Недоступно/Unavailable». Сообщение показывается через единый helper `src/ui/toast.js` (один DOM, таймер перезапускается, без бесконечного stacking).
 
+## Supercomputer: вкладка "Стены"
+- Вкладка "Стены" (`walls`) в supercomputerMenu рендерит таблицу L1..L60 аналогично вкладке "Орудия".
+- Состояние pending/reserved для стен (`pendingFenceUpgradesByLevel`, `getReservedFenceDamagePoints`) полностью независимо от состояния пушек.
+- При смене вкладок внутри модалки (Орудия <-> Стены) pending state не сбрасывается. Сброс происходит только при полном закрытии модалки.
+- Стоимость шага улучшения стены вычисляется через `getCannonUpgradeStepCost` (которая внутри вызывает общую `getUpgradeStepCost`).
+- Суммарная стоимость pending шагов для уровня вычисляется как сумма стоимостей каждого шага: `sum_{i=0..k-1} getUpgradeStepCost(level, applied+i)`.
+- Overflow-блокировки: если стоимость следующего шага превышает `Number.MAX_SAFE_INTEGER` или уходит в бесконечность, кнопка `+` блокируется.
+- Preview стены рисуется в canvas через `drawGunsSpriteCanvas` с использованием спрайта `sideTop` из `fence.json` (или дефолтного атласа, если `sideTop` не найден).
+
 ## Debug panel extension: Damage Points
 - Реализация: `src/ui/adminDamagePoints.js`, инициализация из `src/core/bootstrap.js` рядом с `AdminFlags`.
 - Gating: блок рисуется при `?debug=1` (или `?debug=true`) в контейнер `#debugSectionLogs`.
