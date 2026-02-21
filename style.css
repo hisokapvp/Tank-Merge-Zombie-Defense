@@ -15,6 +15,10 @@
   --ui-scale: clamp(0.95, 0.92 + 0.65vw, 1.22);
   --ui-btn-transition: .2s;
   --ui-btn-press-shift: 2px;
+  --audio-slider-track-bg: linear-gradient(90deg, rgba(255,184,114,.9), rgba(201,245,154,.9));
+  --audio-slider-thumb-bg: linear-gradient(140deg,#ffd39e,#ff8c5a);
+  --audio-slider-thumb-border: 2px solid rgba(0,0,0,.35);
+  --audio-slider-thumb-shadow: 0 4px 0 rgba(0,0,0,.35);
   --scTileIconSizePx: 96px;
   --scTileIconSize: clamp(64px, calc(var(--scTileIconSizePx) * 0.85), var(--scTileIconSizePx));
 }
@@ -432,10 +436,11 @@ body::after{
   grid-template-columns:repeat(3, minmax(0, 1fr));
   margin-top:10px;
 }
-#menuExitConfirmView .menuInlineActions{
+#menuExitConfirmView .menuInlineActions,
+#menuNewConfirmView .menuInlineActions{
   display:flex;
   justify-content:center;
-  align-items:stretch;
+  align-items:center;
   flex-wrap:nowrap;
   gap:12px;
 }
@@ -443,6 +448,8 @@ body::after{
 #menuNewConfirmView .menuInlineActions .btn{
   width:clamp(132px, 32vw, 180px);
   min-width:132px;
+  white-space:nowrap;
+  box-sizing:border-box;
 }
 #menuSaveSlotsView .menuInlineActions{
   grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -582,7 +589,7 @@ body::after{
   appearance:none;
   height:6px;
   border-radius:999px;
-  background:linear-gradient(90deg, rgba(255,184,114,.9), rgba(201,245,154,.9));
+  background:var(--audio-slider-track-bg);
   outline:none;
 }
 .menuSlider input[type="range"]::-webkit-slider-thumb{
@@ -590,18 +597,18 @@ body::after{
   width:18px;
   height:18px;
   border-radius:6px;
-  background:linear-gradient(140deg,#ffd39e,#ff8c5a);
-  border:2px solid rgba(0,0,0,.35);
-  box-shadow:0 4px 0 rgba(0,0,0,.35);
+  background:var(--audio-slider-thumb-bg);
+  border:var(--audio-slider-thumb-border);
+  box-shadow:var(--audio-slider-thumb-shadow);
   cursor:pointer;
 }
 .menuSlider input[type="range"]::-moz-range-thumb{
   width:18px;
   height:18px;
   border-radius:6px;
-  background:linear-gradient(140deg,#ffd39e,#ff8c5a);
-  border:2px solid rgba(0,0,0,.35);
-  box-shadow:0 4px 0 rgba(0,0,0,.35);
+  background:var(--audio-slider-thumb-bg);
+  border:var(--audio-slider-thumb-border);
+  box-shadow:var(--audio-slider-thumb-shadow);
   cursor:pointer;
 }
 .menuValue{
@@ -784,6 +791,10 @@ body.menu-open .stageUi .hudItem{
 #modsHangarOverlay,
 #modsTankWallOverlay{
   overflow:hidden;
+}
+body.scmodal-open{
+  overflow:hidden;
+  touch-action:none;
 }
 
 .centerNotification{
@@ -983,6 +994,7 @@ body.menu-open .stageUi .hudItem{
   padding:10px 14px;
   border-radius:14px;
   border:1px solid rgba(255, 190, 120, 0.28);
+  box-sizing:border-box;
   font-size:14px;
   line-height:1.2;
   font-weight:800;
@@ -992,7 +1004,7 @@ body.menu-open .stageUi .hudItem{
   filter:brightness(1.14);
 }
 .scButton:active:not(:disabled){
-  transform:translateY(2px);
+  transform:translateY(2px) scale(0.99);
   box-shadow:0 6px 0 rgba(0,0,0,.2);
 }
 .scButton:disabled,
@@ -1124,10 +1136,12 @@ body.menu-open .stageUi .hudItem{
   }
 }
 @media (max-width: 520px){
-  #menuExitConfirmView .menuInlineActions{
+  #menuExitConfirmView .menuInlineActions,
+  #menuNewConfirmView .menuInlineActions{
     gap:10px;
   }
-  #menuExitConfirmView .menuInlineActions .btn{
+  #menuExitConfirmView .menuInlineActions .btn,
+  #menuNewConfirmView .menuInlineActions .btn{
     width:clamp(120px, 44vw, 156px);
     min-width:120px;
   }
@@ -1505,13 +1519,32 @@ body.menu-open .stageUi .hudItem{
   height:auto;
   overflow:hidden;
   padding:16px 18px;
+  box-sizing:border-box;
 }
 .scModal__body{
   flex:1;
   min-height:0;
-  overflow:auto;
+  overflow-y:auto;
   overflow-x:hidden;
+  overscroll-behavior:contain;
+  overflow-anchor:none;
   padding-right:2px;
+  /* scrollbar styled like audio sliders */
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,140,90,.78) rgba(18,12,9,.7);
+}
+.scModal__body::-webkit-scrollbar{
+  width:7px;
+}
+.scModal__body::-webkit-scrollbar-track{
+  background:var(--audio-slider-track-bg);
+  border-radius:999px;
+}
+.scModal__body::-webkit-scrollbar-thumb{
+  background:var(--audio-slider-thumb-bg);
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.35);
+  box-shadow:0 2px 0 rgba(0,0,0,.25);
 }
 #modsTankWallOverlay .levelModal__panel.scModal{
   --mods-sc-pad-x: 18px;

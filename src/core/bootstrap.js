@@ -53,6 +53,7 @@
     var activeSlotViewMode = 'none';
     var saveToastTimer = null;
     var lastActiveButtonIdSmallMenu = null;
+    var lastActiveButtonIdConfirm = null;
     var AUTO_SLOT_INDEX = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
     var saveViewConfig = {
       manualOnly: false,
@@ -100,6 +101,48 @@
       if (!buttonId) return;
       lastActiveButtonIdSmallMenu = buttonId;
       applySmallMenuSelectedState();
+    }
+
+    function getConfirmButtons() {
+      return [opts.ui.menuExitConfirmLeave, opts.ui.menuExitConfirmCancel, opts.ui.menuNewConfirmStart, opts.ui.menuNewConfirmBack];
+    }
+
+    function applyConfirmSelectedState() {
+      var buttons = getConfirmButtons();
+      for (var i = 0; i < buttons.length; i++) {
+        var button = buttons[i];
+        if (!button || !button.id) continue;
+        setMenuButtonSelected(button, button.id === lastActiveButtonIdConfirm);
+      }
+    }
+
+    function markConfirmButtonActive(buttonId) {
+      if (!buttonId) return;
+      lastActiveButtonIdConfirm = buttonId;
+      applyConfirmSelectedState();
+    }
+
+    function clearConfirmSelectedState() {
+      lastActiveButtonIdConfirm = null;
+      applyConfirmSelectedState();
+    }
+
+    function focusConfirmButton(buttonId) {
+      if (!buttonId) return;
+      var button = documentObj.getElementById(buttonId);
+      if (!button || button.disabled) return;
+      markConfirmButtonActive(buttonId);
+      button.focus();
+    }
+
+    function bindConfirmButtonSelectedEvents(button) {
+      if (!button || !button.id) return;
+      button.addEventListener('pointerdown', function () {
+        markConfirmButtonActive(button.id);
+      });
+      button.addEventListener('focus', function () {
+        markConfirmButtonActive(button.id);
+      });
     }
 
     function getSaveMeta() {
@@ -340,6 +383,7 @@
     function openMainMenuView() {
       resetSaveViewConfig();
       setSlotViewsOpen('none');
+      clearConfirmSelectedState();
       setMenuView('main');
       applySmallMenuSelectedState();
     }
@@ -438,12 +482,43 @@
     }
 
     function openExitConfirmView() {
+      lastActiveButtonIdSmallMenu = null;
+      applySmallMenuSelectedState();
+      clearConfirmSelectedState();
       setMenuView('exit');
     }
 
     function openNewConfirmView() {
+      lastActiveButtonIdSmallMenu = null;
+      applySmallMenuSelectedState();
+      clearConfirmSelectedState();
       setMenuView('newConfirm');
     }
+
+    opts.ui.menuExitConfirmView && opts.ui.menuExitConfirmView.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        focusConfirmButton('menuExitConfirmLeave');
+      } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        focusConfirmButton('menuExitConfirmCancel');
+      }
+    });
+
+    opts.ui.menuNewConfirmView && opts.ui.menuNewConfirmView.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        focusConfirmButton('menuNewConfirmStart');
+      } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        focusConfirmButton('menuNewConfirmBack');
+      }
+    });
+
+    bindConfirmButtonSelectedEvents(opts.ui.menuExitConfirmLeave);
+    bindConfirmButtonSelectedEvents(opts.ui.menuExitConfirmCancel);
+    bindConfirmButtonSelectedEvents(opts.ui.menuNewConfirmStart);
+    bindConfirmButtonSelectedEvents(opts.ui.menuNewConfirmBack);
 
     opts.ui.menuContinue && opts.ui.menuContinue.addEventListener('click', function () {
       if (typeof opts.isSessionStartUnlocked === 'function' && !opts.isSessionStartUnlocked()) {

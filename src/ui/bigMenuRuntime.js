@@ -505,9 +505,12 @@
     async function startFromBigMenu(mode) {
       if (runtime.bigMenuStartPending) return;
       var selectedPayload = null;
+      var onAfterLoadRestore = null;
       if (mode && typeof mode === 'object') {
-        selectedPayload = mode.payload || null;
-        mode = mode.kind;
+        var modeOptions = mode;
+        selectedPayload = modeOptions.payload || null;
+        onAfterLoadRestore = typeof modeOptions.onAfterLoadRestore === 'function' ? modeOptions.onAfterLoadRestore : null;
+        mode = modeOptions.kind;
       }
       if (mode !== 'new' && mode !== 'load-slot') return;
       if (mode === 'load-slot' && (!selectedPayload || !Array.isArray(selectedPayload.cells))) return;
@@ -525,6 +528,7 @@
           deps.saveProgress();
         } else if (mode === 'load-slot') {
           deps.restoreFullState(selectedPayload);
+          if (onAfterLoadRestore) onAfterLoadRestore(selectedPayload);
           deps.setMetaLastSeenAt(Date.now());
           deps.saveProgress();
           deps.updateUI();

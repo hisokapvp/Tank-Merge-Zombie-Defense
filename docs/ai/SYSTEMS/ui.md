@@ -14,11 +14,15 @@
 
 ## Правила
 - Не добавлять тексты мимо `src/i18n/ru.json` и `src/i18n/en.json`.
+- `src/i18n/fallbackStrings.js` — синхронный fallback, применяется до загрузки JSON; при добавлении нового i18n-ключа его нужно добавлять **одновременно** в `ru.json`, `en.json` **и** `fallbackStrings.js` (иначе до async-загрузки ключ отображается как literal-строка).
 - Не переносить доменную логику в слой UI.
 - Debug-панели и admin-кнопки оставлять за `?debug=1`.
 - Для critical modal: вход/выход должен включать/снимать hard pause через `PauseManager`, skip-кнопка видна только во время typing.
 - Кнопка `Перезапустить симуляцию` должна вызывать partial reset runtime мира без запуска второго main loop.
 - Для `Перезапустить симуляцию` в `restartSimulationPartial(..., { onAfterRestore })` обязательно выполнять post-restore доведение: телепорт дронов к `supercomputer` (с fallback `(0,0)`), сброс zombie target к дефолту из `assets/zombies.json`, сброс `attackMode` runtime к off/default.
+- Зомби — это runtime-состояние, не сохраняемое в payload. При любом `restoreFullState` в конце вызывается явный `state.zombies.length = 0` (сброс зомби).
+- `restoreFullState` при `Object.assign(getComputerState(), saved.supercomputer)` сохраняет предыдущие валидные координаты `x/y` суперкомпьютера, если в `saved.supercomputer` они нулевые/невалидные (pre-retry payload использует `createInitialState` как базу и не хранит real-координаты).
+- Количество стартовых танков при новой игре/рестарте симуляции: **1 танк 1-го уровня**. Точки спавна: `spawnInitialTanksLvl1(state, 1)` (в `resetGameState`) и цикл с `seeded < 1` (в `applyPreRetryRuntimeReset`).
 
 ## Меню и confirm выхода
 - Small menu confirm выхода живёт в `menuExitConfirmView` (`index.html`), обработчики — `src/core/bootstrap.js`.
@@ -27,7 +31,11 @@
 - Кнопка `Выход` в confirm должна переиспользовать существующий session-exit flow (`stopAndResetSessionToBigMenu`), без дублирования reset-логики.
 - `stopAndResetSessionToBigMenu` приводит приложение к состоянию первого запуска через перезагрузку страницы (`window.location.reload`) после очистки transient `progress` (слотовые сохранения не затрагиваются).
 - Открытие/закрытие confirm-экрана внутри small menu не должно трогать pause/unpause; меняется только активный `menuView`.
-- Лейаут `#menuExitConfirmView .menuInlineActions`: `display:flex`, `justify-content:center`, фиксированный `gap` (12px), кнопки `Выйти/Отмена` одинаковой ширины через `clamp(...)` с mobile-override.
+- Лейаут `#menuExitConfirmView .menuInlineActions` и `#menuNewConfirmView .menuInlineActions`: `display:flex`, `justify-content:center`, `align-items:center`, `flex-wrap:nowrap`, `gap:12px`; кнопки одинаковой ширины через `clamp(...)` с mobile-override.
+- При открытии confirm (`openExitConfirmView`, `openNewConfirmView`) в `src/core/bootstrap.js` обязательно сбрасывать `lastActiveButtonIdSmallMenu = null` и вызывать `applySmallMenuSelectedState()` — чтобы ни одна кнопка main menu не светилась как selected пока открыт confirm.
+- На экране confirm ни одна кнопка не имеет default selected-подсветки; selected появляется только после клика пользователя.
+- Для `menuExitConfirmView`/`menuNewConfirmView` default-state: `selected = none` (первый рендер без `menuActionSelected`/`btnPrimary` на кнопках confirm).
+- Явный выбор для confirm считается только после пользовательского действия: `pointerdown/click`, фокус и подтверждение с клавиатуры (`Enter`/`Space`) или навигация стрелками (`ArrowLeft/Right/Up/Down`).
 - Пока `sessionStartGate=locked`, `Continue` в small menu недоступен; в сессию можно войти только через big menu `New` или успешный `Load(slot)`.
 
 ## Small menu Save/Load views
@@ -45,6 +53,7 @@
 - На первом показе меню selected-подсветки нет; selected появляется только после клика.
 - Hover остаётся CSS-driven (`:hover`) и не зависит от selected.
 - При новом клике в пределах одного меню selected переносится на новую кнопку и снимается с предыдущей.
+- При открытии sub-view (confirm, save, load) из small menu — `lastActiveButtonIdSmallMenu` сбрасывается в `null`, чтобы кнопка основного меню не оставалась подсвеченной.
 
 ## Big menu: Language + Credits
 - Кнопка `Язык/Language` открывает подпанель из двух подкнопок (`Русский`, `Английский`) прямо под кнопкой через локальный wrapper в DOM (`bigMenuLanguageWrap`), а не через глобальное позиционирование.
@@ -63,6 +72,7 @@
 - Press/hover-эффекты должны быть визуальными (яркость/scale иконки), не менять якорную позицию кнопки.
 - При изменениях в unified button behavior (`.uiButtonBehavior`) обязательно сохранять исключение для HUD-кнопки суперкомпьютера.
 - `.supercomputerHudBtn` по умолчанию скрыта (`visibility:hidden`) и показывается только после первого успешного расчёта позиции в `updateSupercomputerHudButtonPosition()`; это исключает появление в `(0,0)`.
+- При `resetGameState` (до `initBoard`) обязательно: `supercomputerHudRuntime.button.lastVisible = false`, `supercomputerHudRuntime.button.lastTransform = ''`, `ui.supercomputerBtn.style.visibility = 'hidden'`. Это предотвращает однокадровый flash HUD-кнопки в (0,0) до пересчёта layout.
 - Для `.supercomputerHudBtn` и `.supercomputerHudBtn.uiButtonBehavior` запрещён `transition` по `transform` и запрещён `transition: all`; допускаются только визуальные свойства (`box-shadow/filter/background-color/border-color/opacity`), чтобы убрать визуальный «полёт» при обновлении координат.
 
 ## HUD: XP bar
@@ -79,8 +89,19 @@
 ## Supercomputer: modal layout
 - `supercomputer` модалки (`#supercomputerMenuOverlay`, `#modsHangarOverlay`, `#modsTankWallOverlay`) оформляются как `large modal` по паттерну дерева улучшений: panel с классом `.scModal`.
 - Размеры модалки должны быть адаптивными и ограниченными viewport: паттерн `width:min(96vw, 1060px)` и `max-height:min(90vh, 920px)`.
-- Внешний overlay не скроллится (`overflow:hidden`), скролл разрешён только внутри `.scModal__body` (`overflow:auto`, `min-height:0`, `flex:1`).
+- Внешний overlay не скроллится (`overflow:hidden`), скролл разрешён только внутри `.scModal__body` (`overflow-y:auto; overflow-x:hidden`, `min-height:0`, `flex:1`).
+- `.levelModal__panel.scModal` должен иметь `box-sizing:border-box` — чтобы padding не ломал расчёт ширины.
+- Кастомный scrollbar для `.scModal__body`: эталон — audio slider (`.menuSlider input[type=range]`); применяется через `scrollbar-width:thin; scrollbar-color: rgba(255,140,90,.55) rgba(18,12,9,.7)` (Firefox) + webkit: ширина `7px`, thumb — `linear-gradient(140deg,#ffd39e,#ff8c5a)`, `border-radius:999px`.
+- При открытой SC-модалке добавлять `body.scmodal-open { overflow:hidden; touch-action:none }`: `openRoot()` добавляет класс, `closeAll()` снимает. Это предотвращает появление второго скроллбара страницы при pressed-анимации кнопок внутри модалки.
+- Кнопки `.scButton:active:not(:disabled)` — pressed-эффект только через `transform:translateY(2px) scale(0.99)`, без изменений layout (`margin`, `padding`, `height`), чтобы не провоцировать системный scrollbar.
+- Для `.scButton` обязателен `box-sizing:border-box`; на active/pressed запрещено менять `border-width`, `padding`, `height`, `margin`, `line-height`.
+- Правило overflow: одновременно скроллится только один контейнер (`.scModal__body`), а `overlay/panel/body` страницы не должны получать параллельный scroll.
 - Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll.
+
+### Диагностика: второй scrollbar в supercomputer modal
+- Как воспроизвести: открыть `Supercomputer -> Модификации -> Назад`, зажать кнопку `Назад` (или другую `.scButton`) и удерживать.
+- Ожидаемо: кнопка визуально «прижимается» только через `transform`, но layout не меняется; активен только внутренний scrollbar `.scModal__body`.
+- Запрещённые изменения: любые pressed-стили, меняющие box-model, и любые правки, из-за которых `body` начинает прокручиваться параллельно с `.scModal__body`.
 
 ## On-track dim (иконка в слоте)
 - Источник параметра: `assets/tanks.json` → `ui.onTrackIconOpacity`.

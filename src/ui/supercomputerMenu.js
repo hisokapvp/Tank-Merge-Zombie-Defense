@@ -125,6 +125,12 @@
     };
     var gunsSpriteImageCache = Object.create(null);
 
+    function setBodyScrollLock(locked) {
+      if (!documentObj.body) return;
+      if (locked) documentObj.body.classList.add('scmodal-open');
+      else documentObj.body.classList.remove('scmodal-open');
+    }
+
     function applySharedTalentModalClass() {
       var talentOverlay = documentObj.getElementById('talentOverlay');
       if (!talentOverlay) return;
@@ -871,6 +877,7 @@
       });
       state.isOpen = true;
       state.view = 'root';
+      setBodyScrollLock(true);
       onPauseLockChange(true);
     }
 
@@ -881,6 +888,7 @@
         onClose: backFromChild,
       });
       state.view = 'hangar';
+      setBodyScrollLock(true);
     }
 
     function showTankWallMods() {
@@ -899,6 +907,7 @@
       });
       state.view = 'tankWall';
       startGunsIconTicker();
+      setBodyScrollLock(true);
     }
 
     function showTalents() {
@@ -907,6 +916,7 @@
       state.view = 'talents';
       openTalents({ onClose: backFromChild });
       applySharedTalentModalClass();
+      setBodyScrollLock(true);
     }
 
     function backFromChild() {
@@ -926,6 +936,7 @@
       resetPendingFenceUpgrades();
       state.isOpen = false;
       state.view = 'closed';
+      setBodyScrollLock(false);
       onPauseLockChange(false);
     }
 

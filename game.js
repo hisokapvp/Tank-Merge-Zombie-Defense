@@ -1836,6 +1836,10 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
 }
 
 function finalizePartialRestartPostRestore(stateRef){
+  // Явно очищаем зомби из переданного stateRef (и глобального state)
+  var targetZombies = stateRef && Array.isArray(stateRef.zombies) ? stateRef.zombies : null;
+  if (targetZombies && targetZombies.length > 0) targetZombies.length = 0;
+  if (Array.isArray(state.zombies) && state.zombies !== targetZombies) state.zombies.length = 0;
   normalizeAndTeleportDronesAfterRestore(stateRef);
   resetZombieAndAttackModeToDefaultAfterRestore();
 }
@@ -3631,7 +3635,14 @@ function restoreFullState(saved){
   ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
-    Object.assign(getComputerState(), saved.supercomputer);
+    var _scCurrent = getComputerState();
+    var _scPrevX = _scCurrent.x;
+    var _scPrevY = _scCurrent.y;
+    Object.assign(_scCurrent, saved.supercomputer);
+    // Если в payload координаты нулевые/невалидные (pre-retry payload использует createInitialState как базу),
+    // восстанавливаем предыдущие валидные координаты чтобы избежать телепорта в (0,0).
+    if (!(saved.supercomputer.x > 0) && _scPrevX > 0) _scCurrent.x = _scPrevX;
+    if (!(saved.supercomputer.y > 0) && _scPrevY > 0) _scCurrent.y = _scPrevY;
   }
   if (saved.player) Object.assign(state.player, saved.player);
   ensureCannonUpgradesAppliedState();
@@ -3729,6 +3740,8 @@ function restoreFullState(saved){
   if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
     try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
   }
+  // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
+  if (Array.isArray(state.zombies)) state.zombies.length = 0;
   resetCriticalEntryRuntimeFlags();
 }
 
@@ -6341,7 +6354,7 @@ function initBigMainMenu(){
   ensureBigMenuRuntimeController()?.initBigMainMenu();
 }
 
-function spawnInitialTanksLvl1(targetState, count = 2){
+function spawnInitialTanksLvl1(targetState, count = 1){
   const stateRef = targetState || state;
   if (!stateRef || !Array.isArray(stateRef.cells) || !stateRef.cells.length) return 0;
   const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 2;
@@ -6430,7 +6443,7 @@ function applyPreRetryRuntimeReset(targetState){
     cell.tank = null;
   }
   var seeded = 0;
-  for (let i = 0; i < targetState.cells.length && seeded < 2; i++) {
+  for (let i = 0; i < targetState.cells.length && seeded < 1; i++) {
     const cell = targetState.cells[i];
     if (!cell || cell.tank) continue;
     cell.tank = makeTank(1, true);
@@ -6628,6 +6641,13 @@ function restartSimulationPartial(){
   finalizePartialRestartRestore();
 }
 
+function applyCriticalRestartPostLoad(){
+  clearAllTanksFromCells(state);
+  spawnInitialTanksLvl1(state, 1);
+  refreshTanksPowerTier();
+  finalizePartialRestartPostRestore(state);
+}
+
 function performCriticalRestart(){
   var payload = loadPreRetryPayloadFromAutoSlot();
   if (!payload) {
@@ -6640,7 +6660,11 @@ function performCriticalRestart(){
   }
   criticalFlowActive = false;
   resetCriticalEntryRuntimeFlags();
-  startFromBigMenu({ kind: 'load-slot', payload: payload });
+  startFromBigMenu({
+    kind: 'load-slot',
+    payload: payload,
+    onAfterLoadRestore: applyCriticalRestartPostLoad,
+  });
 }
 
 function handleCriticalSaveAndExit(){
@@ -6685,6 +6709,9 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  supercomputerHudRuntime.button.lastVisible = false;
+  supercomputerHudRuntime.button.lastTransform = '';
+  if (ui.supercomputerBtn) ui.supercomputerBtn.style.visibility = 'hidden';
   resetCriticalEntryRuntimeFlags();
   if (reason === 'new_game') {
     resetWorldEventsRuntimeForNewGame();
@@ -6726,7 +6753,7 @@ function resetGameState(options){
 
   resizeCanvas();
   state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
-  spawnInitialTanksLvl1(state, 2);
+  spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
   updateDamagePointsUI();
 
