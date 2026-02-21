@@ -53,7 +53,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8,
+      "attackDamage": 10,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -107,7 +107,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 108,
+      "attackDamage": 20,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -161,7 +161,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 8,
+      "attackDamage": 30,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -208,7 +208,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 40,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -255,7 +255,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 50,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -302,7 +302,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 60,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -349,7 +349,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 70,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -396,7 +396,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 80,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -443,7 +443,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 90,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -490,7 +490,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 100,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -537,7 +537,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 110,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -584,7 +584,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 120,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -631,7 +631,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 130,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -678,7 +678,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 140,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -725,7 +725,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 150,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -772,7 +772,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 160,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -819,7 +819,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 170,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -866,7 +866,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 180,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -913,7 +913,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 190,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -960,7 +960,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 200,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1007,7 +1007,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 210,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1054,7 +1054,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 220,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1101,7 +1101,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 230,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1148,7 +1148,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 240,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1195,7 +1195,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 250,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1242,7 +1242,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 260,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1289,7 +1289,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 270,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1336,7 +1336,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 280,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1383,7 +1383,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 290,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1430,7 +1430,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 300,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1477,7 +1477,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 310,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1524,7 +1524,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 320,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1571,7 +1571,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 330,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1618,7 +1618,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 340,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1665,7 +1665,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 350,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1712,7 +1712,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 360,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1759,7 +1759,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 370,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1806,7 +1806,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 380,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1853,7 +1853,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 390,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1900,7 +1900,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 400,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1947,7 +1947,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 410,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1994,7 +1994,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 420,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2041,7 +2041,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 430,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2088,7 +2088,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 440,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2135,7 +2135,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 450,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2182,7 +2182,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 460,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2229,7 +2229,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 470,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2276,7 +2276,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 480,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2323,7 +2323,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 490,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2370,7 +2370,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 500,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2417,7 +2417,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 510,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2464,7 +2464,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 520,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2511,7 +2511,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 530,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2558,7 +2558,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 540,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2605,7 +2605,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 550,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2652,7 +2652,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 560,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2699,7 +2699,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 570,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2746,7 +2746,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 580,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2793,7 +2793,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 590,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2840,7 +2840,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 8,
+      "attackDamage": 600,
       "animations": {
         "walk": {
           "frameRateFps": 10

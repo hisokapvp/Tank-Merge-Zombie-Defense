@@ -3,22 +3,252 @@
   "atlas": "fence_atlas.png",
   "cornerInsetPx": 0,
   "segmentsPerSide": 8,
-  "segmentMaxHp": 10000,
   "levels": [
     {
-      "segmentMaxHp": 10000,
-      "armorFlat": 100,
-      "upgradeCostDamagePoints": 2
+      "segmentMaxHp": 100000,
+      "armorFlat": 10,
+      "upgradeCostDamagePoints": 2,
+      "atlas": "fence_atlas.png"
     },
     {
-      "segmentMaxHp": 12000,
-      "armorFlat": 2,
-      "upgradeCostDamagePoints": 3
+      "segmentMaxHp": 103220,
+      "armorFlat": 13,
+      "upgradeCostDamagePoints": 4,
+      "atlas": "fence_atlas.png"
     },
     {
-      "segmentMaxHp": 15000,
-      "armorFlat": 4,
-      "upgradeCostDamagePoints": 0
+      "segmentMaxHp": 106440,
+      "armorFlat": 16,
+      "upgradeCostDamagePoints": 6,
+      "atlas": "fence_atlas_2.png"
+    },
+    {
+      "segmentMaxHp": 109661,
+      "armorFlat": 18,
+      "upgradeCostDamagePoints": 8,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 112881,
+      "armorFlat": 21,
+      "upgradeCostDamagePoints": 10,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 116101,
+      "armorFlat": 24,
+      "upgradeCostDamagePoints": 12,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 119322,
+      "armorFlat": 27,
+      "upgradeCostDamagePoints": 14,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 122542,
+      "armorFlat": 30,
+      "upgradeCostDamagePoints": 16,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 125763,
+      "armorFlat": 33,
+      "upgradeCostDamagePoints": 18,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 128983,
+      "armorFlat": 36,
+      "upgradeCostDamagePoints": 20,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 132203,
+      "armorFlat": 39,
+      "upgradeCostDamagePoints": 22,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 135424,
+      "armorFlat": 42,
+      "upgradeCostDamagePoints": 24,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 138644,
+      "armorFlat": 45,
+      "upgradeCostDamagePoints": 26,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 141865,
+      "armorFlat": 48,
+      "upgradeCostDamagePoints": 28,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 145085,
+      "armorFlat": 51,
+      "upgradeCostDamagePoints": 30,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 148306,
+      "armorFlat": 54,
+      "upgradeCostDamagePoints": 32,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 151526,
+      "armorFlat": 57,
+      "upgradeCostDamagePoints": 34,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 154746,
+      "armorFlat": 60,
+      "upgradeCostDamagePoints": 36,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 157967,
+      "armorFlat": 63,
+      "upgradeCostDamagePoints": 38,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 161187,
+      "armorFlat": 66,
+      "upgradeCostDamagePoints": 40,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 164408,
+      "armorFlat": 69,
+      "upgradeCostDamagePoints": 42,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 167628,
+      "armorFlat": 72,
+      "upgradeCostDamagePoints": 44,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 170848,
+      "armorFlat": 75,
+      "upgradeCostDamagePoints": 46,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 174069,
+      "armorFlat": 78,
+      "upgradeCostDamagePoints": 48,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 177289,
+      "armorFlat": 81,
+      "upgradeCostDamagePoints": 50,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 180510,
+      "armorFlat": 84,
+      "upgradeCostDamagePoints": 52,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 183730,
+      "armorFlat": 87,
+      "upgradeCostDamagePoints": 54,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 186951,
+      "armorFlat": 90,
+      "upgradeCostDamagePoints": 56,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 190171,
+      "armorFlat": 93,
+      "upgradeCostDamagePoints": 58,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 193391,
+      "armorFlat": 96,
+      "upgradeCostDamagePoints": 60,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 196612,
+      "armorFlat": 99,
+      "upgradeCostDamagePoints": 62,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 199832,
+      "armorFlat": 102,
+      "upgradeCostDamagePoints": 64,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 203053,
+      "armorFlat": 105,
+      "upgradeCostDamagePoints": 66,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 206273,
+      "armorFlat": 108,
+      "upgradeCostDamagePoints": 68,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 209494,
+      "armorFlat": 111,
+      "upgradeCostDamagePoints": 70,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 212714,
+      "armorFlat": 114,
+      "upgradeCostDamagePoints": 72,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 215934,
+      "armorFlat": 117,
+      "upgradeCostDamagePoints": 74,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 219155,
+      "armorFlat": 120,
+      "upgradeCostDamagePoints": 76,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 222375,
+      "armorFlat": 123,
+      "upgradeCostDamagePoints": 78,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 225596,
+      "armorFlat": 126,
+      "upgradeCostDamagePoints": 80,
+      "atlas": "fence_atlas.png"
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas.png"
     }
   ],
   "healthBar": {

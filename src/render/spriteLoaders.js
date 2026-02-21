@@ -505,6 +505,8 @@
       error: '',
       atlasImg: null,
       config: null,
+      _currentAtlasName: null,
+      _ensureLevelToken: 0,
       maxFrameScale: 1,
       cornerInsetPx: null,
       framesById: new Map(),
@@ -515,9 +517,19 @@
           var data = await res.json();
           this.config = data || null;
           this.cornerInsetPx = Number.isFinite(data.cornerInsetPx) ? data.cornerInsetPx : null;
-          var atlasPath = 'assets/' + (data.atlas || 'fence.png');
-          var img = await loadImage(atlasPath);
+          var state = getState();
+          var desiredLevel = state && Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1;
+          var perLevels = Array.isArray(data.levels) ? data.levels : null;
+          var atlasName = (perLevels && perLevels[desiredLevel - 1] && perLevels[desiredLevel - 1].atlas) ? perLevels[desiredLevel - 1].atlas : data.atlas;
+          atlasName = atlasName || 'fence_atlas.png';
+          var atlasPath = 'assets/' + atlasName;
+          var img = await loadImage(atlasPath).catch(function (e) {
+            // fallback to global atlas if per-level missing
+            var fallback = 'assets/' + (data.atlas || 'fence_atlas.png');
+            return loadImage(fallback);
+          });
           this.atlasImg = img;
+          this._currentAtlasName = atlasName;
           this.framesById.clear();
           this.maxFrameScale = 1;
           var autoIds = [];
@@ -624,6 +636,11 @@
           if (!wallIds.length) {
             wallIds = autoIds.filter(function (id) {
               var frame = this.framesById.get(id);
+
+          // smoke config (optional)
+          this.config.smoke = data.smoke && typeof data.smoke === 'object' ? data.smoke : { frames: [], fps: 0, offset: { x: 0, y: 0 }, scale: 1 };
+
+          // ready
               return !!(frame && frame.isWall);
             }, this);
           }
@@ -636,6 +653,26 @@
             placementMaxAttempts: Number.isFinite(data.placementMaxAttempts)
               ? Math.max(1, Math.floor(data.placementMaxAttempts))
               : 40,
+      ensureLevel: async function (level) {
+        var token = ++this._ensureLevelToken;
+        if (!this.config) return;
+        var lvl = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+        var perLevels = Array.isArray(this.config.levels) ? this.config.levels : null;
+        var atlasName = (perLevels && perLevels[lvl - 1] && perLevels[lvl - 1].atlas) ? perLevels[lvl - 1].atlas : this.config.atlas;
+        atlasName = atlasName || 'fence_atlas.png';
+        if (atlasName === this._currentAtlasName) return;
+        try {
+          var img = await loadImage('assets/' + atlasName);
+          // ensure last requested wins
+          if (token !== this._ensureLevelToken) return;
+          this.atlasImg = img;
+          this._currentAtlasName = atlasName;
+          this.ready = true;
+          this.error = '';
+        } catch (e) {
+          // fail silently, keep previous atlas
+        }
+      },
             blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
             blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
           };

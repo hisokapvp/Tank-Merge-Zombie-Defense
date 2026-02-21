@@ -169,6 +169,34 @@ function ensureCannonUpgradesAppliedState(){
   return source;
 }
 
+function normalizeAppliedFenceUpgrade(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
+function ensureFenceUpgradesAppliedState(){
+  if (!state.player || typeof state.player !== 'object') state.player = {};
+  var source = Array.isArray(state.player.fenceUpgradesApplied) ? state.player.fenceUpgradesApplied : [];
+  if (source.length !== MAX_TANK_LEVEL) {
+    state.player.fenceUpgradesApplied = Array(MAX_TANK_LEVEL).fill(0);
+    for (var i = 0; i < Math.min(source.length, MAX_TANK_LEVEL); i++) {
+      state.player.fenceUpgradesApplied[i] = normalizeAppliedFenceUpgrade(source[i]);
+    }
+    return state.player.fenceUpgradesApplied;
+  }
+  state.player.fenceUpgradesApplied = source;
+  return source;
+}
+
+function getAppliedFenceUpgradeLevel(level){
+  var applied = ensureFenceUpgradesAppliedState();
+  var lvl = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) : 1;
+  var idx = lvl - 1;
+  var value = normalizeAppliedFenceUpgrade(applied[idx]);
+  if (applied[idx] !== value) applied[idx] = value;
+  return value;
+}
+
 function getAppliedCannonUpgradeLevel(level){
   const applied = ensureCannonUpgradesAppliedState();
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
@@ -301,6 +329,9 @@ const BASE_BAL = {
   crateDropSpeed: 220,
   crateSize: 34,
 };
+
+const FENCE_HP_MUL = 1.05;
+const FENCE_ARMOR_MUL = 1.05;
 
 let BalanceConfig = { zombie: {}, zombieOverrides: {}, tank: {}, tankOverrides: {} };
 GameApi.Balance = GameApi.Balance || {};
@@ -450,13 +481,30 @@ function getDamagePoints(){
 }
 
 function getCannonUpgradeStepCost(level, appliedIndex){
-  const row = getCannonUpgradeRow(level);
-  if (!row) return 0;
-  const costBase = Number(row[1]);
-  const costStep = Number(row[2]);
-  const idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
-  if (!Number.isFinite(costBase) || !Number.isFinite(costStep)) return 0;
-  return Math.max(0, Math.floor(costBase + costStep * idx));
+  return getUpgradeStepCost(level, appliedIndex);
+}
+
+function getUpgradeStepCost(level, appliedIndex){
+  // unified upgrade cost for fences and cannons
+  var lvl = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) : 1;
+  var idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
+  // try fence config first
+  var cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+  var base = 0;
+  if (cfg && Array.isArray(cfg.levels) && cfg.levels[lvl - 1] && Number.isFinite(cfg.levels[lvl - 1].upgradeCostDamagePoints)) {
+    base = Math.max(0, Math.floor(cfg.levels[lvl - 1].upgradeCostDamagePoints));
+  } else {
+    // fallback to cannon upgrades balance table
+    var row = getCannonUpgradeRow(lvl);
+    if (row && Number.isFinite(Number(row[1]))) base = Math.max(0, Math.floor(Number(row[1])));
+  }
+  if (!Number.isFinite(base) || base <= 0) return 0;
+  // exponential growth per step (safe, ceil)
+  var multiplier = 1.2;
+  var cost = Math.ceil(base * Math.pow(multiplier, idx));
+  if (!Number.isFinite(cost) || cost <= 0) return 0;
+  if (cost > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
+  return cost;
 }
 
 function getCannonUpgradeIconFrames(level){
@@ -2302,6 +2350,15 @@ function addDron(level){
 
 function recordTankLevel(level){
   state.maxTankLevelAchieved = Math.max(state.maxTankLevelAchieved || 0, level);
+  // sync fence level to maxTankLevelAchieved (clamped 1..60)
+  var clamped = Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(state.maxTankLevelAchieved || 1)));
+  state.fenceLevel = clamped;
+  // reset/recreate fence segments so visuals rebuild for new atlas/level
+  state.fenceSegments = [];
+  state.fenceSegmentsMeta = null;
+  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+    try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
+  }
 }
 
 function buyTankLevel(){
@@ -3469,6 +3526,7 @@ function saveProgress(){
       talentsPending: p.talentsPending,
       activeCooldowns: p.activeCooldowns,
       cannonUpgradesApplied: ensureCannonUpgradesAppliedState(),
+      fenceUpgradesApplied: ensureFenceUpgradesAppliedState(),
       eventShown40: sc.eventShown40,
       eventShown50: sc.eventShown50,
       eventShown60: sc.eventShown60,
@@ -3600,6 +3658,15 @@ function restoreFullState(saved){
     };
   } else state.crate = null;
   refreshTanksPowerTier();
+  // sync fence level to maxTankLevelAchieved on load
+  var clampedFence = Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(state.maxTankLevelAchieved || state.fenceLevel || 1)));
+  state.fenceLevel = clampedFence;
+  state.fenceSegments = [];
+  state.fenceSegmentsMeta = null;
+  ensureFenceUpgradesAppliedState();
+  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+    try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
+  }
 }
 
 function inflateBuyPrice(price, count){
@@ -3634,6 +3701,7 @@ function applySavedProgress(data){
   if (Number.isFinite(playerData.damagePoints)) state.player.damagePoints = Math.max(0, Math.floor(playerData.damagePoints));
   if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
   ensureCannonUpgradesAppliedState();
+  ensureFenceUpgradesAppliedState();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(getComputerState(), SupercomputerSprites.config);
   }
@@ -4130,14 +4198,20 @@ function getCurrentFenceLevelConfig(){
 
 function getFenceSegmentMaxHp(){
   const levelCfg = getCurrentFenceLevelConfig();
-  return Number.isFinite(levelCfg && levelCfg.segmentMaxHp)
-    ? Math.max(1, Math.floor(levelCfg.segmentMaxHp))
-    : FENCE_DEFAULT_SEGMENT_HP;
+  const base = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
+  const level = getFenceLevelIndex() + 1;
+  const applied = getAppliedFenceUpgradeLevel(level);
+  const val = Math.round(base * Math.pow(FENCE_HP_MUL, applied));
+  return Math.max(1, val);
 }
 
 function getFenceArmorFlat(){
   const levelCfg = getCurrentFenceLevelConfig();
-  return Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
+  const base = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
+  const level = getFenceLevelIndex() + 1;
+  const applied = getAppliedFenceUpgradeLevel(level);
+  const val = Math.round(base * Math.pow(FENCE_ARMOR_MUL, applied));
+  return Math.max(0, val);
 }
 
 function getFenceUpgradeCostDamagePoints(){
@@ -4157,10 +4231,12 @@ function getFenceStats(){
   const levelsCount = levels.length;
   const segmentMaxHp = getFenceSegmentMaxHp();
   const armorFlat = getFenceArmorFlat();
-  const hasNextLevel = index < levelsCount - 1;
-  const upgradeCostDamagePoints = hasNextLevel ? getFenceUpgradeCostDamagePoints() : null;
+  // unlimited steps inside the same level (per-level applied upgrades)
+  const applied = getAppliedFenceUpgradeLevel(level);
+  const upgradeCostDamagePoints = getUpgradeStepCost(level, applied);
   const availableDamagePoints = getAvailableDamagePoints();
-  const canUpgrade = !!hasNextLevel && availableDamagePoints >= (upgradeCostDamagePoints || 0);
+  const hasNextLevel = true;
+  const canUpgrade = Number.isFinite(upgradeCostDamagePoints) && upgradeCostDamagePoints > 0 && availableDamagePoints >= upgradeCostDamagePoints;
   return {
     level,
     levelsCount,
@@ -4189,11 +4265,14 @@ function clampFenceSegmentsToMaxHp(maxHp){
 
 function tryUpgradeFenceLevel(){
   const stats = getFenceStats();
-  if (!stats.hasNextLevel) return false;
   const cost = stats.upgradeCostDamagePoints || 0;
+  if (!Number.isFinite(cost) || cost <= 0) return false;
   if (stats.availableDamagePoints < cost) return false;
 
-  state.fenceLevel = Math.min(stats.levelsCount, stats.level + 1);
+  const level = stats.level;
+  const applied = ensureFenceUpgradesAppliedState();
+  const idx = Math.max(0, Math.min(MAX_TANK_LEVEL - 1, level - 1));
+  applied[idx] = normalizeAppliedFenceUpgrade(applied[idx]) + 1;
   state.damagePointsSpent = ensureDamagePointsSpentState() + cost;
 
   const maxHp = getFenceSegmentMaxHp();
@@ -8292,6 +8371,39 @@ function drawZombieFence(){
       );
       ctx.restore();
 
+      // smoke overlay for broken segments (optional)
+      try {
+        if (seg.broken && FenceSprites && FenceSprites.config && FenceSprites.config.smoke && Array.isArray(FenceSprites.config.smoke.frames) && FenceSprites.config.smoke.frames.length > 0) {
+          const smoke = FenceSprites.config.smoke;
+          const fps = Number.isFinite(smoke.fps) ? Math.max(0.01, smoke.fps) : 0;
+          if (fps > 0) {
+            const framesList = smoke.frames;
+            const frameIndex = Math.floor(nowSec() * fps) % framesList.length;
+            const smokeId = framesList[frameIndex];
+            const smokeFrame = FenceSprites.pickFrame(smokeId);
+            if (smokeFrame && FenceSprites.atlasImg) {
+              ctx.save();
+              const offset = smoke.offset || { x: 0, y: 0 };
+              ctx.translate(seg.x + (offset.x || 0), seg.y + (offset.y || 0));
+              const rotationRad = (Number.isFinite(smokeFrame.rotationDeg) ? smokeFrame.rotationDeg : 0) * Math.PI / 180;
+              if (rotationRad) ctx.rotate(rotationRad);
+              const baseScale = (BAL.fenceWidth / Math.max(smokeFrame.w, smokeFrame.h)) * 1.2 * resolveFenceFrameScale(smokeFrame);
+              const smokeScaleMul = Number.isFinite(smoke.scale) ? smoke.scale : 1;
+              const ax = smokeFrame.anchor?.x ?? 0.5;
+              const ay = smokeFrame.anchor?.y ?? 0.5;
+              const scale = baseScale * smokeScaleMul;
+              ctx.drawImage(
+                FenceSprites.atlasImg,
+                smokeFrame.x, smokeFrame.y, smokeFrame.w, smokeFrame.h,
+                -smokeFrame.w * scale * ax, -smokeFrame.h * scale * ay,
+                smokeFrame.w * scale, smokeFrame.h * scale
+              );
+              ctx.restore();
+            }
+          }
+        }
+      } catch (e) {}
+
       if (seg.hp < seg.maxHp) {
         const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
         const greenWidth = Math.round(hpBar.w * ratio);
@@ -8329,6 +8441,27 @@ function drawZombieFence(){
 
 function resolveFenceSpriteKeys(){
   const required = ['cornerTL', 'cornerTR', 'cornerBR', 'cornerBL', 'sideTop', 'sideRight', 'sideBottom', 'sideLeft'];
+  // try per-level spriteKeys first
+  try {
+    const cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+    const level = Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1;
+    if (cfg && Array.isArray(cfg.levels) && cfg.levels[level - 1] && cfg.levels[level - 1].spriteKeys) {
+      const keys = cfg.levels[level - 1].spriteKeys || {};
+      const map = {};
+      let ok = true;
+      for (let i = 0; i < required.length; i++) {
+        const k = required[i];
+        const id = keys[k] || k;
+        if (!FenceSprites || !FenceSprites.framesById || !FenceSprites.framesById.has(id)) {
+          ok = false;
+          break;
+        }
+        map[k] = id;
+      }
+      if (ok) return map;
+    }
+  } catch (e) {}
+
   const hasNamed = required.every((id) => FenceSprites.framesById.has(id));
   if (hasNamed){
     return {
