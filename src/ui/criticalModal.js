@@ -34,8 +34,10 @@
       token: 0,
       onSaveExit: null,
       onRestart: null,
+      onClose: null,
       lines: [],
       criticalSessionActive: false,
+      canRestart: true,
     };
 
     function setElementVisibility(el, visible) {
@@ -57,7 +59,7 @@
       setElementVisibility(restartBtn, visible);
       setElementVisibility(saveExitBtn, visible);
       closeXBtn.disabled = !visible;
-      restartBtn.disabled = !visible;
+      restartBtn.disabled = !visible || !state.canRestart;
       saveExitBtn.disabled = !visible;
     }
 
@@ -197,6 +199,13 @@
       if (typeof onSaveExit === 'function') onSaveExit();
     }
 
+    function handleClose() {
+      if (state.isTyping) return;
+      var onClose = state.onClose;
+      closeInternal();
+      if (typeof onClose === 'function') onClose();
+    }
+
     function handleRestart() {
       if (state.isTyping) return;
       var onRestart = state.onRestart;
@@ -217,7 +226,9 @@
       logEl.textContent = '';
       state.onSaveExit = null;
       state.onRestart = null;
+      state.onClose = null;
       state.lines = [];
+      state.canRestart = true;
     }
 
     async function open(openOptions) {
@@ -231,18 +242,20 @@
       state.isTyping = false;
       state.onSaveExit = typeof params.onSaveExit === 'function' ? params.onSaveExit : null;
       state.onRestart = typeof params.onRestart === 'function' ? params.onRestart : null;
+      state.onClose = typeof params.onClose === 'function' ? params.onClose : null;
+      state.canRestart = params.canRestart !== false;
       state.lines = buildLines(!!params.hasDrones);
       logEl.textContent = '';
       setFinalActionsVisible(false);
       setSkipVisible(false);
       setOverlayOpen(true, skipBtn, function () {
-        handleSaveExit();
+        handleClose();
       });
       await printAll(token);
     }
 
     skipBtn.addEventListener('click', finishTypingImmediately);
-    closeXBtn.addEventListener('click', handleSaveExit);
+    closeXBtn.addEventListener('click', handleClose);
     restartBtn.addEventListener('click', handleRestart);
     saveExitBtn.addEventListener('click', handleSaveExit);
 

@@ -101,6 +101,11 @@
           bulkBuyUntilMs: 0,
         },
       },
+      flags: {
+        preRetryAutosavedThisCritical: false,
+        wasCritical: false,
+        preRetrySaveFailed: false,
+      },
       selectedHangarCellIndex: null,
       isDismantleMode: false,
       selectedTankIds: [],

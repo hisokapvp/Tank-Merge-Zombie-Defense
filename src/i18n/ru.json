@@ -23,6 +23,7 @@
   "menu.load.col.action": "Загрузить",
   "menu.load.toast.loaded": "Загрузка выполнена",
   "menu.load.toast.error": "Ошибка загрузки",
+  "save.autoRetryName": "Сейв перед повтором",
   "ui.toast.noSaves": "Нет сохранений",
   "ui.toast.unavailable": "Недоступно",
   "menuExit": "Выход",

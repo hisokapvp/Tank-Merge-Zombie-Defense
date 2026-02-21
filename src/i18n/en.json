@@ -23,6 +23,7 @@
   "menu.load.col.action": "Load",
   "menu.load.toast.loaded": "Loaded",
   "menu.load.toast.error": "Load failed",
+  "save.autoRetryName": "Pre-retry save",
   "ui.toast.noSaves": "No saves",
   "ui.toast.unavailable": "Unavailable",
   "menuExit": "Exit",

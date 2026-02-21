@@ -80,7 +80,17 @@
       return 'Слот ' + (index + 1);
     }
 
+    function isAutoSlot(slot, index) {
+      if (slot && typeof slot === 'object' && Object.prototype.hasOwnProperty.call(slot, 'isAuto')) {
+        return !!slot.isAuto;
+      }
+      var storageApi = global.Game && global.Game.Storage;
+      var autoIndex = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+      return index === autoIndex;
+    }
+
     function getBigMenuSlotName(slot, index) {
+      if (isAutoSlot(slot, index)) return deps.t('save.autoRetryName');
       var raw = slot && typeof slot === 'object' ? slot.name : '';
       if (typeof raw !== 'string') return getBigMenuDefaultSlotName(index);
       var text = raw.trim();

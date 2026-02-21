@@ -37,8 +37,11 @@
       }),
       upgrades: {
         talentPoints: toSafeInt(player.talentPoints, 0, 0),
+        damagePoints: toSafeInt(player.damagePoints, 0, 0),
         talentsApplied: cloneArray(player.talentsApplied),
         talentsPending: cloneArray(player.talentsPending),
+        cannonUpgradesApplied: cloneArray(player.cannonUpgradesApplied),
+        fenceUpgradesApplied: cloneArray(player.fenceUpgradesApplied),
       },
       modifications: {
         mods: cloneObject(player.mods, null),
@@ -76,8 +79,11 @@
 
     var upgrades = src.upgrades && typeof src.upgrades === 'object' ? src.upgrades : {};
     target.player.talentPoints = toSafeInt(upgrades.talentPoints, 0, 0);
+    target.player.damagePoints = toSafeInt(upgrades.damagePoints, 0, 0);
     target.player.talentsApplied = cloneArray(upgrades.talentsApplied);
     target.player.talentsPending = cloneArray(upgrades.talentsPending);
+    target.player.cannonUpgradesApplied = cloneArray(upgrades.cannonUpgradesApplied);
+    target.player.fenceUpgradesApplied = cloneArray(upgrades.fenceUpgradesApplied);
 
     var modifications = src.modifications && typeof src.modifications === 'object' ? src.modifications : {};
     target.player.mods = cloneObject(modifications.mods, null);

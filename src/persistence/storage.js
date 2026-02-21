@@ -262,9 +262,7 @@
       var write = safeSetItem(getSlotDataKey(slotIndex), JSON.stringify(serialized));
       if (!write.ok) return { ok: false, error: write.error };
 
-      var nameToSet = slotIndex === AUTO_SLOT_INDEX ? AUTO_SLOT_NAME : undefined;
       var metaRes = updateMetaField(slotIndex, {
-        name: nameToSet,
         lastSavedAt: Date.now(),
       });
       if (!metaRes.ok) return { ok: false, error: metaRes.error };

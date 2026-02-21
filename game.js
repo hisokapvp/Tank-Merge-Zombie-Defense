@@ -394,6 +394,7 @@ let worldEventsRuntimeController = null;
 let crateRuntimeController = null;
 let zombieRenderRuntimeController = null;
 let bigMenuRuntimeController = null;
+let smallMenuRuntimeController = null;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
@@ -428,6 +429,11 @@ function createInitialState(options){
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
           unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
+        flags: {
+          preRetryAutosavedThisCritical: false,
+          wasCritical: false,
+          preRetrySaveFailed: false,
+        },
         selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [] };
   if (reason === 'new_game') {
     if (!initialState.player || typeof initialState.player !== 'object') {
@@ -461,6 +467,23 @@ function ensureDamageProgressState(){
 function ensureDamagePointsSpentState(){
   state.damagePointsSpent = normalizeDamagePointsSpent(state.damagePointsSpent);
   return state.damagePointsSpent;
+}
+
+function ensureRuntimeFlagsState(){
+  if (!state.flags || typeof state.flags !== 'object') {
+    state.flags = {};
+  }
+  state.flags.preRetryAutosavedThisCritical = !!state.flags.preRetryAutosavedThisCritical;
+  state.flags.wasCritical = !!state.flags.wasCritical;
+  state.flags.preRetrySaveFailed = !!state.flags.preRetrySaveFailed;
+  return state.flags;
+}
+
+function resetCriticalEntryRuntimeFlags(){
+  var flags = ensureRuntimeFlagsState();
+  flags.preRetryAutosavedThisCritical = false;
+  flags.wasCritical = false;
+  flags.preRetrySaveFailed = false;
 }
 
 function ensurePlayerDamagePointsState(){
@@ -3706,6 +3729,7 @@ function restoreFullState(saved){
   if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
     try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
   }
+  resetCriticalEntryRuntimeFlags();
 }
 
 function inflateBuyPrice(price, count){
@@ -6360,25 +6384,141 @@ function clearAllTanksFromCells(targetState){
   }
 }
 
-function forceAutosaveSafely(){
+function getAutoRetrySlotIndex(){
+  var storageApi = window.Game && window.Game.Storage;
+  return storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+}
+
+function isValidSavedPayload(payload){
+  return !!(payload && Array.isArray(payload.cells));
+}
+
+function cloneJsonSafe(value, fallback){
   try {
-    meta.lastSeenAt = Date.now();
-    const storageApi = window.Game && window.Game.Storage;
-    if (!storageApi || typeof storageApi.saveSlot !== 'function') {
-      saveProgress();
-      return;
-    }
-    const autoIndex = Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
-    const result = storageApi.saveSlot(autoIndex, state);
-    if (!result || !result.ok) {
-      console.warn('Autosave failed:', result && result.error ? result.error : 'unknown');
-      if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-        window.Game.Toast.show(t('menu.save.toast.error'), 1800);
-      }
-    }
-  } catch (e) {
-    console.warn('Autosave failed:', e);
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return fallback;
   }
+}
+
+function applyPreRetryRuntimeReset(targetState){
+  if (!targetState || typeof targetState !== 'object') return;
+  targetState.coins = 120;
+  targetState.kills = 0;
+  targetState.zombieWaveAtkMult = 1;
+  targetState.fenceLevel = 1;
+  targetState.zombies = [];
+  targetState.projectiles = [];
+  targetState.impacts = [];
+  targetState.decals = [];
+  targetState.particles = [];
+  targetState.damageNumbers = [];
+  targetState.dragging = null;
+  targetState.crate = null;
+  targetState.nextCrateAt = 0;
+  targetState.boostUntil = 0;
+  targetState.empUntil = 0;
+  targetState.activeEffects = {
+    attackUntil: 0,
+    speedUntil: 0,
+    economyUntil: 0,
+  };
+  if (!Array.isArray(targetState.cells)) targetState.cells = [];
+  for (let i = 0; i < targetState.cells.length; i++) {
+    const cell = targetState.cells[i];
+    if (!cell) continue;
+    cell.tank = null;
+  }
+  var seeded = 0;
+  for (let i = 0; i < targetState.cells.length && seeded < 2; i++) {
+    const cell = targetState.cells[i];
+    if (!cell || cell.tank) continue;
+    cell.tank = makeTank(1, true);
+    seeded += 1;
+  }
+  if (!targetState.supercomputer || typeof targetState.supercomputer !== 'object') {
+    targetState.supercomputer = {};
+  }
+  var sc = targetState.supercomputer;
+  var maxHp = Number.isFinite(sc.maxHp) && sc.maxHp > 0 ? Math.floor(sc.maxHp) : 920;
+  sc.maxHp = maxHp;
+  sc.hp = maxHp;
+  sc.state = 'idle';
+  sc.animElapsedSec = 0;
+  sc.glitchLoopsRemaining = 0;
+  sc.pendingBuildTank = false;
+  sc.wantsBuildTank = false;
+  sc.destroyedAt = 0;
+}
+
+function buildPreRetryPayload(currentState){
+  var source = currentState && typeof currentState === 'object' ? currentState : state;
+  var payload = createInitialState({ reason: 'reset' });
+  payload.cells = [];
+  if (Array.isArray(source.cells) && source.cells.length) {
+    for (let i = 0; i < source.cells.length; i++) {
+      const sourceCell = source.cells[i];
+      payload.cells.push({
+        i: sourceCell && Number.isFinite(sourceCell.i) ? sourceCell.i : i,
+        orbitPhase: sourceCell ? sourceCell.orbitPhase : 0,
+        tank: null,
+      });
+    }
+  }
+  var snapshot = null;
+  if (WorldResetApi && typeof WorldResetApi.takeProgressSnapshot === 'function') {
+    snapshot = WorldResetApi.takeProgressSnapshot(source);
+  }
+  if (snapshot && WorldResetApi && typeof WorldResetApi.restoreProgressSnapshot === 'function') {
+    WorldResetApi.restoreProgressSnapshot(payload, snapshot);
+  }
+
+  payload.buyCounts = cloneJsonSafe(source.buyCounts, {});
+  payload.buyPrices = cloneJsonSafe(source.buyPrices, {});
+  payload.maxTankLevelAchieved = Number.isFinite(source.maxTankLevelAchieved)
+    ? Math.max(1, Math.floor(source.maxTankLevelAchieved))
+    : 1;
+
+  applyPreRetryRuntimeReset(payload);
+  return payload;
+}
+
+function savePreRetryPayloadToAutoSlot(){
+  var flags = ensureRuntimeFlagsState();
+  if (flags.preRetryAutosavedThisCritical) return;
+  flags.preRetryAutosavedThisCritical = true;
+
+  var storageApi = window.Game && window.Game.Storage;
+  if (!storageApi || typeof storageApi.saveSlot !== 'function') {
+    flags.preRetrySaveFailed = true;
+    return;
+  }
+
+  var payload = buildPreRetryPayload(state);
+  var result = storageApi.saveSlot(getAutoRetrySlotIndex(), payload);
+  if (!result || !result.ok) {
+    flags.preRetrySaveFailed = true;
+    console.warn('Pre-retry autosave failed:', result && result.error ? result.error : 'unknown');
+    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      window.Game.Toast.show(t('menu.save.toast.error'), 1800);
+    }
+    return;
+  }
+  flags.preRetrySaveFailed = false;
+}
+
+function loadPreRetryPayloadFromAutoSlot(){
+  var storageApi = window.Game && window.Game.Storage;
+  if (!storageApi || typeof storageApi.loadSlot !== 'function') return null;
+  var loaded = storageApi.loadSlot(getAutoRetrySlotIndex());
+  if (!loaded || !loaded.ok || !isValidSavedPayload(loaded.payload)) return null;
+  return loaded.payload;
+}
+
+function canRestartFromAutoSlot(){
+  var flags = ensureRuntimeFlagsState();
+  if (flags.preRetrySaveFailed) return false;
+  return !!loadPreRetryPayloadFromAutoSlot();
 }
 
 function restoreFenceSegmentsToMaxHp(){
@@ -6464,6 +6604,7 @@ function finalizePartialRestartRestore(){
   restoreFenceSegmentsToMaxHp();
   restoreSupercomputerAfterCritical();
   criticalFlowActive = false;
+  resetCriticalEntryRuntimeFlags();
   updateDamagePointsUI();
   closeCriticalModal();
   updateUI();
@@ -6488,23 +6629,47 @@ function restartSimulationPartial(){
 }
 
 function performCriticalRestart(){
-  restartSimulationPartial();
+  var payload = loadPreRetryPayloadFromAutoSlot();
+  if (!payload) {
+    var flags = ensureRuntimeFlagsState();
+    flags.preRetrySaveFailed = true;
+    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      window.Game.Toast.show(t('menu.load.toast.error'), 1800);
+    }
+    return;
+  }
+  criticalFlowActive = false;
+  resetCriticalEntryRuntimeFlags();
+  startFromBigMenu({ kind: 'load-slot', payload: payload });
 }
 
 function handleCriticalSaveAndExit(){
-  location.reload();
+  criticalFlowActive = false;
+  if (smallMenuRuntimeController && typeof smallMenuRuntimeController.openCriticalSaveView === 'function') {
+    smallMenuRuntimeController.openCriticalSaveView();
+    return;
+  }
+  setMenuOpen(true);
+  if (ui.menuSave && typeof ui.menuSave.click === 'function') ui.menuSave.click();
+}
+
+function handleCriticalCloseToMenu(){
+  criticalFlowActive = false;
+  resetCriticalEntryRuntimeFlags();
+  stopAndResetSessionToBigMenu();
 }
 
 function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
-  forceAutosaveSafely();
   clearAllTanksFromCells(state);
   const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
   controller.open({
     hasDrones,
     onSaveExit: handleCriticalSaveAndExit,
     onRestart: performCriticalRestart,
+    onClose: handleCriticalCloseToMenu,
+    canRestart: canRestartFromAutoSlot(),
   });
 }
 
@@ -6520,6 +6685,7 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  resetCriticalEntryRuntimeFlags();
   if (reason === 'new_game') {
     resetWorldEventsRuntimeForNewGame();
   }
@@ -9479,6 +9645,15 @@ function setSupercomputerWantsBuildTank(wantsBuildTank){
 function applySupercomputerDamage(baseDamage){
   const sc = getComputerState();
   if (!sc) return { finalDamage: 0, hp: 0, destroyedNow: false };
+  const flags = ensureRuntimeFlagsState();
+  const maxHp = Number.isFinite(sc.maxHp) && sc.maxHp > 0 ? sc.maxHp : Math.max(1, Number.isFinite(sc.hp) ? sc.hp : 1);
+  const hpThreshold = maxHp * 0.05;
+  const isCriticalNow = Number.isFinite(sc.hp) && sc.hp <= hpThreshold;
+  if (!isCriticalNow) {
+    flags.preRetryAutosavedThisCritical = false;
+    flags.wasCritical = false;
+    flags.preRetrySaveFailed = false;
+  }
   if (criticalFlowActive) {
     return { finalDamage: 0, hp: sc.hp, destroyedNow: false, clampedCritical: true };
   }
@@ -9487,12 +9662,12 @@ function applySupercomputerDamage(baseDamage){
   const armorFlat = Number.isFinite(sc.armorFlat) ? Math.max(0, sc.armorFlat) : 0;
   const finalDamage = Math.max(0, incoming - armorFlat);
   const prevHp = Number.isFinite(sc.hp) ? Math.max(0, sc.hp) : 0;
-  const maxHp = Number.isFinite(sc.maxHp) && sc.maxHp > 0 ? sc.maxHp : Math.max(1, prevHp);
-  const hpThreshold = maxHp * 0.05;
 
-  if (prevHp > hpThreshold && (prevHp - finalDamage) <= hpThreshold) {
+  if (!flags.wasCritical && prevHp > hpThreshold && (prevHp - finalDamage) <= hpThreshold) {
     const appliedToThreshold = Math.max(0, prevHp - hpThreshold);
     sc.hp = hpThreshold;
+    flags.wasCritical = true;
+    savePreRetryPayloadToAutoSlot();
     criticalFlowActive = true;
     openCriticalModal();
     return { finalDamage: appliedToThreshold, hp: sc.hp, destroyedNow: false, clampedCritical: true };
@@ -9799,6 +9974,8 @@ async function boot(){
         openTalents,
         openSupercomputerMenu,
         setMenuOpen,
+        onSmallMenuApiReady: (api) => { smallMenuRuntimeController = api || null; },
+        onCriticalSaveExitCompleted: () => { stopAndResetSessionToBigMenu(); },
         stopAndResetSessionToBigMenu,
         updateBigMenuLoadState,
         isSessionStartUnlocked: () => sessionStartGate === 'unlocked',

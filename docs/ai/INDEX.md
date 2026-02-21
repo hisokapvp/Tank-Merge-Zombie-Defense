@@ -38,7 +38,7 @@
 - Small menu `New`: добавлен confirm-view `menuNewConfirmView` (`Продолжить` стартует New game, `Назад` возвращает в root small menu).
 - [Fix] Тесты: исправлены моки для `adminFlags_visibility` и `fenceSquareGeometry`, устранена ложная детекция "zombie road" в `game.js`, поправлена близость кода в `bootstrap.js` для прохождения `newGamePopupReset`.
 - Slot storage: `saveSlotsMeta_v1` + `saveSlot_v1_0..9`; legacy `progress` мигрируется в слот 1 (`index 0`) при первой инициализации слотов.
-- Слот 10 (`index 9`) зарезервирован под `Auto`; обновляется только autosave при входе supercomputer в critical режим.
+- Слот 10 (`index 9`) зарезервирован под pre-retry autosave: создаётся при входе supercomputer в critical-эпизод (один раз за эпизод), в Load отображается через i18n (`save.autoRetryName`), в Save недоступен для ручного save/rename/delete.
 - Удалён legacy-виджет пользовательских отзывов из UI и рантайма (small/big menu + modal).
 - Achievements modal: accordion single-open с toggler `+`/`−`, по умолчанию всё закрыто при открытии.
 - `#supercomputerBtn`: стабильная позиция при press/hover, без transform-конфликта с unified button behavior.

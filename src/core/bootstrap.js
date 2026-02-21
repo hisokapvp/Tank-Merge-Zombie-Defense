@@ -54,6 +54,22 @@
     var saveToastTimer = null;
     var lastActiveButtonIdSmallMenu = null;
     var AUTO_SLOT_INDEX = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+    var saveViewConfig = {
+      manualOnly: false,
+      exitAfterSave: false,
+    };
+
+    function resetSaveViewConfig() {
+      saveViewConfig.manualOnly = false;
+      saveViewConfig.exitAfterSave = false;
+    }
+
+    function isAutoSlot(slot, index) {
+      if (slot && typeof slot === 'object' && Object.prototype.hasOwnProperty.call(slot, 'isAuto')) {
+        return !!slot.isAuto;
+      }
+      return index === AUTO_SLOT_INDEX;
+    }
 
     function getSmallMenuButtons() {
       return [opts.ui.menuContinue, opts.ui.menuNew, opts.ui.menuSave, opts.ui.menuLoad, opts.ui.menuExit];
@@ -111,6 +127,7 @@
     }
 
     function getSlotName(slot, index) {
+      if (isAutoSlot(slot, index)) return opts.t('save.autoRetryName');
       var raw = slot && typeof slot === 'object' ? slot.name : '';
       if (typeof raw !== 'string') return defaultSlotName(index);
       var text = raw.trim();
@@ -195,14 +212,17 @@
       var meta = getSaveMeta();
       var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
       targetRows.innerHTML = '';
+      var rowCount = mode === 'save' && saveViewConfig.manualOnly ? 9 : 10;
 
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < rowCount; i++) {
         var row = documentObj.createElement('div');
         row.className = 'smallMenuSaveTable__row';
         row.setAttribute('role', 'row');
         row.setAttribute('data-slot-index', String(i));
 
         var slot = slots[i] || null;
+        var isAuto = isAutoSlot(slot, i);
+        row.setAttribute('data-slot-auto', isAuto ? 'true' : 'false');
 
         var numberCell = documentObj.createElement('div');
         numberCell.className = 'smallMenuSaveTable__cell smallMenuSaveTable__cell_num';
@@ -241,7 +261,7 @@
           saveButton.disabled = !slotHasData(slot);
         } else {
           saveButton.textContent = opts.t('menu.save.col.action');
-          saveButton.disabled = i === AUTO_SLOT_INDEX;
+          saveButton.disabled = isAuto;
         }
 
         actionCell.appendChild(saveButton);
@@ -256,9 +276,10 @@
     }
 
     function openNameInlineEdit(slotIndex) {
-      if (!opts.ui.smallMenuSaveRows || slotIndex === AUTO_SLOT_INDEX) return;
+      if (!opts.ui.smallMenuSaveRows) return;
       var row = opts.ui.smallMenuSaveRows.querySelector('[data-slot-index="' + String(slotIndex) + '"]');
       if (!row) return;
+      if (row.getAttribute('data-slot-auto') === 'true') return;
       var nameCell = row.querySelector('.smallMenuSaveTable__cell_name');
       if (!nameCell) return;
 
@@ -317,12 +338,16 @@
     }
 
     function openMainMenuView() {
+      resetSaveViewConfig();
       setSlotViewsOpen('none');
       setMenuView('main');
       applySmallMenuSelectedState();
     }
 
-    function openSaveView() {
+    function openSaveView(config) {
+      var cfg = config && typeof config === 'object' ? config : {};
+      saveViewConfig.manualOnly = !!cfg.manualOnly;
+      saveViewConfig.exitAfterSave = !!cfg.exitAfterSave;
       setSlotViewsOpen('save');
       renderSlotRows('save');
       if (typeof opts.updateBigMenuLoadState === 'function') {
@@ -331,6 +356,7 @@
     }
 
     function openLoadView() {
+      resetSaveViewConfig();
       setSlotViewsOpen('load');
       renderSlotRows('load');
       if (typeof opts.updateBigMenuLoadState === 'function') {
@@ -356,6 +382,9 @@
       showSaveToast('menu.save.toast.saved');
       if (typeof opts.updateBigMenuLoadState === 'function') {
         opts.updateBigMenuLoadState();
+      }
+      if (saveViewConfig.exitAfterSave && typeof opts.onCriticalSaveExitCompleted === 'function') {
+        opts.onCriticalSaveExitCompleted(slotIndex);
       }
       return true;
     }
@@ -392,6 +421,20 @@
         opts.syncVolumeUIFromSettings();
       }
       opts.setMenuOpen(true);
+    }
+
+    if (typeof opts.onSmallMenuApiReady === 'function') {
+      opts.onSmallMenuApiReady({
+        openSaveView: function (config) {
+          openSaveView(config);
+          opts.setMenuOpen(true);
+        },
+        openCriticalSaveView: function () {
+          markSmallMenuButtonActive('menuSave');
+          openSaveView({ manualOnly: true, exitAfterSave: true });
+          opts.setMenuOpen(true);
+        },
+      });
     }
 
     function openExitConfirmView() {
@@ -435,7 +478,7 @@
 
     opts.ui.menuSave && opts.ui.menuSave.addEventListener('click', function () {
       markSmallMenuButtonActive('menuSave');
-      openSaveView();
+      openSaveView({ manualOnly: false, exitAfterSave: false });
     });
     opts.ui.menuLoad && opts.ui.menuLoad.addEventListener('click', function () {
       markSmallMenuButtonActive('menuLoad');
@@ -447,7 +490,9 @@
       if (target.closest('[data-save-slot-btn="true"]')) return;
       if (activeInlineEditSlotIndex >= 0) return;
       var slotIndex = parseSlotIndexFromNode(target);
-      if (slotIndex < 0 || slotIndex === AUTO_SLOT_INDEX) return;
+      if (slotIndex < 0) return;
+      var row = target.closest('[data-slot-index]');
+      if (row && row.getAttribute('data-slot-auto') === 'true') return;
       event.preventDefault();
       openNameInlineEdit(slotIndex);
     });

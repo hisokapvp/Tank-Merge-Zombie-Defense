@@ -25,7 +25,10 @@
 - Данные слотов: `saveSlot_v1_0 ... saveSlot_v1_9` (индексы `0..9`, UI слоты `1..10`).
 - Формат meta: `{ slots: Array<{ name: string, lastSavedAt: number|null }> }`, всегда нормализуется до 10 элементов.
 - Формат payload слота: сериализованное состояние игры + `payload.version = 1`.
-- Слот `10` (`index = 9`) зарезервирован под Auto: имя фиксировано как `Auto`, ручной Save в него не выполняется.
+- Слот `10` (`index = 9`) зарезервирован под Auto (`save before retry`):
+	- в UI `Load` он отображается по i18n-ключу `save.autoRetryName` (meta.name игнорируется),
+	- в UI `Save` он недоступен для сохранения/rename/delete,
+	- логика авто-слота определяется через `slot.isAuto` из `Storage.listSlots()`.
 
 ## Backend-абстракция слотов
 - Реализация в `src/persistence/storage.js` разделена на backend-контракт и текущий LocalStorage backend.
@@ -52,8 +55,29 @@
 ## Save/Load и Auto-trigger
 - Manual Save (`small menu -> Save`) пишет payload в выбранный слот `1..9`.
 - Load (`big menu Load` и `small menu Load`) использует тот же список 10 статичных слотов, пустые слоты disabled.
-- Autosave в слот `10` (`index 9`) выполняется только при входе суперкомпьютера в critical-режим.
-- Ошибка autosave не блокирует critical flow: только warning/toast, runtime продолжается.
+- `saveSlot()` обновляет meta только полем `lastSavedAt` (без передачи `name`), чтобы обычное сохранение не перетирало пользовательский rename.
+- Autosave `pre-retry` в слот `10` (`index 9`) выполняется на входе в critical-режим **один раз за critical-эпизод**.
+	- После выхода из critical-фазы флаг эпизода сбрасывается; при следующем входе autosave снова выполняется.
+	- Payload pre-retry: runtime сброшен (2 танка L1, стены L1, монеты 120), meta-прогресс сохранён (achievements, mods, talents, drones, damage points, cannon/fence upgrades).
+	- Ошибка autosave (quota/parse/доступ) не ломает critical flow: ставится runtime-флаг `preRetrySaveFailed`, показывается warning/toast.
+
+## Critical modal и save/load сценарии
+- `Перезапустить симуляцию`:
+	- использует только Auto-slot (`index 9`),
+	- если autosave неуспешен или слот пуст/битый — кнопка restart disabled,
+	- при успехе применяется тот же load/start path, что и big menu `Load` (`startFromBigMenu({ kind: 'load-slot' ... })`) без запуска второго main loop.
+- `Сохранить прогресс и выйти`:
+	- открывает save-view в small menu только для manual-слотов `1..9` (`index 0..8`),
+	- после успешного сохранения выполняется штатный выход в меню.
+- `×`:
+	- без дополнительных действий завершает critical-сценарий и возвращает в меню.
+
+## Как воспроизвести и проверить
+1. Переименовать manual-слот, сохранить в него, перезагрузить страницу: имя слота не сбрасывается на `Слот X`.
+2. Довести HP supercomputer до порога critical (≤ 5%): проверить, что autosave в auto-slot происходит ровно один раз за вход.
+3. Выйти из critical и снова войти: autosave снова выполняется один раз.
+4. В critical modal нажать restart: если auto-slot валиден, загрузка идёт через общий load-flow и стартовое состояние соответствует pre-retry reset.
+5. Вызвать ошибку autosave (например, quota): убедиться, что modal не падает, restart disabled.
 
 ## Cannon upgrades state
 - Постоянное состояние апгрейдов орудий хранится в `state.player.cannonUpgradesApplied`.
