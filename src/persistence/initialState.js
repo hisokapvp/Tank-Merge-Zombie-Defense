@@ -3,6 +3,7 @@
 
   function createInitialState(options) {
     var opts = options || {};
+    var reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
     var maxLevel = Number.isFinite(opts.maxLevel) ? Math.floor(opts.maxLevel) : 60;
 
     return {
@@ -63,10 +64,16 @@
         eventShown60: false,
       },
       player: {
-        talentPoints: 0,
+        talentPoints: reason === 'new_game' ? 1 : 0,
         damagePoints: 0,
         talentsApplied: [],
         talentsPending: [],
+        talentsVersion: 2,
+        talentsV2: {
+          ranksById: {},
+          freePoints: reason === 'new_game' ? 1 : 0,
+        },
+        freeTalentPointsV2: reason === 'new_game' ? 1 : 0,
         activeCooldowns: [0, 0, 0],
         cannonUpgradesApplied: Array(maxLevel).fill(0),
         fenceUpgradesApplied: Array(60).fill(0),

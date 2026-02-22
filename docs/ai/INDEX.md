@@ -10,6 +10,8 @@
 - UI: `docs/ai/SYSTEMS/ui.md`
 - Render/Canvas: `docs/ai/SYSTEMS/render.md`
 - Assets/JSON: `docs/ai/SYSTEMS/assets.md`
+- Talents v2 data + runtime API: `docs/talents_v2.md`
+- Talents v2 UI integration (3 ветки одновременно/actives/status icons): `docs/ui_talents_v2.md`
 - Combat: `docs/ai/SYSTEMS/combat.md`
 - Save/Offline: `docs/ai/SYSTEMS/save.md`
 - Achievements: `docs/ai/SYSTEMS/achievements.md`
@@ -26,6 +28,16 @@
 - Zombie rendering вынесен в `src/render/zombieRender.js`.
 - Crate runtime вынесен в `src/mechanics/crateRuntime.js`.
 - SFX pool runtime вынесен в `src/audio/sfxPoolRuntime.js`.
+- Talents v2 runtime добавлен в `src/systems/talents/talentsV2.js` (`Game.TalentsV2`).
+- Talents v2 PACK 3: добавлены entity runtime-структуры (`_talentRt/_statusRt/_defRt`), timing helpers, DOT tick engine (`tickStatuses`) и ramp state helper (`_onShotCounterAndRamp`).
+- Talents v2 PACK 4: реализованы offense hooks (`onShotFired`, `onHit`) с per-shot procs/ICD, рикошет-цепочка (`extraHits`) без secondary procs и реальный DOT apply (`_applyDotDamage`) с HP-снятием без tank attribution.
+- Talents v2 PACK 5: добавлены run-runtime (`TalentsV2._runRt`), defense/economy hooks (`onWallDamage`, `onUpdate`, `onKill`, `onShotReward`, `onBuyTank`, `onPurchase`, `onOverkill`, `onWaveStart/End`) и runtime API активок (`activateDefenseActive`, `activateEconomyActive`) с recharge через catch-up `while`.
+- Talents v2 PACK 6: UI дерева переведён на `Game.TalentsV2` (3 ветки одновременно + SVG-связи по legacy-layout 3-3-3-3-2-2-1 + canBuy reason), active HUD использует `getActiveState(...)`, в world-render подключён `renderStatusIcons(...)` (limit=3, приоритеты status).
+- Talents v2 PACK 7: добавлена миграция legacy save v1 -> v2 по `talentsVersion` (`<2` или отсутствует) с fail-soft extract adapter, canonical map `MIGRATE_V1_TO_V2`, refund unknown и немедленным persist результата (`talentsVersion=2`).
+- Talents v2 PACK 8: добавлены строгая validation/reporting (`TalentsV2.validate()`), контрактная проверка `mods`, anti-freeze guard’ы catch-up `while` (DOT/ramp/recharge/interest), debug toggles (`debug_dtScale`, `debug_fixedDtMs`, `talents_debug_*`), `debugDump()` и debug overlay в бою.
+- Talents v2 PACK 9: `canBuy` переведён на строгий row-gating legacy-layout `3-3-3-3-2-2-1` (ряды `0/5/10/15/20/25/30` по spent в ветке) + обязательный prereq из предыдущего ряда (rank >= 1); V2 UI перестал пересоздавать talent-nodes каждый тик (signature-based render), что устраняет hover-SFX spam и потерю click при покупке.
+- Talents v2 runtime integration fix: `game.js/getMods()` теперь использует `Game.TalentsV2.getMods()` через legacy-adapter (`damage/fireRate/range/aoe`, `tankBuyCostMul`, `coinsKillMul/coinsShotMul`, `xpMul`), поэтому эффекты v2 реально влияют на бой и экономику.
+- QA чеклист Talents v2 вынесен в `docs/qa_talents_v2.md`.
 
 ## Текущие UI-акценты
 - Меню (big/small): last-click selected state без default selected на первом показе — `docs/ai/SYSTEMS/ui.md`.
@@ -58,10 +70,10 @@
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
-- Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; отдельный множитель `settings.trackLoopVolumeMul` (`0..1.1`) применяется мультипликативно к global SFX.
-- Sound menu: добавлен отдельный slider `sound.trackLoop` в small menu и big menu sound panel (`#menuTrackLoop`, `#bigMenuTrackLoop`).
+- Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; громкость задаётся кодовым множителем `AudioUi.TANK_DRIVE_VOLUME_MULT` (без UI-слайдера).
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
 - Debug panel: добавлен блок `Damage Points` (доступен при `?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
+- Debug panel tabs обновлены: удалены `Zombies`, `Roads/Hangar`, `Actives`, `Talents`; добавлен таб `Updates` (начисление `talent points` и `damage points` по кнопке `Окей`).
 - Zombie extra VFX policy: дополнительные zombie aura/glow/ring отключены в `src/render/zombieRender.js` через кодовый флаг `DISABLE_ZOMBIE_AURAS` (без правок `assets/zombies.json`).
 - Supercomputer weapons icons: единый поворот настраивается константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js`.
 

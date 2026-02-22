@@ -4,7 +4,7 @@
   var DEFAULT_SETTINGS = {
     sfxVolume: 0.75,
     musicVolume: 0.6,
-    trackLoopVolumeMul: 1.9,
+    trackLoopVolumeMul: 1.0,
   };
 
   var SFX_DEDUP_MS = 80;
@@ -24,13 +24,13 @@
     mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
     tankToTrack: ['assets/sfx/tank_to_track.ogg', 'assets/sfx/tank_to_track.mp3'],
     tankToHangar: ['assets/sfx/tank_to_hangar.ogg', 'assets/sfx/tank_to_hangar.mp3'],
-    trackLoop: ['assets/sfx/Sound_42494300 1633713642 (mp3cut.net).mp3'],
+    trackLoop: ['assets/sfx/TankDrive.ogg', 'assets/sfx/TankDrive.mp3'],
   };
 
   function clampTrackLoopVolumeMul(value) {
     var numeric = Number(value);
     if (!Number.isFinite(numeric)) return DEFAULT_SETTINGS.trackLoopVolumeMul;
-    return Math.max(0, Math.min(1.9, numeric));
+    return Math.max(0, Math.min(3, numeric));
   }
 
   function sfxSourceToMime(source) {
@@ -132,18 +132,6 @@
       }
       if (ui.menuSfxValue) {
         ui.menuSfxValue.textContent = String(Math.round((settings.sfxVolume || 0) * 100)) + '%';
-      }
-      if (ui.menuTrackLoop) {
-        ui.menuTrackLoop.value = Math.round(clampTrackLoopVolumeMul(settings.trackLoopVolumeMul) * 100);
-      }
-      if (ui.menuTrackLoopValue) {
-        ui.menuTrackLoopValue.textContent = String(Math.round(clampTrackLoopVolumeMul(settings.trackLoopVolumeMul) * 100)) + '%';
-      }
-      if (ui.bigMenuTrackLoop) {
-        ui.bigMenuTrackLoop.value = Math.round(clampTrackLoopVolumeMul(settings.trackLoopVolumeMul) * 100);
-      }
-      if (ui.bigMenuTrackLoopValue) {
-        ui.bigMenuTrackLoopValue.textContent = String(Math.round(clampTrackLoopVolumeMul(settings.trackLoopVolumeMul) * 100)) + '%';
       }
     }
 

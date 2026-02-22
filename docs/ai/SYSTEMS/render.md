@@ -8,6 +8,7 @@
 
 ## Интеграция
 - `drawZombieEntity`/`drawZombieSprite`/`drawZombieFallback` в `game.js` делегируются в `Game.ZombieRender` через `ensureZombieRenderRuntimeController()` с fallback на встроенный код.
+- Talents v2 status icons рендерятся в `game.js::draw()` через `Game.TalentsV2.renderStatusIcons(...)` только в world-render боя (не в UI/hangar).
 
 ## Правила
 - `draw()` только рисует; обновления состояния  вне отрисовки.

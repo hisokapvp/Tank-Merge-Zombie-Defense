@@ -93,3 +93,16 @@
 - Явное поле в `player`: `state.player.damagePoints` (нормализованное `>=0`, синхронизируется при расчёте доступных очков).
 - Слоты сохраняют/восстанавливают `state.player.damagePoints` в составе `player` через `src/persistence/storage.js` (`serializeState -> player`) и `restoreFullState`.
 - Debug-изменения очков (`+Add/-Add`) меняют игровое состояние и попадают в slot payload без новых ключей `localStorage`.
+
+## TalentsV2 (PACK 7, save shape + migration)
+- Runtime API: `Game.TalentsV2` (`src/systems/talents/talentsV2.js`).
+- Save-структура после миграции:
+	- `player.talentsVersion` (может отсутствовать);
+	- `player.talentsV2 = { ranksById: {...}, freePoints: number }`;
+	- `player.freeTalentPointsV2` (дублирует `talentsV2.freePoints` для совместимости UI).
+- Триггер миграции v1 -> v2:
+	- если `talentsVersion` отсутствует или `< 2`, `TalentsV2` выполняет миграцию legacy-данных и сразу сохраняет patch (`talentsVersion=2`, `talentsV2`, `freeTalentPointsV2`);
+	- если `talentsVersion >= 2`, миграция не выполняется (идемпотентно).
+- Политика unknown/refund/clamp:
+	- неизвестные v1-имена не ломают загрузку и возвращаются в `freePoints` как refund;
+	- ранги v2 всегда clamp по `maxRank` из дерева.

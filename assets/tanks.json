@@ -3647,7 +3647,7 @@
     "stats": {
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 610
+      "baseDamage": 61000000000
     },
     "body": {
       "src": "tanks/body.png",

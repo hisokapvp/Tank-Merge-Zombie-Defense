@@ -42,7 +42,7 @@
 
 ## Track loop (танк на трассе)
 - Loop-id: `trackLoop`, регистрируется в `src/audio/sfxPoolRuntime.js` и в `game.js` (`SFX_SOURCES`/`SFX_CHANNELS`).
-- Источник loop-аудио задаётся через `DEFAULT_TRACK_LOOP_SOURCES` в `game.js`; runtime берёт список через `getDefaultTrackLoopSources()`.
+- Источник loop-аудио задаётся через `DEFAULT_TRACK_LOOP_SOURCES` в `game.js` (актуально: `assets/sfx/TankDrive.ogg` + `assets/sfx/TankDrive.mp3`); runtime берёт список через `getDefaultTrackLoopSources()`.
 - Старт/стоп выполняется state-manager-ом в `game.js` (`syncTrackLoopSfxState(paused)`):
 	- `hasTankOnTrack && !paused` → `playLoopSfx('trackLoop')`
 	- иначе → `stopLoopSfx('trackLoop')` (мгновенный stop без fade).
@@ -50,7 +50,8 @@
 - Гарантированный stop `trackLoop` вызывается при `setMenuOpen(true)`, `setBigMenuOpen(true)`, `restartSimulationPartial()`, `resetGameState()`, `stopAndResetSessionToBigMenu()`, `visibilitychange(hidden)` и `pagehide`.
 
 ## Track loop volume
-- Поле в `settings`: `trackLoopVolumeMul` (default `1.0`, диапазон UI `0..1.1`), хранится в `localStorage` внутри ключа `settings`.
-- Формула итоговой громкости loop: `final = globalSfxVolume * trackLoopVolumeMul`.
+- Пользовательский UI-слайдер для `trackLoop` отсутствует (small menu + big menu).
+- Громкость loop управляется кодом через `AudioUi.TANK_DRIVE_VOLUME_MULT` в `src/config/audioUi.js`.
+- Формула итоговой громкости loop: `final = globalSfxVolume * TANK_DRIVE_VOLUME_MULT`.
 - Применение идёт через `resolveSfxPlaybackVolume('trackLoop', ...)` + `setLoopSfxVolume('trackLoop', ...)`.
-- Изменение global SFX меняет только итоговый `final` и не перезаписывает `trackLoopVolumeMul`.
+- Изменение global SFX меняет итоговый `final`, кодовый множитель остаётся фиксированным до правки конфига.

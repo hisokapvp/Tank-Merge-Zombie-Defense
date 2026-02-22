@@ -39,6 +39,7 @@ run_test "Pack 7 (analytics aggregation)" "Test/pack7/analytics_aggregation.test
 run_test "Pack 7 (fence square geometry)" "Test/pack7/fenceSquareGeometry.test.js"
 run_test "Pack 7 (fence corner slots)" "Test/pack7/fenceCornerSlots.test.js"
 run_test "Pack 7 (fence asset keys)" "Test/pack7/fenceAssetsCornersSides.test.js"
+run_test "Pack 8 (talents v1->v2 migration)" "Test/pack8/talentsV2_migration.test.js"
 run_test "Pack 8 (offline progress)" "Test/pack8/offlineProgress.test.js"
 run_test "Pack 9 (offline modal UI/i18n)" "Test/pack9/offlineModal_ui_i18n.test.js"
 

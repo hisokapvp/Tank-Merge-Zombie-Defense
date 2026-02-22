@@ -19,6 +19,7 @@
     var xpNeededForLevel = opts.xpNeededForLevel || function () { return 500; };
     var levelGoldReward = opts.levelGoldReward || function () { return 0; };
     var onComputerLevelChanged = typeof opts.onComputerLevelChanged === 'function' ? opts.onComputerLevelChanged : null;
+    var onTalentPointsGained = typeof opts.onTalentPointsGained === 'function' ? opts.onTalentPointsGained : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
 
     function getComputer() {
@@ -161,7 +162,16 @@
 
       p.xpToNext = xpNeededForLevel(p.computerLevel);
       if (leveled) {
-        if (state.player) state.player.talentPoints += gainedLevels;
+        if (state.player) {
+          state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + gainedLevels;
+          if (state.player.talentsV2 && typeof state.player.talentsV2 === 'object') {
+            state.player.talentsV2.freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0)) + gainedLevels;
+            state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
+          } else if (Number.isFinite(state.player.freeTalentPointsV2)) {
+            state.player.freeTalentPointsV2 = Math.max(0, Math.floor(state.player.freeTalentPointsV2 || 0)) + gainedLevels;
+          }
+        }
+        if (onTalentPointsGained) onTalentPointsGained(gainedLevels);
         state.coins += rewardGold;
         if (onComputerLevelChanged) {
           onComputerLevelChanged({

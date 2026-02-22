@@ -7,6 +7,14 @@
 - Инициализация: `src/core/bootstrap.js`
 - Critical modal: `src/ui/criticalModal.js`
 - Restart simulation flow: `game.js` (`restartSimulationPartial`) + `src/core/worldReset.js`
+- Talents v2 UI (overlay + HUD активок): `game.js` (`ensureTalentUI`, `updateTalentUI`, `updateStageAbilitySlots`) + контракт в `docs/ui_talents_v2.md`.
+	- Overlay Talents v2: одновременно рендерятся все 3 ветки (`offense/defense/economy`) в отдельных колонках.
+	- Для каждой ветки есть локальная кнопка `Сбросить выбор` (сбрасывает только pending-выбор этой ветки).
+	- В footer есть кнопка `Применить`, которая фиксирует pending-выбор и только после этого включает модификаторы талантов.
+	- Кнопка `Сбросить улучшения` сбрасывает и pending, и уже применённые ранги, плюс очищает runtime-эффекты талантов (active/status/defense runtime).
+	- Геометрия дерева и SVG-связи соответствуют legacy-layout (ряды `3-3-3-3-2-2-1`).
+	- Unlock-gating рядов в V2: row1..row6 открываются только при spent `5/10/15/20/25/30` в текущей ветке + минимум `1` rank в таланте из предыдущего ряда (row0 доступен сразу).
+	- V2 nodes не должны пересоздаваться каждый UI-tick: ререндер дерева допускается только при изменении signature (ranks/freePoints/canBuy/lang), иначе это провоцирует hover-SFX spam и потерю click-событий.
 
 ## Интеграция
 - Big menu функции (`setBigMenuOpen`, `openBigMenuLoadView`, `renderBigMenuTexts`, `startFromBigMenu`, `initBigMainMenu`) в `game.js` делегируются в `Game.BigMenuRuntime` через `ensureBigMenuRuntimeController()`.
@@ -38,12 +46,9 @@
 - Явный выбор для confirm считается только после пользовательского действия: `pointerdown/click`, фокус и подтверждение с клавиатуры (`Enter`/`Space`) или навигация стрелками (`ArrowLeft/Right/Up/Down`).
 - Пока `sessionStartGate=locked`, `Continue` в small menu недоступен; в сессию можно войти только через big menu `New` или успешный `Load(slot)`.
 
-## Sound menu: track loop slider
-- В `index.html` добавлен слайдер `#menuTrackLoop`/`#menuTrackLoopValue` (small menu) и `#bigMenuTrackLoop`/`#bigMenuTrackLoopValue` (big menu Sound panel).
-- i18n key для label: `sound.trackLoop` (`ru/en` + `fallbackStrings`).
-- Диапазон UI: `0..110` (то есть `trackLoopVolumeMul` в диапазоне `0..1.1`).
-- Привязка small menu: `src/core/bootstrap.js` (`input` → `setTrackLoopVolumeMul` → `syncVolumeUIFromSettings` → `saveSettings`).
-- Привязка big menu: `src/ui/bigMenuRuntime.js` (`input` → `setTrackLoopVolumeMul` → `syncVolumeUIFromSettings` → `saveSettings`).
+## Sound menu: track loop control
+- Слайдер `sound.trackLoop` удалён из small menu и big menu.
+- Громкость езды танка (`trackLoop`) настраивается только в коде: `src/config/audioUi.js` → `AudioUi.TANK_DRIVE_VOLUME_MULT`.
 
 ## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
@@ -135,11 +140,16 @@
 - Overflow-блокировки: если стоимость следующего шага превышает `Number.MAX_SAFE_INTEGER` или уходит в бесконечность, кнопка `+` блокируется.
 - Preview стены рисуется в canvas через `drawGunsSpriteCanvas` с использованием спрайта `sideTop` из `fence.json` (или дефолтного атласа, если `sideTop` не найден).
 
-## Debug panel extension: Damage Points
-- Реализация: `src/ui/adminDamagePoints.js`, инициализация из `src/core/bootstrap.js` рядом с `AdminFlags`.
-- Gating: блок рисуется при `?debug=1` (или `?debug=true`) в контейнер `#debugSectionLogs`.
-- Контролы: `input type="number"` + кнопки `+Add`/`-Add`; delta парсится как `Math.floor(Number(value))`, нечисловой ввод трактуется как `0`.
-- Изменение значения: `+Add`/`-Add` обновляют игровое состояние, значение clamp `>= 0`, после изменения вызывается refresh `supercomputer` UI (доступность `+`/`Улучшить`, reserve/points labels).
+## Debug panel tabs
+- Реализация: `src/ui/debugPanel.js`.
+- Текущий состав вкладок: `Tanks`, `Effects`, `Updates`, `Logs&Tools`.
+- Из панели удалены вкладки и связанный runtime UI-код: `Zombies`, `Roads/Hangar`, `Actives`, `Talents`.
+
+## Debug panel: Updates
+- Раздел `Updates` содержит два действия: `Talent points (+)` и `Damage points (+)`.
+- UX: `input type="number"` + кнопка `Окей`; значение парсится как `Math.floor(Number(value))`, невалидный ввод даёт `0`, начисление выполняется только для `>0`.
+- Начисление talent points идёт через `game.js -> debugAdjustTalentPoints(...)` (с синхронизацией `state.player.talentsV2.freePoints` и `freeTalentPointsV2`, а также `TalentsV2.setFreePoints(...)` при активном v2 runtime).
+- Начисление damage points идёт через `game.js -> debugAdjustDamagePoints(...)`, что корректно обновляет доступные очки и refresh supercomputer UI.
 
 ## Tank onTrack toggle
 - User-action переключения `tank.onTrack` выполняются из `canvas` pointer handlers в `game.js`, но само изменение состояния делается через единый entrypoint `setTankOnTrackState(...)` -> `Game.Garage.setTankOnTrack(...)`.

@@ -40,6 +40,9 @@
     }
 
     opts.ensureTalentState();
+    if (typeof opts.initTalentsV2 === 'function') {
+      await opts.initTalentsV2();
+    }
     var state = getState();
     if (state.supercomputer) {
       state.supercomputer.xpToNext = opts.xpNeededForLevel(state.supercomputer.computerLevel);
@@ -648,21 +651,6 @@
         opts.syncVolumeUIFromSettings();
       } else {
         opts.updateMenuVolumes();
-      }
-      opts.saveSettings();
-    });
-
-    opts.ui.menuTrackLoop && opts.ui.menuTrackLoop.addEventListener('input', function (e) {
-      if (typeof opts.setTrackLoopVolumeMul === 'function') {
-        opts.setTrackLoopVolumeMul(e.target.value, 'percent');
-      }
-      if (typeof opts.syncVolumeUIFromSettings === 'function') {
-        opts.syncVolumeUIFromSettings();
-      } else {
-        opts.updateMenuVolumes();
-      }
-      if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
-        opts.playUiSliderPreviewSfxThrottled();
       }
       opts.saveSettings();
     });
