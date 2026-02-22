@@ -123,6 +123,15 @@
       }
     }
 
+    function resetAttackEpisodeRuntime(worldEventsState) {
+      worldEventsState.attackSpawnDirA = null;
+      worldEventsState.attackSpawnDirB = null;
+      worldEventsState.attackSpawnDirC = null;
+      worldEventsState.attackSpawnPrevPrimaryDir = null;
+      worldEventsState.attackSpawnPrimaryStreak = 0;
+      worldEventsState.attackSpawnEpisodeKey = null;
+    }
+
     function processWeatherLightning(now, dt, weatherCfg) {
       var worldEventsState = deps.getWorldEventsState();
       var lightningCfg = weatherCfg && weatherCfg.lightning ? weatherCfg.lightning : {};
@@ -209,6 +218,7 @@
     function updateWorldEvents(dt) {
       var worldEventsState = deps.getWorldEventsState();
       var state = deps.getState();
+      var wasAttackActive = isZombieAttackModeActive();
       var attackCfg = getWorldEventsAttackCfg();
       var weatherCfg = getWeatherCfg();
       var rainCfg = weatherCfg.rain || {};
@@ -251,10 +261,6 @@
           if (worldEventsState.waveNumber > attackCfg.safeWaves) {
             state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
           }
-          // new attack episode started — pick episode directions
-          // ensure attack runtime fields exist
-          if (!Number.isFinite(worldEventsState.attackSpawnPrimaryStreak)) worldEventsState.attackSpawnPrimaryStreak = 0;
-          pickAttackEpisodeDirections(worldEventsState);
         }
 
         if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
@@ -272,6 +278,12 @@
       }
       if (weatherCfg.forceEnabled) {
         worldEventsState.weatherEnabled = true;
+      }
+
+      var attackActiveNow = isZombieAttackModeActive();
+      if (attackActiveNow && !wasAttackActive) {
+        if (!Number.isFinite(worldEventsState.attackSpawnPrimaryStreak)) worldEventsState.attackSpawnPrimaryStreak = 0;
+        pickAttackEpisodeDirections(worldEventsState);
       }
 
       updateDesiredAliveMultCurrent(dt, attackCfg);
@@ -371,9 +383,10 @@
       }
     }
 
-    function forceDisableAttackModeRuntime() {
-      var worldEventsState = deps.getWorldEventsState();
+    function forceDisableAttackModeRuntime(worldEventsStateOverride) {
+      var worldEventsState = worldEventsStateOverride || deps.getWorldEventsState();
       if (!worldEventsState || typeof worldEventsState !== 'object') return;
+      var state = deps.getState();
       // disable attack windows and weather
       worldEventsState.forceAttackActive = false;
       worldEventsState.attackStartAt = 0;
@@ -386,13 +399,11 @@
       worldEventsState.rainBlend = 0;
       worldEventsState.aliveMultCurrent = 1;
       worldEventsState.eveningDimBlend = 0;
-      // reset attack episode runtime fields
-      worldEventsState.attackSpawnDirA = null;
-      worldEventsState.attackSpawnDirB = null;
-      worldEventsState.attackSpawnDirC = null;
-      worldEventsState.attackSpawnPrevPrimaryDir = null;
-      worldEventsState.attackSpawnPrimaryStreak = 0;
-      worldEventsState.attackSpawnEpisodeKey = null;
+      worldEventsState.waveNumber = 0;
+      resetAttackEpisodeRuntime(worldEventsState);
+      if (state && typeof state === 'object') {
+        state.zombieWaveAtkMult = 1;
+      }
       // stop loop sfx that may run
       if (typeof deps.stopLoopSfx === 'function') {
         try { deps.stopLoopSfx('rainLoop'); } catch (e) {}

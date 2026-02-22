@@ -19,6 +19,8 @@
 - Если `supercomputer` не найден или координаты невалидны, используется fallback позиция `(0, 0)` без прерывания сценария.
 - В `onAfterRestore` обязательно сбрасывать zombie runtime к дефолту из `assets/zombies.json` (`spawn.targetAlive`) и пересинхронизировать живую популяцию.
 - В `onAfterRestore` обязательно сбрасывать `attackMode` к состоянию off/default: таймеры, ramp-мультипликатор `targetAlive`, погодные/event runtime флаги и связанные эффекты.
+- В `onAfterRestore` для partial restart обязательно фиксировать стены в base tier (`state.fenceLevel = 1`) с reinit fence-сегментов tier1.
+- В `onAfterRestore` обязательно сбрасывать накопленную инфляцию покупок в абсолютный старт (`buyCounts = {}`, `buyPrices = {}`), не затрагивая базовые формулы цены.
 
 ## Слоты и ключи localStorage (v1)
 - Метаданные слотов: `saveSlotsMeta_v1`.

@@ -69,6 +69,8 @@
 - Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels auto-shrink до `12px` минимум и защищены `text-overflow: ellipsis`.
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
+- AttackMode supplemental spawn: базовый sideCount-спавн сохраняется до `baseDesiredAlive`, а только attackMode-добавка (до `attackDesiredAlive`) идёт по эпизодным направлениям `dirA/dirB/dirC` с 50/25/25 и анти-повтором `dirA` (не более 2 эпизодов подряд).
+- Partial restart (`Перезапустить симуляцию`): после restore принудительно `fenceLevel=1` (tier1 reinit), сбрасываются `buyCounts/buyPrices` в абсолютный старт, а attackMode/runtime выключается единым force-off reset.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
 - Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; громкость задаётся кодовым множителем `AudioUi.TANK_DRIVE_VOLUME_MULT` (без UI-слайдера).
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.

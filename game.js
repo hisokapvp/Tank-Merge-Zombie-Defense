@@ -1851,6 +1851,12 @@ function resetWorldEventsRuntimeForNewGame(){
   worldEventsState.rainBlend = 0;
   worldEventsState.aliveMultCurrent = 1;
   worldEventsState.waveNumber = 0;
+  worldEventsState.attackSpawnDirA = null;
+  worldEventsState.attackSpawnDirB = null;
+  worldEventsState.attackSpawnDirC = null;
+  worldEventsState.attackSpawnPrevPrimaryDir = null;
+  worldEventsState.attackSpawnPrimaryStreak = 0;
+  worldEventsState.attackSpawnEpisodeKey = null;
 }
 
 function getDefaultZombieTargetAlive(){
@@ -1940,6 +1946,20 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
 }
 
 function finalizePartialRestartPostRestore(stateRef){
+  const targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (targetState && typeof targetState === 'object') {
+    targetState.fenceLevel = 1;
+    targetState.fenceSegments = [];
+    targetState.fenceSegmentsMeta = null;
+    targetState.savedFenceState = null;
+    targetState.buyCounts = {};
+    targetState.buyPrices = {};
+  }
+  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+    try { FenceSprites.ensureLevel(1); } catch (e) {}
+  }
+  ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
+
   // Явно очищаем зомби из переданного stateRef (и глобального state)
   var targetZombies = stateRef && Array.isArray(stateRef.zombies) ? stateRef.zombies : null;
   if (targetZombies && targetZombies.length > 0) targetZombies.length = 0;
@@ -7060,7 +7080,6 @@ function restartSimulationPartial(){
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
       resetWorldRuntime: resetWorldRuntimeState,
-      forceDisableAttackModeRuntime: function () { ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(); },
       onAfterRestore: function (restoredState) {
         finalizePartialRestartPostRestore(restoredState);
         finalizePartialRestartRestore();
@@ -7120,7 +7139,7 @@ function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
   // ensure attackMode is force-disabled immediately when showing critical modal
-  ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime();
+  ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
   clearAllTanksFromCells(state);
   const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
   controller.open({

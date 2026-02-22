@@ -15,7 +15,7 @@
 - Все "attackMode-доп." в рамках эпизода используют только эти три направления.
 
 2) AttackMode-эпизод (deterministic runtime rules)
-- При старте эпизода (переход attackMode false → true) runtime формирует эпизод:
+- При старте эпизода (переход attackMode false → true, включая force/debug-активацию) runtime формирует эпизод:
   - выбирает `dirA` (0..7). Если предыдущий прямой был одинаковым два эпизода подряд (`streak == 2`), то `dirA` выбирается с исключением предыдущего `prevPrimaryDir`.
   - выбирает `dirB` и `dirC` случайно из оставшихся (все три различны).
   - обновляет `attackSpawnPrimaryStreak`: если `dirA == prevPrimaryDir` → `streak++`, иначе `streak=1; prevPrimaryDir=dirA`.
@@ -32,9 +32,9 @@
 - Что сохраняется: прогресс игрока — таланты, апгрейды, дроны, достижения и т.п. (как раньше).
 - Что принудительно сбрасывается при partial restart:
   - `state.fenceLevel` = 1 (base tier);
-  - визуальные/логические сегменты стен пересоздаются как для tier1 (сброс `fenceSegments`, `fenceSegmentsMeta`, `savedFenceState` — следующее отрисовывающееся построение создаст tier1 сегменты);
+  - визуальные/логические сегменты стен пересоздаются как для tier1 (сброс `fenceSegments`, `fenceSegmentsMeta`, `savedFenceState` + принудительный `FenceSprites.ensureLevel(1)`);
   - инфляция цен покупки танков сбрасывается в "абсолютный старт" (`buyCounts = {}`, `buyPrices = {}`);
-  - attackMode runtime выключается полностью (force-off) и runtime-поля сбрасываются.
+  - attackMode runtime выключается полностью (force-off) и runtime-поля сбрасываются в `onAfterRestore`/post-restore step.
 
 5) Критерии проверки (как тестировать)
 - Старт эпизода фиксирует ровно 3 направления; в рамках эпизода дополнительный спавн использует только их.
