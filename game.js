@@ -2540,8 +2540,10 @@ function addDron(level){
 
 function recordTankLevel(level){
   state.maxTankLevelAchieved = Math.max(state.maxTankLevelAchieved || 0, level);
-  // sync fence level to maxTankLevelAchieved (clamped 1..60)
-  var clamped = Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(state.maxTankLevelAchieved || 1)));
+  // sync fence level to maxTankLevelAchieved (clamped by available fence levels)
+  var fenceLevels = getFenceLevels();
+  var maxFenceLevel = Array.isArray(fenceLevels) && fenceLevels.length ? fenceLevels.length : MAX_TANK_LEVEL;
+  var clamped = Math.max(1, Math.min(maxFenceLevel, Math.floor(state.maxTankLevelAchieved || 1)));
   state.fenceLevel = clamped;
   // reset/recreate fence segments so visuals rebuild for new atlas/level
   state.fenceSegments = [];
@@ -4080,8 +4082,10 @@ function restoreFullState(saved){
     };
   } else state.crate = null;
   refreshTanksPowerTier();
-  // sync fence level to maxTankLevelAchieved on load
-  var clampedFence = Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(state.maxTankLevelAchieved || state.fenceLevel || 1)));
+  // sync fence level to maxTankLevelAchieved on load (clamped by available fence levels)
+  var loadedFenceLevels = getFenceLevels();
+  var loadedFenceMax = Array.isArray(loadedFenceLevels) && loadedFenceLevels.length ? loadedFenceLevels.length : MAX_TANK_LEVEL;
+  var clampedFence = Math.max(1, Math.min(loadedFenceMax, Math.floor(state.maxTankLevelAchieved || state.fenceLevel || 1)));
   state.fenceLevel = clampedFence;
   state.fenceSegments = [];
   state.fenceSegmentsMeta = null;
@@ -4528,6 +4532,36 @@ function ensureZombieCount(){
     }
     // attackMode supplemental spawn — use episode dirs A/B/C (50/25/25)
     var w = worldEventsState || {};
+    var hasRuntimeDirs = Number.isFinite(w.attackSpawnDirA) && Number.isFinite(w.attackSpawnDirB) && Number.isFinite(w.attackSpawnDirC);
+    if (!hasRuntimeDirs) {
+      var prevPrimary = Number.isFinite(w.attackSpawnPrevPrimaryDir) ? w.attackSpawnPrevPrimaryDir : null;
+      var prevStreak = Number.isFinite(w.attackSpawnPrimaryStreak) ? Math.max(0, Math.floor(w.attackSpawnPrimaryStreak)) : 0;
+      var candidates = [];
+      for (var d = 0; d < 8; d++) candidates.push(d);
+      if (prevPrimary != null && prevStreak >= 2) {
+        candidates = candidates.filter(function (dir) { return dir !== prevPrimary; });
+      }
+      var idxPrimary = Math.floor(Math.random() * candidates.length);
+      var dirPrimary = candidates[idxPrimary];
+      var restDirs = [];
+      for (var d2 = 0; d2 < 8; d2++) if (d2 !== dirPrimary) restDirs.push(d2);
+      for (var ri = restDirs.length - 1; ri > 0; ri--) {
+        var rj = Math.floor(Math.random() * (ri + 1));
+        var tmp = restDirs[ri];
+        restDirs[ri] = restDirs[rj];
+        restDirs[rj] = tmp;
+      }
+      w.attackSpawnDirA = dirPrimary;
+      w.attackSpawnDirB = restDirs[0];
+      w.attackSpawnDirC = restDirs[1] || restDirs[0];
+      if (prevPrimary === dirPrimary) {
+        w.attackSpawnPrimaryStreak = prevStreak + 1;
+      } else {
+        w.attackSpawnPrimaryStreak = 1;
+        w.attackSpawnPrevPrimaryDir = dirPrimary;
+      }
+      w.attackSpawnEpisodeKey = (w.attackSpawnEpisodeKey || 0) + 1;
+    }
     var dirA = Number.isFinite(w.attackSpawnDirA) ? w.attackSpawnDirA : Math.floor(Math.random() * 8);
     var dirB = Number.isFinite(w.attackSpawnDirB) ? w.attackSpawnDirB : (dirA + 2) % 8;
     var dirC = Number.isFinite(w.attackSpawnDirC) ? w.attackSpawnDirC : (dirA + 6) % 8;
@@ -5409,6 +5443,7 @@ function startZombieDying(z){
   z.deathAnimSpeed = isCommonDeathAnim ? animCfg.deathCommonFps : animCfg.deathFps;
 
   const corpseHelper = Game?.CorpseDespawn;
+  const corpseCfg = ZombieSprites && ZombieSprites.corpseConfig ? ZombieSprites.corpseConfig : null;
   let animDuration = null;
   if (corpseHelper && corpseHelper.computeDeathAnimDuration) {
     animDuration = corpseHelper.computeDeathAnimDuration(z.deathAnim, z.deathAnimSpeed, z.deathDuration);
@@ -5420,15 +5455,25 @@ function startZombieDying(z){
     z.deathDuration = animDuration;
     z.deathTimer = z.deathDuration;
   }
-  if (corpseHelper && corpseHelper.computeCorpseDespawnTimer) {
-    z.corpseTimer = corpseHelper.computeCorpseDespawnTimer({
+
+  if (corpseHelper && corpseHelper.computeCorpseTiming) {
+    var corpseTiming = corpseHelper.computeCorpseTiming({
       deathAnim: z.deathAnim,
       deathAnimSpeed: z.deathAnimSpeed,
       deathDuration: z.deathDuration,
+      corpseConfig: corpseCfg,
     });
+    z.corpseTimerTotal = corpseTiming.corpseTimerTotal;
+    z.corpseTimerLeft = corpseTiming.corpseTimerTotal;
   } else {
-    z.corpseTimer = (Number.isFinite(animDuration) ? animDuration : (z.deathDuration || 0)) + 5;
+    var corpseDespawnSec = Number.isFinite(corpseCfg && corpseCfg.corpseDespawnSec)
+      ? Math.max(0, Number(corpseCfg.corpseDespawnSec))
+      : 3;
+    var total = (Number.isFinite(animDuration) ? animDuration : (z.deathDuration || 0)) + corpseDespawnSec;
+    z.corpseTimerTotal = total;
+    z.corpseTimerLeft = total;
   }
+  z.corpseTimer = z.corpseTimerLeft;
 
   state.coins += Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
   state.kills += 1;
@@ -5456,7 +5501,12 @@ function stepZombies(dt){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
       z.deathProgress = clamp(1 - z.deathTimer / (z.deathDuration || 0.65), 0, 1);
-      if (Number.isFinite(z.corpseTimer)) z.corpseTimer -= dt;
+      if (Number.isFinite(z.corpseTimerLeft)) {
+        z.corpseTimerLeft -= dt;
+      } else if (Number.isFinite(z.corpseTimer)) {
+        z.corpseTimerLeft = z.corpseTimer - dt;
+      }
+      if (Number.isFinite(z.corpseTimerLeft)) z.corpseTimer = z.corpseTimerLeft;
       
       // Advance death animation frame (non-loop: clamp to last frame)
       if (z.deathAnim) {
@@ -6277,12 +6327,13 @@ function crateHitTest(x,y){
 
 // ---------- Kills / respawn ----------
 function cleanupKills(){
+  const CORPSE_OVERFLOW_FADE_SEC = 0.2;
   const corpseMax = BAL.corpseMaxCount;
   let dyingCount = 0;
   if (Number.isFinite(corpseMax)){
     for (const z of state.zombies){
       if (z.state !== 'dying') continue;
-      const ttl = Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer;
+      const ttl = Number.isFinite(z.corpseTimerLeft) ? z.corpseTimerLeft : (Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer);
       if (ttl > 0) dyingCount++;
     }
   }
@@ -6291,12 +6342,16 @@ function cleanupKills(){
   const alive = [];
   for (const z of state.zombies){
     if (z.state === 'dying'){
-      const ttl = Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer;
+      const ttl = Number.isFinite(z.corpseTimerLeft) ? z.corpseTimerLeft : (Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer);
       if (ttl > 0){
-        if (!limitCorpses || keptDying < corpseMax){
-          alive.push(z);
+        if (limitCorpses && keptDying >= corpseMax) {
+          const reducedTtl = Math.min(ttl, CORPSE_OVERFLOW_FADE_SEC);
+          z.corpseTimerLeft = reducedTtl;
+          z.corpseTimer = reducedTtl;
+        } else {
           keptDying++;
         }
+        alive.push(z);
       }
       continue;
     }
@@ -10195,6 +10250,10 @@ function ensureZombieRenderRuntimeController(){
     zombieLevelScale: zombieLevelScale,
     getZombieBalanceMul: getZombieBalanceMul,
     getZombieDefaultAttackFps(){ return ZOMBIE_DEFAULT_ATTACK_FPS; },
+    getZombieCorpseFadeOutSec(){
+      const fadeOut = ZombieSprites && ZombieSprites.corpseConfig ? ZombieSprites.corpseConfig.corpseFadeOutSec : null;
+      return Number.isFinite(fadeOut) ? Math.max(0, fadeOut) : 0;
+    },
     isQualityLow(){ return !!qualityLow; },
   });
   return zombieRenderRuntimeController;

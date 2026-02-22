@@ -14,6 +14,8 @@
     "perSideTarget": 60,
     "perSideTolerance": 5
   },
+  "corpseDespawnSec": 1.5,
+  "corpseFadeOutSec": 0.8,
   "types": [
     {
       "id": "zombie_lvl1",

@@ -6,6 +6,22 @@
   function createController(deps) {
     deps = deps || {};
 
+    function getCorpseFadeAlpha(z, isDying) {
+      if (!isDying) return 1;
+      var deathTimer = Number.isFinite(z && z.deathTimer) ? z.deathTimer : 0;
+      if (deathTimer > 0) return 1;
+      var timeToRemove = Number.isFinite(z && z.corpseTimerLeft)
+        ? z.corpseTimerLeft
+        : (Number.isFinite(z && z.corpseTimer) ? z.corpseTimer : 0);
+      if (timeToRemove <= 0) return 0;
+      var fadeSec = typeof deps.getZombieCorpseFadeOutSec === 'function'
+        ? deps.getZombieCorpseFadeOutSec()
+        : 0;
+      if (!Number.isFinite(fadeSec) || fadeSec <= 0) return 1;
+      if (timeToRemove > fadeSec) return 1;
+      return deps.clamp(timeToRemove / fadeSec, 0, 1);
+    }
+
     function drawZombieEntity(z, x, y) {
       var ZombieSprites = deps.getZombieSprites();
       if (ZombieSprites.ready && ZombieSprites.atlasImg && z.type) {
@@ -29,6 +45,8 @@
       var isDying = z.state === 'dying';
       var hasDeathAnim = isDying && z.deathAnim;
       var hasAttackAnim = !isDying && z.attackState === 'attack' && t.attack;
+      var corpseFadeAlpha = getCorpseFadeAlpha(z, isDying);
+      if (corpseFadeAlpha <= 0) return;
 
       var fx;
       var fy;
@@ -77,7 +95,7 @@
       var death = isDying ? (z.deathProgress ?? 0) : 0;
       var deathScale = hasDeathAnim ? 1 : (1 - death * 0.22);
       var deathTilt = hasDeathAnim ? 0 : (death * 1.1);
-      var deathAlpha = 1;
+      var deathAlpha = corpseFadeAlpha;
 
       var state = deps.getState();
       var qualityLow = deps.isQualityLow();
@@ -150,6 +168,8 @@
       var s = BAL.zombieScaleMul * deps.zombieLevelScale(z);
       var levelBoost = deps.clamp((z.level ?? 1) - 1, 0, 6);
       var isDying = z.state === 'dying';
+      var corpseFadeAlpha = getCorpseFadeAlpha(z, isDying);
+      if (corpseFadeAlpha <= 0) return;
       var skinTone = state.endgameVisuals && !isDying ? deps.shade('#c85050', levelBoost * 8) : deps.shade('#3cbe78', levelBoost * 10);
       var death = isDying ? (z.deathProgress ?? 0) : 0;
       var deathScale = 1 - death * 0.22;
@@ -180,11 +200,11 @@
 
       ctx.save();
       ctx.translate(x, y + bob + groundOffset);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = corpseFadeAlpha;
       ctx.rotate(face * facing + deathTilt * facing);
       ctx.scale(s * facing * deathScale, s * deathScale);
 
-      ctx.globalAlpha = 0.95;
+      ctx.globalAlpha = 0.95 * corpseFadeAlpha;
       ctx.fillStyle = skinTone;
       ctx.strokeStyle = 'rgba(255,255,255,.10)';
       ctx.lineWidth = 2;

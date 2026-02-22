@@ -14,6 +14,14 @@
 - Для визуальных изменений проверять соответствующий loader/renderer в `src/render/*`.
 - Для `assets/credits.json` учитываются поля элемента: `name`, `role_ru`, `role_en`.
 
+## `assets/zombies.json` (corpse lifecycle)
+- `corpseDespawnSec`: время существования трупа **после** завершения death-анимации.
+- `corpseFadeOutSec`: длительность fade-out в конце life-time трупа.
+- Нормализация runtime:
+	- оба поля приводятся к `Number` и clamp к `>= 0`;
+	- `corpseFadeOutSec` дополнительно clamp'ится до `corpseDespawnSec`.
+- Edge-case: при `corpseDespawnSec = 0` труп удаляется сразу после завершения death-анимации.
+
 ## `assets/tanks.json` (UI-параметры)
 - Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
 - Ключ `ui.onTrackIconOpacity`:

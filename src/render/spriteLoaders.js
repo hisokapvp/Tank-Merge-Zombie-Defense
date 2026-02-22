@@ -136,6 +136,7 @@
       types: [],
       deathCommon: null,
       spawnConfig: null,
+      corpseConfig: null,
       load: async function () {
         try {
           var res = await fetch('assets/zombies.json', { cache: 'no-store' });
@@ -178,6 +179,18 @@
             };
           } else {
             this.spawnConfig = null;
+          }
+
+          var corpseHelper = global.Game && global.Game.CorpseDespawn ? global.Game.CorpseDespawn : null;
+          if (corpseHelper && typeof corpseHelper.normalizeCorpseTimingConfig === 'function') {
+            this.corpseConfig = corpseHelper.normalizeCorpseTimingConfig(data);
+          } else {
+            var corpseDespawnSec = Number.isFinite(data && data.corpseDespawnSec) ? Math.max(0, Number(data.corpseDespawnSec)) : 3;
+            var corpseFadeOutSec = Number.isFinite(data && data.corpseFadeOutSec) ? Math.max(0, Number(data.corpseFadeOutSec)) : 0.8;
+            this.corpseConfig = {
+              corpseDespawnSec: corpseDespawnSec,
+              corpseFadeOutSec: Math.min(corpseFadeOutSec, corpseDespawnSec),
+            };
           }
 
           this.types = (data.types || []).map(function (t) {
@@ -232,6 +245,7 @@
           this.types = [];
           this.deathCommon = null;
           this.spawnConfig = null;
+          this.corpseConfig = null;
           this.error = String(e);
         }
       },
@@ -572,6 +586,31 @@
           this.error = String(e);
         }
       },
+      ensureLevel: async function (level) {
+        var token = ++this._ensureLevelToken;
+        if (!this.config) return;
+        var lvl = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+        var perLevels = Array.isArray(this.config.levels) ? this.config.levels : null;
+        var atlasName = (perLevels && perLevels[lvl - 1] && perLevels[lvl - 1].atlas)
+          ? perLevels[lvl - 1].atlas
+          : this.config.atlas;
+        atlasName = atlasName || 'fence_atlas.png';
+        if (atlasName === this._currentAtlasName) return;
+        try {
+          var img = await loadImage('assets/' + atlasName);
+          if (token !== this._ensureLevelToken) return;
+          this.atlasImg = img;
+          this._currentAtlasName = atlasName;
+          this.ready = true;
+          this.error = '';
+          var state = getState();
+          if (state && Array.isArray(state.fenceSegments)) {
+            state.fenceSegments = [];
+          }
+        } catch (e) {
+          // keep previous atlas on failure
+        }
+      },
       pickFrame: function (spriteId) {
         return this.framesById.get(spriteId) || this.framesById.values().next().value;
       },
@@ -636,11 +675,6 @@
           if (!wallIds.length) {
             wallIds = autoIds.filter(function (id) {
               var frame = this.framesById.get(id);
-
-          // smoke config (optional)
-          this.config.smoke = data.smoke && typeof data.smoke === 'object' ? data.smoke : { frames: [], fps: 0, offset: { x: 0, y: 0 }, scale: 1 };
-
-          // ready
               return !!(frame && frame.isWall);
             }, this);
           }
@@ -653,28 +687,11 @@
             placementMaxAttempts: Number.isFinite(data.placementMaxAttempts)
               ? Math.max(1, Math.floor(data.placementMaxAttempts))
               : 40,
-      ensureLevel: async function (level) {
-        var token = ++this._ensureLevelToken;
-        if (!this.config) return;
-        var lvl = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
-        var perLevels = Array.isArray(this.config.levels) ? this.config.levels : null;
-        var atlasName = (perLevels && perLevels[lvl - 1] && perLevels[lvl - 1].atlas) ? perLevels[lvl - 1].atlas : this.config.atlas;
-        atlasName = atlasName || 'fence_atlas.png';
-        if (atlasName === this._currentAtlasName) return;
-        try {
-          var img = await loadImage('assets/' + atlasName);
-          // ensure last requested wins
-          if (token !== this._ensureLevelToken) return;
-          this.atlasImg = img;
-          this._currentAtlasName = atlasName;
-          this.ready = true;
-          this.error = '';
-        } catch (e) {
-          // fail silently, keep previous atlas
-        }
-      },
             blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
             blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
+            smoke: data.smoke && typeof data.smoke === 'object'
+              ? data.smoke
+              : { frames: [], fps: 0, offset: { x: 0, y: 0 }, scale: 1 },
           };
 
           this.ready = true;
