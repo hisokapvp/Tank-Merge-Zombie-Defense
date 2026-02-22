@@ -14,5 +14,10 @@
 - Релизные операции: `docs/ops/release/README.md`
 - Откат: `docs/ops/release/rollback_instructions.md`
 
+## Simulation notes
+
+- Attack-mode supplemental: описано в `docs/simulation.md` (см. ниже).
+
+
 ## Принцип
 Один источник истины на тему: функциональные детали  в `docs/ai/SYSTEMS/*`, процедуры  в `docs/ai/PLAYBOOKS/*`.

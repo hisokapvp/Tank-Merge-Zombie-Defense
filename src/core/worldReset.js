@@ -45,7 +45,6 @@
       },
       modifications: {
         mods: cloneObject(player.mods, null),
-        fenceLevel: toSafeInt(src.fenceLevel, 1, 1),
         totalDamageDealtRaw: toSafeInt(src.totalDamageDealtRaw, 0, 0),
         damagePointsSpent: toSafeInt(src.damagePointsSpent, 0, 0),
       },
@@ -88,7 +87,7 @@
     var modifications = src.modifications && typeof src.modifications === 'object' ? src.modifications : {};
     target.player.mods = cloneObject(modifications.mods, null);
     target.player.modsDirty = true;
-    target.fenceLevel = toSafeInt(modifications.fenceLevel, 1, 1);
+    // fenceLevel intentionally NOT restored here — partial restart should reset fences to tier1
     target.totalDamageDealtRaw = toSafeInt(modifications.totalDamageDealtRaw, 0, 0);
     target.damagePointsSpent = toSafeInt(modifications.damagePointsSpent, 0, 0);
 
@@ -130,6 +129,22 @@
 
     var afterState = opts.getState();
     restoreSnapshot(afterState, snapshot);
+
+    // Post-restore fixes for partial restart: ensure fences tier1, reset buy inflation, and force-disable attack runtime
+    try {
+      if (afterState && typeof afterState === 'object') {
+        afterState.fenceLevel = 1;
+        afterState.fenceSegments = Array.isArray(afterState.fenceSegments) ? [] : [];
+        afterState.fenceSegmentsMeta = null;
+        afterState.savedFenceState = null;
+        afterState.buyCounts = {};
+        afterState.buyPrices = {};
+      }
+    } catch (e) {}
+
+    if (typeof opts.forceDisableAttackModeRuntime === 'function') {
+      try { opts.forceDisableAttackModeRuntime(); } catch (e) {}
+    }
 
     if (typeof opts.onAfterRestore === 'function') {
       opts.onAfterRestore(afterState, snapshot);

@@ -1827,6 +1827,13 @@ const worldEventsState = {
   rainBlend: 0,
   aliveMultCurrent: 1,
   waveNumber: 0,
+  // attackMode supplemental spawn runtime fields
+  attackSpawnDirA: null,
+  attackSpawnDirB: null,
+  attackSpawnDirC: null,
+  attackSpawnPrevPrimaryDir: null,
+  attackSpawnPrimaryStreak: 0,
+  attackSpawnEpisodeKey: null,
 };
 
 function resetWorldEventsRuntimeForNewGame(){
@@ -4314,8 +4321,10 @@ function toSafeInt(value, fallback){
 }
 
 function getZombieSpawnBalanceConfig(){
+  // optional forced multiplier (for computing baseDesiredAlive)
+  const forced = arguments && arguments.length > 0 && Number.isFinite(arguments[0]) ? Number(arguments[0]) : null;
   const attackMult = getZombieAttackMultipliers();
-  const desiredAliveMult = Number.isFinite(attackMult.targetAliveMult) ? Math.max(0, attackMult.targetAliveMult) : 1;
+  const desiredAliveMult = forced != null ? Math.max(0, forced) : (Number.isFinite(attackMult.targetAliveMult) ? Math.max(0, attackMult.targetAliveMult) : 1);
   if (ZombieSpawnApi && ZombieSpawnApi.getZombieSpawnBalanceConfig) {
     return ZombieSpawnApi.getZombieSpawnBalanceConfig(
       ZombieSprites ? ZombieSprites.spawnConfig : null,
@@ -4449,7 +4458,9 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
 
 function ensureZombieCount(){
   const spawnCfg = getZombieSpawnBalanceConfig();
-  const target = spawnCfg.targetAlive;
+  const spawnCfgBase = getZombieSpawnBalanceConfig(1);
+  const target = spawnCfg.targetAlive; // attackDesiredAlive
+  const baseTarget = spawnCfgBase.targetAlive; // baseDesiredAlive
   const slotCount = Math.max(1, target);
   const taken = new Set();
   const aliveBySide = new Array(spawnCfg.sideCount).fill(0);
@@ -4486,10 +4497,34 @@ function ensureZombieCount(){
   }
 
   while (aliveCount < target){
-    const nextSlot = pickMissingSlotBySide(missingBySide, aliveBySide, spawnCfg);
-    const spawnIndex = Number.isFinite(nextSlot.slotIndex) ? nextSlot.slotIndex : aliveCount;
-    state.zombies.push(makeZombie(true, spawnIndex, slotCount));
-    if (nextSlot.side != null) aliveBySide[nextSlot.side] = (aliveBySide[nextSlot.side] || 0) + 1;
+    if (aliveCount < baseTarget) {
+      // base spawn — keep existing sideCount behavior
+      const nextSlot = pickMissingSlotBySide(missingBySide, aliveBySide, spawnCfg);
+      const spawnIndex = Number.isFinite(nextSlot.slotIndex) ? nextSlot.slotIndex : aliveCount;
+      state.zombies.push(makeZombie(true, spawnIndex, slotCount));
+      if (nextSlot.side != null) aliveBySide[nextSlot.side] = (aliveBySide[nextSlot.side] || 0) + 1;
+      aliveCount++;
+      continue;
+    }
+    // attackMode supplemental spawn — use episode dirs A/B/C (50/25/25)
+    var w = worldEventsState || {};
+    var dirA = Number.isFinite(w.attackSpawnDirA) ? w.attackSpawnDirA : Math.floor(Math.random() * 8);
+    var dirB = Number.isFinite(w.attackSpawnDirB) ? w.attackSpawnDirB : (dirA + 2) % 8;
+    var dirC = Number.isFinite(w.attackSpawnDirC) ? w.attackSpawnDirC : (dirA + 6) % 8;
+    var r = Math.random();
+    var chosenDir = r < 0.5 ? dirA : (r < 0.75 ? dirB : dirC);
+    var thetaCenter = chosenDir * (Math.PI * 2 / 8);
+    var jitter = (Math.random() * 2 - 1) * (Math.PI / 32);
+    var theta = thetaCenter + jitter;
+    var z = makeZombie(true, null, slotCount);
+    if (z) {
+      z.theta = theta;
+      z.anchorTheta = theta;
+      z.slotIndex = null;
+      z.spawnSideKey = getSideKeyForTheta(theta);
+      // ensure targetR / r start from edge (makeZombie already set r)
+      state.zombies.push(z);
+    }
     aliveCount++;
   }
 }
@@ -7025,6 +7060,7 @@ function restartSimulationPartial(){
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
       resetWorldRuntime: resetWorldRuntimeState,
+      forceDisableAttackModeRuntime: function () { ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(); },
       onAfterRestore: function (restoredState) {
         finalizePartialRestartPostRestore(restoredState);
         finalizePartialRestartRestore();
@@ -7083,6 +7119,8 @@ function handleCriticalCloseToMenu(){
 function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
+  // ensure attackMode is force-disabled immediately when showing critical modal
+  ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime();
   clearAllTanksFromCells(state);
   const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
   controller.open({

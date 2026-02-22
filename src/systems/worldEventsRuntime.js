@@ -87,6 +87,42 @@
       worldEventsState.nextLightningAt = now + delay;
     }
 
+    function pickAttackEpisodeDirections(worldEventsState) {
+      // choose primary dir (0..7) excluding previous if primary streak == 2
+      var prev = Number.isFinite(worldEventsState.attackSpawnPrevPrimaryDir) ? worldEventsState.attackSpawnPrevPrimaryDir : null;
+      var prevStreak = Number.isFinite(worldEventsState.attackSpawnPrimaryStreak) ? Math.max(0, Math.floor(worldEventsState.attackSpawnPrimaryStreak)) : 0;
+      var choices = [];
+      for (var d = 0; d < 8; d++) choices.push(d);
+      if (prev != null && prevStreak >= 2) {
+        choices = choices.filter(function (x) { return x !== prev; });
+      }
+      var idx = Math.floor(Math.random() * choices.length);
+      var dirA = choices[idx];
+
+      // pick B and C different from A
+      var rest = [];
+      for (var d2 = 0; d2 < 8; d2++) if (d2 !== dirA) rest.push(d2);
+      // shuffle rest minimally
+      for (var i = rest.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = rest[i]; rest[i] = rest[j]; rest[j] = tmp;
+      }
+      var dirB = rest[0];
+      var dirC = rest[1] || rest[0];
+
+      worldEventsState.attackSpawnDirA = dirA;
+      worldEventsState.attackSpawnDirB = dirB;
+      worldEventsState.attackSpawnDirC = dirC;
+      worldEventsState.attackSpawnEpisodeKey = (worldEventsState.attackSpawnEpisodeKey || 0) + 1;
+
+      if (prev == dirA) {
+        worldEventsState.attackSpawnPrimaryStreak = prevStreak + 1;
+      } else {
+        worldEventsState.attackSpawnPrimaryStreak = 1;
+        worldEventsState.attackSpawnPrevPrimaryDir = dirA;
+      }
+    }
+
     function processWeatherLightning(now, dt, weatherCfg) {
       var worldEventsState = deps.getWorldEventsState();
       var lightningCfg = weatherCfg && weatherCfg.lightning ? weatherCfg.lightning : {};
@@ -215,6 +251,10 @@
           if (worldEventsState.waveNumber > attackCfg.safeWaves) {
             state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
           }
+          // new attack episode started — pick episode directions
+          // ensure attack runtime fields exist
+          if (!Number.isFinite(worldEventsState.attackSpawnPrimaryStreak)) worldEventsState.attackSpawnPrimaryStreak = 0;
+          pickAttackEpisodeDirections(worldEventsState);
         }
 
         if (worldEventsState.attackEndAt > 0 && now >= worldEventsState.attackEndAt) {
@@ -331,6 +371,36 @@
       }
     }
 
+    function forceDisableAttackModeRuntime() {
+      var worldEventsState = deps.getWorldEventsState();
+      if (!worldEventsState || typeof worldEventsState !== 'object') return;
+      // disable attack windows and weather
+      worldEventsState.forceAttackActive = false;
+      worldEventsState.attackStartAt = 0;
+      worldEventsState.currentAttackStartAt = 0;
+      worldEventsState.attackEndAt = 0;
+      worldEventsState.weatherEnabled = false;
+      worldEventsState.weatherUntil = 0;
+      worldEventsState.lightningUntil = 0;
+      worldEventsState.nextLightningAt = 0;
+      worldEventsState.rainBlend = 0;
+      worldEventsState.aliveMultCurrent = 1;
+      worldEventsState.eveningDimBlend = 0;
+      // reset attack episode runtime fields
+      worldEventsState.attackSpawnDirA = null;
+      worldEventsState.attackSpawnDirB = null;
+      worldEventsState.attackSpawnDirC = null;
+      worldEventsState.attackSpawnPrevPrimaryDir = null;
+      worldEventsState.attackSpawnPrimaryStreak = 0;
+      worldEventsState.attackSpawnEpisodeKey = null;
+      // stop loop sfx that may run
+      if (typeof deps.stopLoopSfx === 'function') {
+        try { deps.stopLoopSfx('rainLoop'); } catch (e) {}
+        try { deps.stopLoopSfx('attackLoop'); } catch (e) {}
+        try { deps.stopLoopSfx('worldEventsLoop'); } catch (e) {}
+      }
+    }
+
     return {
       getWorldEventsAttackCfg: getWorldEventsAttackCfg,
       getWeatherCfg: getWeatherCfg,
@@ -341,6 +411,7 @@
       desiredAliveMultTarget: desiredAliveMultTarget,
       updateDesiredAliveMultCurrent: updateDesiredAliveMultCurrent,
       getZombieAttackMultipliers: getZombieAttackMultipliers,
+      forceDisableAttackModeRuntime: forceDisableAttackModeRuntime,
       updateWorldEvents: updateWorldEvents,
       ensureRainCache: ensureRainCache,
       drawWeather: drawWeather,

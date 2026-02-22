@@ -14,7 +14,7 @@
       "segmentMaxHp": 103220,
       "armorFlat": 13,
       "upgradeCostDamagePoints": 4,
-      "atlas": "fence_atlas.png"
+      "atlas": "fence_atlas_2.png"
     },
     {
       "segmentMaxHp": 106440,
@@ -26,7 +26,7 @@
       "segmentMaxHp": 109661,
       "armorFlat": 18,
       "upgradeCostDamagePoints": 8,
-      "atlas": "fence_atlas.png"
+      "atlas": "fence_atlas_2.png"
     },
     {
       "segmentMaxHp": 112881,
