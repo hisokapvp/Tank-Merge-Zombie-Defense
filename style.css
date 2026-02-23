@@ -21,6 +21,7 @@
   --audio-slider-thumb-shadow: 0 4px 0 rgba(0,0,0,.35);
   --scTileIconSizePx: 96px;
   --scTileIconSize: clamp(64px, calc(var(--scTileIconSizePx) * 0.85), var(--scTileIconSizePx));
+  --uiModalPad: clamp(16px, 4vw, 50px);
 }
 *{box-sizing:border-box}
 body{
@@ -855,7 +856,7 @@ body.scmodal-open{
   position:relative;
   z-index:1;
   width:min(360px, 86%);
-  padding:18px 18px 20px;
+  padding:var(--uiModalPad);
   border-radius:18px;
   border:2px solid rgba(0,0,0,.25);
   background:linear-gradient(160deg, rgba(17, 30, 55, 0.96), rgba(9, 18, 36, 0.96));
@@ -874,9 +875,9 @@ body.scmodal-open{
   color:var(--muted);
 }
 .levelModal__panel_boost .levelModal__contentWrap{
-  padding-top:44px;
-  padding-right:44px;
-  padding-left:44px;
+  padding-top:var(--uiModalPad);
+  padding-right:var(--uiModalPad);
+  padding-left:var(--uiModalPad);
   width:100%;
   max-width:100%;
   box-sizing:border-box;
@@ -1268,7 +1269,7 @@ body.scmodal-open{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:16px 18px 10px;
+  padding:var(--uiModalPad);
   border-bottom:1px solid rgba(255,255,255,.08);
 }
 .modalTitle{
@@ -1295,7 +1296,7 @@ body.scmodal-open{
   transform:scale(1.05);
 }
 .modalBody{
-  padding:14px 18px 18px;
+  padding:var(--uiModalPad);
   overflow:auto;
   display:flex;
   flex-direction:column;
@@ -1518,7 +1519,7 @@ body.scmodal-open{
 .levelModal__panel.scModal{
   height:auto;
   overflow:hidden;
-  padding:16px 18px;
+  padding:var(--uiModalPad);
   box-sizing:border-box;
 }
 .scModal__body{
@@ -1547,7 +1548,7 @@ body.scmodal-open{
   box-shadow:0 2px 0 rgba(0,0,0,.25);
 }
 #modsTankWallOverlay .levelModal__panel.scModal{
-  --mods-sc-pad-x: 18px;
+  --mods-sc-pad-x: var(--uiModalPad);
   padding-left:0;
   padding-right:0;
 }

@@ -796,6 +796,21 @@
         return frameById[frameId] || null;
       }
 
+      function readInlineFrame(frameCfg) {
+        if (!frameCfg || typeof frameCfg !== 'object') return null;
+        var x = Number(frameCfg.x);
+        var y = Number(frameCfg.y);
+        var w = Number(frameCfg.w);
+        var h = Number(frameCfg.h);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
+        return {
+          x: Math.floor(x),
+          y: Math.floor(y),
+          w: Math.floor(w),
+          h: Math.floor(h),
+        };
+      }
+
       for (var i = 0; i < levelsCount; i++) {
         var level = i + 1;
         var rowCfg = levels[i] || { segmentMaxHp: 0, armorFlat: 0, upgradeCostDamagePoints: 0 };
@@ -819,14 +834,28 @@
         var canApply = pending > 0 && availablePoints >= totalPendingCost;
         
         var spriteHtml = '';
-        var frameId = (rowCfg && typeof rowCfg.uiFrameId === 'string' && rowCfg.uiFrameId)
-          ? rowCfg.uiFrameId
-          : 'sideTop';
-        var uiFrame = findFrameById(frameId);
-        if (!uiFrame) uiFrame = findFrameById('sideTop');
+        var uiIcon = rowCfg && rowCfg.uiIcon && typeof rowCfg.uiIcon === 'object' ? rowCfg.uiIcon : null;
+        var inlineFrame = null;
+        if (uiIcon && uiIcon.frame) {
+          inlineFrame = readInlineFrame(uiIcon.frame);
+        }
+        if (!inlineFrame && rowCfg && rowCfg.uiFrame && typeof rowCfg.uiFrame === 'object') {
+          inlineFrame = readInlineFrame(rowCfg.uiFrame);
+        }
+        var frameId = (uiIcon && typeof uiIcon.frameId === 'string' && uiIcon.frameId)
+          ? uiIcon.frameId
+          : ((rowCfg && typeof rowCfg.uiFrameId === 'string' && rowCfg.uiFrameId)
+            ? rowCfg.uiFrameId
+            : 'sideTop');
+        var uiFrame = inlineFrame || findFrameById(frameId);
+        if (!uiFrame && !inlineFrame) uiFrame = findFrameById('sideTop');
 
         if (uiFrame) {
-          var atlasName = rowCfg.atlas || cfg.atlas || 'fence_atlas.png';
+          var atlasName = (uiIcon && typeof uiIcon.atlas === 'string' && uiIcon.atlas)
+            ? uiIcon.atlas
+            : ((rowCfg && typeof rowCfg.uiAtlas === 'string' && rowCfg.uiAtlas)
+              ? rowCfg.uiAtlas
+              : (rowCfg.atlas || cfg.atlas || 'fence_atlas.png'));
           var src = 'assets/' + atlasName;
           var frameX = Number.isFinite(uiFrame.x) ? Math.floor(uiFrame.x) : 0;
           var frameY = Number.isFinite(uiFrame.y) ? Math.floor(uiFrame.y) : 0;

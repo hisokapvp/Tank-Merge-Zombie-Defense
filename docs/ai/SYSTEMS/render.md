@@ -10,6 +10,13 @@
 - `drawZombieEntity`/`drawZombieSprite`/`drawZombieFallback` в `game.js` делегируются в `Game.ZombieRender` через `ensureZombieRenderRuntimeController()` с fallback на встроенный код.
 - Talents v2 status icons рендерятся в `game.js::draw()` через `Game.TalentsV2.renderStatusIcons(...)` только в world-render боя (не в UI/hangar).
 - Fade трупов применяется в `src/render/zombieRender.js` через `ctx.globalAlpha` в конце corpse-life (`assets/zombies.json: corpseFadeOutSec`).
+- Fence render order в `game.js::draw()`:
+	1) `renderFenceBase()`
+	2) `renderZombiesAndCorpses()`
+	3) `renderFenceHpBars()`
+	4) `renderProjectilesAndEffects()`
+
+	Это гарантирует видимость HP-баров поверх зомби/трупов и допускает перекрытие HP FX-слоем.
 
 ## Правила
 - `draw()` только рисует; обновления состояния  вне отрисовки.

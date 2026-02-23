@@ -138,7 +138,14 @@
 - Стоимость шага улучшения стены вычисляется через `getCannonUpgradeStepCost` (которая внутри вызывает общую `getUpgradeStepCost`).
 - Суммарная стоимость pending шагов для уровня вычисляется как сумма стоимостей каждого шага: `sum_{i=0..k-1} getUpgradeStepCost(level, applied+i)`.
 - Overflow-блокировки: если стоимость следующего шага превышает `Number.MAX_SAFE_INTEGER` или уходит в бесконечность, кнопка `+` блокируется.
-- Preview стены рисуется в canvas через `drawGunsSpriteCanvas` с использованием `levels[].uiFrameId` из `fence.json`; fallback при отсутствии/ошибке — `sideTop` (или fallback-атлас).
+- Preview стены рисуется в canvas через `drawGunsSpriteCanvas`.
+- Источник превью кадра (по приоритету): `levels[].uiIcon.frame` -> `levels[].uiIcon.frameId` -> `levels[].uiFrameId` -> `sideTop`.
+- Источник превью atlas (по приоритету): `levels[].uiIcon.atlas` -> `levels[].uiAtlas` -> `levels[].atlas` -> `fence.json.atlas`.
+
+## Modal padding standard
+- Единый отступ модалок задаётся через `:root { --uiModalPad: clamp(16px, 4vw, 50px) }`.
+- Применяется к ключевым контейнерам: `.levelModal__panel`, `.modalHeader`, `.modalBody`, `.levelModal__panel.scModal`.
+- Для `#modsTankWallOverlay` внутренние боковые отступы табов/контента также завязаны на `--uiModalPad` через `--mods-sc-pad-x`.
 
 ## Debug panel tabs
 - Реализация: `src/ui/debugPanel.js`.

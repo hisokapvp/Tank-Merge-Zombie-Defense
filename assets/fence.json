@@ -1,5 +1,5 @@
 {
-  "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }.",
+  "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }. Для UI вкладки Стены можно задавать levels[].uiIcon: { atlas, frameId } или { atlas, frame:{x,y,w,h} }.",
   "atlas": "fence_atlas.png",
   "cornerInsetPx": 0,
   "segmentsPerSide": 8,
@@ -9,14 +9,40 @@
       "armorFlat": 10,
       "upgradeCostDamagePoints": 2,
       "atlas": "fence_atlas.png",
-      "uiFrameId": "sideTop"
+      "uiFrameId": "sideTop",
+      "uiIcon": {
+        "atlas": "fence_atlas.png",
+        "frame": {
+          "id": "IconLvl1",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": { "x": 0.5, "y": 0.5 }
+        }
+      }
     },
     {
       "segmentMaxHp": 103220,
       "armorFlat": 13,
       "upgradeCostDamagePoints": 4,
       "atlas": "fence_atlas_2.png",
-      "uiFrameId": "sideRight"
+      "uiFrameId": "sideRight",
+      "uiIcon": {
+        "atlas": "fence_atlas_2.png",
+        "frame": {
+          "id": "IconLvl2",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": { "x": 0.5, "y": 0.5 }
+        }
+      }
     },
     {
       "segmentMaxHp": 106440,

@@ -24,9 +24,13 @@
 
 ## assets/fence.json
 
-- `levels[].uiFrameId` — id кадра из `frames[].id`, который используется в таблице `Стены` суперкомпьютера для превью конкретного уровня.
-- Если `uiFrameId` отсутствует или не найден в `frames[]`, UI использует fallback `sideTop`.
-- Для корректного превью рекомендуется заполнять `uiFrameId` на каждом уровне.
+- `levels[].uiFrameId` — backward-compatible id кадра из `frames[].id` для превью уровня стены в таблице `Стены` суперкомпьютера.
+- `levels[].uiIcon` — расширенная конфигурация превью уровня стены:
+	- `uiIcon.atlas` — atlas для UI-превью (может отличаться от боевого atlas уровня).
+	- `uiIcon.frameId` — id кадра из `frames[].id`.
+	- `uiIcon.frame` — прямые координаты кадра `{ x, y, w, h }` без обязательной привязки к `frames[]`.
+- Приоритет выбора кадра: `uiIcon.frame` -> `uiIcon.frameId` -> `uiFrameId` -> fallback `sideTop`.
+- Приоритет выбора атласа: `uiIcon.atlas` -> `uiAtlas` -> `levels[].atlas` -> root `atlas`.
 
 ## src/config/layoutTuning.js
 

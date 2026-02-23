@@ -85,6 +85,8 @@
       },
       endgameVisuals: false,
       maxTankLevelAchieved: 1,
+      runtimeMaxTankLevelAchieved: 1,
+      currentFenceTierApplied: 1,
       buyCounts: {},
       buyPrices: {},
       achievements: {

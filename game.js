@@ -430,7 +430,7 @@ function createInitialState(options){
           cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
-        endgameVisuals: false, maxTankLevelAchieved: 1, buyCounts: {}, buyPrices: {},
+        endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
         achievements: { unlocked: {}, popupQueue: [], totalPurchased: 0, totalMerges: 0 },
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
@@ -453,6 +453,16 @@ function createInitialState(options){
       }
       initialState.player.freeTalentPointsV2 = 1;
     }
+  }
+  if (!Number.isFinite(initialState.runtimeMaxTankLevelAchieved)) {
+    initialState.runtimeMaxTankLevelAchieved = Number.isFinite(initialState.maxTankLevelAchieved)
+      ? Math.max(1, Math.floor(initialState.maxTankLevelAchieved))
+      : 1;
+  }
+  if (!Number.isFinite(initialState.currentFenceTierApplied)) {
+    initialState.currentFenceTierApplied = Number.isFinite(initialState.fenceLevel)
+      ? Math.max(1, Math.floor(initialState.fenceLevel))
+      : 1;
   }
   return initialState;
 }
@@ -1948,15 +1958,11 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
 function finalizePartialRestartPostRestore(stateRef){
   const targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
   if (targetState && typeof targetState === 'object') {
-    targetState.fenceLevel = 1;
-    targetState.fenceSegments = [];
-    targetState.fenceSegmentsMeta = null;
     targetState.savedFenceState = null;
     targetState.buyCounts = {};
     targetState.buyPrices = {};
-  }
-  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
-    try { FenceSprites.ensureLevel(1); } catch (e) {}
+    ensureFenceTierRuntimeState(targetState);
+    syncFenceTierWithMaxTankLevel(targetState, { force: true });
   }
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
 
@@ -2538,23 +2544,93 @@ function addDron(level){
   return drone;
 }
 
-function recordTankLevel(level){
-  const prevMaxLevel = Number.isFinite(state.maxTankLevelAchieved) ? Math.max(0, Math.floor(state.maxTankLevelAchieved)) : 0;
-  const nextLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
-  if (nextLevel <= prevMaxLevel) return;
-
-  state.maxTankLevelAchieved = nextLevel;
-  // sync fence level only when a new max tank level is reached
+function getFenceTierForTankLevel(level){
   var fenceLevels = getFenceLevels();
   var maxFenceLevel = Array.isArray(fenceLevels) && fenceLevels.length ? fenceLevels.length : MAX_TANK_LEVEL;
-  var clamped = Math.max(1, Math.min(maxFenceLevel, Math.floor(state.maxTankLevelAchieved || 1)));
-  state.fenceLevel = clamped;
-  // reset/recreate fence segments so visuals rebuild for new atlas/level
-  state.fenceSegments = [];
-  state.fenceSegmentsMeta = null;
-  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
-    try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
+  var safeLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+  return Math.max(1, Math.min(maxFenceLevel, safeLevel));
+}
+
+function snapshotFenceHpById(stateRef){
+  var targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (!targetState || !Array.isArray(targetState.fenceSegments) || !targetState.fenceSegments.length) return;
+  var hpById = {};
+  for (var i = 0; i < targetState.fenceSegments.length; i++) {
+    var seg = targetState.fenceSegments[i];
+    if (!seg || !seg.id || !Number.isFinite(seg.hp)) continue;
+    hpById[seg.id] = seg.hp;
   }
+  targetState.savedFenceState = {
+    segmentsPerSide: getFenceSegmentsPerSide(),
+    hpById: hpById,
+  };
+}
+
+function ensureFenceTierRuntimeState(stateRef){
+  var targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (!targetState || typeof targetState !== 'object') return;
+  var maxAchieved = Number.isFinite(targetState.maxTankLevelAchieved)
+    ? Math.max(1, Math.floor(targetState.maxTankLevelAchieved))
+    : 1;
+  if (!Number.isFinite(targetState.runtimeMaxTankLevelAchieved)) {
+    targetState.runtimeMaxTankLevelAchieved = maxAchieved;
+  } else {
+    targetState.runtimeMaxTankLevelAchieved = Math.max(maxAchieved, Math.floor(targetState.runtimeMaxTankLevelAchieved));
+  }
+  if (!Number.isFinite(targetState.currentFenceTierApplied)) {
+    targetState.currentFenceTierApplied = getFenceTierForTankLevel(targetState.runtimeMaxTankLevelAchieved);
+  }
+}
+
+function syncFenceTierWithMaxTankLevel(stateRef, options){
+  var targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (!targetState || typeof targetState !== 'object') return false;
+  ensureFenceTierRuntimeState(targetState);
+  var opts = options || {};
+  var force = !!opts.force;
+  var runtimeMax = Number.isFinite(targetState.runtimeMaxTankLevelAchieved)
+    ? Math.max(1, Math.floor(targetState.runtimeMaxTankLevelAchieved))
+    : 1;
+  var desiredTier = getFenceTierForTankLevel(runtimeMax);
+  var appliedTier = Number.isFinite(targetState.currentFenceTierApplied)
+    ? Math.max(1, Math.floor(targetState.currentFenceTierApplied))
+    : getFenceTierForTankLevel(targetState.fenceLevel);
+  var currentTier = Number.isFinite(targetState.fenceLevel)
+    ? Math.max(1, Math.floor(targetState.fenceLevel))
+    : desiredTier;
+  if (!force && desiredTier === appliedTier && currentTier === desiredTier) return false;
+
+  targetState.fenceLevel = desiredTier;
+  targetState.currentFenceTierApplied = desiredTier;
+  snapshotFenceHpById(targetState);
+  targetState.fenceSegments = [];
+  targetState.fenceSegmentsMeta = null;
+
+  if (targetState === state && typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+    try { FenceSprites.ensureLevel(desiredTier); } catch (e) {}
+  }
+  return true;
+}
+
+function recordTankLevel(level){
+  ensureFenceTierRuntimeState(state);
+  const prevMaxLevel = Number.isFinite(state.maxTankLevelAchieved) ? Math.max(0, Math.floor(state.maxTankLevelAchieved)) : 0;
+  const nextLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+  const grewMax = nextLevel > prevMaxLevel;
+  if (grewMax) {
+    state.maxTankLevelAchieved = nextLevel;
+  }
+
+  const prevRuntimeMax = Number.isFinite(state.runtimeMaxTankLevelAchieved)
+    ? Math.max(1, Math.floor(state.runtimeMaxTankLevelAchieved))
+    : 1;
+  if (nextLevel > prevRuntimeMax) {
+    state.runtimeMaxTankLevelAchieved = nextLevel;
+  }
+
+  syncFenceTierWithMaxTankLevel(state, { force: grewMax });
+  if (!grewMax) return;
+
 }
 
 function buyTankLevel(){
@@ -4018,6 +4094,12 @@ function restoreFullState(saved){
   if (saved.buyCounts) state.buyCounts = saved.buyCounts;
   if (saved.buyPrices) state.buyPrices = saved.buyPrices;
   if (saved.maxTankLevelAchieved != null) state.maxTankLevelAchieved = saved.maxTankLevelAchieved;
+  state.runtimeMaxTankLevelAchieved = Number.isFinite(state.maxTankLevelAchieved)
+    ? Math.max(1, Math.floor(state.maxTankLevelAchieved))
+    : 1;
+  state.currentFenceTierApplied = Number.isFinite(state.fenceLevel)
+    ? Math.max(1, Math.floor(state.fenceLevel))
+    : 1;
   if (saved.boostUntil != null) state.boostUntil = saved.boostUntil;
   if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects };
   if (saved.achievements && typeof saved.achievements === 'object') {
@@ -4086,17 +4168,9 @@ function restoreFullState(saved){
     };
   } else state.crate = null;
   refreshTanksPowerTier();
-  // sync fence level to maxTankLevelAchieved on load (clamped by available fence levels)
-  var loadedFenceLevels = getFenceLevels();
-  var loadedFenceMax = Array.isArray(loadedFenceLevels) && loadedFenceLevels.length ? loadedFenceLevels.length : MAX_TANK_LEVEL;
-  var clampedFence = Math.max(1, Math.min(loadedFenceMax, Math.floor(state.maxTankLevelAchieved || state.fenceLevel || 1)));
-  state.fenceLevel = clampedFence;
-  state.fenceSegments = [];
-  state.fenceSegmentsMeta = null;
   ensureFenceUpgradesAppliedState();
-  if (typeof FenceSprites !== 'undefined' && FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
-    try { FenceSprites.ensureLevel(state.fenceLevel); } catch (e) {}
-  }
+  ensureFenceTierRuntimeState(state);
+  syncFenceTierWithMaxTankLevel(state, { force: true });
   // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
   if (Array.isArray(state.zombies)) state.zombies.length = 0;
   resetCriticalEntryRuntimeFlags();
@@ -4192,6 +4266,13 @@ function applySavedProgress(data){
   state.damagePointsSpent = normalizeDamagePointsSpent(data.damagePointsSpent);
   ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(data.fenceLevel) ? Math.max(1, Math.floor(data.fenceLevel)) : 1;
+  state.runtimeMaxTankLevelAchieved = Number.isFinite(state.maxTankLevelAchieved)
+    ? Math.max(1, Math.floor(state.maxTankLevelAchieved))
+    : 1;
+  state.currentFenceTierApplied = Number.isFinite(state.fenceLevel)
+    ? Math.max(1, Math.floor(state.fenceLevel))
+    : 1;
+  syncFenceTierWithMaxTankLevel(state, { force: true });
   state.zombieWaveAtkMult = Number.isFinite(data.zombieWaveAtkMult) ? Math.max(0, data.zombieWaveAtkMult) : 1;
   return true;
 }
@@ -8768,13 +8849,13 @@ function draw(){
 
   drawBackground();
   drawTankTrack();
-  drawZombieFence();
+  renderFenceBase();
   drawSupercomputer();
   drawBoard();
   drawOrbitingTanks();
   drawCrate();
-  drawDecals();
-  drawDecorZombieLayer();
+  renderZombiesAndCorpses();
+  renderFenceHpBars();
   if (isTalentsV2Ready()) {
     const talentsApi = getTalentsV2Api();
     if (talentsApi && typeof talentsApi.renderStatusIcons === 'function') {
@@ -8797,10 +8878,7 @@ function draw(){
       });
     }
   }
-  drawProjectiles();
-  drawImpacts();
-  drawParticles();
-  drawDamageNumbers();
+  renderProjectilesAndEffects();
   drawDrones();
   drawWeather();
   drawAttackModeEveningDim();
@@ -8969,6 +9047,18 @@ function drawDecorZombieLayer(){
     if (item.kind === 'decor') drawDecorSpriteAt(item.ref);
     else if (item.kind === 'zombie') drawZombieEntity(item.ref, item.x, item.zY);
   }
+}
+
+function renderZombiesAndCorpses(){
+  drawDecorZombieLayer();
+}
+
+function renderProjectilesAndEffects(){
+  drawDecals();
+  drawProjectiles();
+  drawImpacts();
+  drawParticles();
+  drawDamageNumbers();
 }
 
 function drawTankTrack(){
@@ -9462,13 +9552,12 @@ function drawDrones(){
   });
 }
 
-function drawZombieFence(){
+function renderFenceBase(){
   const halfSide = BAL.fenceRadius;
   const spriteKeys = resolveFenceSpriteKeys();
   const useSprites = FenceSprites.ready && !!spriteKeys;
   const segmentsPerSide = getFenceSegmentsPerSide();
   const maxHp = getFenceSegmentMaxHp();
-  const hpBar = getFenceHealthBarConfig();
 
   ctx.save();
   ctx.translate(center.x, center.y);
@@ -9606,19 +9695,6 @@ function drawZombieFence(){
           }
         }
       } catch (e) {}
-
-      if (seg.hp < seg.maxHp) {
-        const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
-        const greenWidth = Math.round(hpBar.w * ratio);
-        const barX = Math.round(seg.x - hpBar.w * 0.5);
-        const barY = Math.round(seg.y + hpBar.offsetY);
-        ctx.fillStyle = 'rgba(72,72,72,0.95)';
-        ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
-        if (greenWidth > 0) {
-          ctx.fillStyle = 'rgba(125,255,178,0.95)';
-          ctx.fillRect(barX, barY, greenWidth, hpBar.h);
-        }
-      }
     }
   } else {
     state.fenceSegments = [];
@@ -9639,6 +9715,32 @@ function drawZombieFence(){
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+function drawZombieFence(){
+  renderFenceBase();
+}
+
+function renderFenceHpBars(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  const hpBar = getFenceHealthBarConfig();
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || !(seg.hp < seg.maxHp)) continue;
+    const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
+    const greenWidth = Math.round(hpBar.w * ratio);
+    const barX = Math.round(seg.x - hpBar.w * 0.5);
+    const barY = Math.round(seg.y + hpBar.offsetY);
+    ctx.fillStyle = 'rgba(72,72,72,0.95)';
+    ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
+    if (greenWidth > 0) {
+      ctx.fillStyle = 'rgba(125,255,178,0.95)';
+      ctx.fillRect(barX, barY, greenWidth, hpBar.h);
+    }
+  }
   ctx.restore();
 }
 
@@ -10807,6 +10909,8 @@ function loop(now){
       });
     }
   }
+
+  syncFenceTierWithMaxTankLevel(state);
 
   updateUI();
   draw();
