@@ -58,10 +58,12 @@
 - HUD XP bar: fill фиксирован `#14a13d` без gradient, анимация прогресса только через CSS `width` transition `200–300ms`.
 - `#supercomputerBtn`: позиционирование только через `transform`; для кнопки запрещены `transition` по `transform` и `transition: all`.
 - Unified disabled toast: `data-disabled-reason="noSaves"` → «Нет сохранений/No saves», иначе «Недоступно/Unavailable»; показ централизован через `src/ui/toast.js`.
-- Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
+- Divider под вкладками `Орудия/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
+- `modsTankWall`: вкладка `Базы` удалена из `index.html`, `src/ui/supercomputerMenu.js` и i18n/fallback-строк.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
 - `Орудия`: добавлена колонка `Стоимость` (`next / totalSpent`) и поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` для аним-иконок через shared ticker.
 - `Орудия`: в `src/config/layoutTuning.js` добавлены per-level массивы `weaponIconAnimFramesByLevel` и `weaponIconAnimFpsByLevel` (L1..L60) для ручной настройки кадров и fps.
+- `Стены`: preview-иконки уровней берутся из `assets/fence.json -> levels[]` с приоритетом `uiIcon.frame.id` -> `uiIcon.frame` -> `uiIcon.frameId` -> `uiFrameId` -> `sideTop`, atlas по `uiIcon.atlas`/fallback-цепочке.
 - Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.
 - On-track dim иконки в слоте настраивается параметром `assets/tanks.json -> ui.onTrackIconOpacity` (нормализация в `TankSprites.config.ui`).
 - Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
@@ -80,7 +82,8 @@
 - Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices`, `maxTankLevelAchieved/runtimeMax/currentFenceTierApplied/fenceLevel` в `1`, затем выполняется force-sync tier стен и force-off reset attackMode/runtime.
 - New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
 - Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); steer к ближайшему пролому выполняется только в пределах текущей стороны зомби (без глобального fallback по всем сторонам).
-- Zombie breach targeting: awareness о проломе ограничен радиусом `Game.Config.WorldEvents.attackMode.fenceBreachAwarenessRadiusPx`.
+- Zombie breach targeting: если на стороне уже есть пролом, steer к нему выполняется без ограничения awareness-радиусом.
+- Zombie breach targeting: при наличии пролома на стороне зомби (до `breached`) не выбирают целые fence-сегменты как attack-target.
 - Supercomputer root tiles: root-плашки и modal-кнопки не должны клиппить тени/hover-scale; для root-сетки обязателен запас по краям (`overflow:visible` + внутренние отступы в body).
 - Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `200`).
 - Supercomputer weapons source frame: источник кадра для оружейных иконок в tab `Орудия` задаётся фиксированным размером `128x128` через `layoutTuning` (`weaponIconSpriteFrameW/H`).
@@ -90,6 +93,7 @@
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
 - Debug panel: добавлен блок `Damage Points` (доступен при `?debug=1`) с `input number` и `+Add/-Add`, влияющий на реальное save-состояние.
 - Debug panel tabs обновлены: удалены `Zombies`, `Roads/Hangar`, `Actives`, `Talents`; добавлен таб `Updates` (начисление `talent points` и `damage points` по кнопке `Окей`).
+- Debug panel `Effects`: удалены кнопки `Burst center`, `Particle burst`, `Impact ring`, `Decal Pool`, `Stop all preview VFX`, `Clear debug statuses` и связанный код.
 - Zombie extra VFX policy: дополнительные zombie aura/glow/ring отключены в `src/render/zombieRender.js` через кодовый флаг `DISABLE_ZOMBIE_AURAS` (без правок `assets/zombies.json`).
 - Supercomputer weapons icons: единый поворот настраивается константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js`.
 

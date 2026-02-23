@@ -139,13 +139,14 @@
 
 ## Supercomputer: вкладка "Стены"
 - Вкладка "Стены" (`walls`) в supercomputerMenu рендерит таблицу L1..L60 аналогично вкладке "Орудия".
+- В `modsTankWall` доступны только вкладки `Орудия` и `Стены`; вкладка `Базы` полностью удалена из DOM/runtime/i18n.
 - Состояние pending/reserved для стен (`pendingFenceUpgradesByLevel`, `getReservedFenceDamagePoints`) полностью независимо от состояния пушек.
 - При смене вкладок внутри модалки (Орудия <-> Стены) pending state не сбрасывается. Сброс происходит только при полном закрытии модалки.
 - Стоимость шага улучшения стены вычисляется через `getCannonUpgradeStepCost` (которая внутри вызывает общую `getUpgradeStepCost`).
 - Суммарная стоимость pending шагов для уровня вычисляется как сумма стоимостей каждого шага: `sum_{i=0..k-1} getUpgradeStepCost(level, applied+i)`.
 - Overflow-блокировки: если стоимость следующего шага превышает `Number.MAX_SAFE_INTEGER` или уходит в бесконечность, кнопка `+` блокируется.
 - Preview стены рисуется в canvas через `drawGunsSpriteCanvas`.
-- Источник превью кадра (по приоритету): `levels[].uiIcon.frame` -> `levels[].uiIcon.frameId` -> `levels[].uiFrameId` -> `sideTop`.
+- Источник превью кадра (по приоритету): `levels[].uiIcon.frame.id` -> `levels[].uiIcon.frame (x/y/w/h)` -> `levels[].uiIcon.frameId` -> `levels[].uiFrameId` -> `sideTop`.
 - Источник превью atlas (по приоритету): `levels[].uiIcon.atlas` -> `levels[].uiAtlas` -> `levels[].atlas` -> `fence.json.atlas`.
 
 ## Modal padding standard
@@ -157,6 +158,7 @@
 - Реализация: `src/ui/debugPanel.js`.
 - Текущий состав вкладок: `Tanks`, `Effects`, `Updates`, `Logs&Tools`.
 - Из панели удалены вкладки и связанный runtime UI-код: `Zombies`, `Roads/Hangar`, `Actives`, `Talents`.
+- В `Effects` удалены preview-VFX кнопки (`Burst center`, `Particle burst`, `Impact ring`, `Decal pool`) и служебные кнопки `Stop all preview VFX` / `Clear debug statuses` вместе с их обработчиками.
 
 ## Debug panel: Updates
 - Раздел `Updates` содержит два действия: `Talent points (+)` и `Damage points (+)`.
@@ -171,7 +173,7 @@
 - В reset-пути (`resetGameState`) перед очисткой состояния применяется подавление track-SFX, чтобы при программных изменениях звуки не воспроизводились.
 
 ## Supercomputer tabs divider
-- Разделитель под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay` — это нижняя граница `.scTabs`.
+- Разделитель под вкладками `Орудия/Стены` в `#modsTankWallOverlay` — это нижняя граница `.scTabs`.
 - Правило вёрстки: линия должна доходить до внутренних краёв рамки окна без боковых отступов; для `#modsTankWallOverlay` это делается через нулевые боковые padding у panel и явные `margin-left/right` для прямых дочерних блоков (`title`, `scTabPanels`, footer-actions), без negative margin у `.scTabs`.
 - Проверка: открыть `Модификации танков и стен`, убедиться, что у divider нет видимых зазоров слева/справа относительно внутренней рамки.
 

@@ -103,13 +103,11 @@
 
     var tankWallTabButtons = {
       weapons: documentObj.getElementById('modsTankWallTabGuns'),
-      bases: documentObj.getElementById('modsTankWallTabBases'),
       walls: documentObj.getElementById('modsTankWallTabWalls'),
     };
 
     var tankWallTabPanels = {
       weapons: documentObj.getElementById('modsTankWallPanelGuns'),
-      bases: documentObj.getElementById('modsTankWallPanelBases'),
       walls: documentObj.getElementById('modsTankWallPanelWalls'),
     };
 
@@ -154,7 +152,7 @@
     }
 
     function setTankWallTab(nextTab, options) {
-      var tab = nextTab === 'walls' || nextTab === 'bases' ? nextTab : 'weapons';
+      var tab = nextTab === 'walls' ? 'walls' : 'weapons';
       state.activeTankWallTab = tab;
 
       Object.keys(tankWallTabButtons).forEach(function (key) {
@@ -177,8 +175,6 @@
       } else if (tab === 'walls') {
         renderWallsPanel();
         startGunsIconTicker();
-      } else {
-        stopGunsIconTicker();
       }
 
       var focusButton = options && options.focusButton;
@@ -437,7 +433,7 @@
     function tickGunsIconSprites() {
       if (state.view !== 'tankWall') return;
       var nowMs = Date.now();
-      
+
       if (state.activeTankWallTab === 'weapons' && gunsUi.rows) {
         var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
         if (animatedNodes && animatedNodes.length) {
@@ -841,13 +837,13 @@
         var rowCfg = levels[i] || { segmentMaxHp: 0, armorFlat: 0, upgradeCostDamagePoints: 0 };
         var applied = toSafeNonNegativeInt(getAppliedFenceUpgradeLevel(level));
         var pending = getPendingFenceAt(level);
-        
+
         var stats = getFenceStatsForLevel(level, applied);
         var baseHp = stats.baseHp;
         var baseArmor = stats.baseArmor;
         var currentHp = stats.currentHp;
         var currentArmor = stats.currentArmor;
-        
+
         var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
         var totalSpent = getTotalSpentForFenceLevel(level, applied);
         var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
@@ -857,12 +853,19 @@
           ? String(applied) + ' (+' + String(pending) + ')'
           : String(applied);
         var canApply = pending > 0 && availablePoints >= totalPendingCost;
-        
+
         var spriteHtml = '';
         var uiIcon = rowCfg && rowCfg.uiIcon && typeof rowCfg.uiIcon === 'object' ? rowCfg.uiIcon : null;
+        var uiIconFrame = uiIcon && uiIcon.frame && typeof uiIcon.frame === 'object' ? uiIcon.frame : null;
         var inlineFrame = null;
-        if (uiIcon && uiIcon.frame) {
-          inlineFrame = readInlineFrame(uiIcon.frame);
+        if (uiIconFrame) {
+          var iconFrameId = (typeof uiIconFrame.id === 'string' && uiIconFrame.id) ? uiIconFrame.id : null;
+          if (iconFrameId) {
+            inlineFrame = findFrameById(iconFrameId);
+          }
+          if (!inlineFrame) {
+            inlineFrame = readInlineFrame(uiIconFrame);
+          }
         }
         if (!inlineFrame && rowCfg && rowCfg.uiFrame && typeof rowCfg.uiFrame === 'object') {
           inlineFrame = readInlineFrame(rowCfg.uiFrame);
@@ -886,7 +889,7 @@
           var frameY = Number.isFinite(uiFrame.y) ? Math.floor(uiFrame.y) : 0;
           var frameW = Number.isFinite(uiFrame.w) && uiFrame.w > 0 ? Math.floor(uiFrame.w) : 64;
           var frameH = Number.isFinite(uiFrame.h) && uiFrame.h > 0 ? Math.floor(uiFrame.h) : 64;
-          
+
           var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
           var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
           var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
@@ -907,7 +910,7 @@
         } else {
           spriteHtml = '<span class="scGunsTable__spriteFallback">' + translate('modsGunsNoSprite') + '</span>';
         }
-        
+
         rowsHtml += '' +
           '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
             '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
@@ -1029,7 +1032,6 @@
     documentObj.getElementById('modsTankWallClose')?.addEventListener('click', backFromChild);
     documentObj.getElementById('modsTankWallBack')?.addEventListener('click', backFromChild);
     tankWallTabButtons.weapons?.addEventListener('click', function () { setTankWallTab('weapons', { focusButton: true }); });
-    tankWallTabButtons.bases?.addEventListener('click', function () { setTankWallTab('bases', { focusButton: true }); });
     tankWallTabButtons.walls?.addEventListener('click', function () { setTankWallTab('walls', { focusButton: true }); });
     documentObj.getElementById('modsTankWallFenceUpgrade')?.addEventListener('click', function () {
       if (!upgradeFence()) return;

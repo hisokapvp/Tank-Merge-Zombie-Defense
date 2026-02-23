@@ -4794,7 +4794,13 @@ function getFenceLevels(){
     const upgradeCostDamagePoints = Number.isFinite(raw.upgradeCostDamagePoints)
       ? Math.max(0, Math.floor(raw.upgradeCostDamagePoints))
       : null;
-    levels.push({ segmentMaxHp, armorFlat, upgradeCostDamagePoints });
+    const level = { segmentMaxHp, armorFlat, upgradeCostDamagePoints };
+    if (typeof raw.atlas === 'string' && raw.atlas) level.atlas = raw.atlas;
+    if (typeof raw.uiAtlas === 'string' && raw.uiAtlas) level.uiAtlas = raw.uiAtlas;
+    if (typeof raw.uiFrameId === 'string' && raw.uiFrameId) level.uiFrameId = raw.uiFrameId;
+    if (raw.uiFrame && typeof raw.uiFrame === 'object') level.uiFrame = raw.uiFrame;
+    if (raw.uiIcon && typeof raw.uiIcon === 'object') level.uiIcon = raw.uiIcon;
+    levels.push(level);
   }
   if (!levels.length) {
     return [{ segmentMaxHp: fallbackMaxHp, armorFlat: 0, upgradeCostDamagePoints: null }];
@@ -5256,6 +5262,11 @@ function pickNearestBreachForSide(sideKey, x, y){
   return best;
 }
 
+function hasBreachOnSide(sideKey){
+  const list = getBreachesForSide(sideKey);
+  return Array.isArray(list) && list.length > 0;
+}
+
 
 function getBrokenFenceSidesMap(){
   const breaches = ensureBreachesBySide();
@@ -5396,6 +5407,8 @@ function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer)
       };
     }
   }
+  const sideKey = getSideByPosition(p.x, p.y);
+  if (!allowSupercomputer && hasBreachOnSide(sideKey)) return null;
   const fenceTarget = selectZombieFenceTargetForZombie(z, attackRangePx);
   if (!fenceTarget || !fenceTarget.seg) return null;
   return {
@@ -5678,7 +5691,9 @@ function stepZombies(dt){
     z.side = getSideByPosition(prevX, prevY);
     const prevLocalX = prevX - center.x;
     const prevLocalY = prevY - center.y;
-    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
+    const sideHasBreach = hasBreachOnSide(z.side);
+    const breachSeekRadius = sideHasBreach ? Infinity : breachAwarenessRadiusPx;
+    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY, breachSeekRadius);
     const allowSupercomputerTarget = !!z.breached;
 
     let radialSpeed = 0;

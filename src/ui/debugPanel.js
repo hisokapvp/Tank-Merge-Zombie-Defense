@@ -54,8 +54,6 @@
     var zombieLevelWeights = opts.zombieLevelWeights;
     var pickZombieLevel = opts.pickZombieLevel;
     var initBoard = opts.initBoard;
-    var burst = opts.burst;
-    var playSfx = opts.playSfx;
     var canUseActive = opts.canUseActive;
     var useActiveAbility = opts.useActiveAbility;
     var initTalentDefs = opts.initTalentDefs;
@@ -65,7 +63,6 @@
     var debugSetTotalMerges = opts.debugSetTotalMerges;
     var debugAdjustTalentPoints = opts.debugAdjustTalentPoints;
     var debugAdjustDamagePoints = opts.debugAdjustDamagePoints;
-    var center = opts.center;
     var updateUI = opts.updateUI;
 
     main.classList.add('debugLayout');
@@ -74,19 +71,13 @@
     panel.id = 'debugPanel';
     panel.className = 'debugPanel';
 
-    var vfxList = [
-      { id: 'burst', label: 'Burst center' },
-      { id: 'particle_burst', label: 'Particle burst' },
-      { id: 'impact_ring', label: 'Impact ring' },
-      { id: 'decal_pool', label: 'Decal pool' },
-    ];
     var statusList = [
       { id: 'attack', key: 'attackUntil', label: 'Attack +50%' },
       { id: 'speed', key: 'speedUntil', label: 'Speed +35%' },
       { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
     ];
 
-    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="vfx">VFX</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n        <div class="debugTools" style="margin-top:8px">\n          <button type="button" class="debugBtn" id="debugStopAllVfx">Stop all preview VFX</button>\n          <button type="button" class="debugBtn danger" id="debugClearStatuses">Clear debug statuses</button>\n        </div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <button type="button" class="debugBtn" id="debugResetBtn">Reset (statuses + VFX)</button>\n        <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>\n        <button type="button" class="debugBtn" id="lessonProgressBtn">Lesson Progress</button>\n        <div id="debugTelemetryMount"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
+    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <button type="button" class="debugBtn" id="debugResetBtn">Reset (statuses + VFX)</button>\n        <button type="button" class="debugBtn" id="debugClearLog">Clear log</button>\n        <button type="button" class="debugBtn" id="lessonProgressBtn">Lesson Progress</button>\n        <div id="debugTelemetryMount"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
 
     var tankLevelSelect = panel.querySelector('#debugTankLevel');
     for (var l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) {
@@ -186,31 +177,6 @@
 
     var openSettingsBtn = panel.querySelector('#debugOpenSettings');
     if (openSettingsBtn) openSettingsBtn.addEventListener('click', function () { setMenuOpen(true); });
-
-    var stopVfxBtn = panel.querySelector('#debugStopAllVfx');
-    if (stopVfxBtn) {
-      stopVfxBtn.addEventListener('click', function () {
-        safeDebug(function () {
-          state.particles = state.particles.filter(function (p) { return !p.debugPreview; });
-          state.impacts = state.impacts.filter(function (fx) { return !fx.debugPreview; });
-          state.decals = state.decals.filter(function (d) { return !d.debugPreview; });
-          debugLog('info', 'Stopped all preview VFX.');
-        }, 'Stop VFX failed ');
-      });
-    }
-
-    var clearStatusBtn = panel.querySelector('#debugClearStatuses');
-    if (clearStatusBtn) {
-      clearStatusBtn.addEventListener('click', function () {
-        safeDebug(function () {
-          state.debug.debugStatusActive = false;
-          state.activeEffects.attackUntil = 0;
-          state.activeEffects.speedUntil = 0;
-          state.activeEffects.economyUntil = 0;
-          debugLog('info', 'Cleared debug statuses.');
-        }, 'Clear statuses failed ');
-      });
-    }
 
     var effectsSection = panel.querySelector('#debugSectionEffects');
     if (effectsSection) {
@@ -545,38 +511,7 @@
       container.innerHTML = '';
       var catEl = panel.querySelector('#debugEffectCategory');
       var cat = catEl ? catEl.value : 'all';
-      var showVfx = cat === 'all' || cat === 'vfx';
       var showStatus = cat === 'all' || cat === 'status';
-      if (showVfx) {
-        vfxList.forEach(function (ef) {
-          var row = document.createElement('div');
-          row.className = 'debugRow';
-          row.innerHTML = '<span class="debugLabel">' + ef.label + '</span><button type="button" class="debugBtn debugPlayVfx" data-id="' + ef.id + '">Play once</button>';
-          row.querySelector('button').addEventListener('click', function () {
-            safeDebug(function () {
-              var x = center.x + (Math.random() - 0.5) * 80;
-              var y = center.y + (Math.random() - 0.5) * 80;
-              if (ef.id === 'burst') {
-                burst(x, y, 12, 'rgba(255,180,120,.25)');
-                debugLog('info', 'VFX: Burst at center.');
-              } else if (ef.id === 'particle_burst') {
-                for (var i = 0; i < 8; i++) {
-                  var p = { x: x, y: y, r: 2, color: 'rgba(200,255,180,.4)', life: 0.4, max: 0.4, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, debugPreview: true };
-                  state.particles.push(p);
-                }
-                debugLog('info', 'VFX: Particle burst.');
-              } else if (ef.id === 'impact_ring') {
-                state.impacts.push({ x: x, y: y, r: 0, maxR: 40, life: 0.3, max: 0.3, kind: 'he', debugPreview: true });
-                debugLog('info', 'VFX: Impact ring.');
-              } else if (ef.id === 'decal_pool') {
-                state.decals.push({ kind: 'pool', x: x, y: y, r: 25, life: 5, max: 5, dps: 0, color: 'rgba(125,255,178,.14)', debugPreview: true });
-                debugLog('info', 'VFX: Decal pool.');
-              }
-            }, 'VFX failed ');
-          });
-          container.appendChild(row);
-        });
-      }
       if (showStatus) {
         statusList.forEach(function (ef) {
           var row = document.createElement('div');
