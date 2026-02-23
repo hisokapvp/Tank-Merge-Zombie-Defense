@@ -68,11 +68,15 @@
 - Supercomputer root tiles: 3-в-ряд без переноса, label в одну строку с min font, размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
 - Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels auto-shrink до `12px` минимум и защищены `text-overflow: ellipsis`.
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
+- `modsTankWall` panel: размер приведён к `talentTreeModal`-паттерну (`width:min(980px,95vw)`, `max-height:86vh`) для консистентной геометрии.
+- SC/Talents modal buttons: для pressed-состояния отключён `translateY` в модалках (`transform:none`), чтобы исключить transient scrollbar при удержании кнопок/плашек.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
 - AttackMode supplemental spawn: базовый sideCount-спавн сохраняется до `baseDesiredAlive`, а только attackMode-добавка (до `attackDesiredAlive`) идёт по эпизодным направлениям `dirA/dirB/dirC` с 50/25/25 и анти-повтором `dirA` (не более 2 эпизодов подряд).
 - Corpse despawn/fade: таймер трупа считается как `deathAnimDuration + corpseDespawnSec` из `assets/zombies.json`; в конце жизни трупа применяется linear fade на `corpseFadeOutSec`, forced culling не удаляет мгновенно, а ускоряет fade до `~0.2s`.
 - Fence sprite hot-refresh: tier стен синхронизируется с `maxTankLevelAchieved`/runtime max в текущей симуляции (не только по popup-событию), применяясь one-shot на изменение tier с `FenceSprites.ensureLevel(...)`.
-- Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices` в абсолютный старт, а tier стен повторно синхронизируется с max уровнем танка и attackMode/runtime выключается единым force-off reset.
+- Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices`, `maxTankLevelAchieved/runtimeMax/currentFenceTierApplied/fenceLevel` в `1`, затем выполняется force-sync tier стен и force-off reset attackMode/runtime.
+- New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
+- Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби) и fallback по всем сторонам, чтобы угловые проломы корректно работали как проход.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
 - Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; громкость задаётся кодовым множителем `AudioUi.TANK_DRIVE_VOLUME_MULT` (без UI-слайдера).
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.

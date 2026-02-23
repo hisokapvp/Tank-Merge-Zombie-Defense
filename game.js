@@ -1961,7 +1961,10 @@ function finalizePartialRestartPostRestore(stateRef){
     targetState.savedFenceState = null;
     targetState.buyCounts = {};
     targetState.buyPrices = {};
-    ensureFenceTierRuntimeState(targetState);
+    targetState.maxTankLevelAchieved = 1;
+    targetState.runtimeMaxTankLevelAchieved = 1;
+    targetState.currentFenceTierApplied = 1;
+    targetState.fenceLevel = 1;
     syncFenceTierWithMaxTankLevel(targetState, { force: true });
   }
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
@@ -5182,35 +5185,60 @@ function getBreachesForSide(sideKey){
 
 function pointInAabb(x, y, aabb){
   if (!aabb) return false;
-  return x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
+  const pad = arguments.length >= 4 && Number.isFinite(arguments[3]) ? Math.max(0, arguments[3]) : 0;
+  return x >= (aabb.minX - pad) && x <= (aabb.maxX + pad) && y >= (aabb.minY - pad) && y <= (aabb.maxY + pad);
 }
 
-function getActiveBreachAtPoint(sideKey, x, y){
+function getActiveBreachAtPoint(sideKey, x, y, padding){
+  const pad = Number.isFinite(padding) ? Math.max(0, padding) : 0;
   const list = getBreachesForSide(sideKey);
   for (let i = 0; i < list.length; i++) {
     const breach = list[i];
     if (!breach || !breach.holeAabb) continue;
-    if (pointInAabb(x, y, breach.holeAabb)) return breach;
+    if (pointInAabb(x, y, breach.holeAabb, pad)) return breach;
+  }
+
+  const breaches = ensureBreachesBySide();
+  const sideLists = [breaches.top, breaches.right, breaches.bottom, breaches.left];
+  for (let j = 0; j < sideLists.length; j++) {
+    const sideList = sideLists[j];
+    if (!Array.isArray(sideList) || sideList === list) continue;
+    for (let k = 0; k < sideList.length; k++) {
+      const breach = sideList[k];
+      if (!breach || !breach.holeAabb) continue;
+      if (pointInAabb(x, y, breach.holeAabb, pad)) return breach;
+    }
   }
   return null;
 }
 
 function pickNearestBreachForSide(sideKey, x, y){
   const list = getBreachesForSide(sideKey);
-  if (!list.length) return null;
   let best = null;
   let bestDist = Infinity;
-  for (let i = 0; i < list.length; i++) {
-    const breach = list[i];
-    if (!breach || !breach.center) continue;
-    const dx = breach.center.x - x;
-    const dy = breach.center.y - y;
-    const d2 = dx * dx + dy * dy;
-    if (d2 < bestDist) {
-      bestDist = d2;
-      best = breach;
+  function consider(candidateList){
+    if (!Array.isArray(candidateList) || !candidateList.length) return;
+    for (let i = 0; i < candidateList.length; i++) {
+      const breach = candidateList[i];
+      if (!breach || !breach.center) continue;
+      const dx = breach.center.x - x;
+      const dy = breach.center.y - y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestDist) {
+        bestDist = d2;
+        best = breach;
+      }
     }
   }
+
+  consider(list);
+  if (best) return best;
+
+  const breaches = ensureBreachesBySide();
+  consider(breaches.top);
+  consider(breaches.right);
+  consider(breaches.bottom);
+  consider(breaches.left);
   return best;
 }
 
@@ -5486,7 +5514,8 @@ function zombieFenceLimit(z){
   const worldX = center.x + localX;
   const worldY = center.y + localY;
   const sideAtPoint = getSideByPosition(worldX, worldY);
-  const activeBreach = getActiveBreachAtPoint(sideAtPoint, localX, localY);
+  const breachPad = Math.max(2, zombieCollisionRadius(z) * 0.45);
+  const activeBreach = getActiveBreachAtPoint(sideAtPoint, localX, localY, breachPad);
   if (activeBreach) {
     z.breached = true;
     z.breachSegmentId = activeBreach.segmentId;
@@ -7316,6 +7345,9 @@ function resetGameState(options){
   ensureDamageProgressState();
   ensureDamagePointsSpentState();
   ensureCannonUpgradesAppliedState();
+  if (FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+    try { FenceSprites.ensureLevel(1); } catch (e) {}
+  }
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();

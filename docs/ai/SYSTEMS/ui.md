@@ -101,11 +101,13 @@
 ## Supercomputer: modal layout
 - `supercomputer` модалки (`#supercomputerMenuOverlay`, `#modsHangarOverlay`, `#modsTankWallOverlay`) оформляются как `large modal` по паттерну дерева улучшений: panel с классом `.scModal`.
 - Размеры модалки должны быть адаптивными и ограниченными viewport: паттерн `width:min(96vw, 1060px)` и `max-height:min(90vh, 920px)`.
+- Для `#modsTankWallOverlay` размер панели выровнен с окном дерева талантов: `width:min(980px,95vw)`, `max-height:86vh`.
 - Внешний overlay не скроллится (`overflow:hidden`), скролл разрешён только внутри `.scModal__body` (`overflow-y:auto; overflow-x:hidden`, `min-height:0`, `flex:1`).
 - `.levelModal__panel.scModal` должен иметь `box-sizing:border-box` — чтобы padding не ломал расчёт ширины.
 - Кастомный scrollbar для `.scModal__body`: эталон — audio slider (`.menuSlider input[type=range]`); применяется через `scrollbar-width:thin; scrollbar-color: rgba(255,140,90,.55) rgba(18,12,9,.7)` (Firefox) + webkit: ширина `7px`, thumb — `linear-gradient(140deg,#ffd39e,#ff8c5a)`, `border-radius:999px`.
 - При открытой SC-модалке добавлять `body.scmodal-open { overflow:hidden; touch-action:none }`: `openRoot()` добавляет класс, `closeAll()` снимает. Это предотвращает появление второго скроллбара страницы при pressed-анимации кнопок внутри модалки.
 - Кнопки `.scButton:active:not(:disabled)` — pressed-эффект только через `transform:translateY(2px) scale(0.99)`, без изменений layout (`margin`, `padding`, `height`), чтобы не провоцировать системный scrollbar.
+- Для SC/Talents модалок (`#supercomputerMenuOverlay/#modsHangarOverlay/#modsTankWallOverlay/#talentOverlay`) pressed-состояние `uiButtonBehavior` и `scButton` принудительно `transform:none`, чтобы полностью убрать transient scrollbar при удержании.
 - Для `.scButton` обязателен `box-sizing:border-box`; на active/pressed запрещено менять `border-width`, `padding`, `height`, `margin`, `line-height`.
 - Правило overflow: одновременно скроллится только один контейнер (`.scModal__body`), а `overlay/panel/body` страницы не должны получать параллельный scroll.
 - Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll.

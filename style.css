@@ -1529,7 +1529,9 @@ body.scmodal-open{
   overflow-x:hidden;
   overscroll-behavior:contain;
   overflow-anchor:none;
+  scrollbar-gutter:stable;
   padding-right:2px;
+  padding-bottom:calc(var(--ui-btn-press-shift) + 4px);
   /* scrollbar styled like audio sliders */
   scrollbar-width:thin;
   scrollbar-color:rgba(255,140,90,.78) rgba(18,12,9,.7);
@@ -1549,8 +1551,24 @@ body.scmodal-open{
 }
 #modsTankWallOverlay .levelModal__panel.scModal{
   --mods-sc-pad-x: var(--uiModalPad);
+  width:min(980px, 95vw);
+  max-height:86vh;
   padding-left:0;
   padding-right:0;
+}
+
+#supercomputerMenuOverlay .scButton:active:not(:disabled),
+#modsHangarOverlay .scButton:active:not(:disabled),
+#modsTankWallOverlay .scButton:active:not(:disabled),
+#supercomputerMenuOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+#supercomputerMenuOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed,
+#modsHangarOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+#modsHangarOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed,
+#modsTankWallOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+#modsTankWallOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed,
+#talentOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+#talentOverlay .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed{
+  transform:none;
 }
 .scTabs{
   display:flex;
@@ -1644,6 +1662,8 @@ body.scmodal-open{
 .scGunsTable__rows{
   max-height:44vh;
   overflow:auto;
+  scrollbar-gutter:stable;
+  padding-bottom:calc(var(--ui-btn-press-shift) + 2px);
   display:flex;
   flex-direction:column;
 }
