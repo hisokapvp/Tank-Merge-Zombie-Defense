@@ -503,7 +503,7 @@
       reserveLine.id = 'modsTankWallGunsReserved';
 
       var tableWrap = documentObj.createElement('div');
-      tableWrap.className = 'scGunsTable';
+      tableWrap.className = 'scGunsTable scGunsTable_weapons';
 
       var tableHead = documentObj.createElement('div');
       tableHead.className = 'scGunsTable__head';
@@ -783,13 +783,17 @@
       var availablePoints = toSafeNonNegativeInt(getDamagePoints());
       var reservedPoints = getReservedFenceDamagePoints();
 
-      var frames = cfg.frames || [];
-      var sideTopFrame = null;
+      var frames = Array.isArray(cfg.frames) ? cfg.frames : [];
+      var frameById = Object.create(null);
       for (var j = 0; j < frames.length; j++) {
-        if (frames[j].id === 'sideTop') {
-          sideTopFrame = frames[j];
-          break;
-        }
+        var frameCfg = frames[j];
+        if (!frameCfg || typeof frameCfg.id !== 'string' || !frameCfg.id) continue;
+        frameById[frameCfg.id] = frameCfg;
+      }
+
+      function findFrameById(frameId) {
+        if (!frameId || typeof frameId !== 'string') return null;
+        return frameById[frameId] || null;
       }
 
       for (var i = 0; i < levelsCount; i++) {
@@ -815,13 +819,19 @@
         var canApply = pending > 0 && availablePoints >= totalPendingCost;
         
         var spriteHtml = '';
-        if (sideTopFrame) {
+        var frameId = (rowCfg && typeof rowCfg.uiFrameId === 'string' && rowCfg.uiFrameId)
+          ? rowCfg.uiFrameId
+          : 'sideTop';
+        var uiFrame = findFrameById(frameId);
+        if (!uiFrame) uiFrame = findFrameById('sideTop');
+
+        if (uiFrame) {
           var atlasName = rowCfg.atlas || cfg.atlas || 'fence_atlas.png';
           var src = 'assets/' + atlasName;
-          var frameX = Number.isFinite(sideTopFrame.x) ? Math.floor(sideTopFrame.x) : 0;
-          var frameY = Number.isFinite(sideTopFrame.y) ? Math.floor(sideTopFrame.y) : 0;
-          var frameW = Number.isFinite(sideTopFrame.w) && sideTopFrame.w > 0 ? Math.floor(sideTopFrame.w) : 64;
-          var frameH = Number.isFinite(sideTopFrame.h) && sideTopFrame.h > 0 ? Math.floor(sideTopFrame.h) : 64;
+          var frameX = Number.isFinite(uiFrame.x) ? Math.floor(uiFrame.x) : 0;
+          var frameY = Number.isFinite(uiFrame.y) ? Math.floor(uiFrame.y) : 0;
+          var frameW = Number.isFinite(uiFrame.w) && uiFrame.w > 0 ? Math.floor(uiFrame.w) : 64;
+          var frameH = Number.isFinite(uiFrame.h) && uiFrame.h > 0 ? Math.floor(uiFrame.h) : 64;
           
           var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
           var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;

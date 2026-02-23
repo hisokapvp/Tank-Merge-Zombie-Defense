@@ -86,6 +86,7 @@
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
 - UI SFX параметры (volume/cooldown): `src/config/audioUi.js`
 - Layout tuning (иконки/спрайты): `src/config/layoutTuning.js` (`weaponIconW`, `weaponIconH`)
+- Fence preview кадры в supercomputer: `assets/fence.json` (`levels[].uiFrameId`, fallback `sideTop`)
 - Баланс апгрейдов орудий: `assets/balance/cannonUpgrades.json` (runtime fallback при ошибках загрузки/валидации)
 
 ## Runtime reset (partial)

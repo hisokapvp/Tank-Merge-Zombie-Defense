@@ -2539,8 +2539,12 @@ function addDron(level){
 }
 
 function recordTankLevel(level){
-  state.maxTankLevelAchieved = Math.max(state.maxTankLevelAchieved || 0, level);
-  // sync fence level to maxTankLevelAchieved (clamped by available fence levels)
+  const prevMaxLevel = Number.isFinite(state.maxTankLevelAchieved) ? Math.max(0, Math.floor(state.maxTankLevelAchieved)) : 0;
+  const nextLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
+  if (nextLevel <= prevMaxLevel) return;
+
+  state.maxTankLevelAchieved = nextLevel;
+  // sync fence level only when a new max tank level is reached
   var fenceLevels = getFenceLevels();
   var maxFenceLevel = Array.isArray(fenceLevels) && fenceLevels.length ? fenceLevels.length : MAX_TANK_LEVEL;
   var clamped = Math.max(1, Math.min(maxFenceLevel, Math.floor(state.maxTankLevelAchieved || 1)));
@@ -4513,6 +4517,7 @@ function ensureZombieCount(){
   for (const z of state.zombies){
     if (z.state === 'dying') continue;
     if (!Number.isFinite(z.slotIndex)){
+      if (z.attackSpawnSupplemental === true) continue;
       const nextSlot = pickMissingSlotBySide(missingBySide, aliveBySide, spawnCfg);
       if (!Number.isFinite(nextSlot.slotIndex)) break;
       assignZombieSlot(z, nextSlot.slotIndex, slotCount);
@@ -4575,6 +4580,7 @@ function ensureZombieCount(){
       z.theta = theta;
       z.anchorTheta = theta;
       z.slotIndex = null;
+      z.attackSpawnSupplemental = true;
       z.spawnSideKey = getSideKeyForTheta(theta);
       // ensure targetR / r start from edge (makeZombie already set r)
       state.zombies.push(z);

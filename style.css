@@ -1630,6 +1630,10 @@ body.scmodal-open{
   gap:8px;
   align-items:center;
 }
+.scGunsTable_weapons .scGunsTable__head,
+.scGunsTable_weapons .scGunsTable__row{
+  grid-template-columns: 128px 48px 1fr 1fr 120px 128px 200px;
+}
 .scGunsTable__head{
   font-size:12px;
   color:var(--muted);
