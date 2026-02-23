@@ -532,8 +532,6 @@
 | 7647 | `ensureProgressUI()` |
 | 7670 | `updateProgressUI()` |
 | 7965 | `renderCrateIcon(level)` |
-| 7978 | `openBoostModal()` |
-| 7992 | `closeBoostModal()` |
 | 7999 | `openResetTalentsModal()` |
 | 8007 | `closeResetTalentsModal()` |
 

@@ -41,6 +41,9 @@
     var getCannonUpgradeIconFrames = typeof opts.getCannonUpgradeIconFrames === 'function'
       ? opts.getCannonUpgradeIconFrames
       : function () { return 1; };
+    var getCannonUpgradeIconFps = typeof opts.getCannonUpgradeIconFps === 'function'
+      ? opts.getCannonUpgradeIconFps
+      : function () { return 8; };
     var getCannonUpgradeConfig = typeof opts.getCannonUpgradeConfig === 'function'
       ? opts.getCannonUpgradeConfig
       : function () { return []; };
@@ -96,7 +99,6 @@
       pendingUpgradesByLevel: Array(60).fill(0),
       pendingFenceUpgradesByLevel: Array(60).fill(0),
       iconTickerId: null,
-      iconTickerFrame: 0,
     };
 
     var tankWallTabButtons = {
@@ -131,6 +133,16 @@
       if (!documentObj.body) return;
       if (locked) documentObj.body.classList.add('scmodal-open');
       else documentObj.body.classList.remove('scmodal-open');
+    }
+
+    function applyLayoutTuningVars() {
+      var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+      var rootEl = documentObj.documentElement;
+      if (!rootEl || !rootEl.style) return;
+      var tileIconSize = Number(lt.supercomputerTileIconSizePx);
+      if (Number.isFinite(tileIconSize) && tileIconSize > 0) {
+        rootEl.style.setProperty('--scTileIconSizePx', String(Math.round(tileIconSize)) + 'px');
+      }
     }
 
     function applySharedTalentModalClass() {
@@ -424,7 +436,7 @@
 
     function tickGunsIconSprites() {
       if (state.view !== 'tankWall') return;
-      state.iconTickerFrame = (state.iconTickerFrame + 1) % 1000000;
+      var nowMs = Date.now();
       
       if (state.activeTankWallTab === 'weapons' && gunsUi.rows) {
         var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
@@ -432,9 +444,13 @@
           for (var i = 0; i < animatedNodes.length; i++) {
             var node = animatedNodes[i];
             var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
+            var fps = Number(node.getAttribute('data-anim-fps'));
             var rowNode = node.closest('.scGunsTable__row');
             if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
-            var frameIndex = frames <= 1 ? 0 : (state.iconTickerFrame % frames);
+            var frameIndex = 0;
+            if (frames > 1 && Number.isFinite(fps) && fps > 0) {
+              frameIndex = Math.floor(nowMs * (fps / 1000)) % frames;
+            }
             drawGunsSpriteCanvas(node, frameIndex);
           }
         }
@@ -453,7 +469,7 @@
 
     function startGunsIconTicker() {
       if (state.iconTickerId != null) return;
-      state.iconTickerId = global.setInterval(tickGunsIconSprites, 120);
+      state.iconTickerId = global.setInterval(tickGunsIconSprites, 50);
     }
 
     function stopGunsIconTicker() {
@@ -626,15 +642,23 @@
           var frame = viewData.cannonSprite.cfg.frame || { x: 0, y: 0, w: 64, h: 64 };
           var frameX = Number.isFinite(frame.x) ? Math.floor(frame.x) : 0;
           var frameY = Number.isFinite(frame.y) ? Math.floor(frame.y) : 0;
-          var frameW = Number.isFinite(frame.w) && frame.w > 0 ? Math.floor(frame.w) : 64;
-          var frameH = Number.isFinite(frame.h) && frame.h > 0 ? Math.floor(frame.h) : 64;
+          var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+          var tunedFrameW = Number(lt.weaponIconSpriteFrameW);
+          var tunedFrameH = Number(lt.weaponIconSpriteFrameH);
+          var frameW = Number.isFinite(tunedFrameW) && tunedFrameW > 0
+            ? Math.floor(tunedFrameW)
+            : 128;
+          var frameH = Number.isFinite(tunedFrameH) && tunedFrameH > 0
+            ? Math.floor(tunedFrameH)
+            : 128;
           var spriteFrames = Number.isFinite(viewData.cannonSprite.cfg.frames) && viewData.cannonSprite.cfg.frames >= 1
             ? Math.floor(viewData.cannonSprite.cfg.frames)
             : 1;
           var balanceFrames = toSafeNonNegativeInt(getCannonUpgradeIconFrames(level));
           if (balanceFrames <= 0) balanceFrames = 1;
           var animFrames = Math.max(1, Math.min(spriteFrames, balanceFrames));
-          var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+          var animFps = Number(getCannonUpgradeIconFps(level));
+          if (!Number.isFinite(animFps) || animFps <= 0) animFps = 8;
           var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
           var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
           spriteHtml = '' +
@@ -644,6 +668,7 @@
                 ' height="' + String(iconH) + '"' +
                 ' style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px"' +
                 ' data-anim-frames="' + String(animFrames) + '"' +
+                ' data-anim-fps="' + String(animFps) + '"' +
                 ' data-sprite-src="' + src + '"' +
                 ' data-frame-x="' + String(frameX) + '"' +
                 ' data-frame-y="' + String(frameY) + '"' +
@@ -908,6 +933,7 @@
     }
 
     function openRoot() {
+      applyLayoutTuningVars();
       if (!state.isOpen) {
         resetPendingUpgrades();
         resetPendingFenceUpgrades();

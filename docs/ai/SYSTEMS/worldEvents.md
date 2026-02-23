@@ -11,6 +11,7 @@
 
 ## Правила
 - Параметры `attackMode`, `targetAlive`, ramp и force-сценарии менять как единый набор.
+- Радиус осведомлённости зомби о проломах настраивается в `src/config/worldEvents.js` как `attackMode.fenceBreachAwarenessRadiusPx` (в px, до масштабирования `balScale`).
 - Избегать эксплойтов: резких скачков сложности и бесконечных циклов наград.
 - Debug-forcing оставлять только для debug-режима.
 - Start эпизода attackMode определяется переходом `isZombieAttackModeActive()` из `false -> true` (включая `forceAttackMode`), а не только auto-schedule.

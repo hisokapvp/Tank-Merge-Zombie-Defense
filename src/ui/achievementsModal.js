@@ -98,6 +98,13 @@
         titleEl.className = 'achievementName';
         titleEl.textContent = translate(def.titleKey);
 
+        var doneBadge = null;
+        if (done) {
+          doneBadge = documentObj.createElement('span');
+          doneBadge.className = 'achievementDoneBadge';
+          doneBadge.textContent = translate('achievementStatusDone');
+        }
+
         var toggleBtn = documentObj.createElement('button');
         toggleBtn.className = 'achievementToggleBtn';
         toggleBtn.type = 'button';
@@ -109,6 +116,7 @@
         toggleBtn.setAttribute('aria-label', titleEl.textContent || '+');
 
         headerRow.appendChild(titleEl);
+        if (doneBadge) headerRow.appendChild(doneBadge);
         headerRow.appendChild(toggleBtn);
 
         var descRow = documentObj.createElement('div');

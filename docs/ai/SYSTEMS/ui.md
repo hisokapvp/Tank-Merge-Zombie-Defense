@@ -96,7 +96,8 @@
 ## Supercomputer: root tiles
 - Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).
 - Label `.scRootTile__label`: одна строка (`white-space:nowrap`) с защитой layout (`overflow:hidden` + `text-overflow:ellipsis`), auto-shrink через `clamp(...)` с минимальным размером `12px` на всех брейкпоинтах.
-- Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), а фактический размер идёт через `--scTileIconSize` + `clamp(...)`; целевой baseline около `96px` на стандартном экране.
+- Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), которая заполняется из `Game.Config.LayoutTuning.supercomputerTileIconSizePx`; baseline — `200px`.
+- В root SC-модалке нельзя клиппить hover/active эффекты плиток: у root body и root tiles допускается только `overflow:visible` + технологические внутренние отступы по X.
 
 ## Supercomputer: modal layout
 - `supercomputer` модалки (`#supercomputerMenuOverlay`, `#modsHangarOverlay`, `#modsTankWallOverlay`) оформляются как `large modal` по паттерну дерева улучшений: panel с классом `.scModal`.
@@ -108,9 +109,12 @@
 - При открытой SC-модалке добавлять `body.scmodal-open { overflow:hidden; touch-action:none }`: `openRoot()` добавляет класс, `closeAll()` снимает. Это предотвращает появление второго скроллбара страницы при pressed-анимации кнопок внутри модалки.
 - Кнопки `.scButton:active:not(:disabled)` — pressed-эффект только через `transform:translateY(2px) scale(0.99)`, без изменений layout (`margin`, `padding`, `height`), чтобы не провоцировать системный scrollbar.
 - Для SC/Talents модалок (`#supercomputerMenuOverlay/#modsHangarOverlay/#modsTankWallOverlay/#talentOverlay`) pressed-состояние `uiButtonBehavior` и `scButton` принудительно `transform:none`, чтобы полностью убрать transient scrollbar при удержании.
+- Для SC/Talents модалок у кнопок нельзя клиппить наружные тени (`overflow:visible` для `.btn` в пределах этих overlay).
+- Для SC/Talents overlay shimmer-псевдоэлемент `.btn::after` отключён, чтобы hover не давал белый прямоугольник на кнопках.
 - Для `.scButton` обязателен `box-sizing:border-box`; на active/pressed запрещено менять `border-width`, `padding`, `height`, `margin`, `line-height`.
 - Правило overflow: одновременно скроллится только один контейнер (`.scModal__body`), а `overlay/panel/body` страницы не должны получать параллельный scroll.
 - Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll.
+- Для root/hangar модалок SC body-скролл отключён; для `modsTankWall` скролл оставлен только у `#modsTankWallOverlay .scModal__body`.
 
 ### Диагностика: второй scrollbar в supercomputer modal
 - Как воспроизвести: открыть `Supercomputer -> Модификации -> Назад`, зажать кнопку `Назад` (или другую `.scButton`) и удерживать.
@@ -200,11 +204,16 @@
 	- списывает очки, применяет апгрейд в state и сбрасывает pending для выбранного уровня.
 - Иконки орудий:
 	- источник кадра — текущий `cannon` spritesheet (`TankSprites.pickCannon(level)`);
-	- число кадров берётся из `iconFrames` (fallback `1`), при `iconFrames=1` анимации нет;
+	- source-кадр для UI принудительно берётся как `128x128` (через `Game.Config.LayoutTuning.weaponIconSpriteFrameW/H`), независимо от display-size canvas;
+	- число кадров берётся из `Game.Config.LayoutTuning.weaponIconAnimFramesByLevel[L-1]` (fallback `iconFrames` из баланса, далее `1`), при `1` анимации нет;
+	- FPS берётся из `Game.Config.LayoutTuning.weaponIconAnimFpsByLevel[L-1]` (fallback `8`);
 	- ширина `canvas` задаётся через `Game.Config.LayoutTuning.weaponIconW`; ширина sprite-колонки в CSS должна быть согласована с этим значением;
 	- используется один shared ticker (`setInterval`) на весь таб `Орудия`, без 60 отдельных `requestAnimationFrame`/таймеров;
 	- ticker активен только пока открыт `Supercomputer -> Орудия`, и останавливается при закрытии/переключении таба.
 	- поворот иконок задаётся единой константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js` и применяется в `drawGunsSpriteCanvas(...)` через `ctx.translate(center)` + `ctx.rotate(...)`; `imageSmoothingEnabled` остаётся `false`.
+
+## Stage actions: boost button
+- Кнопка `#boost` и модалка `#boostModal` удалены; не добавлять обработчики `openBoostModal/closeBoostModal` обратно в runtime/UI.
 
 ## Zombie extra VFX policy
 - Дополнительные ауры/свечения/кольца для зомби отключены в коде рендера (`src/render/zombieRender.js`) через флаг `DISABLE_ZOMBIE_AURAS = true`.

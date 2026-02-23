@@ -19,8 +19,8 @@
   --audio-slider-thumb-bg: linear-gradient(140deg,#ffd39e,#ff8c5a);
   --audio-slider-thumb-border: 2px solid rgba(0,0,0,.35);
   --audio-slider-thumb-shadow: 0 4px 0 rgba(0,0,0,.35);
-  --scTileIconSizePx: 96px;
-  --scTileIconSize: clamp(64px, calc(var(--scTileIconSizePx) * 0.85), var(--scTileIconSizePx));
+  --scTileIconSizePx: 200px;
+  --scTileIconSize: clamp(64px, var(--scTileIconSizePx), var(--scTileIconSizePx));
   --uiModalPad: clamp(16px, 4vw, 50px);
 }
 *{box-sizing:border-box}
@@ -727,7 +727,22 @@ body.menu-open .stageUi .hudItem{
 }
 
 .achievementRow.done{
-  border-color:rgba(201,245,154,.45);
+  border-color:rgba(201,245,154,.62);
+  background:linear-gradient(140deg, rgba(37,62,43,.62), rgba(14,24,16,.64));
+  box-shadow:inset 0 0 0 1px rgba(125,255,178,.16), 0 0 0 1px rgba(125,255,178,.12);
+}
+
+.achievementDoneBadge{
+  margin-left:8px;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid rgba(125,255,178,.42);
+  background:rgba(26,52,34,.68);
+  color:rgba(201,245,154,.98);
+  font-size:11px;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
 }
 
 .achievementName{
@@ -969,6 +984,8 @@ body.scmodal-open{
   transform:translateX(-120%) rotate(8deg);
   opacity:0;
   transition:transform .6s ease, opacity .3s ease;
+  border-radius:inherit;
+  pointer-events:none;
 }
 .coinIcon{
   margin-left:6px;
@@ -1084,7 +1101,11 @@ body.scmodal-open{
   justify-content:flex-start;
   align-items:stretch;
   margin-top:12px;
+  margin-left:-8px;
+  margin-right:-8px;
+  padding:8px;
   width:100%;
+  overflow:visible;
 }
 .scRootTile{
   flex:0 0 calc((100% - 20px) / 3);
@@ -1097,6 +1118,7 @@ body.scmodal-open{
   justify-content:center;
   gap:8px;
   text-align:center;
+  overflow:visible;
 }
 .scRootTile__icon{
   width:var(--scTileIconSize);
@@ -1518,20 +1540,20 @@ body.scmodal-open{
 }
 .levelModal__panel.scModal{
   height:auto;
-  overflow:hidden;
+  overflow:visible;
   padding:var(--uiModalPad);
   box-sizing:border-box;
 }
 .scModal__body{
   flex:1;
   min-height:0;
-  overflow-y:auto;
-  overflow-x:hidden;
+  overflow-y:hidden;
+  overflow-x:visible;
   overscroll-behavior:contain;
   overflow-anchor:none;
-  scrollbar-gutter:stable;
+  scrollbar-gutter:auto;
   padding-right:2px;
-  padding-bottom:calc(var(--ui-btn-press-shift) + 4px);
+  padding-bottom:6px;
   /* scrollbar styled like audio sliders */
   scrollbar-width:thin;
   scrollbar-color:rgba(255,140,90,.78) rgba(18,12,9,.7);
@@ -1548,6 +1570,22 @@ body.scmodal-open{
   border-radius:999px;
   border:1px solid rgba(0,0,0,.35);
   box-shadow:0 2px 0 rgba(0,0,0,.25);
+}
+#supercomputerMenuOverlay .scModal__body{
+  overflow:visible;
+  padding-left:10px;
+  padding-right:10px;
+  padding-top:4px;
+}
+#modsHangarOverlay .scModal__body{
+  overflow:visible;
+}
+#modsTankWallOverlay .scModal__body{
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-gutter:stable;
+  padding-right:2px;
+  padding-bottom:calc(var(--ui-btn-press-shift) + 4px);
 }
 #modsTankWallOverlay .levelModal__panel.scModal{
   --mods-sc-pad-x: var(--uiModalPad);
@@ -1587,6 +1625,18 @@ body.scmodal-open{
 #modsTankWallOverlay .levelModal__panel.scModal > .levelModal__actions{
   margin-left:var(--mods-sc-pad-x);
   margin-right:var(--mods-sc-pad-x);
+}
+#supercomputerMenuOverlay .btn,
+#modsHangarOverlay .btn,
+#modsTankWallOverlay .btn,
+#talentOverlay .btn{
+  overflow:visible;
+}
+#supercomputerMenuOverlay .btn::after,
+#modsHangarOverlay .btn::after,
+#modsTankWallOverlay .btn::after,
+#talentOverlay .btn::after{
+  display:none;
 }
 .scTab{
   margin-bottom:-1px;
@@ -1700,7 +1750,7 @@ body.scmodal-open{
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
+  overflow:visible;
 }
 .scGunsTable__spriteCanvas{
   display:block;

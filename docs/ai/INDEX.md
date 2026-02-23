@@ -61,6 +61,7 @@
 - Divider под вкладками `Орудия/Базы/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
 - `Орудия`: добавлена колонка `Стоимость` (`next / totalSpent`) и поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` для аним-иконок через shared ticker.
+- `Орудия`: в `src/config/layoutTuning.js` добавлены per-level массивы `weaponIconAnimFramesByLevel` и `weaponIconAnimFpsByLevel` (L1..L60) для ручной настройки кадров и fps.
 - Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.
 - On-track dim иконки в слоте настраивается параметром `assets/tanks.json -> ui.onTrackIconOpacity` (нормализация в `TankSprites.config.ui`).
 - Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
@@ -68,6 +69,8 @@
 - Supercomputer root tiles: 3-в-ряд без переноса, label в одну строку с min font, размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
 - Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels auto-shrink до `12px` минимум и защищены `text-overflow: ellipsis`.
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
+- Supercomputer overlays: hover-sheen (`.btn::after`) отключён внутри SC/Talents overlays, чтобы не появлялся белый прямоугольник при hover.
+- Supercomputer overlays: для `modsTankWall` скролл оставлен в `#modsTankWallOverlay .scModal__body`; для root/hangar body скролл отключён, чтобы не появлялся лишний scrollbar.
 - `modsTankWall` panel: размер приведён к `talentTreeModal`-паттерну (`width:min(980px,95vw)`, `max-height:86vh`) для консистентной геометрии.
 - SC/Talents modal buttons: для pressed-состояния отключён `translateY` в модалках (`transform:none`), чтобы исключить transient scrollbar при удержании кнопок/плашек.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
@@ -76,7 +79,12 @@
 - Fence sprite hot-refresh: tier стен синхронизируется с `maxTankLevelAchieved`/runtime max в текущей симуляции (не только по popup-событию), применяясь one-shot на изменение tier с `FenceSprites.ensureLevel(...)`.
 - Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices`, `maxTankLevelAchieved/runtimeMax/currentFenceTierApplied/fenceLevel` в `1`, затем выполняется force-sync tier стен и force-off reset attackMode/runtime.
 - New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
-- Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби) и fallback по всем сторонам, чтобы угловые проломы корректно работали как проход.
+- Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); steer к ближайшему пролому выполняется только в пределах текущей стороны зомби (без глобального fallback по всем сторонам).
+- Zombie breach targeting: awareness о проломе ограничен радиусом `Game.Config.WorldEvents.attackMode.fenceBreachAwarenessRadiusPx`.
+- Supercomputer root tiles: root-плашки и modal-кнопки не должны клиппить тени/hover-scale; для root-сетки обязателен запас по краям (`overflow:visible` + внутренние отступы в body).
+- Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `200`).
+- Supercomputer weapons source frame: источник кадра для оружейных иконок в tab `Орудия` задаётся фиксированным размером `128x128` через `layoutTuning` (`weaponIconSpriteFrameW/H`).
+- Stage actions: удалены `#boost` и `#boostModal`; ad-speed boost больше не имеет отдельной кнопки/модалки.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
 - Track loop SFX: `trackLoop` стартует/стопается от факта наличия танка на трассе (`state.cells[].tank.onTrack`) и pause-state; громкость задаётся кодовым множителем `AudioUi.TANK_DRIVE_VOLUME_MULT` (без UI-слайдера).
 - Merge SFX new max: id `mergeNewMaxLevel` используется только вместо `levelUp` при merge, который повышает `maxLevel` и реально показывает `Game.MergePopup.show(level)`.
@@ -89,7 +97,7 @@
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
 - UI SFX параметры (volume/cooldown): `src/config/audioUi.js`
-- Layout tuning (иконки/спрайты): `src/config/layoutTuning.js` (`weaponIconW`, `weaponIconH`)
+- Layout tuning (иконки/спрайты): `src/config/layoutTuning.js` (`supercomputerTileIconSizePx`, `weaponIconW`, `weaponIconH`, `weaponIconSpriteFrameW/H`)
 - Fence preview кадры в supercomputer: `assets/fence.json` (`levels[].uiIcon.{atlas,frame|frameId}` / `levels[].uiFrameId`, fallback `sideTop`)
 - Баланс апгрейдов орудий: `assets/balance/cannonUpgrades.json` (runtime fallback при ошибках загрузки/валидации)
 

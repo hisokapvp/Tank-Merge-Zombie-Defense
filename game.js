@@ -15,10 +15,8 @@ const ui = {
   zcount: document.getElementById('zcount'),
   buy: document.getElementById('buy'),
   buyCost: document.getElementById('buyCost'),
-  boost: document.getElementById('boost'),
   buyBulk: document.getElementById('buyBulk'),
   autoMergeBtn: document.getElementById('autoMergeBtn'),
-  boostState: document.getElementById('boostState'),
   supercomputerBtn: document.getElementById('supercomputerBtn'),
   achievementsBtn: document.getElementById('achievementsBtn'),
   achievementsModal: document.getElementById('achievementsModal'),
@@ -553,11 +551,31 @@ function getUpgradeStepCost(level, appliedIndex){
 }
 
 function getCannonUpgradeIconFrames(level){
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const perLevel = Array.isArray(layoutTuning.weaponIconAnimFramesByLevel)
+    ? layoutTuning.weaponIconAnimFramesByLevel
+    : null;
+  const idx = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) - 1 : 0;
+  if (perLevel && Number.isFinite(perLevel[idx]) && perLevel[idx] >= 1) {
+    return Math.floor(perLevel[idx]);
+  }
   const row = getCannonUpgradeRow(level);
   if (!row) return 1;
   const value = Number(row[5]);
   if (!Number.isFinite(value) || value < 1) return 1;
   return Math.floor(value);
+}
+
+function getCannonUpgradeIconFps(level){
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const perLevel = Array.isArray(layoutTuning.weaponIconAnimFpsByLevel)
+    ? layoutTuning.weaponIconAnimFpsByLevel
+    : null;
+  const idx = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) - 1 : 0;
+  if (perLevel && Number.isFinite(perLevel[idx]) && perLevel[idx] > 0) {
+    return Number(perLevel[idx]);
+  }
+  return 8;
 }
 
 function getCannonUpgradeTotalCost(level, pendingCount){
@@ -5213,6 +5231,8 @@ function getActiveBreachAtPoint(sideKey, x, y, padding){
 }
 
 function pickNearestBreachForSide(sideKey, x, y){
+  const maxDistancePx = Number.isFinite(arguments[3]) ? Math.max(0, arguments[3]) : Infinity;
+  const maxDistanceSq = Number.isFinite(maxDistancePx) ? (maxDistancePx * maxDistancePx) : Infinity;
   const list = getBreachesForSide(sideKey);
   let best = null;
   let bestDist = Infinity;
@@ -5224,6 +5244,7 @@ function pickNearestBreachForSide(sideKey, x, y){
       const dx = breach.center.x - x;
       const dy = breach.center.y - y;
       const d2 = dx * dx + dy * dy;
+      if (d2 > maxDistanceSq) continue;
       if (d2 < bestDist) {
         bestDist = d2;
         best = breach;
@@ -5232,13 +5253,6 @@ function pickNearestBreachForSide(sideKey, x, y){
   }
 
   consider(list);
-  if (best) return best;
-
-  const breaches = ensureBreachesBySide();
-  consider(breaches.top);
-  consider(breaches.right);
-  consider(breaches.bottom);
-  consider(breaches.left);
   return best;
 }
 
@@ -5251,6 +5265,13 @@ function getBrokenFenceSidesMap(){
     bottom: breaches.bottom.length > 0,
     left: breaches.left.length > 0,
   };
+}
+
+function getFenceBreachAwarenessRadiusPx(){
+  const cfg = window.Game && window.Game.Config && window.Game.Config.WorldEvents;
+  const radius = Number(cfg && cfg.attackMode && cfg.attackMode.fenceBreachAwarenessRadiusPx);
+  if (!Number.isFinite(radius) || radius <= 0) return 0;
+  return radius * balScale;
 }
 
 function distancePointAabb(px, py, aabb){
@@ -5432,7 +5453,6 @@ function isBlockingModalOpen(){
     'menuOverlay',
     'crateModal',
     'dismantleModal',
-    'boostModal',
     'resetTalentsModal',
     'talentOverlay',
     'supercomputerMenuOverlay',
@@ -5613,6 +5633,7 @@ function stepZombies(dt){
   const attackActive = isZombieAttackModeActive();
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
+  const breachAwarenessRadiusPx = getFenceBreachAwarenessRadiusPx();
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -5657,7 +5678,7 @@ function stepZombies(dt){
     z.side = getSideByPosition(prevX, prevY);
     const prevLocalX = prevX - center.x;
     const prevLocalY = prevY - center.y;
-    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY);
+    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
     const allowSupercomputerTarget = !!z.breached;
 
     let radialSpeed = 0;
@@ -6919,7 +6940,6 @@ function stopAndResetSessionToBigMenu(){
   closeSupercomputerMenu();
   closeTalents();
   closeLevelModal();
-  closeBoostModal();
   closeResetTalentsModal();
   closeCrateModal();
   closeDismantleModal();
@@ -7430,13 +7450,6 @@ function updateUI(){
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
   ui.buyCost.textContent = fmt(cost);
-
-  const left = state.boostUntil - nowSec();
-  if (ui.boostState) {
-    ui.boostState.textContent = left > 0
-      ? t('boostActive', {mult: BAL.boostMult, sec: Math.ceil(left)})
-      : '—';
-  }
 
   const Garage = window.Game && window.Game.Garage;
   const hasFree = Garage ? Garage.hasFreeCell(state) : state.cells.some(c=>!c.tank);
@@ -8431,33 +8444,6 @@ function renderCrateIcon(level){
   );
 }
 
-function openBoostModal(){
-  if (UIModals && typeof UIModals.openBoostModal === 'function') {
-    UIModals.openBoostModal({ t, a11yOpen, onClose: closeBoostModal });
-    return;
-  }
-  const modal = document.getElementById('boostModal');
-  if (!modal) return;
-  const textEl = document.getElementById('boostModalText');
-  const watchEl = document.getElementById('boostModalWatch');
-  if (textEl) textEl.textContent = t('boostModalText');
-  if (watchEl) watchEl.textContent = t('boostModalWatch');
-  modal.classList.remove('hidden');
-  modal.setAttribute('aria-hidden', 'false');
-  a11yOpen(modal, { initialFocus: watchEl, onClose: closeBoostModal });
-}
-function closeBoostModal(){
-  if (UIModals && typeof UIModals.closeBoostModal === 'function') {
-    UIModals.closeBoostModal({ a11yClose });
-    return;
-  }
-  const modal = document.getElementById('boostModal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden', 'true');
-  a11yClose(modal);
-}
-
 function openResetTalentsModal(){
   if (UIModals && typeof UIModals.openResetTalentsModal === 'function') {
     UIModals.openResetTalentsModal({ t, a11yOpen, onClose: closeResetTalentsModal });
@@ -8595,6 +8581,7 @@ function getSupercomputerMenuController(){
     getAppliedCannonUpgradeLevel: getAppliedCannonUpgradeLevel,
     getCannonUpgradeStepCost: getCannonUpgradeStepCost,
     getCannonUpgradeIconFrames: getCannonUpgradeIconFrames,
+    getCannonUpgradeIconFps: getCannonUpgradeIconFps,
     getCannonUpgradeConfig: getCannonUpgradeConfig,
     applyCannonUpgrade: applyCannonUpgrade,
     getAppliedFenceUpgradeLevel: getAppliedFenceUpgradeLevel,
@@ -8805,7 +8792,6 @@ canvas.addEventListener('pointerleave', ()=>{
 ui.buy.addEventListener('click', ()=> tryBuyTank());
 ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
 ui.autoMergeBtn?.addEventListener('click', ()=> runAutoMergeClick());
-ui.boost.addEventListener('click', () => openBoostModal());
 ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());
 ui.achievementsClose?.addEventListener('click', () => closeAchievementsModal());
 ui.achievementsModal?.addEventListener('click', (e) => {
@@ -8815,14 +8801,6 @@ ui.achievementPopupClose?.addEventListener('click', () => closeAchievementPopup(
 ui.achievementPopupClaim?.addEventListener('click', () => closeAchievementPopup());
 ui.achievementPopup?.addEventListener('click', (e) => {
   if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
-});
-document.getElementById('boostModalWatch')?.addEventListener('click', () => {
-  activateTimedBoost('speedBoost', BAL.boostDurationSec);
-  closeBoostModal();
-});
-document.getElementById('boostModalClose')?.addEventListener('click', () => closeBoostModal());
-document.getElementById('boostModal')?.addEventListener('click', (e) => {
-  if (e.target?.dataset?.boostClose === 'true') closeBoostModal();
 });
 document.getElementById('resetTalentsModalClose')?.addEventListener('click', () => closeResetTalentsModal());
 document.getElementById('resetTalentsModalWatch')?.addEventListener('click', () => {

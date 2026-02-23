@@ -17,22 +17,6 @@
     if (typeof a11yClose === 'function') a11yClose(modal);
   }
 
-  function openBoostModal(options) {
-    var opts = options || {};
-    var t = opts.t || function (k) { return k; };
-    var modal = document.getElementById('boostModal');
-    var textEl = document.getElementById('boostModalText');
-    var watchEl = document.getElementById('boostModalWatch');
-    if (textEl) textEl.textContent = t('boostModalText');
-    if (watchEl) watchEl.textContent = t('boostModalWatch');
-    showModal(modal, opts.a11yOpen, watchEl, opts.onClose);
-  }
-
-  function closeBoostModal(options) {
-    var opts = options || {};
-    hideModal(document.getElementById('boostModal'), opts.a11yClose);
-  }
-
   function openResetTalentsModal(options) {
     var opts = options || {};
     var t = opts.t || function (k) { return k; };
@@ -224,8 +208,6 @@
   global.Game.UIModals = {
     fillDismantleConfirmModal: fillDismantleConfirmModal,
     openDismantleModal: openDismantleModal,
-    openBoostModal: openBoostModal,
-    closeBoostModal: closeBoostModal,
     openResetTalentsModal: openResetTalentsModal,
     closeResetTalentsModal: closeResetTalentsModal,
     openCrateModal: openCrateModal,
