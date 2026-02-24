@@ -1,0 +1,13 @@
+{
+  "name": "bibliotekar-skill-pack",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Validator + regression fixtures for the 'Библиотекарь' skill output schema (v1.1).",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node scripts/run-tests.js"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0"
+  }
+}

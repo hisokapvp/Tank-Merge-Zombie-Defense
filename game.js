@@ -3593,7 +3593,8 @@ function initTalentDefs(){
   addTalent(1, 'Дуплет', 'Шанс двойного выстрела +20%.', 1, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.20, r));
   addTalent(1, 'Стабильная орбита', 'Скорость орбиты +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.07, r));
   addTalent(1, 'Рывок орбиты', 'Скорость орбиты +30%.', 1, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.30, r));
-  addTalent(1, 'Синхронизация', 'Скорострельность +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.06, r));
+  addTalent(1, 'Синхронизация', 'Постоянно увеличивает скорострельность на 6% за ранг. Текущая прибавка скорости - {current}%', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.06, r));
+  TALENT_DEFS[TALENT_DEFS.length - 1].effects = [{ perRank: 0.06 }];
   addTalent(1, 'Механизм спарки', 'Шанс двойного выстрела +4% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.04, r));
   addTalent(1, 'Импульс', 'Скорострельность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.35, r));
   addTalent(1, 'Реактивный контур', 'Скорость орбиты +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.08, r));
@@ -8310,7 +8311,29 @@ function renderTalentNodesV2(overlay, branchId){
     button.classList.toggle('pending', pendingRank > 0);
     button.classList.toggle('maxed', rank >= Math.max(1, node.maxRank || 1));
     button.classList.toggle('locked', !can.ok && rank <= 0);
-    const titleText = `${t(node.ui?.nameKey || node.id)}\n${t(node.ui?.descKey || node.id)}${tooltipReason ? `\n${tooltipReason}` : ''}`;
+    let descText = t(node.ui?.descKey || node.id);
+    try {
+      if (node && node.ui && node.ui.descKey) {
+        const vars = {};
+        let currentPct = 0;
+        if (Array.isArray(node.effects) && node.effects.length > 0) {
+          for (let i = 0; i < node.effects.length; i++) {
+            const eff = node.effects[i];
+            if (eff && typeof eff.perRank === 'number') {
+              currentPct = Math.round(eff.perRank * 100 * rank);
+              vars.current = currentPct;
+              break;
+            }
+          }
+        }
+        descText = t(node.ui.descKey, vars);
+        // Fallback: if translation didn't replace placeholder, force-replace it here
+        try {
+          descText = ('' + descText).replaceAll('{current}', String(currentPct));
+        } catch (_) {}
+      }
+    } catch (e) {}
+    const titleText = `${t(node.ui?.nameKey || node.id)}\n${descText}${tooltipReason ? `\n${tooltipReason}` : ''}`;
     button.setAttribute('data-ui-tooltip', titleText);
     button.removeAttribute('title');
     button.innerHTML = `
@@ -8543,8 +8566,25 @@ function updateTalentUI(){
     btn.classList.toggle('maxed', isMaxed && applied > 0);
     btn.classList.toggle('locked', isLocked);
     btn.disabled = !canSelect && pending === 0;
-    btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
-    btn.removeAttribute('title');
+    try {
+      let descText = def.desc;
+      const rank = applied + pending;
+      if (Array.isArray(def.effects) && def.effects.length > 0) {
+        for (let ei = 0; ei < def.effects.length; ei++) {
+          const eff = def.effects[ei];
+          if (eff && typeof eff.perRank === 'number') {
+            const currentPct = Math.round(eff.perRank * 100 * rank);
+            descText = ('' + descText).replaceAll('{current}', String(currentPct));
+            break;
+          }
+        }
+      }
+      btn.setAttribute('data-ui-tooltip', `${def.name}\n${descText}`);
+      btn.removeAttribute('title');
+    } catch (e) {
+      btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
+      btn.removeAttribute('title');
+    }
   });
 
   // Update branch points

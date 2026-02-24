@@ -290,7 +290,7 @@
   ,"talentBranch_defense": "Защита"
   ,"talentBranch_economy": "Экономика"
   ,"talent_off_caliber_name": "Калибр"
-  ,"talent_off_caliber_desc": "+7% к урону за ранг."
+  ,"talent_off_caliber_desc": "Постоянно увеличивает урон танков на 7% за ранг. Текущая прибавка урона - {current}%"
   ,"talent_off_fire_rate_name": "Скорострельность"
   ,"talent_off_fire_rate_desc": "+6% к скорострельности за ранг."
   ,"talent_off_range_name": "Дальность"

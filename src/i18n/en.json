@@ -290,7 +290,7 @@
   ,"talentBranch_defense": "Defense"
   ,"talentBranch_economy": "Economy"
   ,"talent_off_caliber_name": "Caliber"
-  ,"talent_off_caliber_desc": "+7% damage per rank."
+  ,"talent_off_caliber_desc": "+7% damage per rank. Current damage bonus - {current}%"
   ,"talent_off_fire_rate_name": "Fire Rate"
   ,"talent_off_fire_rate_desc": "+6% fire rate per rank."
   ,"talent_off_range_name": "Range"

@@ -1,0 +1,31 @@
+{
+  "skill": "Библиотекарь",
+  "version": "1.1",
+  "repo": {},
+  "tooling": {
+    "directives": [],
+    "recommended": [
+      "file_tree"
+    ]
+  },
+  "shared": {
+    "targets": []
+  },
+  "items": [
+    {
+      "id": "1",
+      "summary": "x",
+      "targets": [
+        {
+          "file": "src/**",
+          "anchor": "a",
+          "hints": [
+            "x"
+          ],
+          "conf": 0.2,
+          "why": "KEYWORD_HEURISTIC"
+        }
+      ]
+    }
+  ]
+}
