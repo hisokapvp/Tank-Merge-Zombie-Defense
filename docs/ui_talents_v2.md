@@ -37,8 +37,11 @@
   - `isActive`
 - Disabled:
   - `!unlocked || charges <= 0`
+- При первом открытии активки (рост `chargesMax` с 0 до >0) слот должен получать стартовый заряд(ы) сразу, без перезапуска сессии.
 - Таймер до заряда:
   - `ceil((nextRechargeAtMs - nowMs)/1000)`
+- Stage HUD slots:
+  - иконка активки берётся из `Game.TalentsV2.getTalentUi(activeTalentId).icon` (`assets/ui/icons/talents/*.png`), а не из legacy `assets/active_*.png`.
 
 ## 3) Active activation in battle
 
@@ -64,6 +67,7 @@
 
 - `stun > slow > mark > dot > buffs`
 - максимум `3` иконки на entity
+- По мере истечения эффекта иконка статуса получает white-fill прогресс (без чисел) как сектор по часовой стрелке с центром в середине иконки (`fill: 0 -> 1`).
 
 Маппинг ассетов (`assets/ui/icons/status/*.png`):
 

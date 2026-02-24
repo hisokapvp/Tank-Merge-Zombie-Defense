@@ -596,6 +596,11 @@
         defense: { untilMs: 0, charges: 0, nextRechargeAtMs: 0 },
         economy: { untilMs: 0, charges: 0, nextRechargeAtMs: 0 },
       },
+      activeCaps: {
+        offense: 0,
+        defense: 0,
+        economy: 0,
+      },
       _activesInitialized: false,
     };
   }
@@ -643,6 +648,12 @@
     if (!isFiniteNumber(economyRt.untilMs)) economyRt.untilMs = 0;
     if (!isFiniteNumber(economyRt.charges)) economyRt.charges = 0;
     if (!isFiniteNumber(economyRt.nextRechargeAtMs)) economyRt.nextRechargeAtMs = 0;
+
+    if (!runRt.activeCaps || typeof runRt.activeCaps !== 'object') runRt.activeCaps = {};
+    if (!isFiniteNumber(runRt.activeCaps.offense)) runRt.activeCaps.offense = 0;
+    if (!isFiniteNumber(runRt.activeCaps.defense)) runRt.activeCaps.defense = 0;
+    if (!isFiniteNumber(runRt.activeCaps.economy)) runRt.activeCaps.economy = 0;
+
     if (typeof runRt._activesInitialized !== 'boolean') runRt._activesInitialized = false;
 
     return runRt;
@@ -1341,18 +1352,32 @@
     var offMax = Math.max(0, toInt(getModNumber(currMods, 'offActiveCharges', ['offenseActiveCharges'], 0), 0));
     var defMax = Math.max(0, toInt(getModNumber(currMods, 'defActiveCharges', ['defenseActiveCharges'], 0), 0));
     var ecoMax = Math.max(0, toInt(getModNumber(currMods, 'ecoActiveCharges', ['economyActiveCharges'], 0), 0));
+    var prevOffMax = Math.max(0, toInt(runRt.activeCaps && runRt.activeCaps.offense, 0));
+    var prevDefMax = Math.max(0, toInt(runRt.activeCaps && runRt.activeCaps.defense, 0));
+    var prevEcoMax = Math.max(0, toInt(runRt.activeCaps && runRt.activeCaps.economy, 0));
 
     if (!runRt._activesInitialized) {
       runRt.actives.offense.charges = offMax;
       runRt.actives.defense.charges = defMax;
       runRt.actives.economy.charges = ecoMax;
+      runRt.activeCaps.offense = offMax;
+      runRt.activeCaps.defense = defMax;
+      runRt.activeCaps.economy = ecoMax;
       runRt._activesInitialized = true;
       return;
     }
 
+    if (offMax > prevOffMax && runRt.actives.offense.charges <= 0) runRt.actives.offense.charges = offMax;
+    if (defMax > prevDefMax && runRt.actives.defense.charges <= 0) runRt.actives.defense.charges = defMax;
+    if (ecoMax > prevEcoMax && runRt.actives.economy.charges <= 0) runRt.actives.economy.charges = ecoMax;
+
     if (runRt.actives.offense.charges > offMax) runRt.actives.offense.charges = offMax;
     if (runRt.actives.defense.charges > defMax) runRt.actives.defense.charges = defMax;
     if (runRt.actives.economy.charges > ecoMax) runRt.actives.economy.charges = ecoMax;
+
+    runRt.activeCaps.offense = offMax;
+    runRt.activeCaps.defense = defMax;
+    runRt.activeCaps.economy = ecoMax;
   }
 
   function applyParamEffect(mods, effect, rank, stateInfo, talentId) {
@@ -3405,9 +3430,48 @@
     return { x: x, y: y };
   }
 
-  function pushStatus(candidates, iconKey, priority, labelText) {
+  function computeExpiryFill(untilMs, durationMs, nowMs) {
+    var until = toNumber(untilMs, 0);
+    var duration = Math.max(0, toNumber(durationMs, 0));
+    if (until <= 0 || duration <= 0) return 0;
+    var remaining = Math.max(0, until - toNumber(nowMs, 0));
+    return clamp(1 - (remaining / Math.max(1, duration)), 0, 1);
+  }
+
+  function drawStatusExpiryOverlay(ctx, centerX, centerY, fill01) {
+    if (!ctx) return;
+    var fill = clamp(toNumber(fill01, 0), 0, 1);
+    if (fill <= 0.0001) return;
+    var left = centerX - STATUS_ICON_SIZE_PX * 0.5;
+    var top = centerY - STATUS_ICON_SIZE_PX * 0.5;
+    var startAngle = -Math.PI * 0.5;
+    var endAngle = startAngle + Math.PI * 2 * fill;
+    var radius = STATUS_ICON_SIZE_PX;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, STATUS_ICON_SIZE_PX, STATUS_ICON_SIZE_PX);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,255,255,0.58)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 1.4, 0, Math.PI * 2, false);
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function pushStatus(candidates, iconKey, priority, labelText, fill01) {
     if (!iconKey) return;
-    candidates.push({ iconKey: iconKey, priority: priority || 0, labelText: labelText || '' });
+    candidates.push({
+      iconKey: iconKey,
+      priority: priority || 0,
+      labelText: labelText || '',
+      fill01: clamp(toNumber(fill01, 0), 0, 1),
+    });
   }
 
   function formatDebugNumber(value) {
@@ -3470,15 +3534,56 @@
       if (!tank || typeof tank !== 'object') continue;
       var tRt = ensureTankRt(tank);
       var candidates = [];
-      if (isActive(tRt.buffs.armorPiercing.untilMs, nowMs)) pushStatus(candidates, 'status_armorPiercing', STATUS_PRIORITIES.status_armorPiercing);
-      if (isActive(tRt.buffs.impulse.untilMs, nowMs)) pushStatus(candidates, 'status_impulse', STATUS_PRIORITIES.status_impulse);
-      if (isActive(tRt.buffs.killBounty.untilMs, nowMs)) pushStatus(candidates, 'status_killBounty', STATUS_PRIORITIES.status_killBounty);
+      if (isActive(tRt.buffs.armorPiercing.untilMs, nowMs)) {
+        pushStatus(
+          candidates,
+          'status_armorPiercing',
+          STATUS_PRIORITIES.status_armorPiercing,
+          '',
+          computeExpiryFill(tRt.buffs.armorPiercing.untilMs, getModNumber(mods, 'armorPiercingProcDurationMs', [], 0), nowMs)
+        );
+      }
+      if (isActive(tRt.buffs.impulse.untilMs, nowMs)) {
+        pushStatus(
+          candidates,
+          'status_impulse',
+          STATUS_PRIORITIES.status_impulse,
+          '',
+          computeExpiryFill(tRt.buffs.impulse.untilMs, getModNumber(mods, 'impulseProcDurationMs', [], 0), nowMs)
+        );
+      }
+      if (isActive(tRt.buffs.killBounty.untilMs, nowMs)) {
+        pushStatus(
+          candidates,
+          'status_killBounty',
+          STATUS_PRIORITIES.status_killBounty,
+          '',
+          computeExpiryFill(tRt.buffs.killBounty.untilMs, getModNumber(mods, 'killBountyDurationMs', [], 0), nowMs)
+        );
+      }
       if (isActive(tRt.buffs.offenseActive.untilMs, nowMs) || nowMs < toNumber(ensureRunRt().actives.offense.untilMs, 0)) {
-        pushStatus(candidates, 'status_activeOff', STATUS_PRIORITIES.status_activeOff);
+        pushStatus(
+          candidates,
+          'status_activeOff',
+          STATUS_PRIORITIES.status_activeOff,
+          '',
+          computeExpiryFill(
+            Math.max(toNumber(tRt.buffs.offenseActive.untilMs, 0), toNumber(ensureRunRt().actives.offense.untilMs, 0)),
+            getModNumber(mods, 'offenseActiveDurationMs', [], 0),
+            nowMs
+          )
+        );
       }
       var rampGraceMs = Math.max(0, getModNumber(mods, 'rampGraceMs', ['rampUpGraceMs'], 0));
       if (tRt.ramp.stacks > 0 && (nowMs - toNumber(tRt.ramp.lastShotAtMs, 0)) <= rampGraceMs) {
-        pushStatus(candidates, 'status_ramp', STATUS_PRIORITIES.status_ramp, String(Math.max(1, Math.min(5, toInt(tRt.ramp.stacks, 1)))));
+        var rampUntilMs = toNumber(tRt.ramp.lastShotAtMs, 0) + rampGraceMs;
+        pushStatus(
+          candidates,
+          'status_ramp',
+          STATUS_PRIORITIES.status_ramp,
+          String(Math.max(1, Math.min(5, toInt(tRt.ramp.stacks, 1)))),
+          computeExpiryFill(rampUntilMs, rampGraceMs, nowMs)
+        );
       }
       if (!candidates.length) continue;
 
@@ -3496,6 +3601,7 @@
         if (img && img.complete) {
           ctx.drawImage(img, x - STATUS_ICON_SIZE_PX * 0.5, y - STATUS_ICON_SIZE_PX * 0.5, STATUS_ICON_SIZE_PX, STATUS_ICON_SIZE_PX);
         }
+        drawStatusExpiryOverlay(ctx, x, y, icon.fill01);
         if (icon.iconKey === 'status_ramp' && icon.labelText) {
           ctx.save();
           ctx.fillStyle = 'rgba(255,245,224,0.98)';
@@ -3514,11 +3620,51 @@
       if (!zombie || zombie.state === 'dying') continue;
       var zRt = ensureZombieRt(zombie);
       var zCandidates = [];
-      if (nowMs < toNumber(zRt.cc.stunUntilMs, 0)) pushStatus(zCandidates, 'status_stun', STATUS_PRIORITIES.status_stun);
-      if (nowMs < toNumber(zRt.cc.slowUntilMs, 0)) pushStatus(zCandidates, 'status_slow', STATUS_PRIORITIES.status_slow);
-      if (nowMs < toNumber(zRt.markUntilMs, 0)) pushStatus(zCandidates, 'status_mark', STATUS_PRIORITIES.status_mark);
-      if (nowMs < toNumber(zRt.dots.acid.untilMs, 0)) pushStatus(zCandidates, 'status_acid', STATUS_PRIORITIES.status_acid);
-      if (nowMs < toNumber(zRt.dots.converted.untilMs, 0)) pushStatus(zCandidates, 'status_convert', STATUS_PRIORITIES.status_convert);
+      if (nowMs < toNumber(zRt.cc.stunUntilMs, 0)) {
+        pushStatus(
+          zCandidates,
+          'status_stun',
+          STATUS_PRIORITIES.status_stun,
+          '',
+          computeExpiryFill(zRt.cc.stunUntilMs, getModNumber(mods, 'stunOnWallHitDurationMs', [], 0), nowMs)
+        );
+      }
+      if (nowMs < toNumber(zRt.cc.slowUntilMs, 0)) {
+        pushStatus(
+          zCandidates,
+          'status_slow',
+          STATUS_PRIORITIES.status_slow,
+          '',
+          computeExpiryFill(zRt.cc.slowUntilMs, getModNumber(mods, 'ccMicroSlowDurationMs', [], 0), nowMs)
+        );
+      }
+      if (nowMs < toNumber(zRt.markUntilMs, 0)) {
+        pushStatus(
+          zCandidates,
+          'status_mark',
+          STATUS_PRIORITIES.status_mark,
+          '',
+          computeExpiryFill(zRt.markUntilMs, getModNumber(mods, 'markDurationMs', [], 0), nowMs)
+        );
+      }
+      if (nowMs < toNumber(zRt.dots.acid.untilMs, 0)) {
+        pushStatus(
+          zCandidates,
+          'status_acid',
+          STATUS_PRIORITIES.status_acid,
+          '',
+          computeExpiryFill(zRt.dots.acid.untilMs, getModNumber(mods, 'acidDotDurationMs', [], 0), nowMs)
+        );
+      }
+      if (nowMs < toNumber(zRt.dots.converted.untilMs, 0)) {
+        pushStatus(
+          zCandidates,
+          'status_convert',
+          STATUS_PRIORITIES.status_convert,
+          '',
+          computeExpiryFill(zRt.dots.converted.untilMs, getModNumber(mods, 'convertToDotDurationMs', [], 0), nowMs)
+        );
+      }
       if (!zCandidates.length) continue;
 
       zCandidates.sort(function (a, b) { return b.priority - a.priority; });
@@ -3535,6 +3681,7 @@
         if (zImg && zImg.complete) {
           ctx.drawImage(zImg, zx - STATUS_ICON_SIZE_PX * 0.5, zy - STATUS_ICON_SIZE_PX * 0.5, STATUS_ICON_SIZE_PX, STATUS_ICON_SIZE_PX);
         }
+        drawStatusExpiryOverlay(ctx, zx, zy, zIcon.fill01);
       }
       out.push({ type: 'zombie', zombie: zombie, icons: zCandidates.length });
     }

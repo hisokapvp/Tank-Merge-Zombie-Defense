@@ -9,6 +9,7 @@
 - Restart simulation flow: `game.js` (`restartSimulationPartial`) + `src/core/worldReset.js`
 - Talents v2 UI (overlay + HUD активок): `game.js` (`ensureTalentUI`, `updateTalentUI`, `updateStageAbilitySlots`) + контракт в `docs/ui_talents_v2.md`.
 	- Overlay Talents v2: одновременно рендерятся все 3 ветки (`offense/defense/economy`) в отдельных колонках.
+	- Stage HUD active slots для v2 используют иконки активных талантов из `assets/ui/icons/talents/*` (через `Game.TalentsV2.getTalentUi(...)`), а не legacy `assets/active_*.png`.
 	- Для каждой ветки есть локальная кнопка `Сбросить выбор` (сбрасывает только pending-выбор этой ветки).
 	- В footer есть кнопка `Применить`, которая фиксирует pending-выбор и только после этого включает модификаторы талантов.
 	- Кнопка `Сбросить улучшения` сбрасывает и pending, и уже применённые ранги, плюс очищает runtime-эффекты талантов (active/status/defense runtime).
@@ -24,6 +25,7 @@
 - Не добавлять тексты мимо `src/i18n/ru.json` и `src/i18n/en.json`.
 - `src/i18n/fallbackStrings.js` — синхронный fallback, применяется до загрузки JSON; при добавлении нового i18n-ключа его нужно добавлять **одновременно** в `ru.json`, `en.json` **и** `fallbackStrings.js` (иначе до async-загрузки ключ отображается как literal-строка).
 - Не переносить доменную логику в слой UI.
+- Тени UI-элементов (кнопки/панели/модалки/уведомления/debug) должны оставаться тонкими: baseline `box-shadow` с Y-offset не более `3px`.
 - Debug-панели и admin-кнопки оставлять за `?debug=1`.
 - Для critical modal: вход/выход должен включать/снимать hard pause через `PauseManager`, skip-кнопка видна только во время typing.
 - Кнопка `Перезапустить симуляцию` должна вызывать partial reset runtime мира без запуска второго main loop.
@@ -140,6 +142,7 @@
 ## Supercomputer: вкладка "Стены"
 - Вкладка "Стены" (`walls`) в supercomputerMenu рендерит таблицу L1..L60 аналогично вкладке "Орудия".
 - В `modsTankWall` доступны только вкладки `Орудия` и `Стены`; вкладка `Базы` полностью удалена из DOM/runtime/i18n.
+- В `modsTankWall` таблицы `Орудия` и `Стены` должны показывать минимум 4 строки сразу (без дополнительного скролла на первом экране).
 - Состояние pending/reserved для стен (`pendingFenceUpgradesByLevel`, `getReservedFenceDamagePoints`) полностью независимо от состояния пушек.
 - При смене вкладок внутри модалки (Орудия <-> Стены) pending state не сбрасывается. Сброс происходит только при полном закрытии модалки.
 - Стоимость шага улучшения стены вычисляется через `getCannonUpgradeStepCost` (которая внутри вызывает общую `getUpgradeStepCost`).

@@ -37,6 +37,8 @@
 - Talents v2 PACK 8: добавлены строгая validation/reporting (`TalentsV2.validate()`), контрактная проверка `mods`, anti-freeze guard’ы catch-up `while` (DOT/ramp/recharge/interest), debug toggles (`debug_dtScale`, `debug_fixedDtMs`, `talents_debug_*`), `debugDump()` и debug overlay в бою.
 - Talents v2 PACK 9: `canBuy` переведён на строгий row-gating legacy-layout `3-3-3-3-2-2-1` (ряды `0/5/10/15/20/25/30` по spent в ветке) + обязательный prereq из предыдущего ряда (rank >= 1); V2 UI перестал пересоздавать talent-nodes каждый тик (signature-based render), что устраняет hover-SFX spam и потерю click при покупке.
 - Talents v2 runtime integration fix: `game.js/getMods()` теперь использует `Game.TalentsV2.getMods()` через legacy-adapter (`damage/fireRate/range/aoe`, `tankBuyCostMul`, `coinsKillMul/coinsShotMul`, `xpMul`), поэтому эффекты v2 реально влияют на бой и экономику.
+- Talents v2 active slots (stage HUD): иконки активок берутся из talentTree v2 (`assets/ui/icons/talents/*` через `Game.TalentsV2.getTalentUi`) для веток offense/defense/economy; legacy stage active icons больше не источник для v2.
+- Talents v2 status icons: над танками/зомби добавлен expiry-progress без чисел — иконки постепенно закрашиваются белым к окончанию эффекта.
 - QA чеклист Talents v2 вынесен в `docs/qa_talents_v2.md`.
 
 ## Текущие UI-акценты
@@ -75,15 +77,16 @@
 - Supercomputer overlays: для `modsTankWall` скролл оставлен в `#modsTankWallOverlay .scModal__body`; для root/hangar body скролл отключён, чтобы не появлялся лишний scrollbar.
 - `modsTankWall` panel: размер приведён к `talentTreeModal`-паттерну (`width:min(980px,95vw)`, `max-height:86vh`) для консистентной геометрии.
 - SC/Talents modal buttons: для pressed-состояния отключён `translateY` в модалках (`transform:none`), чтобы исключить transient scrollbar при удержании кнопок/плашек.
+- UI shadows: базовые тени UI-элементов (кнопки/панели/модалки/уведомления/debug/lesson panel) сведены к тонким значениям с Y-offset не более `3px`; pressed-state — до `2px`.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
 - AttackMode supplemental spawn: базовый sideCount-спавн сохраняется до `baseDesiredAlive`, а только attackMode-добавка (до `attackDesiredAlive`) идёт по эпизодным направлениям `dirA/dirB/dirC` с 50/25/25 и анти-повтором `dirA` (не более 2 эпизодов подряд).
 - Corpse despawn/fade: таймер трупа считается как `deathAnimDuration + corpseDespawnSec` из `assets/zombies.json`; в конце жизни трупа применяется linear fade на `corpseFadeOutSec`, forced culling не удаляет мгновенно, а ускоряет fade до `~0.2s`.
 - Fence sprite hot-refresh: tier стен синхронизируется с `maxTankLevelAchieved`/runtime max в текущей симуляции (не только по popup-событию), применяясь one-shot на изменение tier с `FenceSprites.ensureLevel(...)`.
 - Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices`, `maxTankLevelAchieved/runtimeMax/currentFenceTierApplied/fenceLevel` в `1`, затем выполняется force-sync tier стен и force-off reset attackMode/runtime.
 - New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
-- Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); steer к ближайшему пролому выполняется только в пределах текущей стороны зомби (без глобального fallback по всем сторонам).
-- Zombie breach targeting: если на стороне уже есть пролом, steer к нему выполняется без ограничения awareness-радиусом.
-- Zombie breach targeting: при наличии пролома на стороне зомби (до `breached`) не выбирают целые fence-сегменты как attack-target.
+- Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); знание о проломе ограничено радиусом `WorldEvents.attackMode.fenceBreachAwarenessRadiusPx` вокруг бреши.
+- Zombie breach targeting: пока зомби «знает» о проломе, он не выбирает целые fence-сегменты как attack-target и уходит в брешь; вне радиуса awareness продолжает стандартную атаку стены.
+- Fence destruction cascade: при разрушении одной side-секции автоматически ломаются две смежные секции этой же стороны (`sideIndex-1` и `sideIndex+1`, если существуют).
 - Supercomputer root tiles: root-плашки и modal-кнопки не должны клиппить тени/hover-scale; для root-сетки обязателен запас по краям (`overflow:visible` + внутренние отступы в body).
 - Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `200`).
 - Supercomputer weapons source frame: источник кадра для оружейных иконок в tab `Орудия` задаётся фиксированным размером `128x128` через `layoutTuning` (`weaponIconSpriteFrameW/H`).

@@ -3389,6 +3389,11 @@ function updateCenterNotification(){
 
 const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика'];
 const TALENTS_V2_BRANCH_IDS = ['offense', 'defense', 'economy'];
+const TALENTS_V2_ACTIVE_ID_BY_BRANCH = {
+  offense: 'off_active_barrage',
+  defense: 'def_active_dome',
+  economy: 'eco_active_golden_hour',
+};
 
 function getTalentsV2Api(){
   return window.Game && window.Game.TalentsV2 ? window.Game.TalentsV2 : null;
@@ -3414,6 +3419,25 @@ function getTalentV2BranchLabelById(branchId){
   const value = t(key);
   if (value && value !== key) return value;
   return branchId;
+}
+
+function getTalentV2ActiveTalentIdByBranch(branchId){
+  return TALENTS_V2_ACTIVE_ID_BY_BRANCH[branchId] || '';
+}
+
+function getTalentV2ActiveIconByBranch(branchId){
+  const fallbackByBranch = {
+    offense: 'activeOff',
+    defense: 'activeDef',
+    economy: 'activeEco',
+  };
+  const fallback = fallbackByBranch[branchId] || 'activeOff';
+  const api = getTalentsV2Api();
+  const talentId = getTalentV2ActiveTalentIdByBranch(branchId);
+  if (!api || !talentId || typeof api.getTalentUi !== 'function') return fallback;
+  const ui = api.getTalentUi(talentId);
+  if (!ui || typeof ui.icon !== 'string' || !ui.icon.trim()) return fallback;
+  return ui.icon.trim();
 }
 
 function resolveTalentCantBuyReasonText(canResult){
@@ -5238,6 +5262,7 @@ function getActiveBreachAtPoint(sideKey, x, y, padding){
 
 function pickNearestBreachForSide(sideKey, x, y){
   const maxDistancePx = Number.isFinite(arguments[3]) ? Math.max(0, arguments[3]) : Infinity;
+  const includeAllSides = arguments.length >= 5 ? !!arguments[4] : false;
   const maxDistanceSq = Number.isFinite(maxDistancePx) ? (maxDistancePx * maxDistancePx) : Infinity;
   const list = getBreachesForSide(sideKey);
   let best = null;
@@ -5259,12 +5284,25 @@ function pickNearestBreachForSide(sideKey, x, y){
   }
 
   consider(list);
+  if (includeAllSides) {
+    const breaches = ensureBreachesBySide();
+    if (sideKey !== 'top') consider(breaches.top);
+    if (sideKey !== 'right') consider(breaches.right);
+    if (sideKey !== 'bottom') consider(breaches.bottom);
+    if (sideKey !== 'left') consider(breaches.left);
+  }
   return best;
 }
 
 function hasBreachOnSide(sideKey){
   const list = getBreachesForSide(sideKey);
   return Array.isArray(list) && list.length > 0;
+}
+
+function getNearestKnownBreachForZombie(sideKey, localX, localY, awarenessRadiusPx){
+  const radius = Number.isFinite(awarenessRadiusPx) ? Math.max(0, awarenessRadiusPx) : 0;
+  if (radius <= 0) return null;
+  return pickNearestBreachForSide(sideKey, localX, localY, radius, true);
 }
 
 
@@ -5407,8 +5445,7 @@ function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer)
       };
     }
   }
-  const sideKey = getSideByPosition(p.x, p.y);
-  if (!allowSupercomputer && hasBreachOnSide(sideKey)) return null;
+  if (!allowSupercomputer && !!(z && z.knowsBreach)) return null;
   const fenceTarget = selectZombieFenceTargetForZombie(z, attackRangePx);
   if (!fenceTarget || !fenceTarget.seg) return null;
   return {
@@ -5425,6 +5462,35 @@ function getFenceInnerLimit(z){
   return 0;
 }
 
+function findFenceSideSegment(sideKey, sideIndex){
+  if (!Number.isFinite(sideIndex) || sideIndex < 0) return null;
+  ensureFenceSegmentMathMeta();
+  const sideMath = state.fenceSegmentsMeta && state.fenceSegmentsMeta.sideMath
+    ? state.fenceSegmentsMeta.sideMath
+    : null;
+  const info = sideMath && sideMath[sideKey] ? sideMath[sideKey] : null;
+  const list = info && Array.isArray(info.sideSegs) ? info.sideSegs : null;
+  if (!list || sideIndex >= list.length) return null;
+  return list[sideIndex] || null;
+}
+
+function breakAdjacentFenceSegments(seg){
+  if (!seg || seg.isCorner || !Number.isFinite(seg.sideIndex)) return 0;
+  const sideKey = getFenceSideKeyForSegment(seg);
+  if (!sideKey) return 0;
+  let brokenCount = 0;
+  const offsets = [-1, 1];
+  for (let i = 0; i < offsets.length; i++) {
+    const neighbor = findFenceSideSegment(sideKey, seg.sideIndex + offsets[i]);
+    if (!neighbor || neighbor.broken) continue;
+    neighbor.hp = 0;
+    neighbor.broken = true;
+    syncFenceBreachForSegment(neighbor);
+    brokenCount += 1;
+  }
+  return brokenCount;
+}
+
 function applyFenceSegmentDamage(seg, amount){
   if (!seg || seg.broken) return false;
   const incomingDamage = Math.max(0, amount || 0);
@@ -5435,7 +5501,10 @@ function applyFenceSegmentDamage(seg, amount){
   const wasBroken = !!seg.broken;
   seg.hp = clamp(seg.hp - finalDamage, 0, seg.maxHp);
   seg.broken = seg.hp <= 0;
-  if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
+  if (seg.broken !== wasBroken) {
+    syncFenceBreachForSegment(seg);
+    if (seg.broken) breakAdjacentFenceSegments(seg);
+  }
   return true;
 }
 
@@ -5691,9 +5760,10 @@ function stepZombies(dt){
     z.side = getSideByPosition(prevX, prevY);
     const prevLocalX = prevX - center.x;
     const prevLocalY = prevY - center.y;
-    const sideHasBreach = hasBreachOnSide(z.side);
-    const breachSeekRadius = sideHasBreach ? Infinity : breachAwarenessRadiusPx;
-    const nearestBreach = z.breached ? null : pickNearestBreachForSide(z.side, prevLocalX, prevLocalY, breachSeekRadius);
+    const nearestBreach = z.breached
+      ? null
+      : getNearestKnownBreachForZombie(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
+    z.knowsBreach = !!nearestBreach;
     const allowSupercomputerTarget = !!z.breached;
 
     let radialSpeed = 0;
@@ -8264,14 +8334,30 @@ function updateTalentAbilitySlotsV2(container){
       : { unlocked: false, charges: 0, chargesMax: 0, nextRechargeAtMs: 0, isActive: false };
     const secLeft = Math.max(0, Math.ceil((Math.max(0, stateActive.nextRechargeAtMs || 0) - nowMs) / 1000));
     const disabled = !stateActive.unlocked || stateActive.charges <= 0;
+    const iconKey = getTalentV2ActiveIconByBranch(branchId);
+    const activeTalentId = getTalentV2ActiveTalentIdByBranch(branchId);
+    const activeUi = activeTalentId && typeof api.getTalentUi === 'function' ? api.getTalentUi(activeTalentId) : null;
+    const activeName = activeUi && activeUi.nameKey ? t(activeUi.nameKey) : getTalentV2BranchLabelById(branchId);
     const branchTitle = getTalentV2BranchLabelById(branchId);
+    const titleParts = [`${branchTitle}`, `${stateActive.charges}/${stateActive.chargesMax}`];
+    if (stateActive.isActive && Number.isFinite(stateActive.untilMs) && stateActive.untilMs > nowMs) {
+      titleParts.push(`${t('talentActiveCooldown', { sec: Math.max(0, Math.ceil((stateActive.untilMs - nowMs) / 1000)) })}`);
+    }
+    if (secLeft > 0) titleParts.push(`${secLeft}s`);
+
+    let labelText = '';
+    if (stateActive.unlocked && stateActive.charges <= 0 && secLeft > 0) labelText = String(secLeft);
+    else if (stateActive.unlocked && stateActive.charges <= 0) labelText = '0';
 
     btn.classList.toggle('talentAbilityLocked', !stateActive.unlocked);
     btn.classList.toggle('talentAbilityUnlocked', stateActive.unlocked);
     btn.classList.toggle('pending', !!stateActive.isActive);
+    btn.classList.add('talentAbilitySlot_v2');
+    btn.style.setProperty('--talentAbilityIcon', `url("assets/ui/icons/talents/${iconKey}.png")`);
     btn.disabled = disabled;
-    btn.title = `${branchTitle} • ${stateActive.charges}/${stateActive.chargesMax}${secLeft > 0 ? ` • ${secLeft}s` : ''}`;
-    btn.textContent = `${stateActive.charges}/${stateActive.chargesMax}${secLeft > 0 ? ` ${secLeft}s` : ''}`;
+    btn.title = titleParts.join(' • ');
+    btn.setAttribute('aria-label', activeName);
+    btn.textContent = labelText;
   });
 }
 
@@ -8428,6 +8514,8 @@ function updateStageAbilitySlots(){
     return;
   }
   container.querySelectorAll('.talentAbilitySlot').forEach(btn => {
+    btn.classList.remove('talentAbilitySlot_v2');
+    btn.style.removeProperty('--talentAbilityIcon');
     const branch = Number(btn.dataset.branch);
     const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
     const canUse = canUseActive(branch);
