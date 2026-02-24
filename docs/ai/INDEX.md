@@ -39,6 +39,7 @@
 - Talents v2 runtime integration fix: `game.js/getMods()` теперь использует `Game.TalentsV2.getMods()` через legacy-adapter (`damage/fireRate/range/aoe`, `tankBuyCostMul`, `coinsKillMul/coinsShotMul`, `xpMul`), поэтому эффекты v2 реально влияют на бой и экономику.
 - Talents v2 active slots (stage HUD): иконки активок берутся из talentTree v2 (`assets/ui/icons/talents/*` через `Game.TalentsV2.getTalentUi`) для веток offense/defense/economy; legacy stage active icons больше не источник для v2.
 - Talents v2 status icons: над танками/зомби добавлен expiry-progress без чисел — иконки постепенно закрашиваются белым к окончанию эффекта.
+- Stage active HUD (v2): в бою для активок показываются корректные tooltip (название+описание+заряды+перезарядка), бейдж зарядов в правом верхнем углу, секундный таймер перезарядки всегда (в т.ч. при оставшихся зарядах) и секторная заливка cooldown по часовой стрелке из центра иконки (черная полупрозрачная при `charges>0`, белая при `charges=0`).
 - QA чеклист Talents v2 вынесен в `docs/qa_talents_v2.md`.
 
 ## Текущие UI-акценты
@@ -86,7 +87,7 @@
 - New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
 - Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); знание о проломе ограничено радиусом `WorldEvents.attackMode.fenceBreachAwarenessRadiusPx` вокруг бреши.
 - Zombie breach targeting: пока зомби «знает» о проломе, он не выбирает целые fence-сегменты как attack-target и уходит в брешь; вне радиуса awareness продолжает стандартную атаку стены.
-- Fence destruction cascade: при разрушении одной side-секции автоматически ломаются две смежные секции этой же стороны (`sideIndex-1` и `sideIndex+1`, если существуют).
+- Fence destruction cascade: при разрушении одной side-секции автоматически ломаются две смежные секции этой же стороны (`sideIndex-1` и `sideIndex+1`, если существуют); при разрушении corner-секции ломается по одной прилегающей side-секции с каждой стороны угла.
 - Supercomputer root tiles: root-плашки и modal-кнопки не должны клиппить тени/hover-scale; для root-сетки обязателен запас по краям (`overflow:visible` + внутренние отступы в body).
 - Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `200`).
 - Supercomputer weapons source frame: источник кадра для оружейных иконок в tab `Орудия` задаётся фиксированным размером `128x128` через `layoutTuning` (`weaponIconSpriteFrameW/H`).

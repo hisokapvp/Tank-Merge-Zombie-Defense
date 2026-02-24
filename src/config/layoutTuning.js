@@ -11,8 +11,8 @@
     /** Размер (px) иконок root-плашек суперкомпьютера. */
     supercomputerTileIconSizePx: 250,
     /** Ширина/высота иконки оружия в UI (суперкомпьютер, модалки). */
-    weaponIconW: 256,
-    weaponIconH: 256,
+    weaponIconW: 96,
+    weaponIconH: 96,
     /** Размер source-кадра спрайта оружия в атласе для UI-иконки. */
     weaponIconSpriteFrameW: 128,
     weaponIconSpriteFrameH: 128,

@@ -657,8 +657,6 @@
           if (!Number.isFinite(animFps) || animFps <= 0) animFps = 8;
           var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
           var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
-          iconW = Math.max(32, Math.min(56, iconW));
-          iconH = Math.max(24, Math.min(42, iconH));
           spriteHtml = '' +
             '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
               '<canvas class="scGunsTable__spriteCanvas"' +
@@ -895,8 +893,6 @@
           var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
           var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
           var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
-          iconW = Math.max(32, Math.min(56, iconW));
-          iconH = Math.max(24, Math.min(42, iconH));
           spriteHtml = '' +
             '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
               '<canvas class="scGunsTable__spriteCanvas"' +

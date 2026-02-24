@@ -10,6 +10,7 @@
 - Talents v2 UI (overlay + HUD активок): `game.js` (`ensureTalentUI`, `updateTalentUI`, `updateStageAbilitySlots`) + контракт в `docs/ui_talents_v2.md`.
 	- Overlay Talents v2: одновременно рендерятся все 3 ветки (`offense/defense/economy`) в отдельных колонках.
 	- Stage HUD active slots для v2 используют иконки активных талантов из `assets/ui/icons/talents/*` (через `Game.TalentsV2.getTalentUi(...)`), а не legacy `assets/active_*.png`.
+	- Stage HUD active slots (v2) обязаны показывать: корректный hover-tooltip (имя/описание/заряды/перезарядка), бейдж зарядов в правом верхнем углу, секундный countdown перезарядки всегда при идущем recharge (даже если есть оставшиеся заряды), и секторную cooldown-заливку по часовой стрелке от центра (`rgba(20,20,20,0.62)` при `charges>0`, `rgba(255,255,255,0.58)` при `charges=0`).
 	- Для каждой ветки есть локальная кнопка `Сбросить выбор` (сбрасывает только pending-выбор этой ветки).
 	- В footer есть кнопка `Применить`, которая фиксирует pending-выбор и только после этого включает модификаторы талантов.
 	- Кнопка `Сбросить улучшения` сбрасывает и pending, и уже применённые ранги, плюс очищает runtime-эффекты талантов (active/status/defense runtime).

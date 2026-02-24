@@ -5475,18 +5475,52 @@ function findFenceSideSegment(sideKey, sideIndex){
 }
 
 function breakAdjacentFenceSegments(seg){
-  if (!seg || seg.isCorner || !Number.isFinite(seg.sideIndex)) return 0;
-  const sideKey = getFenceSideKeyForSegment(seg);
-  if (!sideKey) return 0;
-  let brokenCount = 0;
-  const offsets = [-1, 1];
-  for (let i = 0; i < offsets.length; i++) {
-    const neighbor = findFenceSideSegment(sideKey, seg.sideIndex + offsets[i]);
-    if (!neighbor || neighbor.broken) continue;
+  if (!seg) return 0;
+  ensureFenceSegmentMathMeta();
+  const sideMath = state.fenceSegmentsMeta && state.fenceSegmentsMeta.sideMath
+    ? state.fenceSegmentsMeta.sideMath
+    : null;
+  if (!sideMath) return 0;
+
+  function breakOneNeighbor(sideKey, sideIndex) {
+    const neighbor = findFenceSideSegment(sideKey, sideIndex);
+    if (!neighbor || neighbor.broken) return 0;
     neighbor.hp = 0;
     neighbor.broken = true;
     syncFenceBreachForSegment(neighbor);
-    brokenCount += 1;
+    return 1;
+  }
+
+  let brokenCount = 0;
+
+  if (seg.isCorner) {
+    const cornerId = String(seg.id || seg.kind || '');
+    if (cornerId === 'cornerTL') {
+      brokenCount += breakOneNeighbor('top', 0);
+      brokenCount += breakOneNeighbor('left', 0);
+    } else if (cornerId === 'cornerTR') {
+      const topInfo = sideMath.top && Array.isArray(sideMath.top.sideSegs) ? sideMath.top.sideSegs : [];
+      brokenCount += breakOneNeighbor('top', Math.max(0, topInfo.length - 1));
+      brokenCount += breakOneNeighbor('right', 0);
+    } else if (cornerId === 'cornerBR') {
+      const rightInfo = sideMath.right && Array.isArray(sideMath.right.sideSegs) ? sideMath.right.sideSegs : [];
+      const bottomInfo = sideMath.bottom && Array.isArray(sideMath.bottom.sideSegs) ? sideMath.bottom.sideSegs : [];
+      brokenCount += breakOneNeighbor('right', Math.max(0, rightInfo.length - 1));
+      brokenCount += breakOneNeighbor('bottom', Math.max(0, bottomInfo.length - 1));
+    } else if (cornerId === 'cornerBL') {
+      const leftInfo = sideMath.left && Array.isArray(sideMath.left.sideSegs) ? sideMath.left.sideSegs : [];
+      brokenCount += breakOneNeighbor('left', Math.max(0, leftInfo.length - 1));
+      brokenCount += breakOneNeighbor('bottom', 0);
+    }
+    return brokenCount;
+  }
+
+  if (!Number.isFinite(seg.sideIndex)) return 0;
+  const sideKey = getFenceSideKeyForSegment(seg);
+  if (!sideKey) return 0;
+  const offsets = [-1, 1];
+  for (let i = 0; i < offsets.length; i++) {
+    brokenCount += breakOneNeighbor(sideKey, seg.sideIndex + offsets[i]);
   }
   return brokenCount;
 }
@@ -8332,30 +8366,44 @@ function updateTalentAbilitySlotsV2(container){
     const stateActive = typeof api.getActiveState === 'function'
       ? api.getActiveState(branchId, nowMs)
       : { unlocked: false, charges: 0, chargesMax: 0, nextRechargeAtMs: 0, isActive: false };
-    const secLeft = Math.max(0, Math.ceil((Math.max(0, stateActive.nextRechargeAtMs || 0) - nowMs) / 1000));
+    const rechargeMs = Number.isFinite(stateActive.rechargeMs) ? Math.max(0, stateActive.rechargeMs) : 0;
+    const nextRechargeAtMs = Number.isFinite(stateActive.nextRechargeAtMs) ? stateActive.nextRechargeAtMs : 0;
+    const rechargeLeftMs = Math.max(0, nextRechargeAtMs - nowMs);
+    const secLeft = Math.max(0, Math.ceil(rechargeLeftMs / 1000));
     const disabled = !stateActive.unlocked || stateActive.charges <= 0;
     const iconKey = getTalentV2ActiveIconByBranch(branchId);
     const activeTalentId = getTalentV2ActiveTalentIdByBranch(branchId);
     const activeUi = activeTalentId && typeof api.getTalentUi === 'function' ? api.getTalentUi(activeTalentId) : null;
     const activeName = activeUi && activeUi.nameKey ? t(activeUi.nameKey) : getTalentV2BranchLabelById(branchId);
-    const branchTitle = getTalentV2BranchLabelById(branchId);
-    const titleParts = [`${branchTitle}`, `${stateActive.charges}/${stateActive.chargesMax}`];
+    const activeDesc = activeUi && activeUi.descKey ? t(activeUi.descKey) : '';
+    const chargesCurrent = Math.max(0, Math.floor(Number(stateActive.charges) || 0));
+    const chargesMax = Math.max(chargesCurrent, Math.floor(Number(stateActive.chargesMax) || 0));
+    const titleParts = [activeName];
+    if (activeDesc) titleParts.push(activeDesc);
+    titleParts.push(t('talentActiveCharges', { current: chargesCurrent, max: chargesMax }));
+    titleParts.push(secLeft > 0
+      ? t('talentActiveRechargeIn', { sec: secLeft })
+      : t('talentActiveRechargeReady'));
     if (stateActive.isActive && Number.isFinite(stateActive.untilMs) && stateActive.untilMs > nowMs) {
-      titleParts.push(`${t('talentActiveCooldown', { sec: Math.max(0, Math.ceil((stateActive.untilMs - nowMs) / 1000)) })}`);
+      titleParts.push(t('talentActiveDurationLeft', { sec: Math.max(0, Math.ceil((stateActive.untilMs - nowMs) / 1000)) }));
     }
-    if (secLeft > 0) titleParts.push(`${secLeft}s`);
-
-    let labelText = '';
-    if (stateActive.unlocked && stateActive.charges <= 0 && secLeft > 0) labelText = String(secLeft);
-    else if (stateActive.unlocked && stateActive.charges <= 0) labelText = '0';
+    const rechargeFill = rechargeMs > 0 && rechargeLeftMs > 0
+      ? clamp(1 - (rechargeLeftMs / Math.max(1, rechargeMs)), 0, 1)
+      : 0;
+    const overlayColor = chargesCurrent > 0 ? 'rgba(20,20,20,0.62)' : 'rgba(255,255,255,0.58)';
+    const labelText = stateActive.unlocked && secLeft > 0 ? String(secLeft) : '';
 
     btn.classList.toggle('talentAbilityLocked', !stateActive.unlocked);
     btn.classList.toggle('talentAbilityUnlocked', stateActive.unlocked);
     btn.classList.toggle('pending', !!stateActive.isActive);
     btn.classList.add('talentAbilitySlot_v2');
     btn.style.setProperty('--talentAbilityIcon', `url("assets/ui/icons/talents/${iconKey}.png")`);
+    btn.style.setProperty('--talentAbilityCdFill', String(rechargeFill));
+    btn.style.setProperty('--talentAbilityCdColor', overlayColor);
+    btn.setAttribute('data-cd-visible', secLeft > 0 ? '1' : '0');
+    btn.setAttribute('data-charge-badge', stateActive.unlocked ? String(chargesCurrent) : '');
     btn.disabled = disabled;
-    btn.title = titleParts.join(' • ');
+    btn.title = titleParts.join('\n');
     btn.setAttribute('aria-label', activeName);
     btn.textContent = labelText;
   });
@@ -8516,18 +8564,34 @@ function updateStageAbilitySlots(){
   container.querySelectorAll('.talentAbilitySlot').forEach(btn => {
     btn.classList.remove('talentAbilitySlot_v2');
     btn.style.removeProperty('--talentAbilityIcon');
+    btn.style.removeProperty('--talentAbilityCdFill');
+    btn.style.removeProperty('--talentAbilityCdColor');
     const branch = Number(btn.dataset.branch);
     const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
     const canUse = canUseActive(branch);
     const cdUntil = p.activeCooldowns[branch] || 0;
     const cdLeft = Math.max(0, cdUntil - nowSec());
+    const chargesCurrent = unlocked ? (canUse ? 1 : 0) : 0;
+    const chargesMax = unlocked ? 1 : 0;
+    const mods = getMods();
+    const baseCooldown = 30;
+    const cooldownTotal = Math.max(0.0001, baseCooldown * (mods && Number.isFinite(mods.activeCooldownMul) ? mods.activeCooldownMul : 1));
+    const cooldownFill = cdLeft > 0 ? clamp(1 - (cdLeft / cooldownTotal), 0, 1) : 0;
+    const overlayColor = chargesCurrent > 0 ? 'rgba(20,20,20,0.62)' : 'rgba(255,255,255,0.58)';
     btn.classList.toggle('talentAbilityLocked', !unlocked);
     btn.classList.toggle('talentAbilityUnlocked', unlocked);
     btn.disabled = !unlocked || !canUse;
-    btn.title = unlocked
-      ? (canUse ? TALENT_BRANCHES[branch] : t('talentActiveCooldown', {sec: Math.ceil(cdLeft)}))
-      : TALENT_BRANCHES[branch];
-    btn.textContent = unlocked && canUse ? '' : (cdLeft > 0 ? Math.ceil(cdLeft) : '');
+    btn.style.setProperty('--talentAbilityCdFill', String(cooldownFill));
+    btn.style.setProperty('--talentAbilityCdColor', overlayColor);
+    btn.setAttribute('data-cd-visible', cdLeft > 0 ? '1' : '0');
+    btn.setAttribute('data-charge-badge', unlocked ? String(chargesCurrent) : '');
+    const titleParts = [TALENT_BRANCHES[branch]];
+    titleParts.push(t('talentActiveCharges', { current: chargesCurrent, max: chargesMax }));
+    titleParts.push(cdLeft > 0
+      ? t('talentActiveRechargeIn', { sec: Math.ceil(cdLeft) })
+      : t('talentActiveRechargeReady'));
+    btn.title = unlocked ? titleParts.join('\n') : TALENT_BRANCHES[branch];
+    btn.textContent = unlocked && cdLeft > 0 ? String(Math.ceil(cdLeft)) : '';
   });
 }
 

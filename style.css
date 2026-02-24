@@ -1800,6 +1800,8 @@ body.scmodal-open{
   height:44px;
   min-width:44px;
   min-height:44px;
+  position:relative;
+  overflow:hidden;
   background-size:contain;
   background-repeat:no-repeat;
   background-position:center;
@@ -1828,6 +1830,46 @@ body.scmodal-open{
 }
 .stageAbilitySlots .talentAbilitySlot.talentAbilityUnlocked:not(:disabled){
   background-color:rgba(40,30,20,.85);
+}
+.stageAbilitySlots .talentAbilitySlot::before{
+  content:'';
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  border-radius:inherit;
+  pointer-events:none;
+  background:conic-gradient(
+    from -90deg at 50% 50%,
+    var(--talentAbilityCdColor, rgba(20,20,20,0.62)) calc(var(--talentAbilityCdFill, 0) * 1turn),
+    transparent 0turn
+  );
+}
+.stageAbilitySlots .talentAbilitySlot[data-charge-badge]:not([data-charge-badge=""])::after{
+  content:attr(data-charge-badge);
+  position:absolute;
+  top:2px;
+  right:2px;
+  min-width:14px;
+  height:14px;
+  border-radius:999px;
+  padding:0 3px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(24,18,16,.9);
+  border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,245,224,.98);
+  font-size:10px;
+  line-height:1;
+  font-weight:900;
+  box-sizing:border-box;
+  pointer-events:none;
+}
+.stageAbilitySlots .talentAbilitySlot[data-cd-visible="1"]{
+  color:rgba(255,245,224,.98);
+  text-shadow:0 1px 0 rgba(0,0,0,.75);
 }
 .modal .talentFooter .talentAbilitySlots{
   display:none;
