@@ -655,6 +655,22 @@
       opts.saveSettings();
     });
 
+    opts.ui.menuAutoPause && opts.ui.menuAutoPause.addEventListener('change', function (e) {
+      var checked = !!(e && e.target && e.target.checked);
+      if (typeof opts.setAutoPauseEnabled === 'function') {
+        opts.setAutoPauseEnabled(checked);
+      } else {
+        var settings = getSettings();
+        settings.autoPauseOnInactive = checked;
+      }
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        opts.updateMenuVolumes();
+      }
+      opts.saveSettings();
+    });
+
     opts.ui.supercomputerBtn && opts.ui.supercomputerBtn.addEventListener('click', function () {
       if (typeof opts.openSupercomputerMenu === 'function') return opts.openSupercomputerMenu();
       return opts.openTalents();
@@ -664,35 +680,99 @@
     });
 
     var settingsTooltip = documentObj.getElementById('settingsTooltip');
-    if (opts.ui.settingsBtn && settingsTooltip) {
-      opts.ui.settingsBtn.addEventListener('mouseenter', function () {
-        settingsTooltip.textContent = opts.t('menuSettings');
-        settingsTooltip.classList.remove('hidden');
-        settingsTooltip.setAttribute('aria-hidden', 'false');
-      });
-      opts.ui.settingsBtn.addEventListener('mousemove', function (e) {
-        settingsTooltip.style.left = e.clientX + 'px';
-        settingsTooltip.style.top = (e.clientY + 12) + 'px';
+    if (settingsTooltip) {
+      var activeTooltipTarget = null;
+
+      function hideUnifiedTooltip() {
+        activeTooltipTarget = null;
+        settingsTooltip.classList.add('hidden');
+        settingsTooltip.setAttribute('aria-hidden', 'true');
+      }
+
+      function positionUnifiedTooltip(clientX, clientY) {
+        if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
+        settingsTooltip.style.left = clientX + 'px';
+        settingsTooltip.style.top = (clientY + 12) + 'px';
         settingsTooltip.style.transform = 'translate(-50%, 0)';
-      });
-      opts.ui.settingsBtn.addEventListener('mouseleave', function () {
-        settingsTooltip.classList.add('hidden');
-        settingsTooltip.setAttribute('aria-hidden', 'true');
-      });
-      opts.ui.settingsBtn.addEventListener('touchstart', function (e) {
-        settingsTooltip.textContent = opts.t('menuSettings');
+      }
+
+      function getTooltipText(target) {
+        if (!target || !target.getAttribute) return '';
+        var text = target.getAttribute('data-ui-tooltip');
+        return typeof text === 'string' ? text.trim() : '';
+      }
+
+      documentObj.addEventListener('pointerover', function (event) {
+        var target = event && event.target && event.target.closest
+          ? event.target.closest('[data-ui-tooltip]')
+          : null;
+        if (!target) {
+          hideUnifiedTooltip();
+          return;
+        }
+        var text = getTooltipText(target);
+        if (!text) {
+          hideUnifiedTooltip();
+          return;
+        }
+        activeTooltipTarget = target;
+        settingsTooltip.textContent = text;
         settingsTooltip.classList.remove('hidden');
         settingsTooltip.setAttribute('aria-hidden', 'false');
-        var touch = e.touches[0];
-        if (touch) {
-          settingsTooltip.style.left = touch.clientX + 'px';
-          settingsTooltip.style.top = (touch.clientY + 24) + 'px';
-          settingsTooltip.style.transform = 'translate(-50%, 0)';
+        positionUnifiedTooltip(event.clientX, event.clientY);
+      }, true);
+
+      documentObj.addEventListener('pointermove', function (event) {
+        if (!activeTooltipTarget) return;
+        if (!documentObj.body || !documentObj.body.contains(activeTooltipTarget)) {
+          hideUnifiedTooltip();
+          return;
         }
-      }, { passive: true });
-      opts.ui.settingsBtn.addEventListener('touchend', function () {
-        settingsTooltip.classList.add('hidden');
-        settingsTooltip.setAttribute('aria-hidden', 'true');
+        var text = getTooltipText(activeTooltipTarget);
+        if (!text) {
+          hideUnifiedTooltip();
+          return;
+        }
+        settingsTooltip.textContent = text;
+        positionUnifiedTooltip(event.clientX, event.clientY);
+      }, true);
+
+      documentObj.addEventListener('pointerout', function (event) {
+        if (!activeTooltipTarget) return;
+        var related = event ? event.relatedTarget : null;
+        if (related && activeTooltipTarget.contains && activeTooltipTarget.contains(related)) return;
+        if (event && event.target && activeTooltipTarget.contains && activeTooltipTarget.contains(event.target)) {
+          hideUnifiedTooltip();
+        }
+      }, true);
+
+      documentObj.addEventListener('touchstart', function (event) {
+        var target = event && event.target && event.target.closest
+          ? event.target.closest('[data-ui-tooltip]')
+          : null;
+        if (!target) {
+          hideUnifiedTooltip();
+          return;
+        }
+        var text = getTooltipText(target);
+        if (!text) {
+          hideUnifiedTooltip();
+          return;
+        }
+        activeTooltipTarget = target;
+        settingsTooltip.textContent = text;
+        settingsTooltip.classList.remove('hidden');
+        settingsTooltip.setAttribute('aria-hidden', 'false');
+        var touch = event.touches && event.touches[0] ? event.touches[0] : null;
+        if (touch) {
+          positionUnifiedTooltip(touch.clientX, touch.clientY + 12);
+        }
+      }, { passive: true, capture: true });
+
+      documentObj.addEventListener('touchend', hideUnifiedTooltip, { passive: true, capture: true });
+      documentObj.addEventListener('touchcancel', hideUnifiedTooltip, { passive: true, capture: true });
+      documentObj.addEventListener('visibilitychange', function () {
+        if (documentObj.visibilityState === 'hidden') hideUnifiedTooltip();
       });
     }
 

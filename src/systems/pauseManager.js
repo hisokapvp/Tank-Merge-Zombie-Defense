@@ -6,6 +6,9 @@
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
     var documentObj = opts.documentObj || (typeof document !== 'undefined' ? document : null);
     var onChange = typeof opts.onChange === 'function' ? opts.onChange : function () {};
+    var isAutoPauseEnabled = typeof opts.isAutoPauseEnabled === 'function'
+      ? opts.isAutoPauseEnabled
+      : function () { return true; };
 
     var reasons = {
       menuOpen: false,
@@ -63,11 +66,19 @@
 
     function onVisibilityChange() {
       if (!documentObj) return;
+      if (!isAutoPauseEnabled()) {
+        setTabInactive(false);
+        return;
+      }
       var hidden = !!documentObj.hidden || documentObj.visibilityState === 'hidden';
       setTabInactive(hidden);
     }
 
     function onWindowBlur() {
+      if (!isAutoPauseEnabled()) {
+        setTabInactive(false);
+        return;
+      }
       setTabInactive(true);
     }
 
@@ -78,6 +89,10 @@
     }
 
     function onPageHide() {
+      if (!isAutoPauseEnabled()) {
+        setTabInactive(false);
+        return;
+      }
       setTabInactive(true);
     }
 

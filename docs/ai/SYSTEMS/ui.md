@@ -11,10 +11,14 @@
 	- Overlay Talents v2: одновременно рендерятся все 3 ветки (`offense/defense/economy`) в отдельных колонках.
 	- Stage HUD active slots для v2 используют иконки активных талантов из `assets/ui/icons/talents/*` (через `Game.TalentsV2.getTalentUi(...)`), а не legacy `assets/active_*.png`.
 	- Stage HUD active slots (v2) обязаны показывать: корректный hover-tooltip (имя/описание/заряды/перезарядка), бейдж зарядов в правом верхнем углу, секундный countdown перезарядки всегда при идущем recharge (даже если есть оставшиеся заряды), и секторную cooldown-заливку по часовой стрелке от центра (`rgba(20,20,20,0.62)` при `charges>0`, `rgba(255,255,255,0.58)` при `charges=0`).
+	- Бейдж зарядов на stage active slots должен оставаться читаемым при стандартном масштабе HUD (увеличенный размер цифры/плашки).
+	- Tooltip для talent nodes и stage active slots рендерится через unified DOM-tooltip (`#settingsTooltip` + `data-ui-tooltip`), не через нативный `title` браузера.
+	- Stage active cooldown-sector стартует сверху (12 o'clock / north) и заполняется по часовой стрелке.
 	- Для каждой ветки есть локальная кнопка `Сбросить выбор` (сбрасывает только pending-выбор этой ветки).
 	- В footer есть кнопка `Применить`, которая фиксирует pending-выбор и только после этого включает модификаторы талантов.
 	- Кнопка `Сбросить улучшения` сбрасывает и pending, и уже применённые ранги, плюс очищает runtime-эффекты талантов (active/status/defense runtime).
 	- Геометрия дерева и SVG-связи соответствуют legacy-layout (ряды `3-3-3-3-2-2-1`).
+	- Базовые SVG-связи дерева (`.talentEdge`) должны быть визуально заметны даже до первой покупки таланта.
 	- Unlock-gating рядов в V2: row1..row6 открываются только при spent `5/10/15/20/25/30` в текущей ветке + минимум `1` rank в таланте из предыдущего ряда (row0 доступен сразу).
 	- V2 nodes не должны пересоздаваться каждый UI-tick: ререндер дерева допускается только при изменении signature (ranks/freePoints/canBuy/lang), иначе это провоцирует hover-SFX spam и потерю click-событий.
 
@@ -52,6 +56,12 @@
 ## Sound menu: track loop control
 - Слайдер `sound.trackLoop` удалён из small menu и big menu.
 - Громкость езды танка (`trackLoop`) настраивается только в коде: `src/config/audioUi.js` → `AudioUi.TANK_DRIVE_VOLUME_MULT`.
+
+## Auto pause toggle
+- В small menu есть checkbox `menuAutoPause` (`Автопауза при неактивной вкладке`).
+- В big menu есть два синхронных checkbox той же настройки: в sound subpanel (`bigMenuAutoPause`) и в root-view (`bigMenuRootAutoPause`).
+- Настройка хранится в `settings.autoPauseOnInactive` (default `false`).
+- `PauseManager` учитывает флаг через `isAutoPauseEnabled`; при `false` причина `tabInactive` принудительно очищается.
 
 ## Small menu Save/Load views
 - Save-view — подрежим small menu: `#smallMenuSaveView` в `index.html`, логика в `src/core/bootstrap.js`.
@@ -214,6 +224,7 @@
 	- число кадров берётся из `Game.Config.LayoutTuning.weaponIconAnimFramesByLevel[L-1]` (fallback `iconFrames` из баланса, далее `1`), при `1` анимации нет;
 	- FPS берётся из `Game.Config.LayoutTuning.weaponIconAnimFpsByLevel[L-1]` (fallback `8`);
 	- ширина `canvas` задаётся через `Game.Config.LayoutTuning.weaponIconW`; ширина sprite-колонки в CSS должна быть согласована с этим значением;
+	- строки таблицы и все ячейки центрируются по вертикали/горизонтали; высота строки должна гарантированно вмещать текущий sprite-размер без наезда на соседние строки;
 	- используется один shared ticker (`setInterval`) на весь таб `Орудия`, без 60 отдельных `requestAnimationFrame`/таймеров;
 	- ticker активен только пока открыт `Supercomputer -> Орудия`, и останавливается при закрытии/переключении таба.
 	- поворот иконок задаётся единой константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js` и применяется в `drawGunsSpriteCanvas(...)` через `ctx.translate(center)` + `ctx.rotate(...)`; `imageSmoothingEnabled` остаётся `false`.

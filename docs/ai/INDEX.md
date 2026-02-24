@@ -40,6 +40,12 @@
 - Talents v2 active slots (stage HUD): иконки активок берутся из talentTree v2 (`assets/ui/icons/talents/*` через `Game.TalentsV2.getTalentUi`) для веток offense/defense/economy; legacy stage active icons больше не источник для v2.
 - Talents v2 status icons: над танками/зомби добавлен expiry-progress без чисел — иконки постепенно закрашиваются белым к окончанию эффекта.
 - Stage active HUD (v2): в бою для активок показываются корректные tooltip (название+описание+заряды+перезарядка), бейдж зарядов в правом верхнем углу, секундный таймер перезарядки всегда (в т.ч. при оставшихся зарядах) и секторная заливка cooldown по часовой стрелке из центра иконки (черная полупрозрачная при `charges>0`, белая при `charges=0`).
+- Stage active HUD/tooltips: нативные `title` для talent nodes/active slots заменены на unified in-game tooltip (`#settingsTooltip` + `data-ui-tooltip`), чтобы исключить браузерные чёрные подсказки и сохранить единый стиль UI.
+- Stage active HUD: бейдж зарядов активок всегда видим (не зависит от hover-анимации кнопки), cooldown-сектор стартует сверху (`12 o'clock`).
+- Main menu sound settings: добавлен флаг `Автопауза при неактивной вкладке / Auto-pause on inactive tab`; default `OFF` (`settings.autoPauseOnInactive=false`).
+- Big menu root view: добавлен дублирующий toggle `Автопауза при неактивной вкладке` (вне `Sound` subpanel), синхронизированный с `settings.autoPauseOnInactive`.
+- Talents v2 overlay: базовые SVG-связи (`.talentEdge`) усилены по контрасту и видны даже до первой прокачки таланта.
+- Stage active HUD: увеличен размер бейджа зарядов (`font-size` и габариты), чтобы значение зарядов читалось без приближения.
 - QA чеклист Talents v2 вынесен в `docs/qa_talents_v2.md`.
 
 ## Текущие UI-акценты
@@ -65,6 +71,7 @@
 - `modsTankWall`: вкладка `Базы` удалена из `index.html`, `src/ui/supercomputerMenu.js` и i18n/fallback-строк.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
 - `Орудия`: добавлена колонка `Стоимость` (`next / totalSpent`) и поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` для аним-иконок через shared ticker.
+- `modsTankWall` таблицы (`Орудия/Стены`): строки и ячейки центрированы по вертикали/горизонтали, увеличена базовая sprite-колонка и высота строк под текущий `weaponIconW/H`, чтобы иконки не наезжали на соседние строки.
 - `Орудия`: в `src/config/layoutTuning.js` добавлены per-level массивы `weaponIconAnimFramesByLevel` и `weaponIconAnimFpsByLevel` (L1..L60) для ручной настройки кадров и fps.
 - `Стены`: preview-иконки уровней берутся из `assets/fence.json -> levels[]` с приоритетом `uiIcon.frame.id` -> `uiIcon.frame` -> `uiIcon.frameId` -> `uiFrameId` -> `sideTop`, atlas по `uiIcon.atlas`/fallback-цепочке.
 - Tank track toggle (`onTrack`) меняется через единый entrypoint `Game.Garage.setTankOnTrack(...)`; user-cause играет `tankToTrack/tankToHangar`, reset/restore-cause подавляет эти SFX.

@@ -52,6 +52,7 @@
   "languageEnglish": "Английский",
   "menuSfx": "Громкость эффектов",
   "menuMusic": "Громкость музыки",
+  "menuAutoPause": "Автопауза при неактивной вкладке",
   "sound.trackLoop": "Громкость трассы",
   "hudCoins": "Деньги",
   "hudKills": "Убито монстров",

@@ -81,6 +81,12 @@
                     <span class="menuValue" id="menuMusicValue">60%</span>
                   </div>
                 </div>
+                <div class="menuRow">
+                  <label class="menuToggle" for="menuAutoPause">
+                    <input id="menuAutoPause" type="checkbox" />
+                    <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+                  </label>
+                </div>
               </div>
               </div>
 
@@ -353,6 +359,12 @@
           </div>
           <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
         </div>
+        <div class="menuRow">
+          <label class="menuToggle" id="bigMenuRootAutoPauseLabel" for="bigMenuRootAutoPause">
+            <input id="bigMenuRootAutoPause" type="checkbox" />
+            <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+          </label>
+        </div>
 
         <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
           <div class="bigMenuSubpanelTitle">Звук</div>
@@ -369,6 +381,12 @@
               <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
               <span class="menuValue" id="bigMenuMusicValue">60%</span>
             </div>
+          </div>
+          <div class="menuRow">
+            <label class="menuToggle" id="bigMenuAutoPauseLabel" for="bigMenuAutoPause">
+              <input id="bigMenuAutoPause" type="checkbox" />
+              <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+            </label>
           </div>
         </div>
       </div>

@@ -452,9 +452,13 @@
       var soundTitle = ui.bigMenuOverlay.querySelector('#bigMenuSoundPanel .bigMenuSubpanelTitle');
       var soundSfxLabel = ui.bigMenuOverlay.querySelector('#bigMenuSfxLabel');
       var soundMusicLabel = ui.bigMenuOverlay.querySelector('#bigMenuMusicLabel');
+      var soundAutoPauseLabel = ui.bigMenuOverlay.querySelector('#bigMenuAutoPauseLabel');
+      var rootAutoPauseText = ui.bigMenuOverlay.querySelector('#bigMenuRootAutoPauseLabel .menuLabel');
       if (soundTitle) soundTitle.textContent = deps.t('bigMenuSound');
       if (soundSfxLabel) soundSfxLabel.textContent = deps.t('bigMenuSfx');
       if (soundMusicLabel) soundMusicLabel.textContent = deps.t('bigMenuMusic');
+      if (soundAutoPauseLabel) soundAutoPauseLabel.textContent = deps.t('menuAutoPause');
+      if (rootAutoPauseText) rootAutoPauseText.textContent = deps.t('menuAutoPause');
 
       var languageTitle = ui.bigMenuOverlay.querySelector('#bigMenuLanguagePanel .bigMenuSubpanelTitle');
       if (languageTitle) languageTitle.textContent = deps.t('menuLanguage');
@@ -619,6 +623,24 @@
       if (ui.bigMenuMusic) {
         ui.bigMenuMusic.addEventListener('input', function (e) {
           deps.setVolume('music', e.target.value, 'percent');
+          deps.syncVolumeUIFromSettings();
+          deps.saveSettings();
+        });
+      }
+      if (ui.bigMenuAutoPause) {
+        ui.bigMenuAutoPause.addEventListener('change', function (e) {
+          if (typeof deps.setAutoPauseEnabled === 'function') {
+            deps.setAutoPauseEnabled(!!(e && e.target && e.target.checked));
+          }
+          deps.syncVolumeUIFromSettings();
+          deps.saveSettings();
+        });
+      }
+      if (ui.bigMenuRootAutoPause) {
+        ui.bigMenuRootAutoPause.addEventListener('change', function (e) {
+          if (typeof deps.setAutoPauseEnabled === 'function') {
+            deps.setAutoPauseEnabled(!!(e && e.target && e.target.checked));
+          }
           deps.syncVolumeUIFromSettings();
           deps.saveSettings();
         });

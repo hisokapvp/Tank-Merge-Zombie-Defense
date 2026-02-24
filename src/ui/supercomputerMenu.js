@@ -433,6 +433,7 @@
     function tickGunsIconSprites() {
       if (state.view !== 'tankWall') return;
       var nowMs = Date.now();
+      var ALWAYS_VISIBLE_ICON_ROWS = 4;
 
       if (state.activeTankWallTab === 'weapons' && gunsUi.rows) {
         var animatedNodes = gunsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
@@ -442,7 +443,9 @@
             var frames = toSafeNonNegativeInt(Number(node.getAttribute('data-anim-frames')));
             var fps = Number(node.getAttribute('data-anim-fps'));
             var rowNode = node.closest('.scGunsTable__row');
-            if (rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
+            var rowLevel = Number(rowNode && rowNode.getAttribute ? rowNode.getAttribute('data-level') : 0);
+            var forceVisible = Number.isFinite(rowLevel) && rowLevel >= 1 && rowLevel <= ALWAYS_VISIBLE_ICON_ROWS;
+            if (!forceVisible && rowNode && !isElementVerticallyVisible(rowNode, gunsUi.rows)) continue;
             var frameIndex = 0;
             if (frames > 1 && Number.isFinite(fps) && fps > 0) {
               frameIndex = Math.floor(nowMs * (fps / 1000)) % frames;
@@ -456,7 +459,9 @@
           for (var j = 0; j < wallNodes.length; j++) {
             var wNode = wallNodes[j];
             var wRowNode = wNode.closest('.scGunsTable__row');
-            if (wRowNode && !isElementVerticallyVisible(wRowNode, wallsUi.rows)) continue;
+            var wRowLevel = Number(wRowNode && wRowNode.getAttribute ? wRowNode.getAttribute('data-level') : 0);
+            var wForceVisible = Number.isFinite(wRowLevel) && wRowLevel >= 1 && wRowLevel <= ALWAYS_VISIBLE_ICON_ROWS;
+            if (!wForceVisible && wRowNode && !isElementVerticallyVisible(wRowNode, wallsUi.rows)) continue;
             drawGunsSpriteCanvas(wNode, 0);
           }
         }

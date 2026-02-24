@@ -46,6 +46,7 @@ const ui = {
   bigMenuMusic: document.getElementById('bigMenuMusic'),
   bigMenuSfxValue: document.getElementById('bigMenuSfxValue'),
   bigMenuMusicValue: document.getElementById('bigMenuMusicValue'),
+  bigMenuRootAutoPause: document.getElementById('bigMenuRootAutoPause'),
   bigMenuLangRu: document.getElementById('bigMenuLangRu'),
   bigMenuLangEn: document.getElementById('bigMenuLangEn'),
   creditsModal: document.getElementById('creditsModal'),
@@ -77,8 +78,10 @@ const ui = {
   menuExitConfirmCancel: document.getElementById('menuExitConfirmCancel'),
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
+  menuAutoPause: document.getElementById('menuAutoPause'),
   menuSfxValue: document.getElementById('menuSfxValue'),
   menuMusicValue: document.getElementById('menuMusicValue'),
+  bigMenuAutoPause: document.getElementById('bigMenuAutoPause'),
   crateModal: document.getElementById('crateModal'),
   crateClose: document.getElementById('crateClose'),
   crateGet: document.getElementById('crateGet'),
@@ -377,6 +380,7 @@ const DEFAULT_SETTINGS = audioDefaultsFromApi
   : {
       sfxVolume: 0.75,
       musicVolume: 0.6,
+      autoPauseOnInactive: false,
     };
 
 let settings = { ...DEFAULT_SETTINGS };
@@ -996,6 +1000,8 @@ function loadSettings(){
       };
     }
   }catch(e){}
+  settings.autoPauseOnInactive = !!settings.autoPauseOnInactive;
+  syncAutoPauseWithPauseManager();
   applyAudioSettings();
   updateMenuVolumes();
 }
@@ -1613,6 +1619,27 @@ function setVolume(kind, value, format){
   return settings[key];
 }
 
+function isAutoPauseEnabledSetting(){
+  return !!(settings && settings.autoPauseOnInactive);
+}
+
+function syncAutoPauseWithPauseManager(){
+  if (!pauseManager || typeof pauseManager.setTabInactive !== 'function') return;
+  if (!isAutoPauseEnabledSetting()) {
+    pauseManager.setTabInactive(false);
+    return;
+  }
+  var hidden = !!document.hidden || document.visibilityState === 'hidden';
+  pauseManager.setTabInactive(hidden);
+}
+
+function setAutoPauseEnabled(enabled){
+  settings.autoPauseOnInactive = !!enabled;
+  syncAutoPauseWithPauseManager();
+  updateMenuVolumes();
+  return settings.autoPauseOnInactive;
+}
+
 function syncVolumeUIFromSettings(){
   const sfxPercent = getVolume('sfx', 'percent');
   const musicPercent = getVolume('music', 'percent');
@@ -1626,6 +1653,9 @@ function syncVolumeUIFromSettings(){
   if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(musicPercent);
   if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${sfxPercent}%`;
   if (ui.bigMenuMusicValue) ui.bigMenuMusicValue.textContent = `${musicPercent}%`;
+  if (ui.menuAutoPause) ui.menuAutoPause.checked = isAutoPauseEnabledSetting();
+  if (ui.bigMenuAutoPause) ui.bigMenuAutoPause.checked = isAutoPauseEnabledSetting();
+  if (ui.bigMenuRootAutoPause) ui.bigMenuRootAutoPause.checked = isAutoPauseEnabledSetting();
 }
 
 function updateMenuVolumes(){
@@ -1660,11 +1690,13 @@ function applyTranslations(){
   }
   if (ui.settingsBtn){
     ui.settingsBtn.setAttribute('aria-label', t('menuSettings'));
-    ui.settingsBtn.setAttribute('title', t('menuSettings'));
+    ui.settingsBtn.setAttribute('data-ui-tooltip', t('menuSettings'));
+    ui.settingsBtn.removeAttribute('title');
   }
   if (ui.supercomputerBtn){
     ui.supercomputerBtn.setAttribute('aria-label', t('supercomputerBtn'));
-    ui.supercomputerBtn.setAttribute('title', t('supercomputerBtn'));
+    ui.supercomputerBtn.setAttribute('data-ui-tooltip', t('supercomputerBtn'));
+    ui.supercomputerBtn.removeAttribute('title');
   }
   const langSwitch = document.querySelector('.langSwitch');
   if (langSwitch){
@@ -5300,6 +5332,8 @@ function hasBreachOnSide(sideKey){
 }
 
 function getNearestKnownBreachForZombie(sideKey, localX, localY, awarenessRadiusPx){
+  const sameSideBreach = pickNearestBreachForSide(sideKey, localX, localY, Infinity, false);
+  if (sameSideBreach) return sameSideBreach;
   const radius = Number.isFinite(awarenessRadiusPx) ? Math.max(0, awarenessRadiusPx) : 0;
   if (radius <= 0) return null;
   return pickNearestBreachForSide(sideKey, localX, localY, radius, true);
@@ -6709,6 +6743,7 @@ function ensureBigMenuRuntimeController(){
     loadSettings: loadSettings,
     saveSettings: saveSettings,
     setVolume: setVolume,
+    setAutoPauseEnabled: setAutoPauseEnabled,
     setTrackLoopVolumeMul: setTrackLoopVolumeMul,
     playUiSliderPreviewSfxThrottled: playUiSliderPreviewSfxThrottled,
     boot: boot,
@@ -8049,7 +8084,8 @@ function ensureTalentUI(){
         <span class="talentNodeIcon" aria-hidden="true">${def.icon ? `<img src="${def.icon}" alt="" loading="lazy">` : `<span class="talentNodeGlyph">${def.kind === 'active' ? '⚡' : '◆'}</span>`}</span>
         <span class="talentNodeRank" id="rank-${globalIdx}">0/${def.maxRank}</span>
       `;
-      btn.title = `${def.name}\n${def.desc}`;
+      btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
+      btn.removeAttribute('title');
       btn.addEventListener('click', (event) => {
         adjustTalentPending(globalIdx, event.shiftKey ? -1 : 1);
       });
@@ -8275,7 +8311,8 @@ function renderTalentNodesV2(overlay, branchId){
     button.classList.toggle('maxed', rank >= Math.max(1, node.maxRank || 1));
     button.classList.toggle('locked', !can.ok && rank <= 0);
     const titleText = `${t(node.ui?.nameKey || node.id)}\n${t(node.ui?.descKey || node.id)}${tooltipReason ? `\n${tooltipReason}` : ''}`;
-    button.title = titleText;
+    button.setAttribute('data-ui-tooltip', titleText);
+    button.removeAttribute('title');
     button.innerHTML = `
       <span class="talentNodeIcon" aria-hidden="true">${node.ui && node.ui.icon ? `<img src="assets/ui/icons/talents/${node.ui.icon}.png" alt="" loading="lazy">` : `<span class="talentNodeGlyph">◆</span>`}</span>
       <span class="talentNodeRank">${rank}/${Math.max(1, node.maxRank || 1)}</span>
@@ -8403,7 +8440,8 @@ function updateTalentAbilitySlotsV2(container){
     btn.setAttribute('data-cd-visible', secLeft > 0 ? '1' : '0');
     btn.setAttribute('data-charge-badge', stateActive.unlocked ? String(chargesCurrent) : '');
     btn.disabled = disabled;
-    btn.title = titleParts.join('\n');
+    btn.setAttribute('data-ui-tooltip', titleParts.join('\n'));
+    btn.removeAttribute('title');
     btn.setAttribute('aria-label', activeName);
     btn.textContent = labelText;
   });
@@ -8505,7 +8543,8 @@ function updateTalentUI(){
     btn.classList.toggle('maxed', isMaxed && applied > 0);
     btn.classList.toggle('locked', isLocked);
     btn.disabled = !canSelect && pending === 0;
-    btn.title = `${def.name}\n${def.desc}`;
+    btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
+    btn.removeAttribute('title');
   });
 
   // Update branch points
@@ -8546,9 +8585,10 @@ function updateTalentUI(){
     btn.classList.toggle('talentAbilityLocked', !unlocked);
     btn.classList.toggle('talentAbilityUnlocked', unlocked);
     btn.disabled = !unlocked || !canUse;
-    btn.title = unlocked
+    btn.setAttribute('data-ui-tooltip', unlocked
       ? (canUse ? TALENT_BRANCHES[branch] : t('talentActiveCooldown', {sec: Math.ceil(cdLeft)}))
-      : TALENT_BRANCHES[branch];
+      : TALENT_BRANCHES[branch]);
+    btn.removeAttribute('title');
     btn.textContent = unlocked && canUse ? '' : (cdLeft > 0 ? Math.ceil(cdLeft) : '');
   });
 }
@@ -8590,7 +8630,8 @@ function updateStageAbilitySlots(){
     titleParts.push(cdLeft > 0
       ? t('talentActiveRechargeIn', { sec: Math.ceil(cdLeft) })
       : t('talentActiveRechargeReady'));
-    btn.title = unlocked ? titleParts.join('\n') : TALENT_BRANCHES[branch];
+    btn.setAttribute('data-ui-tooltip', unlocked ? titleParts.join('\n') : TALENT_BRANCHES[branch]);
+    btn.removeAttribute('title');
     btn.textContent = unlocked && cdLeft > 0 ? String(Math.ceil(cdLeft)) : '';
   });
 }
@@ -9005,6 +9046,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
   pauseManager = PauseManagerApi.createPauseManager({
     windowObj: window,
     documentObj: document,
+    isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
       if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
@@ -9013,6 +9055,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     },
   });
   pauseManager.attach();
+  syncAutoPauseWithPauseManager();
   recomputeMenuPauseLock();
 }
 
@@ -11251,6 +11294,7 @@ async function boot(){
         settings,
         getVolume,
         setVolume,
+        setAutoPauseEnabled,
         setTrackLoopVolumeMul,
         applyAudioSettings,
         updateMenuVolumes,

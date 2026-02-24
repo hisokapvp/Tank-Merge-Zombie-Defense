@@ -52,6 +52,7 @@
   "languageEnglish": "English",
   "menuSfx": "SFX volume",
   "menuMusic": "Music volume",
+  "menuAutoPause": "Auto-pause on inactive tab",
   "sound.trackLoop": "Track loop volume",
   "hudCoins": "Money",
   "hudKills": "Monsters defeated",
