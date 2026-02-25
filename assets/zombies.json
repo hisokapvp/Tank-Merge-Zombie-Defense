@@ -55,7 +55,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 15,
+      "attackDamage": 10,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -109,7 +109,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 25,
+      "attackDamage": 20,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -163,7 +163,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 35,
+      "attackDamage": 30,
       "animations": {
         "walk": {
           "frameRateFps": 50
