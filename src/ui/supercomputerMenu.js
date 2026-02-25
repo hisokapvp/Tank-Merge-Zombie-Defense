@@ -483,7 +483,28 @@
       var num = Number(value);
       if (!Number.isFinite(num)) return '—';
       if (Math.abs(num) >= 100) return String(Math.round(num));
-      return num.toFixed(2);
+      var fixed = num.toFixed(2);
+      return fixed
+        .replace(/\.00$/, '')
+        .replace(/(\.\d)0$/, '$1');
+    }
+
+    function normalizeRootTilesSize() {
+      var tilesWrap = documentObj.querySelector('#supercomputerMenuOverlay .scRootTiles');
+      if (!tilesWrap) return;
+      var tiles = tilesWrap.querySelectorAll('.scRootTile');
+      if (!tiles || !tiles.length) return;
+      for (var i = 0; i < tiles.length; i++) {
+        tiles[i].style.setProperty('--scRootTileUniformHeight', 'auto');
+      }
+      var maxHeight = 0;
+      for (var j = 0; j < tiles.length; j++) {
+        maxHeight = Math.max(maxHeight, Math.ceil(tiles[j].getBoundingClientRect().height));
+      }
+      if (maxHeight <= 0) return;
+      for (var k = 0; k < tiles.length; k++) {
+        tiles[k].style.setProperty('--scRootTileUniformHeight', String(maxHeight) + 'px');
+      }
     }
 
     function getTankLevelViewData(level) {
@@ -629,7 +650,6 @@
           ? baseDamage * (1 + applied * damageMulPer)
           : null;
         var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
-        var totalSpent = getTotalSpentForLevel(level, applied);
         var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
         var canMinus = pending > 0;
         var totalPendingCost = getPendingCost(level, pending);
@@ -687,10 +707,12 @@
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseAttackSpeed) + ' / ' + formatNumber(currentAttackSpeed) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseDamage) + ' / ' + formatNumber(currentDamage) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + ' / ' + formatCompact(totalSpent) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '<span class="scGunsActionStepper">' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-guns-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '</span>' +
               '<button type="button" class="btn btnPrimary uiButtonBehavior scGunsActionBtn" data-guns-action="apply" data-level="' + String(level) + '"' + (canApply ? '' : ' disabled') + '>' + translate('modsGunsUpgrade') + '</button>' +
             '</div>' +
           '</div>';
@@ -850,7 +872,6 @@
         var currentArmor = stats.currentArmor;
 
         var nextStepCost = toSafeNonNegativeInt(getCannonUpgradeStepCost(level, applied + pending));
-        var totalSpent = getTotalSpentForFenceLevel(level, applied);
         var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
         var canMinus = pending > 0;
         var totalPendingCost = getPendingFenceCost(level, pending);
@@ -923,10 +944,12 @@
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseHp) + ' / ' + formatNumber(currentHp) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseArmor) + ' / ' + formatNumber(currentArmor) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + ' / ' + formatCompact(totalSpent) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
-              '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '<span class="scGunsActionStepper">' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-walls-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '</span>' +
               '<button type="button" class="btn btnPrimary uiButtonBehavior scGunsActionBtn" data-walls-action="apply" data-level="' + String(level) + '"' + (canApply ? '' : ' disabled') + '>' + translate('modsWallsUpgrade') + '</button>' +
             '</div>' +
           '</div>';
@@ -956,6 +979,7 @@
       });
       state.isOpen = true;
       state.view = 'root';
+      normalizeRootTilesSize();
       setBodyScrollLock(true);
       onPauseLockChange(true);
     }

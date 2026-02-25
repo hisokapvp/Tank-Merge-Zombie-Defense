@@ -2575,7 +2575,12 @@ function drawWeather(){
   ensureWorldEventsRuntimeController()?.drawWeather();
 }
 
-function makeTank(level, onTrack = false){
+function makeTank(level, onTrack = false, options = null){
+  const opts = options && typeof options === 'object' ? options : null;
+  const shouldStamp = !onTrack && (!opts || opts.enableStamp !== false);
+  const stampStartSec = shouldStamp
+    ? (opts && Number.isFinite(opts.stampStartSec) ? opts.stampStartSec : nowSec())
+    : null;
   return {
     id: crypto.randomUUID(),
     level,
@@ -2585,6 +2590,7 @@ function makeTank(level, onTrack = false){
     bodyAnim: Math.random() * 2,
     cannonAnim: 0,
     firedThisCycle: false,
+    stampStartSec: Number.isFinite(stampStartSec) ? stampStartSec : null,
   };
 }
 
@@ -4224,7 +4230,7 @@ function restoreFullState(saved){
     if (!cell) continue;
     if (sc.orbitPhase !== undefined) cell.orbitPhase = sc.orbitPhase;
     if (sc.tank) {
-      cell.tank = makeTank(sc.tank.level, !!sc.tank.onTrack);
+      cell.tank = makeTank(sc.tank.level, !!sc.tank.onTrack, { enableStamp: false });
       if (sc.tank.powerTier != null) cell.tank.powerTier = sc.tank.powerTier;
     } else cell.tank = null;
   }
@@ -8241,6 +8247,16 @@ function getTalentBranchNodesV2(branchId){
 }
 
 function getTalentNodeLayoutV2(localIdx, node){
+  if (node && node.layout && typeof node.layout === 'object') {
+    const row = Number.isFinite(node.layout.row) ? Math.max(0, Math.floor(node.layout.row)) : Math.max(0, (node && node.tier ? node.tier : 1) - 1);
+    const slot = Number.isFinite(node.layout.slot) ? Math.max(0, Math.floor(node.layout.slot)) : (localIdx % 3);
+    const parents = Array.isArray(node.layout.parents)
+      ? node.layout.parents
+          .map((value) => Number.isFinite(value) ? Math.floor(value) : -1)
+          .filter((value, idx, arr) => value >= 0 && arr.indexOf(value) === idx)
+      : [];
+    return { row, slot, parents };
+  }
   const layout = TALENT_LAYOUT[localIdx];
   if (layout) return layout;
   return {
@@ -10196,7 +10212,58 @@ function drawTankSlot(cell){
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
   rr(ctx, cx-18, cy-12, 36, 26, 8);
   ctx.fill();
-  drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
+  drawTankIconWithStampReveal(cell, cx, cy);
+  ctx.restore();
+}
+
+const TANK_STAMP_ROWS = 10;
+const TANK_STAMP_DURATION_SEC = 1.5;
+
+function getTankStampProgress(tank){
+  if (!tank || tank.onTrack) return 1;
+  if (!Number.isFinite(tank.stampStartSec)) return 1;
+  const elapsedSec = nowSec() - tank.stampStartSec;
+  const progress = clamp(elapsedSec / TANK_STAMP_DURATION_SEC, 0, 1);
+  if (progress >= 1) tank.stampStartSec = null;
+  return progress;
+}
+
+function drawTankIconWithStampReveal(cell, cx, cy){
+  if (!cell || !cell.tank) return;
+  const progress = getTankStampProgress(cell.tank);
+  if (progress >= 1) {
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
+    return;
+  }
+
+  const rows = TANK_STAMP_ROWS;
+  const iconW = Math.max(42, cell.w - 8);
+  const iconH = Math.max(32, cell.h - 10);
+  const left = cx - iconW * 0.5;
+  const top = cy - iconH * 0.5;
+  const rowH = iconH / rows;
+  const visibleRows = progress * rows;
+  const fullRows = Math.floor(visibleRows);
+  const partialRow = visibleRows - fullRows;
+
+  ctx.save();
+  for (let row = 0; row < rows; row++) {
+    let reveal = 0;
+    if (row < fullRows) reveal = 1;
+    else if (row === fullRows) reveal = partialRow;
+    if (reveal <= 0) continue;
+
+    const clipY = top + row * rowH;
+    const clipH = rowH * reveal;
+    if (clipH <= 0) continue;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, clipY, iconW, clipH + 0.5);
+    ctx.clip();
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
+    ctx.restore();
+  }
   ctx.restore();
 }
 

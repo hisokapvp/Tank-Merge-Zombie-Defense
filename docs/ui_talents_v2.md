@@ -9,8 +9,9 @@
   - `talentBranchTitle`
   - счетчиком потраченных очков ветки (`getBranchSpent(branchId)`)
   - контейнером дерева (`.talentTreeGrid`) и SVG-слоем связей (`.talentTreeSvg`).
-- Для позиционирования узлов используется legacy-layout `3-3-3-3-2-2-1` (7 рядов); это сохраняет визуальный паттерн старого дерева.
+- Геометрия узлов берётся из `Game.TalentsV2.getTalentsByBranch(branchId)` → `node.layout` (`row`, `slot`, `parents`); при отсутствии layout используется fallback на legacy-layout `3-3-3-3-2-2-1`.
 - SVG-связи обновляются при `updateTalentUI` и на `window.resize`.
+- Базовые SVG-связи (`.talentEdge`) должны быть видимы сразу после `New game` (до первой покупки).
 
 ## 1) UI reasons (disabled buy)
 

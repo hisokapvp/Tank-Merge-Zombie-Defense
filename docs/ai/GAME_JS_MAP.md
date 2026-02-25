@@ -6,9 +6,11 @@
 > Дополнительно вынесены крупные runtime-блоки: `src/audio/sfxPoolRuntime.js`, `src/systems/worldEventsRuntime.js`, `src/render/zombieRender.js`, `src/mechanics/crateRuntime.js`, `src/ui/bigMenuRuntime.js`.
 > Для точных номеров строк используйте grep.
 
-## Extraction status (2026-02-20)
+## Extraction status (2026-02-25)
 - В `game.js` для 5 систем добавлены `ensure*RuntimeController()` и делегирование вызовов в `Game.*Runtime.createController(...)`.
 - Встроенная логика в `game.js` оставлена как fallback (поведение не зависит жёстко от порядка/наличия runtime-скриптов).
+- Talents v2 UI layout в `getTalentNodeLayoutV2(...)` берётся из `node.layout` (из `Game.TalentsV2.getTalentsByBranch(...)`) с fallback на legacy `TALENT_LAYOUT`.
+- Визуал ангара: `drawTankSlot(...)` использует stamp-reveal (`drawTankIconWithStampReveal`) на `10` полос/`1.5s`; при restore сейва stamp отключён (`makeTank(..., { enableStamp:false })`).
 
 ---
 
@@ -146,7 +148,7 @@
 | 9001–9090 | `drawSupercomputerBoostIcons` body, `drawDrones` |
 | 9091–9250 | `drawZombieFence` (sprite + fallback), `resolveFenceSpriteKeys` |
 | 9249–9300 | `drawFence` (hangar visual), `clipRoundedRect` |
-| 9298–9375 | `drawBoard` (cells, drag preview), `drawTankSlot`, `drawOrbitingTanks` |
+| 9298–9375 | `drawBoard` (cells, drag preview), `drawTankSlot` (stamp-reveal), `drawOrbitingTanks` |
 | 9370–9500 | `drawTankIcon`, `drawTankIconTo` |
 | 9503–9640 | `computeAuraBand`, `AuraStyleByBand`, `drawTankAura`, `drawTankAuraSprite` |
 | 9634–9810 | `drawTank` — полный рендер танка (sprite + vector fallback) |
@@ -279,7 +281,7 @@
 ### Экономика / Покупка
 | Строка | Функция |
 |---|---|
-| 2840 | `makeTank(level, silent)` |
+| 2840 | `makeTank(level, onTrack = false, options = null)` |
 | 2860 | `addDron(level)` |
 | 2870 | `recordTankLevel(level)` |
 | 2880 | `buyTankLevel()` |
@@ -364,7 +366,7 @@
 |---|---|
 | 4000 | `saveProgress()` |
 | 4030 | `getSavedProgress()` |
-| 4060 | `restoreFullState(payload)` |
+| 4060 | `restoreFullState(payload)` (создаёт танки через `makeTank(..., { enableStamp:false })`) |
 | 4100 | `applySavedProgress(saved)` |
 | 7144 | `forceAutosaveSafely()` |
 
@@ -575,6 +577,8 @@
 | 9284 | `clipRoundedRect(targetCtx, x, y, w, h, r)` |
 | 9298 | `drawBoard()` |
 | 9349 | `drawTankSlot(cell)` |
+| 9350 | `getTankStampProgress(tank)` |
+| 9356 | `drawTankIconWithStampReveal(cell, cx, cy)` |
 | 9361 | `drawOrbitingTanks()` |
 | 9370 | `drawTankIcon(x, y, level, mutedSlot)` |
 | 9374 | `getOnTrackIconOpacity()` |

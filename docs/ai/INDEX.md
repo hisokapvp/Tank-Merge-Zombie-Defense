@@ -22,7 +22,7 @@
 - Input: `docs/ai/SYSTEMS/input.md`
 - Performance: `docs/ai/SYSTEMS/perf.md`
 
-## Extraction status (2026-02-20)
+## Extraction status (2026-02-25)
 - Big Menu runtime вынесен в `src/ui/bigMenuRuntime.js` (делегирование из `game.js`, API имён сохранён).
 - World Events runtime вынесен в `src/systems/worldEventsRuntime.js`.
 - Zombie rendering вынесен в `src/render/zombieRender.js`.
@@ -47,6 +47,16 @@
 - Talents v2 overlay: базовые SVG-связи (`.talentEdge`) усилены по контрасту и видны даже до первой прокачки таланта.
 - Stage active HUD: увеличен размер бейджа зарядов (`font-size` и габариты), чтобы значение зарядов читалось без приближения.
 - QA чеклист Talents v2 вынесен в `docs/qa_talents_v2.md`.
+- Talents v2 layout contract: `Game.TalentsV2.getTalentsByBranch()` теперь возвращает `node.layout` (`row/slot/parents`); `game.js/getTalentNodeLayoutV2()` сначала использует API-layout и только затем fallback на `TALENT_LAYOUT`.
+- Talents v2 edges: базовые `.talentEdge` видимы сразу после `New game`.
+- Supercomputer root tiles: `.scRootTiles` переведён на grid (3 колонки), а высота карточек нормализуется через `--scRootTileUniformHeight` + `normalizeRootTilesSize()`.
+- Supercomputer root tiles: `.scRootTile__icon` переведён в полноразмерный фон карточки (`inset:0`, `background-size:cover`), подпись остаётся поверх (readable label).
+- Hangar slot stamp reveal: `makeTank(..., options)` записывает `stampStartSec`; в `drawTankSlot` применён reveal-штамп на 10 полос/`1.5s`; при `restoreFullState` штамп отключается (`enableStamp:false`).
+- `modsTankWall` (`Орудия`/`Стены`): колонка `Стоимость` показывает только `nextStepCost` (без `totalSpent`).
+- `modsTankWall`: действия `+/-` собраны в вертикальный стек `.scGunsActionStepper`.
+- `modsTankWall` и stats-таблицы: целые значения в `attackSpeed/armor` и связанных статах показываются без `.00`.
+- Stage active HUD: hover не смещает слот и charge-бейдж (бейдж стабильно в правом верхнем углу).
+- Debug panel `Logs&Tools`: удалены `Reset (statuses + VFX)`, `Clear log`, `Lesson Progress` и их обработчики; оставлен telemetry mount.
 
 ## Текущие UI-акценты
 - Меню (big/small): last-click selected state без default selected на первом показе — `docs/ai/SYSTEMS/ui.md`.
@@ -70,7 +80,7 @@
 - Divider под вкладками `Орудия/Стены` в `#modsTankWallOverlay`: линия тянется до внутренних краёв рамки без боковых отступов.
 - `modsTankWall`: вкладка `Базы` удалена из `index.html`, `src/ui/supercomputerMenu.js` и i18n/fallback-строк.
 - Вкладка `Орудия` в `modsTankWall`: таблица 60 уровней с pending/reserve и apply в `state.player.cannonUpgradesApplied`; pending не сохраняется между открытиями меню.
-- `Орудия`: добавлена колонка `Стоимость` (`next / totalSpent`) и поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` для аним-иконок через shared ticker.
+- `Орудия`: колонка `Стоимость` показывает только `nextStepCost`; поддержка `iconFrames` в `assets/balance/cannonUpgrades.json` используется для аним-иконок через shared ticker.
 - `modsTankWall` таблицы (`Орудия/Стены`): строки и ячейки центрированы по вертикали/горизонтали, увеличена базовая sprite-колонка и высота строк под текущий `weaponIconW/H`, чтобы иконки не наезжали на соседние строки.
 - `Орудия`: в `src/config/layoutTuning.js` добавлены per-level массивы `weaponIconAnimFramesByLevel` и `weaponIconAnimFpsByLevel` (L1..L60) для ручной настройки кадров и fps.
 - `Стены`: preview-иконки уровней берутся из `assets/fence.json -> levels[]` с приоритетом `uiIcon.frame.id` -> `uiIcon.frame` -> `uiIcon.frameId` -> `uiFrameId` -> `sideTop`, atlas по `uiIcon.atlas`/fallback-цепочке.
@@ -78,7 +88,7 @@
 - On-track dim иконки в слоте настраивается параметром `assets/tanks.json -> ui.onTrackIconOpacity` (нормализация в `TankSprites.config.ui`).
 - Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
 - Exit из small menu в big menu приводит приложение к состоянию первого запуска через reload shell после очистки transient `progress` (слоты сохранений не удаляются).
-- Supercomputer root tiles: 3-в-ряд без переноса, label с переносом строк (`white-space: normal` + `overflow-wrap`), размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
+- Supercomputer root tiles: grid 3 колонки, label с переносом строк (`white-space: normal` + `overflow-wrap`), полноразмерный background-икон слой карточки и унификация высоты через `--scRootTileUniformHeight` в `style.css`.
 - Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels поддерживают перенос строк и остаются читаемыми на узких экранах.
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
 - Supercomputer overlays: hover-sheen (`.btn::after`) отключён внутри SC/Talents overlays, чтобы не появлялся белый прямоугольник при hover.

@@ -18,23 +18,23 @@
   };
   var DEFAULT_MAX_CATCHUP_STEPS = 120;
   var LEGACY_BRANCH_LAYOUT = [
-    { row: 0, parents: [] },
-    { row: 0, parents: [] },
-    { row: 0, parents: [] },
-    { row: 1, parents: [0] },
-    { row: 1, parents: [0, 1, 2] },
-    { row: 1, parents: [2] },
-    { row: 2, parents: [3] },
-    { row: 2, parents: [3, 4, 5] },
-    { row: 2, parents: [5] },
-    { row: 3, parents: [6] },
-    { row: 3, parents: [6, 7, 8] },
-    { row: 3, parents: [8] },
-    { row: 4, parents: [9, 10] },
-    { row: 4, parents: [10, 11] },
-    { row: 5, parents: [12] },
-    { row: 5, parents: [13] },
-    { row: 6, parents: [14, 15] },
+    { row: 0, slot: 0, parents: [] },
+    { row: 0, slot: 1, parents: [] },
+    { row: 0, slot: 2, parents: [] },
+    { row: 1, slot: 0, parents: [0] },
+    { row: 1, slot: 1, parents: [0, 1, 2] },
+    { row: 1, slot: 2, parents: [2] },
+    { row: 2, slot: 0, parents: [3] },
+    { row: 2, slot: 1, parents: [3, 4, 5] },
+    { row: 2, slot: 2, parents: [5] },
+    { row: 3, slot: 0, parents: [6] },
+    { row: 3, slot: 1, parents: [6, 7, 8] },
+    { row: 3, slot: 2, parents: [8] },
+    { row: 4, slot: 0, parents: [9, 10] },
+    { row: 4, slot: 2, parents: [10, 11] },
+    { row: 5, slot: 0, parents: [12] },
+    { row: 5, slot: 2, parents: [13] },
+    { row: 6, slot: 1, parents: [14, 15] },
   ];
   var DEV_MODE = !!(global && global.location && (
     global.location.protocol === 'file:' ||
@@ -1661,10 +1661,43 @@
     var list = runtime.talentsByBranch && runtime.talentsByBranch[branchId]
       ? runtime.talentsByBranch[branchId]
       : [];
+    var localIndexById = {};
+    for (var li = 0; li < list.length; li++) {
+      if (list[li] && typeof list[li].id === 'string' && list[li].id) {
+        localIndexById[list[li].id] = li;
+      }
+    }
+    var rowSlotCounters = {};
     var out = [];
     for (var i = 0; i < list.length; i++) {
       var talent = list[i];
       if (!talent) continue;
+      var legacyLayout = LEGACY_BRANCH_LAYOUT[i] && typeof LEGACY_BRANCH_LAYOUT[i] === 'object'
+        ? LEGACY_BRANCH_LAYOUT[i]
+        : null;
+      var row = legacyLayout && Number.isFinite(legacyLayout.row)
+        ? Math.max(0, toInt(legacyLayout.row, 0))
+        : Math.max(0, toInt(talent.tier, 1) - 1);
+      var slot = legacyLayout && Number.isFinite(legacyLayout.slot)
+        ? Math.max(0, toInt(legacyLayout.slot, 0))
+        : toInt(rowSlotCounters[row], 0);
+      if (!(legacyLayout && Number.isFinite(legacyLayout.slot))) {
+        rowSlotCounters[row] = slot + 1;
+      }
+      var parentLocalIndices = [];
+      var parentSeen = {};
+      if (Array.isArray(talent.requires) && talent.requires.length > 0) {
+        for (var ri = 0; ri < talent.requires.length; ri++) {
+          var requiredId = talent.requires[ri];
+          var parentLocal = toInt(localIndexById[requiredId], -1);
+          if (parentLocal < 0 || parentSeen[parentLocal]) continue;
+          parentSeen[parentLocal] = true;
+          parentLocalIndices.push(parentLocal);
+        }
+      }
+      if (!parentLocalIndices.length && LEGACY_BRANCH_LAYOUT[i] && Array.isArray(LEGACY_BRANCH_LAYOUT[i].parents)) {
+        parentLocalIndices = LEGACY_BRANCH_LAYOUT[i].parents.slice();
+      }
       out.push({
         id: talent.id,
         branch: talent.branch,
@@ -1672,6 +1705,11 @@
         maxRank: talent.maxRank,
         costPerRank: talent.costPerRank,
         requires: Array.isArray(talent.requires) ? talent.requires.slice() : [],
+        layout: {
+          row: row,
+          slot: Math.max(0, slot),
+          parents: parentLocalIndices,
+        },
         ui: talent.ui ? {
           nameKey: talent.ui.nameKey,
           descKey: talent.ui.descKey,
@@ -1727,6 +1765,7 @@
     }
     return {
       row: Math.max(0, toInt(talent.tier, 1) - 1),
+      slot: 0,
       parents: [],
     };
   }

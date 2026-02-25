@@ -14,10 +14,11 @@
 	- Бейдж зарядов на stage active slots должен оставаться читаемым при стандартном масштабе HUD (увеличенный размер цифры/плашки).
 	- Tooltip для talent nodes и stage active slots рендерится через unified DOM-tooltip (`#settingsTooltip` + `data-ui-tooltip`), не через нативный `title` браузера.
 	- Stage active cooldown-sector стартует сверху (12 o'clock / north) и заполняется по часовой стрелке.
+	- Бейдж зарядов на stage active slots не должен смещаться на hover: для слотов и бейджа в hover/pressed состоянии `transform:none`, позиция стабильно в правом верхнем углу.
 	- Для каждой ветки есть локальная кнопка `Сбросить выбор` (сбрасывает только pending-выбор этой ветки).
 	- В footer есть кнопка `Применить`, которая фиксирует pending-выбор и только после этого включает модификаторы талантов.
 	- Кнопка `Сбросить улучшения` сбрасывает и pending, и уже применённые ранги, плюс очищает runtime-эффекты талантов (active/status/defense runtime).
-	- Геометрия дерева и SVG-связи соответствуют legacy-layout (ряды `3-3-3-3-2-2-1`).
+	- Геометрия дерева и SVG-связи берутся из `Game.TalentsV2.getTalentsByBranch(...).layout` (`row/slot/parents`) с fallback на legacy-layout (`3-3-3-3-2-2-1`).
 	- Базовые SVG-связи дерева (`.talentEdge`) должны быть визуально заметны даже до первой покупки таланта.
 	- Unlock-gating рядов в V2: row1..row6 открываются только при spent `5/10/15/20/25/30` в текущей ветке + минимум `1` rank в таланте из предыдущего ряда (row0 доступен сразу).
 	- V2 nodes не должны пересоздаваться каждый UI-tick: ререндер дерева допускается только при изменении signature (ranks/freePoints/canBuy/lang), иначе это провоцирует hover-SFX spam и потерю click-событий.
@@ -108,10 +109,11 @@
 - JS-обновление должно менять именно `xpBar.style.width = 'NN%'` и писать значение только при фактическом изменении процента (чтобы не перезапускать transition на каждом тике).
 
 ## Supercomputer: root tiles
-- Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).
+- Контейнер плиток: равномерная grid-сетка `3` колонки (`.scRootTiles`), без ручного расчёта фиксированной ширины карточки.
+- Иконка `.scRootTile__icon` рендерится как полноразмерный фон карточки (`position:absolute; inset:0; background-size:cover`), а текстовый label (`.scRootTile__label`) идёт поверх.
 - Label `.scRootTile__label`: перенос строк разрешён (`white-space:normal`, `overflow-wrap:anywhere`), чтобы длинные названия не обрезались в root-плитках.
-- Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), которая заполняется из `Game.Config.LayoutTuning.supercomputerTileIconSizePx`; baseline — `200px`.
-- В root SC-модалке нельзя клиппить hover/active эффекты плиток: у root body и root tiles допускается только `overflow:visible` + технологические внутренние отступы по X.
+- Высота root-карточек нормализуется по самой высокой карточке через `--scRootTileUniformHeight` + runtime-нормализацию (`normalizeRootTilesSize()` при `openRoot()`).
+- Для root-сетки сохраняется запас по краям (`overflow:visible` у контейнера), при этом сама карточка может использовать `overflow:hidden` для корректного клипа полноразмерного фонового изображения по радиусу.
 
 ## Supercomputer: modal layout
 - `supercomputer` модалки (`#supercomputerMenuOverlay`, `#modsHangarOverlay`, `#modsTankWallOverlay`) оформляются как `large modal` по паттерну дерева улучшений: panel с классом `.scModal`.
@@ -174,6 +176,12 @@
 - Текущий состав вкладок: `Tanks`, `Effects`, `Updates`, `Logs&Tools`.
 - Из панели удалены вкладки и связанный runtime UI-код: `Zombies`, `Roads/Hangar`, `Actives`, `Talents`.
 - В `Effects` удалены preview-VFX кнопки (`Burst center`, `Particle burst`, `Impact ring`, `Decal pool`) и служебные кнопки `Stop all preview VFX` / `Clear debug statuses` вместе с их обработчиками.
+- В `Logs&Tools` удалены кнопки `Reset (statuses + VFX)`, `Clear log`, `Lesson Progress`; раздел оставляет только mount для telemetry/debug-виджетов.
+
+## Hangar slot stamp reveal
+- Визуал слота ангара: появление нового/купленного танка идёт через stamp-reveal анимацию (`10` горизонтальных полос, `1.5s`).
+- Реализация: `game.js` — `makeTank(..., options)` + `drawTankIconWithStampReveal(...)` / `getTankStampProgress(...)`.
+- Контракт restore: при `restoreFullState(...)` штамп отключается (`makeTank(..., { enableStamp:false })`), чтобы загруженные сейвы не проигрывали spawn-анимацию.
 
 ## Debug panel: Updates
 - Раздел `Updates` содержит два действия: `Talent points (+)` и `Damage points (+)`.
@@ -200,25 +208,23 @@
 	- `attackSpeed` (базовое / текущее),
 	- `baseDamage` (базовое / текущее),
 	- уровень улучшения (`applied` и `+pending`),
-	- стоимость `next / totalSpent`,
-	- действия `+`, `-`, `Улучшить`.
+	- стоимость только текущего шага (`nextStepCost`),
+	- действия `+`, `-`, `Улучшить` (кнопки `+/-` собраны в вертикальный стек `.scGunsActionStepper`).
 - `pendingUpgradesByLevel` — локальное UI-состояние (живет только пока открыт supercomputer menu, сбрасывается при полном закрытии).
 - `reservedDamagePoints` считается как сумма стоимости всех pending-шагов по всем уровням с учётом текущего `applied`.
 - Расчёт стоимости для уровня `L`:
 	- `applied = state.player.cannonUpgradesApplied[L]`;
 	- `pending = pendingByLevel[L]`;
 	- `u0 = applied + pending`;
-	- `next = costBase(L) + costStep(L) * u0`;
-	- `totalSpent = applied * costBase(L) + costStep(L) * applied * (applied - 1) / 2` (только `applied`, без `pending`).
-- Обновление значений:
-	- при `+/-` pending меняется только `next`;
-	- после `Улучшить` (`Apply`) меняются и `applied`, и `totalSpent`.
+	- `nextStepCost = getCannonUpgradeStepCost(level, applied + pending)`.
+- Обновление значений: при `+/-` и после `Улучшить` пересчитывается только `nextStepCost` и состояние pending/applied.
 - Кнопка `+` увеличивает pending только если `availableDamagePoints - reservedDamagePoints >= nextStepCost`.
 - Кнопка `-` уменьшает pending до нуля и освобождает reserve.
 - Кнопка `Улучшить`:
 	- disabled при `pending=0`;
 	- при `pending>0` повторно валидирует доступные очки,
 	- списывает очки, применяет апгрейд в state и сбрасывает pending для выбранного уровня.
+- Формат отображения статов: целые значения показываются без суффикса `.00` (для `attackSpeed`, `damage`, `HP`, `armor`).
 - Иконки орудий:
 	- источник кадра — текущий `cannon` spritesheet (`TankSprites.pickCannon(level)`);
 	- source-кадр для UI принудительно берётся как `128x128` (через `Game.Config.LayoutTuning.weaponIconSpriteFrameW/H`), независимо от display-size canvas;
