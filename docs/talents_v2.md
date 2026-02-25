@@ -131,6 +131,8 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - внутренний setter (используется при load/save интеграции).
 - `getFreePoints() => number`
 - `setFreePoints(value)`
+- `syncFromSave(payload)`
+  - пост-restore синхронизация runtime из save payload: обновляет `ranksById/freePoints`, очищает pending-выбор и инвалидирует кеш модификаторов.
 - `getBranchSpent(branchId) => number`
 - `getUnlockedTier(branchId) => 1..5`
 - `canBuy(talentId) => { ok: boolean, reason?: 'no_points'|'tier_locked'|'requires'|'max_rank'|'unknown' }`
@@ -200,6 +202,7 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
 - Поддерживаются поля очков:
   - `save.freeTalentPointsV2` или `save.player.freeTalentPointsV2`.
 - Если `talentsV2` отсутствует: инициализация в пустое состояние (`{}` + `0`), загрузка не ломается.
+- Для сценариев полного restore state (`Load`/start-from-save/restart через big menu) после `restoreFullState(...)` обязателен post-restore шаг синхронизации TalentsV2 runtime через `syncFromSave(payload)` (в проекте вызывается через единый `postRestoreSync`).
 
 ### Контракт миграции v1 -> v2
 

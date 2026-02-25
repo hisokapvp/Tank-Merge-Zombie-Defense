@@ -450,6 +450,9 @@
       if (typeof opts.restoreFullState === 'function') {
         opts.restoreFullState(loaded.payload);
       }
+      if (typeof opts.postRestoreSync === 'function') {
+        opts.postRestoreSync();
+      }
       if (opts.meta) opts.meta.lastSeenAt = Date.now();
       if (typeof opts.saveProgress === 'function') {
         try { opts.saveProgress(); } catch (_) {}
@@ -783,7 +786,12 @@
     }
 
     opts.resizeCanvas();
-    if (loaded && loaded.state) opts.restoreFullState(loaded.state);
+    if (loaded && loaded.state) {
+      opts.restoreFullState(loaded.state);
+      if (typeof opts.postRestoreSync === 'function') {
+        opts.postRestoreSync();
+      }
+    }
     getState().nextCrateAt = getState().nextCrateAt || opts.nowSec() + opts.BAL.crateIntervalSec;
 
     if (windowObj.Game && windowObj.Game.Telemetry) windowObj.Game.Telemetry.loadLifetime();

@@ -533,6 +533,7 @@
         } else if (mode === 'load-slot') {
           deps.restoreFullState(selectedPayload);
           if (onAfterLoadRestore) onAfterLoadRestore(selectedPayload);
+          if (typeof deps.postRestoreSync === 'function') deps.postRestoreSync();
           deps.setMetaLastSeenAt(Date.now());
           deps.saveProgress();
           deps.updateUI();

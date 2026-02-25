@@ -3978,6 +3978,7 @@ function openTalents(options){
       requestAnimationFrame(() => {
         modal.style.transform = 'scale(1)';
         modal.style.opacity = '1';
+        updateTalentUI();
       });
     });
   }
@@ -6750,6 +6751,7 @@ function ensureBigMenuRuntimeController(){
     boot: boot,
     resetGameState: resetGameState,
     restoreFullState: restoreFullState,
+    postRestoreSync: postRestoreSync,
     saveProgress: saveProgress,
     updateUI: updateUI,
     setMenuOpen: setMenuOpen,
@@ -7540,23 +7542,7 @@ function resetGameState(options){
       zombieCountCache: { at: 0, text: '' },
     };
   }
-  ensureTalentState();
-  if (isTalentsV2Ready()) {
-    const talentsApi = getTalentsV2Api();
-    if (talentsApi && typeof talentsApi.setRanks === 'function') {
-      const ranksById = state.player && state.player.talentsV2 && state.player.talentsV2.ranksById
-        ? state.player.talentsV2.ranksById
-        : {};
-      talentsApi.setRanks(ranksById);
-    }
-    if (talentsApi && typeof talentsApi.setFreePoints === 'function') {
-      const freePoints = state.player && state.player.talentsV2 && Number.isFinite(state.player.talentsV2.freePoints)
-        ? state.player.talentsV2.freePoints
-        : (state.player ? state.player.freeTalentPointsV2 : 0);
-      talentsApi.setFreePoints(Math.max(0, Math.floor(freePoints || 0)));
-    }
-    syncPlayerTalentsV2FromApi();
-  }
+  postRestoreSync();
   const sc = getComputerState();
   sc.xpToNext = xpNeededForLevel(sc.computerLevel);
   if (supercomputerController && supercomputerController.syncLevel) {
@@ -8178,6 +8164,38 @@ function syncPlayerTalentsV2FromApi(){
     state.player.talentsV2.freePoints = Math.max(0, Math.floor(api.getFreePoints()));
     state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
   }
+}
+
+function postRestoreSync(){
+  ensureTalentState();
+  if (isTalentsV2Ready()) {
+    const api = getTalentsV2Api();
+    if (api && typeof api.syncFromSave === 'function') {
+      api.syncFromSave({
+        ranksById: state.player && state.player.talentsV2 && state.player.talentsV2.ranksById
+          ? state.player.talentsV2.ranksById
+          : {},
+        freePoints: state.player && state.player.talentsV2 && Number.isFinite(state.player.talentsV2.freePoints)
+          ? state.player.talentsV2.freePoints
+          : (state.player ? state.player.freeTalentPointsV2 : 0),
+      });
+    } else {
+      if (api && typeof api.setRanks === 'function') {
+        const ranksById = state.player && state.player.talentsV2 && state.player.talentsV2.ranksById
+          ? state.player.talentsV2.ranksById
+          : {};
+        api.setRanks(ranksById);
+      }
+      if (api && typeof api.setFreePoints === 'function') {
+        const freePoints = state.player && state.player.talentsV2 && Number.isFinite(state.player.talentsV2.freePoints)
+          ? state.player.talentsV2.freePoints
+          : (state.player ? state.player.freeTalentPointsV2 : 0);
+        api.setFreePoints(Math.max(0, Math.floor(freePoints || 0)));
+      }
+    }
+    syncPlayerTalentsV2FromApi();
+  }
+  if (state.player) state.player.modsDirty = true;
 }
 
 function getTalentPendingRanksV2(){
@@ -11357,6 +11375,7 @@ async function boot(){
         BAL,
         resizeCanvas,
         restoreFullState,
+        postRestoreSync,
         DebugPanelEnabled,
         initDebugPanel,
         makeTank,

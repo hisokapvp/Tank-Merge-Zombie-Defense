@@ -24,6 +24,7 @@
 
 ## Интеграция
 - Big menu функции (`setBigMenuOpen`, `openBigMenuLoadView`, `renderBigMenuTexts`, `startFromBigMenu`, `initBigMainMenu`) в `game.js` делегируются в `Game.BigMenuRuntime` через `ensureBigMenuRuntimeController()`.
+- Для загрузки save через small/big menu действует единый контракт: `restoreFullState(payload)` должен завершаться post-restore синхронизацией (`postRestoreSync`) для runtime-систем (в т.ч. TalentsV2), чтобы ранги/очки и UI состояния были согласованы сразу после старта.
 - Runtime crate-логика вынесена в `src/mechanics/crateRuntime.js`; в `game.js` crate entrypoints делегируются через `ensureCrateRuntimeController()`.
 
 ## Правила
@@ -108,7 +109,7 @@
 
 ## Supercomputer: root tiles
 - Контейнер плиток: всегда `3 в ряд` без переноса (`.scRootTiles` + `.scRootTile` с фиксированным `calc((100% - 20px)/3)`).
-- Label `.scRootTile__label`: одна строка (`white-space:nowrap`) с защитой layout (`overflow:hidden` + `text-overflow:ellipsis`), auto-shrink через `clamp(...)` с минимальным размером `12px` на всех брейкпоинтах.
+- Label `.scRootTile__label`: перенос строк разрешён (`white-space:normal`, `overflow-wrap:anywhere`), чтобы длинные названия не обрезались в root-плитках.
 - Размер иконок управляется одной переменной `--scTileIconSizePx` (в `:root`), которая заполняется из `Game.Config.LayoutTuning.supercomputerTileIconSizePx`; baseline — `200px`.
 - В root SC-модалке нельзя клиппить hover/active эффекты плиток: у root body и root tiles допускается только `overflow:visible` + технологические внутренние отступы по X.
 

@@ -78,8 +78,8 @@
 - On-track dim иконки в слоте настраивается параметром `assets/tanks.json -> ui.onTrackIconOpacity` (нормализация в `TankSprites.config.ui`).
 - Merge popup нового уровня танка: локально отключён только right-side hull shot FX через popup-опции preview model/renderer (без spawn right-shot и без его draw); остальные popup FX/SFX и gameplay-эффекты не затронуты.
 - Exit из small menu в big menu приводит приложение к состоянию первого запуска через reload shell после очистки transient `progress` (слоты сохранений не удаляются).
-- Supercomputer root tiles: 3-в-ряд без переноса, label в одну строку с min font, размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
-- Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels auto-shrink до `12px` минимум и защищены `text-overflow: ellipsis`.
+- Supercomputer root tiles: 3-в-ряд без переноса, label с переносом строк (`white-space: normal` + `overflow-wrap`), размер иконок через `--scTileIconSizePx`/`--scTileIconSize` в `style.css`.
+- Supercomputer modal: `large` и адаптивная (`.scModal`), со внутренним scroll-контейнером `.scModal__body`; root tile labels поддерживают перенос строк и остаются читаемыми на узких экранах.
 - Supercomputer modal: pressed-состояние кнопок только через `transform` (без layout shift), body-scroll lock обязателен на всём жизненном цикле SC overlay, scrollbar `.scModal__body` стилизован по эталону audio slider.
 - Supercomputer overlays: hover-sheen (`.btn::after`) отключён внутри SC/Talents overlays, чтобы не появлялся белый прямоугольник при hover.
 - Supercomputer overlays: для `modsTankWall` скролл оставлен в `#modsTankWallOverlay .scModal__body`; для root/hangar body скролл отключён, чтобы не появлялся лишний scrollbar.

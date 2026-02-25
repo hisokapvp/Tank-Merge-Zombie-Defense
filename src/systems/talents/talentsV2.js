@@ -1638,6 +1638,15 @@
     runtime.freePoints = Math.max(0, toInt(value, 0));
   }
 
+  function syncFromSave(payload) {
+    var source = payload && typeof payload === 'object' ? payload : {};
+    runtime.ranksById = sanitizeRanks(source.ranksById || {});
+    runtime.freePoints = Math.max(0, toInt(source.freePoints, 0));
+    runtime.pendingById = {};
+    runtime.modsDirty = true;
+    runtime.modsCache = null;
+  }
+
   function getTalentUi(talentId) {
     var talent = runtime.talentsById[talentId];
     if (!talent || !talent.ui) return null;
@@ -3732,6 +3741,7 @@
     getAvailableFreePoints: getAvailableFreePoints,
     getPendingCost: getPendingCost,
     setFreePoints: setFreePoints,
+    syncFromSave: syncFromSave,
     getMods: getMods,
     getTalentUi: getTalentUi,
     getTalentsByBranch: getTalentsByBranch,
