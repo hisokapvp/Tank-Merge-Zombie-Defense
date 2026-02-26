@@ -16,35 +16,44 @@
         <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" tabindex="0" aria-label="Настройки" title="Настройки">⚙</button>
         <div id="achievementToast" class="achievementToast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
         <div class="stageUi stageUiRight">
-          <div class="hudBelow">
-          <div class="hud">
-            <div class="hudItem"><div class="k" data-i18n="hudCoins">Money</div><div class="v" id="coins">0</div></div>
-            <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
-          </div>
-
-          <div class="xpPanel hudPanel" id="xpWrap">
-            <div class="xpLabel" id="lvlText">Уровень: 1</div>
-            <div class="xpBar">
-              <div id="xpBar" class="xpFill"></div>
-            </div>
-            <div class="xpValue" id="xpText">0/0</div>
-          </div>
-
-          <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
+          <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Развернуть терминал" title="Развернуть терминал">
+            <img src="assets/ui/icons/terminal_icon.png" alt="Terminal" id="terminalExpandIcon" onerror="this.style.display='none'; this.parentElement.innerText='🖥'" />
+          </button>
+          
           <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
             <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
             <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="Защита"></button>
             <button id="stageActive2" class="btn talentAbilitySlot talentAbilitySlot_economy" type="button" data-branch="2" title="" aria-label="Экономика"></button>
           </div>
-          <div class="stageActions">
-            <button id="buy" class="btn btnPrimary">
-              <span data-i18n="buyTank">Создать танк Lv1</span>
-              <span class="price"> — <span id="buyCost">50</span>$</span>
-            </button>
-            <button id="buyBulk" class="btn btnSecondary hidden" type="button">Создать 2 танка</button>
-            <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
-            <button id="autoMergeBtn" class="btn btnSecondary hidden" type="button">Соединить 2 танка</button>
-          </div>
+
+          <div class="terminal-panel">
+            <div class="hudBelow">
+              <div class="hud">
+                <div class="hudItem"><div class="k" data-i18n="hudCoins">Money</div><div class="v" id="coins">0</div></div>
+                <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
+              </div>
+
+              <div class="xpPanel hudPanel" id="xpWrap">
+                <div class="xpLabel" id="lvlText">Уровень: 1</div>
+                <div class="xpBar">
+                  <div id="xpBar" class="xpFill"></div>
+                </div>
+                <div class="xpValue" id="xpText">0/0</div>
+              </div>
+
+              <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
+              
+              <div class="stageActions">
+                <button id="buy" class="btn btnPrimary">
+                  <span data-i18n="buyTank">Создать танк Lv1</span>
+                  <span class="price"> — <span id="buyCost">50</span>$</span>
+                </button>
+                <button id="buyBulk" class="btn btnSecondary hidden" type="button">Создать 2 танка</button>
+                <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
+                <button id="autoMergeBtn" class="btn btnSecondary hidden" type="button">Соединить 2 танка</button>
+              </div>
+            </div>
+            <button id="terminalCollapseBtn" class="terminalCollapseBtn" type="button" aria-label="Свернуть" title="Свернуть">_</button>
           </div>
         </div>
         <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">

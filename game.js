@@ -98,6 +98,9 @@ const ui = {
   dismantleConfirmText: document.getElementById('dismantleConfirmText'),
   dismantleYes: document.getElementById('dismantleYes'),
   dismantleNo: document.getElementById('dismantleNo'),
+  terminalCollapseBtn: document.getElementById('terminalCollapseBtn'),
+  terminalExpandBtn: document.getElementById('terminalExpandBtn'),
+  stageUiRight: document.querySelector('.stageUiRight'),
 };
 
 const MAX_TANK_LEVEL = 60;
@@ -9192,6 +9195,12 @@ canvas.addEventListener('pointerleave', ()=>{
 ui.buy.addEventListener('click', ()=> tryBuyTank());
 ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
 ui.autoMergeBtn?.addEventListener('click', ()=> runAutoMergeClick());
+ui.terminalCollapseBtn?.addEventListener('click', () => {
+  ui.stageUiRight?.classList.add('collapsed');
+});
+ui.terminalExpandBtn?.addEventListener('click', () => {
+  ui.stageUiRight?.classList.remove('collapsed');
+});
 ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());
 ui.achievementsClose?.addEventListener('click', () => closeAchievementsModal());
 ui.achievementsModal?.addEventListener('click', (e) => {

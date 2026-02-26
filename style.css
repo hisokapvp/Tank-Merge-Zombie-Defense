@@ -72,31 +72,32 @@ body::after{
 .hudItem{
   flex:1;
   min-width:0;
-  border:2px solid #3a3a3a;
+  border:2px solid #4af626;
   border-radius:0;
   padding:6px 8px;
   background:#0a0c0a;
-  box-shadow:inset 0 0 10px rgba(74, 246, 38, 0.15), 2px 2px 0 #000;
+  box-shadow:inset 0 0 15px rgba(74, 246, 38, 0.1), 3px 3px 0 #000;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   position:relative;
+  margin-bottom: 4px;
 }
 .hudItem::before{
   content:"";
   position:absolute;
   inset:2px;
-  border:1px solid rgba(74, 246, 38, 0.05);
+  border:1px solid rgba(74, 246, 38, 0.1);
   pointer-events:none;
 }
-.hudItem .k{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:bold}
-.hudItem .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px;color:var(--accent);text-shadow:0 0 8px rgba(74, 246, 38, 0.6)}
+.hudItem .k{font-size:10px;color:#4af626;text-transform:uppercase;font-weight:bold;opacity: 0.7;}
+.hudItem .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:16px;color:#4af626;text-shadow:0 0 10px rgba(74, 246, 38, 0.8)}
 .hudPanel{
-  border:2px solid #3a3a3a;
+  border:2px solid #4af626;
   border-radius:0;
   background:#0a0c0a;
-  box-shadow:inset 0 0 10px rgba(74, 246, 38, 0.1), 2px 2px 0 #000;
+  box-shadow:inset 0 0 15px rgba(74, 246, 38, 0.1), 3px 3px 0 #000;
 }
 
 .layout{
@@ -131,29 +132,147 @@ body::after{
   align-items:flex-start;
 }
 .stageUiRight{
-  right:12px;
+  right:16px;
   align-items:flex-end;
-  width:min(420px, 40vw);
-  padding-top:40px;
-  padding-right:40px;
+  width:min(440px, 45vw);
+  padding: 0; 
   box-sizing:border-box;
+  transition: width 0.3s ease;
 }
-.settingsGear{
-  position:fixed !important;
-  top:8px;
-  left:8px;
-  top:env(safe-area-inset-top, 8px);
-  width:auto;
-  height:auto;
-  min-width:24px;
-  min-height:24px;
-  padding:4px;
-  font-size:16px;
-  line-height:1;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  z-index:10000;
+
+.stageUiRight.collapsed {
+  width: auto;
+}
+
+.terminal-panel {
+  position: relative;
+  background-color: #0d140b;
+  border: 3px solid #4af626;
+  border-radius: 12px;
+  padding: 24px 20px 40px 20px;
+  box-shadow: 
+    0 0 20px rgba(74, 246, 38, 0.15), 
+    inset 0 0 30px rgba(0, 0, 0, 0.8),
+    4px 4px 0px #1a1a1a;
+  pointer-events: auto;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  background-image: 
+    radial-gradient(circle at 10px 10px, #111 2px, transparent 3px),
+    radial-gradient(circle at calc(100% - 10px) 10px, #111 2px, transparent 3px),
+    radial-gradient(circle at 10px calc(100% - 10px), #111 2px, transparent 3px),
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #111 2px, transparent 3px);
+}
+
+.terminal-panel::before {
+  content: "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM";
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  background: #0d140b;
+  padding: 0 10px;
+  color: #4af626;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.terminal-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 9px;
+}
+
+.terminalCollapseBtn {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 34px;
+  height: 24px;
+  background: #1a2318;
+  border: 1px solid #4af626;
+  color: #4af626;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 2px 2px 0 #000;
+}
+.terminalCollapseBtn:hover {
+  background: #4af626;
+  color: #000;
+}
+
+.terminalExpandBtn {
+  display: none;
+  width: 64px;
+  height: 64px;
+  background: #0d140b;
+  border: 3px solid #4af626;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 0 15px rgba(74, 246, 38, 0.2), 3px 3px 0 #000;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  transition: transform 0.2s ease;
+}
+.terminalExpandBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(74, 246, 38, 0.4), 3px 3px 0 #000;
+}
+.terminalExpandBtn img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) sepia(1) saturate(5) hue-rotate(70deg) brightness(1.2);
+}
+
+.stageUiRight.collapsed .terminal-panel {
+  display: none;
+}
+.stageUiRight.collapsed .terminalExpandBtn {
+  display: flex !important;
+}
+
+.stageUiRight.collapsed .stageAbilitySlots {
+  flex-direction: column;
+  margin-top: 5px;
+  align-items: flex-end;
+}
+
+.supercomputerHudBtn,
+#settingsBtn {
+  background: #0d140b !important;
+  border: 2px solid #4af626 !important;
+  color: #4af626 !important;
+  box-shadow: 0 0 10px rgba(74, 246, 38, 0.2), 2px 2px 0 #000 !important;
+  border-radius: 4px !important;
+}
+
+.supercomputerHudBtn:hover,
+#settingsBtn:hover {
+  background: #4af626 !important;
+  color: #000 !important;
+}
+
+.supercomputerHudBtn .supercomputerHudBtn__icon,
+.settingsGear {
+  filter: none !important; /* already handled by Hue rotate but let's make it cleaner */
+  color: inherit !important;
 }
 .hudBelow{
   display:flex;
@@ -225,6 +344,55 @@ body::after{
 .stageUi .xpPanel{
   pointer-events:auto;
   width:100%;
+}
+
+@keyframes terminalFlicker {
+  0% { opacity: 1; }
+  3% { opacity: 0.95; }
+  6% { opacity: 1; }
+  7% { opacity: 0.9; }
+  8% { opacity: 1; }
+  45% { opacity: 1; }
+  46% { opacity: 0.97; }
+  47% { opacity: 1; }
+  50% { opacity: 1; }
+  51% { opacity: 0.95; }
+  52% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+.terminal-panel {
+  animation: terminalFlicker 10s infinite;
+}
+
+.stageUi .btn {
+  background: #1a2318;
+  border: 1px solid #4af626;
+  color: #4af626;
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: uppercase;
+  font-weight: bold;
+  letter-spacing: 1px;
+  box-shadow: 2px 2px 0 #000, inset 0 0 5px rgba(74, 246, 38, 0.1);
+  transition: all 0.1s ease;
+}
+
+.stageUi .btn:hover:not(:disabled) {
+  background: #4af626;
+  color: #000;
+  box-shadow: 0 0 10px rgba(74, 246, 38, 0.5), 1px 1px 0 #000;
+  transform: translate(1px, 1px);
+}
+
+.stageUi .btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #000;
+}
+
+.stageUi .btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+  cursor: not-allowed;
 }
 .stageUi .hudItem{
   pointer-events:auto;
@@ -1454,19 +1622,22 @@ input, select, textarea, button {
 .xpBar{
   width:100%;
   max-width:100%;
-  height:14px;
-  background:#050505;
-  border:1px solid #3a3a3a;
+  height:16px;
+  background:#000;
+  border:2px solid #4af626;
   border-radius:0;
   overflow:hidden;
   position:relative;
+  box-shadow: 0 0 5px rgba(74, 246, 38, 0.2);
 }
 .xpFill{
   height:100%;
   width:0%;
-  background:var(--accent);
-  background-image:repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.5) 4px, rgba(0,0,0,0.5) 8px);
+  background:#4af626;
+  background-image:linear-gradient(rgba(255, 255, 255, 0.4) 0%, transparent 10%, transparent 90%, rgba(0, 0, 0, 0.4) 100%),
+                   repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.5) 4px, rgba(0,0,0,0.5) 8px);
   transition:width 240ms ease;
+  box-shadow: 0 0 10px #4af626;
 }
 
 .overlay{
