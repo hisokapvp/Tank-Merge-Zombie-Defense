@@ -201,6 +201,9 @@
 
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
+    if (global.document && global.document.body) {
+      global.document.body.classList.add('merge-popup-open');
+    }
     if (global.Game && global.Game.A11y) {
       global.Game.A11y.openModal(modal, { onClose: close, initialFocus: btnFight });
     }
@@ -216,6 +219,9 @@
     if (modal) {
       modal.classList.add('hidden');
       modal.setAttribute('aria-hidden', 'true');
+      if (global.document && global.document.body) {
+        global.document.body.classList.remove('merge-popup-open');
+      }
       if (global.Game && global.Game.A11y) global.Game.A11y.closeModal(modal);
     }
     emitTelemetry('mergePopupClose', { level: currentLevel });

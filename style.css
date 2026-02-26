@@ -46,7 +46,8 @@ body{
 }
 body.menu-open::before,
 body.big-menu-open::before,
-body.scmodal-open::before{
+body.scmodal-open::before,
+body.merge-popup-open::before{
   content:"";
   position:fixed;
   inset:0;
@@ -178,7 +179,7 @@ body::after{
 }
 
 /* CRT Scanline Overlay for Panels */
-.menuPanel::after, .levelModal__panel::after, .bigMenuPanel::after, .creditsModal__panel::after {
+.menuPanel::after, .levelModal__panel::after, .bigMenuPanel::after, .creditsModal__panel::after, .mergePopupModal__panel::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -190,7 +191,7 @@ body::after{
 }
 
 /* Fallout Rivets */
-.menuPanel::before, .levelModal__panel::before, .bigMenuPanel::before, .creditsModal__panel::before {
+.menuPanel::before, .levelModal__panel::before, .bigMenuPanel::before, .creditsModal__panel::before, .mergePopupModal__panel::before {
   content: "";
   position: absolute;
   inset: 4px;
@@ -210,7 +211,7 @@ body::after{
 }
 
 /* Simpler rivets: dots in corners */
-.menuPanel, .levelModal__panel, .bigMenuPanel, .creditsModal__panel {
+.menuPanel, .levelModal__panel, .bigMenuPanel, .creditsModal__panel, .mergePopupModal__panel {
   background-image: 
     radial-gradient(circle at 10px 10px, #111 3px, transparent 4px),
     radial-gradient(circle at calc(100% - 10px) 10px, #111 3px, transparent 4px),
@@ -463,7 +464,7 @@ body::after{
 }
 
 /* Redefining panels with rivets and scanlines */
-.menuPanel, .levelModal__panel, .bigMenuPanel, .creditsModal__panel {
+.menuPanel, .levelModal__panel, .bigMenuPanel, .creditsModal__panel, .mergePopupModal__panel {
   border-radius: 0 !important;
   border: 4px solid #3e3e3e !important;
   background: #1a1e1a !important;
@@ -471,7 +472,7 @@ body::after{
   box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 0 15px rgba(74, 246, 38, 0.2) !important;
 }
 
-.menuPanel::after, .levelModal__panel::after, .bigMenuPanel::after, .creditsModal__panel::after {
+.menuPanel::after, .levelModal__panel::after, .bigMenuPanel::after, .creditsModal__panel::after, .mergePopupModal__panel::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -482,7 +483,7 @@ body::after{
 }
 
 /* Rivets */
-.menuPanel::before, .levelModal__panel::before, .bigMenuPanel::before, .creditsModal__panel::before {
+.menuPanel::before, .levelModal__panel::before, .bigMenuPanel::before, .creditsModal__panel::before, .mergePopupModal__panel::before {
   content: "•";
   position: absolute;
   font-family: Arial;
@@ -2559,20 +2560,22 @@ input, select, textarea, button {
 }
 .mergePopupModal__subtitle{
   font-size:12px;
-  color:#7dffb2;
+  color:var(--accent);
   font-weight:700;
   text-transform:uppercase;
-  letter-spacing:0.5px;
+  letter-spacing:1px;
+  text-shadow: 0 0 5px rgba(74, 246, 38, 0.5);
 }
 .mergePopupModal__title{
   font-weight:900;
   font-size:20px;
-  color:#eaf1ff;
-  text-shadow:0 2px 8px rgba(125,255,178,.3);
+  color:var(--text);
+  text-shadow:0 0 10px rgba(74, 246, 38, 0.4);
 }
 #mergePopupCanvas{
   background:transparent;
   display:block;
+  image-rendering: pixelated;
 }
 .mergePopupModal__hint{
   font-size:10px;
@@ -2586,9 +2589,10 @@ input, select, textarea, button {
   gap:3px;
   width:100%;
   padding:6px 10px;
-  border-radius:10px;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(125,255,178,.15);
+  border-radius:0;
+  background:rgba(0, 0, 0, 0.3);
+  border:2px solid #3a3a3a;
+  box-shadow: inset 0 0 10px rgba(74, 246, 38, 0.1);
 }
 .mergePopupModal__stat{
   font-size:12px;
