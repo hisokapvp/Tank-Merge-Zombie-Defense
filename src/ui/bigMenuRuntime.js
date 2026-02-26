@@ -22,6 +22,11 @@
       ui.bigMenuOverlay.classList.toggle('bigMenuOverlayHidden', !open);
       ui.bigMenuOverlay.setAttribute('aria-hidden', (!open).toString());
       if (open) deps.syncVolumeUIFromSettings();
+      
+      var documentObj = global.document;
+      if (documentObj && documentObj.body) {
+        documentObj.body.classList.toggle('big-menu-open', !!open);
+      }
     }
 
     function isBigMenuOpen() {
