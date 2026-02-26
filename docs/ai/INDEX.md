@@ -51,7 +51,12 @@
 - Talents v2 edges: базовые `.talentEdge` видимы сразу после `New game`.
 - Supercomputer root tiles: `.scRootTiles` переведён на grid (3 колонки), а высота карточек нормализуется через `--scRootTileUniformHeight` + `normalizeRootTilesSize()`.
 - Supercomputer root tiles: `.scRootTile__icon` переведён в полноразмерный фон карточки (`inset:0`, `background-size:cover`), подпись остаётся поверх (readable label).
-- Hangar slot stamp reveal: `makeTank(..., options)` записывает `stampStartSec`; в `drawTankSlot` применён reveal-штамп на 10 полос/`1.5s`; при `restoreFullState` штамп отключается (`enableStamp:false`).
+- Supercomputer root tiles: подпись `.scRootTile__label` прижата к нижней части карточки (`margin-top:auto`), чтобы labels root-плашек стабильно стояли внизу.
+- Hangar slot stamp reveal: `makeTank(..., options)` записывает `stampStartSec`; в `drawTankSlot` применён reveal-штамп на 10 полос; длительность берётся из `assets/tanks.json -> tankPrintDurationSec` (fallback `1.5s`); при `restoreFullState` штамп отключается (`enableStamp:false`).
+- Tank printing guard: печатающийся танк не участвует в `drag/merge/auto-merge/onTrack` до завершения печати (`isTankPrinting`).
+- Hangar render: тени танков в ангарных слотах отключены (`showShadow:false` в slot-render).
+- Talents v2 edges: при `openTalents/closeTalents` и изменении видимого layout выполняется инвалидация кэша геометрии связей (fix скрытия линий после `New/Load`).
+- Supercomputer root tiles: размер root-плашек (`width/height`) берётся из `src/config/layoutTuning.js` (`supercomputerTileWidthPx`, `supercomputerTileHeightPx`) и прокидывается в CSS-переменные `--scRootTileWidthPx/--scRootTileHeightPx`; таблицы `Орудия/Стены` остаются на `--scTableTile*`.
 - `modsTankWall` (`Орудия`/`Стены`): колонка `Стоимость` показывает только `nextStepCost` (без `totalSpent`).
 - `modsTankWall`: действия `+/-` собраны в вертикальный стек `.scGunsActionStepper`.
 - `modsTankWall` и stats-таблицы: целые значения в `attackSpeed/armor` и связанных статах показываются без `.00`.
@@ -97,16 +102,18 @@
 - SC/Talents modal buttons: для pressed-состояния отключён `translateY` в модалках (`transform:none`), чтобы исключить transient scrollbar при удержании кнопок/плашек.
 - UI shadows: базовые тени UI-элементов (кнопки/панели/модалки/уведомления/debug/lesson panel) сведены к тонким значениям с Y-offset не более `3px`; pressed-state — до `2px`.
 - Critical restart (`Перезапустить симуляцию`): post-load нормализация очищает текущие танки/зомби, спавнит 1 стартовый танк `lvl1` и восстанавливает default zombie/attack runtime.
+- Critical restart (`HP <= 5%`): при `Перезапустить симуляцию` сохраняются progress-апгрейды (`talents/mods/cannon/fence/drones/achievements`) из auto-slot snapshot; сбрасывается только runtime мира.
 - AttackMode supplemental spawn: базовый sideCount-спавн сохраняется до `baseDesiredAlive`, а только attackMode-добавка (до `attackDesiredAlive`) идёт по эпизодным направлениям `dirA/dirB/dirC` с 50/25/25 и анти-повтором `dirA` (не более 2 эпизодов подряд).
 - Corpse despawn/fade: таймер трупа считается как `deathAnimDuration + corpseDespawnSec` из `assets/zombies.json`; в конце жизни трупа применяется linear fade на `corpseFadeOutSec`, forced culling не удаляет мгновенно, а ускоряет fade до `~0.2s`.
 - Fence sprite hot-refresh: tier стен синхронизируется с `maxTankLevelAchieved`/runtime max в текущей симуляции (не только по popup-событию), применяясь one-shot на изменение tier с `FenceSprites.ensureLevel(...)`.
 - Partial restart (`Перезапустить симуляцию`): после restore сбрасываются `buyCounts/buyPrices`, `maxTankLevelAchieved/runtimeMax/currentFenceTierApplied/fenceLevel` в `1`, затем выполняется force-sync tier стен и force-off reset attackMode/runtime.
+- Post-restore helper: `finalizePartialRestartPostRestore(stateRef, { preserveProgression, forceFenceRuntimeReset })` поддерживает режим сохранения прогрессии; для critical restart используется `preserveProgression:true` + `forceFenceRuntimeReset:true` (fence runtime: L1 -> force-sync tier по `maxTankLevelAchieved`).
 - New game/reset: выполняется `FenceSprites.ensureLevel(1)` для гарантированного возврата атласа fence к L1.
 - Zombie breach targeting: детект пролома использует расширенный hit-test (padding от радиуса зомби); знание о проломе ограничено радиусом `WorldEvents.attackMode.fenceBreachAwarenessRadiusPx` вокруг бреши.
 - Zombie breach targeting: пока зомби «знает» о проломе, он не выбирает целые fence-сегменты как attack-target и уходит в брешь; вне радиуса awareness продолжает стандартную атаку стены.
 - Fence destruction cascade: при разрушении одной side-секции автоматически ломаются две смежные секции этой же стороны (`sideIndex-1` и `sideIndex+1`, если существуют); при разрушении corner-секции ломается по одной прилегающей side-секции с каждой стороны угла.
 - Supercomputer root tiles: root-плашки и modal-кнопки не должны клиппить тени/hover-scale; для root-сетки обязателен запас по краям (`overflow:visible` + внутренние отступы в body).
-- Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `200`).
+- Supercomputer root icon tuning: размер иконок root-плашек задаётся из `src/config/layoutTuning.js` через `supercomputerTileIconSizePx` (baseline `250`).
 - Supercomputer weapons source frame: источник кадра для оружейных иконок в tab `Орудия` задаётся фиксированным размером `128x128` через `layoutTuning` (`weaponIconSpriteFrameW/H`).
 - Stage actions: удалены `#boost` и `#boostModal`; ad-speed boost больше не имеет отдельной кнопки/модалки.
 - SFX slider preview: template-ассет `assets/sfx/ui_slider_preview_TEMPLATE.ogg`, id `uiSliderPreview`, throttled preview при `input`.
@@ -122,7 +129,7 @@
 - Critical modal typing: `src/config/criticalModalTuning.js`
 - Critical modal audio policy: `src/config/criticalAudioPolicy.js`
 - UI SFX параметры (volume/cooldown): `src/config/audioUi.js`
-- Layout tuning (иконки/спрайты): `src/config/layoutTuning.js` (`supercomputerTileIconSizePx`, `weaponIconW`, `weaponIconH`, `weaponIconSpriteFrameW/H`)
+- Layout tuning (иконки/спрайты/плашки): `src/config/layoutTuning.js` (`supercomputerTileIconSizePx`, `supercomputerTileWidthPx`, `supercomputerTileHeightPx`, `weaponIconW`, `weaponIconH`, `weaponIconSpriteFrameW/H`)
 - Fence preview кадры в supercomputer: `assets/fence.json` (`levels[].uiIcon.{atlas,frame|frameId}` / `levels[].uiFrameId`, fallback `sideTop`)
 - Баланс апгрейдов орудий: `assets/balance/cannonUpgrades.json` (runtime fallback при ошибках загрузки/валидации)
 

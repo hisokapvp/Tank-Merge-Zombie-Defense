@@ -8,6 +8,9 @@
     trackToHangarGapPx: 0,
     trackToFenceGapPx: 30,
     supercomputerOffsetY: 64,
+    /** Единые габариты root-плашек суперкомпьютера. */
+    supercomputerTileWidthPx: 256,
+    supercomputerTileHeightPx: 256,
     /** Размер (px) иконок root-плашек суперкомпьютера. */
     supercomputerTileIconSizePx: 250,
     /** Ширина/высота иконки оружия в UI (суперкомпьютер, модалки). */

@@ -3,6 +3,7 @@
 
   var AUTO_MERGE_COOLDOWN_MS = 300;
   var mergePairExecutor = null;
+  var tankEligibilityPredicate = null;
 
   function getI18n() {
     return global.Game && global.Game.I18n ? global.Game.I18n : null;
@@ -43,7 +44,11 @@
   function isEligibleTank(tank, excludeAdBox) {
     if (!tank) return false;
     if (!excludeAdBox) return true;
-    return !(tank.requiresAd || tank.locked || tank.fromAdBox);
+    if (tank.requiresAd || tank.locked || tank.fromAdBox) return false;
+    if (typeof tankEligibilityPredicate === 'function') {
+      return tankEligibilityPredicate(tank) !== false;
+    }
+    return true;
   }
 
   function findMergePairs(options) {
@@ -221,6 +226,10 @@
     mergePairExecutor = typeof executor === 'function' ? executor : null;
   }
 
+  function setTankEligibilityPredicate(predicate) {
+    tankEligibilityPredicate = typeof predicate === 'function' ? predicate : null;
+  }
+
   global.Game = global.Game || {};
   global.Game.AutoMerge = {
     AUTO_MERGE_COOLDOWN_MS: AUTO_MERGE_COOLDOWN_MS,
@@ -229,5 +238,6 @@
     getAutoMergeButtonModel: getAutoMergeButtonModel,
     runAutoMerge: runAutoMerge,
     setMergePairExecutor: setMergePairExecutor,
+    setTankEligibilityPredicate: setTankEligibilityPredicate,
   };
 })(typeof window !== 'undefined' ? window : this);

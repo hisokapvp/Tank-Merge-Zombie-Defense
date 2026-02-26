@@ -21,6 +21,14 @@
   --audio-slider-thumb-shadow: 0 3px 0 rgba(0,0,0,.35);
   --scTileIconSizePx: 200px;
   --scTileIconSize: clamp(64px, var(--scTileIconSizePx), var(--scTileIconSizePx));
+  --scRootTileWidthPx: 128px;
+  --scRootTileHeightPx: 106px;
+  --scRootTileWidth: clamp(80px, var(--scRootTileWidthPx), var(--scRootTileWidthPx));
+  --scRootTileHeight: clamp(72px, var(--scRootTileHeightPx), var(--scRootTileHeightPx));
+  --scTableTileWidthPx: 128px;
+  --scTableTileHeightPx: 112px;
+  --scTableTileWidth: clamp(72px, var(--scTableTileWidthPx), var(--scTableTileWidthPx));
+  --scTableTileHeight: clamp(64px, var(--scTableTileHeightPx), var(--scTableTileHeightPx));
   --uiModalPad: clamp(16px, 4vw, 50px);
 }
 *{box-sizing:border-box}
@@ -1122,7 +1130,8 @@ body.scmodal-open{
 }
 .scRootTiles{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-template-columns:repeat(3, var(--scRootTileWidth, 128px));
+  justify-content:center;
   gap:10px;
   align-items:stretch;
   margin-top:12px;
@@ -1133,10 +1142,10 @@ body.scmodal-open{
   overflow:visible;
 }
 .scRootTile{
-  width:100%;
+  width:var(--scRootTileWidth, 128px);
   min-width:0;
-  min-height:var(--scRootTileUniformHeight, 106px);
-  height:var(--scRootTileUniformHeight, auto);
+  min-height:var(--scRootTileHeight, 106px);
+  height:var(--scRootTileUniformHeight, var(--scRootTileHeight, auto));
   position:relative;
   display:flex;
   flex-direction:column;
@@ -1172,6 +1181,7 @@ body.scmodal-open{
   position:relative;
   z-index:1;
   width:100%;
+  margin-top:auto;
   font-size:clamp(12px, 1vw, 17px);
   line-height:1.2;
   text-shadow:0 1px 2px rgba(0,0,0,.65);
@@ -1729,13 +1739,13 @@ body.scmodal-open{
 .scGunsTable__head,
 .scGunsTable__row{
   display:grid;
-  grid-template-columns: 112px 56px 1fr 1fr 120px 128px 200px;
+  grid-template-columns: var(--scTableTileWidth, 128px) 56px 1fr 1fr 120px 128px 200px;
   gap:8px;
   align-items:center;
 }
 .scGunsTable_weapons .scGunsTable__head,
 .scGunsTable_weapons .scGunsTable__row{
-  grid-template-columns: 128px 48px 1fr 1fr 120px 128px 200px;
+  grid-template-columns: var(--scTableTileWidth, 128px) 48px 1fr 1fr 120px 128px 200px;
 }
 .scGunsTable__head{
   font-size:12px;
@@ -1756,7 +1766,7 @@ body.scmodal-open{
   min-height:272px;
 }
 #modsTankWallOverlay .scGunsTable__row{
-  min-height:112px;
+  min-height:var(--scTableTileHeight, 112px);
 }
 .scGunsTable__row{
   padding:6px 8px;

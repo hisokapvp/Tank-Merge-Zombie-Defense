@@ -137,6 +137,14 @@
       var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
       var rootEl = documentObj.documentElement;
       if (!rootEl || !rootEl.style) return;
+      var tileWidth = Number(lt.supercomputerTileWidthPx);
+      if (Number.isFinite(tileWidth) && tileWidth > 0) {
+        rootEl.style.setProperty('--scRootTileWidthPx', String(Math.round(tileWidth)) + 'px');
+      }
+      var tileHeight = Number(lt.supercomputerTileHeightPx);
+      if (Number.isFinite(tileHeight) && tileHeight > 0) {
+        rootEl.style.setProperty('--scRootTileHeightPx', String(Math.round(tileHeight)) + 'px');
+      }
       var tileIconSize = Number(lt.supercomputerTileIconSizePx);
       if (Number.isFinite(tileIconSize) && tileIconSize > 0) {
         rootEl.style.setProperty('--scTileIconSizePx', String(Math.round(tileIconSize)) + 'px');

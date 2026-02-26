@@ -12,6 +12,7 @@
 - Геометрия узлов берётся из `Game.TalentsV2.getTalentsByBranch(branchId)` → `node.layout` (`row`, `slot`, `parents`); при отсутствии layout используется fallback на legacy-layout `3-3-3-3-2-2-1`.
 - SVG-связи обновляются при `updateTalentUI` и на `window.resize`.
 - Базовые SVG-связи (`.talentEdge`) должны быть видимы сразу после `New game` (до первой покупки).
+- При `openTalents`/`closeTalents` и изменении видимого layout (включая сценарии `New`/`Load`) кэш геометрии связей должен инвалидироваться с пересчётом, чтобы линии не исчезали.
 
 ## 1) UI reasons (disabled buy)
 

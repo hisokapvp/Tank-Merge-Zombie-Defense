@@ -143,7 +143,7 @@
       can.style.marginRight = '4px';
       var cctx = can.getContext('2d');
       if (typeof drawTankIconTo === 'function') {
-        drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7);
+        drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7, { showShadow: false });
       }
       wrap.appendChild(can);
     });

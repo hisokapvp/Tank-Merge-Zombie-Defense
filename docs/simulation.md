@@ -44,4 +44,18 @@
 - При открытии critical modal — attackMode выключается и loop-sfx останавливаются.
 - После partial reset: `state.fenceLevel === 1`, стены пересозданы как tier1, `buyCounts`/`buyPrices` сброшены.
 
+6) Fence tier runtime при рестарте
+- `ensureFenceTierRuntimeState()` НЕ перезаписывает `runtimeMaxTankLevelAchieved` значением `maxTankLevelAchieved` — это позволяет fence начинать с уровня 1 после critical restart, а не перепрыгивать на ранее достигнутый максимум.
+
+7) Zombie breach awareness
+- `getNearestKnownBreachForZombie()` использует `awarenessRadiusPx` вместо `Infinity` для зомби, находящихся на той же стороне. Зомби «видят» бреши только в пределах настроенного радиуса.
+- `zombieFenceLimit()`: если `z.breached === true`, но зомби стоит на целом (не разрушенном) сегменте и не находится глубоко внутри, флаг `breached` сбрасывается в `false`.
+
+8) Защита дронов при restart/retry
+- `buildPreRetryPayload()`: перед retry проверяется, что массив дронов сохранён в payload даже после `applyPreRetryRuntimeReset`.
+- `applyCriticalRestartPostLoad()`: при critical restart проверяется восстановление массива дронов из snapshot.
+
+9) Drag threshold (pointermove)
+- В обработчике `pointermove` (canvas) координаты `state.dragging.x/y` обновляются только после того, как суммарное смещение превысит 6 px (`moved=true`). Это предотвращает ложные начала drag при тапе.
+
 Если нужно, добавим диаграмму эпизода/потока или unit-test инструкции.

@@ -40,6 +40,15 @@
         damagePoints: toSafeInt(player.damagePoints, 0, 0),
         talentsApplied: cloneArray(player.talentsApplied),
         talentsPending: cloneArray(player.talentsPending),
+        talentsV2: cloneObject(player.talentsV2, { ranksById: {}, freePoints: 0 }),
+        freeTalentPointsV2: toSafeInt(
+          player.freeTalentPointsV2,
+          toSafeInt(player.talentsV2 && player.talentsV2.freePoints, 0, 0),
+          0
+        ),
+        talentsVersion: Number.isFinite(player.talentsVersion)
+          ? Math.max(0, Math.floor(player.talentsVersion))
+          : null,
         cannonUpgradesApplied: cloneArray(player.cannonUpgradesApplied),
         fenceUpgradesApplied: cloneArray(player.fenceUpgradesApplied),
       },
@@ -81,6 +90,24 @@
     target.player.damagePoints = toSafeInt(upgrades.damagePoints, 0, 0);
     target.player.talentsApplied = cloneArray(upgrades.talentsApplied);
     target.player.talentsPending = cloneArray(upgrades.talentsPending);
+    if (upgrades.talentsV2 && typeof upgrades.talentsV2 === 'object') {
+      var talentsV2 = upgrades.talentsV2;
+      target.player.talentsV2 = {
+        ranksById: cloneObject(talentsV2.ranksById, {}),
+        freePoints: toSafeInt(talentsV2.freePoints, 0, 0),
+      };
+    }
+    if (Number.isFinite(upgrades.freeTalentPointsV2)) {
+      target.player.freeTalentPointsV2 = toSafeInt(upgrades.freeTalentPointsV2, 0, 0);
+      if (target.player.talentsV2 && typeof target.player.talentsV2 === 'object') {
+        target.player.talentsV2.freePoints = target.player.freeTalentPointsV2;
+      }
+    } else if (target.player.talentsV2 && typeof target.player.talentsV2 === 'object') {
+      target.player.freeTalentPointsV2 = toSafeInt(target.player.talentsV2.freePoints, 0, 0);
+    }
+    if (Number.isFinite(upgrades.talentsVersion)) {
+      target.player.talentsVersion = Math.max(0, Math.floor(upgrades.talentsVersion));
+    }
     target.player.cannonUpgradesApplied = cloneArray(upgrades.cannonUpgradesApplied);
     target.player.fenceUpgradesApplied = cloneArray(upgrades.fenceUpgradesApplied);
 

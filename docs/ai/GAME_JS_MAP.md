@@ -10,7 +10,8 @@
 - В `game.js` для 5 систем добавлены `ensure*RuntimeController()` и делегирование вызовов в `Game.*Runtime.createController(...)`.
 - Встроенная логика в `game.js` оставлена как fallback (поведение не зависит жёстко от порядка/наличия runtime-скриптов).
 - Talents v2 UI layout в `getTalentNodeLayoutV2(...)` берётся из `node.layout` (из `Game.TalentsV2.getTalentsByBranch(...)`) с fallback на legacy `TALENT_LAYOUT`.
-- Визуал ангара: `drawTankSlot(...)` использует stamp-reveal (`drawTankIconWithStampReveal`) на `10` полос/`1.5s`; при restore сейва stamp отключён (`makeTank(..., { enableStamp:false })`).
+- Визуал ангара: `drawTankSlot(...)` использует stamp-reveal (`drawTankIconWithStampReveal`) на `10` полос; длительность берётся из `assets/tanks.json -> tankPrintDurationSec` (fallback `1.5s`); при restore сейва stamp отключён (`makeTank(..., { enableStamp:false })`).
+- Critical restart (`HP <= 5%`): snapshot сохраняет Talents v2 (`player.talentsV2.ranksById/freePoints` + `freeTalentPointsV2`) и post-restore выполняет reset fence runtime до L1 с последующим force-resync tier по сохранённому `maxTankLevelAchieved`.
 
 ---
 
@@ -111,6 +112,8 @@
 | 7144–7200 | `forceAutosaveSafely`, `restoreFenceSegmentsToMaxHp`, `restoreSupercomputerAfterCritical` |
 | 7197–7282 | Critical flow: modal controller, restart, save & exit |
 | 7283–7345 | `resetGameState()` — полный сброс состояния |
+| 7323–7370 | `buildPreRetryPayload()` — snapshot перед retry (включая защиту дронов) |
+| 7506–7545 | `applyCriticalRestartPostLoad()` — post-load restore при critical restart (с защитой дронов) |
 | 10315–10391 | `stepImpacts`, `setSupercomputerWantsBuildTank`, `applySupercomputerDamage`, `stepSupercomputer` |
 
 ### UI / Модальные окна
@@ -232,6 +235,8 @@
 | 890 | `ensureMapSeedsState()` |
 | 912 | `isDebugPanelEnabled()` |
 | 7283 | `resetGameState(options)` |
+| 7323 | `buildPreRetryPayload(currentState)` |
+| 7506 | `applyCriticalRestartPostLoad()` |
 
 ### Settings / Audio
 | Строка | Функция |
@@ -398,6 +403,7 @@
 | 5350 | `getZombieFinalAttackDamage(z)` |
 | 5360 | `startZombieDying(z)` |
 | 5400 | `stepZombies(dt)` |
+| 5715 | `zombieFenceLimit(z)` |
 
 ### Танки
 | Строка | Функция |
@@ -408,11 +414,13 @@
 ### Fence
 | Строка | Функция |
 |---|---|
+| 2655 | `ensureFenceTierRuntimeState(stateRef)` |
 | 4600 | `getFenceStats()` |
 | 4650 | `tryUpgradeFenceLevel()` |
 | 4700 | `estimateFenceMinRadius()` |
 | 4750+ | Fence segment math (collision, breach) |
 | 5000+ | `rebuildBreachesBySideFromFence()`, `syncFenceBreachForSegment()` |
+| 5381 | `getNearestKnownBreachForZombie(sideKey, localX, localY, awarenessRadiusPx)` |
 | 7170 | `restoreFenceSegmentsToMaxHp()` |
 
 ### Урон / Числа / Декали

@@ -2005,16 +2005,25 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
   }
 }
 
-function finalizePartialRestartPostRestore(stateRef){
+function finalizePartialRestartPostRestore(stateRef, options){
   const targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  const opts = options && typeof options === 'object' ? options : null;
+  const preserveProgression = !!(opts && opts.preserveProgression);
+  const forceFenceRuntimeReset = !!(opts && opts.forceFenceRuntimeReset);
   if (targetState && typeof targetState === 'object') {
     targetState.savedFenceState = null;
-    targetState.buyCounts = {};
-    targetState.buyPrices = {};
-    targetState.maxTankLevelAchieved = 1;
-    targetState.runtimeMaxTankLevelAchieved = 1;
-    targetState.currentFenceTierApplied = 1;
-    targetState.fenceLevel = 1;
+    if (!preserveProgression) {
+      targetState.buyCounts = {};
+      targetState.buyPrices = {};
+      targetState.maxTankLevelAchieved = 1;
+      targetState.runtimeMaxTankLevelAchieved = 1;
+      targetState.currentFenceTierApplied = 1;
+      targetState.fenceLevel = 1;
+    } else if (forceFenceRuntimeReset) {
+      targetState.runtimeMaxTankLevelAchieved = 1;
+      targetState.currentFenceTierApplied = 1;
+      targetState.fenceLevel = 1;
+    }
     syncFenceTierWithMaxTankLevel(targetState, { force: true });
   }
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
@@ -2594,6 +2603,24 @@ function makeTank(level, onTrack = false, options = null){
   };
 }
 
+function getTankPrintDurationSec(){
+  const raw = Number(TankSprites && TankSprites.config ? TankSprites.config.tankPrintDurationSec : NaN);
+  if (!Number.isFinite(raw) || raw <= 0) return 1.5;
+  return raw;
+}
+
+function isTankPrinting(tank){
+  if (!tank || tank.onTrack) return false;
+  if (!Number.isFinite(tank.stampStartSec)) return false;
+  const elapsedSec = nowSec() - tank.stampStartSec;
+  const durationSec = getTankPrintDurationSec();
+  if (!Number.isFinite(elapsedSec) || elapsedSec >= durationSec) {
+    tank.stampStartSec = null;
+    return false;
+  }
+  return elapsedSec >= 0;
+}
+
 function addDron(level){
   if (!(DronesApi && typeof DronesApi.addDron === 'function')) return null;
   const drone = DronesApi.addDron(state, level, { dronConfig: getDronRuntimeConfig() });
@@ -2634,7 +2661,7 @@ function ensureFenceTierRuntimeState(stateRef){
   if (!Number.isFinite(targetState.runtimeMaxTankLevelAchieved)) {
     targetState.runtimeMaxTankLevelAchieved = maxAchieved;
   } else {
-    targetState.runtimeMaxTankLevelAchieved = Math.max(maxAchieved, Math.floor(targetState.runtimeMaxTankLevelAchieved));
+    targetState.runtimeMaxTankLevelAchieved = Math.max(1, Math.floor(targetState.runtimeMaxTankLevelAchieved));
   }
   if (!Number.isFinite(targetState.currentFenceTierApplied)) {
     targetState.currentFenceTierApplied = getFenceTierForTankLevel(targetState.runtimeMaxTankLevelAchieved);
@@ -3156,6 +3183,7 @@ function performMerge(fromIdx, toIdx, opts){
   const a = state.cells[fromIdx];
   const b = state.cells[toIdx];
   if (!a || !b || !a.tank || !b.tank) return false;
+  if (isTankPrinting(a.tank) || isTankPrinting(b.tank)) return false;
   if (a.tank.level !== b.tank.level) return false;
   if (a.tank.level >= MAX_TANK_LEVEL) return false;
   const fromLevel = a.tank.level;
@@ -3212,6 +3240,7 @@ function findTankCellIndex(tankRef){
 }
 
 function mergeAutoPair(leftTank, rightTank){
+  if (isTankPrinting(leftTank) || isTankPrinting(rightTank)) return false;
   const fromIdx = findTankCellIndex(leftTank);
   const toIdx = findTankCellIndex(rightTank);
   if (fromIdx == null || toIdx == null || fromIdx === toIdx) return false;
@@ -3224,6 +3253,9 @@ function mergeAutoPair(leftTank, rightTank){
 
 if (AutoMergeApi && typeof AutoMergeApi.setMergePairExecutor === 'function') {
   AutoMergeApi.setMergePairExecutor(mergeAutoPair);
+}
+if (AutoMergeApi && typeof AutoMergeApi.setTankEligibilityPredicate === 'function') {
+  AutoMergeApi.setTankEligibilityPredicate((tank) => !isTankPrinting(tank));
 }
 
 // ---------- Economy / boost ----------
@@ -3985,6 +4017,12 @@ function openTalents(options){
         modal.style.transform = 'scale(1)';
         modal.style.opacity = '1';
         updateTalentUI();
+        if (isTalentsV2Ready()) {
+          TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
+          requestAnimationFrame(() => {
+            if (state.ui.talentsOpen) updateTalentUI();
+          });
+        }
       });
     });
   }
@@ -3992,6 +4030,7 @@ function openTalents(options){
 
 function closeTalents(){
   state.ui.talentsOpen = false;
+  TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
   const overlay = document.getElementById('talentOverlay');
   if (overlay){
     const modal = overlay.querySelector('.modal');
@@ -5340,7 +5379,7 @@ function hasBreachOnSide(sideKey){
 }
 
 function getNearestKnownBreachForZombie(sideKey, localX, localY, awarenessRadiusPx){
-  const sameSideBreach = pickNearestBreachForSide(sideKey, localX, localY, Infinity, false);
+  const sameSideBreach = pickNearestBreachForSide(sideKey, localX, localY, awarenessRadiusPx, false);
   if (sameSideBreach) return sameSideBreach;
   const radius = Number.isFinite(awarenessRadiusPx) ? Math.max(0, awarenessRadiusPx) : 0;
   if (radius <= 0) return null;
@@ -5705,7 +5744,19 @@ function zombieFenceLimit(z){
     z.breached = true;
     z.breachSegmentId = seg.id || null;
   }
-  if (z.breached) return getFenceInnerLimit(z);
+  if (z.breached) {
+    // Zombie is at an active breach point — allow passage
+    if (activeBreach) return getFenceInnerLimit(z);
+    // Current segment is broken — allow passage
+    if (seg && seg.broken) return getFenceInnerLimit(z);
+    // Zombie is deep inside (past the fence) — don't push back out
+    const deepThreshold = outerLimit - BAL.fenceWidth * 10;
+    if (z.r < deepThreshold) return getFenceInnerLimit(z);
+    // Zombie is at an intact segment near fence edge — reset breach status
+    z.breached = false;
+    z.breachSegmentId = null;
+    return outerLimit;
+  }
   if (seg && seg.broken) return getFenceInnerLimit(z);
   return outerLimit;
 }
@@ -7298,6 +7349,11 @@ function buildPreRetryPayload(currentState){
     : 1;
 
   applyPreRetryRuntimeReset(payload);
+  // Defensive: ensure drones survive pre-retry reset
+  if (Array.isArray(source.drones) && source.drones.length > 0
+      && (!Array.isArray(payload.drones) || !payload.drones.length)) {
+    payload.drones = JSON.parse(JSON.stringify(source.drones));
+  }
   return payload;
 }
 
@@ -7451,7 +7507,19 @@ function applyCriticalRestartPostLoad(){
   clearAllTanksFromCells(state);
   spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
-  finalizePartialRestartPostRestore(state);
+  finalizePartialRestartPostRestore(state, { preserveProgression: true, forceFenceRuntimeReset: true });
+  // Defensive: ensure drones are present after critical restart load
+  if (!Array.isArray(state.drones) || !state.drones.length) {
+    var dronePayload = loadPreRetryPayloadFromAutoSlot();
+    if (dronePayload && Array.isArray(dronePayload.drones) && dronePayload.drones.length) {
+      if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
+        DronesApi.restoreSavedDrones(state, dronePayload.drones);
+      } else {
+        state.drones = dronePayload.drones;
+      }
+      normalizeAndTeleportDronesAfterRestore(state);
+    }
+  }
 }
 
 function performCriticalRestart(){
@@ -7749,7 +7817,7 @@ function fillDismantleConfirmModal(selectedTankIds){
       can.style.verticalAlign = 'middle';
       can.style.marginRight = '4px';
       const cctx = can.getContext('2d');
-      drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7);
+      drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7, { showShadow: false });
       wrap.appendChild(can);
     }
     const span = document.createElement('span');
@@ -8269,7 +8337,31 @@ function getTalentNodeLayoutV2(localIdx, node){
 const TALENT_UI_V2_RENDER_CACHE = {
   signature: '',
   lang: '',
+  edgesLayoutKey: '',
 };
+
+function isTalentLayoutVisibleV2(overlay){
+  if (!overlay || overlay.classList.contains('hidden')) return false;
+  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    const styles = window.getComputedStyle(overlay);
+    if (!styles || styles.display === 'none' || styles.visibility === 'hidden') return false;
+  }
+  return true;
+}
+
+function buildTalentsV2LayoutKey(overlay){
+  if (!overlay) return '';
+  const keyParts = [];
+  for (let i = 0; i < TALENTS_V2_BRANCH_IDS.length; i++) {
+    const branchId = TALENTS_V2_BRANCH_IDS[i];
+    const grid = overlay.querySelector(`#talentGridV2-${branchId}`);
+    if (!grid) return '';
+    const rect = grid.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return '';
+    keyParts.push(`${branchId}:${Math.round(rect.width)}x${Math.round(rect.height)}`);
+  }
+  return keyParts.join('|');
+}
 
 function getTalentsV2CurrentLang(){
   const i18n = window.Game && window.Game.I18n;
@@ -8401,14 +8493,15 @@ function renderTalentNodesV2(overlay, branchId){
 
 function drawTalentEdgesV2(overlay, branchId){
   const api = getTalentsV2Api();
-  if (!api || !overlay) return;
+  if (!api || !overlay) return false;
+  if (!isTalentLayoutVisibleV2(overlay)) return false;
   const svg = overlay.querySelector(`#talentSvgV2-${branchId}`);
   const grid = overlay.querySelector(`#talentGridV2-${branchId}`);
-  if (!svg || !grid) return;
+  if (!svg || !grid) return false;
 
   svg.innerHTML = '';
   const gridRect = grid.getBoundingClientRect();
-  if (!gridRect || gridRect.width <= 0 || gridRect.height <= 0) return;
+  if (!gridRect || gridRect.width <= 0 || gridRect.height <= 0) return false;
   svg.setAttribute('width', gridRect.width);
   svg.setAttribute('height', gridRect.height);
   svg.setAttribute('viewBox', `0 0 ${gridRect.width} ${gridRect.height}`);
@@ -8448,6 +8541,7 @@ function drawTalentEdgesV2(overlay, branchId){
       svg.appendChild(line);
     });
   });
+  return true;
 }
 
 function updateTalentAbilitySlotsV2(container){
@@ -8538,13 +8632,27 @@ function updateTalentUIV2(overlay){
 
   const currentLang = getTalentsV2CurrentLang();
   const renderSignature = buildTalentsV2RenderSignature(api);
-  if (TALENT_UI_V2_RENDER_CACHE.signature !== renderSignature || TALENT_UI_V2_RENDER_CACHE.lang !== currentLang) {
+  const signatureChanged = TALENT_UI_V2_RENDER_CACHE.signature !== renderSignature || TALENT_UI_V2_RENDER_CACHE.lang !== currentLang;
+  if (signatureChanged) {
     TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
       renderTalentNodesV2(overlay, branchId);
-      drawTalentEdgesV2(overlay, branchId);
     });
     TALENT_UI_V2_RENDER_CACHE.signature = renderSignature;
     TALENT_UI_V2_RENDER_CACHE.lang = currentLang;
+    TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
+  }
+
+  if (!isTalentLayoutVisibleV2(overlay)) {
+    TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
+  } else {
+    const layoutKey = buildTalentsV2LayoutKey(overlay);
+    if (layoutKey && (signatureChanged || TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey !== layoutKey)) {
+      let renderedAll = true;
+      TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
+        renderedAll = drawTalentEdgesV2(overlay, branchId) && renderedAll;
+      });
+      TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = renderedAll ? layoutKey : '';
+    }
   }
 
   updateTalentAbilitySlotsV2(overlay);
@@ -8969,6 +9077,7 @@ canvas.addEventListener('pointerdown', (e)=>{
   const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
   if (trackCell !== null){
     const trackTank = state.cells[trackCell].tank;
+    if (isTankPrinting(trackTank)) return;
     const changed = setTankOnTrackState(trackTank, false, { cause: 'user' });
     if (changed) {
       trackTank.cooldown = 0;
@@ -8989,6 +9098,7 @@ canvas.addEventListener('pointerdown', (e)=>{
     return;
   }
   if (!c || !c.tank) return;
+  if (isTankPrinting(c.tank)) return;
   if (c.tank.onTrack){
     const changed = setTankOnTrackState(c.tank, false, { cause: 'user' });
     if (changed) {
@@ -9018,11 +9128,13 @@ canvas.addEventListener('pointermove', (e)=>{
     return;
   }
   if (!state.dragging) return;
-  state.dragging.x = p.x;
-  state.dragging.y = p.y;
   const dx = p.x - state.dragging.startX;
   const dy = p.y - state.dragging.startY;
-  if (Math.hypot(dx, dy) > 6) state.dragging.moved = true;
+  if (!state.dragging.moved && Math.hypot(dx, dy) > 6) state.dragging.moved = true;
+  if (state.dragging.moved) {
+    state.dragging.x = p.x;
+    state.dragging.y = p.y;
+  }
 });
 
 canvas.addEventListener('pointerup', (e)=>{
@@ -9037,6 +9149,12 @@ canvas.addEventListener('pointerup', (e)=>{
 
   const from = state.cells[state.dragging.cellIndex];
   from.tank = state.dragging.tank;
+
+  if (!from || !from.tank || isTankPrinting(from.tank)) {
+    state.dragging = null;
+    updateDismantleButton();
+    return;
+  }
 
   if (!state.dragging.moved){
     const changed = setTankOnTrackState(from.tank, true, { cause: 'user' });
@@ -10212,27 +10330,30 @@ function drawTankSlot(cell){
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
   rr(ctx, cx-18, cy-12, 36, 26, 8);
   ctx.fill();
-  drawTankIconWithStampReveal(cell, cx, cy);
+  drawTankIconWithStampReveal(cell, cx, cy, { showShadow: false });
   ctx.restore();
 }
 
 const TANK_STAMP_ROWS = 10;
-const TANK_STAMP_DURATION_SEC = 1.5;
+const DEFAULT_TANK_STAMP_DURATION_SEC = 1.5;
 
 function getTankStampProgress(tank){
   if (!tank || tank.onTrack) return 1;
+  if (!isTankPrinting(tank)) return 1;
   if (!Number.isFinite(tank.stampStartSec)) return 1;
   const elapsedSec = nowSec() - tank.stampStartSec;
-  const progress = clamp(elapsedSec / TANK_STAMP_DURATION_SEC, 0, 1);
-  if (progress >= 1) tank.stampStartSec = null;
-  return progress;
+  const durationSecRaw = getTankPrintDurationSec();
+  const durationSec = Number.isFinite(durationSecRaw) && durationSecRaw > 0 ? durationSecRaw : DEFAULT_TANK_STAMP_DURATION_SEC;
+  return clamp(elapsedSec / durationSec, 0, 1);
 }
 
-function drawTankIconWithStampReveal(cell, cx, cy){
+function drawTankIconWithStampReveal(cell, cx, cy, options = null){
   if (!cell || !cell.tank) return;
+  const opts = options && typeof options === 'object' ? options : null;
+  const showShadow = opts && opts.showShadow === false ? false : true;
   const progress = getTankStampProgress(cell.tank);
   if (progress >= 1) {
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, { showShadow });
     return;
   }
 
@@ -10261,7 +10382,7 @@ function drawTankIconWithStampReveal(cell, cx, cy){
     ctx.beginPath();
     ctx.rect(left, clipY, iconW, clipH + 0.5);
     ctx.clip();
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack);
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, { showShadow });
     ctx.restore();
   }
   ctx.restore();
@@ -10279,8 +10400,8 @@ function drawOrbitingTanks(){
   }
 }
 
-function drawTankIcon(x,y,level,mutedSlot=false){
-  drawTankIconTo(ctx, x, y, level, mutedSlot);
+function drawTankIcon(x,y,level,mutedSlot=false,options=null){
+  drawTankIconTo(ctx, x, y, level, mutedSlot, 1, options);
 }
 
 function getOnTrackIconOpacity(){
@@ -10291,7 +10412,9 @@ function getOnTrackIconOpacity(){
   return clamp(opacity, 0, 1);
 }
 
-function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
+function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, options=null){
+  const opts = options && typeof options === 'object' ? options : null;
+  const showShadow = !(opts && opts.showShadow === false);
   const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
   const onTrackIconOpacity = mutedSlot ? getOnTrackIconOpacity() : 0;
@@ -10354,9 +10477,11 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1){
   targetCtx.translate(x, y);
   targetCtx.scale(0.52 * balScale * scaleMul, 0.52 * balScale * scaleMul);
   targetCtx.globalAlpha = mutedSlot ? onTrackIconOpacity : 0.95;
-  targetCtx.fillStyle = 'rgba(0,0,0,.35)';
-  rr(targetCtx, -22, -8, 44, 10, 5);
-  targetCtx.fill();
+  if (showShadow) {
+    targetCtx.fillStyle = 'rgba(0,0,0,.35)';
+    rr(targetCtx, -22, -8, 44, 10, 5);
+    targetCtx.fill();
+  }
   targetCtx.fillStyle = hull;
   rr(targetCtx, -18, -18, 36, 14, 6);
   targetCtx.fill();

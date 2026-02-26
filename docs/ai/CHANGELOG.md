@@ -1,5 +1,14 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-02-26
+- **Баг-фикс**: `ensureFenceTierRuntimeState()` (~L2655) — убран `Math.max(maxAchieved, ...)` — `runtimeMaxTankLevelAchieved` больше не перезаписывается значением `maxTankLevelAchieved` при рестарте; fence корректно начинает с уровня 1 после critical restart.
+- **Баг-фикс**: `getNearestKnownBreachForZombie()` (~L5381) — заменён `Infinity` на `awarenessRadiusPx` при поиске бреши на той же стороне; зомби используют настроенный радиус осведомлённости вместо бесконечного.
+- **Баг-фикс**: `zombieFenceLimit()` (~L5715) — добавлена валидация `z.breached`: если зомби стоит на целом сегменте и не глубоко внутри, флаг `breached` сбрасывается.
+- **Баг-фикс**: `buildPreRetryPayload()` (~L7323) — добавлена защитная проверка сохранения дронов после `applyPreRetryRuntimeReset`.
+- **Баг-фикс**: `applyCriticalRestartPostLoad()` (~L7506) — добавлена защитная проверка восстановления дронов при critical restart.
+- **Баг-фикс**: `pointermove` handler (~L9123) — координаты `state.dragging.x/y` обновляются только после превышения порога перемещения (6 px, `moved=true`).
+- Тесты: 82 passed, 0 failed.
+
 ## 2026-02-20
 - **Рефакторинг game.js**: сокращён с 10749 до 9502 строк (−1247 строк, −12%).
 - Извлечён `src/core/runtimeTasks.js` (~100 строк): timer/RAF suspend/resume, экспорт `Game.RuntimeTasks`.

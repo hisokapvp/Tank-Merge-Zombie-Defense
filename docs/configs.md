@@ -36,3 +36,11 @@
 
 - `weaponIconW` — ширина превью оружия в UI суперкомпьютера (включая `canvas` в таблице `Оружия`).
 - При увеличении `weaponIconW` необходимо синхронно расширять ширину sprite-колонки в CSS таблицы `Оружия`, иначе спрайт/анимация будут обрезаться по ширине.
+- `supercomputerTileWidthPx` / `supercomputerTileHeightPx` — размеры root-плашек supercomputer (root menu) через CSS custom properties `--scRootTileWidthPx`/`--scRootTileHeightPx`.
+- Таблицы `Орудия`/`Стены` используют отдельные CSS custom properties `--scTableTileWidthPx`/`--scTableTileHeightPx` и не зависят от `supercomputerTileWidthPx`/`supercomputerTileHeightPx`.
+- `supercomputerTileIconSizePx` — размер иконки root-плашек supercomputer (baseline `250`).
+
+## assets/tanks.json
+
+- `tankPrintDurationSec` — длительность stamp-reveal печати танка в ангаре (сек).
+- Значение читается runtime-логикой печати с fallback `1.5`, если поле отсутствует/невалидно.

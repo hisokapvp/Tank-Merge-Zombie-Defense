@@ -37,6 +37,8 @@
 - Для critical modal: вход/выход должен включать/снимать hard pause через `PauseManager`, skip-кнопка видна только во время typing.
 - Кнопка `Перезапустить симуляцию` должна вызывать partial reset runtime мира без запуска второго main loop.
 - Для `Перезапустить симуляцию` в `restartSimulationPartial(..., { onAfterRestore })` обязательно выполнять post-restore доведение: телепорт дронов к `supercomputer` (с fallback `(0,0)`), сброс zombie target к дефолту из `assets/zombies.json`, сброс `attackMode` runtime к off/default.
+- Critical flow активируется при пороге HP supercomputer `<= 5%`; `Перезапустить симуляцию` в этом сценарии обязан сохранять прогресс-апгрейды из snapshot (talents/mods/cannon/fence/drones/achievements), сбрасывая только runtime-состояние мира.
+- Для critical restart post-restore fence runtime сначала принудительно ставится в L1 (`runtimeMaxTankLevelAchieved/currentFenceTierApplied/fenceLevel = 1`), после чего выполняется `syncFenceTierWithMaxTankLevel(..., { force:true })` — итоговый tier пересчитывается по сохранённому `maxTankLevelAchieved`.
 - Зомби — это runtime-состояние, не сохраняемое в payload. При любом `restoreFullState` в конце вызывается явный `state.zombies.length = 0` (сброс зомби).
 - `restoreFullState` при `Object.assign(getComputerState(), saved.supercomputer)` сохраняет предыдущие валидные координаты `x/y` суперкомпьютера, если в `saved.supercomputer` они нулевые/невалидные (pre-retry payload использует `createInitialState` как базу и не хранит real-координаты).
 - Количество стартовых танков при новой игре/рестарте симуляции: **1 танк 1-го уровня**. Точки спавна: `spawnInitialTanksLvl1(state, 1)` (в `resetGameState`) и цикл с `seeded < 1` (в `applyPreRetryRuntimeReset`).
@@ -112,6 +114,7 @@
 - Контейнер плиток: равномерная grid-сетка `3` колонки (`.scRootTiles`), без ручного расчёта фиксированной ширины карточки.
 - Иконка `.scRootTile__icon` рендерится как полноразмерный фон карточки (`position:absolute; inset:0; background-size:cover`), а текстовый label (`.scRootTile__label`) идёт поверх.
 - Label `.scRootTile__label`: перенос строк разрешён (`white-space:normal`, `overflow-wrap:anywhere`), чтобы длинные названия не обрезались в root-плитках.
+- Label `.scRootTile__label` фиксируется у нижней кромки плитки (`margin-top:auto`), чтобы подписи root-плашек визуально располагались внизу.
 - Высота root-карточек нормализуется по самой высокой карточке через `--scRootTileUniformHeight` + runtime-нормализацию (`normalizeRootTilesSize()` при `openRoot()`).
 - Для root-сетки сохраняется запас по краям (`overflow:visible` у контейнера), при этом сама карточка может использовать `overflow:hidden` для корректного клипа полноразмерного фонового изображения по радиусу.
 
@@ -179,8 +182,12 @@
 - В `Logs&Tools` удалены кнопки `Reset (statuses + VFX)`, `Clear log`, `Lesson Progress`; раздел оставляет только mount для telemetry/debug-виджетов.
 
 ## Hangar slot stamp reveal
-- Визуал слота ангара: появление нового/купленного танка идёт через stamp-reveal анимацию (`10` горизонтальных полос, `1.5s`).
+- Визуал слота ангара: появление нового/купленного танка идёт через stamp-reveal анимацию (`10` горизонтальных полос).
 - Реализация: `game.js` — `makeTank(..., options)` + `drawTankIconWithStampReveal(...)` / `getTankStampProgress(...)`.
+- Длительность печати берётся из `assets/tanks.json -> tankPrintDurationSec` (fallback `1.5s` при отсутствии/невалидном значении).
+- Пока танк в состоянии печати (`isTankPrinting`) он не участвует в пользовательских и авто-действиях: drag/перемещение, merge, auto-merge и отправка на трассу блокируются.
+- В ангарной отрисовке слота тень корпуса танка отключена (`showShadow:false`).
+- В preview иконок в dismantle confirm modal (`fillDismantleConfirmModal`) тень также отключена (`drawTankIconTo(..., { showShadow:false })`).
 - Контракт restore: при `restoreFullState(...)` штамп отключается (`makeTank(..., { enableStamp:false })`), чтобы загруженные сейвы не проигрывали spawn-анимацию.
 
 ## Debug panel: Updates
