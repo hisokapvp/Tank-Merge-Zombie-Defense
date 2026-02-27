@@ -1970,7 +1970,10 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
   if (!targetState || !Array.isArray(targetState.drones) || !targetState.drones.length) return;
 
   if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
-    DronesApi.restoreSavedDrones(targetState, targetState.drones);
+    // Clone before passing: restoreSavedDrones clears state.drones first,
+    // so passing the same reference would wipe the input array.
+    var dronesCopy = JSON.parse(JSON.stringify(targetState.drones));
+    DronesApi.restoreSavedDrones(targetState, dronesCopy);
   }
 
   const sc = targetState.supercomputer && typeof targetState.supercomputer === 'object'
@@ -4264,6 +4267,7 @@ function getSavedProgress(){
 
 function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
+  const forceFenceRuntimeResetOnLoad = !!saved.forceFenceRuntimeResetOnLoad;
   ensureAchievementsState();
   ensureMapSeedsState();
   ensureDamageProgressState();
@@ -4380,6 +4384,15 @@ function restoreFullState(saved){
   ensureFenceUpgradesAppliedState();
   ensureFenceTierRuntimeState(state);
   syncFenceTierWithMaxTankLevel(state, { force: true });
+  if (forceFenceRuntimeResetOnLoad) {
+    state.savedFenceState = null;
+    state.runtimeMaxTankLevelAchieved = 1;
+    state.currentFenceTierApplied = 1;
+    state.fenceLevel = 1;
+    if (FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
+      try { FenceSprites.ensureLevel(1); } catch (e) {}
+    }
+  }
   // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
   if (Array.isArray(state.zombies)) state.zombies.length = 0;
   resetCriticalEntryRuntimeFlags();
@@ -5825,8 +5838,14 @@ function zombieFenceLimit(z){
   }
 
   const segByPoint = pickFenceSegmentByPoint(worldX, worldY);
+  const segByPointBrokenAtPoint = !!(
+    segByPoint
+    && segByPoint.broken
+    && segByPoint.holeAabb
+    && pointInAabb(localX, localY, segByPoint.holeAabb, Math.max(1, zombieCollisionRadius(z) * 0.2))
+  );
   const segByTheta = getFenceSegmentForTheta(z.theta);
-  const seg = segByPoint || segByTheta;
+  const seg = segByPointBrokenAtPoint ? segByPoint : segByTheta;
   if (seg && seg.broken && !z.breached && z.r <= outerLimit + Math.max(2, BAL.fenceWidth * 0.15)) {
     z.breached = true;
     z.breachSegmentId = seg.id || null;
@@ -5835,7 +5854,7 @@ function zombieFenceLimit(z){
     // Zombie is at an active breach point — allow passage
     if (activeBreach) return getFenceInnerLimit(z);
     // Current segment is broken — allow passage
-    if (segByPoint && segByPoint.broken) return getFenceInnerLimit(z);
+    if (segByPointBrokenAtPoint) return getFenceInnerLimit(z);
     // Zombie is deep inside (past the fence) — don't push back out
     const innerLimit = getFenceInnerLimit(z);
     const deepThreshold = innerLimit + Math.max(2, BAL.fenceWidth * 0.2);
@@ -5999,6 +6018,20 @@ function stepZombies(dt){
           z.anchorTheta = z.theta;
           z.r = movedR;
           z.targetR = Math.hypot(sc.x - center.x, sc.y - center.y);
+        }
+        // Push breached zombie off intact fence segments (bottom corners fix):
+        // If the zombie's new position overlaps an intact fence segment,
+        // reduce r so it sits just inside the fence inner edge.
+        const segAtPos = pickFenceSegmentByPoint(moved.x, moved.y);
+        if (segAtPos && !segAtPos.broken) {
+          const innerFence = BAL.fenceRadius - BAL.fenceWidth * 0.5;
+          const dxF = Math.cos(z.theta);
+          const dyF = Math.sin(z.theta);
+          const denomF = Math.max(Math.abs(dxF), Math.abs(dyF)) || 1;
+          const innerR = Math.max(0, innerFence / denomF - zombieCollisionRadius(z) * 0.5);
+          if (z.r > innerR) {
+            z.r = innerR;
+          }
         }
         z.side = getSideByPosition(moved.x, moved.y);
         radialSpeed = Math.hypot(moved.x - prevX, moved.y - prevY);
@@ -7597,18 +7630,35 @@ function applyCriticalRestartPostLoad(){
   spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
   finalizePartialRestartPostRestore(state, { preserveProgression: true, forceFenceRuntimeReset: true });
-  // Defensive: ensure drones are present after critical restart load
-  if (!Array.isArray(state.drones) || !state.drones.length) {
-    var dronePayload = loadPreRetryPayloadFromAutoSlot();
-    var fallbackDrones = null;
-    var flags = ensureRuntimeFlagsState();
-    if (Array.isArray(flags.preRetryDronesSnapshot) && flags.preRetryDronesSnapshot.length) {
-      fallbackDrones = flags.preRetryDronesSnapshot;
+  // Defensive: restore drones from pre-retry snapshot when current set is missing or downgraded
+  var dronePayload = loadPreRetryPayloadFromAutoSlot();
+  var fallbackDrones = null;
+  var flags = ensureRuntimeFlagsState();
+  if (Array.isArray(flags.preRetryDronesSnapshot) && flags.preRetryDronesSnapshot.length) {
+    fallbackDrones = flags.preRetryDronesSnapshot;
+  }
+  var dronesToRestore = (dronePayload && Array.isArray(dronePayload.drones) && dronePayload.drones.length)
+    ? dronePayload.drones
+    : fallbackDrones;
+  if (Array.isArray(dronesToRestore) && dronesToRestore.length) {
+    function droneSnapshotScore(list) {
+      if (!Array.isArray(list) || !list.length) return { count: 0, levelSum: 0 };
+      var count = 0;
+      var levelSum = 0;
+      for (var i = 0; i < list.length; i++) {
+        var drone = list[i];
+        if (!drone || typeof drone !== 'object') continue;
+        count += 1;
+        levelSum += Number.isFinite(drone.level) ? Math.max(1, Math.floor(drone.level)) : 1;
+      }
+      return { count: count, levelSum: levelSum };
     }
-    var dronesToRestore = (dronePayload && Array.isArray(dronePayload.drones) && dronePayload.drones.length)
-      ? dronePayload.drones
-      : fallbackDrones;
-    if (Array.isArray(dronesToRestore) && dronesToRestore.length) {
+
+    var currentScore = droneSnapshotScore(state.drones);
+    var backupScore = droneSnapshotScore(dronesToRestore);
+    var shouldRestore = currentScore.count < backupScore.count || currentScore.levelSum < backupScore.levelSum;
+
+    if (shouldRestore) {
       if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
         DronesApi.restoreSavedDrones(state, dronesToRestore);
       } else {
@@ -7639,7 +7689,11 @@ function performCriticalRestart(){
 }
 
 function buildCriticalSavePayload(){
-  return buildPreRetryPayload(state);
+  var payload = buildPreRetryPayload(state);
+  if (payload && typeof payload === 'object') {
+    payload.forceFenceRuntimeResetOnLoad = true;
+  }
+  return payload;
 }
 
 function buildSmallMenuSavePayload(slotIndex, saveView){

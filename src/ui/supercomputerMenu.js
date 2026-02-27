@@ -529,7 +529,9 @@
       var cy = Math.round(iconH * 0.5);
       ctx.save();
       ctx.translate(cx, cy);
-      ctx.rotate(WEAPON_ICON_ROT_DEG * Math.PI / 180);
+      var rotDegAttr = node.getAttribute('data-rot-deg');
+      var rotDeg = rotDegAttr !== null && Number.isFinite(Number(rotDegAttr)) ? Number(rotDegAttr) : WEAPON_ICON_ROT_DEG;
+      if (rotDeg !== 0) ctx.rotate(rotDeg * Math.PI / 180);
       ctx.drawImage(img, spriteX, Math.floor(baseY), frameW, frameH, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
       ctx.restore();
     }
@@ -817,6 +819,7 @@
                 ' data-frame-y="' + String(frameY) + '"' +
                 ' data-frame-w="' + String(frameW) + '"' +
                 ' data-frame-h="' + String(frameH) + '"' +
+                ' data-rot-deg="-90"' +
               '></canvas>' +
             '</span>';
         } else {
@@ -952,17 +955,19 @@
       var reservedPoints = getReservedDronDamagePoints();
       var dronCfg = getDronRuntimeConfig();
       var dronAnimations = dronCfg && dronCfg.animations && typeof dronCfg.animations === 'object' ? dronCfg.animations : {};
-      var idleAnim = dronAnimations.idle && typeof dronAnimations.idle === 'object' ? dronAnimations.idle : null;
+      var repairAnim = dronAnimations.repair && typeof dronAnimations.repair === 'object'
+        ? dronAnimations.repair
+        : (dronAnimations.idle && typeof dronAnimations.idle === 'object' ? dronAnimations.idle : null);
       var atlasImg = global.DronSprites && global.DronSprites.atlasImg ? global.DronSprites.atlasImg : null;
       var atlasSrc = atlasImg && (atlasImg.currentSrc || atlasImg.src)
         ? (atlasImg.currentSrc || atlasImg.src)
         : ('assets/' + (dronCfg.atlas || dronCfg.png || 'dron_atlas.png'));
-      var frameX = Number.isFinite(idleAnim && idleAnim.x) ? Math.floor(idleAnim.x) : 0;
-      var frameY = Number.isFinite(idleAnim && idleAnim.y) ? Math.floor(idleAnim.y) : 0;
-      var frameW = Number.isFinite(idleAnim && idleAnim.w) && idleAnim.w > 0 ? Math.floor(idleAnim.w) : 96;
-      var frameH = Number.isFinite(idleAnim && idleAnim.h) && idleAnim.h > 0 ? Math.floor(idleAnim.h) : 96;
-      var animFrames = Number.isFinite(idleAnim && idleAnim.frames) && idleAnim.frames > 0 ? Math.floor(idleAnim.frames) : 1;
-      var animFps = Number.isFinite(idleAnim && idleAnim.frameRateFps) && idleAnim.frameRateFps > 0 ? Number(idleAnim.frameRateFps) : 10;
+      var frameX = Number.isFinite(repairAnim && repairAnim.x) ? Math.floor(repairAnim.x) : 0;
+      var frameY = Number.isFinite(repairAnim && repairAnim.y) ? Math.floor(repairAnim.y) : 0;
+      var frameW = Number.isFinite(repairAnim && repairAnim.w) && repairAnim.w > 0 ? Math.floor(repairAnim.w) : 96;
+      var frameH = Number.isFinite(repairAnim && repairAnim.h) && repairAnim.h > 0 ? Math.floor(repairAnim.h) : 96;
+      var animFrames = Number.isFinite(repairAnim && repairAnim.frames) && repairAnim.frames > 0 ? Math.floor(repairAnim.frames) : 1;
+      var animFps = Number.isFinite(repairAnim && repairAnim.frameRateFps) && repairAnim.frameRateFps > 0 ? Number(repairAnim.frameRateFps) : 10;
 
       for (var i = 0; i < levelsCount; i++) {
         var level = i + 1;
@@ -992,6 +997,7 @@
               ' data-frame-y="' + String(frameY) + '"' +
               ' data-frame-w="' + String(frameW) + '"' +
               ' data-frame-h="' + String(frameH) + '"' +
+              ' data-rot-deg="0"' +
             '></canvas>' +
           '</span>';
 
@@ -1226,6 +1232,7 @@
                 ' data-frame-y="' + String(frameY) + '"' +
                 ' data-frame-w="' + String(frameW) + '"' +
                 ' data-frame-h="' + String(frameH) + '"' +
+                ' data-rot-deg="0"' +
               '></canvas>' +
             '</span>';
         } else {

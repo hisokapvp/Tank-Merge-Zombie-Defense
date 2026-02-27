@@ -53,11 +53,12 @@
 
 8) Защита дронов при restart/retry
 - `buildPreRetryPayload()`: перед retry проверяется, что массив дронов сохранён в payload даже после `applyPreRetryRuntimeReset`.
-- `applyCriticalRestartPostLoad()`: при critical restart проверяется восстановление массива дронов из snapshot.
+- `applyCriticalRestartPostLoad()`: при critical restart выполняется восстановление из pre-retry snapshot не только при пустом массиве, но и при деградации состава дронов (меньше количество/сумма уровней).
 
 9) Critical save & exit
 - При `HP supercomputer <= 5%` и выборе `Сохранить прогресс и выйти` сохраняется не «текущий аварийный runtime», а нормализованный pre-retry payload:
   - `fenceLevel` сброшен в `1`,
+  - в payload проставляется флаг принудительного fence runtime reset при загрузке (`forceFenceRuntimeResetOnLoad`),
   - `supercomputer.hp` восстановлен до `maxHp`,
   - runtime-объекты очищены,
   - стартовый `lvl1` танк присутствует в payload.

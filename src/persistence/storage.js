@@ -473,6 +473,7 @@
       stats: stats,
       mapSeeds: mapSeeds,
       drones: drones,
+      forceFenceRuntimeResetOnLoad: !!state.forceFenceRuntimeResetOnLoad,
     };
   }
 

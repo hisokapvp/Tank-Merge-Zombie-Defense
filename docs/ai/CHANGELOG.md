@@ -1,5 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-02-27
+- **Баг-фикс**: `normalizeAndTeleportDronesAfterRestore()` (~L1968) — при вызове `DronesApi.restoreSavedDrones(state, state.drones)` передавалась та же ссылка на массив; `restoreSavedDrones` обнулял `state.drones.length = 0` до итерации, что уничтожало входные данные. Исправлено клонированием массива перед передачей. Дроны и их прокачка теперь сохраняются при «Перезапустить симуляцию».
+- **Баг-фикс**: `serializeState()` (storage.js ~L476) — поле `forceFenceRuntimeResetOnLoad` терялось при сериализации save-слота; при загрузке «Сохранить и выйти»-сейва fence уровень не сбрасывался. Добавлено сохранение флага в `serializeState`.
+- **Баг-фикс**: Breached zombie movement (~L6023) — зомби, прошедшие через сломанные нижние углы забора, шли по целым секциям. Добавлена проверка `pickFenceSegmentByPoint` после перемещения breached-зомби: если зомби на целом сегменте, `z.r` уменьшается до внутреннего края забора.
+- **Фикс UI**: `drawGunsSpriteCanvas()` (supercomputerMenu.js) — введён атрибут `data-rot-deg` на canvas-элементах. Оружия сохраняют поворот −90°; дроны и стены рисуются без поворота (0°). Дроны корректно воспроизводят repair-анимацию (16 кадров @ 15 fps).
+- Тесты: 79 passed, 3 failed (pre-existing T5 settings CSS).
+
 ## 2026-02-26
 - **Редизайн UI (Wasteland Edition)**: Полное обновление интерфейса в стиле Fallout 1 & 2.
   - Основной шрифт заменён на `Courier New` с эффектом фосфорного свечения (`text-shadow`).

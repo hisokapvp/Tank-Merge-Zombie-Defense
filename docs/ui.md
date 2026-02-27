@@ -33,7 +33,7 @@
 - В `modsTankWall` добавлена вкладка `Дроны` после `Орудия`.
 - Таблица следует тому же паттерну, что `Орудия`/`Стены`: sprite-колонка, уровни, статы, `+/-`, `Apply`.
 - Статы по уровням берутся из `assets/dron.json` (`levels[level].moveSpeedPxSec`, `repairSpeedMult`).
-- Иконки дронов в строках используют idle-анимацию из `assets/dron.json -> animations.idle`.
+- Иконки дронов в строках используют repair-анимацию из `assets/dron.json -> animations.repair` (fallback: `animations.idle`, если `repair` отсутствует).
 
 ## Wasteland UI (Fallout Style)
 
