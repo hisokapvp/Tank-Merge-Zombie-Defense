@@ -62,6 +62,7 @@
     var debugSetTotalMerges = opts.debugSetTotalMerges;
     var debugAdjustTalentPoints = opts.debugAdjustTalentPoints;
     var debugAdjustDamagePoints = opts.debugAdjustDamagePoints;
+    var getWaveInfo = typeof opts.getWaveInfo === 'function' ? opts.getWaveInfo : null;
     var updateUI = opts.updateUI;
 
     main.classList.add('debugLayout');
@@ -76,7 +77,7 @@
       { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
     ];
 
-    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
+    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
 
     var tankLevelSelect = panel.querySelector('#debugTankLevel');
     for (var l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) {
@@ -102,6 +103,7 @@
         if (tab === 'tanks') { refreshDebugHangarList(); refreshDebugTankExtras(); }
         if (tab === 'effects') refreshDebugEffectList();
         if (tab === 'updates') refreshDebugUpdatesSection();
+        if (tab === 'waveInfo') refreshDebugWaveInfo();
         if (tab === 'logs') refreshDebugAchievementsTools();
       });
     });
@@ -229,6 +231,31 @@
       if (talentValueEl) talentValueEl.textContent = 'Current talent points: ' + getCurrentTalentPointsForDebug();
       var damageValueEl = panel.querySelector('#debugDamagePointsValue');
       if (damageValueEl) damageValueEl.textContent = 'Current damage points: ' + getCurrentDamagePointsForDebug();
+    }
+
+    function formatWaveSec(value) {
+      var n = Number(value);
+      if (!Number.isFinite(n) || n <= 0) return '0.0s';
+      return (Math.round(n * 10) / 10).toFixed(1) + 's';
+    }
+
+    function refreshDebugWaveInfo() {
+      var table = panel.querySelector('#debugWaveInfoTable');
+      if (!table) return;
+      var info = getWaveInfo ? getWaveInfo() : null;
+      if (!info || typeof info !== 'object') {
+        table.textContent = 'Wave info unavailable.';
+        return;
+      }
+      table.innerHTML = [
+        '<div><strong>Wave:</strong> ' + Math.max(0, Math.floor(Number(info.waveNumber) || 0)) + '</div>',
+        '<div><strong>Safe waves:</strong> ' + Math.max(0, Math.floor(Number(info.safeWaves) || 0)) + '</div>',
+        '<div><strong>Attack active:</strong> ' + (info.attackActive ? 'yes' : 'no') + '</div>',
+        '<div><strong>Next attack in:</strong> ' + formatWaveSec(info.nextAttackInSec) + '</div>',
+        '<div><strong>Attack ends in:</strong> ' + formatWaveSec(info.attackEndsInSec) + '</div>',
+        '<div><strong>Zombie atk mult:</strong> ' + (Math.round((Number(info.zombieWaveAtkMult) || 0) * 1000) / 1000) + '</div>',
+        '<div><strong>Zombies alive:</strong> ' + Math.max(0, Math.floor(Number(info.zombiesAlive) || 0)) + '</div>',
+      ].join('');
     }
 
     var addTalentPointsBtn = panel.querySelector('#debugAddTalentPointsApply');
@@ -529,11 +556,13 @@
     state.debug.refreshHangarList = refreshDebugHangarList;
     state.debug.refreshTankExtras = refreshDebugTankExtras;
     state.debug.refreshUpdates = refreshDebugUpdatesSection;
+    state.debug.refreshZombieCounts = refreshDebugWaveInfo;
 
     main.insertBefore(panel, main.firstChild);
     refreshDebugHangarList();
     refreshDebugEffectList();
     refreshDebugUpdatesSection();
+    refreshDebugWaveInfo();
 
     if (global.Game && global.Game.Telemetry) {
       var telMount = panel.querySelector('#debugTelemetryMount');

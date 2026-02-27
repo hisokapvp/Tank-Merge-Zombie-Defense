@@ -3734,7 +3734,7 @@
       out.push({ type: 'zombie', zombie: zombie, icons: zCandidates.length });
     }
 
-    if (DEV_MODE) {
+    if (DEV_MODE && dbgCfg.dumpEnabled) {
       drawDebugOverlay(ctx, nowMs, mods);
     }
 

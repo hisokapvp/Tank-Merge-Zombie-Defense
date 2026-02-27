@@ -506,6 +506,7 @@ function ensureRuntimeFlagsState(){
   state.flags.preRetryAutosavedThisCritical = !!state.flags.preRetryAutosavedThisCritical;
   state.flags.wasCritical = !!state.flags.wasCritical;
   state.flags.preRetrySaveFailed = !!state.flags.preRetrySaveFailed;
+  if (!Array.isArray(state.flags.preRetryDronesSnapshot)) state.flags.preRetryDronesSnapshot = [];
   return state.flags;
 }
 
@@ -514,6 +515,7 @@ function resetCriticalEntryRuntimeFlags(){
   flags.preRetryAutosavedThisCritical = false;
   flags.wasCritical = false;
   flags.preRetrySaveFailed = false;
+  flags.preRetryDronesSnapshot = [];
 }
 
 function ensurePlayerDamagePointsState(){
@@ -3941,8 +3943,12 @@ function useActiveAbility(branch){
       updateUI();
       return;
     }
-    playSfx('activeAbility');
-    burst(center.x, center.y, 60, 'rgba(255,215,125,.22)');
+    const untilSec = Number.isFinite(result.untilMs) ? (result.untilMs / 1000) : 0;
+    if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
+      if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
+      else if (branch === 1) state.activeEffects.speedUntil = Math.max(state.activeEffects.speedUntil || 0, untilSec);
+      else if (branch === 2) state.activeEffects.economyUntil = Math.max(state.activeEffects.economyUntil || 0, untilSec);
+    }
     updateUI();
     return;
   }
@@ -3952,17 +3958,13 @@ function useActiveAbility(branch){
   const mods = getMods();
   const baseCooldown = 30;
   p.activeCooldowns[branch] = now + baseCooldown * mods.activeCooldownMul;
-  playSfx('activeAbility');
 
   if (branch === 0){
     activateTimedBoost('attackBoost', ACTIVE_ABILITY_DURATION_SEC);
-    burst(center.x, center.y, 60, 'rgba(255,120,90,.2)');
   } else if (branch === 1){
     activateTimedBoost('defenseBoost', ACTIVE_ABILITY_DURATION_SEC);
-    burst(center.x, center.y, 60, 'rgba(125,255,178,.22)');
   } else if (branch === 2){
     activateTimedBoost('economyBoost', ACTIVE_ABILITY_DURATION_SEC);
-    burst(center.x, center.y, 60, 'rgba(255,215,125,.22)');
   }
   saveProgress();
 }
@@ -5339,7 +5341,7 @@ function getActiveBreachAtPoint(sideKey, x, y, padding){
     for (let k = 0; k < sideList.length; k++) {
       const breach = sideList[k];
       if (!breach || !breach.holeAabb) continue;
-      if (pointInAabb(x, y, breach.holeAabb, pad)) return breach;
+      if (pointInAabb(x, y, breach.holeAabb, 0)) return breach;
     }
   }
   return null;
@@ -5756,8 +5758,9 @@ function zombieFenceLimit(z){
     // Current segment is broken — allow passage
     if (seg && seg.broken) return getFenceInnerLimit(z);
     // Zombie is deep inside (past the fence) — don't push back out
-    const deepThreshold = outerLimit - BAL.fenceWidth * 10;
-    if (z.r < deepThreshold) return getFenceInnerLimit(z);
+    const innerLimit = getFenceInnerLimit(z);
+    const deepThreshold = innerLimit + Math.max(2, BAL.fenceWidth * 0.2);
+    if (z.r <= deepThreshold) return innerLimit;
     // Zombie is at an intact segment near fence edge — reset breach status
     z.breached = false;
     z.breachSegmentId = null;
@@ -7367,6 +7370,7 @@ function savePreRetryPayloadToAutoSlot(){
   var flags = ensureRuntimeFlagsState();
   if (flags.preRetryAutosavedThisCritical) return;
   flags.preRetryAutosavedThisCritical = true;
+  flags.preRetryDronesSnapshot = Array.isArray(state.drones) ? cloneJsonSafe(state.drones, []) : [];
 
   var storageApi = window.Game && window.Game.Storage;
   if (!storageApi || typeof storageApi.saveSlot !== 'function') {
@@ -7517,11 +7521,19 @@ function applyCriticalRestartPostLoad(){
   // Defensive: ensure drones are present after critical restart load
   if (!Array.isArray(state.drones) || !state.drones.length) {
     var dronePayload = loadPreRetryPayloadFromAutoSlot();
-    if (dronePayload && Array.isArray(dronePayload.drones) && dronePayload.drones.length) {
+    var fallbackDrones = null;
+    var flags = ensureRuntimeFlagsState();
+    if (Array.isArray(flags.preRetryDronesSnapshot) && flags.preRetryDronesSnapshot.length) {
+      fallbackDrones = flags.preRetryDronesSnapshot;
+    }
+    var dronesToRestore = (dronePayload && Array.isArray(dronePayload.drones) && dronePayload.drones.length)
+      ? dronePayload.drones
+      : fallbackDrones;
+    if (Array.isArray(dronesToRestore) && dronesToRestore.length) {
       if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
-        DronesApi.restoreSavedDrones(state, dronePayload.drones);
+        DronesApi.restoreSavedDrones(state, dronesToRestore);
       } else {
-        state.drones = dronePayload.drones;
+        state.drones = cloneJsonSafe(dronesToRestore, []);
       }
       normalizeAndTeleportDronesAfterRestore(state);
     }
@@ -7582,6 +7594,9 @@ function openCriticalModal(){
 function resetGameState(options){
   const opts = options || {};
   const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';
+  const preservedDrones = reason !== 'new_game' && Array.isArray(state.drones) && state.drones.length
+    ? cloneJsonSafe(state.drones, [])
+    : [];
   const wasCollapsed = state.debug?.collapsed;
   stopTrackLoopSfxImmediate();
   silenceAllTanksTrackSfx(reason === 'reset' ? 'reset' : 'restore');
@@ -7592,6 +7607,14 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  if (reason !== 'new_game' && preservedDrones.length) {
+    if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
+      DronesApi.restoreSavedDrones(state, preservedDrones);
+    } else {
+      state.drones = cloneJsonSafe(preservedDrones, []);
+    }
+    normalizeAndTeleportDronesAfterRestore(state);
+  }
   supercomputerHudRuntime.button.lastVisible = false;
   supercomputerHudRuntime.button.lastTransform = '';
   if (ui.supercomputerBtn) ui.supercomputerBtn.style.visibility = 'hidden';
@@ -11455,6 +11478,29 @@ function safeDebug(fn, fallbackMsg){
 }
 
 function initDebugPanel(){
+  const getWaveInfo = function () {
+    const now = nowSec();
+    const attackCfg = getWorldEventsAttackCfg();
+    const attackActive = isZombieAttackModeActive();
+    const waveNumber = Number.isFinite(worldEventsState.waveNumber) ? Math.max(0, Math.floor(worldEventsState.waveNumber)) : 0;
+    const safeWaves = Number.isFinite(attackCfg.safeWaves) ? Math.max(0, Math.floor(attackCfg.safeWaves)) : 0;
+    return {
+      waveNumber,
+      safeWaves,
+      attackActive: !!attackActive,
+      nextAttackInSec: !attackActive && Number.isFinite(worldEventsState.attackStartAt)
+        ? Math.max(0, worldEventsState.attackStartAt - now)
+        : 0,
+      attackEndsInSec: attackActive && Number.isFinite(worldEventsState.attackEndAt)
+        ? Math.max(0, worldEventsState.attackEndAt - now)
+        : 0,
+      zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
+      zombiesAlive: Array.isArray(state.zombies)
+        ? state.zombies.filter(function (z) { return z && z.state !== 'dying'; }).length
+        : 0,
+    };
+  };
+
   if (DebugPanelApi && typeof DebugPanelApi.initDebugPanel === 'function') {
     DebugPanelApi.initDebugPanel({
       DebugPanelEnabled,
@@ -11488,6 +11534,7 @@ function initDebugPanel(){
       debugSetTotalMerges,
       debugAdjustTalentPoints,
       debugAdjustDamagePoints,
+      getWaveInfo,
       updateUI,
       debugLog,
       debugReset,
