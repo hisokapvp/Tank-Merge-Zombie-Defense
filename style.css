@@ -146,35 +146,39 @@ body::after{
 
 .terminal-panel {
   position: relative;
-  background-color: #0d140b;
-  border: 3px solid #4af626;
-  border-radius: 12px;
-  padding: 24px 20px 40px 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  border: 2px solid #4af127;
+  border-radius: 0px;
+  padding: 34px 20px 40px 20px;
   box-shadow: 
-    0 0 20px rgba(74, 246, 38, 0.15), 
-    inset 0 0 30px rgba(0, 0, 0, 0.8),
-    4px 4px 0px #1a1a1a;
+    0 0 20px rgba(0, 0, 0, 0.8),
+    inset 0 0 40px rgba(74, 246, 38, 0.05),
+    2px 2px 0px #1a1a1a;
   pointer-events: auto;
   width: 100%;
   box-sizing: border-box;
   overflow: visible;
   transition: opacity 0.3s ease, transform 0.3s ease;
-  background-image: 
-    radial-gradient(circle at 10px 10px, #111 2px, transparent 3px),
-    radial-gradient(circle at calc(100% - 10px) 10px, #111 2px, transparent 3px),
-    radial-gradient(circle at 10px calc(100% - 10px), #111 2px, transparent 3px),
-    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #111 2px, transparent 3px);
+}
+
+.terminal-panel .stageAbilitySlots {
+  margin: 10px 0 15px 0;
+  justify-content: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(74, 246, 38, 0.15);
+  border-bottom: 1px solid rgba(74, 246, 38, 0.15);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .terminal-panel::before {
   content: "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM";
   position: absolute;
-  top: -10px;
+  top: 8px;
   left: 20px;
-  background: #0d140b;
+  background: transparent;
   padding: 0 10px;
   color: #4af626;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: bold;
   letter-spacing: 1px;
 }
@@ -187,7 +191,7 @@ body::after{
   background-size: 100% 4px;
   pointer-events: none;
   z-index: 10;
-  border-radius: 9px;
+  border-radius: 4px;
 }
 
 .terminalCollapseBtn {
@@ -249,9 +253,11 @@ body::after{
 }
 
 .stageUiRight.collapsed .stageAbilitySlots {
-  flex-direction: column;
+  flex-direction: row;
   margin-top: 5px;
-  align-items: flex-end;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .supercomputerHudBtn,
@@ -1510,10 +1516,14 @@ input, select, textarea, button {
   margin-top:auto;
   font-size:clamp(12px, 1vw, 17px);
   line-height:1.2;
-  text-shadow:0 1px 2px rgba(0,0,0,.65);
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
   white-space:normal;
   overflow-wrap:anywhere;
   word-break:break-word;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+  padding: 6px 4px;
+  border-radius: 4px;
 }
 @media (max-width: 768px){
   :root{
@@ -1583,21 +1593,23 @@ input, select, textarea, button {
 }
 .settingsTooltip{
   position:fixed;
-  padding:6px 10px;
-  border-radius:8px;
-  background:rgba(20,14,10,.95);
-  border:1px solid rgba(255,184,114,.25);
-  font-size:12px;
+  padding:8px 12px;
+  border-radius:4px;
+  background:rgba(10,12,10,.95);
+  border:1px solid #4af626;
+  font-size:13px;
   font-weight:700;
-  color:var(--text);
+  color:#4af626;
   pointer-events:none;
-  z-index:100;
+  z-index:20000;
   white-space:pre-line;
   line-height:1.35;
   max-width:min(360px, 88vw);
-  text-align:left;
+  text-align:center;
   transform:translate(-50%, 0);
   margin-top:8px;
+  box-shadow: 0 0 15px rgba(74, 246, 38, 0.3), 4px 4px 0 rgba(0,0,0,0.8);
+  text-transform: uppercase;
 }
 .settingsTooltip.hidden{
   display:none;
@@ -1708,33 +1720,43 @@ input, select, textarea, button {
   width:100%;
 }
 .talentBranch{
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(0,0,0,.25);
-  padding:12px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+  position: relative;
+  border-radius: 0;
+  border: 2px solid #4af626;
+  background: rgba(13, 17, 13, 0.85);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: inset 0 0 20px rgba(74, 246, 38, 0.05);
 }
 .talentBranchHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding-bottom:6px;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(74, 246, 38, 0.3);
 }
 .talentBranchTitle{
-  font-weight:800;
-  font-size:14px;
-  color:var(--accent2);
+  font-weight: 800;
+  font-size: 20px;
+  color: #4af626;
+  text-align: center;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 .talentBranchPoints{
-  font-weight:700;
-  font-size:12px;
-  color:var(--accent);
-  background:rgba(255,184,114,.15);
-  padding:2px 8px;
-  border-radius:8px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #4af626;
+  background: rgba(74, 246, 38, 0.2);
+  padding: 2px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(74, 246, 38, 0.4);
 }
 
 /* Tree container with SVG overlay */
@@ -2053,7 +2075,7 @@ input, select, textarea, button {
 .scTab{
   margin-bottom:-1px;
   border-bottom:1px solid rgba(255,255,255,.22);
-  border-radius:12px 12px 0 0;
+  border-radius:0;
   background:linear-gradient(180deg, rgba(48,32,23,.9), rgba(20,13,10,.92));
   box-shadow:none !important;
   filter:none;
@@ -2075,15 +2097,18 @@ input, select, textarea, button {
   background:linear-gradient(180deg, rgba(53,36,26,.95), rgba(24,16,12,.95));
 }
 .scTab[aria-selected='true']{
-  border-bottom-color:transparent;
-  background:linear-gradient(180deg, rgba(29,46,76,.95), rgba(17,30,55,.95));
+  border: 1px solid #4af626 !important;
+  border-bottom-color: transparent !important;
+  background: linear-gradient(180deg, #1e2e1e 0%, #0d110d 100%) !important;
+  box-shadow: 0 0 15px rgba(74, 246, 38, 0.2) !important;
+  color: #4af626 !important;
 }
 .scTabPanels{
   flex:1;
   min-height:0;
   overflow:visible;
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:12px;
+  border:1px solid rgba(74, 246, 38, 0.3);
+  border-radius:0;
   padding:12px;
   background:rgba(0,0,0,.18);
 }

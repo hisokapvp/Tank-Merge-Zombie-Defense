@@ -98,8 +98,11 @@ const ui = {
   dismantleConfirmText: document.getElementById('dismantleConfirmText'),
   dismantleYes: document.getElementById('dismantleYes'),
   dismantleNo: document.getElementById('dismantleNo'),
+  terminalPanel: document.getElementById('terminalPanel'),
   terminalCollapseBtn: document.getElementById('terminalCollapseBtn'),
   terminalExpandBtn: document.getElementById('terminalExpandBtn'),
+  stageAbilitySlots: document.getElementById('stageAbilitySlots'),
+  xpWrap: document.getElementById('xpWrap'),
   stageUiRight: document.querySelector('.stageUiRight'),
 };
 
@@ -9197,9 +9200,15 @@ ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
 ui.autoMergeBtn?.addEventListener('click', ()=> runAutoMergeClick());
 ui.terminalCollapseBtn?.addEventListener('click', () => {
   ui.stageUiRight?.classList.add('collapsed');
+  if (ui.stageAbilitySlots && ui.terminalExpandBtn) {
+    ui.terminalExpandBtn.after(ui.stageAbilitySlots);
+  }
 });
 ui.terminalExpandBtn?.addEventListener('click', () => {
   ui.stageUiRight?.classList.remove('collapsed');
+  if (ui.stageAbilitySlots && ui.xpWrap) {
+    ui.xpWrap.after(ui.stageAbilitySlots);
+  }
 });
 ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());
 ui.achievementsClose?.addEventListener('click', () => closeAchievementsModal());
