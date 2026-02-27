@@ -1,6 +1,8 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-02-27
+- **Баг-фикс**: ранняя инициализация `game.js` — `ensureDronUpgradesAppliedState()` переведён в fail-soft режим при раннем вызове (fallback по длине уже сохранённого массива/`MAX_TANK_LEVEL`, если `getDronLevelsCount()` ещё недоступен), что предотвращает падение загрузки скрипта.
+- **Баг-фикс**: безопасное чтение конфига дронов — доступ к `DronSprites.config` обёрнут в `try/catch` и дополнен fallback на `spriteLoaders.DronSprites.config`; устранён runtime-crash и восстановлена штатная инициализация обработчиков большого меню.
 - **Баг-фикс**: `normalizeAndTeleportDronesAfterRestore()` (~L1968) — при вызове `DronesApi.restoreSavedDrones(state, state.drones)` передавалась та же ссылка на массив; `restoreSavedDrones` обнулял `state.drones.length = 0` до итерации, что уничтожало входные данные. Исправлено клонированием массива перед передачей. Дроны и их прокачка теперь сохраняются при «Перезапустить симуляцию».
 - **Баг-фикс**: `serializeState()` (storage.js ~L476) — поле `forceFenceRuntimeResetOnLoad` терялось при сериализации save-слота; при загрузке «Сохранить и выйти»-сейва fence уровень не сбрасывался. Добавлено сохранение флага в `serializeState`.
 - **Баг-фикс**: Breached zombie movement (~L6023) — зомби, прошедшие через сломанные нижние углы забора, шли по целым секциям. Добавлена проверка `pickFenceSegmentByPoint` после перемещения breached-зомби: если зомби на целом сегменте, `z.r` уменьшается до внутреннего края забора.

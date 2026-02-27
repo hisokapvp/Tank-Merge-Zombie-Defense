@@ -181,6 +181,11 @@ function normalizeAppliedFenceUpgrade(value){
   return Math.max(0, Math.floor(value));
 }
 
+function normalizeAppliedDronUpgrade(value){
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(value));
+}
+
 function ensureFenceUpgradesAppliedState(){
   if (!state.player || typeof state.player !== 'object') state.player = {};
   var source = Array.isArray(state.player.fenceUpgradesApplied) ? state.player.fenceUpgradesApplied : [];
@@ -193,6 +198,46 @@ function ensureFenceUpgradesAppliedState(){
   }
   state.player.fenceUpgradesApplied = source;
   return source;
+}
+
+function ensureDronUpgradesAppliedState(){
+  if (!state.player || typeof state.player !== 'object') state.player = {};
+  var levelsCount = MAX_TANK_LEVEL;
+  try {
+    levelsCount = getDronLevelsCount();
+  } catch (e) {
+    var existing = Array.isArray(state.player.dronUpgradesApplied) ? state.player.dronUpgradesApplied.length : 0;
+    levelsCount = existing > 0 ? Math.min(MAX_TANK_LEVEL, existing) : MAX_TANK_LEVEL;
+  }
+  var source = Array.isArray(state.player.dronUpgradesApplied) ? state.player.dronUpgradesApplied : [];
+  if (source.length !== levelsCount) {
+    state.player.dronUpgradesApplied = Array(levelsCount).fill(0);
+    for (var i = 0; i < Math.min(source.length, levelsCount); i++) {
+      state.player.dronUpgradesApplied[i] = normalizeAppliedDronUpgrade(source[i]);
+    }
+    return state.player.dronUpgradesApplied;
+  }
+  state.player.dronUpgradesApplied = source;
+  return source;
+}
+
+function normalizeStoredUntilSec(value){
+  if (!Number.isFinite(value)) return 0;
+  var safe = Number(value);
+  if (safe <= 0) return 0;
+  return safe > 1e11 ? (safe / 1000) : safe;
+}
+
+function normalizeActiveEffectsTimestamps(){
+  if (!state || typeof state !== 'object') return;
+  state.boostUntil = normalizeStoredUntilSec(state.boostUntil);
+  if (!state.activeEffects || typeof state.activeEffects !== 'object') {
+    state.activeEffects = { attackUntil: 0, speedUntil: 0, economyUntil: 0 };
+    return;
+  }
+  state.activeEffects.attackUntil = normalizeStoredUntilSec(state.activeEffects.attackUntil);
+  state.activeEffects.speedUntil = normalizeStoredUntilSec(state.activeEffects.speedUntil);
+  state.activeEffects.economyUntil = normalizeStoredUntilSec(state.activeEffects.economyUntil);
 }
 
 function getAppliedFenceUpgradeLevel(level){
@@ -436,6 +481,7 @@ function createInitialState(options){
         player: { talentPoints: 0, damagePoints: 0, talentsApplied: [],
           talentsPending: [], activeCooldowns: [0,0,0],
           cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
+          dronUpgradesApplied: Array(MAX_TANK_LEVEL).fill(0),
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
         endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
@@ -478,6 +524,7 @@ function createInitialState(options){
 let state = createInitialState();
 let meta = { lastSeenAt: null };
 ensureCannonUpgradesAppliedState();
+ensureDronUpgradesAppliedState();
 
 function normalizeTotalDamageDealtRaw(value){
   if (!Number.isFinite(value)) return 0;
@@ -588,6 +635,38 @@ function getCannonUpgradeIconFps(level){
     return Number(perLevel[idx]);
   }
   return 8;
+}
+
+function getDronUpgradeIconFrames(level){
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const perLevel = Array.isArray(layoutTuning.droneIconAnimFramesByLevel)
+    ? layoutTuning.droneIconAnimFramesByLevel
+    : null;
+  const idx = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) - 1 : 0;
+  if (perLevel && Number.isFinite(perLevel[idx]) && perLevel[idx] >= 1) {
+    return Math.floor(perLevel[idx]);
+  }
+  const cfg = getDronRuntimeConfig();
+  const fly = cfg && cfg.animations && cfg.animations.fly ? cfg.animations.fly : null;
+  const frames = Number(fly && fly.frames);
+  if (!Number.isFinite(frames) || frames < 1) return 1;
+  return Math.floor(frames);
+}
+
+function getDronUpgradeIconFps(level){
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const perLevel = Array.isArray(layoutTuning.droneIconAnimFpsByLevel)
+    ? layoutTuning.droneIconAnimFpsByLevel
+    : null;
+  const idx = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) - 1 : 0;
+  if (perLevel && Number.isFinite(perLevel[idx]) && perLevel[idx] > 0) {
+    return Number(perLevel[idx]);
+  }
+  const cfg = getDronRuntimeConfig();
+  const fly = cfg && cfg.animations && cfg.animations.fly ? cfg.animations.fly : null;
+  const fps = Number(fly && fly.frameRateFps);
+  if (!Number.isFinite(fps) || fps <= 0) return 10;
+  return fps;
 }
 
 function getCannonUpgradeTotalCost(level, pendingCount){
@@ -1798,7 +1877,7 @@ const BoostIconsSprites = spriteLoaders && spriteLoaders.BoostIconsSprites ? spr
   getBoost() { return null; },
 };
 
-const DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.DronSprites : {
+var DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.DronSprites : {
   ready: false,
   error: 'SpriteLoaders module is unavailable',
   atlasImg: null,
@@ -1831,7 +1910,12 @@ const BulletSprites = spriteLoaders && spriteLoaders.BulletSprites ? spriteLoade
 };
 
 function getDronConfig(){
-  return DronSprites && DronSprites.config ? DronSprites.config : null;
+  try {
+    if (DronSprites && DronSprites.config) return DronSprites.config;
+  } catch (e) {}
+  return spriteLoaders && spriteLoaders.DronSprites && spriteLoaders.DronSprites.config
+    ? spriteLoaders.DronSprites.config
+    : null;
 }
 
 function getFenceRepairCostCoins(){
@@ -1841,9 +1925,30 @@ function getFenceRepairCostCoins(){
 
 function getDronRuntimeConfig(){
   const cfg = getDronConfig() || {};
+  const sourceLevels = cfg.levels && typeof cfg.levels === 'object' ? cfg.levels : {};
+  const maxLevel = Number.isFinite(cfg.maxLevel) ? Math.max(1, Math.floor(cfg.maxLevel)) : 1;
+  const levels = {};
+  for (let lvl = 1; lvl <= maxLevel; lvl++) {
+    const baseStats = getDronStatsForLevel(lvl, 0);
+    const appliedStats = getDronStatsForLevel(lvl);
+    levels[lvl] = {
+      moveSpeedPxSec: Number.isFinite(appliedStats.moveSpeedPxSec) ? Math.max(0, appliedStats.moveSpeedPxSec) : Math.max(0, baseStats.moveSpeedPxSec),
+      repairSpeedMult: Number.isFinite(appliedStats.repairSpeedMult) ? Math.max(0, appliedStats.repairSpeedMult) : Math.max(0, baseStats.repairSpeedMult),
+      costMult: Number.isFinite(appliedStats.costMult) ? Math.max(0.01, appliedStats.costMult) : Math.max(0.01, baseStats.costMult),
+    };
+  }
+  if (!Object.keys(levels).length && sourceLevels && typeof sourceLevels === 'object') {
+    const keys = Object.keys(sourceLevels);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const parsed = Number(key);
+      if (!Number.isFinite(parsed)) continue;
+      levels[String(Math.max(1, Math.floor(parsed)))] = sourceLevels[key];
+    }
+  }
   return {
-    levels: cfg.levels && typeof cfg.levels === 'object' ? cfg.levels : {},
-    maxLevel: Number.isFinite(cfg.maxLevel) ? Math.max(1, Math.floor(cfg.maxLevel)) : 1,
+    levels: levels,
+    maxLevel: maxLevel,
     baseRepairSec: Number.isFinite(cfg.baseRepairSec) ? Math.max(0.01, cfg.baseRepairSec) : 5,
     iconSize: {
       w: Number.isFinite(cfg.iconSize && cfg.iconSize.w) ? Math.max(8, cfg.iconSize.w) : 20,
@@ -2642,41 +2747,74 @@ function addDron(level){
 }
 
 function getDronLevelsCount(){
-  const cfg = getDronRuntimeConfig();
+  const cfg = getDronConfig() || {};
   const maxLevel = Number.isFinite(cfg && cfg.maxLevel) ? Math.max(1, Math.floor(cfg.maxLevel)) : 1;
   return Math.max(1, Math.min(MAX_TANK_LEVEL, maxLevel));
 }
 
 function getAppliedDronUpgradeLevel(level){
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
-  if (!Array.isArray(state.drones) || !state.drones.length) return 0;
-  let count = 0;
-  for (let i = 0; i < state.drones.length; i++) {
-    const drone = state.drones[i];
-    if (!drone || !Number.isFinite(drone.level)) continue;
-    if (Math.max(1, Math.floor(drone.level)) === lvl) count += 1;
-  }
-  return count;
+  const applied = ensureDronUpgradesAppliedState();
+  const idx = lvl - 1;
+  const value = normalizeAppliedDronUpgrade(applied[idx]);
+  if (applied[idx] !== value) applied[idx] = value;
+  return value;
 }
 
 function getDronUpgradeStepCost(level, appliedIndex){
   return getUpgradeStepCost(level, appliedIndex);
 }
 
-function getDronStatsForLevel(level){
-  const cfg = getDronRuntimeConfig();
+function getDronUpgradePercentsForLevel(level){
+  const row = getCannonUpgradeRow(level) || [];
+  const moveSpeedIncPer = Number.isFinite(Number(row[4])) ? Math.max(0, Number(row[4])) : 0;
+  const repairSpeedIncPer = Number.isFinite(Number(row[3])) ? Math.max(0, Number(row[3])) : 0;
+  const repairCostDecPer = Number.isFinite(Number(row[3])) ? Math.max(0, Number(row[3])) : 0;
+  return {
+    moveSpeedIncPer,
+    repairSpeedIncPer,
+    repairCostDecPer,
+  };
+}
+
+function buildDronStatsWithApplied(baseStats, level, applied){
+  const baseMove = Number.isFinite(baseStats && baseStats.moveSpeedPxSec) ? Math.max(0, Number(baseStats.moveSpeedPxSec)) : 0;
+  const baseRepair = Number.isFinite(baseStats && baseStats.repairSpeedMult) ? Math.max(0, Number(baseStats.repairSpeedMult)) : 0;
+  const baseCost = Number.isFinite(baseStats && baseStats.costMult) ? Math.max(0.01, Number(baseStats.costMult)) : 1;
+  const up = Number.isFinite(applied) ? Math.max(0, Math.floor(applied)) : 0;
+  if (up <= 0) {
+    return {
+      moveSpeedPxSec: baseMove,
+      repairSpeedMult: baseRepair,
+      costMult: baseCost,
+    };
+  }
+  const percents = getDronUpgradePercentsForLevel(level);
+  const moveSpeedPxSec = baseMove * (1 + percents.moveSpeedIncPer * up);
+  const repairSpeedMult = baseRepair * (1 + percents.repairSpeedIncPer * up);
+  const costMulRaw = baseCost * (1 - percents.repairCostDecPer * up);
+  return {
+    moveSpeedPxSec: moveSpeedPxSec,
+    repairSpeedMult: repairSpeedMult,
+    costMult: Math.max(0.01, costMulRaw),
+  };
+}
+
+function getDronStatsForLevel(level, appliedOverride){
+  const cfg = getDronConfig() || {};
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
   const raw = DronesApi && typeof DronesApi.getDroneLevelConfig === 'function'
     ? DronesApi.getDroneLevelConfig(cfg, lvl)
     : ((cfg && cfg.levels && cfg.levels[lvl]) || (cfg && cfg.levels && cfg.levels[String(lvl)]) || null);
-  const moveSpeedPxSec = Number.isFinite(raw && raw.moveSpeedPxSec) ? Math.max(0, raw.moveSpeedPxSec) : 0;
-  const repairSpeedMult = Number.isFinite(raw && raw.repairSpeedMult) ? Math.max(0, raw.repairSpeedMult) : 0;
-  const costMult = Number.isFinite(raw && raw.costMult) ? Math.max(0, raw.costMult) : 0;
-  return {
-    moveSpeedPxSec,
-    repairSpeedMult,
-    costMult,
+  const baseStats = {
+    moveSpeedPxSec: Number.isFinite(raw && raw.moveSpeedPxSec) ? Math.max(0, raw.moveSpeedPxSec) : 0,
+    repairSpeedMult: Number.isFinite(raw && raw.repairSpeedMult) ? Math.max(0, raw.repairSpeedMult) : 0,
+    costMult: Number.isFinite(raw && raw.costMult) ? Math.max(0.01, raw.costMult) : 1,
   };
+  const applied = Number.isFinite(appliedOverride)
+    ? Math.max(0, Math.floor(appliedOverride))
+    : getAppliedDronUpgradeLevel(lvl);
+  return buildDronStatsWithApplied(baseStats, lvl, applied);
 }
 
 function getDronUpgradeTotalCost(level, pendingCount){
@@ -2698,23 +2836,17 @@ function applyDronUpgrade(level, pendingCount){
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
-  let appliedCount = 0;
-  for (let i = 0; i < count; i++) {
-    const drone = addDron(lvl);
-    if (!drone) break;
-    appliedCount += 1;
-  }
-  if (appliedCount <= 0) return { ok: false, error: 'spawn_failed' };
+  const applied = ensureDronUpgradesAppliedState();
+  applied[lvl - 1] = normalizeAppliedDronUpgrade(applied[lvl - 1]) + count;
 
-  const spent = getDronUpgradeTotalCost(lvl, appliedCount);
+  const spent = totalCost;
   state.damagePointsSpent = ensureDamagePointsSpentState() + spent;
   state.player.modsDirty = true;
   updateDamagePointsUI();
   return {
     ok: true,
     totalCost: spent,
-    appliedLevel: getAppliedDronUpgradeLevel(lvl),
-    added: appliedCount,
+    appliedLevel: normalizeAppliedDronUpgrade(applied[lvl - 1]),
   };
 }
 
@@ -3580,7 +3712,21 @@ function getTalentV2BranchLabelById(branchId){
 }
 
 function getTalentV2ActiveTalentIdByBranch(branchId){
-  return TALENTS_V2_ACTIVE_ID_BY_BRANCH[branchId] || '';
+  const fallbackId = TALENTS_V2_ACTIVE_ID_BY_BRANCH[branchId] || '';
+  const api = getTalentsV2Api();
+  if (!api || typeof api.getTalentsByBranch !== 'function') return fallbackId;
+  const nodes = api.getTalentsByBranch(branchId);
+  if (!Array.isArray(nodes) || !nodes.length) return fallbackId;
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i] && nodes[i].id === fallbackId) return fallbackId;
+  }
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const node = nodes[i];
+    if (!node || typeof node.id !== 'string') continue;
+    if (node.id.indexOf('_active_') >= 0) return node.id;
+  }
+  const last = nodes[nodes.length - 1];
+  return last && typeof last.id === 'string' ? last.id : fallbackId;
 }
 
 function getTalentV2ActiveIconByBranch(branchId){
@@ -3596,6 +3742,35 @@ function getTalentV2ActiveIconByBranch(branchId){
   const ui = api.getTalentUi(talentId);
   if (!ui || typeof ui.icon !== 'string' || !ui.icon.trim()) return fallback;
   return ui.icon.trim();
+}
+
+function normalizeTalentTimerTargetMs(value, nowMs, baseDurationMs){
+  const now = Number.isFinite(nowMs) ? nowMs : Date.now();
+  let target = Number(value);
+  if (!Number.isFinite(target) || target <= 0) return 0;
+  if (target < 1e11) target *= 1000;
+  const duration = Number.isFinite(baseDurationMs) ? Math.max(0, baseDurationMs) : 0;
+  if (duration > 0) {
+    const maxReasonableTarget = now + (duration * 4);
+    if (target > maxReasonableTarget) {
+      return now + duration;
+    }
+  }
+  return target;
+}
+
+function getTalentV2ActiveIconUrlByBranch(branchId){
+  const api = getTalentsV2Api();
+  const talentId = getTalentV2ActiveTalentIdByBranch(branchId);
+  if (api && talentId && typeof api.getTalentUi === 'function') {
+    const ui = api.getTalentUi(talentId);
+    if (ui && ui.nameKey) {
+      const localizedName = t(ui.nameKey);
+      return talentIconPath(localizedName);
+    }
+  }
+  const iconKey = getTalentV2ActiveIconByBranch(branchId);
+  return `assets/ui/icons/talents/${iconKey}.png`;
 }
 
 function resolveTalentCantBuyReasonText(canResult){
@@ -4005,6 +4180,7 @@ function getFirstTrackTank(){
 
 function useActiveAbility(branch){
   if (isTalentsV2Ready()) {
+    normalizeActiveEffectsTimestamps();
     const api = getTalentsV2Api();
     if (!api) return;
     const nowMs = Date.now();
@@ -4023,7 +4199,21 @@ function useActiveAbility(branch){
       updateUI();
       return;
     }
-    const untilSec = Number.isFinite(result.untilMs) ? (result.untilMs / 1000) : 0;
+    const nowSecValue = nowMs / 1000;
+    let untilSec = 0;
+    const branchId = getTalentV2BranchIdByIndex(branch);
+    const stateAfterUse = typeof api.getActiveState === 'function'
+      ? api.getActiveState(branchId, nowMs)
+      : null;
+    const durationMs = Number(stateAfterUse && stateAfterUse.durationMs);
+    const durationSec = Number.isFinite(durationMs) && durationMs > 0
+      ? (durationMs / 1000)
+      : 0;
+    if (durationSec > 0) {
+      untilSec = nowSecValue + durationSec;
+    } else if (Number.isFinite(result.untilMs) && result.untilMs > 0) {
+      untilSec = result.untilMs > 1e11 ? (result.untilMs / 1000) : result.untilMs;
+    }
     if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
       if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
       else if (branch === 1) state.activeEffects.speedUntil = Math.max(state.activeEffects.speedUntil || 0, untilSec);
@@ -4235,6 +4425,7 @@ function saveProgress(){
       freeTalentPointsV2: Number.isFinite(p.freeTalentPointsV2) ? Math.max(0, Math.floor(p.freeTalentPointsV2)) : 0,
       activeCooldowns: p.activeCooldowns,
       cannonUpgradesApplied: ensureCannonUpgradesAppliedState(),
+      dronUpgradesApplied: ensureDronUpgradesAppliedState(),
       fenceUpgradesApplied: ensureFenceUpgradesAppliedState(),
       eventShown40: sc.eventShown40,
       eventShown50: sc.eventShown50,
@@ -4315,6 +4506,7 @@ function restoreFullState(saved){
     : 1;
   if (saved.boostUntil != null) state.boostUntil = saved.boostUntil;
   if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects };
+  normalizeActiveEffectsTimestamps();
   if (saved.achievements && typeof saved.achievements === 'object') {
     const ach = ensureAchievementsState();
     ach.unlocked = saved.achievements.unlocked && typeof saved.achievements.unlocked === 'object'
@@ -4381,6 +4573,7 @@ function restoreFullState(saved){
     };
   } else state.crate = null;
   refreshTanksPowerTier();
+  ensureDronUpgradesAppliedState();
   ensureFenceUpgradesAppliedState();
   ensureFenceTierRuntimeState(state);
   syncFenceTierWithMaxTankLevel(state, { force: true });
@@ -4455,7 +4648,9 @@ function applySavedProgress(data){
   if (Array.isArray(playerData.activeCooldowns)) state.player.activeCooldowns = playerData.activeCooldowns;
   if (Number.isFinite(playerData.damagePoints)) state.player.damagePoints = Math.max(0, Math.floor(playerData.damagePoints));
   if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
+  if (Array.isArray(playerData.dronUpgradesApplied)) state.player.dronUpgradesApplied = playerData.dronUpgradesApplied;
   ensureCannonUpgradesAppliedState();
+  ensureDronUpgradesAppliedState();
   ensureFenceUpgradesAppliedState();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(getComputerState(), SupercomputerSprites.config);
@@ -8728,11 +8923,13 @@ function updateTalentAbilitySlotsV2(container){
       ? api.getActiveState(branchId, nowMs)
       : { unlocked: false, charges: 0, chargesMax: 0, nextRechargeAtMs: 0, isActive: false };
     const rechargeMs = Number.isFinite(stateActive.rechargeMs) ? Math.max(0, stateActive.rechargeMs) : 0;
-    const nextRechargeAtMs = Number.isFinite(stateActive.nextRechargeAtMs) ? stateActive.nextRechargeAtMs : 0;
+    const nextRechargeAtMs = normalizeTalentTimerTargetMs(stateActive.nextRechargeAtMs, nowMs, rechargeMs);
+    const durationMs = Number.isFinite(stateActive.durationMs) ? Math.max(0, stateActive.durationMs) : 0;
+    const untilMs = normalizeTalentTimerTargetMs(stateActive.untilMs, nowMs, durationMs);
     const rechargeLeftMs = Math.max(0, nextRechargeAtMs - nowMs);
     const secLeft = Math.max(0, Math.ceil(rechargeLeftMs / 1000));
     const disabled = !stateActive.unlocked || stateActive.charges <= 0;
-    const iconKey = getTalentV2ActiveIconByBranch(branchId);
+    const iconUrl = getTalentV2ActiveIconUrlByBranch(branchId);
     const activeTalentId = getTalentV2ActiveTalentIdByBranch(branchId);
     const activeUi = activeTalentId && typeof api.getTalentUi === 'function' ? api.getTalentUi(activeTalentId) : null;
     const activeName = activeUi && activeUi.nameKey ? t(activeUi.nameKey) : getTalentV2BranchLabelById(branchId);
@@ -8745,8 +8942,8 @@ function updateTalentAbilitySlotsV2(container){
     titleParts.push(secLeft > 0
       ? t('talentActiveRechargeIn', { sec: secLeft })
       : t('talentActiveRechargeReady'));
-    if (stateActive.isActive && Number.isFinite(stateActive.untilMs) && stateActive.untilMs > nowMs) {
-      titleParts.push(t('talentActiveDurationLeft', { sec: Math.max(0, Math.ceil((stateActive.untilMs - nowMs) / 1000)) }));
+    if (untilMs > nowMs) {
+      titleParts.push(t('talentActiveDurationLeft', { sec: Math.max(0, Math.ceil((untilMs - nowMs) / 1000)) }));
     }
     const rechargeFill = rechargeMs > 0 && rechargeLeftMs > 0
       ? clamp(1 - (rechargeLeftMs / Math.max(1, rechargeMs)), 0, 1)
@@ -8756,9 +8953,9 @@ function updateTalentAbilitySlotsV2(container){
 
     btn.classList.toggle('talentAbilityLocked', !stateActive.unlocked);
     btn.classList.toggle('talentAbilityUnlocked', stateActive.unlocked);
-    btn.classList.toggle('pending', !!stateActive.isActive);
+    btn.classList.toggle('pending', untilMs > nowMs);
     btn.classList.add('talentAbilitySlot_v2');
-    btn.style.setProperty('--talentAbilityIcon', `url("assets/ui/icons/talents/${iconKey}.png")`);
+    btn.style.setProperty('--talentAbilityIcon', `url("${iconUrl}")`);
     btn.style.setProperty('--talentAbilityCdFill', String(rechargeFill));
     btn.style.setProperty('--talentAbilityCdColor', overlayColor);
     btn.setAttribute('data-cd-visible', secLeft > 0 ? '1' : '0');
@@ -9152,6 +9349,8 @@ function getSupercomputerMenuController(){
     getDronStatsForLevel: getDronStatsForLevel,
     getAppliedDronUpgradeLevel: getAppliedDronUpgradeLevel,
     getDronUpgradeStepCost: getDronUpgradeStepCost,
+    getDronUpgradeIconFrames: getDronUpgradeIconFrames,
+    getDronUpgradeIconFps: getDronUpgradeIconFps,
     applyDronUpgrade: applyDronUpgrade,
     getAppliedFenceUpgradeLevel: getAppliedFenceUpgradeLevel,
     applyFenceUpgrade: applyFenceUpgrade,
@@ -9787,11 +9986,11 @@ function drawSupercomputer(){
 function getBoostEffectUntil(def){
   if (!def || !def.key) return 0;
   if (def.source === 'state') {
-    return Number.isFinite(state[def.key]) ? state[def.key] : 0;
+    return normalizeStoredUntilSec(state[def.key]);
   }
   if (def.source === 'activeEffects') {
     const effects = state.activeEffects;
-    return Number.isFinite(effects && effects[def.key]) ? effects[def.key] : 0;
+    return normalizeStoredUntilSec(effects && effects[def.key]);
   }
   return 0;
 }
@@ -11517,6 +11716,7 @@ function loop(now){
   updateCenterNotification();
 
   const effDt = dt * (state.timeScale ?? 1);
+  normalizeActiveEffectsTimestamps();
   const paused = pauseManager && typeof pauseManager.isPaused === 'function'
     ? pauseManager.isPaused()
     : !!(

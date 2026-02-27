@@ -31,9 +31,11 @@
 ## Дроны (вкладка Supercomputer -> Drones)
 
 - В `modsTankWall` добавлена вкладка `Дроны` после `Орудия`.
-- Таблица следует тому же паттерну, что `Орудия`/`Стены`: sprite-колонка, уровни, статы, `+/-`, `Apply`.
+- Таблица следует тому же паттерну, что `Орудия`/`Стены`, но с порядком колонок `Ур.` слева.
 - Статы по уровням берутся из `assets/dron.json` (`levels[level].moveSpeedPxSec`, `repairSpeedMult`).
-- Иконки дронов в строках используют repair-анимацию из `assets/dron.json -> animations.repair` (fallback: `animations.idle`, если `repair` отсутствует).
+- Дополнительная колонка `Множитель стоимости ремонта` берётся из `assets/dron.json` (`levels[level].costMult`).
+- При `+/-` в строке используется preview с учётом pending-апгрейда: отображается `base / upgraded` для `moveSpeedPxSec`, `repairSpeedMult`, `costMult` (без создания «новых дронов» в UI).
+- Иконки дронов в строках используют fly-анимацию из `assets/dron.json -> animations.fly` (fallback: `animations.repair`, затем `animations.idle`).
 
 ## Wasteland UI (Fallout Style)
 

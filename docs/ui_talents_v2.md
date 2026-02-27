@@ -37,13 +37,16 @@
   - `untilMs`
   - `durationMs`
   - `isActive`
+- Временные поля `untilMs`/`nextRechargeAtMs` нормализуются к epoch в миллисекундах (защита от смешения секунд и миллисекунд в save/runtime).
+- Для индикации активной длительности в UI использовать нормализованный `untilMs`; если `untilMs` невалиден/выбивается по диапазону, допускается fallback от `durationMs` (`nowMs + durationMs`).
 - Disabled:
   - `!unlocked || charges <= 0`
 - При первом открытии активки (рост `chargesMax` с 0 до >0) слот должен получать стартовый заряд(ы) сразу, без перезапуска сессии.
 - Таймер до заряда:
   - `ceil((nextRechargeAtMs - nowMs)/1000)`
 - Stage HUD slots:
-  - иконка активки берётся из `Game.TalentsV2.getTalentUi(activeTalentId).icon` (`assets/ui/icons/talents/*.png`), а не из legacy `assets/active_*.png`.
+  - иконка активки берётся из локализованного имени таланта (`Game.TalentsV2.getTalentUi(activeTalentId).nameKey`) и маппится в `assets/Telent_icon/<name>.png`.
+  - fallback при отсутствии нового ассета: `assets/ui/icons/talents/<icon>.png`.
 
 ## 3) Active activation in battle
 

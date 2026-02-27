@@ -65,6 +65,12 @@
     var getDronUpgradeStepCost = typeof opts.getDronUpgradeStepCost === 'function'
       ? opts.getDronUpgradeStepCost
       : function (_level, _appliedIndex) { return 0; };
+    var getDronUpgradeIconFrames = typeof opts.getDronUpgradeIconFrames === 'function'
+      ? opts.getDronUpgradeIconFrames
+      : function () { return 1; };
+    var getDronUpgradeIconFps = typeof opts.getDronUpgradeIconFps === 'function'
+      ? opts.getDronUpgradeIconFps
+      : function () { return 8; };
     var applyDronUpgrade = typeof opts.applyDronUpgrade === 'function'
       ? opts.applyDronUpgrade
       : function () { return { ok: false }; };
@@ -670,8 +676,8 @@
       var tableHead = documentObj.createElement('div');
       tableHead.className = 'scGunsTable__head';
       tableHead.innerHTML = '' +
-        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsGunsColType') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_level">' + translate('modsGunsColLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsGunsColType') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsGunsColAttackSpeed') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsGunsColDamage') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
@@ -827,8 +833,8 @@
         }
         rowsHtml += '' +
           '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
-            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseAttackSpeed) + ' / ' + formatNumber(currentAttackSpeed) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseDamage) + ' / ' + formatNumber(currentDamage) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
@@ -863,15 +869,16 @@
       reserveLine.id = 'modsTankWallDronsReserved';
 
       var tableWrap = documentObj.createElement('div');
-      tableWrap.className = 'scGunsTable';
+      tableWrap.className = 'scGunsTable scGunsTable_drones';
 
       var tableHead = documentObj.createElement('div');
       tableHead.className = 'scGunsTable__head';
       tableHead.innerHTML = '' +
-        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabDrones') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_level">' + translate('modsGunsColLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabDrones') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsDronesColMoveSpeed') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsDronesColRepairSpeed') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_stat scGunsTable__cell_headWrap">' + translate('modsDronesColCostMult') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_cost">' + translate('modsGunsColCost') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_actions">' + translate('modsGunsColActions') + '</div>';
@@ -955,25 +962,36 @@
       var reservedPoints = getReservedDronDamagePoints();
       var dronCfg = getDronRuntimeConfig();
       var dronAnimations = dronCfg && dronCfg.animations && typeof dronCfg.animations === 'object' ? dronCfg.animations : {};
-      var repairAnim = dronAnimations.repair && typeof dronAnimations.repair === 'object'
-        ? dronAnimations.repair
-        : (dronAnimations.idle && typeof dronAnimations.idle === 'object' ? dronAnimations.idle : null);
+      var flyAnimFromSprites = global.DronSprites && typeof global.DronSprites.getAnimation === 'function'
+        ? global.DronSprites.getAnimation('fly')
+        : null;
+      var flyAnim = flyAnimFromSprites && typeof flyAnimFromSprites === 'object'
+        ? flyAnimFromSprites
+        : (dronAnimations.fly && typeof dronAnimations.fly === 'object'
+          ? dronAnimations.fly
+          : (dronAnimations.repair && typeof dronAnimations.repair === 'object'
+            ? dronAnimations.repair
+            : (dronAnimations.idle && typeof dronAnimations.idle === 'object' ? dronAnimations.idle : null)));
       var atlasImg = global.DronSprites && global.DronSprites.atlasImg ? global.DronSprites.atlasImg : null;
       var atlasSrc = atlasImg && (atlasImg.currentSrc || atlasImg.src)
         ? (atlasImg.currentSrc || atlasImg.src)
-        : ('assets/' + (dronCfg.atlas || dronCfg.png || 'dron_atlas.png'));
-      var frameX = Number.isFinite(repairAnim && repairAnim.x) ? Math.floor(repairAnim.x) : 0;
-      var frameY = Number.isFinite(repairAnim && repairAnim.y) ? Math.floor(repairAnim.y) : 0;
-      var frameW = Number.isFinite(repairAnim && repairAnim.w) && repairAnim.w > 0 ? Math.floor(repairAnim.w) : 96;
-      var frameH = Number.isFinite(repairAnim && repairAnim.h) && repairAnim.h > 0 ? Math.floor(repairAnim.h) : 96;
-      var animFrames = Number.isFinite(repairAnim && repairAnim.frames) && repairAnim.frames > 0 ? Math.floor(repairAnim.frames) : 1;
-      var animFps = Number.isFinite(repairAnim && repairAnim.frameRateFps) && repairAnim.frameRateFps > 0 ? Number(repairAnim.frameRateFps) : 10;
+        : ('assets/' + ((global.DronSprites && global.DronSprites.config && global.DronSprites.config.atlas) || dronCfg.atlas || dronCfg.png || 'dron_atlas.png'));
+      var frameX = Number.isFinite(flyAnim && flyAnim.x) ? Math.floor(flyAnim.x) : 0;
+      var frameY = Number.isFinite(flyAnim && flyAnim.y) ? Math.floor(flyAnim.y) : 0;
+      var frameW = Number.isFinite(flyAnim && flyAnim.w) && flyAnim.w > 0 ? Math.floor(flyAnim.w) : 96;
+      var frameH = Number.isFinite(flyAnim && flyAnim.h) && flyAnim.h > 0 ? Math.floor(flyAnim.h) : 96;
+      var baseAnimFrames = Number.isFinite(flyAnim && flyAnim.frames) && flyAnim.frames > 0 ? Math.floor(flyAnim.frames) : 1;
+      var baseAnimFps = Number.isFinite(flyAnim && flyAnim.frameRateFps) && flyAnim.frameRateFps > 0 ? Number(flyAnim.frameRateFps) : 10;
+      var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
+      var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
+      var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
 
       for (var i = 0; i < levelsCount; i++) {
         var level = i + 1;
         var applied = toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level));
         var pending = getPendingDronAt(level);
-        var stats = getDronStatsForLevel(level) || {};
+        var baseStats = getDronStatsForLevel(level, 0) || {};
+        var stats = getDronStatsForLevel(level, applied + pending) || {};
 
         var nextStepCost = toSafeNonNegativeInt(getDronUpgradeStepCost(level, applied + pending));
         var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
@@ -983,15 +1001,21 @@
           ? String(applied) + ' (+' + String(pending) + ')'
           : String(applied);
         var canApply = pending > 0 && availablePoints >= totalPendingCost;
+        var tunedFrames = toSafeNonNegativeInt(getDronUpgradeIconFrames(level));
+        if (tunedFrames <= 0) tunedFrames = 1;
+        var rowAnimFrames = Math.max(1, Math.min(baseAnimFrames, tunedFrames));
+        var rowAnimFps = Number(getDronUpgradeIconFps(level));
+        if (!Number.isFinite(rowAnimFps) || rowAnimFps <= 0) rowAnimFps = baseAnimFps;
+        if (!Number.isFinite(rowAnimFps) || rowAnimFps <= 0) rowAnimFps = 10;
 
         var spriteHtml = '' +
-          '<span class="scGunsTable__spriteBox" style="width:60px;height:45px">' +
+          '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
             '<canvas class="scGunsTable__spriteCanvas"' +
-              ' width="60"' +
-              ' height="45"' +
-              ' style="width:60px;height:45px"' +
-              ' data-anim-frames="' + String(animFrames) + '"' +
-              ' data-anim-fps="' + String(animFps) + '"' +
+              ' width="' + String(iconW) + '"' +
+              ' height="' + String(iconH) + '"' +
+              ' style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px"' +
+              ' data-anim-frames="' + String(rowAnimFrames) + '"' +
+              ' data-anim-fps="' + String(rowAnimFps) + '"' +
               ' data-sprite-src="' + atlasSrc + '"' +
               ' data-frame-x="' + String(frameX) + '"' +
               ' data-frame-y="' + String(frameY) + '"' +
@@ -1003,10 +1027,11 @@
 
         rowsHtml += '' +
           '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
-            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(stats.moveSpeedPxSec) + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(stats.repairSpeedMult) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.moveSpeedPxSec) + ' / ' + formatNumber(stats.moveSpeedPxSec) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.repairSpeedMult) + ' / ' + formatNumber(stats.repairSpeedMult) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.costMult) + ' / ' + formatNumber(stats.costMult) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
@@ -1044,8 +1069,8 @@
       var tableHead = documentObj.createElement('div');
       tableHead.className = 'scGunsTable__head';
       tableHead.innerHTML = '' +
-        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabWalls') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_level">' + translate('modsGunsColLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabWalls') + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsWallsSegmentHpLabel', {hp:''}).replace(':', '').trim() + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsWallsArmorLabel', {armor:''}).replace(':', '').trim() + '</div>' +
         '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
@@ -1241,8 +1266,8 @@
 
         rowsHtml += '' +
           '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
-            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseHp) + ' / ' + formatNumber(currentHp) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseArmor) + ' / ' + formatNumber(currentArmor) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +

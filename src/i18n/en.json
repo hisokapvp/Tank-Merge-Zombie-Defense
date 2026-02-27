@@ -96,7 +96,7 @@
   "modsGunsColDamage": "Base damage",
   "modsDronesColMoveSpeed": "Move speed",
   "modsDronesColRepairSpeed": "Repair speed",
-  "modsDronesColCostMult": "Cost mult",
+  "modsDronesColCostMult": "Repair cost multiplier",
   "modsGunsColUpgradeLevel": "Upgrade level",
   "modsGunsColCost": "Cost",
   "modsGunsColActions": "Actions",

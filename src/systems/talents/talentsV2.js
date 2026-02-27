@@ -3299,6 +3299,14 @@
     return '';
   }
 
+  function normalizeEpochMs(timeLike, fallbackNowMs) {
+    var baseNow = isFiniteNumber(fallbackNowMs) ? fallbackNowMs : runtime.nowMsFn();
+    var value = toNumber(timeLike, baseNow);
+    if (!isFiniteNumber(value)) return baseNow;
+    if (value > 0 && value < 1e11) return value * 1000;
+    return value;
+  }
+
   function getBranchActiveConfig(branchId, mods) {
     if (branchId === 'offense') {
       return {
@@ -3332,7 +3340,7 @@
 
   function getActiveState(branchLike, nowMs) {
     var branchId = resolveBranchId(branchLike);
-    var timeNow = toNumber(nowMs, runtime.nowMsFn());
+    var timeNow = normalizeEpochMs(nowMs, runtime.nowMsFn());
     var mods = getMods();
     var runRt = ensureRunRt();
     syncRunActiveCharges(mods);
@@ -3366,7 +3374,7 @@
     var mods = getMods();
     var runRt = ensureRunRt();
     syncRunActiveCharges(mods);
-    var nowMs = toNumber(timeMs, runtime.nowMsFn());
+    var nowMs = normalizeEpochMs(timeMs, runtime.nowMsFn());
     var unlocked = !!mods.offenseActive;
     var maxCharges = Math.max(0, toInt(getModNumber(mods, 'offActiveCharges', ['offenseActiveCharges'], 0), 0));
     var durationMs = Math.max(0, getModNumber(mods, 'offActiveDurationMs', ['offenseActiveDurationMs'], 0));
@@ -3394,7 +3402,7 @@
     var mods = getMods();
     var runRt = ensureRunRt();
     syncRunActiveCharges(mods);
-    var nowMs = toNumber(timeMs, runtime.nowMsFn());
+    var nowMs = normalizeEpochMs(timeMs, runtime.nowMsFn());
     var maxCharges = Math.max(0, toInt(getModNumber(mods, 'defActiveCharges', ['defenseActiveCharges'], 0), 0));
     var durationMs = Math.max(0, getModNumber(mods, 'defActiveDurationMs', ['defenseActiveDurationMs'], 0));
     var rechargeMs = Math.max(0, getModNumber(mods, 'defActiveRechargeMs', ['defenseActiveRechargeMs'], 0));
@@ -3416,7 +3424,7 @@
     var mods = getMods();
     var runRt = ensureRunRt();
     syncRunActiveCharges(mods);
-    var nowMs = toNumber(timeMs, runtime.nowMsFn());
+    var nowMs = normalizeEpochMs(timeMs, runtime.nowMsFn());
     var maxCharges = Math.max(0, toInt(getModNumber(mods, 'ecoActiveCharges', ['economyActiveCharges'], 0), 0));
     var durationMs = Math.max(0, getModNumber(mods, 'ecoActiveDurationMs', ['economyActiveDurationMs'], 0));
     var rechargeMs = Math.max(0, getModNumber(mods, 'ecoActiveRechargeMs', ['economyActiveRechargeMs'], 0));

@@ -96,7 +96,7 @@
   "modsGunsColDamage": "Базовый урон",
   "modsDronesColMoveSpeed": "Скорость полёта",
   "modsDronesColRepairSpeed": "Скорость ремонта",
-  "modsDronesColCostMult": "Множ. стоимости",
+  "modsDronesColCostMult": "Множитель стоимости ремонта",
   "modsGunsColUpgradeLevel": "Уровень улучш.",
   "modsGunsColCost": "Стоимость",
   "modsGunsColActions": "Действия",
