@@ -416,7 +416,19 @@
         showSaveToast('menu.save.toast.error');
         return false;
       }
-      var result = storageApi.saveSlot(slotIndex, getState());
+      var payload = getState();
+      if (typeof opts.buildSavePayload === 'function') {
+        try {
+          var customPayload = opts.buildSavePayload(slotIndex, {
+            manualOnly: !!saveViewConfig.manualOnly,
+            exitAfterSave: !!saveViewConfig.exitAfterSave,
+          });
+          if (customPayload && typeof customPayload === 'object') {
+            payload = customPayload;
+          }
+        } catch (_) {}
+      }
+      var result = storageApi.saveSlot(slotIndex, payload);
       if (!result || !result.ok) {
         showSaveToast('menu.save.toast.error');
         return false;

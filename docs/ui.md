@@ -28,6 +28,13 @@
 - При наличии `uiIcon.frame` используются прямые координаты кадра.
 - Если `uiIcon.frame` отсутствует, используется `uiIcon.frameId` / `uiFrameId` / fallback `sideTop`.
 
+## Дроны (вкладка Supercomputer -> Drones)
+
+- В `modsTankWall` добавлена вкладка `Дроны` после `Орудия`.
+- Таблица следует тому же паттерну, что `Орудия`/`Стены`: sprite-колонка, уровни, статы, `+/-`, `Apply`.
+- Статы по уровням берутся из `assets/dron.json` (`levels[level].moveSpeedPxSec`, `repairSpeedMult`).
+- Иконки дронов в строках используют idle-анимацию из `assets/dron.json -> animations.idle`.
+
 ## Wasteland UI (Fallout Style)
 
 С 26.02.2026 интерфейс переведён на ретро-футуристический стиль.

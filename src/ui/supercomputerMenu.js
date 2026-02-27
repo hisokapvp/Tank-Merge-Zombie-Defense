@@ -50,6 +50,24 @@
     var applyCannonUpgrade = typeof opts.applyCannonUpgrade === 'function'
       ? opts.applyCannonUpgrade
       : function () { return { ok: false }; };
+    var getDronRuntimeConfig = typeof opts.getDronRuntimeConfig === 'function'
+      ? opts.getDronRuntimeConfig
+      : function () { return { levels: {}, maxLevel: 1, animations: {} }; };
+    var getDronLevelsCount = typeof opts.getDronLevelsCount === 'function'
+      ? opts.getDronLevelsCount
+      : function () { return 1; };
+    var getDronStatsForLevel = typeof opts.getDronStatsForLevel === 'function'
+      ? opts.getDronStatsForLevel
+      : function () { return { moveSpeedPxSec: 0, repairSpeedMult: 0, costMult: 0 }; };
+    var getAppliedDronUpgradeLevel = typeof opts.getAppliedDronUpgradeLevel === 'function'
+      ? opts.getAppliedDronUpgradeLevel
+      : function () { return 0; };
+    var getDronUpgradeStepCost = typeof opts.getDronUpgradeStepCost === 'function'
+      ? opts.getDronUpgradeStepCost
+      : function (_level, _appliedIndex) { return 0; };
+    var applyDronUpgrade = typeof opts.applyDronUpgrade === 'function'
+      ? opts.applyDronUpgrade
+      : function () { return { ok: false }; };
     var getFenceStats = typeof opts.getFenceStats === 'function' ? opts.getFenceStats : function () {
       return {
         level: 1,
@@ -79,6 +97,11 @@
       if (key === 'modsGunsReservedLabel') return 'Reserved points: ' + (vars && vars.count != null ? vars.count : 0);
       if (key === 'modsGunsNotEnoughDamagePoints') return 'Not enough damage points';
       if (key === 'modsGunsNoSprite') return 'No sprite';
+      if (key === 'modsTabDrones') return 'Drones';
+      if (key === 'modsDronesColMoveSpeed') return 'Move speed';
+      if (key === 'modsDronesColRepairSpeed') return 'Repair speed';
+      if (key === 'modsDronesColCostMult') return 'Cost mult';
+      if (key === 'modsDronesUpgrade') return 'Upgrade';
       if (key === 'modsTabWalls') return 'Walls';
       if (key === 'modsWallsLevelLabel') return 'Wall level: ' + (vars && vars.level != null ? vars.level : 1);
       if (key === 'modsWallsSegmentHpLabel') return 'Segment HP: ' + (vars && vars.hp != null ? vars.hp : 0);
@@ -97,17 +120,20 @@
       view: 'closed',
       activeTankWallTab: 'weapons',
       pendingUpgradesByLevel: Array(60).fill(0),
+      pendingDronUpgradesByLevel: Array(60).fill(0),
       pendingFenceUpgradesByLevel: Array(60).fill(0),
       iconTickerId: null,
     };
 
     var tankWallTabButtons = {
       weapons: documentObj.getElementById('modsTankWallTabGuns'),
+      drones: documentObj.getElementById('modsTankWallTabDrones'),
       walls: documentObj.getElementById('modsTankWallTabWalls'),
     };
 
     var tankWallTabPanels = {
       weapons: documentObj.getElementById('modsTankWallPanelGuns'),
+      drones: documentObj.getElementById('modsTankWallPanelDrones'),
       walls: documentObj.getElementById('modsTankWallPanelWalls'),
     };
 
@@ -119,6 +145,13 @@
       initialized: false,
     };
     var wallsUi = {
+      root: null,
+      points: null,
+      reserve: null,
+      rows: null,
+      initialized: false,
+    };
+    var dronsUi = {
       root: null,
       points: null,
       reserve: null,
@@ -160,7 +193,7 @@
     }
 
     function setTankWallTab(nextTab, options) {
-      var tab = nextTab === 'walls' ? 'walls' : 'weapons';
+      var tab = nextTab === 'walls' ? 'walls' : (nextTab === 'drones' ? 'drones' : 'weapons');
       state.activeTankWallTab = tab;
 
       Object.keys(tankWallTabButtons).forEach(function (key) {
@@ -179,6 +212,9 @@
 
       if (tab === 'weapons') {
         renderGunsPanel();
+        startGunsIconTicker();
+      } else if (tab === 'drones') {
+        renderDronsPanel();
         startGunsIconTicker();
       } else if (tab === 'walls') {
         renderWallsPanel();
@@ -202,6 +238,12 @@
       }
       if (gunsUi.reserve) {
         gunsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedDamagePoints() });
+      }
+      if (dronsUi.points) {
+        dronsUi.points.textContent = translate('damagePointsLabel', { count: count });
+      }
+      if (dronsUi.reserve) {
+        dronsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedDronDamagePoints() });
       }
       if (wallsUi.points) {
         wallsUi.points.textContent = translate('damagePointsLabel', { count: count });
@@ -282,6 +324,60 @@
       var levels = getFenceLevels();
       if (!Array.isArray(levels) || !levels.length) return 60;
       return Math.max(1, Math.min(60, levels.length));
+    }
+
+    function ensurePendingDronLevelsSize() {
+      var size = Math.max(1, Math.min(60, toSafeNonNegativeInt(getDronLevelsCount())));
+      if (!Array.isArray(state.pendingDronUpgradesByLevel)) {
+        state.pendingDronUpgradesByLevel = Array(size).fill(0);
+        return;
+      }
+      if (state.pendingDronUpgradesByLevel.length !== size) {
+        var next = Array(size).fill(0);
+        for (var i = 0; i < Math.min(size, state.pendingDronUpgradesByLevel.length); i++) {
+          next[i] = toSafeNonNegativeInt(state.pendingDronUpgradesByLevel[i]);
+        }
+        state.pendingDronUpgradesByLevel = next;
+      }
+    }
+
+    function getPendingDronAt(level) {
+      ensurePendingDronLevelsSize();
+      var idx = Math.max(1, Math.floor(level || 1)) - 1;
+      return toSafeNonNegativeInt(state.pendingDronUpgradesByLevel[idx]);
+    }
+
+    function setPendingDronAt(level, value) {
+      ensurePendingDronLevelsSize();
+      var idx = Math.max(1, Math.floor(level || 1)) - 1;
+      state.pendingDronUpgradesByLevel[idx] = toSafeNonNegativeInt(value);
+    }
+
+    function resetPendingDronUpgrades() {
+      ensurePendingDronLevelsSize();
+      for (var i = 0; i < state.pendingDronUpgradesByLevel.length; i++) {
+        state.pendingDronUpgradesByLevel[i] = 0;
+      }
+    }
+
+    function getPendingDronCost(level, pendingCount) {
+      var count = toSafeNonNegativeInt(pendingCount);
+      if (count <= 0) return 0;
+      var applied = toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level));
+      var total = 0;
+      for (var i = 0; i < count; i++) {
+        total += toSafeNonNegativeInt(getDronUpgradeStepCost(level, applied + i));
+      }
+      return toSafeNonNegativeInt(total);
+    }
+
+    function getReservedDronDamagePoints() {
+      ensurePendingDronLevelsSize();
+      var total = 0;
+      for (var i = 0; i < state.pendingDronUpgradesByLevel.length; i++) {
+        total += getPendingDronCost(i + 1, state.pendingDronUpgradesByLevel[i]);
+      }
+      return toSafeNonNegativeInt(total);
     }
 
     function ensurePendingFenceLevelsSize() {
@@ -459,6 +555,24 @@
               frameIndex = Math.floor(nowMs * (fps / 1000)) % frames;
             }
             drawGunsSpriteCanvas(node, frameIndex);
+          }
+        }
+      } else if (state.activeTankWallTab === 'drones' && dronsUi.rows) {
+        var dronNodes = dronsUi.rows.querySelectorAll('.scGunsTable__spriteCanvas[data-anim-frames]');
+        if (dronNodes && dronNodes.length) {
+          for (var d = 0; d < dronNodes.length; d++) {
+            var dNode = dronNodes[d];
+            var dFrames = toSafeNonNegativeInt(Number(dNode.getAttribute('data-anim-frames')));
+            var dFps = Number(dNode.getAttribute('data-anim-fps'));
+            var dRowNode = dNode.closest('.scGunsTable__row');
+            var dRowLevel = Number(dRowNode && dRowNode.getAttribute ? dRowNode.getAttribute('data-level') : 0);
+            var dForceVisible = Number.isFinite(dRowLevel) && dRowLevel >= 1 && dRowLevel <= ALWAYS_VISIBLE_ICON_ROWS;
+            if (!dForceVisible && dRowNode && !isElementVerticallyVisible(dRowNode, dronsUi.rows)) continue;
+            var dFrameIndex = 0;
+            if (dFrames > 1 && Number.isFinite(dFps) && dFps > 0) {
+              dFrameIndex = Math.floor(nowMs * (dFps / 1000)) % dFrames;
+            }
+            drawGunsSpriteCanvas(dNode, dFrameIndex);
           }
         }
       } else if (state.activeTankWallTab === 'walls' && wallsUi.rows) {
@@ -730,6 +844,179 @@
       tickGunsIconSprites();
     }
 
+    function ensureDronsPanelUI() {
+      if (dronsUi.initialized) return;
+      var panel = tankWallTabPanels.drones;
+      if (!panel) return;
+
+      panel.innerHTML = '';
+
+      var pointsLine = documentObj.createElement('div');
+      pointsLine.className = 'levelModal__line';
+      pointsLine.id = 'modsTankWallDronsDamagePoints';
+
+      var reserveLine = documentObj.createElement('div');
+      reserveLine.className = 'levelModal__line';
+      reserveLine.id = 'modsTankWallDronsReserved';
+
+      var tableWrap = documentObj.createElement('div');
+      tableWrap.className = 'scGunsTable';
+
+      var tableHead = documentObj.createElement('div');
+      tableHead.className = 'scGunsTable__head';
+      tableHead.innerHTML = '' +
+        '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + translate('modsTabDrones') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_level">' + translate('modsGunsColLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsDronesColMoveSpeed') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_stat">' + translate('modsDronesColRepairSpeed') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + translate('modsGunsColUpgradeLevel') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_cost">' + translate('modsGunsColCost') + '</div>' +
+        '<div class="scGunsTable__cell scGunsTable__cell_actions">' + translate('modsGunsColActions') + '</div>';
+
+      var tableRows = documentObj.createElement('div');
+      tableRows.className = 'scGunsTable__rows';
+
+      tableWrap.appendChild(tableHead);
+      tableWrap.appendChild(tableRows);
+
+      panel.appendChild(pointsLine);
+      panel.appendChild(reserveLine);
+      panel.appendChild(tableWrap);
+
+      panel.addEventListener('click', function (evt) {
+        var target = evt.target;
+        if (!target || typeof target.closest !== 'function') return;
+        var actionBtn = target.closest('[data-dron-action]');
+        if (!actionBtn) return;
+        var level = Number(actionBtn.getAttribute('data-level'));
+        if (!Number.isFinite(level) || level < 1 || level > getDronLevelsCount()) return;
+        var action = actionBtn.getAttribute('data-dron-action');
+        if (action === 'plus') {
+          var applied = toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level));
+          var pending = getPendingDronAt(level);
+          var nextCost = toSafeNonNegativeInt(getDronUpgradeStepCost(level, applied + pending));
+          if (nextCost <= 0 || nextCost >= Number.MAX_SAFE_INTEGER) return;
+          var available = toSafeNonNegativeInt(getDamagePoints());
+          var reserved = getReservedDronDamagePoints();
+          if (available - reserved < nextCost) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(translate('modsGunsNotEnoughDamagePoints'), 1200);
+            }
+            return;
+          }
+          setPendingDronAt(level, pending + 1);
+          renderDronsPanel();
+          return;
+        }
+        if (action === 'minus') {
+          var currentPending = getPendingDronAt(level);
+          if (currentPending <= 0) return;
+          setPendingDronAt(level, currentPending - 1);
+          renderDronsPanel();
+          return;
+        }
+        if (action === 'apply') {
+          var applyPending = getPendingDronAt(level);
+          if (applyPending <= 0) return;
+          var totalCost = getPendingDronCost(level, applyPending);
+          var pointsAvailable = toSafeNonNegativeInt(getDamagePoints());
+          if (pointsAvailable < totalCost) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(translate('modsGunsNotEnoughDamagePoints'), 1200);
+            }
+            return;
+          }
+          var result = applyDronUpgrade(level, applyPending);
+          if (!result || !result.ok) return;
+          setPendingDronAt(level, 0);
+          renderDronsPanel();
+        }
+      });
+
+      dronsUi.root = panel;
+      dronsUi.points = pointsLine;
+      dronsUi.reserve = reserveLine;
+      dronsUi.rows = tableRows;
+      dronsUi.initialized = true;
+    }
+
+    function renderDronsPanel() {
+      ensureDronsPanelUI();
+      if (!dronsUi.initialized || !dronsUi.rows) return;
+      ensurePendingDronLevelsSize();
+      updateDamagePointsLabel();
+
+      var levelsCount = Math.max(1, Math.min(60, toSafeNonNegativeInt(getDronLevelsCount())));
+      var rowsHtml = '';
+      var availablePoints = toSafeNonNegativeInt(getDamagePoints());
+      var reservedPoints = getReservedDronDamagePoints();
+      var dronCfg = getDronRuntimeConfig();
+      var dronAnimations = dronCfg && dronCfg.animations && typeof dronCfg.animations === 'object' ? dronCfg.animations : {};
+      var idleAnim = dronAnimations.idle && typeof dronAnimations.idle === 'object' ? dronAnimations.idle : null;
+      var atlasImg = global.DronSprites && global.DronSprites.atlasImg ? global.DronSprites.atlasImg : null;
+      var atlasSrc = atlasImg && (atlasImg.currentSrc || atlasImg.src)
+        ? (atlasImg.currentSrc || atlasImg.src)
+        : ('assets/' + (dronCfg.atlas || dronCfg.png || 'dron_atlas.png'));
+      var frameX = Number.isFinite(idleAnim && idleAnim.x) ? Math.floor(idleAnim.x) : 0;
+      var frameY = Number.isFinite(idleAnim && idleAnim.y) ? Math.floor(idleAnim.y) : 0;
+      var frameW = Number.isFinite(idleAnim && idleAnim.w) && idleAnim.w > 0 ? Math.floor(idleAnim.w) : 96;
+      var frameH = Number.isFinite(idleAnim && idleAnim.h) && idleAnim.h > 0 ? Math.floor(idleAnim.h) : 96;
+      var animFrames = Number.isFinite(idleAnim && idleAnim.frames) && idleAnim.frames > 0 ? Math.floor(idleAnim.frames) : 1;
+      var animFps = Number.isFinite(idleAnim && idleAnim.frameRateFps) && idleAnim.frameRateFps > 0 ? Number(idleAnim.frameRateFps) : 10;
+
+      for (var i = 0; i < levelsCount; i++) {
+        var level = i + 1;
+        var applied = toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level));
+        var pending = getPendingDronAt(level);
+        var stats = getDronStatsForLevel(level) || {};
+
+        var nextStepCost = toSafeNonNegativeInt(getDronUpgradeStepCost(level, applied + pending));
+        var canAdd = nextStepCost > 0 && nextStepCost < Number.MAX_SAFE_INTEGER && (availablePoints - reservedPoints) >= nextStepCost;
+        var canMinus = pending > 0;
+        var totalPendingCost = getPendingDronCost(level, pending);
+        var upgradeText = pending > 0
+          ? String(applied) + ' (+' + String(pending) + ')'
+          : String(applied);
+        var canApply = pending > 0 && availablePoints >= totalPendingCost;
+
+        var spriteHtml = '' +
+          '<span class="scGunsTable__spriteBox" style="width:60px;height:45px">' +
+            '<canvas class="scGunsTable__spriteCanvas"' +
+              ' width="60"' +
+              ' height="45"' +
+              ' style="width:60px;height:45px"' +
+              ' data-anim-frames="' + String(animFrames) + '"' +
+              ' data-anim-fps="' + String(animFps) + '"' +
+              ' data-sprite-src="' + atlasSrc + '"' +
+              ' data-frame-x="' + String(frameX) + '"' +
+              ' data-frame-y="' + String(frameY) + '"' +
+              ' data-frame-w="' + String(frameW) + '"' +
+              ' data-frame-h="' + String(frameH) + '"' +
+            '></canvas>' +
+          '</span>';
+
+        rowsHtml += '' +
+          '<div class="scGunsTable__row" data-level="' + String(level) + '">' +
+            '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(stats.moveSpeedPxSec) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(stats.repairSpeedMult) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCompact(nextStepCost) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_actions">' +
+              '<span class="scGunsActionStepper">' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-dron-action="plus" data-level="' + String(level) + '"' + (canAdd ? '' : ' disabled') + '>+</button>' +
+                '<button type="button" class="btn btnSecondary uiButtonBehavior scGunsActionBtn" data-dron-action="minus" data-level="' + String(level) + '"' + (canMinus ? '' : ' disabled') + '>-</button>' +
+              '</span>' +
+              '<button type="button" class="btn btnPrimary uiButtonBehavior scGunsActionBtn" data-dron-action="apply" data-level="' + String(level) + '"' + (canApply ? '' : ' disabled') + '>' + translate('modsDronesUpgrade') + '</button>' +
+            '</div>' +
+          '</div>';
+      }
+
+      dronsUi.rows.innerHTML = rowsHtml;
+      tickGunsIconSprites();
+    }
+
     function ensureWallsPanelUI() {
       if (wallsUi.initialized) return;
       var panel = tankWallTabPanels.walls;
@@ -975,6 +1262,7 @@
       applyLayoutTuningVars();
       if (!state.isOpen) {
         resetPendingUpgrades();
+        resetPendingDronUpgrades();
         resetPendingFenceUpgrades();
       }
       stopGunsIconTicker();
@@ -1005,9 +1293,11 @@
     function showTankWallMods() {
       setTankWallTab('weapons');
       ensurePendingLevelsSize();
+      ensurePendingDronLevelsSize();
       ensurePendingFenceLevelsSize();
       updateDamagePointsLabel();
       renderGunsPanel();
+      renderDronsPanel();
       renderWallsPanel();
       updateFenceStatsUI();
 
@@ -1044,6 +1334,7 @@
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);
       resetPendingUpgrades();
+      resetPendingDronUpgrades();
       resetPendingFenceUpgrades();
       state.isOpen = false;
       state.view = 'closed';
@@ -1069,6 +1360,7 @@
     documentObj.getElementById('modsTankWallClose')?.addEventListener('click', backFromChild);
     documentObj.getElementById('modsTankWallBack')?.addEventListener('click', backFromChild);
     tankWallTabButtons.weapons?.addEventListener('click', function () { setTankWallTab('weapons', { focusButton: true }); });
+    tankWallTabButtons.drones?.addEventListener('click', function () { setTankWallTab('drones', { focusButton: true }); });
     tankWallTabButtons.walls?.addEventListener('click', function () { setTankWallTab('walls', { focusButton: true }); });
     documentObj.getElementById('modsTankWallFenceUpgrade')?.addEventListener('click', function () {
       if (!upgradeFence()) return;
@@ -1088,6 +1380,7 @@
         if (!state.isOpen || state.view !== 'tankWall') return;
         updateDamagePointsLabel();
         renderGunsPanel();
+        renderDronsPanel();
         renderWallsPanel();
         updateFenceStatsUI();
       },
@@ -1095,6 +1388,7 @@
         if (!state.isOpen || state.view !== 'tankWall') return;
         updateDamagePointsLabel();
         renderGunsPanel();
+        renderDronsPanel();
         renderWallsPanel();
         updateFenceStatsUI();
       },

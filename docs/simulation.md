@@ -55,7 +55,18 @@
 - `buildPreRetryPayload()`: перед retry проверяется, что массив дронов сохранён в payload даже после `applyPreRetryRuntimeReset`.
 - `applyCriticalRestartPostLoad()`: при critical restart проверяется восстановление массива дронов из snapshot.
 
-9) Drag threshold (pointermove)
+9) Critical save & exit
+- При `HP supercomputer <= 5%` и выборе `Сохранить прогресс и выйти` сохраняется не «текущий аварийный runtime», а нормализованный pre-retry payload:
+  - `fenceLevel` сброшен в `1`,
+  - `supercomputer.hp` восстановлен до `maxHp`,
+  - runtime-объекты очищены,
+  - стартовый `lvl1` танк присутствует в payload.
+
+10) Fence pathing на нижних углах
+- В `zombieFenceLimit()` проверка «зомби стоит на сломанном сегменте» выполняется по фактической позиции (`pickFenceSegmentByPoint`) с fallback на `theta`.
+- Это убирает ложный проход зомби по целым нижним секциям fence после пролома углов, не меняя обзор/агро/другие attackMode-правила.
+
+11) Drag threshold (pointermove)
 - В обработчике `pointermove` (canvas) координаты `state.dragging.x/y` обновляются только после того, как суммарное смещение превысит 6 px (`moved=true`). Это предотвращает ложные начала drag при тапе.
 
 Если нужно, добавим диаграмму эпизода/потока или unit-test инструкции.

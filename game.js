@@ -2638,6 +2638,83 @@ function addDron(level){
   return drone;
 }
 
+function getDronLevelsCount(){
+  const cfg = getDronRuntimeConfig();
+  const maxLevel = Number.isFinite(cfg && cfg.maxLevel) ? Math.max(1, Math.floor(cfg.maxLevel)) : 1;
+  return Math.max(1, Math.min(MAX_TANK_LEVEL, maxLevel));
+}
+
+function getAppliedDronUpgradeLevel(level){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
+  if (!Array.isArray(state.drones) || !state.drones.length) return 0;
+  let count = 0;
+  for (let i = 0; i < state.drones.length; i++) {
+    const drone = state.drones[i];
+    if (!drone || !Number.isFinite(drone.level)) continue;
+    if (Math.max(1, Math.floor(drone.level)) === lvl) count += 1;
+  }
+  return count;
+}
+
+function getDronUpgradeStepCost(level, appliedIndex){
+  return getUpgradeStepCost(level, appliedIndex);
+}
+
+function getDronStatsForLevel(level){
+  const cfg = getDronRuntimeConfig();
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
+  const raw = DronesApi && typeof DronesApi.getDroneLevelConfig === 'function'
+    ? DronesApi.getDroneLevelConfig(cfg, lvl)
+    : ((cfg && cfg.levels && cfg.levels[lvl]) || (cfg && cfg.levels && cfg.levels[String(lvl)]) || null);
+  const moveSpeedPxSec = Number.isFinite(raw && raw.moveSpeedPxSec) ? Math.max(0, raw.moveSpeedPxSec) : 0;
+  const repairSpeedMult = Number.isFinite(raw && raw.repairSpeedMult) ? Math.max(0, raw.repairSpeedMult) : 0;
+  const costMult = Number.isFinite(raw && raw.costMult) ? Math.max(0, raw.costMult) : 0;
+  return {
+    moveSpeedPxSec,
+    repairSpeedMult,
+    costMult,
+  };
+}
+
+function getDronUpgradeTotalCost(level, pendingCount){
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return 0;
+  const applied = getAppliedDronUpgradeLevel(level);
+  let total = 0;
+  for (let k = 0; k < count; k++) {
+    total += getDronUpgradeStepCost(level, applied + k);
+  }
+  return total;
+}
+
+function applyDronUpgrade(level, pendingCount){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
+  const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
+  if (count <= 0) return { ok: false, error: 'no_pending' };
+  const totalCost = getDronUpgradeTotalCost(lvl, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
+
+  let appliedCount = 0;
+  for (let i = 0; i < count; i++) {
+    const drone = addDron(lvl);
+    if (!drone) break;
+    appliedCount += 1;
+  }
+  if (appliedCount <= 0) return { ok: false, error: 'spawn_failed' };
+
+  const spent = getDronUpgradeTotalCost(lvl, appliedCount);
+  state.damagePointsSpent = ensureDamagePointsSpentState() + spent;
+  state.player.modsDirty = true;
+  updateDamagePointsUI();
+  return {
+    ok: true,
+    totalCost: spent,
+    appliedLevel: getAppliedDronUpgradeLevel(lvl),
+    added: appliedCount,
+  };
+}
+
 function getFenceTierForTankLevel(level){
   var fenceLevels = getFenceLevels();
   var maxFenceLevel = Array.isArray(fenceLevels) && fenceLevels.length ? fenceLevels.length : MAX_TANK_LEVEL;
@@ -5747,7 +5824,9 @@ function zombieFenceLimit(z){
     return getFenceInnerLimit(z);
   }
 
-  const seg = getFenceSegmentForTheta(z.theta);
+  const segByPoint = pickFenceSegmentByPoint(worldX, worldY);
+  const segByTheta = getFenceSegmentForTheta(z.theta);
+  const seg = segByPoint || segByTheta;
   if (seg && seg.broken && !z.breached && z.r <= outerLimit + Math.max(2, BAL.fenceWidth * 0.15)) {
     z.breached = true;
     z.breachSegmentId = seg.id || null;
@@ -5756,7 +5835,7 @@ function zombieFenceLimit(z){
     // Zombie is at an active breach point — allow passage
     if (activeBreach) return getFenceInnerLimit(z);
     // Current segment is broken — allow passage
-    if (seg && seg.broken) return getFenceInnerLimit(z);
+    if (segByPoint && segByPoint.broken) return getFenceInnerLimit(z);
     // Zombie is deep inside (past the fence) — don't push back out
     const innerLimit = getFenceInnerLimit(z);
     const deepThreshold = innerLimit + Math.max(2, BAL.fenceWidth * 0.2);
@@ -5766,7 +5845,7 @@ function zombieFenceLimit(z){
     z.breachSegmentId = null;
     return outerLimit;
   }
-  if (seg && seg.broken) return getFenceInnerLimit(z);
+  if (segByPoint && segByPoint.broken) return getFenceInnerLimit(z);
   return outerLimit;
 }
 
@@ -7538,6 +7617,7 @@ function applyCriticalRestartPostLoad(){
       normalizeAndTeleportDronesAfterRestore(state);
     }
   }
+  resetCriticalEntryRuntimeFlags();
 }
 
 function performCriticalRestart(){
@@ -7551,7 +7631,6 @@ function performCriticalRestart(){
     return;
   }
   criticalFlowActive = false;
-  resetCriticalEntryRuntimeFlags();
   startFromBigMenu({
     kind: 'load-slot',
     payload: payload,
@@ -7559,8 +7638,19 @@ function performCriticalRestart(){
   });
 }
 
+function buildCriticalSavePayload(){
+  return buildPreRetryPayload(state);
+}
+
+function buildSmallMenuSavePayload(slotIndex, saveView){
+  const cfg = saveView && typeof saveView === 'object' ? saveView : null;
+  if (!(criticalFlowActive && cfg && cfg.exitAfterSave)) {
+    return state;
+  }
+  return buildCriticalSavePayload();
+}
+
 function handleCriticalSaveAndExit(){
-  criticalFlowActive = false;
   if (smallMenuRuntimeController && typeof smallMenuRuntimeController.openCriticalSaveView === 'function') {
     smallMenuRuntimeController.openCriticalSaveView();
     return;
@@ -9003,6 +9093,12 @@ function getSupercomputerMenuController(){
     getCannonUpgradeIconFps: getCannonUpgradeIconFps,
     getCannonUpgradeConfig: getCannonUpgradeConfig,
     applyCannonUpgrade: applyCannonUpgrade,
+    getDronRuntimeConfig: getDronRuntimeConfig,
+    getDronLevelsCount: getDronLevelsCount,
+    getDronStatsForLevel: getDronStatsForLevel,
+    getAppliedDronUpgradeLevel: getAppliedDronUpgradeLevel,
+    getDronUpgradeStepCost: getDronUpgradeStepCost,
+    applyDronUpgrade: applyDronUpgrade,
     getAppliedFenceUpgradeLevel: getAppliedFenceUpgradeLevel,
     applyFenceUpgrade: applyFenceUpgrade,
     getFenceLevels: getFenceLevels,
@@ -11605,6 +11701,7 @@ async function boot(){
         meta,
         grantXP,
         saveProgress,
+        buildSavePayload: buildSmallMenuSavePayload,
         clamp,
         settings,
         getVolume,
