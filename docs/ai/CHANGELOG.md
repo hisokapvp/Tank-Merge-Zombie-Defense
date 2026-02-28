@@ -1,5 +1,20 @@
 ﻿# Журнал изменений (A2DP)
 
+## Рефакторинг game.js — удаление мёртвого кода и извлечение талантов
+- **Удалён мёртвый код из game.js** (~70 строк):
+  - Первый (затенённый) `normalizeAppliedCannonUpgrade` — дубликат, перезаписывался вторым определением.
+  - `drawZombieFence` — никогда не вызывалась.
+  - `drawZombieSprite`, `drawZombieFallback` — не вызывались после перехода на ZombieRender runtime.
+  - `pad2ForBigMenu`, `formatDateForBigMenu`, `renderBigMenuLoadRows`, `parseBigMenuSlotIndexFromNode` — не вызывались после перехода на BigMenuRuntime.
+  - `sanitizeCannonUpgradeRow` — обёртка, которая не использовалась.
+  - `setTrackLoopVolumeMul` — функция-заглушка (игнорировала параметры, использовала хардкод) и две ссылки в объектах deps.
+  - `const compact = true` / `const muted = false` — удалены, значения заинлайнены (`0.065`/`0.56` вместо тернарных операторов; мёртвые ветки `if (muted)` удалены).
+- **Извлечён блок талантов v1** (~170 строк) в `src/systems/talents/talentDefs.js`:
+  - `TALENT_DEFS`, `ACTIVE_TALENT_INDEX`, `sanitizeTalentIconBaseName`, `talentIconPath`, `TALENT_LAYOUT`, `TALENT_EDGES`, `TALENT_ROW_POINTS`, `addTalent`, `initTalentDefs`, `baseMods`, `computeModsFromApplied`.
+  - В `computeModsFromApplied` вызов `clamp()` заменён на `Math.max(0, Math.min(0.9, ...))` для устранения зависимости от game.js.
+  - Скрипт подключён в `index.html` перед `game.js` (после `talentsV2.js`).
+- **Итого**: game.js сокращён с ~12 212 до ~11 976 строк (−236 строк, −1.9%).
+
 ## 2026-02-28
 - **Новая фича: Каскадная система модификаторов чипов**.
   - Модификаторы теперь разделяются по «порядку срабатывания» (order): первый красный мод (order 0) срабатывает при выстреле, второй красный мод (order 1) — при попадании первых снарядов, жёлтый мод (order 2) — при попадании последних каскадных снарядов.

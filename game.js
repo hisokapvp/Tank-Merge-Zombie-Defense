@@ -130,19 +130,12 @@ function createFallbackCannonUpgrades(levels){
     : [];
 }
 
-function sanitizeCannonUpgradeRow(row, index){
-  return CannonUpgradesApi ? CannonUpgradesApi.sanitizeCannonUpgradeRow(row, index) : null;
-}
-
 function normalizeCannonUpgradesConfig(raw){
   return CannonUpgradesApi
     ? CannonUpgradesApi.normalizeCannonUpgradesConfig(raw, CANNON_UPGRADES_LEVELS)
     : null;
 }
 
-function normalizeAppliedCannonUpgrade(value){
-  return CannonUpgradesApi ? CannonUpgradesApi.normalizeAppliedCannonUpgrade(value) : (Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0);
-}
 let CannonUpgradesBalance = createFallbackCannonUpgrades(CANNON_UPGRADES_LEVELS);
 
 function getCannonUpgradeConfig(){
@@ -410,9 +403,6 @@ function getTankBalanceMul(level, key) {
   if (!Number.isFinite(perUpgradeMul) || perUpgradeMul <= 0) return baseMul;
   return baseMul * (1 + applied * perUpgradeMul);
 }
-
-const compact = true;
-const muted = false;
 
 const backgroundLayer = {
   canvas: null,
@@ -1681,14 +1671,6 @@ function toVolume01(value, format){
   if (!Number.isFinite(numeric)) return 0;
   if (format === 'percent') return clamp(numeric / 100, 0, 1);
   return clamp(numeric, 0, 1);
-}
-
-function setTrackLoopVolumeMul(value, format){
-  void value;
-  void format;
-  applyAudioSettings();
-  setLoopSfxVolume(TRACK_LOOP_ID, 1);
-  return TRACK_LOOP_CODE_VOLUME_MUL;
 }
 
 function getVolume(kind, format){
@@ -3793,178 +3775,9 @@ function resolveTalentCantBuyReasonText(canResult){
   }
   return t('ui.toast.unavailable');
 }
-const TALENT_DEFS = [];
-const ACTIVE_TALENT_INDEX = [null, null, null];
-
-function sanitizeTalentIconBaseName(name){
-  // Keep it stable and filesystem-safe (Windows + web servers)
-  return String(name || '')
-    .trim()
-    .replace(/[:\\/]/g, ' ')
-    .replace(/[<>"|?*]/g, '')
-    .replace(/\s+/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 80) || 'talent';
-}
-
-function talentIconPath(name){
-  return `assets/Telent_icon/${sanitizeTalentIconBaseName(name)}.png`;
-}
-
-// Talent tree layout: row, slot (column 0-2), parents (indices within branch)
-// Pattern: 3+3+3+3+2+2+1 = 17 talents per branch
-// Row gating: row N requires N*5 points spent in branch
-const TALENT_LAYOUT = [
-  // Row 0 (0 pts): 3 talents
-  { row: 0, slot: 0, parents: [] },
-  { row: 0, slot: 1, parents: [] },
-  { row: 0, slot: 2, parents: [] },
-  // Row 1 (5 pts): 3 talents
-  { row: 1, slot: 0, parents: [0] },
-  { row: 1, slot: 1, parents: [0, 1, 2] },
-  { row: 1, slot: 2, parents: [2] },
-  // Row 2 (10 pts): 3 talents
-  { row: 2, slot: 0, parents: [3] },
-  { row: 2, slot: 1, parents: [3, 4, 5] },
-  { row: 2, slot: 2, parents: [5] },
-  // Row 3 (15 pts): 3 talents
-  { row: 3, slot: 0, parents: [6] },
-  { row: 3, slot: 1, parents: [6, 7, 8] },
-  { row: 3, slot: 2, parents: [8] },
-  // Row 4 (20 pts): 2 talents
-  { row: 4, slot: 0, parents: [9, 10] },
-  { row: 4, slot: 2, parents: [10, 11] },
-  // Row 5 (25 pts): 2 talents
-  { row: 5, slot: 0, parents: [12] },
-  { row: 5, slot: 2, parents: [13] },
-  // Row 6 (30 pts): 1 talent (active)
-  { row: 6, slot: 1, parents: [14, 15] },
-];
-
-// Build edges for SVG lines: { from: idx, to: idx }
-const TALENT_EDGES = [];
-TALENT_LAYOUT.forEach((node, i) => {
-  node.parents.forEach(p => TALENT_EDGES.push({ from: p, to: i }));
-});
-
-const TALENT_ROW_POINTS = 5; // points needed per row tier
-
-function addTalent(branch, name, desc, maxRank, kind, apply){
-  const id = `${branch}-${TALENT_DEFS.length}`;
-  const prev = ACTIVE_TALENT_INDEX[branch];
-  const idx = TALENT_DEFS.filter(d => d.branch === branch).length;
-  const layout = TALENT_LAYOUT[idx] || { row: 0, slot: 1, parents: [] };
-  const def = { id, branch, name, desc, maxRank, prev, kind, apply, row: layout.row, slot: layout.slot, parents: layout.parents, icon: talentIconPath(name) };
-  TALENT_DEFS.push(def);
-  ACTIVE_TALENT_INDEX[branch] = TALENT_DEFS.length - 1;
-}
-
-function initTalentDefs(){
-  if (TALENT_DEFS.length) return;
-  const addMul = (mods, key, perRank, rank) => { mods[key] *= 1 + perRank * rank; };
-  const addChance = (mods, key, perRank, rank) => { mods[key] += perRank * rank; };
-  const addCooldown = (mods, perRank, rank) => { mods.activeCooldownMul *= 1 - perRank * rank; };
-
-  // Attack branch (17)
-  addTalent(0, 'Калибр', 'Урон +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.07, r));
-  addTalent(0, 'Бронебойные', 'Урон +30%.', 1, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.30, r));
-  addTalent(0, 'Фокусировка', 'Дальность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.07, r));
-  addTalent(0, 'Дальний выстрел', 'Дальность +30%.', 1, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.30, r));
-  addTalent(0, 'Разрывные боеприпасы', 'AOE +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.07, r));
-  addTalent(0, 'Широкий взрыв', 'AOE +30%.', 1, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.30, r));
-  addTalent(0, 'Отравляющие осколки', 'Шанс DOT +6% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'dotChance', 0.06, r));
-  addTalent(0, 'Токсичная волна', 'Шанс DOT +25%.', 1, 'passive', (mods, r) => addChance(mods, 'dotChance', 0.25, r));
-  addTalent(0, 'Кислотный урон', 'DOT-урон +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dotDpsMul', 0.07, r));
-  addTalent(0, 'Горящий яд', 'DOT-урон +30%.', 1, 'passive', (mods, r) => addMul(mods, 'dotDpsMul', 0.30, r));
-  addTalent(0, 'Контроль зоны', 'AOE +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.06, r));
-  addTalent(0, 'Разгон урона', 'Урон +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.06, r));
-  addTalent(0, 'Смертоносный заряд', 'Урон +35%.', 1, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.35, r));
-  addTalent(0, 'Шрапнель', 'AOE +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'aoeMul', 0.07, r));
-  addTalent(0, 'Огневой поток', 'Урон +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'dmgMul', 0.08, r));
-  addTalent(0, 'Снайперский финал', 'Дальность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'rangeMul', 0.35, r));
-  addTalent(0, 'Активка: Шквал', 'На 6с усиливает урон и AOE.', 1, 'active', (mods) => {
-    mods.activeBranches.add(0);
-  });
-
-  // Speed branch (17)
-  addTalent(1, 'Калибровка затвора', 'Скорострельность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.07, r));
-  addTalent(1, 'Турбозатвор', 'Скорострельность +30%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.30, r));
-  addTalent(1, 'Двойной выстрел', 'Шанс двойного выстрела +5% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.05, r));
-  addTalent(1, 'Дуплет', 'Шанс двойного выстрела +20%.', 1, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.20, r));
-  addTalent(1, 'Стабильная орбита', 'Скорость орбиты +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.07, r));
-  addTalent(1, 'Рывок орбиты', 'Скорость орбиты +30%.', 1, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.30, r));
-  addTalent(1, 'Синхронизация', 'Постоянно увеличивает скорострельность на 6% за ранг. Текущая прибавка скорости - {current}%', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.06, r));
-  TALENT_DEFS[TALENT_DEFS.length - 1].effects = [{ perRank: 0.06 }];
-  addTalent(1, 'Механизм спарки', 'Шанс двойного выстрела +4% за ранг.', 5, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.04, r));
-  addTalent(1, 'Импульс', 'Скорострельность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.35, r));
-  addTalent(1, 'Реактивный контур', 'Скорость орбиты +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.08, r));
-  addTalent(1, 'Сокращение перезарядки', 'Кулдауны активки -8% за ранг.', 5, 'passive', (mods, r) => addCooldown(mods, 0.08, r));
-  addTalent(1, 'Молниеносность', 'Кулдауны активки -30%.', 1, 'passive', (mods, r) => addCooldown(mods, 0.30, r));
-  addTalent(1, 'Сверхскорострельность', 'Скорострельность +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.07, r));
-  addTalent(1, 'Серия', 'Шанс двойного выстрела +22%.', 1, 'passive', (mods, r) => addChance(mods, 'doubleShotChance', 0.22, r));
-  addTalent(1, 'Разгон орбиты', 'Скорость орбиты +9% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'orbitSpeedMul', 0.09, r));
-  addTalent(1, 'Стартовый импульс', 'Скорострельность +35%.', 1, 'passive', (mods, r) => addMul(mods, 'fireRateMul', 0.35, r));
-  addTalent(1, 'Активка: Перегрев', 'На 6с резко ускоряет стрельбу и орбиту.', 1, 'active', (mods) => {
-    mods.activeBranches.add(1);
-  });
-
-  // Economy branch (17)
-  addTalent(2, 'Скидки', 'Стоимость покупки -6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.06, r));
-  addTalent(2, 'Оптовые закупки', 'Стоимость покупки -25%.', 1, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.25, r));
-  addTalent(2, 'Увеличенный выкуп', 'Награда монетами +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.07, r));
-  addTalent(2, 'Премия за убийство', 'Награда монетами +30%.', 1, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.30, r));
-  addTalent(2, 'Копилка опыта', 'Опыт +7% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.07, r));
-  addTalent(2, 'Ускоренное обучение', 'Опыт +30%.', 1, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.30, r));
-  addTalent(2, 'Снабжение', 'Награда монетами +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.06, r));
-  addTalent(2, 'Казначей', 'Награда монетами +35%.', 1, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.35, r));
-  addTalent(2, 'Экономия топлива', 'Стоимость покупки -5% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.05, r));
-  addTalent(2, 'Инвестор', 'Опыт +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.08, r));
-  addTalent(2, 'Бонус за выстрел', 'Награда за выстрел +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.06, r));
-  addTalent(2, 'Золотая лихорадка', 'Опыт +35%.', 1, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.35, r));
-  addTalent(2, 'Скидка на снаряды', 'Стоимость покупки -6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.06, r));
-  addTalent(2, 'Программа лояльности', 'Награда монетами +8% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'coinsMul', 0.08, r));
-  addTalent(2, 'Стимул обучения', 'Опыт +6% за ранг.', 5, 'passive', (mods, r) => addMul(mods, 'xpMul', 0.06, r));
-  addTalent(2, 'Контракт века', 'Стоимость покупки -35%.', 1, 'passive', (mods, r) => addMul(mods, 'buyCostMul', -0.35, r));
-  addTalent(2, 'Активка: Золотой час', 'На 6с увеличивает монеты и опыт.', 1, 'active', (mods) => {
-    mods.activeBranches.add(2);
-  });
-}
-
-function baseMods(){
-  return {
-    dmgMul: 1,
-    rangeMul: 1,
-    aoeMul: 1,
-    fireRateMul: 1,
-    doubleShotChance: 0,
-    dotChance: 0,
-    dotDpsMul: 1,
-    orbitSpeedMul: 1,
-    buyCostMul: 1,
-    coinsMul: 1,
-    xpMul: 1,
-    activeCooldownMul: 1,
-    activeBranches: new Set(),
-  };
-}
-
-function computeModsFromApplied(applied, debugOverrides){
-  initTalentDefs();
-  const mods = baseMods();
-  TALENT_DEFS.forEach((def, i) => {
-    let rank = applied[i] || 0;
-    if (debugOverrides && debugOverrides[i]) {
-      if (debugOverrides[i] === 'off') return;
-      if (debugOverrides[i] === 'on') rank = def.kind === 'active' ? 1 : def.maxRank;
-    }
-    if (rank <= 0) return;
-    def.apply(mods, rank);
-  });
-  mods.doubleShotChance = clamp(mods.doubleShotChance, 0, 0.9);
-  mods.dotChance = clamp(mods.dotChance, 0, 0.9);
-  return mods;
-}
+// TALENT_DEFS, ACTIVE_TALENT_INDEX, sanitizeTalentIconBaseName, talentIconPath,
+// TALENT_LAYOUT, TALENT_EDGES, TALENT_ROW_POINTS, addTalent, initTalentDefs,
+// baseMods, computeModsFromApplied  →  extracted to src/systems/talents/talentDefs.js
 
 function adaptTalentsV2ModsToLegacy(v2Mods){
   const src = v2Mods && typeof v2Mods === 'object' ? v2Mods : {};
@@ -7268,7 +7081,6 @@ function ensureBigMenuRuntimeController(){
     saveSettings: saveSettings,
     setVolume: setVolume,
     setAutoPauseEnabled: setAutoPauseEnabled,
-    setTrackLoopVolumeMul: setTrackLoopVolumeMul,
     playUiSliderPreviewSfxThrottled: playUiSliderPreviewSfxThrottled,
     boot: boot,
     resetGameState: resetGameState,
@@ -7350,34 +7162,6 @@ function bigMenuSlotHasData(slot){
   if (!slot || typeof slot !== 'object') return false;
   if (Object.prototype.hasOwnProperty.call(slot, 'hasData')) return !!slot.hasData;
   return Number(slot.lastSavedAt) > 0;
-}
-
-function pad2ForBigMenu(value){
-  const num = Number(value);
-  if (!Number.isFinite(num)) return '00';
-  const intNum = Math.max(0, Math.floor(num));
-  return intNum < 10 ? '0' + intNum : String(intNum);
-}
-
-function formatDateForBigMenu(ms){
-  const timestamp = Number(ms);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return '—';
-  const date = new Date(Math.floor(timestamp));
-  if (!Number.isFinite(date.getTime())) return '—';
-  return date.getFullYear() + '-' + pad2ForBigMenu(date.getMonth() + 1) + '-' + pad2ForBigMenu(date.getDate()) + ' ' + pad2ForBigMenu(date.getHours()) + ':' + pad2ForBigMenu(date.getMinutes());
-}
-
-function renderBigMenuLoadRows(){
-  ensureBigMenuRuntimeController()?.renderBigMenuLoadRows();
-}
-
-function parseBigMenuSlotIndexFromNode(node){
-  if (!node || typeof node.closest !== 'function') return -1;
-  const btn = node.closest('[data-big-load-slot-btn="true"]');
-  if (!btn) return -1;
-  const slotIndex = Number(btn.getAttribute('data-slot-index'));
-  if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return -1;
-  return Math.floor(slotIndex);
 }
 
 function loadSlotPayloadForBigMenu(slotIndex){
@@ -10673,10 +10457,6 @@ function renderFenceBase(){
   ctx.restore();
 }
 
-function drawZombieFence(){
-  renderFenceBase();
-}
-
 function renderFenceHpBars(){
   if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
   const hpBar = getFenceHealthBarConfig();
@@ -11184,13 +10964,9 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
     ctx.translate(x,y);
     ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
     ctx.globalAlpha = ghost ? 0.78 : 1;
-    if (muted){
-      ctx.filter = 'grayscale(1) brightness(0.75)';
-      ctx.globalAlpha *= 0.6;
-    }
 
     const configScale = TankSprites?.config?.tankScale ?? 1;
-    const baseScale = (compact ? 0.065 : 0.085) * balScale * (BAL.tankSpriteScaleMul ?? 1) * configScale;            // tuned for typical PNG sizes
+    const baseScale = 0.065 * balScale * (BAL.tankSpriteScaleMul ?? 1) * configScale;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale;
 
@@ -11263,7 +11039,7 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
 
   // Fallback: vector tank (smaller)
   const configScale = TankSprites?.config?.tankScale ?? 1;
-  const baseScale = (compact ? 0.56 : 0.72) * balScale * configScale;
+  const baseScale = 0.56 * balScale * configScale;
   const levelScale = 1.0 + Math.min(0.20, level*0.010);
   const scale = baseScale * levelScale;
 
@@ -11272,9 +11048,6 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
   ctx.scale(scale, scale);
   ctx.globalAlpha = ghost ? 0.78 : 1;
-  if (muted){
-    ctx.globalAlpha *= 0.6;
-  }
 
   const tier = Math.floor((level-1)/3);
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
@@ -11382,14 +11155,6 @@ function ensureZombieRenderRuntimeController(){
 
 function drawZombieEntity(z, x, y){
   ensureZombieRenderRuntimeController()?.drawZombieEntity(z, x, y);
-}
-
-function drawZombieSprite(x,y,z){
-  ensureZombieRenderRuntimeController()?.drawZombieSprite(x, y, z);
-}
-
-function drawZombieFallback(x,y,z){
-  ensureZombieRenderRuntimeController()?.drawZombieFallback(x, y, z);
 }
 
 function drawProjectiles(){
@@ -12140,7 +11905,6 @@ async function boot(){
         getVolume,
         setVolume,
         setAutoPauseEnabled,
-        setTrackLoopVolumeMul,
         applyAudioSettings,
         updateMenuVolumes,
         syncVolumeUIFromSettings,

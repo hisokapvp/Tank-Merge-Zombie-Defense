@@ -7,7 +7,7 @@
 - Zombie render runtime: `src/render/zombieRender.js`
 
 ## Интеграция
-- `drawZombieEntity`/`drawZombieSprite`/`drawZombieFallback` в `game.js` делегируются в `Game.ZombieRender` через `ensureZombieRenderRuntimeController()` с fallback на встроенный код.
+- `drawZombieEntity` в `game.js` делегируется в `Game.ZombieRender` через `ensureZombieRenderRuntimeController()`. Устаревшие fallback-функции `drawZombieSprite`/`drawZombieFallback` удалены как мёртвый код (весь рендер зомби обрабатывается runtime-модулем).
 - Talents v2 status icons рендерятся в `game.js::draw()` через `Game.TalentsV2.renderStatusIcons(...)` только в world-render боя (не в UI/hangar).
 - Fade трупов применяется в `src/render/zombieRender.js` через `ctx.globalAlpha` в конце corpse-life (`assets/zombies.json: corpseFadeOutSec`).
 - Fence render order в `game.js::draw()`:
