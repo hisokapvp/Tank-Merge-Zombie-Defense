@@ -3,11 +3,11 @@
  * from hangar cells to the tank combat pipeline.
  *
  * Modifier effects (modId 1–14):
- *  1  Double Shot       — 2 projectiles per barrel, each targeting a different enemy
- *  2  Double Chain      — on-hit projectile chains to 2 more targets
- *  3  Double Matryoshka — big shot (×1.25 size, ×2 dmg) spawns small child on impact
+ *  1  Double Shot       — 2 projectiles per barrel, each targeting a different distant enemy; full barrel dmg per projectile
+ *  2  Double Chain      — on-hit spawns a chain projectile to a new target (≥12px away), up to 2 bounces
+ *  3  Double Matryoshka — big shot (×1.25 visual size, ×2 dmg) spawns small child on impact toward a different target (≥12px away)
  *  4  Small Repulse     — on-hit: +0.5× extra dmg & push zombies 10px away
- *  5  Small Vacuum      — on-hit: +0.5× extra dmg & pull zombies 10px toward impact
+ *  5  Small Vacuum      — on-hit: +0.5× extra dmg & pull ALL zombies within 50px toward impact point
  *  6  Small Combo       — every 4th shot fires 3 rapid shots at ×1.25 dmg
  *  7  Arcade Chaos      — each shot randomly picks one pattern from group A (mods 1–9)
  *  8  Small Nuke        — once per 30s: nuclear shot with ×3 blast, 100px radius
@@ -142,7 +142,7 @@
           break;
 
         case 5: // Small Vacuum
-          result.pullDistance = 10;
+          result.pullDistance = 50;
           result.pullExtraDmgMul = 0.5;
           break;
 
@@ -239,7 +239,7 @@
 
     /* ─── Mod 5: Vacuum ─── */
     if (sm.pullDistance > 0) {
-      _applyPushPull(x, y, b, sm.pullDistance, sm.pullExtraDmgMul, 'pull', opts);
+      _applyVacuum(x, y, b, sm.pullDistance, sm.pullExtraDmgMul, opts);
     }
 
     /* ─── Mod 9: Calming ─── */
@@ -321,52 +321,77 @@
     }
   }
 
-  /* ─── chain jumps (mod 2) ─── */
+  /* ─── chain jumps (mod 2) — spawn a projectile to a different target ─── */
   function _applyChainJumps(x, y, b, jumps, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
-    var applyDmg = opts.applyDamage;
-    var addNum = opts.addDamageNumber;
-    var impacts = opts.impacts;
-    var curX = x, curY = y;
-    var hit = {};
-    var chainDmg = b.dmg * 0.7;
+    if (!opts.spawnProjectile) return;
 
-    for (var i = 0; i < jumps; i++) {
-      var best = null, bestD = Infinity;
-      for (var j = 0; j < zombies.length; j++) {
-        var z = zombies[j];
-        if (z.state === 'dying' || hit[z.id]) continue;
-        var p = getPos(z);
-        var d = Math.hypot(p.x - curX, p.y - curY);
-        if (d <= 84 && d < bestD) { best = z; bestD = d; }
-      }
-      if (!best) break;
-      hit[best.id] = true;
-      var bp = getPos(best);
-      if (impacts) {
-        impacts.push({ x: curX, y: curY, tx: bp.x, ty: bp.y, life: 0.10, max: 0.10, kind: 'chipChain' });
-      }
-      var dmg = Math.round(chainDmg);
-      if (applyDmg) applyDmg(best, dmg, 'tank');
-      if (addNum) addNum(bp.x, bp.y, dmg, false);
-      curX = bp.x;
-      curY = bp.y;
+    // Find nearest alive zombie at least 12px from impact point
+    var best = null, bestD = Infinity;
+    for (var j = 0; j < zombies.length; j++) {
+      var z = zombies[j];
+      if (z.state === 'dying') continue;
+      var p = getPos(z);
+      var d = Math.hypot(p.x - x, p.y - y);
+      if (d >= 12 && d <= 150 && d < bestD) { best = z; bestD = d; }
     }
+    if (!best) return;
+
+    var tp = getPos(best);
+    // spawn chain projectile that flies to new target
+    opts.spawnProjectile({
+      fromX: x, fromY: y,
+      toZombieId: best.id, toX: tp.x, toY: tp.y,
+      level: b.level,
+      dmg: b.dmg,
+      aoe: b.aoe,
+      prof: b.prof,
+      bulletCfg: b.bulletCfg,
+      effectIntensity: (b.effectIntensity || 1) * 0.9,
+      shotId: (b.shotId || 0) + 0.1,
+      isTankAttackingZombie: false,
+      tank: b.tank,
+      chipShotMods: jumps > 1 ? {
+        chainJumps: jumps - 1,
+        extraProjectiles: 0,
+        isMatryoshka: false,
+        matryoshkaDmgMul: 1,
+        matryoshkaSizeMul: 1,
+        pushDistance: 0,
+        pushExtraDmgMul: 0,
+        pullDistance: 0,
+        pullExtraDmgMul: 0,
+        comboShots: 0,
+        comboDmgMul: 1,
+        isNuke: false,
+        nukeDmgMul: 1,
+        nukeRadius: 0,
+        isCalming: false,
+        calmDuration: 0,
+        firePool: false,
+        iceZone: false,
+        electroNode: false,
+        laserMark: false,
+        acidPool: false,
+        activeModIds: [2]
+      } : null,
+      isChainChild: true
+    });
   }
 
-  /* ─── matryoshka child (mod 3) ─── */
+  /* ─── matryoshka child (mod 3) — spawn small child to a DIFFERENT target ─── */
   function _spawnMatryoshkaChild(x, y, b, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
-    // find nearest alive zombie for child target
+    // find nearest alive zombie at least 12px from impact point
     var best = null, bestD = Infinity;
     for (var i = 0; i < zombies.length; i++) {
       var z = zombies[i];
       if (z.state === 'dying') continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
-      if (d < bestD) { best = z; bestD = d; }
+      if (d >= 12 && d < bestD) { best = z; bestD = d; }
     }
     if (!best) return;
     var tp = getPos(best);
@@ -387,10 +412,9 @@
     });
   }
 
-  /* ─── push/pull (mod 4, 5) ─── */
+  /* ─── push (mod 4) ─── */
   /* Zombies use polar coordinates (z.r, z.theta) around center.
-     Push = increase z.r (away from center = toward edge),
-     Pull = decrease z.r (toward center). */
+     Push = increase z.r (away from center = toward edge). */
   function _applyPushPull(x, y, b, distance, extraDmgMul, direction, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
@@ -415,6 +439,44 @@
       if (Number.isFinite(z.r)) {
         var sign = direction === 'push' ? 1 : -1;
         z.r = Math.max(0, z.r + distance * sign);
+      }
+    }
+  }
+
+  /* ─── vacuum (mod 5) — pull all zombies in radius toward impact point ─── */
+  function _applyVacuum(x, y, b, pullRadius, extraDmgMul, opts) {
+    var zombies = opts.zombies;
+    var getPos = opts.getZombiePos;
+    var applyDmg = opts.applyDamage;
+    var addNum = opts.addDamageNumber;
+
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      if (z.state === 'dying') continue;
+      var p = getPos(z);
+      var d = Math.hypot(p.x - x, p.y - y);
+      if (d > pullRadius || d < 1) continue;
+
+      // extra damage
+      if (extraDmgMul > 0) {
+        var extraDmg = Math.round(b.dmg * extraDmgMul);
+        if (applyDmg) applyDmg(z, extraDmg, 'tank');
+        if (addNum) addNum(p.x, p.y, extraDmg, false);
+      }
+
+      // Pull toward impact point (x, y) in Cartesian, convert back to polar
+      var pullStrength = Math.min(d * 0.6, 15); // pull up to 15px or 60% of distance
+      var dirX = (x - p.x) / d;
+      var dirY = (y - p.y) / d;
+      var newX = p.x + dirX * pullStrength;
+      var newY = p.y + dirY * pullStrength;
+
+      if (Number.isFinite(z.r) && Number.isFinite(z.theta)) {
+        // Derive center from current polar position
+        var cx = p.x - Math.cos(z.theta) * z.r;
+        var cy = p.y - Math.sin(z.theta) * z.r;
+        z.r = Math.max(0, Math.hypot(newX - cx, newY - cy));
+        z.theta = Math.atan2(newY - cy, newX - cx);
       }
     }
   }

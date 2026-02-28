@@ -6513,6 +6513,7 @@ function resetProjectile(p){
   p.tank = null;
   p.chipShotMods = null;
   p.isMatryoshkaChild = false;
+  p.isChainChild = false;
 }
 
 const projectilePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
@@ -6559,11 +6560,39 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     chipAoe = chipShotMods.nukeRadius;
   }
 
-  const splitDmg = (stats.dmg * chipDmgMul) / totalProjectiles;
+  // Mod 1: each projectile gets full barrel damage (split only by barrel count N, NOT by chip extras)
+  const splitDmg = (stats.dmg * chipDmgMul) / N;
   const shotId = _nextShotId++;
   const targeting = window.Game && window.Game.Targeting;
-  const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, totalProjectiles) : pickBurstTargetsFallback(baseTargets, totalProjectiles);
+  // Pick targets for base barrels (N targets)
+  const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, N) : pickBurstTargetsFallback(baseTargets, N);
   if (!burstTargets.length) return;
+
+  // For chip extra projectiles (mod 1), pick separate distant targets
+  let chipExtraTargetList = burstTargets;
+  if (chipExtraProj > 0 && baseTargets.length > 1) {
+    const usedIds = {};
+    for (let ui = 0; ui < burstTargets.length; ui++) usedIds[burstTargets[ui].id] = true;
+    const altCands = [];
+    for (let ai = 0; ai < baseTargets.length; ai++) {
+      const zt = baseTargets[ai];
+      if (usedIds[zt.id]) continue;
+      const zp = zombiePos(zt);
+      let tooClose = false;
+      for (let bi = 0; bi < burstTargets.length; bi++) {
+        const bp = zombiePos(burstTargets[bi]);
+        if (Math.hypot(zp.x - bp.x, zp.y - bp.y) < 30) { tooClose = true; break; }
+      }
+      if (!tooClose) altCands.push(zt);
+    }
+    if (altCands.length > 0) {
+      chipExtraTargetList = pickBurstTargetsFallback(altCands, N * chipExtraProj);
+    }
+  }
+  // Combined target list: [base barrel targets..., chip extra targets...]
+  const allTargets = [];
+  for (let ti = 0; ti < N; ti++) allTargets.push(burstTargets[ti % burstTargets.length]);
+  for (let ti = 0; ti < N * chipExtraProj; ti++) allTargets.push(chipExtraTargetList[ti % chipExtraTargetList.length]);
 
   const bulletCfg = stats && stats.bulletCfg ? stats.bulletCfg : null;
   if (!bulletCfg) {
@@ -6601,7 +6630,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
         const b = cannonBarrels[bIdx];
         const bx = sx + Math.cos(heading) * (b.x || 0) - Math.sin(heading) * (b.y || 0);
         const by = sy + Math.sin(heading) * (b.x || 0) + Math.cos(heading) * (b.y || 0);
-        const t = burstTargets[i % burstTargets.length];
+        const t = allTargets[i % allTargets.length];
         const tpos = zombiePos(t);
         spawnProjectile({
           fromX: bx, fromY: by,
@@ -6622,7 +6651,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
         for (let k = 0; k < totalProjectiles; k++) offsets.push(-BARREL_SPREAD + (2 * BARREL_SPREAD * k / (totalProjectiles - 1)));
       }
       for (let i = 0; i < totalProjectiles; i++) {
-        const t = burstTargets[i % burstTargets.length];
+        const t = allTargets[i % allTargets.length];
         const tpos = zombiePos(t);
         spawnProjectile({
           fromX: sx + perpX * (offsets[i] || 0),
@@ -6713,6 +6742,7 @@ function spawnProjectile(p){
   b.tank = p.tank || null;
   b.chipShotMods = p.chipShotMods || null;
   b.isMatryoshkaChild = p.isMatryoshkaChild || false;
+  b.isChainChild = p.isChainChild || false;
   state.projectiles.push(b);
 }
 
@@ -11362,7 +11392,8 @@ function drawProjectiles(){
       const sw = bulletSprite.frame.w;
       const sh = bulletSprite.frame.h;
       const anchor = bulletSprite.anchor || { x: 0.5, y: 0.5 };
-      const scale = Number.isFinite(bulletSprite.scale) ? Math.max(0.05, bulletSprite.scale) : 1;
+      const baseScale = Number.isFinite(bulletSprite.scale) ? Math.max(0.05, bulletSprite.scale) : 1;
+      const scale = baseScale * (b.effectIntensity ?? 1);
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(Number.isFinite(b.rotation) ? b.rotation : 0);
