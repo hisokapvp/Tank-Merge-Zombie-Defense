@@ -473,5 +473,140 @@
         "poolLoop": "sfxAcidLoop"
       }
     }
+    ,
+    "15": {
+      "name": "Тройной снаряд",
+      "nameEn": "Triple Shot",
+      "projectile": { "sprite": "bullet_double", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.0, "tint": "#ffe066" },
+      "impact": { "sprite": "impact_double", "frameWidth": 48, "frameHeight": 48, "frames": 4, "animSpeed": 12, "scale": 1.0 },
+      "effect": null,
+      "sfx": { "shoot": "shootNormal", "impact": "impactNormal" }
+    },
+    "16": {
+      "name": "Шестерной снаряд",
+      "nameEn": "Hex Shot",
+      "projectile": { "sprite": "bullet_double", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.1, "tint": "#fff700" },
+      "impact": { "sprite": "impact_double", "frameWidth": 48, "frameHeight": 48, "frames": 4, "animSpeed": 12, "scale": 1.1 },
+      "effect": null,
+      "sfx": { "shoot": "shootNormal", "impact": "impactNormal" }
+    },
+    "17": {
+      "name": "Тройной цепной заряд",
+      "nameEn": "Triple Chain Charge",
+      "projectile": { "sprite": "bullet_chain", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.1, "tint": "#aee9ff" },
+      "impact": { "sprite": "impact_chain", "frameWidth": 48, "frameHeight": 48, "frames": 5, "animSpeed": 14, "scale": 1.1 },
+      "effect": { "sprite": "chain_bolt", "frameWidth": 64, "frameHeight": 16, "frames": 3, "animSpeed": 16, "color": "#aee9ff" },
+      "sfx": { "shoot": "shootHeavy", "impact": "impactChain", "chain": "sfxChainJump" }
+    },
+    "18": {
+      "name": "Шестерной цепной заряд",
+      "nameEn": "Hex Chain Charge",
+      "projectile": { "sprite": "bullet_chain", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.15, "tint": "#e0f7fa" },
+      "impact": { "sprite": "impact_chain", "frameWidth": 48, "frameHeight": 48, "frames": 5, "animSpeed": 14, "scale": 1.15 },
+      "effect": { "sprite": "chain_bolt", "frameWidth": 64, "frameHeight": 16, "frames": 3, "animSpeed": 16, "color": "#e0f7fa" },
+      "sfx": { "shoot": "shootHeavy", "impact": "impactChain", "chain": "sfxChainJump" }
+    },
+    "19": {
+      "name": "Тройная матрёшка",
+      "nameEn": "Triple Matryoshka",
+      "projectile": { "sprite": "bullet_matryoshka_big", "frameWidth": 40, "frameHeight": 40, "frames": 1, "scale": 1.35, "tint": "#ffb347" },
+      "projectileSmall": { "sprite": "bullet_matryoshka_small", "frameWidth": 24, "frameHeight": 24, "frames": 1, "scale": 1.1, "tint": "#ffe0b2" },
+      "impact": { "sprite": "impact_matryoshka", "frameWidth": 56, "frameHeight": 56, "frames": 5, "animSpeed": 12, "scale": 1.3 },
+      "effect": null,
+      "sfx": { "shoot": "shootHeavy", "impact": "impactMatryoshka", "childSpawn": "sfxMatryoshkaChild" }
+    },
+    "20": {
+      "name": "Четверная матрёшка",
+      "nameEn": "Quad Matryoshka",
+      "projectile": { "sprite": "bullet_matryoshka_big", "frameWidth": 40, "frameHeight": 40, "frames": 1, "scale": 1.45, "tint": "#ffe082" },
+      "projectileSmall": { "sprite": "bullet_matryoshka_small", "frameWidth": 24, "frameHeight": 24, "frames": 1, "scale": 1.15, "tint": "#fff8e1" },
+      "impact": { "sprite": "impact_matryoshka", "frameWidth": 56, "frameHeight": 56, "frames": 5, "animSpeed": 12, "scale": 1.4 },
+      "effect": null,
+      "sfx": { "shoot": "shootHeavy", "impact": "impactMatryoshka", "childSpawn": "sfxMatryoshkaChild" }
+    },
+    "21": {
+      "name": "Средний отталкивающий снаряд",
+      "nameEn": "Medium Repulse Shot",
+      "projectile": { "sprite": "bullet_repulse", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.1, "tint": "#ffb3b3" },
+      "impact": { "sprite": "impact_repulse", "frameWidth": 64, "frameHeight": 64, "frames": 6, "animSpeed": 14, "scale": 1.25 },
+      "effect": { "sprite": "wave_repulse", "frameWidth": 64, "frameHeight": 64, "frames": 4, "animSpeed": 10, "color": "rgba(255,179,179,0.3)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactRepulse" }
+    },
+    "22": {
+      "name": "Большой отталкивающий снаряд",
+      "nameEn": "Large Repulse Shot",
+      "projectile": { "sprite": "bullet_repulse", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.2, "tint": "#ffd6d6" },
+      "impact": { "sprite": "impact_repulse", "frameWidth": 64, "frameHeight": 64, "frames": 6, "animSpeed": 14, "scale": 1.3 },
+      "effect": { "sprite": "wave_repulse", "frameWidth": 64, "frameHeight": 64, "frames": 4, "animSpeed": 10, "color": "rgba(255,214,214,0.3)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactRepulse" }
+    },
+    "23": {
+      "name": "Средний вакуумный снаряд",
+      "nameEn": "Medium Vacuum Shot",
+      "projectile": { "sprite": "bullet_vacuum", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.1, "tint": "#d1b3ff" },
+      "impact": { "sprite": "impact_vacuum", "frameWidth": 64, "frameHeight": 64, "frames": 6, "animSpeed": 14, "scale": 1.25 },
+      "effect": { "sprite": "wave_vacuum", "frameWidth": 64, "frameHeight": 64, "frames": 4, "animSpeed": 10, "color": "rgba(209,179,255,0.3)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactVacuum" }
+    },
+    "24": {
+      "name": "Большой вакуумный снаряд",
+      "nameEn": "Large Vacuum Shot",
+      "projectile": { "sprite": "bullet_vacuum", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.2, "tint": "#f3e6ff" },
+      "impact": { "sprite": "impact_vacuum", "frameWidth": 64, "frameHeight": 64, "frames": 6, "animSpeed": 14, "scale": 1.3 },
+      "effect": { "sprite": "wave_vacuum", "frameWidth": 64, "frameHeight": 64, "frames": 4, "animSpeed": 10, "color": "rgba(243,230,255,0.3)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactVacuum" }
+    },
+    "25": {
+      "name": "Средний комбо-счётчик дула",
+      "nameEn": "Medium Barrel Combo",
+      "projectile": { "sprite": "bullet_combo", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 0.95, "tint": "#ffeaa7" },
+      "projectileCombo": { "sprite": "bullet_combo_burst", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.05, "tint": "#f6e58d" },
+      "impact": { "sprite": "impact_combo", "frameWidth": 48, "frameHeight": 48, "frames": 4, "animSpeed": 14, "scale": 1.1 },
+      "effect": null,
+      "sfx": { "shoot": "shootNormal", "shootCombo": "shootHeavy", "impact": "impactNormal" }
+    },
+    "26": {
+      "name": "Большой комбо-счётчик дула",
+      "nameEn": "Large Barrel Combo",
+      "projectile": { "sprite": "bullet_combo", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.05, "tint": "#fffbe6" },
+      "projectileCombo": { "sprite": "bullet_combo_burst", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.15, "tint": "#fffde1" },
+      "impact": { "sprite": "impact_combo", "frameWidth": 48, "frameHeight": 48, "frames": 4, "animSpeed": 14, "scale": 1.2 },
+      "effect": null,
+      "sfx": { "shoot": "shootNormal", "shootCombo": "shootHeavy", "impact": "impactNormal" }
+    },
+    "27": {
+      "name": "Средний ядерный снаряд",
+      "nameEn": "Medium Nuclear Shot",
+      "projectile": { "sprite": "bullet_nuke", "frameWidth": 40, "frameHeight": 40, "frames": 2, "scale": 1.5, "tint": "#ffe066" },
+      "projectileNormal": { "sprite": "bullet_base", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.0, "tint": null },
+      "impact": { "sprite": "impact_nuke", "frameWidth": 128, "frameHeight": 128, "frames": 8, "animSpeed": 10, "scale": 2.2 },
+      "effect": { "sprite": "nuke_shockwave", "frameWidth": 128, "frameHeight": 128, "frames": 6, "animSpeed": 8, "color": "rgba(255,224,102,0.4)" },
+      "sfx": { "shoot": "shootHeavy2", "shootNormal": "shootNormal", "impact": "impactNuke", "impactNormal": "impactNormal" }
+    },
+    "28": {
+      "name": "Большой ядерный снаряд",
+      "nameEn": "Large Nuclear Shot",
+      "projectile": { "sprite": "bullet_nuke", "frameWidth": 40, "frameHeight": 40, "frames": 2, "scale": 1.7, "tint": "#fffde1" },
+      "projectileNormal": { "sprite": "bullet_base", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.0, "tint": null },
+      "impact": { "sprite": "impact_nuke", "frameWidth": 128, "frameHeight": 128, "frames": 8, "animSpeed": 10, "scale": 2.5 },
+      "effect": { "sprite": "nuke_shockwave", "frameWidth": 128, "frameHeight": 128, "frames": 6, "animSpeed": 8, "color": "rgba(255,253,225,0.4)" },
+      "sfx": { "shoot": "shootHeavy2", "shootNormal": "shootNormal", "impact": "impactNuke", "impactNormal": "impactNormal" }
+    },
+    "29": {
+      "name": "Средний успокаивающий снаряд",
+      "nameEn": "Medium Calming Shot",
+      "projectile": { "sprite": "bullet_calm", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.1, "tint": "#b8ffe3" },
+      "impact": { "sprite": "impact_calm", "frameWidth": 48, "frameHeight": 48, "frames": 5, "animSpeed": 12, "scale": 1.1 },
+      "effect": { "sprite": "aura_calm", "frameWidth": 32, "frameHeight": 32, "frames": 3, "animSpeed": 6, "color": "rgba(184,255,227,0.25)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactCalm" }
+    },
+    "30": {
+      "name": "Большой успокаивающий снаряд",
+      "nameEn": "Large Calming Shot",
+      "projectile": { "sprite": "bullet_calm", "frameWidth": 32, "frameHeight": 32, "frames": 2, "scale": 1.2, "tint": "#eafff7" },
+      "impact": { "sprite": "impact_calm", "frameWidth": 48, "frameHeight": 48, "frames": 5, "animSpeed": 12, "scale": 1.2 },
+      "effect": { "sprite": "aura_calm", "frameWidth": 32, "frameHeight": 32, "frames": 3, "animSpeed": 6, "color": "rgba(234,255,247,0.25)" },
+      "sfx": { "shoot": "shootNormal", "impact": "impactCalm" }
+    }
   }
 }

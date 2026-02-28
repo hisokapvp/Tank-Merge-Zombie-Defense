@@ -17,6 +17,24 @@
  * 12  Electro Node      — creates a point that periodically zaps nearest enemy
  * 13  Laser Mark        — marks target; hitting mark = ×2 dmg & ×2 aoe radius
  * 14  Acid Pool         — impact leaves acid pool: small dmg + light slow (sprite)
+ *
+ * Tech-unlockable upgrades (15–30):
+ * 15  Triple Shot       — 3 projectiles per barrel targeting different enemies
+ * 16  Hex Shot          — 6 projectiles per barrel targeting different enemies
+ * 17  Triple Chain      — on-hit chain with 3 bounces
+ * 18  Hex Chain         — on-hit chain with 6 bounces
+ * 19  Triple Matryoshka — big (×1.5, ×3 dmg) → medium (×1.25, ×2 dmg) → small (×1, ×1 dmg)
+ * 20  Quad Matryoshka   — huge (×1.75, ×4 dmg) → big (×1.5, ×3 dmg) → medium (×1.25, ×2 dmg) → small (×1, ×1 dmg)
+ * 21  Medium Repulse    — on-hit: +0.75× extra dmg & push 15px
+ * 22  Large Repulse     — on-hit: +1× extra dmg & push 20px
+ * 23  Medium Vacuum     — on-hit: +0.75× extra dmg & pull 15px
+ * 24  Large Vacuum      — on-hit: +1× extra dmg & pull 20px
+ * 25  Medium Combo      — every 4th shot: 3 rapid shots ×1.5 dmg
+ * 26  Large Combo       — every 4th shot: 4 rapid shots ×2 dmg
+ * 27  Medium Nuke       — once per 30s: ×4 dmg, 300px radius
+ * 28  Large Nuke        — once per 30s: ×5 dmg, entire map radius
+ * 29  Medium Calming    — 0.75s stun, max once per zombie
+ * 30  Large Calming     — 1s stun, max once per zombie
  */
 (function (global) {
   'use strict';
@@ -75,6 +93,7 @@
   }
 
   /* ─── group-A mods for Arcade Chaos (mod 7) ─── */
+  /* Only base mods; tech upgrades are NOT picked by Arcade Chaos */
   var GROUP_A_MODS = [1, 2, 3, 4, 5, 6, 8, 9];
 
   /* ================== SHOT MODIFIER ================== */
@@ -82,21 +101,23 @@
   /** Build an empty shotMods result with all properties at defaults. */
   function _buildEmptyResult() {
     return {
-      extraProjectiles: 0,        // mod 1
-      chainJumps: 0,              // mod 2
-      isMatryoshka: false,        // mod 3
+      extraProjectiles: 0,        // mod 1/15/16
+      chainJumps: 0,              // mod 2/17/18
+      isMatryoshka: false,        // mod 3/19/20
       matryoshkaDmgMul: 1,
       matryoshkaSizeMul: 1,
-      pushDistance: 0,            // mod 4
+      matryoshkaDepth: 0,         // remaining child spawns (0=no child)
+      matryoshkaChain: null,      // array of {dmgMul, sizeMul} for each child level
+      pushDistance: 0,            // mod 4/21/22
       pushExtraDmgMul: 0,
-      pullDistance: 0,            // mod 5
+      pullDistance: 0,            // mod 5/23/24
       pullExtraDmgMul: 0,
-      comboShots: 0,              // mod 6
+      comboShots: 0,              // mod 6/25/26
       comboDmgMul: 1,
-      isNuke: false,              // mod 8
+      isNuke: false,              // mod 8/27/28
       nukeDmgMul: 1,
       nukeRadius: 0,
-      isCalming: false,           // mod 9
+      isCalming: false,           // mod 9/29/30
       calmDuration: 0,
       firePool: false,            // mod 10
       iceZone: false,             // mod 11
@@ -169,6 +190,100 @@
         break;
       case 14: // Acid Pool
         result.acidPool = true;
+        break;
+      /* ── Tech-unlockable upgrades (15–30) ── */
+      case 15: // Triple Shot — 3 projectiles
+        result.extraProjectiles = 2;
+        break;
+      case 16: // Hex Shot — 6 projectiles
+        result.extraProjectiles = 5;
+        break;
+      case 17: // Triple Chain — 3 bounces
+        result.chainJumps = 3;
+        break;
+      case 18: // Hex Chain — 6 bounces
+        result.chainJumps = 6;
+        break;
+      case 19: // Triple Matryoshka — big(×1.5,×3) → med(×1.25,×2) → small(×1,×1)
+        result.isMatryoshka = true;
+        result.matryoshkaDmgMul = 3;
+        result.matryoshkaSizeMul = 1.5;
+        result.matryoshkaDepth = 2;
+        result.matryoshkaChain = [
+          { dmgMul: 2, sizeMul: 1.25 },
+          { dmgMul: 1, sizeMul: 1.0 }
+        ];
+        break;
+      case 20: // Quad Matryoshka — huge(×1.75,×4) → big(×1.5,×3) → med(×1.25,×2) → small(×1,×1)
+        result.isMatryoshka = true;
+        result.matryoshkaDmgMul = 4;
+        result.matryoshkaSizeMul = 1.75;
+        result.matryoshkaDepth = 3;
+        result.matryoshkaChain = [
+          { dmgMul: 3, sizeMul: 1.5 },
+          { dmgMul: 2, sizeMul: 1.25 },
+          { dmgMul: 1, sizeMul: 1.0 }
+        ];
+        break;
+      case 21: // Medium Repulse — ×0.75 extra dmg, 15px push
+        result.pushDistance = 15;
+        result.pushExtraDmgMul = 0.75;
+        break;
+      case 22: // Large Repulse — ×1 extra dmg, 20px push
+        result.pushDistance = 20;
+        result.pushExtraDmgMul = 1.0;
+        break;
+      case 23: // Medium Vacuum — ×0.75 extra dmg, 15px pull radius
+        result.pullDistance = 15;
+        result.pullExtraDmgMul = 0.75;
+        break;
+      case 24: // Large Vacuum — ×1 extra dmg, 20px pull radius
+        result.pullDistance = 20;
+        result.pullExtraDmgMul = 1.0;
+        break;
+      case 25: // Medium Combo — every 4th: 3 rapid shots ×1.5 dmg
+        if (!_comboCounters[cellIndex]) _comboCounters[cellIndex] = 0;
+        _comboCounters[cellIndex]++;
+        if (_comboCounters[cellIndex] >= 4) {
+          _comboCounters[cellIndex] = 0;
+          result.comboShots = 3;
+          result.comboDmgMul = 1.5;
+        }
+        break;
+      case 26: // Large Combo — every 4th: 4 rapid shots ×2 dmg
+        if (!_comboCounters[cellIndex]) _comboCounters[cellIndex] = 0;
+        _comboCounters[cellIndex]++;
+        if (_comboCounters[cellIndex] >= 4) {
+          _comboCounters[cellIndex] = 0;
+          result.comboShots = 4;
+          result.comboDmgMul = 2.0;
+        }
+        break;
+      case 27: // Medium Nuke — every 30s: ×4 dmg, 300px radius
+        var now27 = _now();
+        if (!_nukeCooldowns[cellIndex] || now27 >= _nukeCooldowns[cellIndex]) {
+          result.isNuke = true;
+          result.nukeDmgMul = 4;
+          result.nukeRadius = 300;
+          _nukeCooldowns[cellIndex] = now27 + 30;
+        }
+        break;
+      case 28: // Large Nuke — every 30s: ×5 dmg, entire map (radius 9999)
+        var now28 = _now();
+        if (!_nukeCooldowns[cellIndex] || now28 >= _nukeCooldowns[cellIndex]) {
+          result.isNuke = true;
+          result.nukeDmgMul = 5;
+          result.nukeRadius = 9999;
+          _nukeCooldowns[cellIndex] = now28 + 30;
+        }
+        break;
+      case 29: // Medium Calming — 0.75s stun
+        result.isCalming = true;
+        result.calmDuration = 0.75;
+        break;
+      case 30: // Large Calming — 1s stun
+        result.isCalming = true;
+        result.calmDuration = 1.0;
         break;
     }
   }
@@ -600,7 +715,7 @@
     });
   }
 
-  /* ─── matryoshka child (mod 3) — spawn small child to a DIFFERENT target ─── */
+  /* ─── matryoshka child (mod 3/19/20) — spawn child(ren) to DIFFERENT targets ─── */
   function _spawnMatryoshkaChild(x, y, b, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
@@ -615,21 +730,72 @@
     }
     if (!best) return;
     var tp = getPos(best);
-    opts.spawnProjectile({
-      fromX: x, fromY: y,
-      toZombieId: best.id, toX: tp.x, toY: tp.y,
-      level: b.level,
-      dmg: (b.dmg / (b.chipShotMods && b.chipShotMods.matryoshkaDmgMul || 2)), // child = base dmg
-      aoe: b.aoe,
-      prof: b.prof,
-      bulletCfg: b.bulletCfg,
-      effectIntensity: (b.effectIntensity || 1) * 0.8,
-      shotId: (b.shotId || 0) + 0.5,
-      isTankAttackingZombie: false,
-      tank: b.tank,
-      chipShotMods: null, // child has no further chip effects
-      isMatryoshkaChild: true
-    });
+
+    var sm = b.chipShotMods;
+    var chain = sm && sm.matryoshkaChain;
+    var depth = sm && sm.matryoshkaDepth;
+
+    if (chain && chain.length > 0 && depth > 0) {
+      /* Advanced matryoshka (triple/quad): spawn next child in chain */
+      var nextChild = chain[0];
+      var remainingChain = chain.slice(1);
+      var baseDmg = b.dmg / (sm.matryoshkaDmgMul || 1); // get base dmg
+      var childDmg = baseDmg * nextChild.dmgMul;
+      var childShotMods = null;
+      if (remainingChain.length > 0) {
+        childShotMods = {
+          isMatryoshka: true,
+          matryoshkaDmgMul: nextChild.dmgMul,
+          matryoshkaSizeMul: nextChild.sizeMul,
+          matryoshkaDepth: depth - 1,
+          matryoshkaChain: remainingChain,
+          /* carry through other properties as empty */
+          extraProjectiles: 0, chainJumps: 0,
+          pushDistance: 0, pushExtraDmgMul: 0,
+          pullDistance: 0, pullExtraDmgMul: 0,
+          comboShots: 0, comboDmgMul: 1,
+          isNuke: false, nukeDmgMul: 1, nukeRadius: 0,
+          isCalming: false, calmDuration: 0,
+          firePool: false, iceZone: false, electroNode: false,
+          laserMark: false, acidPool: false,
+          activeModIds: sm.activeModIds || [],
+          cascadeLevel: 0, pendingCascadeMods: [],
+          pendingYellowMods: [], cellIndex: sm.cellIndex || -1
+        };
+      }
+      opts.spawnProjectile({
+        fromX: x, fromY: y,
+        toZombieId: best.id, toX: tp.x, toY: tp.y,
+        level: b.level,
+        dmg: childDmg,
+        aoe: b.aoe,
+        prof: b.prof,
+        bulletCfg: b.bulletCfg,
+        effectIntensity: (b.effectIntensity || 1) * nextChild.sizeMul,
+        shotId: (b.shotId || 0) + 0.5,
+        isTankAttackingZombie: false,
+        tank: b.tank,
+        chipShotMods: childShotMods,
+        isMatryoshkaChild: true
+      });
+    } else {
+      /* Original double matryoshka: big → small (base dmg) */
+      opts.spawnProjectile({
+        fromX: x, fromY: y,
+        toZombieId: best.id, toX: tp.x, toY: tp.y,
+        level: b.level,
+        dmg: (b.dmg / (sm && sm.matryoshkaDmgMul || 2)),
+        aoe: b.aoe,
+        prof: b.prof,
+        bulletCfg: b.bulletCfg,
+        effectIntensity: (b.effectIntensity || 1) * 0.8,
+        shotId: (b.shotId || 0) + 0.5,
+        isTankAttackingZombie: false,
+        tank: b.tank,
+        chipShotMods: null,
+        isMatryoshkaChild: true
+      });
+    }
   }
 
   /* ─── push (mod 4) ─── */

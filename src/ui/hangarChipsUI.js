@@ -395,6 +395,166 @@
     if (panelTechUnlock) panelTechUnlock.hidden = isChips;
 
     if (isChips) renderChipUpgradeGrid();
+    if (!isChips) renderTechUnlockPanel();
+  }
+
+  /* ─── Tech Unlock state ────────────────────────────────── */
+  var _techFeedProgress = {}; // modId → number of chips fed so far
+
+  function getTechFeedProgress() { return _techFeedProgress; }
+  function setTechFeedProgress(obj) { _techFeedProgress = (obj && typeof obj === 'object') ? obj : {}; }
+
+  /** Render the Technology Unlock panel */
+  function renderTechUnlockPanel() {
+    var panel = el('workshopPanelTechUnlock');
+    if (!panel) return;
+    var h = hc();
+    if (!h || !h.TECH_TREE) {
+      panel.innerHTML = '<div class="levelModal__line hangarWipLabel">' + t('workshopTechUnlockWIP', 'В разработке') + '</div>';
+      return;
+    }
+
+    var chips = ensurePlayerChips();
+    var totalChips = 0;
+    for (var ti = 0; ti < chips.length; ti++) totalChips += chips[ti].count;
+
+    var html = '<div class="techUnlockHeader">' +
+      '<span class="techUnlockTitle">' + t('techUnlockTitle', 'Открытие технологий') + '</span>' +
+      '<span class="techUnlockChipCount">' + t('techUnlockChipsAvail', 'Чипов в инвентаре: {count}').replace('{count}', totalChips) + '</span>' +
+      '</div>';
+
+    html += '<div class="techUnlockGrid">';
+
+    var treeKeys = Object.keys(h.TECH_TREE);
+    for (var tk = 0; tk < treeKeys.length; tk++) {
+      var baseModId = Number(treeKeys[tk]);
+      var chain = h.TECH_TREE[baseModId];
+      var baseName = modName(baseModId);
+
+      html += '<div class="techUnlockGroup">';
+      html += '<div class="techUnlockGroup__base">' + t('techUnlockBaseMod', 'Базовая: {name}').replace('{name}', baseName) + '</div>';
+
+      for (var ci = 0; ci < chain.length; ci++) {
+        var tech = chain[ci];
+        var isUnlocked = h.isTechUnlocked(tech.modId);
+        var canUnlock = h.canUnlockTech(tech.modId);
+        var cost = h.getTechCost(tech.modId);
+        var fed = _techFeedProgress[tech.modId] || 0;
+        var remaining = Math.max(0, cost - fed);
+        var canAfford = totalChips >= remaining && remaining > 0;
+
+        var cardClass = 'techUnlockCard';
+        if (isUnlocked) cardClass += ' techUnlockCard--unlocked';
+        else if (!canUnlock) cardClass += ' techUnlockCard--locked';
+        else if (canAfford) cardClass += ' techUnlockCard--ready';
+
+        html += '<div class="' + cardClass + '">';
+        html += '<div class="techUnlockCard__name">' + modName(tech.modId) + '</div>';
+        html += '<div class="techUnlockCard__desc">' + _getTechDescription(tech.modId) + '</div>';
+
+        if (isUnlocked) {
+          html += '<div class="techUnlockCard__status techUnlockCard__status--done">' + t('techUnlockDone', '✓ Открыто') + '</div>';
+        } else if (!canUnlock) {
+          html += '<div class="techUnlockCard__status techUnlockCard__status--locked">' + t('techUnlockNeedPrev', 'Сначала откройте предыдущий уровень') + '</div>';
+        } else {
+          html += '<div class="techUnlockCard__progress">';
+          var pctW = cost > 0 ? Math.min(100, Math.round(fed / cost * 100)) : 0;
+          html += '<div class="techUnlockCard__bar"><div class="techUnlockCard__barFill" style="width:' + pctW + '%"></div></div>';
+          html += '<span class="techUnlockCard__progressText">' + fed + ' / ' + cost + '</span>';
+          html += '</div>';
+
+          html += '<div class="techUnlockCard__actions">';
+          html += '<button class="btn scButton techUnlockCard__feedBtn" data-tech-feed="' + tech.modId + '" data-tech-amount="1" type="button"' + (totalChips < 1 ? ' disabled' : '') + '>' + t('techUnlockFeed1', 'Скормить 1') + '</button>';
+          html += '<button class="btn scButton techUnlockCard__feedBtn" data-tech-feed="' + tech.modId + '" data-tech-amount="5" type="button"' + (totalChips < 1 ? ' disabled' : '') + '>' + t('techUnlockFeed5', 'Скормить 5') + '</button>';
+          if (canAfford) {
+            html += '<button class="btn scButton techUnlockCard__feedBtn techUnlockCard__feedBtn--all" data-tech-feed="' + tech.modId + '" data-tech-amount="' + remaining + '" type="button">' + t('techUnlockFeedAll', 'Скормить всё ({n})').replace('{n}', remaining) + '</button>';
+          }
+          html += '</div>';
+        }
+
+        html += '</div>'; // techUnlockCard
+      }
+      html += '</div>'; // techUnlockGroup
+    }
+
+    html += '</div>'; // techUnlockGrid
+    panel.innerHTML = html;
+  }
+
+  /** Get a short description for a tech mod */
+  function _getTechDescription(modId) {
+    var descs = {
+      15: t('techDesc15', '3 снаряда из каждого дула в разные цели'),
+      16: t('techDesc16', '6 снарядов из каждого дула в разные цели'),
+      17: t('techDesc17', 'Цепная молния с 3 перескоками'),
+      18: t('techDesc18', 'Цепная молния с 6 перескоками'),
+      19: t('techDesc19', 'Матрёшка: большой(×3) → средний(×2) → малый(×1)'),
+      20: t('techDesc20', 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)'),
+      21: t('techDesc21', 'Ударная волна: ×0.75 урона, отталкивание 15px'),
+      22: t('techDesc22', 'Ударная волна: ×1 урона, отталкивание 20px'),
+      23: t('techDesc23', 'Вакуум: ×0.75 урона, стягивание 15px'),
+      24: t('techDesc24', 'Вакуум: ×1 урона, стягивание 20px'),
+      25: t('techDesc25', 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном'),
+      26: t('techDesc26', 'Каждый 4-й выстрел: 4 залпа с ×2 уроном'),
+      27: t('techDesc27', 'Раз в 30с: ядерный взрыв ×4, радиус 300px'),
+      28: t('techDesc28', 'Раз в 30с: ядерный взрыв ×5, вся карта'),
+      29: t('techDesc29', 'Заморозка атаки зомби на 0.75с'),
+      30: t('techDesc30', 'Заморозка атаки зомби на 1с')
+    };
+    return descs[modId] || '';
+  }
+
+  /**
+   * Feed chips to unlock a technology.
+   * Removes `amount` chips from inventory (any chips, cheapest first).
+   * When progress reaches cost → unlocks the technology.
+   */
+  function feedChipsForTech(modId, amount) {
+    var h = hc();
+    if (!h) return { ok: false, error: 'no_module' };
+    if (h.isTechUnlocked(modId)) return { ok: false, error: 'already_unlocked' };
+    if (!h.canUnlockTech(modId)) return { ok: false, error: 'prerequisite' };
+
+    var cost = h.getTechCost(modId);
+    var fed = _techFeedProgress[modId] || 0;
+    var remaining = cost - fed;
+    if (remaining <= 0) return { ok: false, error: 'already_full' };
+
+    var chips = ensurePlayerChips();
+    var totalAvail = 0;
+    for (var i = 0; i < chips.length; i++) totalAvail += chips[i].count;
+
+    var toFeed = Math.min(amount, remaining, totalAvail);
+    if (toFeed <= 0) return { ok: false, error: 'no_chips' };
+
+    /* Remove chips from inventory (cheapest / lowest level first) */
+    var removed = 0;
+    /* Sort by level ascending so we consume lowest-level chips first */
+    var sorted = chips.slice().sort(function(a, b) { return a.level - b.level; });
+
+    for (var si = 0; si < sorted.length && removed < toFeed; si++) {
+      var entry = sorted[si];
+      var take = Math.min(entry.count, toFeed - removed);
+      entry.count -= take;
+      removed += take;
+    }
+    /* Clean up zero-count entries */
+    for (var ci = chips.length - 1; ci >= 0; ci--) {
+      if (chips[ci].count <= 0) chips.splice(ci, 1);
+    }
+
+    _techFeedProgress[modId] = fed + removed;
+
+    /* Check if we've reached the cost */
+    if (_techFeedProgress[modId] >= cost) {
+      /* Unlock technology! */
+      var cells = ensureCells();
+      var result = h.unlockTechnology(modId, chips, cells);
+      _techFeedProgress[modId] = cost; // cap at cost
+      return { ok: true, unlocked: true, fed: removed, replaced: result.replaced };
+    }
+
+    return { ok: true, unlocked: false, fed: removed };
   }
 
   /* ─── Player chip inventory (with levels) ──────────────── */
@@ -791,6 +951,30 @@
       }
       return;
     }
+
+    /* tech unlock feed button */
+    var techFeedBtn = tgt.closest ? tgt.closest('[data-tech-feed]') : null;
+    if (techFeedBtn) {
+      var techModId = parseInt(techFeedBtn.getAttribute('data-tech-feed'), 10);
+      var techAmount = parseInt(techFeedBtn.getAttribute('data-tech-amount'), 10);
+      if (Number.isFinite(techModId) && Number.isFinite(techAmount) && techAmount > 0) {
+        var feedResult = feedChipsForTech(techModId, techAmount);
+        if (feedResult.ok) {
+          if (feedResult.unlocked) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(t('techUnlockSuccess', 'Технология «{name}» открыта! Все чипы обновлены.').replace('{name}', modName(techModId)), 2500);
+            }
+          } else {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(t('techUnlockFedChips', 'Скормлено {n} чипов').replace('{n}', feedResult.fed), 1200);
+            }
+          }
+          renderTechUnlockPanel();
+          renderChipUpgradeGrid();
+        }
+      }
+      return;
+    }
   }
 
   /** Try to auto-install a chip into the first empty matching slot */
@@ -955,6 +1139,10 @@
     mergeChips: mergeChips,
     chipLevelBonus: chipLevelBonus,
     renderChipUpgradeGrid: renderChipUpgradeGrid,
+    renderTechUnlockPanel: renderTechUnlockPanel,
+    feedChipsForTech: feedChipsForTech,
+    getTechFeedProgress: getTechFeedProgress,
+    setTechFeedProgress: setTechFeedProgress,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,
