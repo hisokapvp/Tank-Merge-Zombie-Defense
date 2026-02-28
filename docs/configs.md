@@ -44,3 +44,30 @@
 
 - `tankPrintDurationSec` — длительность stamp-reveal печати танка в ангаре (сек).
 - Значение читается runtime-логикой печати с fallback `1.5`, если поле отсутствует/невалидно.
+
+## assets/chips.json
+
+Конфигурация спрайтов, эффектов и звуков для чип-модификаторов ангара.
+
+### Структура верхнего уровня
+
+- `atlas` — путь к атласу спрайтов (например `"assets/chips_atlas.png"`).
+- `modifiers` — объект, ключи — ID модификатора (`"1"`.."14"`), значения — конфиг модификатора.
+
+### Конфиг модификатора
+
+Каждый модификатор содержит:
+
+- `projectile` — спрайт снаряда: `{ sprite, frameWidth, frames, scale, tint }`.
+- `projectileSmall` *(опционально, mod 3)* — спрайт child-снаряда (матрёшка).
+- `projectileCombo` *(опционально, mod 6)* — спрайт комбо-снаряда.
+- `projectileNormal` *(опционально, mod 8)* — спрайт обычного снаряда (нука в cooldown-е).
+- `impact` — спрайт попадания: `{ sprite, frameWidth, frames, scale, tint }`.
+- `effect` — спрайт эффекта: `{ sprite, frameWidth, frames, scale, tint }`.
+  - Дополнительные поля для пулов/нод: `poolLife`, `poolRadius`, `slowFactor`, `nodeLife`.
+- `sfx` — звуковые файлы: `{ shoot, impact }` и/или модификатор-специфичные (`chain`, `push`, `calm`, `fire`, `ice`, `electro`, `laser`, `acid`).
+
+### Загрузка
+
+- `boot()` в `game.js` загружает `assets/chips.json` через `fetch` и вызывает `ChipEffects.loadChipsCfg(data)`.
+- Если файл не загрузился, чип-эффекты работают без визуальных/звуковых настроек (fallback поведение).

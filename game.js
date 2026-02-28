@@ -6179,8 +6179,15 @@ function stepZombies(dt){
     if (!Number.isFinite(z.walkAnimFrame)) z.walkAnimFrame = 0;
 
     const typeId = z.type?.id || '';
-    const balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
+    let balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
     const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
+
+    // ── Chip: slow from ice/acid pools (mods 11, 14) ──
+    if (z.chipSlowUntil && (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000) < z.chipSlowUntil) {
+      balSpeedMul *= Math.max(0.05, z.chipSlowFactor || 1);
+    } else {
+      z.chipSlowFactor = 1; // reset
+    }
 
     const shouldMove = !attackActive || z.attackState !== 'attack';
     const prevTheta = z.theta;
@@ -6282,7 +6289,10 @@ function stepZombies(dt){
     const targetNow = attackActive ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
-    if (!attackActive) {
+    // ── Chip: calming effect (mod 9) — suppress attacks ──
+    const isCalmed = z.calmUntil && (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000) < z.calmUntil;
+
+    if (!attackActive || isCalmed) {
       z.attackState = 'walk';
       z.attackAnimTimeSec = 0;
       z.attackCooldownTimerSec = 0;
@@ -6449,7 +6459,7 @@ function stepTanks(dt){
             : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
           const primaryTarget = targets.length ? targets[0] : best;
 
-          fireTankProjectile({sx: mx, sy: my, target: primaryTarget, targets, tank, stats: s, mods});
+          fireTankProjectile({sx: mx, sy: my, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i});
         }
       }
 
@@ -6468,7 +6478,7 @@ function stepTanks(dt){
       ? targeting.pickBurstTargetsBySide(targetPool, count, { sx: sx, sy: sy, heading: pos.heading, getPos: zombiePos })
       : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
     const primaryTarget = targets.length ? targets[0] : best;
-    fireTankProjectile({sx, sy, target: primaryTarget, targets, tank, stats: s, mods});
+    fireTankProjectile({sx, sy, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i});
   }
 }
 
@@ -6501,6 +6511,8 @@ function resetProjectile(p){
   p.life = 0;
   p.isTankAttackingZombie = false;
   p.tank = null;
+  p.chipShotMods = null;
+  p.isMatryoshkaChild = false;
 }
 
 const projectilePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
@@ -6511,7 +6523,7 @@ function releaseProjectile(p){
   if (projectilePool) projectilePool.release(p);
 }
 
-function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
+function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellIndex}){
   const isTankAttackingZombie = false;
   const powerTier = tank.powerTier ?? computePowerTier(getComputerLevel());
   const effectIntensity = 1 + powerTier * 0.25;
@@ -6519,13 +6531,38 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
   if (!baseTargets.length) return;
   const tp = zombiePos(baseTargets[0]);
 
+  // ── Chip modifier system ──
+  const ChipFx = window.Game && window.Game.ChipEffects;
+  const chipShotMods = ChipFx && typeof ChipFx.applyShotModifiers === 'function'
+    ? ChipFx.applyShotModifiers({ cellIndex: cellIndex, tank: tank, stats: stats, targets: baseTargets, sx: sx, sy: sy })
+    : null;
+
   // Multi-barrel: N projectiles with damage split (T3)
   const Combat = window.Game && window.Game.Combat;
   const N = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
-  const splitDmg = stats.dmg / N;
+
+  // Mod 1 (Double Shot): extra projectile per barrel
+  const chipExtraProj = chipShotMods && chipShotMods.extraProjectiles ? chipShotMods.extraProjectiles : 0;
+  const totalProjectiles = N + N * chipExtraProj;
+
+  // Mod 3 (Matryoshka): big shot has ×2 dmg, ×1.25 size
+  let chipDmgMul = 1;
+  let chipSizeMul = 1;
+  if (chipShotMods && chipShotMods.isMatryoshka) {
+    chipDmgMul = chipShotMods.matryoshkaDmgMul;
+    chipSizeMul = chipShotMods.matryoshkaSizeMul;
+  }
+  // Mod 8 (Nuke): ×3 dmg, 100px aoe
+  let chipAoe = stats.aoe;
+  if (chipShotMods && chipShotMods.isNuke) {
+    chipDmgMul *= chipShotMods.nukeDmgMul;
+    chipAoe = chipShotMods.nukeRadius;
+  }
+
+  const splitDmg = (stats.dmg * chipDmgMul) / totalProjectiles;
   const shotId = _nextShotId++;
   const targeting = window.Game && window.Game.Targeting;
-  const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, N) : pickBurstTargetsFallback(baseTargets, N);
+  const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, totalProjectiles) : pickBurstTargetsFallback(baseTargets, totalProjectiles);
   if (!burstTargets.length) return;
 
   const bulletCfg = stats && stats.bulletCfg ? stats.bulletCfg : null;
@@ -6559,8 +6596,9 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
   const spawnBurst = () => {
     if (cannonBarrels && cannonBarrels.length >= N) {
       // Use explicit barrel positions from tanks.json
-      for (let i = 0; i < N; i++) {
-        const b = cannonBarrels[i];
+      for (let i = 0; i < totalProjectiles; i++) {
+        const bIdx = i % N;
+        const b = cannonBarrels[bIdx];
         const bx = sx + Math.cos(heading) * (b.x || 0) - Math.sin(heading) * (b.y || 0);
         const by = sy + Math.sin(heading) * (b.x || 0) + Math.cos(heading) * (b.y || 0);
         const t = burstTargets[i % burstTargets.length];
@@ -6569,29 +6607,34 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
           fromX: bx, fromY: by,
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
-          aoe: stats.aoe, prof: stats.prof,
+          aoe: chipAoe, prof: stats.prof,
           bulletCfg,
-          effectIntensity, shotId,
+          effectIntensity: effectIntensity * chipSizeMul, shotId,
           isTankAttackingZombie,
           tank,
+          chipShotMods,
         });
       }
     } else {
       // Default: spread perpendicular to heading
-      const offsets = N === 1 ? [0] : N === 2 ? [-BARREL_SPREAD / 2, BARREL_SPREAD / 2] : [-BARREL_SPREAD, 0, BARREL_SPREAD];
-      for (let i = 0; i < N; i++) {
+      const offsets = totalProjectiles === 1 ? [0] : totalProjectiles === 2 ? [-BARREL_SPREAD / 2, BARREL_SPREAD / 2] : [];
+      if (!offsets.length && totalProjectiles > 2) {
+        for (let k = 0; k < totalProjectiles; k++) offsets.push(-BARREL_SPREAD + (2 * BARREL_SPREAD * k / (totalProjectiles - 1)));
+      }
+      for (let i = 0; i < totalProjectiles; i++) {
         const t = burstTargets[i % burstTargets.length];
         const tpos = zombiePos(t);
         spawnProjectile({
-          fromX: sx + perpX * offsets[i],
-          fromY: sy + perpY * offsets[i],
+          fromX: sx + perpX * (offsets[i] || 0),
+          fromY: sy + perpY * (offsets[i] || 0),
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
-          aoe: stats.aoe, prof: stats.prof,
+          aoe: chipAoe, prof: stats.prof,
           bulletCfg,
-          effectIntensity, shotId,
+          effectIntensity: effectIntensity * chipSizeMul, shotId,
           isTankAttackingZombie,
           tank,
+          chipShotMods,
         });
       }
     }
@@ -6603,6 +6646,12 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods}){
   spawnBurst();
   if (Math.random() < mods.doubleShotChance){
     spawnBurst();
+  }
+  // Mod 6 (combo counter): fire 3 extra rapid bursts at ×1.25 dmg
+  if (chipShotMods && chipShotMods.comboShots > 0) {
+    for (let ci = 0; ci < chipShotMods.comboShots; ci++) {
+      spawnBurst();
+    }
   }
   tank.cooldown = 1 / (stats.fr * speedMult());
   if (!isTankAttackingZombie){
@@ -6662,6 +6711,8 @@ function spawnProjectile(p){
   b.life = 2.0;
   b.isTankAttackingZombie = p.isTankAttackingZombie === true;
   b.tank = p.tank || null;
+  b.chipShotMods = p.chipShotMods || null;
+  b.isMatryoshkaChild = p.isMatryoshkaChild || false;
   state.projectiles.push(b);
 }
 
@@ -6737,6 +6788,17 @@ function impactAt(x,y,b,opts){
   const mods = getMods();
   const attackMult = getZombieAttackMultipliers();
   const damageMul = attackMult.damageMult;
+
+  // ── Chip: Laser Mark boost (mod 13) ──
+  const ChipFx = window.Game && window.Game.ChipEffects;
+  if (ChipFx && b.chipShotMods && !b.isMatryoshkaChild) {
+    const markBoost = ChipFx.checkLaserMarkBoost(x, y);
+    if (markBoost) {
+      b.dmg = b.dmg * markBoost.damageMul;
+      b.aoe = b.aoe * markBoost.aoeMul;
+    }
+  }
+
   const talentsApi = isTalentsV2Ready() ? getTalentsV2Api() : null;
   const hasTalentsHit = !!(talentsApi && typeof talentsApi.onHit === 'function');
   const aoeVictimsCount = state.zombies.reduce((acc, z) => {
@@ -6815,6 +6877,25 @@ function impactAt(x,y,b,opts){
     burst(x, y, impactCount, b.glow);
     if (b.dmg > 80){
       state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow',bulletCfg:b.bulletCfg||null});
+    }
+  }
+
+  // ── Chip impact effects (mods 2–14) ──
+  if (b.chipShotMods && !b.isMatryoshkaChild) {
+    const ChipFxI = window.Game && window.Game.ChipEffects;
+    if (ChipFxI && typeof ChipFxI.applyImpactEffects === 'function') {
+      ChipFxI.applyImpactEffects({
+        x, y, b,
+        shotMods: b.chipShotMods,
+        zombies: state.zombies,
+        getZombiePos: zombiePos,
+        applyDamage: applyDamageToZombie,
+        addDecal,
+        burst,
+        addDamageNumber,
+        spawnProjectile,
+        impacts: state.impacts,
+      });
     }
   }
 }
@@ -6908,18 +6989,22 @@ function addDecal(d){
   if (state.decals.length > BAL.maxDecals) state.decals.shift();
   state.decals.push({
     kind: d.kind,
+    subKind: d.subKind || null,
     x: d.x,
     y: d.y,
     r: d.r,
     life: d.life,
     max: d.life,
     dps: d.dps || 0,
+    slowFactor: d.slowFactor || 0,
+    chipModId: d.chipModId || 0,
     color: d.color || 'rgba(125,255,178,.14)',
   });
 }
 
 function stepDecals(dt){
   const next = [];
+  const ChipFxD = window.Game && window.Game.ChipEffects;
   for (const d of state.decals){
     d.life -= dt;
     if (d.life <= 0) continue;
@@ -6932,6 +7017,25 @@ function stepDecals(dt){
         if (dist <= d.r){
           applyDamageToZombie(z, d.dps * dt, 'tank');
         }
+      }
+    }
+
+    // Chip-created pools (fire, ice, acid)
+    if (d.kind === 'chipPool') {
+      // DOT damage (fire, acid)
+      if (d.dps > 0) {
+        for (const z of state.zombies) {
+          if (z.state === 'dying') continue;
+          const p = zombiePos(z);
+          const dist = Math.hypot(p.x - d.x, p.y - d.y);
+          if (dist <= d.r) {
+            applyDamageToZombie(z, d.dps * dt, 'tank');
+          }
+        }
+      }
+      // Slow effect (ice, acid) — delegate to ChipEffects
+      if (ChipFxD && typeof ChipFxD.stepChipDecal === 'function') {
+        ChipFxD.stepChipDecal(d, dt, { zombies: state.zombies, getZombiePos: zombiePos });
       }
     }
 
@@ -7970,6 +8074,10 @@ function resetGameState(options){
   // Clear popup seen-levels on New Game (T5)
   if (window.Game && window.Game.MergePopup && window.Game.MergePopup.resetSeenLevels) {
     window.Game.MergePopup.resetSeenLevels();
+  }
+  // ── Reset chip effects state (cooldowns, combo counters, etc.) ──
+  if (window.Game && window.Game.ChipEffects && typeof window.Game.ChipEffects.reset === 'function') {
+    window.Game.ChipEffects.reset();
   }
   if (DebugPanelEnabled) {
     state.debug = {
@@ -11751,6 +11859,19 @@ function loop(now){
     stepTanks(effDt);
     stepProjectiles(effDt);
     stepDecals(effDt);
+    // ── Chip effects tick (electro nodes, laser marks) ──
+    {
+      const _ChipFxStep = window.Game && window.Game.ChipEffects;
+      if (_ChipFxStep && typeof _ChipFxStep.stepChipEffects === 'function') {
+        _ChipFxStep.stepChipEffects(effDt, {
+          zombies: state.zombies,
+          getZombiePos: zombiePos,
+          applyDamage: applyDamageToZombie,
+          addDamageNumber,
+          impacts: state.impacts,
+        });
+      }
+    }
     stepCrate(effDt);
     cleanupKills();
     stepImpacts(effDt);
@@ -11927,6 +12048,18 @@ async function boot(){
       GameApi.Balance.CannonUpgrades = CannonUpgradesBalance;
       console.warn('[Balance] using fallback CannonUpgrades:', e);
     }
+
+    // ── Load chips.json for chip modifier visuals / sounds ──
+    try {
+      const chipsRes = await fetch('assets/chips.json', { cache: 'no-store' });
+      if (chipsRes.ok) {
+        const chipsData = await chipsRes.json();
+        if (window.Game && window.Game.ChipEffects && typeof window.Game.ChipEffects.loadChipsCfg === 'function') {
+          window.Game.ChipEffects.loadChipsCfg(chipsData);
+          console.log('[ChipEffects] chips.json loaded OK');
+        }
+      }
+    } catch (e) { console.warn('chips.json load failed:', e); }
 
     await GroundSprites.load().catch(function () {});
     rebuildGroundLayer();

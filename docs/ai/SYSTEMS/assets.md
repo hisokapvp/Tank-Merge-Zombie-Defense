@@ -5,6 +5,7 @@
 - `assets/ground.json`, `assets/decor.json`, `assets/fence.json`
 - `assets/supercomputer.json`, `assets/bonusbox.json`, `assets/boost_icons.json`
 - `assets/credits.json` (данные для модалки `Credits/Создатели` в big menu)
+- `assets/chips.json` (спрайты, эффекты и звуки чип-модификаторов ангара)
 - `assets/balance/talentTree_v2.json` (PACK 1 baseline для data-driven дерева талантов v2)
 - `assets/ui/icons/talents/*.png`, `assets/ui/icons/status/*.png` (stable icon keys; placeholder допустим)
 
