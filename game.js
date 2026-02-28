@@ -6569,6 +6569,8 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   if (!burstTargets.length) return;
 
   // For chip extra projectiles (mod 1), pick separate distant targets
+  // Distance threshold is configurable via ChipEffects.DOUBLE_SHOT_MIN_TARGET_DISTANCE
+  const dblShotMinDist = (ChipFx && ChipFx.DOUBLE_SHOT_MIN_TARGET_DISTANCE) || 120;
   let chipExtraTargetList = burstTargets;
   if (chipExtraProj > 0 && baseTargets.length > 1) {
     const usedIds = {};
@@ -6581,7 +6583,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
       let tooClose = false;
       for (let bi = 0; bi < burstTargets.length; bi++) {
         const bp = zombiePos(burstTargets[bi]);
-        if (Math.hypot(zp.x - bp.x, zp.y - bp.y) < 30) { tooClose = true; break; }
+        if (Math.hypot(zp.x - bp.x, zp.y - bp.y) < dblShotMinDist) { tooClose = true; break; }
       }
       if (!tooClose) altCands.push(zt);
     }

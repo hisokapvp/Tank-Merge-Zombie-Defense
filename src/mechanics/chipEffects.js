@@ -24,6 +24,14 @@
   /* ────────── config loaded from assets/chips.json ────────── */
   var _chipsCfg = null;
 
+  /**
+   * Minimum distance (px) between primary and secondary target for
+   * the "Double Shot" (mod 1) modifier.  The second projectile will
+   * only pick a zombie that is at least this far from every primary
+   * target.  Increase to force more spread, decrease to relax it.
+   */
+  var DOUBLE_SHOT_MIN_TARGET_DISTANCE = 1000;
+
   function loadChipsCfg(cfg) { _chipsCfg = cfg; }
   function getChipsCfg() { return _chipsCfg; }
   function getModCfg(modId) { return _chipsCfg && _chipsCfg.modifiers ? _chipsCfg.modifiers[String(modId)] : null; }
@@ -639,7 +647,10 @@
     reset: reset,
     getElectroNodes: getElectroNodes,
     getLaserMarks: getLaserMarks,
-    GROUP_A_MODS: GROUP_A_MODS
+    GROUP_A_MODS: GROUP_A_MODS,
+    /** Configurable min distance for Double Shot second-target selection */
+    get DOUBLE_SHOT_MIN_TARGET_DISTANCE() { return DOUBLE_SHOT_MIN_TARGET_DISTANCE; },
+    set DOUBLE_SHOT_MIN_TARGET_DISTANCE(v) { DOUBLE_SHOT_MIN_TARGET_DISTANCE = v; }
   };
 
 })(typeof window !== 'undefined' ? window : this);

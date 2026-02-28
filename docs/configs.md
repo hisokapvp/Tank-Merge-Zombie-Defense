@@ -71,3 +71,6 @@
 
 - `boot()` в `game.js` загружает `assets/chips.json` через `fetch` и вызывает `ChipEffects.loadChipsCfg(data)`.
 - Если файл не загрузился, чип-эффекты работают без визуальных/звуковых настроек (fallback поведение).
+## src/mechanics/chipEffects.js — runtime-параметры
+
+- `Game.ChipEffects.DOUBLE_SHOT_MIN_TARGET_DISTANCE` (read/write, default `120`) — минимальная дистанция (px) между основной и вторичной целью модификатора «Двойной снаряд» (mod 1). Увеличение значения заставляет второй снаряд искать более далёких зомби; уменьшение — допускает ближайших.

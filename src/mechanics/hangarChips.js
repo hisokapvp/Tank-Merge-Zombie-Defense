@@ -195,6 +195,47 @@
     return p1.A === p2.A && p1.B === p2.B;
   }
 
+  /**
+   * Yellow slot adjacency map (based on shared vertices with red slots):
+   *
+   *   Y1 (slot1, pts: TC, CL, TL) ↔ Red1 (pts: TC, BC, CL)
+   *     → Y1.innerA (at TC) must == Red1.A (at TC)
+   *     → Y1.innerB (at CL) must == Red1.C (at CL)
+   *
+   *   Y2 (slot2, pts: TC, CR, TR) ↔ Red2 (pts: TC, BC, CR)
+   *     → Y2.innerA (at TC) must == Red2.A (at TC)
+   *     → Y2.innerB (at CR) must == Red2.C (at CR)
+   *
+   *   Y3 (slot3, pts: BC, CL, BL) ↔ Red1 (pts: TC, BC, CL)
+   *     → Y3.innerA (at BC) must == Red1.B (at BC)
+   *     → Y3.innerB (at CL) must == Red1.C (at CL)
+   *
+   *   Y4 (slot4, pts: BC, CR, BR) ↔ Red2 (pts: TC, BC, CR)
+   *     → Y4.innerA (at BC) must == Red2.B (at BC)
+   *     → Y4.innerB (at CR) must == Red2.C (at CR)
+   */
+  var YELLOW_ADJACENCY = {
+    slot1: { redSlot: 'slot1', innerAKey: 'A', innerBKey: 'C' },
+    slot2: { redSlot: 'slot2', innerAKey: 'A', innerBKey: 'C' },
+    slot3: { redSlot: 'slot1', innerAKey: 'B', innerBKey: 'C' },
+    slot4: { redSlot: 'slot2', innerAKey: 'B', innerBKey: 'C' }
+  };
+
+  /**
+   * Check if a yellow chip's inner vertices match the adjacent red chip.
+   * Returns true only if the adjacent red chip is installed AND both
+   * shared vertices have matching modifier IDs.
+   */
+  function checkYellowMatch(yellowPlacement, yellowSlotKey, cellState) {
+    var adj = YELLOW_ADJACENCY[yellowSlotKey];
+    if (!adj) return false;
+    var redChip = cellState.redSlots[adj.redSlot];
+    if (!redChip) return false;
+    var rp = normalizeRedPlacementRotated(redChip.modIds, redChip.rotation);
+    return yellowPlacement.innerA === rp[adj.innerAKey] &&
+      yellowPlacement.innerB === rp[adj.innerBKey];
+  }
+
   /* ── Active-modifier calculation ───────────────────────── */
 
   function calculateActiveModifiers(cellState) {
@@ -224,9 +265,10 @@
       mods.push({ modId: pr2.A, source: 'red2', vertex: 'A' });
     }
 
-    /* Yellow: only 1 chip can be active */
+    /* Yellow: only 1 chip can be active, AND its inner vertices must match the adjacent red chip */
     var activeYellow = null;
     var activeYellowSlotKey = null;
+    var yellowMatchSuccess = null;
     for (var i = 0; i < YELLOW_SLOT_KEYS.length; i++) {
       var yc = cellState.yellowSlots[YELLOW_SLOT_KEYS[i]];
       if (yc) {
@@ -244,10 +286,14 @@
       if (!isSpecialMod(yp.X)) {
         console.warn('[HangarChips] Yellow X vertex is not special: ' + yp.X);
       }
-      mods.push({ modId: yp.X, source: 'yellow', vertex: 'X' });
+      yellowMatchSuccess = checkYellowMatch(yp, activeYellowSlotKey, cellState);
+      if (yellowMatchSuccess) {
+        mods.push({ modId: yp.X, source: 'yellow', vertex: 'X' });
+      }
+      // If no match, yellow modifier is NOT activated
     }
 
-    return { modifiers: mods, redMatchSuccess: matchSuccess, hasYellow: !!activeYellow };
+    return { modifiers: mods, redMatchSuccess: matchSuccess, hasYellow: !!activeYellow, yellowMatchSuccess: yellowMatchSuccess };
   }
 
   /* ── Cell state helpers ────────────────────────────────── */
@@ -263,6 +309,7 @@
         yellowLocked: false,
         activeYellowSlotId: null,
         redMatchSuccess: null,
+        yellowMatchSuccess: null,
         redMismatchReason: ''
       }
     };
@@ -278,6 +325,7 @@
     var r = calculateActiveModifiers(cell);
     cell.activeModifiers = r.modifiers;
     cell.uiState.redMatchSuccess = r.redMatchSuccess;
+    cell.uiState.yellowMatchSuccess = r.yellowMatchSuccess;
     /* update yellowLocked */
     var hasY = false;
     var activeSlot = null;
@@ -391,6 +439,8 @@
     normalizeYellowPlacement: normalizeYellowPlacement,
     normalizeYellowPlacementRotated: normalizeYellowPlacementRotated,
     checkRedMatch: checkRedMatch,
+    checkYellowMatch: checkYellowMatch,
+    YELLOW_ADJACENCY: YELLOW_ADJACENCY,
     calculateActiveModifiers: calculateActiveModifiers,
     createEmptyCell: createEmptyCell,
     createHangarCellsState: createHangarCellsState,

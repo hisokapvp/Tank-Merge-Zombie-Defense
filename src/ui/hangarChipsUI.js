@@ -162,7 +162,7 @@
         cy = Math.round(cy / 3);
 
         if (isRed) {
-          /* show A, B, C labels */
+          /* show A, B, C labels at each vertex */
           var labels = [
             { label: 'A:' + modShort(placement.A), pos: _midPt(def.pts, 'TC') },
             { label: 'B:' + modShort(placement.B), pos: _midPt(def.pts, 'BC') },
@@ -174,20 +174,21 @@
               'fill="#4af626" font-size="13" font-family="monospace" pointer-events="none">' + labels[li].label + '</text>';
           }
         } else {
-          /* yellow: show X prominently */
-          var outerPt = PT[def.outerKey];
-          var innerPts = [];
-          for (var pi = 0; pi < def.pts.length; pi++) {
-            if (def.pts[pi] !== def.outerKey) innerPts.push(def.pts[pi]);
+          /* yellow: show labels at each vertex like red chips.
+             pts[0] → innerA, pts[1] → innerB, outerKey → X */
+          var yLabels = [
+            { label: 'A:' + modShort(placement.innerA), pos: _midPt(def.pts, def.pts[0]) },
+            { label: 'B:' + modShort(placement.innerB), pos: _midPt(def.pts, def.pts[1]) },
+            { label: 'X:' + modShort(placement.X), pos: _midPt(def.pts, def.outerKey) }
+          ];
+          for (var yl = 0; yl < yLabels.length; yl++) {
+            var ylp = yLabels[yl].pos;
+            var yColor = yl === 2 ? '#fdd835' : '#4af626'; // X = yellow, inner = green
+            var ySize = yl === 2 ? '14' : '13';
+            var yWeight = yl === 2 ? ' font-weight="bold"' : '';
+            svg += '<text x="' + ylp[0] + '" y="' + ylp[1] + '" text-anchor="middle" dominant-baseline="central" ' +
+              'fill="' + yColor + '" font-size="' + ySize + '"' + yWeight + ' font-family="monospace" pointer-events="none">' + yLabels[yl].label + '</text>';
           }
-          /* X label near outer vertex */
-          var xLabelPos = [(outerPt[0] * 2 + cx) / 3, (outerPt[1] * 2 + cy) / 3];
-          svg += '<text x="' + Math.round(xLabelPos[0]) + '" y="' + Math.round(xLabelPos[1]) + '" text-anchor="middle" dominant-baseline="central" ' +
-            'fill="#fdd835" font-size="14" font-weight="bold" font-family="monospace" pointer-events="none">X:' + modShort(placement.X) + '</text>';
-          /* small inner labels */
-          svg += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="central" ' +
-            'fill="#aaa" font-size="10" font-family="monospace" pointer-events="none">' +
-            modShort(placement.innerA) + ',' + modShort(placement.innerB) + '</text>';
         }
 
         /* Rotate button (visible on hover via CSS) */
@@ -262,6 +263,13 @@
       html += '<div class="hangarMatchStatus hangarMatchStatus--ok">' + t('hangarChipsMatchSuccess', 'Совпадение! A+B активны') + '</div>';
     } else if (cell.uiState.redMatchSuccess === false) {
       html += '<div class="hangarMatchStatus hangarMatchStatus--fail">' + t('hangarChipsMatchFail', 'Нет совпадения. Только A') + '</div>';
+    }
+
+    /* yellow match status */
+    if (cell.uiState.yellowMatchSuccess === true) {
+      html += '<div class="hangarMatchStatus hangarMatchStatus--ok">' + t('hangarChipsYellowMatch', 'Жёлтый: совпадение! X активен') + '</div>';
+    } else if (cell.uiState.yellowMatchSuccess === false) {
+      html += '<div class="hangarMatchStatus hangarMatchStatus--fail">' + t('hangarChipsYellowMismatch', 'Жёлтый: нет совпадения. X не активен') + '</div>';
     }
 
     wrap.innerHTML = html;
@@ -555,10 +563,11 @@
     if (h) {
       for (var i = 0; i < _cells.length; i++) {
         var cell = _cells[i];
-        if (!cell.uiState) cell.uiState = { yellowLocked: false, activeYellowSlotId: null, redMatchSuccess: null, redMismatchReason: '' };
+        if (!cell.uiState) cell.uiState = { yellowLocked: false, activeYellowSlotId: null, redMatchSuccess: null, yellowMatchSuccess: null, redMismatchReason: '' };
         var r = h.calculateActiveModifiers(cell);
         cell.activeModifiers = r.modifiers;
         cell.uiState.redMatchSuccess = r.redMatchSuccess;
+        cell.uiState.yellowMatchSuccess = r.yellowMatchSuccess;
       }
     }
   }
@@ -609,7 +618,7 @@
     c.yellowSlots.slot4 = null;
     var r = h.calculateActiveModifiers(c);
     c.activeModifiers = r.modifiers;
-    c.uiState = { yellowLocked: false, activeYellowSlotId: null, redMatchSuccess: null, redMismatchReason: '' };
+    c.uiState = { yellowLocked: false, activeYellowSlotId: null, redMatchSuccess: null, yellowMatchSuccess: null, redMismatchReason: '' };
     _selectedCell = cellIdx;
     render();
     return 'OK: cleared cell ' + cellIdx;
