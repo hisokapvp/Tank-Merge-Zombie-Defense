@@ -6676,10 +6676,12 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   if (Math.random() < mods.doubleShotChance){
     spawnBurst();
   }
-  // Mod 6 (combo counter): fire 3 extra rapid bursts at ×1.25 dmg
+  // Mod 6 (combo counter): fire 3 extra rapid bursts at ×1.25 dmg with 0.15s interval
   if (chipShotMods && chipShotMods.comboShots > 0) {
     for (let ci = 0; ci < chipShotMods.comboShots; ci++) {
-      spawnBurst();
+      (function(delay) {
+        setTimeout(function() { spawnBurst(); }, delay);
+      })((ci + 1) * 150);
     }
   }
   tank.cooldown = 1 / (stats.fr * speedMult());

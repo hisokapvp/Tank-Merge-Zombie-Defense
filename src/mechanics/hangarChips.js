@@ -132,6 +132,22 @@
   }
 
   /**
+   * Red chip placement with rotation applied.
+   * rotation 0: A, B, C (original)
+   * rotation 1: C→A, A→B, B→C (rotate CW 120°)
+   * rotation 2: B→A, C→B, A→C (rotate CW 240°)
+   */
+  function normalizeRedPlacementRotated(modIds, rotation) {
+    var base = normalizeRedPlacement(modIds);
+    var arr = [base.A, base.B, base.C];
+    var r = (rotation || 0) % 3;
+    if (r === 0) return base;
+    // rotate: shift array backwards by r positions
+    var rotated = arr.slice(-r).concat(arr.slice(0, 3 - r));
+    return { A: rotated[0], B: rotated[1], C: rotated[2] };
+  }
+
+  /**
    * Yellow chip placement: X (outer, must be the special 10–14).
    * Inner vertices get the two non-special mods, sorted ascending.
    */
@@ -150,6 +166,21 @@
     }
     inner.sort(function (a, b) { return a - b; });
     return { innerA: inner[0], innerB: inner[1], X: modIds[specIdx] };
+  }
+
+  /**
+   * Yellow chip placement with rotation applied.
+   * rotation 0: innerA, innerB, X (original)
+   * rotation 1: X moves to innerA position, innerA→innerB, innerB→X
+   * rotation 2: innerB→innerA, X→innerB, innerA→X
+   */
+  function normalizeYellowPlacementRotated(modIds, rotation) {
+    var base = normalizeYellowPlacement(modIds);
+    var arr = [base.innerA, base.innerB, base.X];
+    var r = (rotation || 0) % 3;
+    if (r === 0) return base;
+    var rotated = arr.slice(-r).concat(arr.slice(0, 3 - r));
+    return { innerA: rotated[0], innerB: rotated[1], X: rotated[2] };
   }
 
   /* ── Adjacency & matching ──────────────────────────────── */
@@ -174,27 +205,28 @@
     var red2 = cellState.redSlots.slot2;
 
     if (red1 && red2) {
-      var p1 = normalizeRedPlacement(red1.modIds);
-      var p2 = normalizeRedPlacement(red2.modIds);
+      var p1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
+      var p2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
       if (checkRedMatch(p1, p2)) {
         matchSuccess = true;
         mods.push({ modId: p1.A, source: 'red', vertex: 'A' });
         mods.push({ modId: p1.B, source: 'red', vertex: 'B' });
       } else {
         matchSuccess = false;
+        // No match — only the first red chip's A vertex is active
         mods.push({ modId: p1.A, source: 'red1', vertex: 'A' });
-        mods.push({ modId: p2.A, source: 'red2', vertex: 'A' });
       }
     } else if (red1) {
-      var pr1 = normalizeRedPlacement(red1.modIds);
+      var pr1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
       mods.push({ modId: pr1.A, source: 'red1', vertex: 'A' });
     } else if (red2) {
-      var pr2 = normalizeRedPlacement(red2.modIds);
+      var pr2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
       mods.push({ modId: pr2.A, source: 'red2', vertex: 'A' });
     }
 
     /* Yellow: only 1 chip can be active */
     var activeYellow = null;
+    var activeYellowSlotKey = null;
     for (var i = 0; i < YELLOW_SLOT_KEYS.length; i++) {
       var yc = cellState.yellowSlots[YELLOW_SLOT_KEYS[i]];
       if (yc) {
@@ -203,11 +235,12 @@
           break;
         }
         activeYellow = yc;
+        activeYellowSlotKey = YELLOW_SLOT_KEYS[i];
       }
     }
 
     if (activeYellow) {
-      var yp = normalizeYellowPlacement(activeYellow.modIds);
+      var yp = normalizeYellowPlacementRotated(activeYellow.modIds, activeYellow.rotation);
       if (!isSpecialMod(yp.X)) {
         console.warn('[HangarChips] Yellow X vertex is not special: ' + yp.X);
       }
@@ -266,7 +299,8 @@
       cell.redSlots[slotId] = {
         chipId: chipDef.chipId,
         modIds: chipDef.modIds.slice(),
-        sourceComboKey: chipDef.sourceComboKey
+        sourceComboKey: chipDef.sourceComboKey,
+        rotation: 0
       };
     } else if (slotType === 'yellow') {
       if (YELLOW_SLOT_KEYS.indexOf(slotId) === -1) return false;
@@ -278,7 +312,8 @@
       cell.yellowSlots[slotId] = {
         chipId: chipDef.chipId,
         modIds: chipDef.modIds.slice(),
-        sourceComboKey: chipDef.sourceComboKey
+        sourceComboKey: chipDef.sourceComboKey,
+        rotation: 0
       };
     } else {
       return false;
@@ -294,6 +329,23 @@
       cell.yellowSlots[slotId] = null;
     }
     _recalc(cell);
+  }
+
+  /**
+   * Rotate an installed chip clockwise (120° per step).
+   * This changes which modifiers land on which vertices (A, B, C / innerA, innerB, X).
+   */
+  function rotateChip(cell, slotType, slotId) {
+    var chip = null;
+    if (slotType === 'red') {
+      chip = cell.redSlots[slotId];
+    } else if (slotType === 'yellow') {
+      chip = cell.yellowSlots[slotId];
+    }
+    if (!chip) return false;
+    chip.rotation = ((chip.rotation || 0) + 1) % 3;
+    _recalc(cell);
+    return true;
   }
 
   function getChipById(allChips, chipId) {
@@ -335,13 +387,16 @@
     separatePools: separatePools,
     validatePools: validatePools,
     normalizeRedPlacement: normalizeRedPlacement,
+    normalizeRedPlacementRotated: normalizeRedPlacementRotated,
     normalizeYellowPlacement: normalizeYellowPlacement,
+    normalizeYellowPlacementRotated: normalizeYellowPlacementRotated,
     checkRedMatch: checkRedMatch,
     calculateActiveModifiers: calculateActiveModifiers,
     createEmptyCell: createEmptyCell,
     createHangarCellsState: createHangarCellsState,
     installChip: installChip,
     removeChip: removeChip,
+    rotateChip: rotateChip,
     getChipById: getChipById,
     getChipByKey: getChipByKey
   };

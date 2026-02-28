@@ -3087,6 +3087,17 @@ input, select, textarea, button {
   filter:brightness(1.3);
 }
 
+/* --- Rotate button (shown on hover over slot triangle) --- */
+.hangarRotateBtn{
+  opacity:0;
+  transition:opacity .15s;
+  pointer-events:none;
+}
+.hangarSlotGroup:hover .hangarRotateBtn{
+  opacity:1;
+  pointer-events:auto;
+}
+
 /* --- Active modifiers box --- */
 .hangarActiveMods{
   border:1px solid rgba(255,255,255,.1);

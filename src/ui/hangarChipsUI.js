@@ -144,6 +144,7 @@
       var fillColor = locked ? 'rgba(60,60,60,0.35)' : (chipData ? (isRed ? 'rgba(229,57,53,0.18)' : 'rgba(253,216,53,0.18)') : 'rgba(80,80,80,0.12)');
       var strokeW = selected ? 4 : 2.5;
 
+      svg += '<g class="hangarSlotGroup">';
       svg += '<polygon class="hangarSlotPoly" points="' + polyPoints(def.pts) + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
@@ -151,7 +152,7 @@
 
       /* vertex labels inside triangle */
       if (chipData && h) {
-        var placement = isRed ? h.normalizeRedPlacement(chipData.modIds) : h.normalizeYellowPlacement(chipData.modIds);
+        var placement = isRed ? h.normalizeRedPlacementRotated(chipData.modIds, chipData.rotation) : h.normalizeYellowPlacementRotated(chipData.modIds, chipData.rotation);
         var cx = 0, cy = 0;
         for (var vi = 0; vi < def.pts.length; vi++) {
           cx += PT[def.pts[vi]][0];
@@ -188,6 +189,17 @@
             'fill="#aaa" font-size="10" font-family="monospace" pointer-events="none">' +
             modShort(placement.innerA) + ',' + modShort(placement.innerB) + '</text>';
         }
+
+        /* Rotate button (visible on hover via CSS) */
+        var rotBtnX = cx;
+        var rotBtnY = cy + 18;
+        var rotDeg = (chipData.rotation || 0) * 120;
+        svg += '<g class="hangarRotateBtn" data-rotate-type="' + def.type + '" data-rotate-slot="' + def.slotId + '" ' +
+          'style="cursor:pointer">' +
+          '<circle cx="' + rotBtnX + '" cy="' + rotBtnY + '" r="11" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
+          '<text x="' + rotBtnX + '" y="' + (rotBtnY + 1) + '" text-anchor="middle" dominant-baseline="central" ' +
+          'fill="#4af626" font-size="14" font-family="sans-serif" style="transform-origin:' + rotBtnX + 'px ' + rotBtnY + 'px;transform:rotate(' + rotDeg + 'deg)">\u21BB</text>' +
+          '</g>';
       } else if (!locked) {
         /* empty label */
         var ecx = 0, ecy = 0;
@@ -200,6 +212,7 @@
         svg += '<text x="' + ecx + '" y="' + ecy + '" text-anchor="middle" dominant-baseline="central" ' +
           'fill="#666" font-size="12" font-family="monospace" pointer-events="none">' + def.label + '</text>';
       }
+      svg += '</g>'; /* close hangarSlotGroup */
     }
 
     svg += '</svg>';
@@ -388,6 +401,24 @@
   function handleOverlayClick(evt) {
     var tgt = evt.target;
     if (!tgt) return;
+
+    /* rotate button click */
+    var rotateBtn = tgt.closest ? tgt.closest('[data-rotate-type]') : null;
+    if (rotateBtn) {
+      evt.stopPropagation();
+      var rotType = rotateBtn.getAttribute('data-rotate-type');
+      var rotSlot = rotateBtn.getAttribute('data-rotate-slot');
+      var h = hc();
+      if (h && typeof h.rotateChip === 'function') {
+        var cells = ensureCells();
+        var cell = cells[_selectedCell];
+        if (cell) {
+          h.rotateChip(cell, rotType, rotSlot);
+          render();
+        }
+      }
+      return;
+    }
 
     /* grid cell click */
     var cellBtn = tgt.closest ? tgt.closest('[data-cell-idx]') : null;

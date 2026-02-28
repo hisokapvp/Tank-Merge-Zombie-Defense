@@ -334,7 +334,7 @@
       if (z.state === 'dying') continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
-      if (d >= 12 && d <= 150 && d < bestD) { best = z; bestD = d; }
+      if (d >= 120 && d <= 300 && d < bestD) { best = z; bestD = d; }
     }
     if (!best) return;
 
@@ -391,7 +391,7 @@
       if (z.state === 'dying') continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
-      if (d >= 12 && d < bestD) { best = z; bestD = d; }
+      if (d >= 50 && d < bestD) { best = z; bestD = d; }
     }
     if (!best) return;
     var tp = getPos(best);
