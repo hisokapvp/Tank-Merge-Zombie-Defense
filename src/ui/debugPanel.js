@@ -77,7 +77,7 @@
       { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
     ];
 
-    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
+    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n      <button type="button" class="debugTab" data-tab="chips">Chips</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n      <div id="debugSectionChips" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Cell index (0–15)</label>\n          <select id="debugChipCell" class="debugSelect"></select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Slot</label>\n          <select id="debugChipSlot" class="debugSelect">\n            <option value="red-0">Red 0 (top)</option>\n            <option value="red-1">Red 1 (bottom)</option>\n            <option value="yellow-0">Yellow 0 (TL)</option>\n            <option value="yellow-1">Yellow 1 (TR)</option>\n            <option value="yellow-2">Yellow 2 (BL)</option>\n            <option value="yellow-3">Yellow 3 (BR)</option>\n          </select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key (e.g. 1-2-3)</label>\n          <input type="text" id="debugChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugChipInstall" style="margin-top:6px">Install chip</button>\n        <button type="button" class="debugBtn" id="debugChipRemove" style="margin-top:4px">Remove chip from slot</button>\n        <button type="button" class="debugBtn" id="debugChipClear" style="margin-top:4px">Clear entire cell</button>\n        <div id="debugChipStatus" class="debugRow" style="margin-top:8px;font-size:11px;line-height:1.5"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
 
     var tankLevelSelect = panel.querySelector('#debugTankLevel');
     for (var l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) {
@@ -105,6 +105,7 @@
         if (tab === 'updates') refreshDebugUpdatesSection();
         if (tab === 'waveInfo') refreshDebugWaveInfo();
         if (tab === 'logs') refreshDebugAchievementsTools();
+        if (tab === 'chips') refreshDebugChipsSection();
       });
     });
 
@@ -552,11 +553,120 @@
     var effectCategoryEl = panel.querySelector('#debugEffectCategory');
     if (effectCategoryEl) effectCategoryEl.addEventListener('change', refreshDebugEffectList);
 
+    /* ---- Chips debug section ---- */
+    var debugChipCellSelect = panel.querySelector('#debugChipCell');
+    if (debugChipCellSelect) {
+      for (var ci = 0; ci < 16; ci++) {
+        debugChipCellSelect.appendChild(new Option('Cell ' + ci, ci));
+      }
+    }
+
+    function refreshDebugChipsSection() {
+      var statusEl = panel.querySelector('#debugChipStatus');
+      if (!statusEl) return;
+      var HC = global.Game && global.Game.HangarChips;
+      if (!HC) { statusEl.textContent = 'HangarChips module not loaded'; return; }
+      var cellIdx = Number((debugChipCellSelect || {}).value || 0);
+      var cells = state.hangarCells;
+      if (!cells || !cells[cellIdx]) {
+        statusEl.innerHTML = '<b>Cell ' + cellIdx + ':</b> empty (no state)';
+        return;
+      }
+      var cs = cells[cellIdx];
+      var lines = ['<b>Cell ' + cellIdx + ' state:</b>'];
+      var slotNames = ['red-0', 'red-1', 'yellow-0', 'yellow-1', 'yellow-2', 'yellow-3'];
+      for (var si = 0; si < slotNames.length; si++) {
+        var sn = slotNames[si];
+        var chip = cs.slots[sn];
+        if (chip) {
+          lines.push(sn + ': [' + chip.mods.join('-') + '] ' + chip.type);
+        } else {
+          lines.push(sn + ': —');
+        }
+      }
+      var active = HC.calculateActiveModifiers(cs);
+      if (active && active.length) {
+        lines.push('<b>Active mods:</b> ' + active.map(function(m){ return m.id + '(' + m.source + ')'; }).join(', '));
+      } else {
+        lines.push('<b>Active mods:</b> none');
+      }
+      statusEl.innerHTML = lines.join('<br>');
+    }
+
+    var debugChipInstallBtn = panel.querySelector('#debugChipInstall');
+    if (debugChipInstallBtn) {
+      debugChipInstallBtn.addEventListener('click', function () {
+        var HC = global.Game && global.Game.HangarChips;
+        if (!HC) { debugLog('error', 'HangarChips not loaded'); return; }
+        var cellIdx = Number((debugChipCellSelect || {}).value || 0);
+        var slotVal = (panel.querySelector('#debugChipSlot') || {}).value || 'red-0';
+        var keyVal = (panel.querySelector('#debugChipKey') || {}).value || '';
+        if (!keyVal) { debugLog('warn', 'Enter chip key (e.g. 1-2-3)'); return; }
+        var parts = keyVal.split('-').map(Number);
+        if (parts.length !== 3 || parts.some(isNaN)) { debugLog('error', 'Invalid chip key format'); return; }
+        var slotParts = slotVal.split('-');
+        var slotType = slotParts[0];
+        var slotId = Number(slotParts[1]);
+        if (!state.hangarCells) { state.hangarCells = HC.createHangarCellsState(); }
+        var result = HC.installChip(state.hangarCells, cellIdx, slotType, slotId, { mods: parts, type: slotType, key: keyVal });
+        if (result.ok) {
+          debugLog('info', 'Chip ' + keyVal + ' installed in cell ' + cellIdx + ' slot ' + slotVal);
+        } else {
+          debugLog('warn', 'Install failed: ' + (result.error || 'unknown'));
+        }
+        refreshDebugChipsSection();
+        if (typeof updateUI === 'function') updateUI();
+      });
+    }
+
+    var debugChipRemoveBtn = panel.querySelector('#debugChipRemove');
+    if (debugChipRemoveBtn) {
+      debugChipRemoveBtn.addEventListener('click', function () {
+        var HC = global.Game && global.Game.HangarChips;
+        if (!HC) { debugLog('error', 'HangarChips not loaded'); return; }
+        var cellIdx = Number((debugChipCellSelect || {}).value || 0);
+        var slotVal = (panel.querySelector('#debugChipSlot') || {}).value || 'red-0';
+        if (!state.hangarCells || !state.hangarCells[cellIdx]) {
+          debugLog('warn', 'Cell ' + cellIdx + ' has no state'); return;
+        }
+        var slotParts = slotVal.split('-');
+        var result = HC.removeChip(state.hangarCells, cellIdx, slotParts[0], Number(slotParts[1]));
+        if (result.ok) {
+          debugLog('info', 'Removed chip from cell ' + cellIdx + ' slot ' + slotVal);
+        } else {
+          debugLog('warn', 'Remove failed: ' + (result.error || 'unknown'));
+        }
+        refreshDebugChipsSection();
+        if (typeof updateUI === 'function') updateUI();
+      });
+    }
+
+    var debugChipClearBtn = panel.querySelector('#debugChipClear');
+    if (debugChipClearBtn) {
+      debugChipClearBtn.addEventListener('click', function () {
+        var HC = global.Game && global.Game.HangarChips;
+        if (!HC) return;
+        var cellIdx = Number((debugChipCellSelect || {}).value || 0);
+        if (!state.hangarCells || !state.hangarCells[cellIdx]) {
+          debugLog('warn', 'Cell ' + cellIdx + ' has no state'); return;
+        }
+        state.hangarCells[cellIdx].slots = {};
+        state.hangarCells[cellIdx].activeMods = [];
+        debugLog('info', 'Cleared all chips from cell ' + cellIdx);
+        refreshDebugChipsSection();
+        if (typeof updateUI === 'function') updateUI();
+      });
+    }
+
+    if (debugChipCellSelect) {
+      debugChipCellSelect.addEventListener('change', refreshDebugChipsSection);
+    }
 
     state.debug.refreshHangarList = refreshDebugHangarList;
     state.debug.refreshTankExtras = refreshDebugTankExtras;
     state.debug.refreshUpdates = refreshDebugUpdatesSection;
     state.debug.refreshZombieCounts = refreshDebugWaveInfo;
+    state.debug.refreshChips = refreshDebugChipsSection;
 
     main.insertBefore(panel, main.firstChild);
     refreshDebugHangarList();

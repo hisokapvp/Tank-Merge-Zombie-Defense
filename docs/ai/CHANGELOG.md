@@ -1,5 +1,17 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-02-28
+- **Новая фича: Треугольные чипы ангара** — система модификации ячеек ангара через треугольные чипы.
+  - Добавлен `src/mechanics/hangarChips.js` (`Game.HangarChips`): генерация пула 381 чипа (156 красных + 225 жёлтых), нормализация размещения, расчёт активных модификаторов, match-логика красных чипов.
+  - Добавлен `src/ui/hangarChipsUI.js` (`Game.HangarChipsUI`): SVG бабочка-визуализация 6 слотов, сетка ячеек 4×4, каталог чипов с фильтрацией, установка/удаление чипов.
+  - `index.html`: заменена заглушка «В разработке» в `#modsHangarOverlay` на полную вкладочную структуру (Улучшение ячеек / Мастерская).
+  - `style.css`: +~250 строк стилей для чипового UI в wasteland-палитре.
+  - `src/persistence/initialState.js`: добавлено поле `hangarCells: null`.
+  - `src/ui/supercomputerMenu.js`: `showHangarMods()` теперь вызывает `Game.HangarChipsUI.init()` / `.show()`.
+  - `src/ui/debugPanel.js`: новая вкладка `Chips` для отладочной установки/удаления чипов по ключу.
+  - i18n: добавлены ключи `hangarChips*` в `ru.json` и `en.json`.
+  - Документация: `docs/ai/SYSTEMS/ui.md` + `docs/ui.md` обновлены.
+
 ## 2026-02-27
 - **Баг-фикс**: ранняя инициализация `game.js` — `ensureDronUpgradesAppliedState()` переведён в fail-soft режим при раннем вызове (fallback по длине уже сохранённого массива/`MAX_TANK_LEVEL`, если `getDronLevelsCount()` ещё недоступен), что предотвращает падение загрузки скрипта.
 - **Баг-фикс**: безопасное чтение конфига дронов — доступ к `DronSprites.config` обёрнут в `try/catch` и дополнен fallback на `spriteLoaders.DronSprites.config`; устранён runtime-crash и восстановлена штатная инициализация обработчиков большого меню.

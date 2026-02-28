@@ -469,6 +469,18 @@
       triageAttachTelemetry: 'Attach telemetry',
       triageRemove: 'Remove',
       triageTelemetryAttached: 'Telemetry attached',
+      hangarChipsTabCells: 'Cell Upgrades',
+      hangarChipsTabWorkshop: 'Workshop',
+      hangarChipsWorkshopWIP: 'In development',
+      hangarChipsCellLabel: 'Cell',
+      hangarChipsAvailable: 'Available chips',
+      hangarChipsActiveMods: 'Active modifications',
+      hangarChipsNoMods: 'No active modifications',
+      hangarChipsMatchSuccess: 'Match! A+B active',
+      hangarChipsMatchFail: 'No match. Only A',
+      hangarChipsYellowLocked: 'Only 1 yellow chip can be installed',
+      hangarChipsActiveX: 'Activates outer angle (not adjacent to red chips)',
+      hangarChipsSlotLocked: 'Slot locked',
     }
   };
 

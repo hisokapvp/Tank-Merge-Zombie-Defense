@@ -1319,6 +1319,10 @@
         onClose: backFromChild,
       });
       state.view = 'hangar';
+      if (window.Game && Game.HangarChipsUI) {
+        Game.HangarChipsUI.init();
+        Game.HangarChipsUI.show();
+      }
       setBodyScrollLock(true);
     }
 

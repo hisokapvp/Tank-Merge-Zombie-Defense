@@ -118,6 +118,7 @@
       selectedHangarCellIndex: null,
       isDismantleMode: false,
       selectedTankIds: [],
+      hangarCells: null,
     };
   }
 
