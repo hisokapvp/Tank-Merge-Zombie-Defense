@@ -83,6 +83,20 @@
 
 ## Cannon upgrades state
 - Постоянное состояние апгрейдов орудий хранится в `state.player.cannonUpgradesApplied`.
+
+## Player Chips (инвентарь чипов мастерской)
+- Runtime-источник: `Game.HangarChipsUI.getPlayerChips()` / `.setPlayerChips(arr)`.
+- Формат: массив `{ chipId, chipColor, modIds, sourceComboKey, level, count }`.
+- Сериализуется в `serializeState()` как `playerChips` (fallback `[]`).
+- Восстанавливается в `restoreFullState` и `applySavedProgress` с синхронизацией `HangarChipsUI.setPlayerChips`.
+- Backward compatibility: старые save без `playerChips` → пустой массив, игра не падает.
+- Используется в `getChipLevelDmgMul(cellIndex)` для расчёта бонуса урона (+10% за каждый уровень чипа).
+
+## V1 talents save fields (deprecated)
+- Поля `talentsPending` и `activeCooldowns` больше не сохраняются и не восстанавливаются.
+- Поле `talentsApplied` сохранено для совместимости миграции V1→V2 в `talentsV2.js`.
+
+## Cannon upgrades state
 - Формат: массив длиной `60`, индекс `i` соответствует уровню танка `L=i+1`, значение — число применённых улучшений (`>=0`).
 - Поле сериализуется в слотовый payload через `player` и восстанавливается при `loadSlot`/`restoreFullState`.
 - Backward compatibility:

@@ -469,7 +469,7 @@ function createInitialState(options){
           glitchCooldownUntil: 0, wantsBuildTank: false, pendingBuildTank: false,
           eventShown40: false, eventShown50: false, eventShown60: false },
         player: { talentPoints: 0, damagePoints: 0, talentsApplied: [],
-          talentsPending: [], activeCooldowns: [0,0,0],
+          activeCooldowns: [0,0,0],
           cannonUpgradesApplied: Array(CANNON_UPGRADES_LEVELS).fill(0),
           dronUpgradesApplied: Array(MAX_TANK_LEVEL).fill(0),
           mods: null, modsDirty: true,
@@ -3659,8 +3659,9 @@ function updateCenterNotification(){
   }
 }
 
-const TALENT_BRANCHES = ['Атака', 'Скорость', 'Экономика'];
 const TALENTS_V2_BRANCH_IDS = ['offense', 'defense', 'economy'];
+/* V1 layout stub — kept as fallback for V2 node layout resolution */
+const TALENT_LAYOUT = [];
 const TALENTS_V2_ACTIVE_ID_BY_BRANCH = {
   offense: 'off_active_barrage',
   defense: 'def_active_dome',
@@ -3741,6 +3742,17 @@ function normalizeTalentTimerTargetMs(value, nowMs, baseDurationMs){
   return target;
 }
 
+/* Talent icon helpers (previously in talentDefs.js, still used by V2) */
+function sanitizeTalentIconBaseName(name){
+  return String(name || '').trim()
+    .replace(/[:\\/]/g, ' ').replace(/[<>"|?*]/g, '')
+    .replace(/\s+/g, '_').replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '').slice(0, 80) || 'talent';
+}
+function talentIconPath(name){
+  return `assets/Telent_icon/${sanitizeTalentIconBaseName(name)}.png`;
+}
+
 function getTalentV2ActiveIconUrlByBranch(branchId){
   const api = getTalentsV2Api();
   const talentId = getTalentV2ActiveTalentIdByBranch(branchId);
@@ -3775,13 +3787,14 @@ function resolveTalentCantBuyReasonText(canResult){
   }
   return t('ui.toast.unavailable');
 }
-// TALENT_DEFS, ACTIVE_TALENT_INDEX, sanitizeTalentIconBaseName, talentIconPath,
-// TALENT_LAYOUT, TALENT_EDGES, TALENT_ROW_POINTS, addTalent, initTalentDefs,
-// baseMods, computeModsFromApplied  →  extracted to src/systems/talents/talentDefs.js
-
 function adaptTalentsV2ModsToLegacy(v2Mods){
   const src = v2Mods && typeof v2Mods === 'object' ? v2Mods : {};
-  const out = baseMods();
+  const out = {
+    dmgMul: 1, rangeMul: 1, aoeMul: 1, fireRateMul: 1,
+    doubleShotChance: 0, dotChance: 0, dotDpsMul: 1,
+    orbitSpeedMul: 1, buyCostMul: 1, coinsMul: 1,
+    xpMul: 1, activeCooldownMul: 1, activeBranches: new Set(),
+  };
   const asMul = (value, fallback) => Number.isFinite(value) ? Math.max(0, value) : fallback;
 
   out.dmgMul = asMul(src.damageMul, out.dmgMul);
@@ -3811,176 +3824,47 @@ function getMods(){
       return adaptTalentsV2ModsToLegacy(api.getMods());
     }
   }
-  const p = state.player;
-  const overrides = DebugPanelEnabled && state.debug?.talentOverrides ? state.debug.talentOverrides : null;
-  if (overrides) return computeModsFromApplied(p.talentsApplied, overrides);
-  if (!p.mods || p.modsDirty){
-    p.mods = computeModsFromApplied(p.talentsApplied);
-    p.modsDirty = false;
-  }
-  return p.mods;
-}
-
-function pendingCost(){
-  const p = state.player;
-  return p.talentsPending.reduce((sum, r) => sum + r, 0);
+  /* V2 not ready yet — return default neutral mods */
+  return {
+    dmgMul: 1, rangeMul: 1, aoeMul: 1, fireRateMul: 1,
+    doubleShotChance: 0, dotChance: 0, dotDpsMul: 1,
+    orbitSpeedMul: 1, buyCostMul: 1, coinsMul: 1,
+    xpMul: 1, activeCooldownMul: 1, activeBranches: new Set(),
+  };
 }
 
 function resetAllTalents(){
-  if (isTalentsV2Ready()) {
-    const api = getTalentsV2Api();
-    if (!api) return;
-    if (typeof api.resetPending === 'function') api.resetPending();
-    if (typeof api.respec === 'function') api.respec();
-    clearTalentRuntimeEffectsV2();
-    syncPlayerTalentsV2FromApi();
-    saveProgress();
-    updateTalentUI();
-    return;
-  }
-  const p = state.player;
-  let refund = 0;
-  TALENT_DEFS.forEach((def, i) => {
-    const applied = p.talentsApplied[i] || 0;
-    refund += applied;
-    p.talentsApplied[i] = 0;
-  });
-  p.talentsPending.fill(0);
-  p.talentPoints += refund;
-  p.modsDirty = true;
+  if (!isTalentsV2Ready()) return;
+  const api = getTalentsV2Api();
+  if (!api) return;
+  if (typeof api.resetPending === 'function') api.resetPending();
+  if (typeof api.respec === 'function') api.respec();
+  clearTalentRuntimeEffectsV2();
+  syncPlayerTalentsV2FromApi();
   saveProgress();
   updateTalentUI();
 }
-
-function doApplyTalentSelections(){
-  const p = state.player;
-  const cost = pendingCost();
-  if (cost <= 0 || cost > p.talentPoints) return;
-  TALENT_DEFS.forEach((def, i) => {
-    const pending = p.talentsPending[i] || 0;
-    if (!pending) return;
-    const next = Math.min(def.maxRank, (p.talentsApplied[i] || 0) + pending);
-    p.talentsApplied[i] = next;
-  });
-  p.talentPoints -= cost;
-  p.talentsPending.fill(0);
-  p.modsDirty = true;
-  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_upgrade', { cost: cost });
-  saveProgress();
-  updateTalentUI();
-}
-
-const APPLY_VFX_TOTAL_MS = 520;
-let applyTalentBusy = false;
 
 function applyTalentSelections(){
-  if (isTalentsV2Ready()) {
-    const api = getTalentsV2Api();
-    if (!api || typeof api.applyPending !== 'function') return;
-    const result = api.applyPending();
-    if (!result || !result.ok) return;
-    playSfx('applyTalents');
-    syncPlayerTalentsV2FromApi();
-    saveProgress();
-    updateTalentUI();
-    updateUI();
-    return;
-  }
-  const p = state.player;
-  const cost = pendingCost();
-  if (cost <= 0 || cost > p.talentPoints) return;
-  if (applyTalentBusy) return;
-  applyTalentBusy = true;
-  const applyBtn = document.querySelector('#talentApply');
-  if (applyBtn) applyBtn.disabled = true;
-
+  if (!isTalentsV2Ready()) return;
+  const api = getTalentsV2Api();
+  if (!api || typeof api.applyPending !== 'function') return;
+  const result = api.applyPending();
+  if (!result || !result.ok) return;
   playSfx('applyTalents');
-  const overlay = document.getElementById('talentOverlay');
-  const modal = overlay?.querySelector('.modal');
-  if (modal) modal.classList.add('talentApplyFlash');
-  overlay?.querySelectorAll('.talentNode').forEach(btn => {
-    const i = Number(btn.dataset.talent);
-    if ((p.talentsPending[i] || 0) > 0) btn.classList.add('talentEnergyFlow');
-  });
-
-  setTimeout(() => {
-    if (modal) modal.classList.remove('talentApplyFlash');
-    overlay?.querySelectorAll('.talentNode').forEach(btn => btn.classList.remove('talentEnergyFlow'));
-    doApplyTalentSelections();
-    applyTalentBusy = false;
-    if (applyBtn) applyBtn.disabled = pendingCost() <= 0 || pendingCost() > state.player.talentPoints;
-  }, APPLY_VFX_TOTAL_MS);
-}
-
-function canSelectTalent(i){
-  const p = state.player;
-  const def = TALENT_DEFS[i];
-  if (!def) return false;
-  if (p.talentPoints <= pendingCost()) return false;
-  if (def.kind === 'active' && p.level < 40) return false;
-  const appliedRank = p.talentsApplied[i] || 0;
-  const pendingRank = p.talentsPending[i] || 0;
-  if (appliedRank + pendingRank >= def.maxRank) return false;
-  
-  // Row gating: need row * 5 points spent in this branch
-  const branchIndices = TALENT_DEFS.map((d, idx) => d.branch === def.branch ? idx : -1).filter(x => x >= 0);
-  const pointsInBranch = branchIndices.reduce((sum, idx) => sum + (p.talentsApplied[idx] || 0) + (p.talentsPending[idx] || 0), 0);
-  const requiredPoints = def.row * TALENT_ROW_POINTS;
-  if (pointsInBranch < requiredPoints) return false;
-  
-  // Parent gating: need at least one parent with rank > 0 (OR logic), skip for row 0
-  if (def.row > 0 && def.parents && def.parents.length > 0) {
-    // Convert relative parents (within branch) to absolute indices
-    const branchOffset = branchIndices[0];
-    const hasParent = def.parents.some(relIdx => {
-      const absIdx = branchOffset + relIdx;
-      return (p.talentsApplied[absIdx] || 0) + (p.talentsPending[absIdx] || 0) > 0;
-    });
-    if (!hasParent) return false;
-  }
-  
-  return true;
-}
-
-function adjustTalentPending(i, delta){
-  const p = state.player;
-  if (!p) return;
-  const def = TALENT_DEFS[i];
-  if (!def) return;
-  if (delta > 0){
-    if (!canSelectTalent(i)) return;
-    p.talentsPending[i] += 1;
-  } else if (delta < 0){
-    p.talentsPending[i] = Math.max(0, p.talentsPending[i] - 1);
-  }
-  state.ui.talentBranch = def.branch;
+  syncPlayerTalentsV2FromApi();
+  saveProgress();
   updateTalentUI();
-}
-
-function activeTalentIndex(branch){
-  for (let i = TALENT_DEFS.length - 1; i >= 0; i--){
-    if (TALENT_DEFS[i].branch === branch) return i;
-  }
-  return -1;
+  updateUI();
 }
 
 function canUseActive(branch){
-  if (isTalentsV2Ready()) {
-    const api = getTalentsV2Api();
-    if (!api || typeof api.getActiveState !== 'function') return false;
-    const branchId = getTalentV2BranchIdByIndex(branch);
-    const activeState = api.getActiveState(branchId, Date.now());
-    return !!(activeState.unlocked && activeState.charges > 0);
-  }
-  const p = state.player;
-  if (!p) return false;
-  if (p.level < 40) return false;
-  const activeIndex = activeTalentIndex(branch);
-  if (activeIndex < 0) return false;
-  if ((p.talentsApplied[activeIndex] || 0) < 1) return false;
-  const now = nowSec();
-  const cooldownUntil = p.activeCooldowns[branch] || 0;
-  return now >= cooldownUntil;
+  if (!isTalentsV2Ready()) return false;
+  const api = getTalentsV2Api();
+  if (!api || typeof api.getActiveState !== 'function') return false;
+  const branchId = getTalentV2BranchIdByIndex(branch);
+  const activeState = api.getActiveState(branchId, Date.now());
+  return !!(activeState.unlocked && activeState.charges > 0);
 }
 
 function getFirstTrackTank(){
@@ -3992,64 +3876,47 @@ function getFirstTrackTank(){
 }
 
 function useActiveAbility(branch){
-  if (isTalentsV2Ready()) {
-    normalizeActiveEffectsTimestamps();
-    const api = getTalentsV2Api();
-    if (!api) return;
-    const nowMs = Date.now();
-    let result = { ok: false, reason: 'unavailable' };
-    if (branch === 0 && typeof api.activateOffenseActive === 'function') {
-      result = api.activateOffenseActive(nowMs, { tank: getFirstTrackTank() });
-    } else if (branch === 1 && typeof api.activateDefenseActive === 'function') {
-      result = api.activateDefenseActive(nowMs);
-    } else if (branch === 2 && typeof api.activateEconomyActive === 'function') {
-      result = api.activateEconomyActive(nowMs);
-    }
-    if (!result || !result.ok) {
-      if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-        window.Game.Toast.show(t('ui.toast.unavailable'), 1400);
-      }
-      updateUI();
-      return;
-    }
-    const nowSecValue = nowMs / 1000;
-    let untilSec = 0;
-    const branchId = getTalentV2BranchIdByIndex(branch);
-    const stateAfterUse = typeof api.getActiveState === 'function'
-      ? api.getActiveState(branchId, nowMs)
-      : null;
-    const durationMs = Number(stateAfterUse && stateAfterUse.durationMs);
-    const durationSec = Number.isFinite(durationMs) && durationMs > 0
-      ? (durationMs / 1000)
-      : 0;
-    if (durationSec > 0) {
-      untilSec = nowSecValue + durationSec;
-    } else if (Number.isFinite(result.untilMs) && result.untilMs > 0) {
-      untilSec = result.untilMs > 1e11 ? (result.untilMs / 1000) : result.untilMs;
-    }
-    if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
-      if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
-      else if (branch === 1) state.activeEffects.speedUntil = Math.max(state.activeEffects.speedUntil || 0, untilSec);
-      else if (branch === 2) state.activeEffects.economyUntil = Math.max(state.activeEffects.economyUntil || 0, untilSec);
+  if (!isTalentsV2Ready()) return;
+  normalizeActiveEffectsTimestamps();
+  const api = getTalentsV2Api();
+  if (!api) return;
+  const nowMs = Date.now();
+  let result = { ok: false, reason: 'unavailable' };
+  if (branch === 0 && typeof api.activateOffenseActive === 'function') {
+    result = api.activateOffenseActive(nowMs, { tank: getFirstTrackTank() });
+  } else if (branch === 1 && typeof api.activateDefenseActive === 'function') {
+    result = api.activateDefenseActive(nowMs);
+  } else if (branch === 2 && typeof api.activateEconomyActive === 'function') {
+    result = api.activateEconomyActive(nowMs);
+  }
+  if (!result || !result.ok) {
+    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      window.Game.Toast.show(t('ui.toast.unavailable'), 1400);
     }
     updateUI();
     return;
   }
-  const p = state.player;
-  if (!canUseActive(branch)) return;
-  const now = nowSec();
-  const mods = getMods();
-  const baseCooldown = 30;
-  p.activeCooldowns[branch] = now + baseCooldown * mods.activeCooldownMul;
-
-  if (branch === 0){
-    activateTimedBoost('attackBoost', ACTIVE_ABILITY_DURATION_SEC);
-  } else if (branch === 1){
-    activateTimedBoost('defenseBoost', ACTIVE_ABILITY_DURATION_SEC);
-  } else if (branch === 2){
-    activateTimedBoost('economyBoost', ACTIVE_ABILITY_DURATION_SEC);
+  const nowSecValue = nowMs / 1000;
+  let untilSec = 0;
+  const branchId = getTalentV2BranchIdByIndex(branch);
+  const stateAfterUse = typeof api.getActiveState === 'function'
+    ? api.getActiveState(branchId, nowMs)
+    : null;
+  const durationMs = Number(stateAfterUse && stateAfterUse.durationMs);
+  const durationSec = Number.isFinite(durationMs) && durationMs > 0
+    ? (durationMs / 1000)
+    : 0;
+  if (durationSec > 0) {
+    untilSec = nowSecValue + durationSec;
+  } else if (Number.isFinite(result.untilMs) && result.untilMs > 0) {
+    untilSec = result.untilMs > 1e11 ? (result.untilMs / 1000) : result.untilMs;
   }
-  saveProgress();
+  if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
+    if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
+    else if (branch === 1) state.activeEffects.speedUntil = Math.max(state.activeEffects.speedUntil || 0, untilSec);
+    else if (branch === 2) state.activeEffects.economyUntil = Math.max(state.activeEffects.economyUntil || 0, untilSec);
+  }
+  updateUI();
 }
 
 function activateTimedBoost(boostId, secondsTotal){
@@ -4136,14 +4003,13 @@ function closeTalents(){
   talentCloseRequestHandler = null;
 }
 
+/* V1 initTalentDefs stub — no-op, V1 talents removed */
+function initTalentDefs() {}
+
 function ensureTalentState(){
-  initTalentDefs();
   const p = state.player;
-  if (!Array.isArray(p.talentsApplied) || p.talentsApplied.length !== TALENT_DEFS.length){
-    p.talentsApplied = Array(TALENT_DEFS.length).fill(0);
-  }
-  if (!Array.isArray(p.talentsPending) || p.talentsPending.length !== TALENT_DEFS.length){
-    p.talentsPending = Array(TALENT_DEFS.length).fill(0);
+  if (!Array.isArray(p.talentsApplied)) {
+    p.talentsApplied = [];
   }
   if (!Array.isArray(p.activeCooldowns) || p.activeCooldowns.length !== 3){
     p.activeCooldowns = [0, 0, 0];
@@ -4227,7 +4093,6 @@ function saveProgress(){
       supercomputer: sc,
       talentPoints: p.talentPoints,
       talentsApplied: p.talentsApplied,
-      talentsPending: p.talentsPending,
       talentsVersion: Number.isFinite(p.talentsVersion) ? Math.max(2, Math.floor(p.talentsVersion)) : 2,
       talentsV2: p.talentsV2 && typeof p.talentsV2 === 'object'
         ? {
@@ -4236,7 +4101,6 @@ function saveProgress(){
           }
         : { ranksById: {}, freePoints: 0 },
       freeTalentPointsV2: Number.isFinite(p.freeTalentPointsV2) ? Math.max(0, Math.floor(p.freeTalentPointsV2)) : 0,
-      activeCooldowns: p.activeCooldowns,
       cannonUpgradesApplied: ensureCannonUpgradesAppliedState(),
       dronUpgradesApplied: ensureDronUpgradesAppliedState(),
       fenceUpgradesApplied: ensureFenceUpgradesAppliedState(),
@@ -4251,6 +4115,7 @@ function saveProgress(){
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       drones: Array.isArray(state.drones) ? state.drones : [],
+      playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
     }));
   }catch(e){}
 }
@@ -4344,6 +4209,13 @@ function restoreFullState(saved){
   } else {
     state.drones = Array.isArray(saved.drones) ? saved.drones : [];
   }
+  /* Restore player chips for Workshop/Chip Upgrade */
+  if (Array.isArray(saved.playerChips)) {
+    state.playerChips = saved.playerChips;
+    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
+      window.Game.HangarChipsUI.setPlayerChips(saved.playerChips);
+    }
+  }
   const scRestored = getComputerState();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(scRestored, SupercomputerSprites.config);
@@ -4431,7 +4303,6 @@ function applySavedProgress(data){
   }
   if (Number.isFinite(playerData.talentPoints)) state.player.talentPoints = Math.max(0, Math.floor(playerData.talentPoints));
   if (Array.isArray(playerData.talentsApplied)) state.player.talentsApplied = playerData.talentsApplied;
-  if (Array.isArray(playerData.talentsPending)) state.player.talentsPending = playerData.talentsPending;
   if (playerData.talentsV2 && typeof playerData.talentsV2 === 'object') {
     state.player.talentsV2 = {
       ranksById: playerData.talentsV2.ranksById && typeof playerData.talentsV2.ranksById === 'object'
@@ -4458,7 +4329,6 @@ function applySavedProgress(data){
   } else {
     state.player.talentsVersion = 0;
   }
-  if (Array.isArray(playerData.activeCooldowns)) state.player.activeCooldowns = playerData.activeCooldowns;
   if (Number.isFinite(playerData.damagePoints)) state.player.damagePoints = Math.max(0, Math.floor(playerData.damagePoints));
   if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
   if (Array.isArray(playerData.dronUpgradesApplied)) state.player.dronUpgradesApplied = playerData.dronUpgradesApplied;
@@ -4504,6 +4374,13 @@ function applySavedProgress(data){
     : 1;
   syncFenceTierWithMaxTankLevel(state, { force: true });
   state.zombieWaveAtkMult = Number.isFinite(data.zombieWaveAtkMult) ? Math.max(0, data.zombieWaveAtkMult) : 1;
+  /* Restore player chips for Workshop/Chip Upgrade */
+  if (Array.isArray(data.playerChips)) {
+    state.playerChips = data.playerChips;
+    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
+      window.Game.HangarChipsUI.setPlayerChips(data.playerChips);
+    }
+  }
   return true;
 }
 
@@ -6338,6 +6215,44 @@ function releaseProjectile(p){
   if (projectilePool) projectilePool.release(p);
 }
 
+/** Get combined chip-level damage multiplier for a hangar cell.
+ *  Each chip installed adds +10% per level to attack power. */
+function getChipLevelDmgMul(cellIndex){
+  var HUI = window.Game && window.Game.HangarChipsUI;
+  if (!HUI || typeof HUI.getPlayerChips !== 'function') return 1;
+  var cells = typeof HUI.getCells === 'function' ? HUI.getCells() : null;
+  if (!cells || !cells[cellIndex]) return 1;
+  var cell = cells[cellIndex];
+  var chips = HUI.getPlayerChips();
+  if (!Array.isArray(chips) || !chips.length) return 1;
+  var bonusPct = 0;
+  /* Sum bonuses from all installed chips in this cell */
+  var allSlots = [];
+  if (cell.redSlots) {
+    if (cell.redSlots.slot1) allSlots.push(cell.redSlots.slot1);
+    if (cell.redSlots.slot2) allSlots.push(cell.redSlots.slot2);
+  }
+  if (cell.yellowSlots) {
+    if (cell.yellowSlots.slot1) allSlots.push(cell.yellowSlots.slot1);
+    if (cell.yellowSlots.slot2) allSlots.push(cell.yellowSlots.slot2);
+    if (cell.yellowSlots.slot3) allSlots.push(cell.yellowSlots.slot3);
+    if (cell.yellowSlots.slot4) allSlots.push(cell.yellowSlots.slot4);
+  }
+  for (var i = 0; i < allSlots.length; i++) {
+    var installedChip = allSlots[i];
+    if (!installedChip) continue;
+    var chipId = installedChip.chipId;
+    /* find the player's chip entry to get its level */
+    for (var j = 0; j < chips.length; j++) {
+      if (chips[j].chipId === chipId) {
+        bonusPct += typeof HUI.chipLevelBonus === 'function' ? HUI.chipLevelBonus(chips[j].level) : (chips[j].level * 10);
+        break;
+      }
+    }
+  }
+  return bonusPct > 0 ? 1 + bonusPct / 100 : 1;
+}
+
 function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellIndex, targetPool, heading: inHeading}){
   const isTankAttackingZombie = false;
   const powerTier = tank.powerTier ?? computePowerTier(getComputerLevel());
@@ -6375,7 +6290,8 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   }
 
   // Mod 1: each projectile gets full barrel damage (split only by barrel count N, NOT by chip extras)
-  const splitDmg = (stats.dmg * chipDmgMul) / N;
+  const chipLevelDmgMul = getChipLevelDmgMul(cellIndex);
+  const splitDmg = (stats.dmg * chipDmgMul * chipLevelDmgMul) / N;
   const shotId = _nextShotId++;
   const targeting = window.Game && window.Game.Targeting;
   // Pick targets for base barrels (N targets)
@@ -8364,172 +8280,6 @@ function ensureTalentUI(){
     });
     return;
   }
-  initTalentDefs();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'talentOverlay';
-  overlay.className = 'overlay hidden';
-  overlay.innerHTML = `
-    <div class="modal talentTreeModal" role="dialog" aria-modal="true">
-      <div class="modalHeader">
-        <div class="modalTitle">${t('talentTreeTitle')}</div>
-        <button class="modalClose" type="button" aria-label="Close">✕</button>
-      </div>
-      <div class="modalBody talentTreeBody">
-        <div class="talentBranches" id="talentBranches"></div>
-      </div>
-      <div class="talentFooter">
-        <div class="talentSummary" id="talentSummary"></div>
-        <div class="talentAbilitySlots" id="talentAbilitySlots">
-          <button id="talentActive0" class="btn talentAbilitySlot" type="button" data-branch="0" title="" aria-label="Active 0"></button>
-          <button id="talentActive1" class="btn talentAbilitySlot" type="button" data-branch="1" title="" aria-label="Active 1"></button>
-          <button id="talentActive2" class="btn talentAbilitySlot" type="button" data-branch="2" title="" aria-label="Active 2"></button>
-        </div>
-        <div class="talentActions">
-          <button id="talentApply" class="btn btnPrimary" type="button">${t('talentApply')}</button>
-          <button id="talentResetAll" class="btn btnSecondary" type="button">${t('talentResetAll')}</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) requestCloseTalents();
-  });
-  overlay.querySelector('.modalClose')?.addEventListener('click', () => requestCloseTalents());
-  overlay.querySelector('#talentResetAll')?.addEventListener('click', () => openResetTalentsModal());
-  overlay.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
-  overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const branch = Number(btn.dataset.branch);
-      useActiveAbility(branch);
-    });
-  });
-
-  const branches = overlay.querySelector('#talentBranches');
-  TALENT_BRANCHES.forEach((branchName, branch) => {
-    const column = document.createElement('div');
-    column.className = 'talentBranch';
-    column.dataset.branch = String(branch);
-    
-    // Calculate max rows for this branch
-    const branchTalents = TALENT_DEFS.filter(d => d.branch === branch);
-    const maxRow = Math.max(...branchTalents.map(d => d.row));
-    
-    column.innerHTML = `
-      <div class="talentBranchHeader">
-        <span class="talentBranchTitle">${branchName}</span>
-        <span class="talentBranchPoints" id="branchPoints-${branch}">0</span>
-      </div>
-      <div class="talentTreeContainer">
-        <svg class="talentTreeSvg" id="talentSvg-${branch}"></svg>
-        <div class="talentTreeGrid" id="talentGrid-${branch}" style="--rows: ${maxRow + 1}"></div>
-      </div>
-      <button class="btn btnSecondary talentBranchReset" data-branch="${branch}" type="button">${t('talentReset')}</button>
-    `;
-    
-    // Branch reset button (pending only for this branch)
-    column.querySelector('.talentBranchReset')?.addEventListener('click', () => {
-      resetBranchPending(branch);
-    });
-
-    const grid = column.querySelector('.talentTreeGrid');
-    branchTalents.forEach((def, localIdx) => {
-      const globalIdx = TALENT_DEFS.findIndex(d => d === def);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'talentNode';
-      btn.dataset.talent = String(globalIdx);
-      btn.dataset.row = String(def.row);
-      btn.dataset.slot = String(def.slot);
-      btn.style.setProperty('--row', def.row);
-      btn.style.setProperty('--slot', def.slot);
-      btn.innerHTML = `
-        <span class="talentNodeIcon" aria-hidden="true">${def.icon ? `<img src="${def.icon}" alt="" loading="lazy">` : `<span class="talentNodeGlyph">${def.kind === 'active' ? '⚡' : '◆'}</span>`}</span>
-        <span class="talentNodeRank" id="rank-${globalIdx}">0/${def.maxRank}</span>
-      `;
-      btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
-      btn.removeAttribute('title');
-      btn.addEventListener('click', (event) => {
-        adjustTalentPending(globalIdx, event.shiftKey ? -1 : 1);
-      });
-      btn.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-        adjustTalentPending(globalIdx, -1);
-      });
-      grid.appendChild(btn);
-    });
-    branches.appendChild(column);
-  });
-  
-  // Draw SVG edges on open/resize
-  let resizeTimeout = null;
-  const redrawEdges = () => {
-    TALENT_BRANCHES.forEach((_, branch) => drawTalentEdges(branch));
-  };
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(redrawEdges, 100);
-  });
-}
-
-function resetBranchPending(branch){
-  const p = state.player;
-  TALENT_DEFS.forEach((def, i) => {
-    if (def.branch === branch) p.talentsPending[i] = 0;
-  });
-  updateTalentUI();
-}
-
-function drawTalentEdges(branch){
-  const svg = document.getElementById(`talentSvg-${branch}`);
-  const grid = document.getElementById(`talentGrid-${branch}`);
-  if (!svg || !grid) return;
-  
-  svg.innerHTML = '';
-  const gridRect = grid.getBoundingClientRect();
-  svg.setAttribute('width', gridRect.width);
-  svg.setAttribute('height', gridRect.height);
-  svg.setAttribute('viewBox', `0 0 ${gridRect.width} ${gridRect.height}`);
-  
-  const branchTalents = TALENT_DEFS.filter(d => d.branch === branch);
-  const branchOffset = TALENT_DEFS.findIndex(d => d.branch === branch);
-  const p = state.player;
-  
-  branchTalents.forEach((def, localIdx) => {
-    if (!def.parents || def.parents.length === 0) return;
-    const toBtn = grid.querySelector(`[data-talent="${branchOffset + localIdx}"]`);
-    if (!toBtn) return;
-    const toRect = toBtn.getBoundingClientRect();
-    const toX = toRect.left + toRect.width / 2 - gridRect.left;
-    const toY = toRect.top - gridRect.top;
-    
-    def.parents.forEach(parentLocalIdx => {
-      const fromBtn = grid.querySelector(`[data-talent="${branchOffset + parentLocalIdx}"]`);
-      if (!fromBtn) return;
-      const fromRect = fromBtn.getBoundingClientRect();
-      const fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
-      const fromY = fromRect.bottom - gridRect.top;
-      
-      // Determine edge state
-      const parentAbsIdx = branchOffset + parentLocalIdx;
-      const childAbsIdx = branchOffset + localIdx;
-      const parentActive = (p.talentsApplied[parentAbsIdx] || 0) + (p.talentsPending[parentAbsIdx] || 0) > 0;
-      const childActive = (p.talentsApplied[childAbsIdx] || 0) + (p.talentsPending[childAbsIdx] || 0) > 0;
-      
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', fromX);
-      line.setAttribute('y1', fromY);
-      line.setAttribute('x2', toX);
-      line.setAttribute('y2', toY);
-      line.classList.add('talentEdge');
-      if (parentActive && childActive) line.classList.add('talentEdgeActive');
-      else if (parentActive) line.classList.add('talentEdgeReady');
-      svg.appendChild(line);
-    });
-  });
 }
 
 function syncPlayerTalentsV2FromApi(){
@@ -8988,98 +8738,6 @@ function updateTalentUI(){
     updateTalentUIV2(overlay);
     return;
   }
-
-  const cost = pendingCost();
-  const summary = overlay.querySelector('#talentSummary');
-  if (summary){
-    const note = cost > p.talentPoints ? ` • ${t('talentNeedPoints')}` : '';
-    summary.textContent = `${t('talentPoints')}: ${p.talentPoints} • ${t('talentPending')}: ${cost}${note}`;
-  }
-
-  // Update talent nodes
-  overlay.querySelectorAll('.talentNode').forEach(btn => {
-    const i = Number(btn.dataset.talent);
-    const def = TALENT_DEFS[i];
-    const applied = p.talentsApplied[i] || 0;
-    const pending = p.talentsPending[i] || 0;
-    const rankText = `${applied + pending}/${def.maxRank}`;
-    const rankEl = btn.querySelector('.talentNodeRank');
-    if (rankEl) rankEl.textContent = rankText;
-
-    const canSelect = canSelectTalent(i);
-    const isMaxed = applied + pending >= def.maxRank;
-    const isLocked = !canSelect && pending === 0 && applied === 0;
-    
-    btn.classList.toggle('applied', applied > 0);
-    btn.classList.toggle('pending', pending > 0);
-    btn.classList.toggle('maxed', isMaxed && applied > 0);
-    btn.classList.toggle('locked', isLocked);
-    btn.disabled = !canSelect && pending === 0;
-    try {
-      let descText = def.desc;
-      const rank = applied + pending;
-      if (Array.isArray(def.effects) && def.effects.length > 0) {
-        for (let ei = 0; ei < def.effects.length; ei++) {
-          const eff = def.effects[ei];
-          if (eff && typeof eff.perRank === 'number') {
-            const currentPct = Math.round(eff.perRank * 100 * rank);
-            descText = ('' + descText).replaceAll('{current}', String(currentPct));
-            break;
-          }
-        }
-      }
-      btn.setAttribute('data-ui-tooltip', `${def.name}\n${descText}`);
-      btn.removeAttribute('title');
-    } catch (e) {
-      btn.setAttribute('data-ui-tooltip', `${def.name}\n${def.desc}`);
-      btn.removeAttribute('title');
-    }
-  });
-
-  // Update branch points
-  TALENT_BRANCHES.forEach((_, branch) => {
-    const el = overlay.querySelector(`#branchPoints-${branch}`);
-    if (!el) return;
-    const applied = TALENT_DEFS.reduce((sum, def, i) => {
-      if (def.branch !== branch) return sum;
-      return sum + (p.talentsApplied[i] || 0);
-    }, 0);
-    const pending = TALENT_DEFS.reduce((sum, def, i) => {
-      if (def.branch !== branch) return sum;
-      return sum + (p.talentsPending[i] || 0);
-    }, 0);
-    el.textContent = pending > 0 ? `${applied}+${pending}` : `${applied}`;
-    
-    // Update branch reset button
-    const resetBtn = overlay.querySelector(`.talentBranchReset[data-branch="${branch}"]`);
-    if (resetBtn) resetBtn.disabled = pending <= 0;
-  });
-
-  // Redraw SVG edges
-  TALENT_BRANCHES.forEach((_, branch) => drawTalentEdges(branch));
-
-  const applyBtn = overlay.querySelector('#talentApply');
-  if (applyBtn){
-    applyBtn.disabled = cost <= 0 || cost > p.talentPoints;
-  }
-  const resetAllBtn = overlay.querySelector('#talentResetAll');
-  if (resetAllBtn) resetAllBtn.disabled = !p.talentsApplied.some((r, i) => (r || 0) > 0);
-
-  overlay.querySelectorAll('.talentAbilitySlot').forEach(btn => {
-    const branch = Number(btn.dataset.branch);
-    const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
-    const canUse = canUseActive(branch);
-    const cdUntil = p.activeCooldowns[branch] || 0;
-    const cdLeft = Math.max(0, cdUntil - nowSec());
-    btn.classList.toggle('talentAbilityLocked', !unlocked);
-    btn.classList.toggle('talentAbilityUnlocked', unlocked);
-    btn.disabled = !unlocked || !canUse;
-    btn.setAttribute('data-ui-tooltip', unlocked
-      ? (canUse ? TALENT_BRANCHES[branch] : t('talentActiveCooldown', {sec: Math.ceil(cdLeft)}))
-      : TALENT_BRANCHES[branch]);
-    btn.removeAttribute('title');
-    btn.textContent = unlocked && canUse ? '' : (cdLeft > 0 ? Math.ceil(cdLeft) : '');
-  });
 }
 
 function updateStageAbilitySlots(){
@@ -9090,39 +8748,6 @@ function updateStageAbilitySlots(){
     updateTalentAbilitySlotsV2(container);
     return;
   }
-  container.querySelectorAll('.talentAbilitySlot').forEach(btn => {
-    btn.classList.remove('talentAbilitySlot_v2');
-    btn.style.removeProperty('--talentAbilityIcon');
-    btn.style.removeProperty('--talentAbilityCdFill');
-    btn.style.removeProperty('--talentAbilityCdColor');
-    const branch = Number(btn.dataset.branch);
-    const unlocked = (p.level >= 40) && (p.talentsApplied[activeTalentIndex(branch)] || 0) >= 1;
-    const canUse = canUseActive(branch);
-    const cdUntil = p.activeCooldowns[branch] || 0;
-    const cdLeft = Math.max(0, cdUntil - nowSec());
-    const chargesCurrent = unlocked ? (canUse ? 1 : 0) : 0;
-    const chargesMax = unlocked ? 1 : 0;
-    const mods = getMods();
-    const baseCooldown = 30;
-    const cooldownTotal = Math.max(0.0001, baseCooldown * (mods && Number.isFinite(mods.activeCooldownMul) ? mods.activeCooldownMul : 1));
-    const cooldownFill = cdLeft > 0 ? clamp(1 - (cdLeft / cooldownTotal), 0, 1) : 0;
-    const overlayColor = chargesCurrent > 0 ? 'rgba(20,20,20,0.62)' : 'rgba(255,255,255,0.58)';
-    btn.classList.toggle('talentAbilityLocked', !unlocked);
-    btn.classList.toggle('talentAbilityUnlocked', unlocked);
-    btn.disabled = !unlocked || !canUse;
-    btn.style.setProperty('--talentAbilityCdFill', String(cooldownFill));
-    btn.style.setProperty('--talentAbilityCdColor', overlayColor);
-    btn.setAttribute('data-cd-visible', cdLeft > 0 ? '1' : '0');
-    btn.setAttribute('data-charge-badge', unlocked ? String(chargesCurrent) : '');
-    const titleParts = [TALENT_BRANCHES[branch]];
-    titleParts.push(t('talentActiveCharges', { current: chargesCurrent, max: chargesMax }));
-    titleParts.push(cdLeft > 0
-      ? t('talentActiveRechargeIn', { sec: Math.ceil(cdLeft) })
-      : t('talentActiveRechargeReady'));
-    btn.setAttribute('data-ui-tooltip', unlocked ? titleParts.join('\n') : TALENT_BRANCHES[branch]);
-    btn.removeAttribute('title');
-    btn.textContent = unlocked && cdLeft > 0 ? String(Math.ceil(cdLeft)) : '';
-  });
 }
 
 function renderCrateIcon(level){
@@ -11809,8 +11434,6 @@ function initDebugPanel(){
       playSfx,
       canUseActive,
       useActiveAbility,
-      initTalentDefs,
-      getTalentDefs: () => TALENT_DEFS,
       getAchievementDefinitions,
       debugUnlockAchievementAndClaim,
       debugSetTotalMerges,

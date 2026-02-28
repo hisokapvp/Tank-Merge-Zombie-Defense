@@ -28,6 +28,14 @@
 - Для загрузки save через small/big menu действует единый контракт: `restoreFullState(payload)` должен завершаться post-restore синхронизацией (`postRestoreSync`) для runtime-систем (в т.ч. TalentsV2), чтобы ранги/очки и UI состояния были согласованы сразу после старта.
 - Runtime crate-логика вынесена в `src/mechanics/crateRuntime.js`; в `game.js` crate entrypoints делегируются через `ensureCrateRuntimeController()`.
 
+## Мастерская (Workshop) — под-вкладки в модификациях ангара
+- Расположение: `#modsHangarOverlay` → вкладка «Мастерская» (`workshopPanel`).
+- Под-вкладки: «Улучшение чипов» (`workshopTabChipUpgrade`, панель `workshopPanelChipUpgrade`) и «Открытие технологий» (`workshopTabTechUnlock`, панель `workshopPanelTechUnlock`, WIP).
+- Переключение под-вкладок: `Game.HangarChipsUI.switchWorkshopSubTab(tabId)` — DOM-переключение active/hidden, aria-selected.
+- «Улучшение чипов»: сетка `#chipUpgradeGrid` с карточками чипов из инвентаря `playerChips`. Каждая карточка показывает SVG-иконку, имя, уровень («Ур. N»), счётчик копий, кнопку «Объединить» (при `count >= 2`). При наведении — tooltip с уровнем, бонусом (+N% атаки), количеством, подсказкой по слиянию.
+- Логика merge: `mergeChips(chipId, level)` — забирает 2 копии, создаёт 1 копию `level+1`. Бонус: `level * 10`% к урону.
+- Бонус урона интегрирован в `fireTankProjectile` через `getChipLevelDmgMul(cellIndex)`.
+
 ## Правила
 - Не добавлять тексты мимо `src/i18n/ru.json` и `src/i18n/en.json`.
 - `src/i18n/fallbackStrings.js` — синхронный fallback, применяется до загрузки JSON; при добавлении нового i18n-ключа его нужно добавлять **одновременно** в `ru.json`, `en.json` **и** `fallbackStrings.js` (иначе до async-загрузки ключ отображается как literal-строка).

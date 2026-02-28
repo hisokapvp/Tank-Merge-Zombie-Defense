@@ -372,6 +372,264 @@
     if (panelWorkshop) panelWorkshop.hidden = isCells;
 
     if (isCells) render();
+    if (!isCells) renderChipUpgradeGrid();
+  }
+
+  /* ─── Workshop sub-tab switching ───────────────────────── */
+
+  function switchWorkshopSubTab(tabId) {
+    var tabChipUpgrade = el('workshopTabChipUpgrade');
+    var tabTechUnlock = el('workshopTabTechUnlock');
+    var panelChipUpgrade = el('workshopPanelChipUpgrade');
+    var panelTechUnlock = el('workshopPanelTechUnlock');
+    if (!tabChipUpgrade || !tabTechUnlock) return;
+
+    var isChips = tabId === 'chipUpgrade';
+    tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
+    tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
+    tabChipUpgrade.classList.toggle('workshopSubTab--active', isChips);
+    tabTechUnlock.setAttribute('aria-selected', isChips ? 'false' : 'true');
+    tabTechUnlock.setAttribute('tabindex', isChips ? '-1' : '0');
+    tabTechUnlock.classList.toggle('workshopSubTab--active', !isChips);
+    if (panelChipUpgrade) panelChipUpgrade.hidden = !isChips;
+    if (panelTechUnlock) panelTechUnlock.hidden = isChips;
+
+    if (isChips) renderChipUpgradeGrid();
+  }
+
+  /* ─── Player chip inventory (with levels) ──────────────── */
+
+  /* _playerChips: array of { chipId, chipColor, modIds, sourceComboKey, level, count }
+     Chips with same chipId and same level are grouped together. */
+  var _playerChips = null;
+
+  function ensurePlayerChips() {
+    if (_playerChips) return _playerChips;
+    _playerChips = [];
+    return _playerChips;
+  }
+
+  function getPlayerChips() { return ensurePlayerChips(); }
+
+  function setPlayerChips(chips) {
+    _playerChips = Array.isArray(chips) ? chips : [];
+  }
+
+  /** Add a chip to player's inventory. If a chip with same chipId and level exists, increment count. */
+  function addPlayerChip(chipDef, level) {
+    var chips = ensurePlayerChips();
+    var lvl = (Number.isFinite(level) && level >= 1) ? Math.floor(level) : 1;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipDef.chipId && chips[i].level === lvl) {
+        chips[i].count++;
+        return chips[i];
+      }
+    }
+    var entry = {
+      chipId: chipDef.chipId,
+      chipColor: chipDef.chipColor,
+      modIds: chipDef.modIds ? chipDef.modIds.slice() : [],
+      sourceComboKey: chipDef.sourceComboKey || '',
+      level: lvl,
+      count: 1
+    };
+    chips.push(entry);
+    return entry;
+  }
+
+  /** Remove one chip from player's inventory entry. If count reaches 0, remove the entry. */
+  function removePlayerChipOne(chipId, level) {
+    var chips = ensurePlayerChips();
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) {
+        chips[i].count--;
+        if (chips[i].count <= 0) chips.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Merge two identical chips (same chipId, same level) → one chip at level+1. 
+      Returns the new level or -1 on failure. */
+  function mergeChips(chipId, level) {
+    var chips = ensurePlayerChips();
+    var entry = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) {
+        entry = chips[i];
+        break;
+      }
+    }
+    if (!entry || entry.count < 2) return -1;
+    entry.count -= 2;
+    var newLevel = level + 1;
+    /* add merged chip */
+    var h = hc();
+    var chipDef = h ? h.getChipById(h.allChips, chipId) : null;
+    if (chipDef) {
+      addPlayerChip(chipDef, newLevel);
+    } else {
+      /* fallback: create manually */
+      var found = false;
+      for (var j = 0; j < chips.length; j++) {
+        if (chips[j].chipId === chipId && chips[j].level === newLevel) {
+          chips[j].count++;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        chips.push({
+          chipId: chipId,
+          chipColor: entry.chipColor,
+          modIds: entry.modIds.slice(),
+          sourceComboKey: entry.sourceComboKey,
+          level: newLevel,
+          count: 1
+        });
+      }
+    }
+    /* clean up empty entries */
+    if (entry.count <= 0) {
+      for (var k = 0; k < chips.length; k++) {
+        if (chips[k] === entry) { chips.splice(k, 1); break; }
+      }
+    }
+    return newLevel;
+  }
+
+  /** Get the attack bonus for a chip level (+10% per level, starting at level 1 = +10%). */
+  function chipLevelBonus(level) {
+    var lvl = (Number.isFinite(level) && level >= 1) ? Math.floor(level) : 1;
+    return lvl * 10;
+  }
+
+  /* ─── Render: chip upgrade grid ────────────────────────── */
+
+  var _chipUpgradeTooltipEl = null;
+
+  function renderChipUpgradeGrid() {
+    var grid = el('chipUpgradeGrid');
+    if (!grid) return;
+    var chips = ensurePlayerChips();
+    var h = hc();
+
+    if (!chips.length) {
+      grid.innerHTML = '<div class="chipUpgradeEmptyLabel">' + t('workshopChipUpgradeEmpty', 'У вас пока нет чипов') + '</div>';
+      return;
+    }
+
+    /* sort: by chipColor (red first), then by chipId, then by level */
+    var sorted = chips.slice().sort(function(a, b) {
+      if (a.chipColor !== b.chipColor) return a.chipColor === 'red' ? -1 : 1;
+      if (a.chipId !== b.chipId) return a.chipId - b.chipId;
+      return a.level - b.level;
+    });
+
+    var html = '';
+    for (var i = 0; i < sorted.length; i++) {
+      var chip = sorted[i];
+      var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
+      var canMerge = chip.count >= 2;
+      var cardClass = 'chipUpgradeCard' + (canMerge ? ' chipUpgradeCard--canMerge' : '');
+      var bonusPct = chipLevelBonus(chip.level);
+      var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
+
+      html += '<div class="' + cardClass + '" ' + tooltipData + '>';
+      
+      /* chip icon SVG */
+      html += '<svg viewBox="0 0 44 40" class="chipUpgradeCard__icon">' +
+        '<polygon points="22,3 40,37 4,37" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
+      var vx = [[22, 7], [36, 33], [8, 33]];
+      var mods = chip.modIds;
+      for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
+        var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
+        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+      }
+      html += '</svg>';
+
+      /* name */
+      var chipName = chip.sourceComboKey;
+      if (h && mods.length) {
+        var names = [];
+        for (var ni = 0; ni < mods.length; ni++) names.push(modName(mods[ni]));
+        chipName = names.join('+');
+      }
+      html += '<span class="chipUpgradeCard__name" title="' + chipName + '">' + chipName + '</span>';
+
+      /* level label */
+      html += '<span class="chipUpgradeCard__level">' + t('workshopChipLevelLabel', 'Ур.') + ' ' + chip.level + '</span>';
+
+      /* count badge */
+      if (chip.count > 1) {
+        html += '<span class="chipUpgradeCard__count">×' + chip.count + '</span>';
+      }
+
+      /* merge button */
+      if (canMerge) {
+        html += '<button class="chipUpgradeCard__mergeBtn" data-merge-chip="' + chip.chipId + '" data-merge-level="' + chip.level + '" type="button">' +
+          t('workshopChipMerge', 'Объединить') + '</button>';
+      }
+
+      html += '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  /* ─── Chip upgrade tooltip ─────────────────────────────── */
+
+  function showChipUpgradeTooltip(evt) {
+    var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
+    if (!card) { hideChipUpgradeTooltip(); return; }
+    var chipId = parseInt(card.getAttribute('data-chip-upgrade-id'), 10);
+    var level = parseInt(card.getAttribute('data-chip-upgrade-level'), 10);
+    if (!Number.isFinite(chipId) || !Number.isFinite(level)) return;
+
+    var chips = ensurePlayerChips();
+    var chip = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
+    }
+    if (!chip) return;
+
+    if (!_chipUpgradeTooltipEl) {
+      _chipUpgradeTooltipEl = _doc.createElement('div');
+      _chipUpgradeTooltipEl.className = 'chipUpgradeTooltip';
+      _doc.body.appendChild(_chipUpgradeTooltipEl);
+    }
+
+    var bonus = chipLevelBonus(chip.level);
+    var h = hc();
+    var chipName = chip.sourceComboKey;
+    if (h && chip.modIds.length) {
+      var names = [];
+      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
+      chipName = names.join(' + ');
+    }
+
+    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
+    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
+    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    if (chip.count > 1) {
+      html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
+    }
+    if (chip.count >= 2) {
+      html += '<div style="margin-top:4px;font-size:11px;color:rgba(74,246,38,.7)">' + t('workshopChipTooltipMergeHint', 'Объединить 2 одинаковых чипа для повышения уровня') + '</div>';
+    }
+
+    _chipUpgradeTooltipEl.innerHTML = html;
+    _chipUpgradeTooltipEl.style.display = 'block';
+
+    var rect = card.getBoundingClientRect();
+    _chipUpgradeTooltipEl.style.left = Math.min(rect.right + 8, global.innerWidth - 240) + 'px';
+    _chipUpgradeTooltipEl.style.top = Math.max(0, rect.top - 10) + 'px';
+  }
+
+  function hideChipUpgradeTooltip() {
+    if (_chipUpgradeTooltipEl) {
+      _chipUpgradeTooltipEl.style.display = 'none';
+    }
   }
 
   /* ─── Install chip into selected slot ──────────────────── */
@@ -506,6 +764,33 @@
       switchHangarTab('workshop');
       return;
     }
+
+    /* workshop sub-tab buttons */
+    if (tgt.id === 'workshopTabChipUpgrade' || tgt.closest && tgt.closest('#workshopTabChipUpgrade')) {
+      switchWorkshopSubTab('chipUpgrade');
+      return;
+    }
+    if (tgt.id === 'workshopTabTechUnlock' || tgt.closest && tgt.closest('#workshopTabTechUnlock')) {
+      switchWorkshopSubTab('techUnlock');
+      return;
+    }
+
+    /* merge chip button */
+    var mergeBtn = tgt.closest ? tgt.closest('[data-merge-chip]') : null;
+    if (mergeBtn) {
+      var mergeChipId = parseInt(mergeBtn.getAttribute('data-merge-chip'), 10);
+      var mergeLevel = parseInt(mergeBtn.getAttribute('data-merge-level'), 10);
+      if (Number.isFinite(mergeChipId) && Number.isFinite(mergeLevel)) {
+        var newLevel = mergeChips(mergeChipId, mergeLevel);
+        if (newLevel > 0) {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('workshopChipMerged', 'Чип улучшен до ур. {level}!').replace('{level}', newLevel), 1800);
+          }
+          renderChipUpgradeGrid();
+        }
+      }
+      return;
+    }
   }
 
   /** Try to auto-install a chip into the first empty matching slot */
@@ -553,6 +838,15 @@
     var overlay = el('modsHangarOverlay');
     if (overlay) {
       overlay.addEventListener('click', handleOverlayClick);
+      /* tooltip hover events for chip upgrade cards */
+      overlay.addEventListener('mouseover', function(evt) {
+        var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
+        if (card) showChipUpgradeTooltip(evt);
+      });
+      overlay.addEventListener('mouseout', function(evt) {
+        var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
+        if (!card || (evt.relatedTarget && !card.contains(evt.relatedTarget))) hideChipUpgradeTooltip();
+      });
     }
 
     ensureCells();
@@ -654,6 +948,13 @@
     getCells: getCells,
     setCells: setCells,
     switchHangarTab: switchHangarTab,
+    switchWorkshopSubTab: switchWorkshopSubTab,
+    getPlayerChips: getPlayerChips,
+    setPlayerChips: setPlayerChips,
+    addPlayerChip: addPlayerChip,
+    mergeChips: mergeChips,
+    chipLevelBonus: chipLevelBonus,
+    renderChipUpgradeGrid: renderChipUpgradeGrid,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,

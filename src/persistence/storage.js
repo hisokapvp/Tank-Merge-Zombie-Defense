@@ -474,6 +474,7 @@
       mapSeeds: mapSeeds,
       drones: drones,
       forceFenceRuntimeResetOnLoad: !!state.forceFenceRuntimeResetOnLoad,
+      playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
     };
   }
 

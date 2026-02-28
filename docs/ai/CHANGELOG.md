@@ -1,5 +1,24 @@
 ﻿# Журнал изменений (A2DP)
 
+## Мастерская: улучшение чипов + удаление V1 талантов
+- **Новая фича: Вкладки «Мастерская»** — в модалке «Модификации ангара» во вкладке «Мастерская» добавлены две под-вкладки: «Улучшение чипов» и «Открытие технологий» (WIP).
+  - `index.html`: заменена заглушка «В разработке» в панели `workshopPanel` на структуру с под-вкладками (`workshopTabChipUpgrade`, `workshopTabTechUnlock`) и панелями (`workshopPanelChipUpgrade` с `#chipUpgradeGrid`, `workshopPanelTechUnlock`).
+  - `style.css`: +~150 строк CSS для `.workshopSubTabs`, `.workshopSubTab`, `.chipUpgradeGrid`, `.chipUpgradeCard`, `.chipUpgradeCard__icon/__name/__level/__count`, `.chipUpgradeCard--canMerge`, `.chipUpgradeCard__mergeBtn`, `.chipUpgradeTooltip`, `.chipUpgradeEmptyLabel`.
+  - `src/i18n/fallbackStrings.js`: +13 ключей на RU и EN (`workshopTabChipUpgrade`, `workshopTabTechUnlock`, `workshopChipMerge`, `workshopChipLevelLabel`, `workshopChipTooltip*` и др.).
+- **Новая фича: Система улучшения чипов** — игрок может объединять одинаковые чипы для повышения уровня; каждый уровень даёт +10% к силе атаки танка.
+  - `src/ui/hangarChipsUI.js`: +~300 строк — инвентарь `playerChips` (`{ chipId, chipColor, modIds, sourceComboKey, level, count }`), функции `addPlayerChip`, `removePlayerChipOne`, `mergeChips`, `chipLevelBonus`, `renderChipUpgradeGrid`, tooltip-система при наведении, переключение под-вкладок.
+  - `game.js`: добавлена функция `getChipLevelDmgMul(cellIndex)` — суммирует бонусы уровней установленных чипов, возвращает множитель урона; интегрирована в `fireTankProjectile` (`splitDmg *= chipLevelDmgMul`).
+  - `src/persistence/initialState.js`: добавлено поле `playerChips: []`.
+  - `src/persistence/storage.js`: `serializeState` сохраняет `playerChips`.
+  - `game.js`: `restoreFullState` и `applySavedProgress` восстанавливают `playerChips` с синхронизацией `HangarChipsUI.setPlayerChips`.
+- **Удаление V1 талантов** — удалён весь код старой системы талантов v1 из game.js (~400 строк) и файл `src/systems/talents/talentDefs.js` (176 строк).
+  - `game.js`: удалены функции `pendingCost`, `doApplyTalentSelections`, `canSelectTalent`, `adjustTalentPending`, `activeTalentIndex`, `resetBranchPending`, `drawTalentEdges`; константа `TALENT_BRANCHES`; V1-ветки из `getMods`, `resetAllTalents`, `applyTalentSelections`, `canUseActive`, `useActiveAbility`, `ensureTalentState`, `ensureTalentUI`, `updateTalentUI`, `updateStageAbilitySlots`.
+  - `game.js`: удалены `talentsPending` и `activeCooldowns` из save/restore; удалены V1-экспорты из debug-панели.
+  - `game.js`: добавлены утилитарные заглушки: `TALENT_LAYOUT = []`, `initTalentDefs()` (no-op), `sanitizeTalentIconBaseName()`, `talentIconPath()` — нужны V2-коду для иконок и fallback layout.
+  - `index.html`: удалён `<script src="src/systems/talents/talentDefs.js">`.
+  - `src/core/bootstrap.js`: вызов `initTalentDefs` защищён `typeof`-проверкой.
+  - Поле `talentsApplied` сохранено в state для совместимости миграции V1→V2 в `talentsV2.js`.
+
 ## Рефакторинг game.js — удаление мёртвого кода и извлечение талантов
 - **Удалён мёртвый код из game.js** (~70 строк):
   - Первый (затенённый) `normalizeAppliedCannonUpgrade` — дубликат, перезаписывался вторым определением.

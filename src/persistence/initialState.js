@@ -119,6 +119,7 @@
       isDismantleMode: false,
       selectedTankIds: [],
       hangarCells: null,
+      playerChips: [],
     };
   }
 

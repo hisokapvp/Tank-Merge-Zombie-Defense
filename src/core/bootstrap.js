@@ -26,7 +26,8 @@
     }
 
     opts.ensureProgressUI();
-    opts.initTalentDefs();
+    /* V1 talentDefs removed – initTalentDefs is now a no-op */
+    if (typeof opts.initTalentDefs === 'function') opts.initTalentDefs();
 
     var loaded = null;
     if (windowObj.Game && windowObj.Game.Storage) {

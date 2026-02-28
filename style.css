@@ -3247,3 +3247,145 @@ input, select, textarea, button {
   padding:60px 0;
 }
 
+/* --- Workshop sub-tabs --- */
+.workshopSubTabs{
+  display:flex;
+  gap:6px;
+  margin-bottom:12px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  padding-bottom:8px;
+}
+.workshopSubTab{
+  font-size:12px;
+  padding:5px 14px;
+  background:rgba(60,55,50,.5);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:5px 5px 0 0;
+  color:rgba(255,255,255,.5);
+  cursor:pointer;
+  transition:background .12s,color .12s,border-color .12s;
+}
+.workshopSubTab:hover{
+  color:rgba(255,255,255,.8);
+  border-color:rgba(255,255,255,.25);
+}
+.workshopSubTab--active,
+.workshopSubTab[aria-selected="true"]{
+  background:rgba(74,246,38,.08);
+  border-color:#4af626;
+  color:#4af626;
+}
+
+/* --- Chip upgrade grid --- */
+.chipUpgradeGrid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  max-height:400px;
+  overflow-y:auto;
+  padding:6px 2px;
+  scrollbar-width:thin;
+}
+.chipUpgradeCard{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  width:72px;
+  padding:6px 4px 4px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;
+  background:rgba(40,36,32,.6);
+  cursor:default;
+  position:relative;
+  transition:border-color .12s, background .12s;
+}
+.chipUpgradeCard:hover{
+  border-color:rgba(125,255,178,.45);
+  background:rgba(50,46,40,.85);
+}
+.chipUpgradeCard__icon{
+  width:44px;
+  height:40px;
+}
+.chipUpgradeCard__name{
+  font-size:9px;
+  color:rgba(255,255,255,.55);
+  font-family:monospace;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:66px;
+  text-align:center;
+}
+.chipUpgradeCard__level{
+  font-size:10px;
+  color:rgba(255,255,255,.45);
+  margin-top:1px;
+}
+.chipUpgradeCard__count{
+  position:absolute;
+  top:2px;
+  right:4px;
+  font-size:9px;
+  color:#fdd835;
+  background:rgba(0,0,0,.55);
+  border-radius:3px;
+  padding:1px 4px;
+  pointer-events:none;
+}
+.chipUpgradeCard--canMerge{
+  border-color:rgba(74,246,38,.4);
+  box-shadow:0 0 6px rgba(74,246,38,.15);
+  cursor:pointer;
+}
+.chipUpgradeCard--canMerge:hover{
+  border-color:#4af626;
+  box-shadow:0 0 10px rgba(74,246,38,.25);
+}
+.chipUpgradeCard__mergeBtn{
+  margin-top:2px;
+  font-size:10px;
+  padding:2px 10px;
+  background:rgba(74,246,38,.12);
+  border:1px solid rgba(74,246,38,.4);
+  border-radius:4px;
+  color:#4af626;
+  cursor:pointer;
+  transition:background .12s;
+}
+.chipUpgradeCard__mergeBtn:hover{
+  background:rgba(74,246,38,.22);
+}
+
+/* Chip upgrade tooltip */
+.chipUpgradeTooltip{
+  position:fixed;
+  z-index:9999;
+  background:rgba(20,18,16,.96);
+  border:1px solid rgba(74,246,38,.35);
+  border-radius:6px;
+  padding:8px 12px;
+  font-size:12px;
+  color:rgba(255,255,255,.88);
+  pointer-events:none;
+  max-width:220px;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  line-height:1.4;
+}
+.chipUpgradeTooltip__title{
+  font-weight:bold;
+  color:#4af626;
+  margin-bottom:4px;
+}
+.chipUpgradeTooltip__bonus{
+  color:#fdd835;
+}
+.chipUpgradeEmptyLabel{
+  text-align:center;
+  font-size:14px;
+  color:rgba(255,255,255,.35);
+  padding:40px 0;
+  width:100%;
+}
+
