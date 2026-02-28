@@ -6459,7 +6459,7 @@ function stepTanks(dt){
             : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
           const primaryTarget = targets.length ? targets[0] : best;
 
-          fireTankProjectile({sx: mx, sy: my, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i});
+          fireTankProjectile({sx: mx, sy: my, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i, targetPool: targetPool, heading: pos.heading});
         }
       }
 
@@ -6478,7 +6478,7 @@ function stepTanks(dt){
       ? targeting.pickBurstTargetsBySide(targetPool, count, { sx: sx, sy: sy, heading: pos.heading, getPos: zombiePos })
       : (targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(targetPool, count) : pickBurstTargetsFallback(targetPool, count));
     const primaryTarget = targets.length ? targets[0] : best;
-    fireTankProjectile({sx, sy, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i});
+    fireTankProjectile({sx, sy, target: primaryTarget, targets, tank, stats: s, mods, cellIndex: cell.i, targetPool: targetPool, heading: pos.heading});
   }
 }
 
@@ -6514,6 +6514,7 @@ function resetProjectile(p){
   p.chipShotMods = null;
   p.isMatryoshkaChild = false;
   p.isChainChild = false;
+  p.isCascadeChild = false;
 }
 
 const projectilePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
@@ -6524,7 +6525,7 @@ function releaseProjectile(p){
   if (projectilePool) projectilePool.release(p);
 }
 
-function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellIndex}){
+function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellIndex, targetPool, heading: inHeading}){
   const isTankAttackingZombie = false;
   const powerTier = tank.powerTier ?? computePowerTier(getComputerLevel());
   const effectIntensity = 1 + powerTier * 0.25;
@@ -6568,27 +6569,26 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   const burstTargets = targeting && targeting.pickBurstTargets ? targeting.pickBurstTargets(baseTargets, N) : pickBurstTargetsFallback(baseTargets, N);
   if (!burstTargets.length) return;
 
-  // For chip extra projectiles (mod 1), pick separate distant targets
-  // Distance threshold is configurable via ChipEffects.DOUBLE_SHOT_MIN_TARGET_DISTANCE
-  const dblShotMinDist = (ChipFx && ChipFx.DOUBLE_SHOT_MIN_TARGET_DISTANCE) || 120;
+  // For chip extra projectiles (mod 1), pick separate targets using side-based targeting
+  // Uses the same pickBurstTargetsBySide algorithm as multi-barrel tanks
   let chipExtraTargetList = burstTargets;
-  if (chipExtraProj > 0 && baseTargets.length > 1) {
+  if (chipExtraProj > 0) {
+    const fullPool = Array.isArray(targetPool) && targetPool.length > 0 ? targetPool : baseTargets;
+    // Exclude primary targets from the pool to force different targets
     const usedIds = {};
     for (let ui = 0; ui < burstTargets.length; ui++) usedIds[burstTargets[ui].id] = true;
-    const altCands = [];
-    for (let ai = 0; ai < baseTargets.length; ai++) {
-      const zt = baseTargets[ai];
-      if (usedIds[zt.id]) continue;
-      const zp = zombiePos(zt);
-      let tooClose = false;
-      for (let bi = 0; bi < burstTargets.length; bi++) {
-        const bp = zombiePos(burstTargets[bi]);
-        if (Math.hypot(zp.x - bp.x, zp.y - bp.y) < dblShotMinDist) { tooClose = true; break; }
-      }
-      if (!tooClose) altCands.push(zt);
+    const altPool = [];
+    for (let ai = 0; ai < fullPool.length; ai++) {
+      if (!usedIds[fullPool[ai].id]) altPool.push(fullPool[ai]);
     }
-    if (altCands.length > 0) {
-      chipExtraTargetList = pickBurstTargetsFallback(altCands, N * chipExtraProj);
+    const pool = altPool.length > 0 ? altPool : fullPool;
+    const targeting = window.Game && window.Game.Targeting;
+    if (targeting && targeting.pickBurstTargetsBySide && Number.isFinite(inHeading)) {
+      chipExtraTargetList = targeting.pickBurstTargetsBySide(pool, N * chipExtraProj, {
+        sx: sx, sy: sy, heading: inHeading, getPos: zombiePos
+      });
+    } else {
+      chipExtraTargetList = pickBurstTargetsFallback(pool, N * chipExtraProj);
     }
   }
   // Combined target list: [base barrel targets..., chip extra targets...]
@@ -6747,6 +6747,7 @@ function spawnProjectile(p){
   b.chipShotMods = p.chipShotMods || null;
   b.isMatryoshkaChild = p.isMatryoshkaChild || false;
   b.isChainChild = p.isChainChild || false;
+  b.isCascadeChild = p.isCascadeChild || false;
   state.projectiles.push(b);
 }
 
@@ -6914,7 +6915,8 @@ function impactAt(x,y,b,opts){
     }
   }
 
-  // ── Chip impact effects (mods 2–14) ──
+  // ── Chip impact effects (mods 2–14) + cascade spawning ──
+  // Cascade children trigger their own effects; only matryoshka children are blocked.
   if (b.chipShotMods && !b.isMatryoshkaChild) {
     const ChipFxI = window.Game && window.Game.ChipEffects;
     if (ChipFxI && typeof ChipFxI.applyImpactEffects === 'function') {
@@ -7058,13 +7060,22 @@ function stepDecals(dt){
     if (d.kind === 'chipPool') {
       // DOT damage (fire, acid)
       if (d.dps > 0) {
+        if (d._dmgAccum == null) { d._dmgAccum = 0; d._dmgTimer = 0; }
+        d._dmgTimer -= dt;
         for (const z of state.zombies) {
           if (z.state === 'dying') continue;
           const p = zombiePos(z);
           const dist = Math.hypot(p.x - d.x, p.y - d.y);
           if (dist <= d.r) {
-            applyDamageToZombie(z, d.dps * dt, 'tank');
+            const tickDmg = d.dps * dt;
+            applyDamageToZombie(z, tickDmg, 'tank');
+            d._dmgAccum += tickDmg;
           }
+        }
+        if (d._dmgTimer <= 0 && d._dmgAccum > 0) {
+          addDamageNumber(d.x, d.y, Math.round(d._dmgAccum), false);
+          d._dmgAccum = 0;
+          d._dmgTimer = 0.5;
         }
       }
       // Slow effect (ice, acid) — delegate to ChipEffects

@@ -1,6 +1,16 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-02-28
+- **Новая фича: Каскадная система модификаторов чипов**.
+  - Модификаторы теперь разделяются по «порядку срабатывания» (order): первый красный мод (order 0) срабатывает при выстреле, второй красный мод (order 1) — при попадании первых снарядов, жёлтый мод (order 2) — при попадании последних каскадных снарядов.
+  - `hangarChips.js`: `calculateActiveModifiers` теперь добавляет поле `order` (0, 1, 2) к каждому модификатору.
+  - `chipEffects.js`: `applyShotModifiers` разделяет моды по order; order-0 применяются при выстреле, остальные сохраняются в `pendingCascadeMods` / `pendingYellowMods` на объекте `shotMods`.
+  - `chipEffects.js`: добавлены каскадные функции — `_buildEmptyResult`, `_applyModToResult`, `_findCascadeTargets`, `_getCascadeProjectileCount`, `_spawnCascadeProjectiles`.
+  - `chipEffects.js`: `applyImpactEffects` теперь после обработки текущих эффектов проверяет `pendingCascadeMods` и запускает `_spawnCascadeProjectiles`.
+  - `game.js`: добавлен флаг `isCascadeChild` в `resetProjectile` и `spawnProjectile` для каскадных снарядов.
+  - Каскадные снаряды летят к целям в 100–250px от точки взрыва, количество зависит от мода (Double Shot = 2, Combo = 3, остальные = 1).
+  - Жёлтые моды (10–14) срабатывают ТОЛЬКО на последнем каскаде: если 1 красный + жёлтый → жёлтый на первом попадании; если 2 красных + жёлтый → жёлтый только на попадании каскадных снарядов.
+  - Тесты: 79 passed, 3 failed (pre-existing T5 CSS).
 - **Фикс: Мод 1 (Двойной снаряд) — снаряды летят в разные далёкие цели**.
   - Минимальная дистанция между основной и вторичной целью увеличена с 30px до 120px (настраиваемая через `Game.ChipEffects.DOUBLE_SHOT_MIN_TARGET_DISTANCE`).
   - Добавлена getter/setter-пара `DOUBLE_SHOT_MIN_TARGET_DISTANCE` в `chipEffects.js` для runtime-настройки дальности выбора второй цели.

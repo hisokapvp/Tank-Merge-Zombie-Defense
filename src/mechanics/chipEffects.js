@@ -79,30 +79,9 @@
 
   /* ================== SHOT MODIFIER ================== */
 
-  /**
-   * Called from fireTankProjectile BEFORE spawning projectiles.
-   * Returns an object describing modifications to the shot.
-   *
-   * @param {object} opts
-   *   - cellIndex {number}
-   *   - tank {object}
-   *   - stats {object}  (dmg, fr, aoe, prof, bulletCfg …)
-   *   - targets {array}  zombie target pool
-   *   - sx, sy {number}  muzzle position
-   * @returns {object} shotMods
-   */
-  function applyShotModifiers(opts) {
-    var cellIndex = opts.cellIndex;
-    var modIds = getActiveModIds(cellIndex);
-    if (!modIds.length) return null;
-
-    /* Mod 7 — Arcade Chaos: replace active mods with one random from group A */
-    if (modIds.indexOf(7) !== -1) {
-      var pick = GROUP_A_MODS[Math.floor(Math.random() * GROUP_A_MODS.length)];
-      modIds = [pick];  // this shot uses a random pattern
-    }
-
-    var result = {
+  /** Build an empty shotMods result with all properties at defaults. */
+  function _buildEmptyResult() {
+    return {
       extraProjectiles: 0,        // mod 1
       chainJumps: 0,              // mod 2
       isMatryoshka: false,        // mod 3
@@ -124,83 +103,305 @@
       electroNode: false,         // mod 12
       laserMark: false,           // mod 13
       acidPool: false,            // mod 14
-      activeModIds: modIds
+      activeModIds: [],
+      cascadeLevel: 0,
+      pendingCascadeMods: [],
+      pendingYellowMods: [],
+      cellIndex: -1
     };
+  }
 
-    for (var i = 0; i < modIds.length; i++) {
-      var m = modIds[i];
-      switch (m) {
-        case 1: // Double Shot
-          result.extraProjectiles = 1; // +1 projectile per barrel
-          break;
+  /** Apply a single modId to an existing shotMods result object. */
+  function _applyModToResult(result, modId, cellIndex) {
+    switch (modId) {
+      case 1: // Double Shot
+        result.extraProjectiles = 1;
+        break;
+      case 2: // Double Chain
+        result.chainJumps = 2;
+        break;
+      case 3: // Double Matryoshka
+        result.isMatryoshka = true;
+        result.matryoshkaDmgMul = 2;
+        result.matryoshkaSizeMul = 1.25;
+        break;
+      case 4: // Small Repulse
+        result.pushDistance = 10;
+        result.pushExtraDmgMul = 0.5;
+        break;
+      case 5: // Small Vacuum
+        result.pullDistance = 50;
+        result.pullExtraDmgMul = 0.5;
+        break;
+      case 6: // Small Combo Counter
+        if (!_comboCounters[cellIndex]) _comboCounters[cellIndex] = 0;
+        _comboCounters[cellIndex]++;
+        if (_comboCounters[cellIndex] >= 4) {
+          _comboCounters[cellIndex] = 0;
+          result.comboShots = 3;
+          result.comboDmgMul = 1.25;
+        }
+        break;
+      case 8: // Small Nuke
+        var now = _now();
+        if (!_nukeCooldowns[cellIndex] || now >= _nukeCooldowns[cellIndex]) {
+          result.isNuke = true;
+          result.nukeDmgMul = 3;
+          result.nukeRadius = 100;
+          _nukeCooldowns[cellIndex] = now + 30;
+        }
+        break;
+      case 9: // Small Calming
+        result.isCalming = true;
+        result.calmDuration = 0.5;
+        break;
+      case 10: // Fire Pool
+        result.firePool = true;
+        break;
+      case 11: // Ice Zone
+        result.iceZone = true;
+        break;
+      case 12: // Electro Node
+        result.electroNode = true;
+        break;
+      case 13: // Laser Mark
+        result.laserMark = true;
+        break;
+      case 14: // Acid Pool
+        result.acidPool = true;
+        break;
+    }
+  }
 
-        case 2: // Double Chain
-          result.chainJumps = 2;
-          break;
+  /**
+   * Called from fireTankProjectile BEFORE spawning projectiles.
+   * Returns an object describing modifications to the shot.
+   *
+   * Cascade system: mods with order > 0 are deferred to impact time.
+   * - order 0: applied at shot time (initial fire)
+   * - order 1: spawns cascade projectiles from impact point
+   * - order 2 (yellow): triggers on the LAST cascade's impact
+   *
+   * @param {object} opts
+   *   - cellIndex {number}
+   *   - tank {object}
+   *   - stats {object}  (dmg, fr, aoe, prof, bulletCfg …)
+   *   - targets {array}  zombie target pool
+   *   - sx, sy {number}  muzzle position
+   * @returns {object} shotMods
+   */
+  function applyShotModifiers(opts) {
+    var cellIndex = opts.cellIndex;
+    var chipMods = getActiveChipMods(cellIndex);
+    if (!chipMods.length) return null;
 
-        case 3: // Double Matryoshka
-          result.isMatryoshka = true;
-          result.matryoshkaDmgMul = 2;
-          result.matryoshkaSizeMul = 1.25;
-          break;
+    /* Mod 7 — Arcade Chaos: replace active mods with one random from group A (no cascade) */
+    var hasArcadeChaos = false;
+    for (var ac = 0; ac < chipMods.length; ac++) {
+      if (chipMods[ac].modId === 7) { hasArcadeChaos = true; break; }
+    }
+    if (hasArcadeChaos) {
+      var pick = GROUP_A_MODS[Math.floor(Math.random() * GROUP_A_MODS.length)];
+      var result = _buildEmptyResult();
+      result.activeModIds = [pick];
+      result.cellIndex = cellIndex;
+      _applyModToResult(result, pick, cellIndex);
+      return result;
+    }
 
-        case 4: // Small Repulse
-          result.pushDistance = 10;
-          result.pushExtraDmgMul = 0.5;
-          break;
+    /* Separate mods by cascade order */
+    var level0Mods = [];
+    var cascadeMods = [];
+    var yellowMods = [];
 
-        case 5: // Small Vacuum
-          result.pullDistance = 50;
-          result.pullExtraDmgMul = 0.5;
-          break;
-
-        case 6: // Small Combo Counter
-          if (!_comboCounters[cellIndex]) _comboCounters[cellIndex] = 0;
-          _comboCounters[cellIndex]++;
-          if (_comboCounters[cellIndex] >= 4) {
-            _comboCounters[cellIndex] = 0;
-            result.comboShots = 3;
-            result.comboDmgMul = 1.25;
-          }
-          break;
-
-        case 8: // Small Nuke
-          var now = _now();
-          if (!_nukeCooldowns[cellIndex] || now >= _nukeCooldowns[cellIndex]) {
-            result.isNuke = true;
-            result.nukeDmgMul = 3;
-            result.nukeRadius = 100;
-            _nukeCooldowns[cellIndex] = now + 30;
-          }
-          break;
-
-        case 9: // Small Calming
-          result.isCalming = true;
-          result.calmDuration = 0.5;
-          break;
-
-        case 10: // Fire Pool
-          result.firePool = true;
-          break;
-
-        case 11: // Ice Zone
-          result.iceZone = true;
-          break;
-
-        case 12: // Electro Node
-          result.electroNode = true;
-          break;
-
-        case 13: // Laser Mark
-          result.laserMark = true;
-          break;
-
-        case 14: // Acid Pool
-          result.acidPool = true;
-          break;
+    for (var i = 0; i < chipMods.length; i++) {
+      var cm = chipMods[i];
+      var order = cm.order !== undefined ? cm.order : 0;
+      if (cm.source === 'yellow' || order === 2) {
+        yellowMods.push({ modId: cm.modId });
+      } else if (order >= 1) {
+        cascadeMods.push({ modId: cm.modId });
+      } else {
+        level0Mods.push({ modId: cm.modId });
       }
     }
+
+    /* Build result from level-0 mods only */
+    var result = _buildEmptyResult();
+    result.cellIndex = cellIndex;
+    for (var j = 0; j < level0Mods.length; j++) {
+      result.activeModIds.push(level0Mods[j].modId);
+      _applyModToResult(result, level0Mods[j].modId, cellIndex);
+    }
+
+    /* If no cascade mods, yellow mods apply at this (first) level */
+    if (cascadeMods.length === 0) {
+      for (var k = 0; k < yellowMods.length; k++) {
+        result.activeModIds.push(yellowMods[k].modId);
+        _applyModToResult(result, yellowMods[k].modId, cellIndex);
+      }
+      result.pendingCascadeMods = [];
+      result.pendingYellowMods = [];
+    } else {
+      /* Cascade mods deferred; yellow deferred to final cascade */
+      result.pendingCascadeMods = cascadeMods;
+      result.pendingYellowMods = yellowMods;
+    }
+
+    result.cascadeLevel = 0;
     return result;
+  }
+
+  /* ================== CASCADE SYSTEM ================== */
+
+  /** Minimum distance (px) from impact for cascade target selection. */
+  var CASCADE_MIN_DIST = 100;
+  /** Maximum distance (px) from impact for cascade target selection. */
+  var CASCADE_MAX_DIST = 250;
+
+  /**
+   * Find targets for cascade projectiles: zombies 100–250px from impact.
+   * Prefers targets closer to CASCADE_MIN_DIST for maximum spread.
+   */
+  function _findCascadeTargets(x, y, count, opts) {
+    var zombies = opts.zombies;
+    var getPos = opts.getZombiePos;
+    var candidates = [];
+
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      if (z.state === 'dying') continue;
+      var p = getPos(z);
+      var d = Math.hypot(p.x - x, p.y - y);
+      if (d >= CASCADE_MIN_DIST && d <= CASCADE_MAX_DIST) {
+        candidates.push({ z: z, d: d });
+      }
+    }
+
+    /* Sort by distance ascending — prefer closer for first picks */
+    candidates.sort(function(a, b) { return a.d - b.d; });
+
+    var results = [];
+    var usedIds = {};
+    /* Pick diverse targets (skip duplicates) */
+    for (var j = 0; j < candidates.length && results.length < count; j++) {
+      var c = candidates[j];
+      if (!usedIds[c.z.id]) {
+        results.push(c.z);
+        usedIds[c.z.id] = true;
+      }
+    }
+
+    /* Fallback: if not enough in preferred range, accept any alive zombie ≥50px */
+    if (results.length < count) {
+      for (var k = 0; k < zombies.length && results.length < count; k++) {
+        var zf = zombies[k];
+        if (zf.state === 'dying') continue;
+        if (usedIds[zf.id]) continue;
+        var pf = getPos(zf);
+        var df = Math.hypot(pf.x - x, pf.y - y);
+        if (df >= 50) {
+          results.push(zf);
+          usedIds[zf.id] = true;
+        }
+      }
+    }
+
+    /* Last resort: any alive zombie */
+    if (results.length < count) {
+      for (var m = 0; m < zombies.length && results.length < count; m++) {
+        var za = zombies[m];
+        if (za.state === 'dying') continue;
+        if (usedIds[za.id]) continue;
+        results.push(za);
+        usedIds[za.id] = true;
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Determine how many cascade projectiles a mod should spawn.
+   */
+  function _getCascadeProjectileCount(modId, result) {
+    switch (modId) {
+      case 1: return 1 + (result.extraProjectiles || 1); // Double Shot: 2 projectiles
+      case 6: return result.comboShots > 0 ? result.comboShots : 1; // Combo: 3 if triggered, else 1
+      default: return 1;
+    }
+  }
+
+  /**
+   * Spawn cascade projectiles from impact point when a higher-order mod
+   * needs to fire. Each cascade projectile flies to a target 100–250px
+   * away and carries that mod's effects (+yellow if it's the final cascade).
+   */
+  function _spawnCascadeProjectiles(x, y, b, nextMod, remainingCascade, yellowMods, opts) {
+    if (!opts.spawnProjectile) return;
+    var cellIndex = (b.chipShotMods && b.chipShotMods.cellIndex >= 0) ? b.chipShotMods.cellIndex : -1;
+
+    /* Build shotMods for the cascade mod */
+    var cascadeResult = _buildEmptyResult();
+    cascadeResult.cellIndex = cellIndex;
+    cascadeResult.activeModIds = [nextMod.modId];
+    _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
+
+    /* If this is the LAST cascade level, include yellow mods */
+    if (remainingCascade.length === 0 && yellowMods.length > 0) {
+      for (var yi = 0; yi < yellowMods.length; yi++) {
+        cascadeResult.activeModIds.push(yellowMods[yi].modId);
+        _applyModToResult(cascadeResult, yellowMods[yi].modId, cellIndex);
+      }
+    }
+
+    cascadeResult.cascadeLevel = ((b.chipShotMods && b.chipShotMods.cascadeLevel) || 0) + 1;
+    cascadeResult.pendingCascadeMods = remainingCascade;
+    cascadeResult.pendingYellowMods = remainingCascade.length > 0 ? yellowMods : [];
+
+    /* Determine projectile count for this mod */
+    var projCount = _getCascadeProjectileCount(nextMod.modId, cascadeResult);
+
+    /* Determine damage multipliers */
+    var cascadeDmg = b.dmg;
+    if (cascadeResult.isMatryoshka) cascadeDmg *= cascadeResult.matryoshkaDmgMul;
+    if (cascadeResult.isNuke) cascadeDmg *= cascadeResult.nukeDmgMul;
+    var splitDmg = cascadeDmg / Math.max(1, projCount);
+
+    /* Determine aoe */
+    var cascadeAoe = cascadeResult.isNuke ? cascadeResult.nukeRadius : b.aoe;
+
+    /* Visual size multiplier */
+    var sizeMul = cascadeResult.isMatryoshka ? cascadeResult.matryoshkaSizeMul : 0.85;
+
+    /* Find targets */
+    var targets = _findCascadeTargets(x, y, projCount, opts);
+    if (!targets.length) return;
+
+    for (var i = 0; i < projCount; i++) {
+      var t = targets[i % targets.length];
+      var tp = opts.getZombiePos(t);
+      opts.spawnProjectile({
+        fromX: x, fromY: y,
+        toZombieId: t.id, toX: tp.x, toY: tp.y,
+        level: b.level,
+        dmg: splitDmg,
+        aoe: cascadeAoe,
+        prof: b.prof,
+        bulletCfg: b.bulletCfg,
+        effectIntensity: (b.effectIntensity || 1) * sizeMul,
+        shotId: (b.shotId || 0) + 0.3 * cascadeResult.cascadeLevel,
+        isTankAttackingZombie: false,
+        tank: b.tank,
+        chipShotMods: cascadeResult,
+        isCascadeChild: true
+      });
+    }
+
+    /* Visual burst at cascade spawn point */
+    if (opts.burst) {
+      opts.burst(x, y, Math.min(8, projCount * 3), 'rgba(255,220,100,0.35)');
+    }
   }
 
   /* ================== IMPACT EFFECTS ================== */
@@ -326,6 +527,17 @@
         color: acidEff ? acidEff.color : 'rgba(184,255,59,0.2)',
         chipModId: 14
       });
+    }
+
+    /* ─── CASCADE SPAWNING ───
+     * If there are pending cascade mods, spawn projectiles from impact
+     * point carrying the next cascade mod's effects. Yellow mods are
+     * included only on the final cascade level. */
+    if (sm.pendingCascadeMods && sm.pendingCascadeMods.length > 0) {
+      var nextMod = sm.pendingCascadeMods[0];
+      var remaining = sm.pendingCascadeMods.slice(1);
+      var yellows = sm.pendingYellowMods || [];
+      _spawnCascadeProjectiles(x, y, b, nextMod, remaining, yellows, opts);
     }
   }
 

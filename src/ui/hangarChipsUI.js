@@ -19,16 +19,20 @@
   }
 
   /* ─── SVG geometry (viewBox 0 0 400 300) ───────────────── */
+  /* All 6 triangles are equilateral with side ≈ 120px.
+     TC-BC is the shared central vertical edge (s=120).
+     CL/CR are at horizontal distance s√3/2 ≈ 104 from center.
+     TL/TR/BL/BR complete the outer yellow equilateral triangles. */
   var SVG_W = 400, SVG_H = 300;
   var PT = {
-    TC: [200, 35],   // top-center
-    BC: [200, 265],  // bottom-center
-    CL: [75, 150],   // center-left (Red1 outer)
-    CR: [325, 150],  // center-right (Red2 outer)
-    TL: [15, 15],    // top-left external (Y1.X)
-    TR: [385, 15],   // top-right external (Y2.X)
-    BL: [15, 285],   // bottom-left external (Y3.X)
-    BR: [385, 285]   // bottom-right external (Y4.X)
+    TC: [200, 90],   // top-center
+    BC: [200, 210],  // bottom-center
+    CL: [96, 150],   // center-left
+    CR: [304, 150],  // center-right
+    TL: [96, 30],    // top-left
+    TR: [304, 30],   // top-right
+    BL: [96, 270],   // bottom-left
+    BR: [304, 270]   // bottom-right
   };
 
   /* slot definitions:  type, slotId, 3 point-keys, which key is the "outer/X" vertex */
@@ -143,9 +147,10 @@
       var strokeColor = locked ? '#555' : (isRed ? '#e53935' : '#fdd835');
       var fillColor = locked ? 'rgba(60,60,60,0.35)' : (chipData ? (isRed ? 'rgba(229,57,53,0.18)' : 'rgba(253,216,53,0.18)') : 'rgba(80,80,80,0.12)');
       var strokeW = selected ? 4 : 2.5;
+      var selectedClass = selected ? ' hangarSlotPoly--selected' : '';
 
       svg += '<g class="hangarSlotGroup">';
-      svg += '<polygon class="hangarSlotPoly" points="' + polyPoints(def.pts) + '" ' +
+      svg += '<polygon class="hangarSlotPoly' + selectedClass + '" points="' + polyPoints(def.pts) + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer') + '" />';
@@ -310,7 +315,7 @@
       html += '<button class="hangarChipBtn" data-chip-id="' + chip.chipId + '" type="button" ' +
         'title="' + chip.sourceComboKey + ': ' + chip.modIds.map(function(m) { return modName(m); }).join(', ') + '">' +
         '<svg viewBox="0 0 40 36" class="hangarChipIcon">' +
-        '<polygon points="20,2 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
+        '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
 
       /* vertex dots */
       var vx = [[20, 6], [34, 31], [6, 31]]; // top, right, left
@@ -475,8 +480,10 @@
       if (_selectedSlot) {
         installChipAction(chipId);
       } else {
-        /* auto-select first empty matching slot */
-        autoInstall(chipId);
+        /* no slot selected — show a hint instead of auto-installing */
+        if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+          global.Game.Toast.show(t('hangarChipsSelectSlot', 'Сначала выберите слот для установки чипа'), 1500);
+        }
       }
       return;
     }

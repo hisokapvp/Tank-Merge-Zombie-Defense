@@ -250,19 +250,19 @@
       var p2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
       if (checkRedMatch(p1, p2)) {
         matchSuccess = true;
-        mods.push({ modId: p1.A, source: 'red', vertex: 'A' });
-        mods.push({ modId: p1.B, source: 'red', vertex: 'B' });
+        mods.push({ modId: p1.A, source: 'red', vertex: 'A', order: 0 });
+        mods.push({ modId: p1.B, source: 'red', vertex: 'B', order: 1 });
       } else {
         matchSuccess = false;
         // No match — only the first red chip's A vertex is active
-        mods.push({ modId: p1.A, source: 'red1', vertex: 'A' });
+        mods.push({ modId: p1.A, source: 'red1', vertex: 'A', order: 0 });
       }
     } else if (red1) {
       var pr1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
-      mods.push({ modId: pr1.A, source: 'red1', vertex: 'A' });
+      mods.push({ modId: pr1.A, source: 'red1', vertex: 'A', order: 0 });
     } else if (red2) {
       var pr2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
-      mods.push({ modId: pr2.A, source: 'red2', vertex: 'A' });
+      mods.push({ modId: pr2.A, source: 'red2', vertex: 'A', order: 0 });
     }
 
     /* Yellow: only 1 chip can be active, AND its inner vertices must match the adjacent red chip */
@@ -288,7 +288,7 @@
       }
       yellowMatchSuccess = checkYellowMatch(yp, activeYellowSlotKey, cellState);
       if (yellowMatchSuccess) {
-        mods.push({ modId: yp.X, source: 'yellow', vertex: 'X' });
+        mods.push({ modId: yp.X, source: 'yellow', vertex: 'X', order: 2 });
       }
       // If no match, yellow modifier is NOT activated
     }
