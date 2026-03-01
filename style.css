@@ -3003,23 +3003,25 @@ input, select, textarea, button {
 
 /* --- 4×4 Cell Grid --- */
 .hangarGridWrap{
-  flex:0 0 auto;
+  flex: 1 1 auto;
   padding:8px;
-  border:2px solid rgba(125,255,178,.35);
-  border-radius:8px;
-  background:rgba(20,18,16,.65);
-  align-self: flex-start;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:6px;
+  background:rgba(20,18,16,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .hangarGrid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:4px;
-  width:200px;
+  width: auto;
 }
 .hangarGridCell{
   position:relative;
-  width:46px;
-  height:46px;
+  width:42px;
+  height:42px;
   border:1.5px solid rgba(255,255,255,.18);
   border-radius:5px;
   background:rgba(60,55,50,.55);
@@ -3065,13 +3067,17 @@ input, select, textarea, button {
   max-height: 800px;
 }
 .hangarCellTitle{
-  flex: 0 0 auto;
-  font-size:16px;
-  font-weight:bold;
-  color:#4af626;
-  font-family:'Share Tech Mono', monospace;
-  text-transform:uppercase;
-  letter-spacing:1px;
+  position: absolute;
+  top: 10px;
+  left: 15px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #4af626;
+  font-family: 'Share Tech Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  z-index: 10;
+  pointer-events: none; /* Let clicks pass through to triangles */
 }
 
 .hangarRow {
@@ -3081,32 +3087,47 @@ input, select, textarea, button {
   align-items: stretch;
 }
 
+.hangarRightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* --- Butterfly rotate and alignment --- */
+.hangarSlotViewWrap {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 .hangarSlotView {
-  border:1px solid rgba(255,255,255,.12);
-  border-radius:8px;
-  background:rgba(30,28,24,.7);
-  padding: 10px;
-  width: 320px;
-  height: 240px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  background: rgba(30,28,24,.7);
+  padding: 0;
+  width: 420px;
+  height: 380px;
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 .hangarSvg {
   width: 100%;
   height: 100%;
   max-width: 100%;
-  transform: rotate(90deg) scale(0.7);
+  transform: scale(0.95); /* Full size, slight margin */
   transform-origin: center;
   display:block;
 }
-/* Adjust internal alignment of labels and rotation icons inside rotated SVG */
+/* Adjust internal alignment of labels and rotation icons */
 .hangarSlotGroup text {
   transform-box: fill-box;
   transform-origin: center;
-  transform: rotate(-90deg);
 }
 .hangarRotateBtn text {
   transform-box: fill-box;
@@ -3174,8 +3195,21 @@ input, select, textarea, button {
   border-radius:6px;
   background:rgba(20,18,16,.5);
   padding: 10px;
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 140px; 
+  display: flex;
+  flex-direction: column;
+}
+
+.hangarGridWrapUnder{
+  flex: 1 1 auto;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:6px;
+  background:rgba(20,18,16,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .hangarActiveModsTitle{
   font-size:12px;
@@ -3209,11 +3243,7 @@ input, select, textarea, button {
   margin-left:auto;
 }
 .hangarMatchStatus{
-  margin-top:6px;
-  padding:4px 8px;
-  border-radius:4px;
-  font-size:12px;
-  font-weight:bold;
+  display: none;
 }
 .hangarMatchStatus--ok{
   background:rgba(74,246,38,.12);
@@ -3227,13 +3257,15 @@ input, select, textarea, button {
 }
 
 /* --- Available chips list --- */
-.hangarCh100%; /* Req 3: Match width */
-  max-width: 550px;
-  flex: 1 1 auto; /* Grow to fill available space */
+.hangarChipsList{
+  width: 100%; 
+  max-width: none;
+  flex: 1 1 auto; 
   display: flex;
   flex-direction: column;
   min-height: 150px;
   overflow: hidden;
+  margin-top: 10px;
 }
 .hangarChipsListHeader{
   flex: 0 0 auto;

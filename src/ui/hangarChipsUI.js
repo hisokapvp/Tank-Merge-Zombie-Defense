@@ -19,21 +19,25 @@
   }
 
   /* ─── SVG geometry (viewBox 0 0 400 300) ───────────────── */
-  /* All 6 triangles are equilateral with side ≈ 120px.
-     TC-BC is the shared central vertical edge (s=120).
-     CL/CR are at horizontal distance s√3/2 ≈ 104 from center.
-     TL/TR/BL/BR complete the outer yellow equilateral triangles. */
+  /* All 6 triangles are equilateral with side ≈ 130px.
+     TC-BC is the shared central vertical edge. */
   var SVG_W = 400, SVG_H = 300;
-  var GAP = 5; // Req 1: Distance between chip slots set to 5 pixels
+  var GAP = 5; 
+  var side = 160; 
+  var h_tri = side * Math.sqrt(3) / 2; // ~112.5
+  
+  var cy = SVG_H / 2;
+  var cx = SVG_W / 2;
+
   var PT = {
-    TC: [200, 90],   // top-center
-    BC: [200, 210],  // bottom-center
-    CL: [96, 150],   // center-left
-    CR: [304, 150],  // center-right
-    TL: [96, 30],    // top-left
-    TR: [304, 30],   // top-right
-    BL: [96, 270],   // bottom-left
-    BR: [304, 270]   // bottom-right
+    TC: [cx, cy - side / 2],      // Top-center (top of red vertical edge)
+    BC: [cx, cy + side / 2],      // Bottom-center (bottom of red vertical edge)
+    CL: [cx - h_tri, cy],         // Center-left (shared vertex for R1, Y1, Y3)
+    CR: [cx + h_tri, cy],         // Center-right (shared vertex for R2, Y2, Y4)
+    TL: [cx - h_tri, cy - side],  // Top-left
+    TR: [cx + h_tri, cy - side],  // Top-right
+    BL: [cx - h_tri, cy + side],  // Bottom-left
+    BR: [cx + h_tri, cy + side]   // Bottom-right
   };
 
   /** Get offset points for a triangle with a gap */
@@ -157,8 +161,8 @@
     var cells = ensureCells();
     var cell = cells[_selectedCell];
     if (!cell) return;
-
     var h = hc();
+
     var svg = '<svg class="hangarSvg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" xmlns="http://www.w3.org/2000/svg">';
 
     for (var d = 0; d < SLOT_DEFS.length; d++) {
@@ -304,20 +308,6 @@
           '<span class="hangarActiveMods__tag">[' + m.vertex + ']</span>' +
           '</div>';
       }
-    }
-
-    /* match status */
-    if (cell.uiState.redMatchSuccess === true) {
-      html += '<div class="hangarMatchStatus hangarMatchStatus--ok">' + t('hangarChipsMatchSuccess', 'Совпадение! A+B активны') + '</div>';
-    } else if (cell.uiState.redMatchSuccess === false) {
-      html += '<div class="hangarMatchStatus hangarMatchStatus--fail">' + t('hangarChipsMatchFail', 'Нет совпадения. Только A') + '</div>';
-    }
-
-    /* yellow match status */
-    if (cell.uiState.yellowMatchSuccess === true) {
-      html += '<div class="hangarMatchStatus hangarMatchStatus--ok">' + t('hangarChipsYellowMatch', 'Жёлтый: совпадение! X активен') + '</div>';
-    } else if (cell.uiState.yellowMatchSuccess === false) {
-      html += '<div class="hangarMatchStatus hangarMatchStatus--fail">' + t('hangarChipsYellowMismatch', 'Жёлтый: нет совпадения. X не активен') + '</div>';
     }
 
     wrap.innerHTML = html;
