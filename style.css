@@ -3050,11 +3050,17 @@ input, select, textarea, button {
   position:absolute;
   bottom:3px;
   right:3px;
+  display: flex;
+  gap: 2px;
+  pointer-events: none;
+}
+.hangarGridCell__dotItem {
   width:6px;
   height:6px;
   border-radius:50%;
-  background:#fdd835;
 }
+.hangarGridCell__dotItem--yellow { background:#fdd835; }
+.hangarGridCell__dotItem--red { background:#e53935; }
 
 /* --- Detail panel (right side) --- */
 .hangarDetail{

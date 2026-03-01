@@ -131,11 +131,25 @@
     for (var i = 0; i < 16; i++) {
       var c = cells[i] || {};
       var sel = i === _selectedCell ? ' hangarGridCell--selected' : '';
-      var hasChips = !!(
-        (c.redSlots && (c.redSlots.slot1 || c.redSlots.slot2)) ||
-        (c.yellowSlots && (c.yellowSlots.slot1 || c.yellowSlots.slot2 || c.yellowSlots.slot3 || c.yellowSlots.slot4))
-      );
-      var chipDot = hasChips ? '<span class="hangarGridCell__dot"></span>' : '';
+
+      var dotHtml = '';
+      if (c.redSlots) {
+        var anyRed = !!(c.redSlots.slot1 || c.redSlots.slot2);
+        var bothRed = !!(c.redSlots.slot1 && c.redSlots.slot2);
+        var redMatch = (c.uiState && c.uiState.redMatchSuccess === true);
+        if (redMatch || (anyRed && !bothRed)) {
+          var redCount = (c.redSlots.slot1 ? 1 : 0) + (c.redSlots.slot2 ? 1 : 0);
+          var activeRedCount = redMatch ? 2 : (anyRed && !bothRed ? 1 : 0);
+          for (var r = 0; r < activeRedCount; r++) {
+            dotHtml += '<span class="hangarGridCell__dotItem hangarGridCell__dotItem--red"></span>';
+          }
+        }
+      }
+      if (c.yellowSlots && c.uiState && c.uiState.yellowMatchSuccess === true) {
+        dotHtml += '<span class="hangarGridCell__dotItem hangarGridCell__dotItem--yellow"></span>';
+      }
+
+      var chipDot = dotHtml ? '<div class="hangarGridCell__dot">' + dotHtml + '</div>' : '';
       html += '<button class="hangarGridCell' + sel + '" data-cell-idx="' + i + '" type="button">' +
         '<span class="hangarGridCell__num">' + (i + 1) + '</span>' + chipDot +
         '</button>';
@@ -180,7 +194,11 @@
       var isWorking = false;
       if (chipData) {
         if (isRed) {
-          isWorking = (cell.uiState.redMatchSuccess === true);
+          // New logic for red: matches or solo chip
+          var anyRed = !!(cell.redSlots && (cell.redSlots.slot1 || cell.redSlots.slot2));
+          var bothRed = !!(cell.redSlots && cell.redSlots.slot1 && cell.redSlots.slot2);
+          var redMatch = (cell.uiState.redMatchSuccess === true);
+          isWorking = redMatch || (anyRed && !bothRed);
         } else {
           isWorking = (cell.uiState.yellowMatchSuccess === true && cell.uiState.activeYellowSlotId === def.slotId);
         }
