@@ -24,6 +24,7 @@
      CL/CR are at horizontal distance s√3/2 ≈ 104 from center.
      TL/TR/BL/BR complete the outer yellow equilateral triangles. */
   var SVG_W = 400, SVG_H = 300;
+  var GAP = 5; // Req 1: Distance between chip slots set to 5 pixels
   var PT = {
     TC: [200, 90],   // top-center
     BC: [200, 210],  // bottom-center
@@ -34,6 +35,29 @@
     BL: [96, 270],   // bottom-left
     BR: [304, 270]   // bottom-right
   };
+
+  /** Get offset points for a triangle with a gap */
+  function getGappedPoints(pts) {
+    var c = [0, 0];
+    for (var i = 0; i < pts.length; i++) {
+      c[0] += PT[pts[i]][0];
+      c[1] += PT[pts[i]][1];
+    }
+    c[0] /= pts.length;
+    c[1] /= pts.length;
+
+    var res = [];
+    for (var j = 0; j < pts.length; j++) {
+      var p = PT[pts[j]];
+      var dx = p[0] - c[0], dy = p[1] - c[1];
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist === 0) { res.push(p); continue; }
+      var ox = (dx / dist) * (dist - GAP);
+      var oy = (dy / dist) * (dist - GAP);
+      res.push([c[0] + ox, c[1] + oy]);
+    }
+    return res;
+  }
 
   /* slot definitions:  type, slotId, 3 point-keys, which key is the "outer/X" vertex */
   var SLOT_DEFS = [
@@ -118,11 +142,11 @@
   /* ─── Render: butterfly SVG ────────────────────────────── */
 
   function polyPoints(keys) {
+    var pts = getGappedPoints(keys);
     var s = '';
-    for (var i = 0; i < keys.length; i++) {
-      var p = PT[keys[i]];
+    for (var i = 0; i < pts.length; i++) {
       if (i > 0) s += ' ';
-      s += p[0] + ',' + p[1];
+      s += pts[i][0] + ',' + pts[i][1];
     }
     return s;
   }
@@ -149,11 +173,30 @@
       var strokeW = selected ? 4 : 2.5;
       var selectedClass = selected ? ' hangarSlotPoly--selected' : '';
 
+      var isWorking = false;
+      if (chipData) {
+        if (isRed) {
+          isWorking = (cell.uiState.redMatchSuccess === true);
+        } else {
+          isWorking = (cell.uiState.yellowMatchSuccess === true && cell.uiState.activeYellowSlotId === def.slotId);
+        }
+      }
+      var workingClass = isWorking ? ' hangarSlotPoly--working' : '';
+      
+      // Add individual animation delays to make shake effect individual for each element
+      var animationDelay = (d * 0.05) + 's';
+
       svg += '<g class="hangarSlotGroup">';
-      svg += '<polygon class="hangarSlotPoly' + selectedClass + '" points="' + polyPoints(def.pts) + '" ' +
+      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts) + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
-        'style="cursor:' + (locked ? 'not-allowed' : 'pointer') + '" />';
+        'style="cursor:' + (locked ? 'not-allowed' : 'pointer');
+      
+      if (isWorking) {
+        svg += '; animation-delay: ' + animationDelay;
+      }
+      
+      svg += '" />';
 
       /* vertex labels inside triangle */
       if (chipData && h) {
@@ -302,13 +345,13 @@
     var html = '<div class="hangarChipsListHeader">' +
       '<span class="hangarChipsAvailLabel">' + t('hangarChipsAvailable', 'Доступные чипы') +
       ' (' + chips.length + ')</span>' +
-      '<span class="hangarChipsFilters">' +
+      '<div class="hangarChipsFilters">' +
       '<button class="hangarFilterBtn' + (_chipFilter === 'all' ? ' active' : '') + '" data-filter="all">Все</button>' +
       '<button class="hangarFilterBtn' + (_chipFilter === 'red' ? ' active' : '') + '" data-filter="red" style="color:#e53935">Красные</button>' +
       '<button class="hangarFilterBtn' + (_chipFilter === 'yellow' ? ' active' : '') + '" data-filter="yellow" style="color:#fdd835">Жёлтые</button>' +
-      '</span></div>';
+      '</div></div>';
 
-    html += '<div class="hangarChipsGrid">';
+    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -332,7 +375,7 @@
         '<span class="hangarChipBtn__key">' + chip.sourceComboKey + '</span>' +
         '</button>';
     }
-    html += '</div>';
+    html += '</div></div>';
     list.innerHTML = html;
   }
 
