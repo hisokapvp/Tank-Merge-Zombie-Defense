@@ -81,6 +81,9 @@
   var _initialized = false;
   var _doc = null;
 
+  /* ─── Chip drag-and-drop state (Workshop) ──────────────── */
+  var _chipDragging = null; // { chipId, level, startX, startY, x, y, moved, ghostEl, sourceEl }
+
   /* ─── DOM refs (populated on init) ─────────────────────── */
   var dom = {};
 
@@ -339,19 +342,28 @@
     var h = hc();
     if (!h) { list.innerHTML = ''; return; }
 
-    var chips;
-    if (_chipFilter === 'red') chips = h.redPool;
-    else if (_chipFilter === 'yellow') chips = h.yellowPool;
-    else chips = h.allChips;
+    /* Use player inventory instead of full chip pool */
+    var playerChips = ensurePlayerChips();
+    var chips = [];
+    for (var pi = 0; pi < playerChips.length; pi++) {
+      var pc = playerChips[pi];
+      if (pc.count <= 0) continue;
+      chips.push(pc);
+    }
 
     /* if a slot is selected, show only matching color */
+    var filterColor = _chipFilter;
     if (_selectedSlot) {
-      if (_selectedSlot.type === 'red') chips = h.redPool;
-      else chips = h.yellowPool;
+      filterColor = _selectedSlot.type;
+    }
+    if (filterColor === 'red') {
+      chips = chips.filter(function(c) { return c.chipColor === 'red'; });
+    } else if (filterColor === 'yellow') {
+      chips = chips.filter(function(c) { return c.chipColor === 'yellow'; });
     }
 
     var html = '<div class="hangarChipsListHeader">' +
-      '<span class="hangarChipsAvailLabel">' + t('hangarChipsAvailable', 'Доступные чипы') +
+      '<span class="hangarChipsAvailLabel">' + t('hangarChipsAvailable', 'Чипы в инвентаре') +
       ' (' + chips.length + ')</span>' +
       '<div class="hangarChipsFilters">' +
       '<button class="hangarFilterBtn' + (_chipFilter === 'all' ? ' active' : '') + '" data-filter="all">Все</button>' +
@@ -359,28 +371,33 @@
       '<button class="hangarFilterBtn' + (_chipFilter === 'yellow' ? ' active' : '') + '" data-filter="yellow" style="color:#fdd835">Жёлтые</button>' +
       '</div></div>';
 
+    if (!chips.length) {
+      html += '<div class="chipUpgradeEmptyLabel">' + t('hangarChipsNoChips', 'Нет подходящих чипов в инвентаре') + '</div>';
+      list.innerHTML = html;
+      return;
+    }
+
     html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-      html += '<button class="hangarChipBtn" data-chip-id="' + chip.chipId + '" type="button" ' +
-        'title="' + chip.sourceComboKey + ': ' + chip.modIds.map(function(m) { return modName(m); }).join(', ') + '">' +
+      html += '<button class="hangarChipBtn" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" ' +
+        'title="' + chip.sourceComboKey + ' (Ур.' + chip.level + ', ×' + chip.count + '): ' + chip.modIds.map(function(m) { return modName(m); }).join(', ') + '">' +
         '<svg viewBox="0 0 40 36" class="hangarChipIcon">' +
         '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
 
       /* vertex dots */
       var vx = [[20, 6], [34, 31], [6, 31]]; // top, right, left
       var mods = chip.modIds;
-      for (var vi = 0; vi < 3; vi++) {
-        var mc = h.isSpecialMod(mods[vi]) ? '#fdd835' : '#e53935';
-        svg_dot(vx[vi], mc);
-      }
-      function svg_dot(pos, color) {
-        html += '<circle cx="' + pos[0] + '" cy="' + pos[1] + '" r="4" fill="' + color + '" />';
+      for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
+        var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
+        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
       }
 
       html += '</svg>' +
         '<span class="hangarChipBtn__key">' + chip.sourceComboKey + '</span>' +
+        '<span class="hangarChipBtn__lvl">Ур.' + chip.level + '</span>' +
+        (chip.count > 1 ? '<span class="hangarChipBtn__cnt">×' + chip.count + '</span>' : '') +
         '</button>';
     }
     html += '</div></div>';
@@ -439,9 +456,11 @@
     tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
     tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
     tabChipUpgrade.classList.toggle('workshopSubTab--active', isChips);
+
     tabTechUnlock.setAttribute('aria-selected', isChips ? 'false' : 'true');
     tabTechUnlock.setAttribute('tabindex', isChips ? '-1' : '0');
     tabTechUnlock.classList.toggle('workshopSubTab--active', !isChips);
+
     if (panelChipUpgrade) panelChipUpgrade.hidden = !isChips;
     if (panelTechUnlock) panelTechUnlock.hidden = isChips;
 
@@ -455,6 +474,95 @@
   function getTechFeedProgress() { return _techFeedProgress; }
   function setTechFeedProgress(obj) { _techFeedProgress = (obj && typeof obj === 'object') ? obj : {}; }
 
+  /* ─── Tech Study state (Tasks 6-8) ────────────────────── */
+  var _techStudying = null; // { modId, elapsed, duration, acceleratedPct } or null
+  var _techStudyTimerId = null;
+  var TECH_STUDY_DURATION_OPEN = 7200;   // 2 hours in seconds for available techs
+  var TECH_STUDY_DURATION_LOCKED = 18000; // 5 hours in seconds for locked techs
+
+  function getTechStudying() { return _techStudying; }
+  function setTechStudying(obj) { _techStudying = (obj && typeof obj === 'object') ? obj : null; }
+
+  function _startTechStudyTimer() {
+    if (_techStudyTimerId) return;
+    _techStudyTimerId = setInterval(function() {
+      if (!_techStudying) { _stopTechStudyTimer(); return; }
+      _techStudying.elapsed += 1;
+      /* Check completion */
+      var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
+      if (_techStudying.elapsed >= effectiveDuration) {
+        _completeTechStudy();
+      } else {
+        /* Update timer display */
+        _updateTechStudyTimerDisplay();
+      }
+    }, 1000);
+  }
+
+  function _stopTechStudyTimer() {
+    if (_techStudyTimerId) {
+      clearInterval(_techStudyTimerId);
+      _techStudyTimerId = null;
+    }
+  }
+
+  function _completeTechStudy() {
+    if (!_techStudying) return;
+    var modId = _techStudying.modId;
+    _stopTechStudyTimer();
+    _techStudying = null;
+
+    /* Actually unlock the technology */
+    var h = hc();
+    if (h) {
+      var chips = ensurePlayerChips();
+      var cells = ensureCells();
+      var result = h.unlockTechnology(modId, chips, cells);
+      if (result.ok) {
+        if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+          global.Game.Toast.show(t('techUnlockSuccess', 'Технология «{name}» открыта! Все чипы обновлены.').replace('{name}', modName(modId)), 2500);
+        }
+      }
+    }
+    renderTechUnlockPanel();
+    renderChipUpgradeGrid();
+  }
+
+  function _updateTechStudyTimerDisplay() {
+    if (!_techStudying) return;
+    var timerEl = _doc ? _doc.querySelector('[data-tech-timer="' + _techStudying.modId + '"]') : null;
+    if (timerEl) {
+      var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
+      var remaining = Math.max(0, Math.ceil(effectiveDuration - _techStudying.elapsed));
+      timerEl.textContent = _formatTime(remaining);
+    }
+    /* Update progress bar */
+    var barEl = _doc ? _doc.querySelector('[data-tech-study-bar="' + _techStudying.modId + '"]') : null;
+    if (barEl) {
+      var effectiveDur = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
+      var pct = Math.min(100, Math.round(_techStudying.elapsed / effectiveDur * 100));
+      barEl.style.width = pct + '%';
+    }
+  }
+
+  function _formatTime(seconds) {
+    var h = Math.floor(seconds / 3600);
+    var m = Math.floor((seconds % 3600) / 60);
+    var s = seconds % 60;
+    var parts = [];
+    if (h > 0) parts.push(h + 'ч');
+    if (m > 0 || h > 0) parts.push(m + 'м');
+    parts.push(s + 'с');
+    return parts.join(' ');
+  }
+
+  function _getTechDuration(modId) {
+    var h = hc();
+    if (!h) return TECH_STUDY_DURATION_OPEN;
+    if (h.canUnlockTech(modId)) return TECH_STUDY_DURATION_OPEN;
+    return TECH_STUDY_DURATION_LOCKED;
+  }
+
   /** Render the Technology Unlock panel */
   function renderTechUnlockPanel() {
     var panel = el('workshopPanelTechUnlock');
@@ -465,13 +573,8 @@
       return;
     }
 
-    var chips = ensurePlayerChips();
-    var totalChips = 0;
-    for (var ti = 0; ti < chips.length; ti++) totalChips += chips[ti].count;
-
     var html = '<div class="techUnlockHeader">' +
-      '<span class="techUnlockTitle">' + t('techUnlockTitle', 'Открытие технологий') + '</span>' +
-      '<span class="techUnlockChipCount">' + t('techUnlockChipsAvail', 'Чипов в инвентаре: {count}').replace('{count}', totalChips) + '</span>' +
+      '<span class="techUnlockTitle">' + t('techUnlockTitle', 'Варианты технологий') + '</span>' +
       '</div>';
 
     html += '<div class="techUnlockGrid">';
@@ -480,24 +583,19 @@
     for (var tk = 0; tk < treeKeys.length; tk++) {
       var baseModId = Number(treeKeys[tk]);
       var chain = h.TECH_TREE[baseModId];
-      var baseName = modName(baseModId);
-
-      html += '<div class="techUnlockGroup">';
-      html += '<div class="techUnlockGroup__base">' + t('techUnlockBaseMod', 'Базовая: {name}').replace('{name}', baseName) + '</div>';
 
       for (var ci = 0; ci < chain.length; ci++) {
         var tech = chain[ci];
         var isUnlocked = h.isTechUnlocked(tech.modId);
         var canUnlock = h.canUnlockTech(tech.modId);
-        var cost = h.getTechCost(tech.modId);
-        var fed = _techFeedProgress[tech.modId] || 0;
-        var remaining = Math.max(0, cost - fed);
-        var canAfford = totalChips >= remaining && remaining > 0;
+        var isStudying = _techStudying && _techStudying.modId === tech.modId;
+        var anotherStudying = _techStudying && _techStudying.modId !== tech.modId;
+        var duration = canUnlock ? TECH_STUDY_DURATION_OPEN : TECH_STUDY_DURATION_LOCKED;
 
         var cardClass = 'techUnlockCard';
         if (isUnlocked) cardClass += ' techUnlockCard--unlocked';
         else if (!canUnlock) cardClass += ' techUnlockCard--locked';
-        else if (canAfford) cardClass += ' techUnlockCard--ready';
+        else if (isStudying) cardClass += ' techUnlockCard--studying';
 
         html += '<div class="' + cardClass + '">';
         html += '<div class="techUnlockCard__name">' + modName(tech.modId) + '</div>';
@@ -506,51 +604,69 @@
         if (isUnlocked) {
           html += '<div class="techUnlockCard__status techUnlockCard__status--done">' + t('techUnlockDone', '✓ Открыто') + '</div>';
         } else if (!canUnlock) {
-          html += '<div class="techUnlockCard__status techUnlockCard__status--locked">' + t('techUnlockNeedPrev', 'Сначала откройте предыдущий уровень') + '</div>';
-        } else {
+          var prevModId = tech.replacesModId;
+          var prevName = modName(prevModId);
+          var lockMsg = t('techUnlockNeedPrevNamed', 'Для разблокировки откройте "{name}"').replace('{name}', prevName);
+          html += '<div class="techUnlockCard__status techUnlockCard__status--locked">' + lockMsg + '</div>';
+          html += '<div class="techUnlockCard__durationInfo">' + t('techUnlockDuration', 'Время изучения: {time}').replace('{time}', _formatTime(TECH_STUDY_DURATION_LOCKED)) + '</div>';
+        } else if (isStudying) {
+          /* Show progress bar + timer + cancel + accelerate */
+          var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
+          var remaining = Math.max(0, Math.ceil(effectiveDuration - _techStudying.elapsed));
+          var pctW = effectiveDuration > 0 ? Math.min(100, Math.round(_techStudying.elapsed / effectiveDuration * 100)) : 0;
+
           html += '<div class="techUnlockCard__progress">';
-          var pctW = cost > 0 ? Math.min(100, Math.round(fed / cost * 100)) : 0;
-          html += '<div class="techUnlockCard__bar"><div class="techUnlockCard__barFill" style="width:' + pctW + '%"></div></div>';
-          html += '<span class="techUnlockCard__progressText">' + fed + ' / ' + cost + '</span>';
+          html += '<div class="techUnlockCard__bar"><div class="techUnlockCard__barFill" data-tech-study-bar="' + tech.modId + '" style="width:' + pctW + '%"></div></div>';
+          html += '<span class="techUnlockCard__progressText" data-tech-timer="' + tech.modId + '">' + _formatTime(remaining) + '</span>';
           html += '</div>';
 
-          html += '<div class="techUnlockCard__actions">';
-          html += '<button class="btn scButton techUnlockCard__feedBtn" data-tech-feed="' + tech.modId + '" data-tech-amount="1" type="button"' + (totalChips < 1 ? ' disabled' : '') + '>' + t('techUnlockFeed1', 'Скормить 1') + '</button>';
-          html += '<button class="btn scButton techUnlockCard__feedBtn" data-tech-feed="' + tech.modId + '" data-tech-amount="5" type="button"' + (totalChips < 1 ? ' disabled' : '') + '>' + t('techUnlockFeed5', 'Скормить 5') + '</button>';
-          if (canAfford) {
-            html += '<button class="btn scButton techUnlockCard__feedBtn techUnlockCard__feedBtn--all" data-tech-feed="' + tech.modId + '" data-tech-amount="' + remaining + '" type="button">' + t('techUnlockFeedAll', 'Скормить всё ({n})').replace('{n}', remaining) + '</button>';
+          if (_techStudying.acceleratedPct > 0) {
+            html += '<div class="techUnlockCard__accelInfo">' + t('techUnlockAccelerated', 'Ускорено на {pct}%').replace('{pct}', _techStudying.acceleratedPct) + '</div>';
           }
+
+          html += '<div class="techUnlockCard__actions">';
+          html += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
+          html += '<button class="btn scButton techUnlockCard__accelBtn" data-tech-accel="' + tech.modId + '" type="button">' + t('techUnlockAccel', 'Ускорить процесс открытия') + '</button>';
+          html += '</div>';
+        } else {
+          /* Show "Start study" button + duration */
+          html += '<div class="techUnlockCard__durationInfo">' + t('techUnlockDuration', 'Время изучения: {time}').replace('{time}', _formatTime(duration)) + '</div>';
+          html += '<div class="techUnlockCard__actions">';
+          var disabled = anotherStudying ? ' disabled' : '';
+          html += '<button class="btn scButton techUnlockCard__startBtn' + (anotherStudying ? ' techUnlockCard__startBtn--disabled' : '') + '" data-tech-start="' + tech.modId + '" type="button"' + disabled + '>' + t('techUnlockStart', 'Начать процесс изучения') + '</button>';
           html += '</div>';
         }
 
         html += '</div>'; // techUnlockCard
       }
-      html += '</div>'; // techUnlockGroup
     }
 
     html += '</div>'; // techUnlockGrid
     panel.innerHTML = html;
+
+    /* Restart timer if studying */
+    if (_techStudying) _startTechStudyTimer();
   }
 
   /** Get a short description for a tech mod */
   function _getTechDescription(modId) {
     var descs = {
-      15: t('techDesc15', '3 снаряда из каждого дула в разные цели'),
-      16: t('techDesc16', '6 снарядов из каждого дула в разные цели'),
-      17: t('techDesc17', 'Цепная молния с 3 перескоками'),
-      18: t('techDesc18', 'Цепная молния с 6 перескоками'),
-      19: t('techDesc19', 'Матрёшка: большой(×3) → средний(×2) → малый(×1)'),
-      20: t('techDesc20', 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)'),
-      21: t('techDesc21', 'Ударная волна: ×0.75 урона, отталкивание 15px'),
-      22: t('techDesc22', 'Ударная волна: ×1 урона, отталкивание 20px'),
-      23: t('techDesc23', 'Вакуум: ×0.75 урона, стягивание 15px'),
-      24: t('techDesc24', 'Вакуум: ×1 урона, стягивание 20px'),
-      25: t('techDesc25', 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном'),
-      26: t('techDesc26', 'Каждый 4-й выстрел: 4 залпа с ×2 уроном'),
-      27: t('techDesc27', 'Раз в 30с: ядерный взрыв ×4, радиус 300px'),
-      28: t('techDesc28', 'Раз в 30с: ядерный взрыв ×5, вся карта'),
-      29: t('techDesc29', 'Заморозка атаки зомби на 0.75с'),
-      30: t('techDesc30', 'Заморозка атаки зомби на 1с')
+      15: 'Танк стреляет тремя снарядами',
+      16: 'Танк стреляет шестью снарядами',
+      17: 'Цепная молния с 3 перескоками',
+      18: 'Цепная молния с 6 перескоками',
+      19: 'Матрёшка: большой(×3) → средний(×2) → малый(×1)',
+      20: 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)',
+      21: 'Ударная волна: ×0.75 урона, отталкивание 15px',
+      22: 'Ударная волна: ×1 урона, отталкивание 20px',
+      23: 'Вакуум: ×0.75 урона, стягивание 15px',
+      24: 'Вакуум: ×1 урона, стягивание 20px',
+      25: 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном',
+      26: 'Каждый 4-й выстрел: 4 залпа с ×2 уроном',
+      27: 'Раз в 30с: ядерный взрыв ×4, радиус 300px',
+      28: 'Раз в 30с: ядерный взрыв ×5, вся карта',
+      29: 'Заморозка атаки зомби на 0.75с',
+      30: 'Заморозка атаки зомби на 1с'
     };
     return descs[modId] || '';
   }
@@ -747,7 +863,7 @@
       var bonusPct = chipLevelBonus(chip.level);
       var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
 
-      html += '<div class="' + cardClass + '" ' + tooltipData + '>';
+      html += '<div class="' + cardClass + '" ' + tooltipData + ' data-drag-chip-id="' + chip.chipId + '" data-drag-chip-level="' + chip.level + '">';
       
       /* chip icon SVG */
       html += '<svg viewBox="0 0 44 40" class="chipUpgradeCard__icon">' +
@@ -777,10 +893,9 @@
         html += '<span class="chipUpgradeCard__count">×' + chip.count + '</span>';
       }
 
-      /* merge button */
+      /* Merge hint (drag instruction instead of button) */
       if (canMerge) {
-        html += '<button class="chipUpgradeCard__mergeBtn" data-merge-chip="' + chip.chipId + '" data-merge-level="' + chip.level + '" type="button">' +
-          t('workshopChipMerge', 'Объединить') + '</button>';
+        html += '<span class="chipUpgradeCard__mergeHint">' + t('workshopChipDragHint', 'Перетащите для слияния') + '</span>';
       }
 
       html += '</div>';
@@ -845,7 +960,7 @@
 
   /* ─── Install chip into selected slot ──────────────────── */
 
-  function installChipAction(chipId) {
+  function installChipAction(chipId, chipLevel) {
     var h = hc();
     if (!h || !_selectedSlot) return;
     var cells = ensureCells();
@@ -858,8 +973,28 @@
     if (_selectedSlot.type === 'red' && chipDef.chipColor !== 'red') return;
     if (_selectedSlot.type === 'yellow' && chipDef.chipColor !== 'yellow') return;
 
-    var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef);
+    var lvl = (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1;
+
+    /* check inventory has this chip */
+    var chips = ensurePlayerChips();
+    var invEntry = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === lvl && chips[i].count > 0) {
+        invEntry = chips[i];
+        break;
+      }
+    }
+    if (!invEntry) {
+      if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+        global.Game.Toast.show(t('hangarChipsNoInvChip', 'Этого чипа нет в инвентаре'), 1500);
+      }
+      return;
+    }
+
+    var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl);
     if (ok) {
+      /* Remove from inventory */
+      removePlayerChipOne(chipId, lvl);
       _selectedSlot = null;
       render();
     }
@@ -873,6 +1008,16 @@
     var cells = ensureCells();
     var cell = cells[_selectedCell];
     if (!cell) return;
+
+    /* Return chip to inventory before removing from slot */
+    var chipData = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
+    if (chipData) {
+      var chipDef = h.getChipById(h.allChips, chipData.chipId);
+      if (chipDef) {
+        addPlayerChip(chipDef, chipData.level || 1);
+      }
+    }
+
     h.removeChip(cell, slotType, slotId);
     _selectedSlot = null;
     render();
@@ -946,8 +1091,9 @@
     var chipBtn = tgt.closest ? tgt.closest('[data-chip-id]') : null;
     if (chipBtn) {
       var chipId = parseInt(chipBtn.getAttribute('data-chip-id'), 10);
+      var chipLevel = parseInt(chipBtn.getAttribute('data-chip-level'), 10) || 1;
       if (_selectedSlot) {
-        installChipAction(chipId);
+        installChipAction(chipId, chipLevel);
       } else {
         /* no slot selected — show a hint instead of auto-installing */
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
@@ -986,46 +1132,222 @@
       return;
     }
 
-    /* merge chip button */
-    var mergeBtn = tgt.closest ? tgt.closest('[data-merge-chip]') : null;
-    if (mergeBtn) {
-      var mergeChipId = parseInt(mergeBtn.getAttribute('data-merge-chip'), 10);
-      var mergeLevel = parseInt(mergeBtn.getAttribute('data-merge-level'), 10);
-      if (Number.isFinite(mergeChipId) && Number.isFinite(mergeLevel)) {
-        var newLevel = mergeChips(mergeChipId, mergeLevel);
-        if (newLevel > 0) {
-          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-            global.Game.Toast.show(t('workshopChipMerged', 'Чип улучшен до ур. {level}!').replace('{level}', newLevel), 1800);
-          }
-          renderChipUpgradeGrid();
+    /* merge chip button — removed, now uses drag-and-drop */
+
+    /* tech start study button */
+    var techStartBtn = tgt.closest ? tgt.closest('[data-tech-start]') : null;
+    if (techStartBtn) {
+      var startModId = parseInt(techStartBtn.getAttribute('data-tech-start'), 10);
+      if (Number.isFinite(startModId) && !_techStudying) {
+        var h = hc();
+        if (h && h.canUnlockTech(startModId)) {
+          var dur = _getTechDuration(startModId);
+          _techStudying = { modId: startModId, elapsed: 0, duration: dur, acceleratedPct: 0 };
+          _startTechStudyTimer();
+          renderTechUnlockPanel();
         }
       }
       return;
     }
 
-    /* tech unlock feed button */
-    var techFeedBtn = tgt.closest ? tgt.closest('[data-tech-feed]') : null;
-    if (techFeedBtn) {
-      var techModId = parseInt(techFeedBtn.getAttribute('data-tech-feed'), 10);
-      var techAmount = parseInt(techFeedBtn.getAttribute('data-tech-amount'), 10);
-      if (Number.isFinite(techModId) && Number.isFinite(techAmount) && techAmount > 0) {
-        var feedResult = feedChipsForTech(techModId, techAmount);
-        if (feedResult.ok) {
-          if (feedResult.unlocked) {
-            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-              global.Game.Toast.show(t('techUnlockSuccess', 'Технология «{name}» открыта! Все чипы обновлены.').replace('{name}', modName(techModId)), 2500);
-            }
-          } else {
-            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-              global.Game.Toast.show(t('techUnlockFedChips', 'Скормлено {n} чипов').replace('{n}', feedResult.fed), 1200);
-            }
-          }
-          renderTechUnlockPanel();
-          renderChipUpgradeGrid();
-        }
+    /* tech cancel button */
+    var techCancelBtn = tgt.closest ? tgt.closest('[data-tech-cancel]') : null;
+    if (techCancelBtn) {
+      var cancelModId = parseInt(techCancelBtn.getAttribute('data-tech-cancel'), 10);
+      if (Number.isFinite(cancelModId) && _techStudying && _techStudying.modId === cancelModId) {
+        _showTechCancelConfirm(cancelModId);
       }
       return;
     }
+
+    /* tech accelerate button */
+    var techAccelBtn = tgt.closest ? tgt.closest('[data-tech-accel]') : null;
+    if (techAccelBtn) {
+      var accelModId = parseInt(techAccelBtn.getAttribute('data-tech-accel'), 10);
+      if (Number.isFinite(accelModId) && _techStudying && _techStudying.modId === accelModId) {
+        _showTechAccelModal(accelModId);
+      }
+      return;
+    }
+
+    /* tech cancel confirm buttons */
+    var techCancelYes = tgt.closest ? tgt.closest('[data-tech-cancel-yes]') : null;
+    if (techCancelYes) {
+      _stopTechStudyTimer();
+      _techStudying = null;
+      _closeTechModal();
+      renderTechUnlockPanel();
+      return;
+    }
+    var techCancelNo = tgt.closest ? tgt.closest('[data-tech-cancel-no]') : null;
+    if (techCancelNo) {
+      _closeTechModal();
+      return;
+    }
+
+    /* tech accel confirm button */
+    var techAccelConfirm = tgt.closest ? tgt.closest('[data-tech-accel-confirm]') : null;
+    if (techAccelConfirm) {
+      _applyTechAcceleration();
+      return;
+    }
+
+    /* tech accel chip checkbox toggle */
+    var techAccelChip = tgt.closest ? tgt.closest('[data-accel-chip-id]') : null;
+    if (techAccelChip) {
+      var isChecked = techAccelChip.getAttribute('data-accel-checked') === 'true';
+      techAccelChip.setAttribute('data-accel-checked', isChecked ? 'false' : 'true');
+      var checkMark = techAccelChip.querySelector('.techAccelChip__check');
+      if (checkMark) checkMark.textContent = isChecked ? '' : '✓';
+      /* Update acceleration percentage */
+      _updateAccelPercentage();
+      return;
+    }
+
+    /* Close tech modal on backdrop click */
+    var modalBackdrop = tgt.closest ? tgt.closest('.techModal__backdrop') : null;
+    if (modalBackdrop && tgt === modalBackdrop) {
+      _closeTechModal();
+      return;
+    }
+  }
+
+  /* ─── Tech study modals ────────────────────────────────── */
+
+  var _techModalEl = null;
+
+  function _ensureTechModal() {
+    if (!_techModalEl) {
+      _techModalEl = _doc.createElement('div');
+      _techModalEl.className = 'techModal__backdrop';
+      _techModalEl.style.display = 'none';
+      _doc.body.appendChild(_techModalEl);
+      /* Delegate clicks inside modal */
+      _techModalEl.addEventListener('click', handleOverlayClick);
+    }
+    return _techModalEl;
+  }
+
+  function _closeTechModal() {
+    if (_techModalEl) {
+      _techModalEl.style.display = 'none';
+      _techModalEl.innerHTML = '';
+    }
+  }
+
+  function _showTechCancelConfirm(modId) {
+    var modal = _ensureTechModal();
+    var html = '<div class="techModal__dialog">' +
+      '<div class="techModal__text">' +
+      t('techCancelConfirmText', 'Если Вы отмените процесс обучения, то прогресс в открытии технологии будет утерян. Отменить процесс обучения?') +
+      '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__yesBtn" data-tech-cancel-yes="' + modId + '" type="button">' + t('techCancelYes', 'Да') + '</button>' +
+      '<button class="btn scButton techModal__noBtn" data-tech-cancel-no="' + modId + '" type="button">' + t('techCancelNo', 'Нет') + '</button>' +
+      '</div>' +
+      '</div>';
+    modal.innerHTML = html;
+    modal.style.display = 'flex';
+  }
+
+  function _showTechAccelModal(modId) {
+    var modal = _ensureTechModal();
+    var chips = ensurePlayerChips();
+    var h = hc();
+
+    var html = '<div class="techModal__dialog techModal__dialog--wide">' +
+      '<div class="techModal__title">' + t('techAccelTitle', 'Ускорить процесс открытия') + '</div>' +
+      '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите чипы для ускорения (каждый чип = +5%)') + '</div>';
+
+    if (!chips.length) {
+      html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет чипов в инвентаре') + '</div>';
+    } else {
+      html += '<div class="techAccelGrid">';
+      for (var i = 0; i < chips.length; i++) {
+        var chip = chips[i];
+        var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
+        for (var ci = 0; ci < chip.count; ci++) {
+          html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
+          html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
+          html += '<svg viewBox="0 0 40 36" class="techAccelChip__icon">' +
+            '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
+          var vx = [[20, 6], [34, 31], [6, 31]];
+          var mods = chip.modIds;
+          for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
+            var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
+            html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+          }
+          html += '</svg>';
+          html += '<span class="techAccelChip__label">' + chip.sourceComboKey + ' Ур.' + chip.level + '</span>';
+          html += '</div>';
+        }
+      }
+      html += '</div>';
+    }
+
+    html += '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__accelConfirmBtn" data-tech-accel-confirm="' + modId + '" type="button">' +
+      t('techAccelBtnLabel', 'Ускорить на 0%') + '</button>' +
+      '<button class="btn scButton techModal__noBtn" data-tech-cancel-no="close" type="button">' + t('techAccelClose', 'Закрыть') + '</button>' +
+      '</div></div>';
+
+    modal.innerHTML = html;
+    modal.style.display = 'flex';
+  }
+
+  function _updateAccelPercentage() {
+    if (!_techModalEl) return;
+    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
+    var count = checked.length;
+    var pct = count * 5;
+    var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
+    if (confirmBtn) {
+      confirmBtn.textContent = t('techAccelBtnLabel', 'Ускорить на {pct}%').replace('{pct}', pct).replace('0%', pct + '%');
+      confirmBtn.textContent = 'Ускорить на ' + pct + '%';
+      confirmBtn.disabled = count === 0;
+    }
+  }
+
+  function _applyTechAcceleration() {
+    if (!_techModalEl || !_techStudying) return;
+    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
+    if (!checked.length) {
+      _closeTechModal();
+      return;
+    }
+
+    /* Collect chips to burn */
+    var chipsToBurn = [];
+    for (var i = 0; i < checked.length; i++) {
+      var chipId = parseInt(checked[i].getAttribute('data-accel-chip-id'), 10);
+      var level = parseInt(checked[i].getAttribute('data-accel-chip-level'), 10);
+      chipsToBurn.push({ chipId: chipId, level: level });
+    }
+
+    /* Burn chips from inventory */
+    for (var j = 0; j < chipsToBurn.length; j++) {
+      removePlayerChipOne(chipsToBurn[j].chipId, chipsToBurn[j].level);
+    }
+
+    /* Apply acceleration */
+    _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + (chipsToBurn.length * 5);
+    if (_techStudying.acceleratedPct > 95) _techStudying.acceleratedPct = 95; // Cap at 95%
+
+    /* Check if study should complete now */
+    var effectiveDuration = _techStudying.duration * (1 - _techStudying.acceleratedPct / 100);
+    if (_techStudying.elapsed >= effectiveDuration) {
+      _closeTechModal();
+      _completeTechStudy();
+      return;
+    }
+
+    if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+      global.Game.Toast.show(t('techAccelApplied', 'Сожжено {n} чипов. Ускорение: {pct}%').replace('{n}', chipsToBurn.length).replace('{pct}', _techStudying.acceleratedPct), 2000);
+    }
+
+    _closeTechModal();
+    renderTechUnlockPanel();
+    renderChipUpgradeGrid();
   }
 
   /** Try to auto-install a chip into the first empty matching slot */
@@ -1081,6 +1403,143 @@
       overlay.addEventListener('mouseout', function(evt) {
         var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
         if (!card || (evt.relatedTarget && !card.contains(evt.relatedTarget))) hideChipUpgradeTooltip();
+      });
+
+      /* ─── Chip drag-and-drop for merge ───────────────────── */
+      overlay.addEventListener('pointerdown', function(evt) {
+        var card = evt.target.closest ? evt.target.closest('[data-drag-chip-id]') : null;
+        if (!card) return;
+        var chipId = parseInt(card.getAttribute('data-drag-chip-id'), 10);
+        var level = parseInt(card.getAttribute('data-drag-chip-level'), 10);
+        if (!Number.isFinite(chipId) || !Number.isFinite(level)) return;
+
+        /* Only allow dragging chips that have count >= 2 */
+        var chips = ensurePlayerChips();
+        var entry = null;
+        for (var i = 0; i < chips.length; i++) {
+          if (chips[i].chipId === chipId && chips[i].level === level) { entry = chips[i]; break; }
+        }
+        if (!entry || entry.count < 2) return;
+
+        evt.preventDefault();
+
+        /* Create ghost element */
+        var ghost = _doc.createElement('div');
+        ghost.className = 'chipDragGhost';
+        ghost.innerHTML = card.innerHTML;
+        ghost.style.position = 'fixed';
+        ghost.style.left = evt.clientX + 'px';
+        ghost.style.top = evt.clientY + 'px';
+        ghost.style.pointerEvents = 'none';
+        ghost.style.zIndex = '99999';
+        ghost.style.opacity = '0.85';
+        ghost.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        _doc.body.appendChild(ghost);
+
+        card.classList.add('chipUpgradeCard--dragging');
+
+        _chipDragging = {
+          chipId: chipId,
+          level: level,
+          startX: evt.clientX,
+          startY: evt.clientY,
+          x: evt.clientX,
+          y: evt.clientY,
+          moved: false,
+          ghostEl: ghost,
+          sourceEl: card
+        };
+      });
+
+      overlay.addEventListener('pointermove', function(evt) {
+        if (!_chipDragging) return;
+        _chipDragging.x = evt.clientX;
+        _chipDragging.y = evt.clientY;
+        var dx = _chipDragging.x - _chipDragging.startX;
+        var dy = _chipDragging.y - _chipDragging.startY;
+        if (Math.abs(dx) + Math.abs(dy) > 6) _chipDragging.moved = true;
+        if (_chipDragging.ghostEl) {
+          _chipDragging.ghostEl.style.left = evt.clientX + 'px';
+          _chipDragging.ghostEl.style.top = evt.clientY + 'px';
+        }
+
+        /* Highlight potential drop targets */
+        var allCards = overlay.querySelectorAll('[data-drag-chip-id]');
+        for (var i = 0; i < allCards.length; i++) {
+          var c = allCards[i];
+          if (c === _chipDragging.sourceEl) continue;
+          var cId = parseInt(c.getAttribute('data-drag-chip-id'), 10);
+          var cLvl = parseInt(c.getAttribute('data-drag-chip-level'), 10);
+          var rect = c.getBoundingClientRect();
+          var hit = evt.clientX >= rect.left && evt.clientX <= rect.right &&
+                    evt.clientY >= rect.top && evt.clientY <= rect.bottom;
+          if (hit && cId === _chipDragging.chipId && cLvl === _chipDragging.level) {
+            c.classList.add('chipUpgradeCard--dropTarget');
+          } else {
+            c.classList.remove('chipUpgradeCard--dropTarget');
+          }
+        }
+      });
+
+      overlay.addEventListener('pointerup', function(evt) {
+        if (!_chipDragging) return;
+        var drag = _chipDragging;
+        _chipDragging = null;
+
+        /* Clean up ghost */
+        if (drag.ghostEl && drag.ghostEl.parentNode) {
+          drag.ghostEl.parentNode.removeChild(drag.ghostEl);
+        }
+        if (drag.sourceEl) {
+          drag.sourceEl.classList.remove('chipUpgradeCard--dragging');
+        }
+
+        /* Remove drop target highlights */
+        var allCards = overlay.querySelectorAll('.chipUpgradeCard--dropTarget');
+        for (var i = 0; i < allCards.length; i++) {
+          allCards[i].classList.remove('chipUpgradeCard--dropTarget');
+        }
+
+        if (!drag.moved) return; /* Was just a click, not a drag */
+
+        /* Find target card under pointer */
+        var targetCard = _doc.elementFromPoint(evt.clientX, evt.clientY);
+        if (targetCard) targetCard = targetCard.closest ? targetCard.closest('[data-drag-chip-id]') : null;
+        if (!targetCard || targetCard === drag.sourceEl) return;
+
+        var targetChipId = parseInt(targetCard.getAttribute('data-drag-chip-id'), 10);
+        var targetLevel = parseInt(targetCard.getAttribute('data-drag-chip-level'), 10);
+
+        /* Both must be same chipId and same level */
+        if (targetChipId === drag.chipId && targetLevel === drag.level) {
+          var newLevel = mergeChips(drag.chipId, drag.level);
+          if (newLevel > 0) {
+            if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+              global.Game.Toast.show(t('workshopChipMerged', 'Чип улучшен до ур. {level}!').replace('{level}', newLevel), 1800);
+            }
+            renderChipUpgradeGrid();
+          }
+        } else {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('workshopChipMergeFail', 'Можно объединять только одинаковые чипы одного уровня'), 1500);
+          }
+        }
+      });
+
+      overlay.addEventListener('pointerleave', function() {
+        if (_chipDragging) {
+          if (_chipDragging.ghostEl && _chipDragging.ghostEl.parentNode) {
+            _chipDragging.ghostEl.parentNode.removeChild(_chipDragging.ghostEl);
+          }
+          if (_chipDragging.sourceEl) {
+            _chipDragging.sourceEl.classList.remove('chipUpgradeCard--dragging');
+          }
+          var allCards = overlay.querySelectorAll('.chipUpgradeCard--dropTarget');
+          for (var i = 0; i < allCards.length; i++) {
+            allCards[i].classList.remove('chipUpgradeCard--dropTarget');
+          }
+          _chipDragging = null;
+        }
       });
     }
 
@@ -1187,6 +1646,7 @@
     getPlayerChips: getPlayerChips,
     setPlayerChips: setPlayerChips,
     addPlayerChip: addPlayerChip,
+    removePlayerChipOne: removePlayerChipOne,
     mergeChips: mergeChips,
     chipLevelBonus: chipLevelBonus,
     renderChipUpgradeGrid: renderChipUpgradeGrid,
@@ -1194,6 +1654,11 @@
     feedChipsForTech: feedChipsForTech,
     getTechFeedProgress: getTechFeedProgress,
     setTechFeedProgress: setTechFeedProgress,
+    getTechStudying: getTechStudying,
+    setTechStudying: function(obj) {
+      setTechStudying(obj);
+      if (_techStudying) _startTechStudyTimer();
+    },
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,

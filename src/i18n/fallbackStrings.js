@@ -246,7 +246,7 @@
       workshopChipTooltipCount: 'Количество: {count}',
       workshopChipTooltipMergeHint: 'Объединить 2 одинаковых чипа для повышения уровня',
       workshopChipMerged: 'Чип улучшен до ур. {level}!',
-      techUnlockTitle: 'Дерево технологий',
+      techUnlockTitle: 'Варианты технологий',
       techUnlockChipsAvail: 'Чипов доступно: {count}',
       techUnlockDone: '✔ Открыто',
       techUnlockNeedPrev: '🔒 Сначала откройте предыдущую',

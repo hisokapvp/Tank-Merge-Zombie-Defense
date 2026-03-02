@@ -319,8 +319,7 @@
         mods.push({ modId: p1.B, source: 'red', vertex: 'B', order: 1 });
       } else {
         matchSuccess = false;
-        // No match — only the first red chip's A vertex is active
-        mods.push({ modId: p1.A, source: 'red1', vertex: 'A', order: 0 });
+        // No match and both red chips installed — neither works
       }
     } else if (red1) {
       var pr1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
@@ -405,7 +404,7 @@
     cell.uiState.activeYellowSlotId = activeSlot;
   }
 
-  function installChip(cell, slotType, slotId, chipDef) {
+  function installChip(cell, slotType, slotId, chipDef, chipLevel) {
     if (slotType === 'red') {
       if (slotId !== 'slot1' && slotId !== 'slot2') return false;
       if (chipDef.chipColor !== 'red') return false;
@@ -413,7 +412,8 @@
         chipId: chipDef.chipId,
         modIds: chipDef.modIds.slice(),
         sourceComboKey: chipDef.sourceComboKey,
-        rotation: 0
+        rotation: 0,
+        level: (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1
       };
     } else if (slotType === 'yellow') {
       if (YELLOW_SLOT_KEYS.indexOf(slotId) === -1) return false;
@@ -426,7 +426,8 @@
         chipId: chipDef.chipId,
         modIds: chipDef.modIds.slice(),
         sourceComboKey: chipDef.sourceComboKey,
-        rotation: 0
+        rotation: 0,
+        level: (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1
       };
     } else {
       return false;

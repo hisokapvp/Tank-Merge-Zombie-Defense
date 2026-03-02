@@ -92,6 +92,14 @@
 - Backward compatibility: старые save без `playerChips` → пустой массив, игра не падает.
 - Используется в `getChipLevelDmgMul(cellIndex)` для расчёта бонуса урона (+10% за каждый уровень чипа).
 
+## Tech Studying (процесс изучения технологий)
+- Runtime-источник: `Game.HangarChipsUI.getTechStudying()` / `.setTechStudying(obj)`.
+- Формат: `{ techId: string, remaining: number, total: number }` или `null`.
+- Сериализуется в `serializeState()` как `techStudying` (fallback `null`).
+- Восстанавливается в `restoreFullState` и `applySavedProgress` через `HangarChipsUI.setTechStudying(saved.techStudying)`, что автоматически перезапускает таймер обратного отсчёта.
+- Backward compatibility: старые save без `techStudying` → `null`, процесс изучения не активен.
+- `timer` (id `setInterval`) не сериализуется — пересоздаётся при восстановлении.
+
 ## V1 talents save fields (deprecated)
 - Поля `talentsPending` и `activeCooldowns` больше не сохраняются и не восстанавливаются.
 - Поле `talentsApplied` сохранено для совместимости миграции V1→V2 в `talentsV2.js`.

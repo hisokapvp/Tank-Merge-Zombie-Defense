@@ -4116,6 +4116,7 @@ function saveProgress(){
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       drones: Array.isArray(state.drones) ? state.drones : [],
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
+      techStudying: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getTechStudying === 'function') ? window.Game.HangarChipsUI.getTechStudying() : null,
     }));
   }catch(e){}
 }
@@ -4215,6 +4216,10 @@ function restoreFullState(saved){
     if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
       window.Game.HangarChipsUI.setPlayerChips(saved.playerChips);
     }
+  }
+  /* Restore tech study state */
+  if (saved.techStudying && typeof saved.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
+    window.Game.HangarChipsUI.setTechStudying(saved.techStudying);
   }
   const scRestored = getComputerState();
   if (supercomputerController && supercomputerController.syncLevel) {
@@ -4380,6 +4385,10 @@ function applySavedProgress(data){
     if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
       window.Game.HangarChipsUI.setPlayerChips(data.playerChips);
     }
+  }
+  /* Restore tech study state */
+  if (data.techStudying && typeof data.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
+    window.Game.HangarChipsUI.setTechStudying(data.techStudying);
   }
   return true;
 }
