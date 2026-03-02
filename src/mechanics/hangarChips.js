@@ -404,13 +404,13 @@
     cell.uiState.activeYellowSlotId = activeSlot;
   }
 
-  function installChip(cell, slotType, slotId, chipDef, chipLevel) {
+  function installChip(cell, slotType, slotId, chipDef, chipLevel, modIdsOverride) {
     if (slotType === 'red') {
       if (slotId !== 'slot1' && slotId !== 'slot2') return false;
       if (chipDef.chipColor !== 'red') return false;
       cell.redSlots[slotId] = {
         chipId: chipDef.chipId,
-        modIds: chipDef.modIds.slice(),
+        modIds: (modIdsOverride || chipDef.modIds).slice(),
         sourceComboKey: chipDef.sourceComboKey,
         rotation: 0,
         level: (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1
@@ -424,7 +424,7 @@
       }
       cell.yellowSlots[slotId] = {
         chipId: chipDef.chipId,
-        modIds: chipDef.modIds.slice(),
+        modIds: (modIdsOverride || chipDef.modIds).slice(),
         sourceComboKey: chipDef.sourceComboKey,
         rotation: 0,
         level: (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1

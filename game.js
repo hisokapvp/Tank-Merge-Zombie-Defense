@@ -1310,6 +1310,13 @@ function recomputeMenuPauseLock(){
   }
 }
 
+/* Fix 4: Expose function for tech timer pause check.
+   Timer pauses ONLY when settings (small menu) or bigMenu is open. */
+window.Game = window.Game || {};
+window.Game._isTechTimerPaused = function() {
+  return !!(menuPauseLocks.settings || menuPauseLocks.bigMenu);
+};
+
 function setMenuPauseSource(source, open){
   if (!source || !Object.prototype.hasOwnProperty.call(menuPauseLocks, source)) return;
   menuPauseLocks[source] = !!open;

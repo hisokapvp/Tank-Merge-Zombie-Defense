@@ -487,10 +487,14 @@
     if (_techStudyTimerId) return;
     _techStudyTimerId = setInterval(function() {
       if (!_techStudying) { _stopTechStudyTimer(); return; }
-      _techStudying.elapsed += 1;
-      /* Check completion */
-      var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
-      if (_techStudying.elapsed >= effectiveDuration) {
+      /* Fix 4: Only pause timer when settings or bigMenu are open */
+      if (_isTechTimerPaused()) return;
+      /* Fix 7: Speed multiplier — acceleratedPct increases tick speed, not reduces duration */
+      var accelPct = _techStudying.acceleratedPct || 0;
+      var speedMul = accelPct >= 100 ? 20 : (1 / (1 - accelPct / 100));
+      _techStudying.elapsed += speedMul;
+      /* Check completion against FULL duration (not reduced) */
+      if (_techStudying.elapsed >= _techStudying.duration) {
         _completeTechStudy();
       } else {
         /* Update timer display */
@@ -532,15 +536,14 @@
     if (!_techStudying) return;
     var timerEl = _doc ? _doc.querySelector('[data-tech-timer="' + _techStudying.modId + '"]') : null;
     if (timerEl) {
-      var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
-      var remaining = Math.max(0, Math.ceil(effectiveDuration - _techStudying.elapsed));
+      /* Fix 7: Show remaining based on full duration, speed multiplier handles acceleration */
+      var remaining = Math.max(0, Math.ceil(_techStudying.duration - _techStudying.elapsed));
       timerEl.textContent = _formatTime(remaining);
     }
     /* Update progress bar */
     var barEl = _doc ? _doc.querySelector('[data-tech-study-bar="' + _techStudying.modId + '"]') : null;
     if (barEl) {
-      var effectiveDur = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
-      var pct = Math.min(100, Math.round(_techStudying.elapsed / effectiveDur * 100));
+      var pct = Math.min(100, Math.round(_techStudying.elapsed / _techStudying.duration * 100));
       barEl.style.width = pct + '%';
     }
   }
@@ -559,8 +562,23 @@
   function _getTechDuration(modId) {
     var h = hc();
     if (!h) return TECH_STUDY_DURATION_OPEN;
-    if (h.canUnlockTech(modId)) return TECH_STUDY_DURATION_OPEN;
-    return TECH_STUDY_DURATION_LOCKED;
+    /* Tier is determined by what the tech replaces:
+       if it replaces a base mod (1-14) → tier 1 (2h)
+       if it replaces a tech mod (15+)  → tier 2 (5h) */
+    var replacesId = h.getTechReplacesModId(modId);
+    if (replacesId >= 0 && replacesId <= 14) return TECH_STUDY_DURATION_OPEN;  // Tier 1: 2h
+    return TECH_STUDY_DURATION_LOCKED; // Tier 2: 5h
+  }
+
+  /** Get acceleration percentage per burned chip based on tech duration */
+  function _getAccelPerChip(modId) {
+    var dur = _getTechDuration(modId);
+    return dur === TECH_STUDY_DURATION_LOCKED ? 2.5 : 5; // 2.5% for 5h techs, 5% for 2h techs
+  }
+
+  /** Check if the tech study timer should be paused (only when settings/bigMenu open) */
+  function _isTechTimerPaused() {
+    return !!(global.Game && typeof global.Game._isTechTimerPaused === 'function' && global.Game._isTechTimerPaused());
   }
 
   /** Render the Technology Unlock panel */
@@ -590,7 +608,7 @@
         var canUnlock = h.canUnlockTech(tech.modId);
         var isStudying = _techStudying && _techStudying.modId === tech.modId;
         var anotherStudying = _techStudying && _techStudying.modId !== tech.modId;
-        var duration = canUnlock ? TECH_STUDY_DURATION_OPEN : TECH_STUDY_DURATION_LOCKED;
+        var duration = _getTechDuration(tech.modId);
 
         var cardClass = 'techUnlockCard';
         if (isUnlocked) cardClass += ' techUnlockCard--unlocked';
@@ -626,7 +644,9 @@
 
           html += '<div class="techUnlockCard__actions">';
           html += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
-          html += '<button class="btn scButton techUnlockCard__accelBtn" data-tech-accel="' + tech.modId + '" type="button">' + t('techUnlockAccel', 'Ускорить процесс открытия') + '</button>';
+          /* Fix 2: Disable accel button when already at 95% */
+          var accelDisabled = (_techStudying.acceleratedPct || 0) >= 95;
+          html += '<button class="btn scButton techUnlockCard__accelBtn' + (accelDisabled ? ' techUnlockCard__accelBtn--disabled' : '') + '" data-tech-accel="' + tech.modId + '" type="button"' + (accelDisabled ? ' disabled' : '') + '>' + (accelDisabled ? t('techUnlockAccelMax', 'Максимальное ускорение') : t('techUnlockAccel', 'Ускорить процесс открытия')) + '</button>';
           html += '</div>';
         } else {
           /* Show "Start study" button + duration */
@@ -742,16 +762,10 @@
     _playerChips = Array.isArray(chips) ? chips : [];
   }
 
-  /** Add a chip to player's inventory. If a chip with same chipId and level exists, increment count. */
+  /** Add a chip to player's inventory. Each chip is a separate entry (no stacking). */
   function addPlayerChip(chipDef, level) {
     var chips = ensurePlayerChips();
     var lvl = (Number.isFinite(level) && level >= 1) ? Math.floor(level) : 1;
-    for (var i = 0; i < chips.length; i++) {
-      if (chips[i].chipId === chipDef.chipId && chips[i].level === lvl) {
-        chips[i].count++;
-        return chips[i];
-      }
-    }
     var entry = {
       chipId: chipDef.chipId,
       chipColor: chipDef.chipColor,
@@ -781,47 +795,36 @@
       Returns the new level or -1 on failure. */
   function mergeChips(chipId, level) {
     var chips = ensurePlayerChips();
-    var entry = null;
+    /* Find two separate entries with same chipId+level */
+    var idx1 = -1, idx2 = -1;
     for (var i = 0; i < chips.length; i++) {
       if (chips[i].chipId === chipId && chips[i].level === level) {
-        entry = chips[i];
-        break;
+        if (idx1 === -1) { idx1 = i; }
+        else { idx2 = i; break; }
       }
     }
-    if (!entry || entry.count < 2) return -1;
-    entry.count -= 2;
+    if (idx1 === -1 || idx2 === -1) return -1;
+    var entry = chips[idx1];
     var newLevel = level + 1;
+    /* Remove both entries (higher index first to preserve lower) */
+    chips.splice(idx2, 1);
+    chips.splice(idx1, 1);
     /* add merged chip */
     var h = hc();
     var chipDef = h ? h.getChipById(h.allChips, chipId) : null;
     if (chipDef) {
-      addPlayerChip(chipDef, newLevel);
+      /* Use entry's modIds (may be upgraded by tech) instead of chipDef's original */
+      var mergedDef = { chipId: chipDef.chipId, chipColor: chipDef.chipColor, modIds: entry.modIds, sourceComboKey: entry.sourceComboKey };
+      addPlayerChip(mergedDef, newLevel);
     } else {
-      /* fallback: create manually */
-      var found = false;
-      for (var j = 0; j < chips.length; j++) {
-        if (chips[j].chipId === chipId && chips[j].level === newLevel) {
-          chips[j].count++;
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        chips.push({
-          chipId: chipId,
-          chipColor: entry.chipColor,
-          modIds: entry.modIds.slice(),
-          sourceComboKey: entry.sourceComboKey,
-          level: newLevel,
-          count: 1
-        });
-      }
-    }
-    /* clean up empty entries */
-    if (entry.count <= 0) {
-      for (var k = 0; k < chips.length; k++) {
-        if (chips[k] === entry) { chips.splice(k, 1); break; }
-      }
+      chips.push({
+        chipId: chipId,
+        chipColor: entry.chipColor,
+        modIds: entry.modIds.slice(),
+        sourceComboKey: entry.sourceComboKey,
+        level: newLevel,
+        count: 1
+      });
     }
     return newLevel;
   }
@@ -858,7 +861,13 @@
     for (var i = 0; i < sorted.length; i++) {
       var chip = sorted[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-      var canMerge = chip.count >= 2;
+      /* Check if another entry with same chipId+level exists (for merge) */
+      var canMerge = false;
+      for (var cm = 0; cm < sorted.length; cm++) {
+        if (cm !== i && sorted[cm].chipId === chip.chipId && sorted[cm].level === chip.level) {
+          canMerge = true; break;
+        }
+      }
       var cardClass = 'chipUpgradeCard' + (canMerge ? ' chipUpgradeCard--canMerge' : '');
       var bonusPct = chipLevelBonus(chip.level);
       var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
@@ -991,7 +1000,7 @@
       return;
     }
 
-    var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl);
+    var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl, invEntry.modIds);
     if (ok) {
       /* Remove from inventory */
       removePlayerChipOne(chipId, lvl);
@@ -1014,7 +1023,14 @@
     if (chipData) {
       var chipDef = h.getChipById(h.allChips, chipData.chipId);
       if (chipDef) {
-        addPlayerChip(chipDef, chipData.level || 1);
+        /* Use slot's modIds (may have been upgraded by tech unlock) */
+        var returnDef = {
+          chipId: chipDef.chipId,
+          chipColor: chipDef.chipColor,
+          modIds: chipData.modIds || chipDef.modIds,
+          sourceComboKey: chipData.sourceComboKey || chipDef.sourceComboKey
+        };
+        addPlayerChip(returnDef, chipData.level || 1);
       }
     }
 
@@ -1165,6 +1181,13 @@
     if (techAccelBtn) {
       var accelModId = parseInt(techAccelBtn.getAttribute('data-tech-accel'), 10);
       if (Number.isFinite(accelModId) && _techStudying && _techStudying.modId === accelModId) {
+        /* Fix 2: Block if at 95% */
+        if ((_techStudying.acceleratedPct || 0) >= 95) {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('techAccelMaxReached', 'Достигнуто максимальное ускорение (95%)'), 1500);
+          }
+          return;
+        }
         _showTechAccelModal(accelModId);
       }
       return;
@@ -1255,9 +1278,11 @@
     var chips = ensurePlayerChips();
     var h = hc();
 
+    /* Fix 6: Show correct per-chip percentage based on tech duration */
+    var accelPerChip = _getAccelPerChip(modId);
     var html = '<div class="techModal__dialog techModal__dialog--wide">' +
       '<div class="techModal__title">' + t('techAccelTitle', 'Ускорить процесс открытия') + '</div>' +
-      '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите чипы для ускорения (каждый чип = +5%)') + '</div>';
+      '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите чипы для ускорения (каждый чип = +{pct}%)').replace('{pct}', accelPerChip) + '</div>';
 
     if (!chips.length) {
       html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет чипов в инвентаре') + '</div>';
@@ -1296,20 +1321,36 @@
   }
 
   function _updateAccelPercentage() {
-    if (!_techModalEl) return;
+    if (!_techModalEl || !_techStudying) return;
     var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
     var count = checked.length;
-    var pct = count * 5;
+    /* Fix 6: Use per-chip rate based on tech duration */
+    var accelPerChip = _getAccelPerChip(_techStudying.modId);
+    var pct = count * accelPerChip;
+    /* Fix 2: Cap at remaining room to 95% */
+    var currentAccel = _techStudying.acceleratedPct || 0;
+    var maxMore = 95 - currentAccel;
+    if (pct > maxMore) pct = maxMore;
+    if (pct < 0) pct = 0;
     var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
     if (confirmBtn) {
-      confirmBtn.textContent = t('techAccelBtnLabel', 'Ускорить на {pct}%').replace('{pct}', pct).replace('0%', pct + '%');
       confirmBtn.textContent = 'Ускорить на ' + pct + '%';
-      confirmBtn.disabled = count === 0;
+      confirmBtn.disabled = count === 0 || pct <= 0;
     }
   }
 
   function _applyTechAcceleration() {
     if (!_techModalEl || !_techStudying) return;
+
+    /* Fix 2: Block if already at 95% */
+    if ((_techStudying.acceleratedPct || 0) >= 95) {
+      if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+        global.Game.Toast.show(t('techAccelMaxReached', 'Достигнуто максимальное ускорение (95%)'), 1500);
+      }
+      _closeTechModal();
+      return;
+    }
+
     var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
     if (!checked.length) {
       _closeTechModal();
@@ -1329,13 +1370,13 @@
       removePlayerChipOne(chipsToBurn[j].chipId, chipsToBurn[j].level);
     }
 
-    /* Apply acceleration */
-    _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + (chipsToBurn.length * 5);
+    /* Fix 6: Acceleration per chip depends on tech duration */
+    var accelPerChip = _getAccelPerChip(_techStudying.modId);
+    _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + (chipsToBurn.length * accelPerChip);
     if (_techStudying.acceleratedPct > 95) _techStudying.acceleratedPct = 95; // Cap at 95%
 
-    /* Check if study should complete now */
-    var effectiveDuration = _techStudying.duration * (1 - _techStudying.acceleratedPct / 100);
-    if (_techStudying.elapsed >= effectiveDuration) {
+    /* Fix 7: Check completion against full duration (not reduced) */
+    if (_techStudying.elapsed >= _techStudying.duration) {
       _closeTechModal();
       _completeTechStudy();
       return;
@@ -1413,13 +1454,14 @@
         var level = parseInt(card.getAttribute('data-drag-chip-level'), 10);
         if (!Number.isFinite(chipId) || !Number.isFinite(level)) return;
 
-        /* Only allow dragging chips that have count >= 2 */
+        /* Only allow dragging chips that have a matching entry for merge */
         var chips = ensurePlayerChips();
-        var entry = null;
-        for (var i = 0; i < chips.length; i++) {
-          if (chips[i].chipId === chipId && chips[i].level === level) { entry = chips[i]; break; }
+        var matchCount = 0;
+        for (var mi = 0; mi < chips.length; mi++) {
+          if (chips[mi].chipId === chipId && chips[mi].level === level) matchCount++;
+          if (matchCount >= 2) break;
         }
-        if (!entry || entry.count < 2) return;
+        if (matchCount < 2) return;
 
         evt.preventDefault();
 
