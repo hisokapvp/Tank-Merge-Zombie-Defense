@@ -23,7 +23,7 @@
      TC-BC is the shared central vertical edge. */
   var SVG_W = 400, SVG_H = 300;
   var GAP_DEFAULT = 15;   // normal spacing between slot triangles
-  var GAP_MATCHED = 3;    // spacing when matching chips are installed (attract)
+  var GAP_MATCHED = 10;    // spacing when matching chips are installed (attract)
   var side = 160; 
   var h_tri = side * Math.sqrt(3) / 2; // ~112.5
   
@@ -182,11 +182,11 @@
     if (!cell) return;
     var h = hc();
 
-    /* Determine if red/yellow have matching chips → attract (smaller gap) */
+    /* Determine if red/yellow have matching chips → attract (shift position, keep size) */
     var redMatched = (cell.uiState && cell.uiState.redMatchSuccess === true);
-    var yellowMatched = (cell.uiState && cell.uiState.yellowMatchSuccess === true);
-    var redGap = redMatched ? GAP_MATCHED : GAP_DEFAULT;
-    var yellowGap = yellowMatched ? GAP_MATCHED : GAP_DEFAULT;
+    
+    /* Constants for attraction */
+    var ATTRACTION_DIST = GAP_DEFAULT - GAP_MATCHED; // ~12px
 
     var svg = '<svg class="hangarSvg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" xmlns="http://www.w3.org/2000/svg">';
 
@@ -194,6 +194,10 @@
       var def = SLOT_DEFS[d];
       var isRed = def.type === 'red';
       var chipData = isRed ? cell.redSlots[def.slotId] : cell.yellowSlots[def.slotId];
+      
+      /* Yellow attraction: only if this specific yellow slot is active and matched */
+      var yellowMatched = (cell.uiState && cell.uiState.yellowMatchSuccess === true && cell.uiState.activeYellowSlotId === def.slotId);
+      
       var locked = !isRed && cell.uiState.yellowLocked && cell.uiState.activeYellowSlotId !== def.slotId;
       var selected = _selectedSlot && _selectedSlot.type === def.type && _selectedSlot.slotId === def.slotId;
 
@@ -219,11 +223,45 @@
       // Add individual animation delays to make shake effect individual for each element
       var animationDelay = (d * 0.05) + 's';
 
-      /* Choose gap: red slots use redGap, yellow slots use yellowGap */
-      var slotGap = isRed ? redGap : yellowGap;
+      /* Calculate translation for attraction */
+      var tx = 0, ty = 0;
+      if (redMatched && isRed) {
+        // Red slots attract each other along X axis
+        if (def.slotId === 'slot1') tx = ATTRACTION_DIST; // R1 moves Right
+        else if (def.slotId === 'slot2') tx = -ATTRACTION_DIST; // R2 moves Left
+      } else if (yellowMatched && !isRed) {
+        // Yellow slots attract to their adjacent Red slot
+        // Y1, Y3 adjacent to R1 (Left Red)
+        // Y2, Y4 adjacent to R2 (Right Red)
+        var targetRedId = (def.slotId === 'slot1' || def.slotId === 'slot3') ? 'slot1' : 'slot2';
+        
+        // Calculate vector from Yellow Center to Red Center
+        var yc = _getPolyCenter(def.pts);
+        
+        // Find Red definition
+        var redDef = null;
+        for(var k=0; k<SLOT_DEFS.length; k++) {
+          if (SLOT_DEFS[k].type === 'red' && SLOT_DEFS[k].slotId === targetRedId) {
+            redDef = SLOT_DEFS[k];
+            break;
+          }
+        }
+        
+        if (redDef) {
+          var rc = _getPolyCenter(redDef.pts);
+          var dx = rc[0] - yc[0];
+          var dy = rc[1] - yc[1];
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist > 0) {
+            tx = (dx / dist) * ATTRACTION_DIST;
+            ty = (dy / dist) * ATTRACTION_DIST;
+          }
+        }
+      }
 
-      svg += '<g class="hangarSlotGroup">';
-      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts, slotGap) + '" ' +
+      /* Always use GAP_DEFAULT to keep size constant */
+      svg += '<g class="hangarSlotGroup" style="transform: translate(' + tx + 'px, ' + ty + 'px)">';
+      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts, GAP_DEFAULT) + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer');
@@ -315,6 +353,17 @@
     cx /= ptKeys.length;
     cy /= ptKeys.length;
     return [Math.round((tgt[0] + cx) / 2), Math.round((tgt[1] + cy) / 2)];
+  }
+
+  function _getPolyCenter(keys) {
+    var c = [0, 0];
+    for (var i = 0; i < keys.length; i++) {
+      c[0] += PT[keys[i]][0];
+      c[1] += PT[keys[i]][1];
+    }
+    c[0] /= keys.length;
+    c[1] /= keys.length;
+    return c;
   }
 
   /* ─── Render: active modifiers summary ─────────────────── */
