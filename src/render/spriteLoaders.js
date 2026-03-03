@@ -158,14 +158,21 @@
           };
 
           if (data.deathCommon) {
-            this.deathCommon = {
-              x: data.deathCommon.x != null ? data.deathCommon.x : 0,
-              y: data.deathCommon.y != null ? data.deathCommon.y : 0,
-              w: data.deathCommon.w != null ? data.deathCommon.w : 96,
-              h: data.deathCommon.h != null ? data.deathCommon.h : 96,
-              frames: data.deathCommon.frames != null ? data.deathCommon.frames : 1,
-              frameRateFps: toPositiveNumber(data.deathCommon.frameRateFps, defaultAnimFps.deathCommon),
-            };
+            /* Support single object or array of variants */
+            var rawDC = Array.isArray(data.deathCommon) ? data.deathCommon : [data.deathCommon];
+            var parsedDC = [];
+            for (var dci = 0; dci < rawDC.length; dci++) {
+              var dc = rawDC[dci];
+              parsedDC.push({
+                x: dc.x != null ? dc.x : 0,
+                y: dc.y != null ? dc.y : 0,
+                w: dc.w != null ? dc.w : 96,
+                h: dc.h != null ? dc.h : 96,
+                frames: dc.frames != null ? dc.frames : 1,
+                frameRateFps: toPositiveNumber(dc.frameRateFps, defaultAnimFps.deathCommon),
+              });
+            }
+            this.deathCommon = parsedDC;
           } else {
             this.deathCommon = null;
           }

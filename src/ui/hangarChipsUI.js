@@ -118,6 +118,88 @@
 
   function el(id) { return _doc ? _doc.getElementById(id) : null; }
 
+  /**
+   * Generate a chip SVG icon composed of 3 sub-triangles.
+   * Each sub-triangle has a colored fill matching the modifier type.
+   * @param {number} w - viewBox width
+   * @param {number} h - viewBox height
+   * @param {string} borderColor - stroke color of outer triangle
+   * @param {number[]} modIds - array of 3 mod IDs
+   * @param {string} cssClass - CSS class for <svg>
+   * @param {number} strokeW - outer stroke width
+   * @returns {string} SVG markup
+   */
+  function chipSvgComposed(w, h, borderColor, modIds, cssClass, strokeW) {
+    var sw = strokeW || 2.5;
+    var cls = cssClass || 'hangarChipIcon';
+    var hc2 = hc();
+
+    /* Triangle vertices (apex at top for "pointing up") */
+    var ax = w / 2, ay = 2;          // top
+    var bx = w - 2, by = h - 2;      // bottom-right
+    var cx2 = 2, cy2 = h - 2;        // bottom-left
+
+    /* Centroid */
+    var cenX = (ax + bx + cx2) / 3;
+    var cenY = (ay + by + cy2) / 3;
+
+    /* 3 sub-triangles: Top, BottomLeft, BottomRight */
+    var subTris = [
+      { pts: ax + ',' + ay + ' ' + cx2 + ',' + cy2 + ' ' + cenX + ',' + cenY, modIdx: 0 },
+      { pts: cx2 + ',' + cy2 + ' ' + bx + ',' + by + ' ' + cenX + ',' + cenY, modIdx: 1 },
+      { pts: ax + ',' + ay + ' ' + cenX + ',' + cenY + ' ' + bx + ',' + by, modIdx: 2 }
+    ];
+
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="' + cls + '">';
+
+    for (var i = 0; i < subTris.length; i++) {
+      var modId = (modIds && modIds.length > subTris[i].modIdx) ? modIds[subTris[i].modIdx] : 0;
+      var isSpec = hc2 && hc2.isSpecialMod(modId);
+      var subFill = modId ? (isSpec ? 'rgba(253,216,53,0.22)' : 'rgba(229,57,53,0.22)') : 'rgba(80,80,80,0.08)';
+      var subStroke = modId ? (isSpec ? '#fdd835' : '#e53935') : 'rgba(255,255,255,0.1)';
+      svg += '<polygon points="' + subTris[i].pts + '" fill="' + subFill + '" stroke="' + subStroke + '" stroke-width="1"/>';
+    }
+
+    /* Outer triangle border */
+    svg += '<polygon points="' + ax + ',' + ay + ' ' + bx + ',' + by + ' ' + cx2 + ',' + cy2 + '" fill="none" stroke="' + borderColor + '" stroke-width="' + sw + '"/>';
+
+    /* Vertex dots */
+    var dotR = Math.max(2.5, Math.min(4, w / 10));
+    var vx = [[ax, ay + 4], [bx - 4, by - 3], [cx2 + 4, cy2 - 3]];
+    for (var vi = 0; vi < 3 && modIds && vi < modIds.length; vi++) {
+      var mc = (hc2 && hc2.isSpecialMod(modIds[vi])) ? '#fdd835' : '#e53935';
+      svg += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="' + dotR + '" fill="' + mc + '" />';
+    }
+
+    svg += '</svg>';
+    return svg;
+  }
+
+  /**
+   * Generate a small (fragment) chip SVG — inverted triangle pointing UP.
+   * @param {number} modId
+   * @param {number} size
+   * @param {string} strokeColor
+   * @returns {string} SVG markup
+   */
+  function _fragmentSvgUp(modId, size, strokeColor) {
+    var w = size || 40;
+    var fh = Math.round(w * 0.9);
+    var sc = strokeColor || '#e53935';
+    var hc2 = hc();
+    var isSpec = hc2 && hc2.isSpecialMod(modId);
+    var fillDot = isSpec ? '#fdd835' : '#e53935';
+    /* Small upward triangle */
+    var ax = w / 2, ay = 2;
+    var bx = w - 3, by = fh - 2;
+    var cx2 = 3, cy2 = fh - 2;
+    return '<svg viewBox="0 0 ' + w + ' ' + fh + '" width="' + w + '" height="' + fh + '" class="chipFragmentIcon">' +
+      '<polygon points="' + ax + ',' + ay + ' ' + bx + ',' + by + ' ' + cx2 + ',' + cy2 + '" ' +
+      'fill="rgba(80,80,80,0.12)" stroke="' + sc + '" stroke-width="2"/>' +
+      '<circle cx="' + ax + '" cy="' + (ay + 6) + '" r="3.5" fill="' + fillDot + '"/>' +
+      '</svg>';
+  }
+
   function ensureCells() {
     if (!_cells) {
       var h = hc();
@@ -230,32 +312,16 @@
         if (def.slotId === 'slot1') tx = ATTRACTION_DIST; // R1 moves Right
         else if (def.slotId === 'slot2') tx = -ATTRACTION_DIST; // R2 moves Left
       } else if (yellowMatched && !isRed) {
-        // Yellow slots attract to their adjacent Red slot
-        // Y1, Y3 adjacent to R1 (Left Red)
-        // Y2, Y4 adjacent to R2 (Right Red)
-        var targetRedId = (def.slotId === 'slot1' || def.slotId === 'slot3') ? 'slot1' : 'slot2';
-        
-        // Calculate vector from Yellow Center to Red Center
-        var yc = _getPolyCenter(def.pts);
-        
-        // Find Red definition
-        var redDef = null;
-        for(var k=0; k<SLOT_DEFS.length; k++) {
-          if (SLOT_DEFS[k].type === 'red' && SLOT_DEFS[k].slotId === targetRedId) {
-            redDef = SLOT_DEFS[k];
-            break;
-          }
-        }
-        
-        if (redDef) {
-          var rc = _getPolyCenter(redDef.pts);
-          var dx = rc[0] - yc[0];
-          var dy = rc[1] - yc[1];
-          var dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist > 0) {
-            tx = (dx / dist) * ATTRACTION_DIST;
-            ty = (dy / dist) * ATTRACTION_DIST;
-          }
+        // Yellow slots attract by shifting in sync with their adjacent Red slot
+        // Y1 (slot1) & Y3 (slot3) → adjacent to R1 → shift right (same as R1)
+        // Y2 (slot2) & Y4 (slot4) → adjacent to R2 → shift left (same as R2)
+        var isLeftSide = (def.slotId === 'slot1' || def.slotId === 'slot3');
+        if (redMatched) {
+          // Both reds matched and shifted, yellow follows its adjacent red
+          tx = isLeftSide ? ATTRACTION_DIST : -ATTRACTION_DIST;
+        } else {
+          // Only this yellow matched its adjacent red
+          tx = isLeftSide ? ATTRACTION_DIST : -ATTRACTION_DIST;
         }
       }
 
@@ -366,6 +432,54 @@
     return c;
   }
 
+  /**
+   * Check if installing a chip in any empty slot of the current cell
+   * would create (or contribute to) a match.
+   */
+  function _wouldChipCreateMatch(cell, chipEntry, h) {
+    if (!cell || !h || !chipEntry) return false;
+    var chipDef = h.getChipById(h.allChips, chipEntry.chipId);
+    if (!chipDef) return false;
+
+    if (chipEntry.chipColor === 'red') {
+      /* Check if the other red slot has a chip and would match */
+      var otherRedSlot = cell.redSlots.slot1 ? 'slot1' : (cell.redSlots.slot2 ? 'slot2' : null);
+      if (!otherRedSlot) return false; /* no red chip installed, can't match */
+      var otherRedChip = cell.redSlots[otherRedSlot];
+      if (!otherRedChip) return false;
+      /* Try all 3 rotations */
+      var otherP = h.normalizeRedPlacementRotated(otherRedChip.modIds, otherRedChip.rotation);
+      for (var rot = 0; rot < 3; rot++) {
+        var testP = h.normalizeRedPlacementRotated(chipEntry.modIds, rot);
+        if (h.checkRedMatch(testP, otherP)) return true;
+      }
+      return false;
+    } else if (chipEntry.chipColor === 'yellow') {
+      /* Check if any yellow slot adjacent to an installed red chip would match */
+      var YELLOW_ADJ = {
+        slot1: { redSlot: 'slot1', innerAKey: 'A', innerBKey: 'C' },
+        slot2: { redSlot: 'slot2', innerAKey: 'A', innerBKey: 'C' },
+        slot3: { redSlot: 'slot1', innerAKey: 'B', innerBKey: 'C' },
+        slot4: { redSlot: 'slot2', innerAKey: 'B', innerBKey: 'C' }
+      };
+      var ySlotKeys = ['slot1', 'slot2', 'slot3', 'slot4'];
+      for (var yi = 0; yi < ySlotKeys.length; yi++) {
+        var yKey = ySlotKeys[yi];
+        if (cell.yellowSlots[yKey]) continue; /* slot occupied */
+        var adj = YELLOW_ADJ[yKey];
+        var adjRed = cell.redSlots[adj.redSlot];
+        if (!adjRed) continue; /* no adjacent red */
+        var rp = h.normalizeRedPlacementRotated(adjRed.modIds, adjRed.rotation);
+        for (var rot2 = 0; rot2 < 3; rot2++) {
+          var yp = h.normalizeYellowPlacementRotated(chipEntry.modIds, rot2);
+          if (yp.innerA === rp[adj.innerAKey] && yp.innerB === rp[adj.innerBKey]) return true;
+        }
+      }
+      return false;
+    }
+    return false;
+  }
+
   /* ─── Render: active modifiers summary ─────────────────── */
 
   function renderActiveMods() {
@@ -438,23 +552,26 @@
     }
 
     html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
+
+    /* Pre-calculate which chips could create matches in the current cell */
+    var cells = ensureCells();
+    var cell = cells[_selectedCell];
+    var canMatchMap = {};
+    if (cell && h) {
+      for (var ci2 = 0; ci2 < chips.length; ci2++) {
+        var testChip = chips[ci2];
+        canMatchMap[testChip.chipId + '_' + testChip.level] = _wouldChipCreateMatch(cell, testChip, h);
+      }
+    }
+
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-      html += '<button class="hangarChipBtn" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" ' +
+      var canMatch = canMatchMap[chip.chipId + '_' + chip.level] || false;
+      var matchClass = canMatch ? ' hangarChipBtn--canMatch' : '';
+      html += '<button class="hangarChipBtn' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" ' +
         'title="' + chip.sourceComboKey + ' (Ур.' + chip.level + ', ×' + chip.count + '): ' + chip.modIds.map(function(m) { return modName(m); }).join(', ') + '">' +
-        '<svg viewBox="0 0 40 36" class="hangarChipIcon">' +
-        '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
-
-      /* vertex dots */
-      var vx = [[20, 6], [34, 31], [6, 31]]; // top, right, left
-      var mods = chip.modIds;
-      for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
-        var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
-        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
-      }
-
-      html += '</svg>' +
+        chipSvgComposed(40, 36, borderColor, chip.modIds, 'hangarChipIcon', 2.5) +
         '<span class="hangarChipBtn__key">' + chip.sourceComboKey + '</span>' +
         '<span class="hangarChipBtn__lvl">Ур.' + chip.level + '</span>' +
         (chip.count > 1 ? '<span class="hangarChipBtn__cnt">×' + chip.count + '</span>' : '') +
@@ -487,44 +604,48 @@
   function switchHangarTab(tabId) {
     var tabCells = el('hangarTabCells');
     var tabWorkshop = el('hangarTabWorkshop');
+    var tabTechUnlock = el('hangarTabTechUnlock');
     var panelCells = el('hangarPanelCells');
     var panelWorkshop = el('hangarPanelWorkshop');
+    var panelTechUnlock = el('hangarPanelTechUnlock');
     if (!tabCells || !tabWorkshop) return;
 
     var isCells = tabId === 'cells';
+    var isWorkshop = tabId === 'workshop';
+    var isTech = tabId === 'techUnlock';
+
     tabCells.setAttribute('aria-selected', isCells ? 'true' : 'false');
     tabCells.setAttribute('tabindex', isCells ? '0' : '-1');
-    tabWorkshop.setAttribute('aria-selected', isCells ? 'false' : 'true');
-    tabWorkshop.setAttribute('tabindex', isCells ? '-1' : '0');
+    tabWorkshop.setAttribute('aria-selected', isWorkshop ? 'true' : 'false');
+    tabWorkshop.setAttribute('tabindex', isWorkshop ? '0' : '-1');
+    if (tabTechUnlock) {
+      tabTechUnlock.setAttribute('aria-selected', isTech ? 'true' : 'false');
+      tabTechUnlock.setAttribute('tabindex', isTech ? '0' : '-1');
+    }
     if (panelCells) panelCells.hidden = !isCells;
-    if (panelWorkshop) panelWorkshop.hidden = isCells;
+    if (panelWorkshop) panelWorkshop.hidden = !isWorkshop;
+    if (panelTechUnlock) panelTechUnlock.hidden = !isTech;
 
     if (isCells) render();
-    if (!isCells) renderChipUpgradeGrid();
+    if (isWorkshop) renderChipUpgradeGrid();
+    if (isTech) renderTechUnlockPanel();
   }
 
   /* ─── Workshop sub-tab switching ───────────────────────── */
 
   function switchWorkshopSubTab(tabId) {
     var tabChipUpgrade = el('workshopTabChipUpgrade');
-    var tabTechUnlock = el('workshopTabTechUnlock');
     var tabChipCraft = el('workshopTabChipCraft');
     var panelChipUpgrade = el('workshopPanelChipUpgrade');
-    var panelTechUnlock = el('workshopPanelTechUnlock');
     var panelChipCraft = el('workshopPanelChipCraft');
-    if (!tabChipUpgrade || !tabTechUnlock) return;
+    if (!tabChipUpgrade) return;
 
     var isChips = tabId === 'chipUpgrade';
-    var isTech = tabId === 'techUnlock';
     var isCraft = tabId === 'chipCraft';
 
     tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
     tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
     tabChipUpgrade.classList.toggle('workshopSubTab--active', isChips);
-
-    tabTechUnlock.setAttribute('aria-selected', isTech ? 'true' : 'false');
-    tabTechUnlock.setAttribute('tabindex', isTech ? '0' : '-1');
-    tabTechUnlock.classList.toggle('workshopSubTab--active', isTech);
 
     if (tabChipCraft) {
       tabChipCraft.setAttribute('aria-selected', isCraft ? 'true' : 'false');
@@ -533,11 +654,9 @@
     }
 
     if (panelChipUpgrade) panelChipUpgrade.hidden = !isChips;
-    if (panelTechUnlock) panelTechUnlock.hidden = !isTech;
     if (panelChipCraft) panelChipCraft.hidden = !isCraft;
 
     if (isChips) renderChipUpgradeGrid();
-    if (isTech) renderTechUnlockPanel();
     if (isCraft) renderChipCraftPanel();
   }
 
@@ -662,7 +781,7 @@
 
   /** Render the Technology Unlock panel */
   function renderTechUnlockPanel() {
-    var panel = el('workshopPanelTechUnlock');
+    var panel = el('techUnlockContainer');
     if (!panel) return;
     var h = hc();
     if (!h || !h.TECH_TREE) {
@@ -1005,23 +1124,15 @@
       var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
 
       html += '<div class="' + cardClass + '" ' + tooltipData + ' data-drag-chip-id="' + chip.chipId + '" data-drag-chip-level="' + chip.level + '">';
-      
-      /* chip icon SVG */
-      html += '<svg viewBox="0 0 44 40" class="chipUpgradeCard__icon">' +
-        '<polygon points="22,3 40,37 4,37" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
-      var vx = [[22, 7], [36, 33], [8, 33]];
-      var mods = chip.modIds;
-      for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
-        var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
-        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
-      }
-      html += '</svg>';
+
+      /* chip icon SVG — composed of 3 sub-triangles */
+      html += chipSvgComposed(44, 40, borderColor, chip.modIds, 'chipUpgradeCard__icon', 2.5);
 
       /* name */
       var chipName = chip.sourceComboKey;
-      if (h && mods.length) {
+      if (h && chip.modIds.length) {
         var names = [];
-        for (var ni = 0; ni < mods.length; ni++) names.push(modName(mods[ni]));
+        for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
         chipName = names.join('+');
       }
       html += '<span class="chipUpgradeCard__name" title="' + chipName + '">' + chipName + '</span>';
@@ -1332,14 +1443,14 @@
       switchHangarTab('workshop');
       return;
     }
+    if (tgt.id === 'hangarTabTechUnlock' || tgt.closest && tgt.closest('#hangarTabTechUnlock')) {
+      switchHangarTab('techUnlock');
+      return;
+    }
 
     /* workshop sub-tab buttons */
     if (tgt.id === 'workshopTabChipUpgrade' || tgt.closest && tgt.closest('#workshopTabChipUpgrade')) {
       switchWorkshopSubTab('chipUpgrade');
-      return;
-    }
-    if (tgt.id === 'workshopTabTechUnlock' || tgt.closest && tgt.closest('#workshopTabTechUnlock')) {
-      switchWorkshopSubTab('techUnlock');
       return;
     }
 
@@ -1525,15 +1636,7 @@
           for (var ci = 0; ci < chip.count; ci++) {
             html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
             html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
-            html += '<svg viewBox="0 0 40 36" class="techAccelChip__icon">' +
-              '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
-            var vx = [[20, 6], [34, 31], [6, 31]];
-            var mods = chip.modIds;
-            for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
-              var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
-              html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
-            }
-            html += '</svg>';
+            html += chipSvgComposed(40, 36, borderColor, chip.modIds, 'techAccelChip__icon', 2.5);
             html += '<span class="techAccelChip__label">' + chip.sourceComboKey + ' Ур.' + chip.level + '</span>';
             html += '</div>';
           }
@@ -1695,11 +1798,33 @@
   /* ─── Chip Crafting Panel (Создание чипов) ─────────────── */
 
   var _craftSlots = [null, null, null]; // 3 slots for fragments or 1 slot for whole chip
-  var _craftMode = null; // 'disassemble' | 'assemble' | null
+  var _craftMode = 'assemble'; // 'disassemble' | 'assemble' — always one of two
+  var _dustMode = false;       // true when "Распылить" flow is active
+  var _dustSelected = {};      // { 'chip_<chipId>_<level>': count, 'frag_<fragId>': count }
+  var _siliconDust = 0;        // player's silicon dust resource
+
+  var DUST_PER_CHIP = 10;
+  var DUST_PER_FRAGMENT = 3;
 
   function _resetCraftSlots() {
     _craftSlots = [null, null, null];
-    _craftMode = null;
+  }
+
+  function _resetDustMode() {
+    _dustMode = false;
+    _dustSelected = {};
+  }
+
+  function _calcDustTotal() {
+    var total = 0;
+    var keys = Object.keys(_dustSelected);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var cnt = _dustSelected[k] || 0;
+      if (k.indexOf('chip_') === 0) total += cnt * DUST_PER_CHIP;
+      else if (k.indexOf('frag_') === 0) total += cnt * DUST_PER_FRAGMENT;
+    }
+    return total;
   }
 
   /** Detect craft mode based on current slot contents */
@@ -1717,26 +1842,9 @@
     return null;
   }
 
-  /** Draw a fragment SVG icon (kite/diamond shape — top portion of a triangle) */
+  /** Draw a fragment SVG icon — small upward triangle */
   function _fragmentSvg(modId, size, strokeColor) {
-    var w = size || 40;
-    var h = Math.round(w * 1.2);
-    var sc = strokeColor || '#e53935';
-    var hc2 = hc();
-    var isSpec = hc2 && hc2.isSpecialMod(modId);
-    var fillDot = isSpec ? '#fdd835' : '#e53935';
-    // Kite shape: top vertex, left, bottom, right
-    var cx2 = w / 2;
-    var top = 2;
-    var bot = h - 2;
-    var mid = h * 0.45;
-    var left = 3;
-    var right = w - 3;
-    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" class="chipFragmentIcon">' +
-      '<polygon points="' + cx2 + ',' + top + ' ' + right + ',' + mid + ' ' + cx2 + ',' + bot + ' ' + left + ',' + mid + '" ' +
-      'fill="rgba(80,80,80,0.12)" stroke="' + sc + '" stroke-width="2"/>' +
-      '<circle cx="' + cx2 + '" cy="' + (top + 6) + '" r="3.5" fill="' + fillDot + '"/>' +
-      '</svg>';
+    return _fragmentSvgUp(modId, size, strokeColor);
   }
 
   /** Render the chip crafting panel */
@@ -1746,16 +1854,13 @@
     var h = hc();
     if (!h) { panel.innerHTML = '<div class="chipUpgradeEmptyLabel">Модуль не загружен</div>'; return; }
 
-    _craftMode = _detectCraftMode();
-
     var html = '<div class="chipCraftLayout">';
 
     /* ── Left column: Inventory of fragments + whole chips ── */
     html += '<div class="chipCraftInventory">';
-    html += '<div class="chipCraftInvHeader">' + t('chipCraftInventoryTitle', 'Распылить') + '</div>';
     html += '<div class="chipCraftInvGrid">';
 
-    /* Show whole chips (for disassembling) */
+    /* Show whole chips */
     var playerChips = ensurePlayerChips();
     for (var ci = 0; ci < playerChips.length; ci++) {
       var pc = playerChips[ci];
@@ -1767,18 +1872,20 @@
         for (var ni = 0; ni < pc.modIds.length; ni++) names.push(modName(pc.modIds[ni]));
         chipName = names.join('+');
       }
-      // Truncate name for display
       var displayName = chipName.length > 14 ? chipName.substring(0, 12) + '..' : chipName;
-      html += '<div class="chipCraftInvItem" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" ' +
+      var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
+      var dustSel = _dustSelected[dustKey] || 0;
+      html += '<div class="chipCraftInvItem' + (_dustMode && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
+        '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" ' +
         'title="' + chipName + ' (Ур.' + pc.level + ', ×' + pc.count + ')">';
-      html += '<svg viewBox="0 0 40 36" class="chipCraftInvIcon">' +
-        '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
-      var vx = [[20, 6], [34, 31], [6, 31]];
-      for (var vi = 0; vi < 3 && vi < pc.modIds.length; vi++) {
-        var mc = (h && h.isSpecialMod(pc.modIds[vi])) ? '#fdd835' : '#e53935';
-        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+      if (_dustMode) {
+        html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
+          (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
+        if (dustSel > 0 && pc.count > 1) {
+          html += '<span class="chipCraftDustCount">' + dustSel + '/' + pc.count + '</span>';
+        }
       }
-      html += '</svg>';
+      html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
       html += '<span class="chipCraftInvLabel">' + displayName + '</span>';
       html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
       html += '</div>';
@@ -1792,14 +1899,21 @@
       var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
       var fragName = modName(frag.fragmentId);
       var fragDisplayName = fragName.length > 14 ? fragName.substring(0, 12) + '..' : fragName;
-      html += '<div class="chipCraftInvItem chipCraftInvItem--fragment" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '" ' +
+      var dustKeyF = 'frag_' + frag.fragmentId;
+      var dustSelF = _dustSelected[dustKeyF] || 0;
+      html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (_dustMode && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') +
+        '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '" ' +
         'title="' + fragName + ' (×' + frag.count + ')">';
-      html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
+      if (_dustMode) {
+        html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyF + '" data-dust-type="fragment" data-dust-max="' + frag.count + '"' +
+          (dustSelF > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
+        if (dustSelF > 0 && frag.count > 1) {
+          html += '<span class="chipCraftDustCount">' + dustSelF + '/' + frag.count + '</span>';
+        }
+      }
+      html += _fragmentSvg(frag.fragmentId, 22, fragStroke);
       html += '<span class="chipCraftInvLabel">' + fragDisplayName + '</span>';
       html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
-      if (frag.count > 1) {
-        html += '<span class="chipCraftInvCount" style="color:#fdd835;font-size:9px">Перетащите для слияния</span>';
-      }
       html += '</div>';
     }
 
@@ -1808,72 +1922,89 @@
     }
 
     html += '</div>'; // chipCraftInvGrid
-    html += '</div>'; // chipCraftInventory
 
-    /* ── Right column: Craft preview area + action button ── */
-    html += '<div class="chipCraftPreview">';
-
-    /* Preview area (the "yellow outlined" drop zone from screenshot) */
-    html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
-    var hasContent = false;
-    for (var si = 0; si < 3; si++) {
-      if (_craftSlots[si]) { hasContent = true; break; }
-    }
-    if (hasContent) {
-      html += '<div class="chipCraftSlotRow">';
-      for (var sj = 0; sj < 3; sj++) {
-        var slot = _craftSlots[sj];
-        html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '">';
-        if (slot) {
-          if (slot.type === 'chip') {
-            var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
-            html += '<svg viewBox="0 0 60 54" class="chipCraftSlotIcon">' +
-              '<polygon points="30,4 56,50 4,50" fill="none" stroke="' + sc + '" stroke-width="3"/>';
-            for (var svi = 0; svi < 3 && svi < slot.modIds.length; svi++) {
-              var sVx = [[30, 9], [50, 45], [10, 45]];
-              var sMc = (h && h.isSpecialMod(slot.modIds[svi])) ? '#fdd835' : '#e53935';
-              html += '<circle cx="' + sVx[svi][0] + '" cy="' + sVx[svi][1] + '" r="5" fill="' + sMc + '"/>';
-            }
-            html += '</svg>';
-          } else if (slot.type === 'fragment') {
-            var fSc = (h && h.isSpecialMod(slot.fragmentId)) ? '#fdd835' : '#e53935';
-            html += _fragmentSvg(slot.fragmentId, 50, fSc);
-          }
-          html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj + '" type="button">×</button>';
-        } else {
-          html += '<div class="chipCraftSlotEmpty">+</div>';
-        }
-        html += '</div>';
-      }
+    /* ── Bottom bar below inventory: dust controls + silicon dust display ── */
+    html += '<div class="chipCraftBottomBar">';
+    html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
+    if (_dustMode) {
+      html += '<div class="chipCraftDustActions">';
+      html += '<button class="btn scButton chipCraftDustConfirmBtn" id="chipCraftDustConfirm" type="button">' + t('chipCraftDustConfirm', 'Подтвердить') + '</button>';
+      html += '<button class="btn scButton chipCraftDustCancelBtn" id="chipCraftDustCancel" type="button">' + t('chipCraftDustCancel', 'Отменить') + '</button>';
+      var dustTotal = _calcDustTotal();
+      html += '<span class="chipCraftDustTotal" id="chipCraftDustTotal">' +
+        t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', dustTotal) + '</span>';
       html += '</div>';
     } else {
-      /* Empty preview: show placeholder image (triangle outline) */
-      html += '<div class="chipCraftEmptyPreview">';
-      html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
-        '<polygon points="60,8 112,100 8,100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6,3"/>' +
-        '<line x1="60" y1="8" x2="60" y2="66" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
-        '<line x1="60" y1="66" x2="24" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
-        '<line x1="60" y1="66" x2="96" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
-        '</svg>';
-      html += '<span class="chipCraftPlaceholderText">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
-      html += '</div>';
+      html += '<button class="btn scButton chipCraftDustBtn" id="chipCraftDustBtn" type="button">' + t('chipCraftDustBtn', 'Распылить') + '</button>';
     }
-    html += '</div>'; // chipCraftDropZone
+    html += '</div>'; // chipCraftBottomBar
 
-    /* Action button */
-    var btnLabel = t('chipCraftButton', 'Кнопка');
-    var btnDisabled = true;
-    if (_craftMode === 'disassemble') {
-      btnLabel = t('chipCraftDisassemble', 'Разобрать');
-      btnDisabled = false;
-    } else if (_craftMode === 'assemble') {
-      btnLabel = t('chipCraftAssemble', 'Создать чип');
-      btnDisabled = false;
+    html += '</div>'; // chipCraftInventory
+
+    /* ── Right column: Craft preview area (hidden in dust mode) ── */
+    if (!_dustMode) {
+      html += '<div class="chipCraftPreview">';
+
+      html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
+      var hasContent = false;
+      for (var si = 0; si < 3; si++) {
+        if (_craftSlots[si]) { hasContent = true; break; }
+      }
+      if (hasContent) {
+        html += '<div class="chipCraftSlotRow">';
+        for (var sj = 0; sj < 3; sj++) {
+          var slot = _craftSlots[sj];
+          html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '">';
+          if (slot) {
+            if (slot.type === 'chip') {
+              var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
+              html += chipSvgComposed(60, 54, sc, slot.modIds, 'chipCraftSlotIcon', 3);
+            } else if (slot.type === 'fragment') {
+              var fSc = (h && h.isSpecialMod(slot.fragmentId)) ? '#fdd835' : '#e53935';
+              html += _fragmentSvg(slot.fragmentId, 50, fSc);
+            }
+            html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj + '" type="button">×</button>';
+          } else {
+            html += '<div class="chipCraftSlotEmpty">+</div>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+      } else {
+        html += '<div class="chipCraftEmptyPreview">';
+        html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
+          '<polygon points="60,8 112,100 8,100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6,3"/>' +
+          '<line x1="60" y1="8" x2="60" y2="66" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+          '<line x1="60" y1="66" x2="24" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+          '<line x1="60" y1="66" x2="96" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+          '</svg>';
+        html += '<span class="chipCraftPlaceholderText">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
+        html += '</div>';
+      }
+      html += '</div>'; // chipCraftDropZone
+
+      /* ── Mode toggle buttons (below drop zone) ── */
+      html += '<div class="chipCraftModeRow">';
+      html += '<button class="btn scButton chipCraftModeBtn' + (_craftMode === 'disassemble' ? ' chipCraftModeBtn--active' : '') +
+        '" data-craft-mode-btn="disassemble" type="button">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
+      html += '<button class="btn scButton chipCraftModeBtn' + (_craftMode === 'assemble' ? ' chipCraftModeBtn--active' : '') +
+        '" data-craft-mode-btn="assemble" type="button">' + t('chipCraftAssemble', 'Создать чип') + '</button>';
+      html += '</div>'; // chipCraftModeRow
+
+      /* Execute action button — contextual based on slot contents */
+      var slotMode = _detectCraftMode();
+      var canExec = (slotMode === 'disassemble' || slotMode === 'assemble');
+      var execLabel = slotMode === 'disassemble'
+        ? t('chipCraftDisassemble', 'Разобрать')
+        : slotMode === 'assemble'
+          ? t('chipCraftAssemble', 'Создать чип')
+          : (_craftMode === 'disassemble' ? t('chipCraftDisassemble', 'Разобрать') : t('chipCraftAssemble', 'Создать чип'));
+      html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
+        '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
+
+      html += '</div>'; // chipCraftPreview
     }
-    html += '<button class="btn scButton chipCraftActionBtn' + (btnDisabled ? ' chipCraftActionBtn--disabled' : '') + '" id="chipCraftActionBtn" type="button" ' +
-      (btnDisabled ? 'disabled' : '') + '>' + btnLabel + '</button>';
 
-    html += '</div>'; // chipCraftPreview
     html += '</div>'; // chipCraftLayout
 
     panel.innerHTML = html;
@@ -1883,53 +2014,114 @@
   }
 
   function _attachCraftPanelEvents(panel) {
-    /* Click on inventory item → add to craft slot */
-    var invItems = panel.querySelectorAll('.chipCraftInvItem');
-    for (var i = 0; i < invItems.length; i++) {
-      invItems[i].addEventListener('click', function (evt) {
-        var item = evt.currentTarget;
-        var srcType = item.getAttribute('data-craft-src');
-        if (srcType === 'chip') {
-          // Only one whole chip in slot 0
-          var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
-          var chipLevel = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
-          /* Find chip in inventory */
-          var chips = ensurePlayerChips();
-          var chipEntry = null;
-          for (var ci = 0; ci < chips.length; ci++) {
-            if (chips[ci].chipId === chipId && chips[ci].level === chipLevel && chips[ci].count > 0) {
-              chipEntry = chips[ci]; break;
-            }
-          }
-          if (!chipEntry) return;
-          /* Check if slot is already occupied by something else */
-          var hasFrags = _craftSlots.some(function (s) { return s && s.type === 'fragment'; });
-          if (hasFrags) {
-            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftClearFirst', 'Сначала очистите слоты от фрагментов'), 1500);
-            return;
-          }
-          _craftSlots = [{ type: 'chip', chipId: chipEntry.chipId, chipColor: chipEntry.chipColor, modIds: chipEntry.modIds.slice(), sourceComboKey: chipEntry.sourceComboKey, level: chipEntry.level }, null, null];
-        } else if (srcType === 'fragment') {
-          var fragId = parseInt(item.getAttribute('data-craft-frag-id'), 10);
-          /* Check if slot has a whole chip */
-          var hasChip = _craftSlots.some(function (s) { return s && s.type === 'chip'; });
-          if (hasChip) {
-            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftClearChipFirst', 'Сначала уберите целый чип'), 1500);
-            return;
-          }
-          /* Find empty slot */
-          var emptyIdx = -1;
-          for (var si = 0; si < 3; si++) {
-            if (!_craftSlots[si]) { emptyIdx = si; break; }
-          }
-          if (emptyIdx === -1) {
-            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftSlotsFull', 'Все 3 слота заняты'), 1500);
-            return;
-          }
-          _craftSlots[emptyIdx] = { type: 'fragment', fragmentId: fragId };
-        }
+
+    /* ── Dust mode buttons ── */
+    var dustBtn = el('chipCraftDustBtn');
+    if (dustBtn) {
+      dustBtn.addEventListener('click', function () {
+        _dustMode = true;
+        _dustSelected = {};
         renderChipCraftPanel();
       });
+    }
+    var dustConfirm = el('chipCraftDustConfirm');
+    if (dustConfirm) {
+      dustConfirm.addEventListener('click', function () {
+        _executeDust();
+      });
+    }
+    var dustCancel = el('chipCraftDustCancel');
+    if (dustCancel) {
+      dustCancel.addEventListener('click', function () {
+        _resetDustMode();
+        renderChipCraftPanel();
+      });
+    }
+
+    /* ── Dust checkboxes ── */
+    var dustChecks = panel.querySelectorAll('[data-dust-key]');
+    for (var di = 0; di < dustChecks.length; di++) {
+      dustChecks[di].addEventListener('change', function (evt) {
+        var cb = evt.target;
+        var key = cb.getAttribute('data-dust-key');
+        var maxQ = parseInt(cb.getAttribute('data-dust-max'), 10) || 1;
+        if (cb.checked) {
+          _dustSelected[key] = maxQ; // select all available
+        } else {
+          delete _dustSelected[key];
+        }
+        /* Update total display */
+        var totalEl = el('chipCraftDustTotal');
+        if (totalEl) {
+          totalEl.textContent = t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', _calcDustTotal());
+        }
+        /* Update visual highlight */
+        var item = cb.closest('.chipCraftInvItem');
+        if (item) {
+          if (cb.checked) item.classList.add('chipCraftInvItem--dustSelected');
+          else item.classList.remove('chipCraftInvItem--dustSelected');
+        }
+      });
+    }
+
+    /* ── Mode toggle buttons ── */
+    var modeBtns = panel.querySelectorAll('[data-craft-mode-btn]');
+    for (var mi = 0; mi < modeBtns.length; mi++) {
+      modeBtns[mi].addEventListener('click', function (evt) {
+        var newMode = evt.currentTarget.getAttribute('data-craft-mode-btn');
+        if (newMode === _craftMode) return;
+        _craftMode = newMode;
+        _resetCraftSlots();
+        renderChipCraftPanel();
+      });
+    }
+
+    /* ── Click on inventory item → add to craft slot (only when NOT in dust mode) ── */
+    if (!_dustMode) {
+      var invItems = panel.querySelectorAll('.chipCraftInvItem');
+      for (var i = 0; i < invItems.length; i++) {
+        invItems[i].addEventListener('click', function (evt) {
+          /* Skip if click was on a checkbox */
+          if (evt.target.tagName === 'INPUT') return;
+          var item = evt.currentTarget;
+          var srcType = item.getAttribute('data-craft-src');
+          if (_craftMode === 'disassemble' && srcType === 'chip') {
+            var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
+            var chipLevel = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
+            var chips = ensurePlayerChips();
+            var chipEntry = null;
+            for (var ci = 0; ci < chips.length; ci++) {
+              if (chips[ci].chipId === chipId && chips[ci].level === chipLevel && chips[ci].count > 0) {
+                chipEntry = chips[ci]; break;
+              }
+            }
+            if (!chipEntry) return;
+            _craftSlots = [{ type: 'chip', chipId: chipEntry.chipId, chipColor: chipEntry.chipColor, modIds: chipEntry.modIds.slice(), sourceComboKey: chipEntry.sourceComboKey, level: chipEntry.level }, null, null];
+          } else if (_craftMode === 'assemble' && srcType === 'fragment') {
+            var fragId = parseInt(item.getAttribute('data-craft-frag-id'), 10);
+            var hasChip = _craftSlots.some(function (s) { return s && s.type === 'chip'; });
+            if (hasChip) return;
+            var emptyIdx = -1;
+            for (var si = 0; si < 3; si++) {
+              if (!_craftSlots[si]) { emptyIdx = si; break; }
+            }
+            if (emptyIdx === -1) {
+              if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftSlotsFull', 'Все 3 слота заняты'), 1500);
+              return;
+            }
+            _craftSlots[emptyIdx] = { type: 'fragment', fragmentId: fragId };
+          } else {
+            /* Wrong mode for this item type */
+            if (srcType === 'chip' && _craftMode === 'assemble') {
+              if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftSwitchToDisassemble', 'Переключитесь в режим «Разобрать»'), 1500);
+            } else if (srcType === 'fragment' && _craftMode === 'disassemble') {
+              if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftSwitchToAssemble', 'Переключитесь в режим «Создать чип»'), 1500);
+            }
+            return;
+          }
+          renderChipCraftPanel();
+        });
+      }
     }
 
     /* Click on slot remove button → remove from slot */
@@ -1950,6 +2142,38 @@
         _executeCraftAction();
       });
     }
+  }
+
+  /** Execute dust conversion: destroy selected items, gain silicon dust */
+  function _executeDust() {
+    var keys = Object.keys(_dustSelected);
+    if (!keys.length) {
+      if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftDustNoneSelected', 'Выберите хотя бы один элемент'), 1500);
+      return;
+    }
+    var totalDust = _calcDustTotal();
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var cnt = _dustSelected[k];
+      if (k.indexOf('chip_') === 0) {
+        var parts = k.split('_');
+        var cId = parseInt(parts[1], 10);
+        var cLvl = parseInt(parts[2], 10) || 1;
+        for (var cc = 0; cc < cnt; cc++) {
+          removePlayerChipOne(cId, cLvl);
+        }
+      } else if (k.indexOf('frag_') === 0) {
+        var fId = parseInt(k.split('_')[1], 10);
+        removePlayerFragment(fId, cnt);
+      }
+    }
+    _siliconDust += totalDust;
+    if (global.Game && global.Game.Toast) {
+      global.Game.Toast.show(t('chipCraftDustGained', 'Получено кремниевой пыли: {amount}').replace('{amount}', totalDust), 2000);
+    }
+    _resetDustMode();
+    renderChipCraftPanel();
+    renderChipUpgradeGrid();
   }
 
   /** Execute the craft action (disassemble or assemble) */
@@ -2096,8 +2320,52 @@
         if (!slotPoly) _hideSlotChipTooltip();
       });
 
-      /* ─── Chip drag-and-drop for merge ───────────────────── */
+      /* ─── Chip drag-and-drop (merge + install into slots) ──── */
+      var _slotDragging = null; // { chipId, level, chipColor, startX, startY, ghostEl, sourceEl }
+
       overlay.addEventListener('pointerdown', function(evt) {
+        /* Check for chip button in inventory (for slot installation) */
+        var chipBtn = evt.target.closest ? evt.target.closest('[data-chip-id]') : null;
+        if (chipBtn && !evt.target.closest('[data-drag-chip-id]')) {
+          var sid = parseInt(chipBtn.getAttribute('data-chip-id'), 10);
+          var slvl = parseInt(chipBtn.getAttribute('data-chip-level'), 10) || 1;
+          if (!Number.isFinite(sid)) return;
+
+          var chips2 = ensurePlayerChips();
+          var invE = null;
+          for (var ii = 0; ii < chips2.length; ii++) {
+            if (chips2[ii].chipId === sid && chips2[ii].level === slvl && chips2[ii].count > 0) {
+              invE = chips2[ii]; break;
+            }
+          }
+          if (!invE) return;
+
+          evt.preventDefault();
+          var ghost2 = _doc.createElement('div');
+          ghost2.className = 'chipDragGhost';
+          ghost2.innerHTML = chipBtn.innerHTML;
+          ghost2.style.position = 'fixed';
+          ghost2.style.left = evt.clientX + 'px';
+          ghost2.style.top = evt.clientY + 'px';
+          ghost2.style.pointerEvents = 'none';
+          ghost2.style.zIndex = '99999';
+          ghost2.style.opacity = '0.85';
+          ghost2.style.transform = 'translate(-50%, -50%) scale(1.1)';
+          _doc.body.appendChild(ghost2);
+
+          _slotDragging = {
+            chipId: sid,
+            level: slvl,
+            chipColor: invE.chipColor,
+            startX: evt.clientX,
+            startY: evt.clientY,
+            moved: false,
+            ghostEl: ghost2,
+            sourceEl: chipBtn
+          };
+          return;
+        }
+
         var card = evt.target.closest ? evt.target.closest('[data-drag-chip-id]') : null;
         if (!card) return;
         var chipId = parseInt(card.getAttribute('data-drag-chip-id'), 10);
@@ -2144,6 +2412,32 @@
       });
 
       overlay.addEventListener('pointermove', function(evt) {
+        /* Handle slot-install drag */
+        if (_slotDragging) {
+          var sdx = evt.clientX - _slotDragging.startX;
+          var sdy = evt.clientY - _slotDragging.startY;
+          if (Math.abs(sdx) + Math.abs(sdy) > 6) _slotDragging.moved = true;
+          if (_slotDragging.ghostEl) {
+            _slotDragging.ghostEl.style.left = evt.clientX + 'px';
+            _slotDragging.ghostEl.style.top = evt.clientY + 'px';
+          }
+          /* Highlight slot polygons */
+          var allPolys = overlay.querySelectorAll('[data-slot-type]');
+          for (var pi = 0; pi < allPolys.length; pi++) {
+            var poly = allPolys[pi];
+            var sr = poly.getBoundingClientRect();
+            var hit2 = evt.clientX >= sr.left && evt.clientX <= sr.right &&
+                       evt.clientY >= sr.top && evt.clientY <= sr.bottom;
+            if (hit2 && poly.getAttribute('data-slot-type') === _slotDragging.chipColor) {
+              poly.style.filter = 'brightness(1.5)';
+              poly.style.strokeWidth = '4';
+            } else {
+              poly.style.filter = '';
+              poly.style.strokeWidth = '';
+            }
+          }
+          return;
+        }
         if (!_chipDragging) return;
         _chipDragging.x = evt.clientX;
         _chipDragging.y = evt.clientY;
@@ -2174,6 +2468,79 @@
       });
 
       overlay.addEventListener('pointerup', function(evt) {
+        /* Handle slot-install drop */
+        if (_slotDragging) {
+          var sd = _slotDragging;
+          _slotDragging = null;
+          if (sd.ghostEl && sd.ghostEl.parentNode) sd.ghostEl.parentNode.removeChild(sd.ghostEl);
+          /* Reset polygon styles */
+          var allPolys2 = overlay.querySelectorAll('[data-slot-type]');
+          for (var pi2 = 0; pi2 < allPolys2.length; pi2++) {
+            allPolys2[pi2].style.filter = '';
+            allPolys2[pi2].style.strokeWidth = '';
+          }
+          if (!sd.moved) return;
+
+          /* Find slot under pointer */
+          var hitEl = _doc.elementFromPoint(evt.clientX, evt.clientY);
+          var slotPoly = hitEl ? (hitEl.closest ? hitEl.closest('[data-slot-type]') : null) : null;
+          if (!slotPoly) return;
+
+          var slotType = slotPoly.getAttribute('data-slot-type');
+          var slotId = slotPoly.getAttribute('data-slot-id');
+          if (slotType !== sd.chipColor) {
+            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('hangarChipsColorMismatch', 'Цвет чипа не совпадает со слотом'), 1500);
+            return;
+          }
+
+          var cells = ensureCells();
+          var cell = cells[_selectedCell];
+          if (!cell) return;
+
+          /* Check if yellow locked */
+          if (slotType === 'yellow' && cell.uiState.yellowLocked && cell.uiState.activeYellowSlotId !== slotId) {
+            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('hangarChipsYellowLocked', 'Можно установить только 1 жёлтый чип'), 1500);
+            return;
+          }
+
+          var h2 = hc();
+          if (!h2) return;
+
+          /* If slot occupied, return existing chip to inventory */
+          var existingChip = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
+          if (existingChip) {
+            var existDef = h2.getChipById(h2.allChips, existingChip.chipId);
+            if (existDef) {
+              addPlayerChip({
+                chipId: existDef.chipId,
+                chipColor: existDef.chipColor,
+                modIds: existingChip.modIds || existDef.modIds,
+                sourceComboKey: existingChip.sourceComboKey || existDef.sourceComboKey
+              }, existingChip.level || 1);
+            }
+            h2.removeChip(cell, slotType, slotId);
+          }
+
+          /* Install new chip */
+          var chipDef = h2.getChipById(h2.allChips, sd.chipId);
+          if (!chipDef) return;
+          var chips3 = ensurePlayerChips();
+          var invE2 = null;
+          for (var i3 = 0; i3 < chips3.length; i3++) {
+            if (chips3[i3].chipId === sd.chipId && chips3[i3].level === sd.level && chips3[i3].count > 0) {
+              invE2 = chips3[i3]; break;
+            }
+          }
+          if (!invE2) return;
+          var ok2 = h2.installChip(cell, slotType, slotId, chipDef, sd.level, invE2.modIds);
+          if (ok2) {
+            removePlayerChipOne(sd.chipId, sd.level);
+            _selectedSlot = null;
+            render();
+          }
+          return;
+        }
+
         if (!_chipDragging) return;
         var drag = _chipDragging;
         _chipDragging = null;
@@ -2219,6 +2586,15 @@
       });
 
       overlay.addEventListener('pointerleave', function() {
+        if (_slotDragging) {
+          if (_slotDragging.ghostEl && _slotDragging.ghostEl.parentNode) _slotDragging.ghostEl.parentNode.removeChild(_slotDragging.ghostEl);
+          var allPolys3 = overlay.querySelectorAll('[data-slot-type]');
+          for (var pi3 = 0; pi3 < allPolys3.length; pi3++) {
+            allPolys3[pi3].style.filter = '';
+            allPolys3[pi3].style.strokeWidth = '';
+          }
+          _slotDragging = null;
+        }
         if (_chipDragging) {
           if (_chipDragging.ghostEl && _chipDragging.ghostEl.parentNode) {
             _chipDragging.ghostEl.parentNode.removeChild(_chipDragging.ghostEl);
@@ -2357,6 +2733,8 @@
     addPlayerFragment: addPlayerFragment,
     removePlayerFragment: removePlayerFragment,
     getFragmentCount: getFragmentCount,
+    getSiliconDust: function () { return _siliconDust; },
+    setSiliconDust: function (v) { _siliconDust = (typeof v === 'number' && v >= 0) ? v : 0; },
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,

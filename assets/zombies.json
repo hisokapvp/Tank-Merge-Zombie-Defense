@@ -1,13 +1,31 @@
 {
   "atlas": "zombie_atlas.png",
-  "deathCommon": {
-    "x": 0,
-    "y": 384,
-    "w": 191,
-    "h": 204,
-    "frames": 15,
-    "frameRateFps": 10
-  },
+  "deathCommon": [
+    {
+      "x": 0,
+      "y": 384,
+      "w": 191,
+      "h": 204,
+      "frames": 15,
+      "frameRateFps": 10
+    },
+    {
+      "x": 0,
+      "y": 589,
+      "w": 84,
+      "h": 126,
+      "frames": 11,
+      "frameRateFps": 5
+    },
+    {
+      "x": 0,
+      "y": 715,
+      "w": 47,
+      "h": 74,
+      "frames": 11,
+      "frameRateFps": 10
+    }
+  ],
   "spawn": {
     "targetAlive": 240,
     "sideCount": 4,

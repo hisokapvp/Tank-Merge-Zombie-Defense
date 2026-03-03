@@ -3374,6 +3374,12 @@ input, select, textarea, button {
   width:40px;
   height:36px;
 }
+/* Highlight chips that can create a match */
+.hangarChipBtn--canMatch{
+  border-color:rgba(74,246,38,.6) !important;
+  background:rgba(74,246,38,.12) !important;
+  box-shadow:0 0 6px rgba(74,246,38,.35);
+}
 .hangarChipBtn__key{
   font-size:9px;
   color:rgba(255,255,255,.45);
@@ -4005,6 +4011,7 @@ input, select, textarea, button {
 .chipCraftInvGrid::-webkit-scrollbar-track{background:rgba(0,0,0,.2);border-radius:3px}
 .chipCraftInvGrid::-webkit-scrollbar-thumb{background:#4af626;border-radius:3px}
 .chipCraftInvItem{
+  position:relative;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -4148,6 +4155,170 @@ input, select, textarea, button {
   color:rgba(255,255,255,.3);
   background:rgba(40,36,32,.4);
   cursor:not-allowed;
+}
+
+/* ─── Craft Bottom Bar (dust controls below inventory) ─── */
+.chipCraftBottomBar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px;
+  flex-wrap:wrap;
+  border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(20,18,14,.4);
+}
+.chipCraftDustActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.chipCraftDustBtn{
+  padding:6px 14px;
+  font-size:11px;
+  border:2px solid #ff9800;
+  color:#ff9800;
+  background:rgba(255,152,0,.08);
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'Press Start 2P',monospace;
+  text-transform:uppercase;
+  margin-left:auto;
+}
+.chipCraftDustBtn:hover{
+  background:rgba(255,152,0,.2);
+}
+.chipCraftDustConfirmBtn{
+  padding:6px 14px;
+  font-size:11px;
+  border:2px solid #4af626;
+  color:#4af626;
+  background:rgba(74,246,38,.08);
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'Press Start 2P',monospace;
+  text-transform:uppercase;
+}
+.chipCraftDustConfirmBtn:hover{
+  background:rgba(74,246,38,.2);
+}
+.chipCraftDustCancelBtn{
+  padding:6px 14px;
+  font-size:11px;
+  border:2px solid #e53935;
+  color:#e53935;
+  background:rgba(229,57,53,.08);
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'Press Start 2P',monospace;
+  text-transform:uppercase;
+}
+.chipCraftDustCancelBtn:hover{
+  background:rgba(229,57,53,.2);
+}
+.chipCraftDustTotal{
+  color:#ff9800;
+  font-size:11px;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftDustResource{
+  margin-left:auto;
+  color:#b0bec5;
+  font-size:11px;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftDustResource b{
+  color:#ff9800;
+}
+
+/* ─── Mode toggle row ─── */
+.chipCraftModeRow{
+  display:flex;
+  gap:8px;
+  padding:4px 0 8px;
+}
+.chipCraftModeBtn{
+  flex:1;
+  padding:8px 12px;
+  font-size:12px;
+  border:2px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.5);
+  background:rgba(40,36,32,.4);
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'Press Start 2P',monospace;
+  text-transform:uppercase;
+  transition:border-color .15s,color .15s,background .15s;
+}
+.chipCraftModeBtn:hover{
+  border-color:rgba(255,255,255,.4);
+  color:rgba(255,255,255,.7);
+}
+.chipCraftModeBtn--active{
+  border-color:#4af626;
+  color:#4af626;
+  background:rgba(74,246,38,.1);
+}
+
+/* ─── Dust checkbox (game-styled) ─── */
+.chipCraftDustCheck{
+  position:absolute;
+  top:4px;
+  left:4px;
+  z-index:2;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.chipCraftDustCheck input[type="checkbox"]{
+  position:absolute;
+  opacity:0;
+  width:0;
+  height:0;
+  pointer-events:none;
+}
+.chipCraftDustCheckmark{
+  display:inline-block;
+  width:16px;
+  height:16px;
+  border:2px solid rgba(255,152,0,.6);
+  border-radius:3px;
+  background:rgba(30,28,24,.8);
+  transition:border-color .12s, background .12s;
+  position:relative;
+}
+.chipCraftDustCheck:hover .chipCraftDustCheckmark{
+  border-color:#ff9800;
+  background:rgba(255,152,0,.1);
+}
+.chipCraftDustCheck input[type="checkbox"]:checked + .chipCraftDustCheckmark{
+  border-color:#ff9800;
+  background:rgba(255,152,0,.15);
+}
+.chipCraftDustCheck input[type="checkbox"]:checked + .chipCraftDustCheckmark::after{
+  content:'';
+  position:absolute;
+  left:3px;
+  top:0;
+  width:6px;
+  height:10px;
+  border:solid #ff9800;
+  border-width:0 2px 2px 0;
+  transform:rotate(45deg);
+}
+.chipCraftDustCount{
+  position:absolute;
+  top:4px;
+  right:4px;
+  font-size:9px;
+  color:#ff9800;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftInvItem--dustSelected{
+  border-color:#ff9800 !important;
+  background:rgba(255,152,0,.12) !important;
+  box-shadow:0 0 6px rgba(255,152,0,.3);
 }
 
 /* ─── Chip Fragment Icon ─── */

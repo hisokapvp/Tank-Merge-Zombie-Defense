@@ -5430,7 +5430,11 @@ function getZombieAnimConfig(z){
   const cfg = type && type.animations && typeof type.animations === 'object' ? type.animations : null;
   const deathCommonFps = Number.isFinite(cfg?.deathCommon?.frameRateFps)
     ? cfg.deathCommon.frameRateFps
-    : (Number.isFinite(ZombieSprites?.deathCommon?.frameRateFps) ? ZombieSprites.deathCommon.frameRateFps : ZOMBIE_DEFAULT_DEATH_FPS);
+    : (function() {
+        var dc = ZombieSprites?.deathCommon;
+        if (Array.isArray(dc) && dc.length) dc = dc[0];
+        return Number.isFinite(dc?.frameRateFps) ? dc.frameRateFps : ZOMBIE_DEFAULT_DEATH_FPS;
+      })();
   return {
     walkFps: Number.isFinite(cfg?.walk?.frameRateFps) ? cfg.walk.frameRateFps : ZOMBIE_DEFAULT_WALK_FPS,
     attackFps: Number.isFinite(cfg?.attack?.frameRateFps) ? cfg.attack.frameRateFps : ZOMBIE_DEFAULT_ATTACK_FPS,
@@ -5792,14 +5796,26 @@ function startZombieDying(z){
   const commonDeath = ZombieSprites.deathCommon || null;
   const pickDeathAnim = Game?.Combat?.pickDeathAnim || function(c, p, r) {
     // Inline fallback if Combat module not loaded
-    if (p && c) return r < 0.7 ? p : c;
-    return p || c || null;
+    var rc = c;
+    if (Array.isArray(c)) rc = c.length ? c[Math.floor(Math.random() * c.length)] : null;
+    if (p && rc) return r < 0.7 ? p : rc;
+    return p || rc || null;
   };
   z.deathAnim = pickDeathAnim(commonDeath, personalDeath, Math.random());
   
   z.deathFrame = 0; // current frame of death animation
   const animCfg = getZombieAnimConfig(z);
-  const isCommonDeathAnim = !!(z.deathAnim && ZombieSprites.deathCommon && z.deathAnim === ZombieSprites.deathCommon);
+  /* Check if common was selected: compare against all variants if array */
+  let isCommonDeathAnim = false;
+  if (z.deathAnim && ZombieSprites.deathCommon) {
+    if (Array.isArray(ZombieSprites.deathCommon)) {
+      for (let dci = 0; dci < ZombieSprites.deathCommon.length; dci++) {
+        if (z.deathAnim === ZombieSprites.deathCommon[dci]) { isCommonDeathAnim = true; break; }
+      }
+    } else {
+      isCommonDeathAnim = z.deathAnim === ZombieSprites.deathCommon;
+    }
+  }
   z.deathAnimSpeed = isCommonDeathAnim ? animCfg.deathCommonFps : animCfg.deathFps;
 
   const corpseHelper = Game?.CorpseDespawn;

@@ -1,5 +1,36 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-05
+- **UI: Реструктуризация вкладок ангара**
+  - Вкладка «Открытие технологий» перенесена из под-вкладок мастерской в основные вкладки ангара (3 основные: Улучшение ячеек / Мастерская / Открытие технологий).
+  - Под-вкладки мастерской: «Улучшение чипов» + «Создание чипов» (переименована из `workshopTabChipCraft`).
+  - `switchHangarTab()` поддерживает `'cells'`, `'workshop'`, `'techUnlock'`.
+
+- **UI: Composed chip SVG**
+  - Новая функция `chipSvgComposed()` рисует чип как 3 вложенных мини-треугольника внутри большого контура.
+  - Иконки фрагментов повёрнуты на 180° — теперь вершиной вверх (`_fragmentSvgUp()`).
+  - Используется повсюду: инвентарь, грид улучшений, craft panel, tech modal.
+
+- **UI: Зелёная подсветка совпадений**
+  - Чипы в инвентаре, создающие match при установке, подсвечиваются зелёным (`hangarChipBtn--canMatch`).
+  - `_wouldChipCreateMatch()` проверяет все 3 ротации.
+
+- **UI: Выравнивание жёлтых слотов**
+  - Жёлтые слоты притягиваются горизонтально (`ATTRACTION_DIST`) синхронно с соседним красным слотом.
+
+- **UI: Drag-and-drop в слоты бабочки**
+  - Чип перетаскивается из инвентаря в SVG-слот. Если слот занят — старый чип возвращается. Проверка совпадения цвета.
+  - `_slotDragging` state + pointer events в `init()`.
+
+- **UI: Craft panel — режимы + «Распылить»**
+  - Два toggle-кнопки «Разобрать» / «Создать чип» (`chipCraftModeBtn`) вместо одной кнопки-действия.
+  - По умолчанию активен режим «Создать чип» (`_craftMode = 'assemble'`).
+  - Кнопка «Распылить» (`chipCraftDustBtn`): dust mode с чекбоксами на элементах инвентаря.
+  - Большой чип = 10 ед. кремниевой пыли, фрагмент = 3 ед. (`DUST_PER_CHIP`, `DUST_PER_FRAGMENT`).
+  - «Подтвердить» / «Отменить» в dust mode. Ресурс `_siliconDust` с геттером/сеттером в public API.
+  - CSS: `.chipCraftTopBar`, `.chipCraftModeRow`, `.chipCraftModeBtn`, `.chipCraftDustBtn`, `.chipCraftDustCheck`, `.chipCraftInvItem--dustSelected` и др.
+  - i18n: ключи `chipCraftDustBtn`, `chipCraftDustConfirm`, `chipCraftDustCancel`, `chipCraftDustResult`, `chipCraftDustNoneSelected`, `chipCraftDustGained`, `chipCraftSiliconDust`, `chipCraftSwitchToDisassemble`, `chipCraftSwitchToAssemble`.
+
 ## 2026-03-04
 - **Новая фича: Система фрагментов чипов (Создание чипов)**
   - Вкладка «Создание чипов» в мастерской: игрок может разбирать целые чипы на 3 фрагмента и собирать 3 фрагмента в новый чип.

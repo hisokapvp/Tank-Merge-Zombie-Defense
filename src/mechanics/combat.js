@@ -37,8 +37,9 @@
   /**
    * Детерминированный выбор анимации смерти зомби.
    * 70% personal, 30% common (если оба доступны).
-    *
-   * @param {object|null} common - общая death-анимация (ZombieSprites.deathCommon)
+   * common может быть объектом, массивом вариантов или null.
+   *
+   * @param {object|object[]|null} common - общая death-анимация (ZombieSprites.deathCommon)
    * @param {object|null} personal - персональная death-анимация (z.type.death)
    * @param {number} rand01 - случайное число [0, 1) для детерминированного тестирования
    * @returns {object|null} - выбранная анимация или null (fallback to fade/tilt)
@@ -56,13 +57,27 @@
       r = rand01;
     }
 
-    if (personal && common) {
+    /* Resolve common: if array, pick random variant using upper bits of rand01 */
+    var resolvedCommon = common;
+    if (Array.isArray(common)) {
+      if (common.length === 0) {
+        resolvedCommon = null;
+      } else if (common.length === 1) {
+        resolvedCommon = common[0];
+      } else {
+        /* Use fractional part of r*1000 to pick variant index — decorrelated from 70/30 split */
+        var variantIdx = Math.floor((r * 997) % common.length);
+        resolvedCommon = common[variantIdx];
+      }
+    }
+
+    if (personal && resolvedCommon) {
       // Оба доступны: 70% personal, 30% common
-      return r < 0.7 ? personal : common;
+      return r < 0.7 ? personal : resolvedCommon;
     } else if (personal) {
       return personal;
-    } else if (common) {
-      return common;
+    } else if (resolvedCommon) {
+      return resolvedCommon;
     }
     return null; // fallback: fade/tilt
   }
