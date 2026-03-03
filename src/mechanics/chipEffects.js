@@ -441,8 +441,14 @@
    */
   function _getCascadeProjectileCount(modId, result) {
     switch (modId) {
-      case 1: return 1 + (result.extraProjectiles || 1); // Double Shot: 2 projectiles
-      case 6: return result.comboShots > 0 ? result.comboShots : 1; // Combo: 3 if triggered, else 1
+      case 1:  // Double Shot
+      case 15: // Triple Shot
+      case 16: // Hex Shot
+        return 1 + (result.extraProjectiles || 1);
+      case 6:  // Small Combo
+      case 25: // Medium Combo
+      case 26: // Large Combo
+        return result.comboShots > 0 ? result.comboShots : 1;
       default: return 1;
     }
   }

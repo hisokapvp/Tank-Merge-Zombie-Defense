@@ -542,6 +542,33 @@
     return base / 2; // half of whole chip
   }
 
+  /**
+   * Apply all unlocked tech upgrades to a modIds array.
+   * Walks the TECH_TREE chains and replaces base mods with their
+   * highest unlocked upgrade so newly obtained chips match current tech level.
+   * @param {number[]} modIds - array of modIds (mutated in place)
+   * @returns {number[]} the same array (for chaining)
+   */
+  function applyTechUpgradesToModIds(modIds) {
+    if (!modIds || !modIds.length) return modIds;
+    for (var i = 0; i < modIds.length; i++) {
+      var cur = modIds[i];
+      // Walk each tech tree chain to find highest unlocked upgrade
+      var keys = Object.keys(TECH_TREE);
+      for (var k = 0; k < keys.length; k++) {
+        var chain = TECH_TREE[keys[k]];
+        for (var c = 0; c < chain.length; c++) {
+          if (chain[c].replacesModId === cur && _unlockedTechs[chain[c].modId]) {
+            modIds[i] = chain[c].modId;
+            cur = chain[c].modId;
+            // continue checking if there's a further upgrade in this chain
+          }
+        }
+      }
+    }
+    return modIds;
+  }
+
   /* ── Initialise chip pool at load time ─────────────────── */
 
   var _allChips = generateChipPool();
@@ -712,6 +739,7 @@
     ALL_FRAGMENT_IDS: ALL_FRAGMENT_IDS,
     disassembleChip: disassembleChip,
     assembleChip: assembleChip,
-    getFragmentAccelBonus: getFragmentAccelBonus
+    getFragmentAccelBonus: getFragmentAccelBonus,
+    applyTechUpgradesToModIds: applyTechUpgradesToModIds
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -4003,7 +4003,7 @@ input, select, textarea, button {
   flex-wrap:wrap;
   gap:6px;
   padding:8px;
-  max-height:350px;
+  flex:1 1 auto;
   overflow-y:auto;
   scrollbar-width:thin;
 }
@@ -4166,6 +4166,8 @@ input, select, textarea, button {
   flex-wrap:wrap;
   border-top:1px solid rgba(255,255,255,.08);
   background:rgba(20,18,14,.4);
+  margin-top:auto;
+  flex-shrink:0;
 }
 .chipCraftDustActions{
   display:flex;
