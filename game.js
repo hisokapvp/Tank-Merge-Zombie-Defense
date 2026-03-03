@@ -4123,6 +4123,7 @@ function saveProgress(){
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       drones: Array.isArray(state.drones) ? state.drones : [],
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
+      playerFragments: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function') ? window.Game.HangarChipsUI.getPlayerFragments() : [],
       techStudying: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getTechStudying === 'function') ? window.Game.HangarChipsUI.getTechStudying() : null,
     }));
   }catch(e){}
@@ -4222,6 +4223,12 @@ function restoreFullState(saved){
     state.playerChips = saved.playerChips;
     if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
       window.Game.HangarChipsUI.setPlayerChips(saved.playerChips);
+    }
+  }
+  /* Restore player fragments (chip shards) */
+  if (Array.isArray(saved.playerFragments)) {
+    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
+      window.Game.HangarChipsUI.setPlayerFragments(saved.playerFragments);
     }
   }
   /* Restore tech study state */

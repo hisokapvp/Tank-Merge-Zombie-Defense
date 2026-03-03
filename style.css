@@ -3966,3 +3966,191 @@ input, select, textarea, button {
   text-overflow:ellipsis;
   max-width:60px;
 }
+
+/* ─── Chip Craft Panel (Создание чипов) ─── */
+.chipCraftLayout{
+  display:flex;
+  gap:14px;
+  min-height:380px;
+}
+.chipCraftInventory{
+  flex:0 0 440px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;
+  background:rgba(30,28,24,.6);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.chipCraftInvHeader{
+  font-size:12px;
+  color:#4af626;
+  padding:6px 10px;
+  background:rgba(74,246,38,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  text-transform:uppercase;
+  letter-spacing:1px;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftInvGrid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:8px;
+  max-height:350px;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.chipCraftInvGrid::-webkit-scrollbar{width:6px}
+.chipCraftInvGrid::-webkit-scrollbar-track{background:rgba(0,0,0,.2);border-radius:3px}
+.chipCraftInvGrid::-webkit-scrollbar-thumb{background:#4af626;border-radius:3px}
+.chipCraftInvItem{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  width:72px;
+  padding:5px 4px 4px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:5px;
+  background:rgba(40,36,32,.5);
+  cursor:pointer;
+  transition:border-color .12s, background .12s;
+}
+.chipCraftInvItem:hover{
+  border-color:rgba(74,246,38,.5);
+  background:rgba(50,46,40,.8);
+}
+.chipCraftInvItem--fragment{
+  border-style:dashed;
+}
+.chipCraftInvIcon{
+  width:36px;
+  height:32px;
+}
+.chipCraftInvLabel{
+  font-size:8px;
+  color:rgba(255,255,255,.5);
+  font-family:monospace;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:66px;
+  text-align:center;
+}
+.chipCraftInvLevel{
+  font-size:9px;
+  color:rgba(255,255,255,.35);
+}
+.chipCraftInvCount{
+  font-size:8px;
+  color:#fdd835;
+}
+.chipCraftPreview{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.chipCraftDropZone{
+  flex:1;
+  border:2px solid rgba(255,255,255,.15);
+  border-radius:8px;
+  background:rgba(30,28,24,.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:220px;
+  position:relative;
+}
+.chipCraftEmptyPreview{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  opacity:.5;
+}
+.chipCraftPlaceholderSvg{
+  width:100px;
+  height:90px;
+}
+.chipCraftPlaceholderText{
+  font-size:11px;
+  color:rgba(255,255,255,.3);
+  text-align:center;
+}
+.chipCraftSlotRow{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+}
+.chipCraftSlot{
+  width:80px;
+  height:80px;
+  border:1px dashed rgba(255,255,255,.2);
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  background:rgba(40,36,32,.4);
+}
+.chipCraftSlotIcon{
+  width:56px;
+  height:50px;
+}
+.chipCraftSlotEmpty{
+  font-size:24px;
+  color:rgba(255,255,255,.15);
+  user-select:none;
+}
+.chipCraftSlotRemove{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#e53935;
+  color:#fff;
+  border:none;
+  font-size:11px;
+  line-height:18px;
+  text-align:center;
+  cursor:pointer;
+  padding:0;
+  z-index:2;
+}
+.chipCraftSlotRemove:hover{
+  background:#ff5252;
+}
+.chipCraftActionBtn{
+  padding:10px 24px;
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  border:2px solid #4af626;
+  color:#4af626;
+  background:rgba(74,246,38,.08);
+  border-radius:5px;
+  cursor:pointer;
+  transition:background .12s, color .12s;
+  font-family:'Press Start 2P',monospace;
+  align-self:center;
+}
+.chipCraftActionBtn:hover:not(:disabled){
+  background:rgba(74,246,38,.2);
+}
+.chipCraftActionBtn--disabled,
+.chipCraftActionBtn:disabled{
+  border-color:rgba(255,255,255,.15);
+  color:rgba(255,255,255,.3);
+  background:rgba(40,36,32,.4);
+  cursor:not-allowed;
+}
+
+/* ─── Chip Fragment Icon ─── */
+.chipFragmentIcon{
+  display:block;
+}

@@ -22,7 +22,8 @@
   /* All 6 triangles are equilateral with side ≈ 130px.
      TC-BC is the shared central vertical edge. */
   var SVG_W = 400, SVG_H = 300;
-  var GAP = 5; 
+  var GAP_DEFAULT = 15;   // normal spacing between slot triangles
+  var GAP_MATCHED = 3;    // spacing when matching chips are installed (attract)
   var side = 160; 
   var h_tri = side * Math.sqrt(3) / 2; // ~112.5
   
@@ -40,8 +41,9 @@
     BR: [cx + h_tri, cy + side]   // Bottom-right
   };
 
-  /** Get offset points for a triangle with a gap */
-  function getGappedPoints(pts) {
+  /** Get offset points for a triangle with a custom gap */
+  function getGappedPoints(pts, gap) {
+    var g = (typeof gap === 'number') ? gap : GAP_DEFAULT;
     var c = [0, 0];
     for (var i = 0; i < pts.length; i++) {
       c[0] += PT[pts[i]][0];
@@ -56,8 +58,8 @@
       var dx = p[0] - c[0], dy = p[1] - c[1];
       var dist = Math.sqrt(dx * dx + dy * dy);
       if (dist === 0) { res.push(p); continue; }
-      var ox = (dx / dist) * (dist - GAP);
-      var oy = (dy / dist) * (dist - GAP);
+      var ox = (dx / dist) * (dist - g);
+      var oy = (dy / dist) * (dist - g);
       res.push([c[0] + ox, c[1] + oy]);
     }
     return res;
@@ -162,8 +164,8 @@
 
   /* ─── Render: butterfly SVG ────────────────────────────── */
 
-  function polyPoints(keys) {
-    var pts = getGappedPoints(keys);
+  function polyPoints(keys, gap) {
+    var pts = getGappedPoints(keys, gap);
     var s = '';
     for (var i = 0; i < pts.length; i++) {
       if (i > 0) s += ' ';
@@ -179,6 +181,12 @@
     var cell = cells[_selectedCell];
     if (!cell) return;
     var h = hc();
+
+    /* Determine if red/yellow have matching chips → attract (smaller gap) */
+    var redMatched = (cell.uiState && cell.uiState.redMatchSuccess === true);
+    var yellowMatched = (cell.uiState && cell.uiState.yellowMatchSuccess === true);
+    var redGap = redMatched ? GAP_MATCHED : GAP_DEFAULT;
+    var yellowGap = yellowMatched ? GAP_MATCHED : GAP_DEFAULT;
 
     var svg = '<svg class="hangarSvg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" xmlns="http://www.w3.org/2000/svg">';
 
@@ -211,8 +219,11 @@
       // Add individual animation delays to make shake effect individual for each element
       var animationDelay = (d * 0.05) + 's';
 
+      /* Choose gap: red slots use redGap, yellow slots use yellowGap */
+      var slotGap = isRed ? redGap : yellowGap;
+
       svg += '<g class="hangarSlotGroup">';
-      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts) + '" ' +
+      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts, slotGap) + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer');
@@ -448,24 +459,37 @@
   function switchWorkshopSubTab(tabId) {
     var tabChipUpgrade = el('workshopTabChipUpgrade');
     var tabTechUnlock = el('workshopTabTechUnlock');
+    var tabChipCraft = el('workshopTabChipCraft');
     var panelChipUpgrade = el('workshopPanelChipUpgrade');
     var panelTechUnlock = el('workshopPanelTechUnlock');
+    var panelChipCraft = el('workshopPanelChipCraft');
     if (!tabChipUpgrade || !tabTechUnlock) return;
 
     var isChips = tabId === 'chipUpgrade';
+    var isTech = tabId === 'techUnlock';
+    var isCraft = tabId === 'chipCraft';
+
     tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
     tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
     tabChipUpgrade.classList.toggle('workshopSubTab--active', isChips);
 
-    tabTechUnlock.setAttribute('aria-selected', isChips ? 'false' : 'true');
-    tabTechUnlock.setAttribute('tabindex', isChips ? '-1' : '0');
-    tabTechUnlock.classList.toggle('workshopSubTab--active', !isChips);
+    tabTechUnlock.setAttribute('aria-selected', isTech ? 'true' : 'false');
+    tabTechUnlock.setAttribute('tabindex', isTech ? '0' : '-1');
+    tabTechUnlock.classList.toggle('workshopSubTab--active', isTech);
+
+    if (tabChipCraft) {
+      tabChipCraft.setAttribute('aria-selected', isCraft ? 'true' : 'false');
+      tabChipCraft.setAttribute('tabindex', isCraft ? '0' : '-1');
+      tabChipCraft.classList.toggle('workshopSubTab--active', isCraft);
+    }
 
     if (panelChipUpgrade) panelChipUpgrade.hidden = !isChips;
-    if (panelTechUnlock) panelTechUnlock.hidden = isChips;
+    if (panelTechUnlock) panelTechUnlock.hidden = !isTech;
+    if (panelChipCraft) panelChipCraft.hidden = !isCraft;
 
     if (isChips) renderChipUpgradeGrid();
-    if (!isChips) renderTechUnlockPanel();
+    if (isTech) renderTechUnlockPanel();
+    if (isCraft) renderChipCraftPanel();
   }
 
   /* ─── Tech Unlock state ────────────────────────────────── */
@@ -757,10 +781,61 @@
      Chips with same chipId and same level are grouped together. */
   var _playerChips = null;
 
+  /* _playerFragments: array of { fragmentId (=modId), count }
+     Each fragment is one of the 30 possible modifier properties. */
+  var _playerFragments = null;
+
   function ensurePlayerChips() {
     if (_playerChips) return _playerChips;
     _playerChips = [];
     return _playerChips;
+  }
+
+  function ensurePlayerFragments() {
+    if (_playerFragments) return _playerFragments;
+    _playerFragments = [];
+    return _playerFragments;
+  }
+
+  function getPlayerFragments() { return ensurePlayerFragments(); }
+  function setPlayerFragments(frags) { _playerFragments = Array.isArray(frags) ? frags : []; }
+
+  /** Add fragment(s) to inventory. fragmentId = modId (1–30). */
+  function addPlayerFragment(fragmentId, count) {
+    var frags = ensurePlayerFragments();
+    var cnt = (Number.isFinite(count) && count >= 1) ? Math.floor(count) : 1;
+    for (var i = 0; i < frags.length; i++) {
+      if (frags[i].fragmentId === fragmentId) {
+        frags[i].count += cnt;
+        return frags[i];
+      }
+    }
+    var entry = { fragmentId: fragmentId, count: cnt };
+    frags.push(entry);
+    return entry;
+  }
+
+  /** Remove one fragment from inventory. Returns true if removed. */
+  function removePlayerFragment(fragmentId, count) {
+    var frags = ensurePlayerFragments();
+    var cnt = (Number.isFinite(count) && count >= 1) ? Math.floor(count) : 1;
+    for (var i = 0; i < frags.length; i++) {
+      if (frags[i].fragmentId === fragmentId) {
+        frags[i].count -= cnt;
+        if (frags[i].count <= 0) frags.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Get fragment count for a given fragmentId */
+  function getFragmentCount(fragmentId) {
+    var frags = ensurePlayerFragments();
+    for (var i = 0; i < frags.length; i++) {
+      if (frags[i].fragmentId === fragmentId) return frags[i].count;
+    }
+    return 0;
   }
 
   function getPlayerChips() { return ensurePlayerChips(); }
@@ -1219,6 +1294,12 @@
       return;
     }
 
+    /* workshop chip-craft sub-tab */
+    if (tgt.id === 'workshopTabChipCraft' || tgt.closest && tgt.closest('#workshopTabChipCraft')) {
+      switchWorkshopSubTab('chipCraft');
+      return;
+    }
+
     /* merge chip button — removed, now uses drag-and-drop */
 
     /* tech start study button */
@@ -1293,7 +1374,7 @@
       /* Task 4: If not checked and already at limit, block toggling on */
       if (!isChecked && _isAccelSelectionAtMax()) {
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого чипа, чтобы добавить новый.'), 2000);
+          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого элемента, чтобы добавить новый.'), 2000);
         }
         return;
       }
@@ -1301,6 +1382,23 @@
       var checkMark = techAccelChip.querySelector('.techAccelChip__check');
       if (checkMark) checkMark.textContent = isChecked ? '' : '✓';
       /* Update acceleration percentage */
+      _updateAccelPercentage();
+      return;
+    }
+
+    /* tech accel fragment checkbox toggle */
+    var techAccelFrag = tgt.closest ? tgt.closest('[data-accel-frag-id]') : null;
+    if (techAccelFrag) {
+      var isFragChecked = techAccelFrag.getAttribute('data-accel-checked') === 'true';
+      if (!isFragChecked && _isAccelSelectionAtMax()) {
+        if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого элемента, чтобы добавить новый.'), 2000);
+        }
+        return;
+      }
+      techAccelFrag.setAttribute('data-accel-checked', isFragChecked ? 'false' : 'true');
+      var fragCheckMark = techAccelFrag.querySelector('.techAccelChip__check');
+      if (fragCheckMark) fragCheckMark.textContent = isFragChecked ? '' : '✓';
       _updateAccelPercentage();
       return;
     }
@@ -1354,38 +1452,65 @@
   function _showTechAccelModal(modId) {
     var modal = _ensureTechModal();
     var chips = ensurePlayerChips();
+    var frags = ensurePlayerFragments();
     var h = hc();
 
     /* Fix 6: Show correct per-chip percentage based on tech duration */
     var accelPerChip = _getAccelPerChip(modId);
+    var accelPerFrag = accelPerChip / 2; // fragments give half acceleration
     var html = '<div class="techModal__dialog techModal__dialog--wide">' +
       '<div class="techModal__title">' + t('techAccelTitle', 'Ускорить процесс открытия') + '</div>' +
       '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите чипы для ускорения (каждый чип = +{pct}%)').replace('{pct}', accelPerChip) + '</div>';
 
-    if (!chips.length) {
-      html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет чипов в инвентаре') + '</div>';
+    var hasItems = chips.length > 0 || frags.length > 0;
+
+    if (!hasItems) {
+      html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет чипов или фрагментов в инвентаре') + '</div>';
     } else {
-      html += '<div class="techAccelGrid">';
-      for (var i = 0; i < chips.length; i++) {
-        var chip = chips[i];
-        var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-        for (var ci = 0; ci < chip.count; ci++) {
-          html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
-          html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
-          html += '<svg viewBox="0 0 40 36" class="techAccelChip__icon">' +
-            '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
-          var vx = [[20, 6], [34, 31], [6, 31]];
-          var mods = chip.modIds;
-          for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
-            var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
-            html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+      /* ── Whole chips grid ── */
+      if (chips.length) {
+        html += '<div class="techAccelGrid">';
+        for (var i = 0; i < chips.length; i++) {
+          var chip = chips[i];
+          var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
+          for (var ci = 0; ci < chip.count; ci++) {
+            html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
+            html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
+            html += '<svg viewBox="0 0 40 36" class="techAccelChip__icon">' +
+              '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
+            var vx = [[20, 6], [34, 31], [6, 31]];
+            var mods = chip.modIds;
+            for (var vi = 0; vi < 3 && vi < mods.length; vi++) {
+              var mc = (h && h.isSpecialMod(mods[vi])) ? '#fdd835' : '#e53935';
+              html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+            }
+            html += '</svg>';
+            html += '<span class="techAccelChip__label">' + chip.sourceComboKey + ' Ур.' + chip.level + '</span>';
+            html += '</div>';
           }
-          html += '</svg>';
-          html += '<span class="techAccelChip__label">' + chip.sourceComboKey + ' Ур.' + chip.level + '</span>';
-          html += '</div>';
         }
+        html += '</div>';
       }
-      html += '</div>';
+
+      /* ── Fragment grid ── */
+      if (frags.length) {
+        html += '<div class="techModal__subtitle" style="margin-top:10px">' +
+          t('techAccelFragSubtitle', 'Фрагменты чипов (каждый фрагмент = +{pct}%)').replace('{pct}', accelPerFrag) +
+          '</div>';
+        html += '<div class="techAccelGrid">';
+        for (var fi = 0; fi < frags.length; fi++) {
+          var frag = frags[fi];
+          var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
+          for (var fc = 0; fc < frag.count; fc++) {
+            html += '<div class="techAccelChip" data-accel-frag-id="' + frag.fragmentId + '" data-accel-checked="false">';
+            html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
+            html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
+            html += '<span class="techAccelChip__label">' + modName(frag.fragmentId) + '</span>';
+            html += '</div>';
+          }
+        }
+        html += '</div>';
+      }
     }
 
     html += '<div class="techModal__btns">' +
@@ -1398,25 +1523,30 @@
     modal.style.display = 'flex';
   }
 
-  /** Task 4: Check if the current chip selection has reached the max acceleration limit */
+  /** Task 4: Check if the current chip/fragment selection has reached the max acceleration limit */
   function _isAccelSelectionAtMax() {
     if (!_techModalEl || !_techStudying) return false;
-    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
-    var count = checked.length;
     var accelPerChip = _getAccelPerChip(_techStudying.modId);
+    var accelPerFrag = accelPerChip / 2;
     var currentAccel = _techStudying.acceleratedPct || 0;
     var maxMore = 95 - currentAccel;
-    var pct = count * accelPerChip;
+
+    var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
+    var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
+    var pct = checkedChips.length * accelPerChip + checkedFrags.length * accelPerFrag;
     return pct >= maxMore;
   }
 
   function _updateAccelPercentage() {
     if (!_techModalEl || !_techStudying) return;
-    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
-    var count = checked.length;
     /* Fix 6: Use per-chip rate based on tech duration */
     var accelPerChip = _getAccelPerChip(_techStudying.modId);
-    var pct = count * accelPerChip;
+    var accelPerFrag = accelPerChip / 2;
+
+    var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
+    var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
+    var pct = checkedChips.length * accelPerChip + checkedFrags.length * accelPerFrag;
+
     /* Fix 2: Cap at remaining room to 95% */
     var currentAccel = _techStudying.acceleratedPct || 0;
     var maxMore = 95 - currentAccel;
@@ -1425,22 +1555,22 @@
     var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
     if (confirmBtn) {
       confirmBtn.textContent = 'Ускорить на ' + pct + '%';
-      confirmBtn.disabled = count === 0 || pct <= 0;
+      confirmBtn.disabled = (checkedChips.length + checkedFrags.length) === 0 || pct <= 0;
     }
-    /* Task 4: Disable unchecked chips when max acceleration is reached */
+    /* Task 4: Disable unchecked items when max acceleration is reached */
     var atMax = pct >= maxMore && maxMore > 0;
-    var allChipEls = _techModalEl.querySelectorAll('[data-accel-chip-id]');
-    for (var i = 0; i < allChipEls.length; i++) {
-      var chipEl = allChipEls[i];
-      var isChecked = chipEl.getAttribute('data-accel-checked') === 'true';
+    var allItems = _techModalEl.querySelectorAll('[data-accel-chip-id], [data-accel-frag-id]');
+    for (var i = 0; i < allItems.length; i++) {
+      var itemEl = allItems[i];
+      var isChecked = itemEl.getAttribute('data-accel-checked') === 'true';
       if (!isChecked && atMax) {
-        chipEl.classList.add('techAccelChip--disabled');
-        chipEl.style.pointerEvents = 'none';
-        chipEl.style.opacity = '0.35';
+        itemEl.classList.add('techAccelChip--disabled');
+        itemEl.style.pointerEvents = 'none';
+        itemEl.style.opacity = '0.35';
       } else {
-        chipEl.classList.remove('techAccelChip--disabled');
-        chipEl.style.pointerEvents = '';
-        chipEl.style.opacity = '';
+        itemEl.classList.remove('techAccelChip--disabled');
+        itemEl.style.pointerEvents = '';
+        itemEl.style.opacity = '';
       }
     }
   }
@@ -1457,18 +1587,26 @@
       return;
     }
 
-    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
-    if (!checked.length) {
+    var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
+    var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
+    if (!checkedChips.length && !checkedFrags.length) {
       _closeTechModal();
       return;
     }
 
     /* Collect chips to burn */
     var chipsToBurn = [];
-    for (var i = 0; i < checked.length; i++) {
-      var chipId = parseInt(checked[i].getAttribute('data-accel-chip-id'), 10);
-      var level = parseInt(checked[i].getAttribute('data-accel-chip-level'), 10);
+    for (var i = 0; i < checkedChips.length; i++) {
+      var chipId = parseInt(checkedChips[i].getAttribute('data-accel-chip-id'), 10);
+      var level = parseInt(checkedChips[i].getAttribute('data-accel-chip-level'), 10);
       chipsToBurn.push({ chipId: chipId, level: level });
+    }
+
+    /* Collect fragments to burn */
+    var fragsToBurn = [];
+    for (var fi = 0; fi < checkedFrags.length; fi++) {
+      var fragId = parseInt(checkedFrags[fi].getAttribute('data-accel-frag-id'), 10);
+      fragsToBurn.push(fragId);
     }
 
     /* Burn chips from inventory */
@@ -1476,9 +1614,16 @@
       removePlayerChipOne(chipsToBurn[j].chipId, chipsToBurn[j].level);
     }
 
-    /* Fix 6: Acceleration per chip depends on tech duration */
+    /* Burn fragments from inventory */
+    for (var fj = 0; fj < fragsToBurn.length; fj++) {
+      removePlayerFragment(fragsToBurn[fj], 1);
+    }
+
+    /* Fix 6: Acceleration per chip depends on tech duration; fragments = half */
     var accelPerChip = _getAccelPerChip(_techStudying.modId);
-    _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + (chipsToBurn.length * accelPerChip);
+    var accelPerFrag = accelPerChip / 2;
+    var totalAccel = chipsToBurn.length * accelPerChip + fragsToBurn.length * accelPerFrag;
+    _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + totalAccel;
     if (_techStudying.acceleratedPct > 95) _techStudying.acceleratedPct = 95; // Cap at 95%
 
     /* Fix 7: Check completion against full duration (not reduced) */
@@ -1488,13 +1633,346 @@
       return;
     }
 
+    var burnedCount = chipsToBurn.length + fragsToBurn.length;
     if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-      global.Game.Toast.show(t('techAccelApplied', 'Сожжено {n} чипов. Ускорение: {pct}%').replace('{n}', chipsToBurn.length).replace('{pct}', _techStudying.acceleratedPct), 2000);
+      global.Game.Toast.show(t('techAccelApplied', 'Сожжено {n} элементов. Ускорение: {pct}%').replace('{n}', burnedCount).replace('{pct}', _techStudying.acceleratedPct), 2000);
     }
 
     _closeTechModal();
     renderTechUnlockPanel();
     renderChipUpgradeGrid();
+  }
+
+  /* ─── Chip Crafting Panel (Создание чипов) ─────────────── */
+
+  var _craftSlots = [null, null, null]; // 3 slots for fragments or 1 slot for whole chip
+  var _craftMode = null; // 'disassemble' | 'assemble' | null
+
+  function _resetCraftSlots() {
+    _craftSlots = [null, null, null];
+    _craftMode = null;
+  }
+
+  /** Detect craft mode based on current slot contents */
+  function _detectCraftMode() {
+    var wholeChipCount = 0;
+    var fragmentCount = 0;
+    for (var i = 0; i < 3; i++) {
+      if (_craftSlots[i]) {
+        if (_craftSlots[i].type === 'chip') wholeChipCount++;
+        else if (_craftSlots[i].type === 'fragment') fragmentCount++;
+      }
+    }
+    if (wholeChipCount === 1 && fragmentCount === 0) return 'disassemble';
+    if (fragmentCount > 0 && fragmentCount <= 3 && wholeChipCount === 0) return fragmentCount === 3 ? 'assemble' : 'partial';
+    return null;
+  }
+
+  /** Draw a fragment SVG icon (kite/diamond shape — top portion of a triangle) */
+  function _fragmentSvg(modId, size, strokeColor) {
+    var w = size || 40;
+    var h = Math.round(w * 1.2);
+    var sc = strokeColor || '#e53935';
+    var hc2 = hc();
+    var isSpec = hc2 && hc2.isSpecialMod(modId);
+    var fillDot = isSpec ? '#fdd835' : '#e53935';
+    // Kite shape: top vertex, left, bottom, right
+    var cx2 = w / 2;
+    var top = 2;
+    var bot = h - 2;
+    var mid = h * 0.45;
+    var left = 3;
+    var right = w - 3;
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" class="chipFragmentIcon">' +
+      '<polygon points="' + cx2 + ',' + top + ' ' + right + ',' + mid + ' ' + cx2 + ',' + bot + ' ' + left + ',' + mid + '" ' +
+      'fill="rgba(80,80,80,0.12)" stroke="' + sc + '" stroke-width="2"/>' +
+      '<circle cx="' + cx2 + '" cy="' + (top + 6) + '" r="3.5" fill="' + fillDot + '"/>' +
+      '</svg>';
+  }
+
+  /** Render the chip crafting panel */
+  function renderChipCraftPanel() {
+    var panel = el('workshopPanelChipCraft');
+    if (!panel) return;
+    var h = hc();
+    if (!h) { panel.innerHTML = '<div class="chipUpgradeEmptyLabel">Модуль не загружен</div>'; return; }
+
+    _craftMode = _detectCraftMode();
+
+    var html = '<div class="chipCraftLayout">';
+
+    /* ── Left column: Inventory of fragments + whole chips ── */
+    html += '<div class="chipCraftInventory">';
+    html += '<div class="chipCraftInvHeader">' + t('chipCraftInventoryTitle', 'Распылить') + '</div>';
+    html += '<div class="chipCraftInvGrid">';
+
+    /* Show whole chips (for disassembling) */
+    var playerChips = ensurePlayerChips();
+    for (var ci = 0; ci < playerChips.length; ci++) {
+      var pc = playerChips[ci];
+      if (pc.count <= 0) continue;
+      var borderColor = pc.chipColor === 'red' ? '#e53935' : '#fdd835';
+      var chipName = pc.sourceComboKey;
+      if (h && pc.modIds.length) {
+        var names = [];
+        for (var ni = 0; ni < pc.modIds.length; ni++) names.push(modName(pc.modIds[ni]));
+        chipName = names.join('+');
+      }
+      // Truncate name for display
+      var displayName = chipName.length > 14 ? chipName.substring(0, 12) + '..' : chipName;
+      html += '<div class="chipCraftInvItem" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" ' +
+        'title="' + chipName + ' (Ур.' + pc.level + ', ×' + pc.count + ')">';
+      html += '<svg viewBox="0 0 40 36" class="chipCraftInvIcon">' +
+        '<polygon points="20,3 38,34 2,34" fill="none" stroke="' + borderColor + '" stroke-width="2.5"/>';
+      var vx = [[20, 6], [34, 31], [6, 31]];
+      for (var vi = 0; vi < 3 && vi < pc.modIds.length; vi++) {
+        var mc = (h && h.isSpecialMod(pc.modIds[vi])) ? '#fdd835' : '#e53935';
+        html += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="4" fill="' + mc + '" />';
+      }
+      html += '</svg>';
+      html += '<span class="chipCraftInvLabel">' + displayName + '</span>';
+      html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
+      html += '</div>';
+    }
+
+    /* Show fragments */
+    var playerFrags = ensurePlayerFragments();
+    for (var fi = 0; fi < playerFrags.length; fi++) {
+      var frag = playerFrags[fi];
+      if (frag.count <= 0) continue;
+      var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
+      var fragName = modName(frag.fragmentId);
+      var fragDisplayName = fragName.length > 14 ? fragName.substring(0, 12) + '..' : fragName;
+      html += '<div class="chipCraftInvItem chipCraftInvItem--fragment" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '" ' +
+        'title="' + fragName + ' (×' + frag.count + ')">';
+      html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
+      html += '<span class="chipCraftInvLabel">' + fragDisplayName + '</span>';
+      html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
+      if (frag.count > 1) {
+        html += '<span class="chipCraftInvCount" style="color:#fdd835;font-size:9px">Перетащите для слияния</span>';
+      }
+      html += '</div>';
+    }
+
+    if (!playerChips.length && !playerFrags.length) {
+      html += '<div class="chipUpgradeEmptyLabel" style="padding:20px 0">' + t('chipCraftNoItems', 'Нет чипов или фрагментов') + '</div>';
+    }
+
+    html += '</div>'; // chipCraftInvGrid
+    html += '</div>'; // chipCraftInventory
+
+    /* ── Right column: Craft preview area + action button ── */
+    html += '<div class="chipCraftPreview">';
+
+    /* Preview area (the "yellow outlined" drop zone from screenshot) */
+    html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
+    var hasContent = false;
+    for (var si = 0; si < 3; si++) {
+      if (_craftSlots[si]) { hasContent = true; break; }
+    }
+    if (hasContent) {
+      html += '<div class="chipCraftSlotRow">';
+      for (var sj = 0; sj < 3; sj++) {
+        var slot = _craftSlots[sj];
+        html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '">';
+        if (slot) {
+          if (slot.type === 'chip') {
+            var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
+            html += '<svg viewBox="0 0 60 54" class="chipCraftSlotIcon">' +
+              '<polygon points="30,4 56,50 4,50" fill="none" stroke="' + sc + '" stroke-width="3"/>';
+            for (var svi = 0; svi < 3 && svi < slot.modIds.length; svi++) {
+              var sVx = [[30, 9], [50, 45], [10, 45]];
+              var sMc = (h && h.isSpecialMod(slot.modIds[svi])) ? '#fdd835' : '#e53935';
+              html += '<circle cx="' + sVx[svi][0] + '" cy="' + sVx[svi][1] + '" r="5" fill="' + sMc + '"/>';
+            }
+            html += '</svg>';
+          } else if (slot.type === 'fragment') {
+            var fSc = (h && h.isSpecialMod(slot.fragmentId)) ? '#fdd835' : '#e53935';
+            html += _fragmentSvg(slot.fragmentId, 50, fSc);
+          }
+          html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj + '" type="button">×</button>';
+        } else {
+          html += '<div class="chipCraftSlotEmpty">+</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    } else {
+      /* Empty preview: show placeholder image (triangle outline) */
+      html += '<div class="chipCraftEmptyPreview">';
+      html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
+        '<polygon points="60,8 112,100 8,100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6,3"/>' +
+        '<line x1="60" y1="8" x2="60" y2="66" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+        '<line x1="60" y1="66" x2="24" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+        '<line x1="60" y1="66" x2="96" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+        '</svg>';
+      html += '<span class="chipCraftPlaceholderText">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
+      html += '</div>';
+    }
+    html += '</div>'; // chipCraftDropZone
+
+    /* Action button */
+    var btnLabel = t('chipCraftButton', 'Кнопка');
+    var btnDisabled = true;
+    if (_craftMode === 'disassemble') {
+      btnLabel = t('chipCraftDisassemble', 'Разобрать');
+      btnDisabled = false;
+    } else if (_craftMode === 'assemble') {
+      btnLabel = t('chipCraftAssemble', 'Создать чип');
+      btnDisabled = false;
+    }
+    html += '<button class="btn scButton chipCraftActionBtn' + (btnDisabled ? ' chipCraftActionBtn--disabled' : '') + '" id="chipCraftActionBtn" type="button" ' +
+      (btnDisabled ? 'disabled' : '') + '>' + btnLabel + '</button>';
+
+    html += '</div>'; // chipCraftPreview
+    html += '</div>'; // chipCraftLayout
+
+    panel.innerHTML = html;
+
+    /* ── Attach event handlers for craft panel ── */
+    _attachCraftPanelEvents(panel);
+  }
+
+  function _attachCraftPanelEvents(panel) {
+    /* Click on inventory item → add to craft slot */
+    var invItems = panel.querySelectorAll('.chipCraftInvItem');
+    for (var i = 0; i < invItems.length; i++) {
+      invItems[i].addEventListener('click', function (evt) {
+        var item = evt.currentTarget;
+        var srcType = item.getAttribute('data-craft-src');
+        if (srcType === 'chip') {
+          // Only one whole chip in slot 0
+          var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
+          var chipLevel = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
+          /* Find chip in inventory */
+          var chips = ensurePlayerChips();
+          var chipEntry = null;
+          for (var ci = 0; ci < chips.length; ci++) {
+            if (chips[ci].chipId === chipId && chips[ci].level === chipLevel && chips[ci].count > 0) {
+              chipEntry = chips[ci]; break;
+            }
+          }
+          if (!chipEntry) return;
+          /* Check if slot is already occupied by something else */
+          var hasFrags = _craftSlots.some(function (s) { return s && s.type === 'fragment'; });
+          if (hasFrags) {
+            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftClearFirst', 'Сначала очистите слоты от фрагментов'), 1500);
+            return;
+          }
+          _craftSlots = [{ type: 'chip', chipId: chipEntry.chipId, chipColor: chipEntry.chipColor, modIds: chipEntry.modIds.slice(), sourceComboKey: chipEntry.sourceComboKey, level: chipEntry.level }, null, null];
+        } else if (srcType === 'fragment') {
+          var fragId = parseInt(item.getAttribute('data-craft-frag-id'), 10);
+          /* Check if slot has a whole chip */
+          var hasChip = _craftSlots.some(function (s) { return s && s.type === 'chip'; });
+          if (hasChip) {
+            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftClearChipFirst', 'Сначала уберите целый чип'), 1500);
+            return;
+          }
+          /* Find empty slot */
+          var emptyIdx = -1;
+          for (var si = 0; si < 3; si++) {
+            if (!_craftSlots[si]) { emptyIdx = si; break; }
+          }
+          if (emptyIdx === -1) {
+            if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftSlotsFull', 'Все 3 слота заняты'), 1500);
+            return;
+          }
+          _craftSlots[emptyIdx] = { type: 'fragment', fragmentId: fragId };
+        }
+        renderChipCraftPanel();
+      });
+    }
+
+    /* Click on slot remove button → remove from slot */
+    var removeButtons = panel.querySelectorAll('[data-craft-remove]');
+    for (var ri = 0; ri < removeButtons.length; ri++) {
+      removeButtons[ri].addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        var idx = parseInt(evt.currentTarget.getAttribute('data-craft-remove'), 10);
+        _craftSlots[idx] = null;
+        renderChipCraftPanel();
+      });
+    }
+
+    /* Click on action button */
+    var actionBtn = el('chipCraftActionBtn');
+    if (actionBtn) {
+      actionBtn.addEventListener('click', function () {
+        _executeCraftAction();
+      });
+    }
+  }
+
+  /** Execute the craft action (disassemble or assemble) */
+  function _executeCraftAction() {
+    var h = hc();
+    if (!h) return;
+    var mode = _detectCraftMode();
+
+    if (mode === 'disassemble') {
+      /* Find the whole chip in slot 0 */
+      var chipSlot = _craftSlots[0];
+      if (!chipSlot || chipSlot.type !== 'chip') return;
+
+      /* Remove chip from inventory */
+      var removed = removePlayerChipOne(chipSlot.chipId, chipSlot.level);
+      if (!removed) {
+        if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftNoChipInv', 'Чип не найден в инвентаре'), 1500);
+        return;
+      }
+
+      /* Create 3 fragments */
+      var frags = h.disassembleChip(chipSlot.modIds);
+      for (var fi = 0; fi < frags.length; fi++) {
+        addPlayerFragment(frags[fi].fragmentId, 1);
+      }
+
+      if (global.Game && global.Game.Toast) {
+        global.Game.Toast.show(t('chipCraftDisassembled', 'Чип разобран на 3 фрагмента!'), 1800);
+      }
+
+      _resetCraftSlots();
+      renderChipCraftPanel();
+      renderChipUpgradeGrid();
+
+    } else if (mode === 'assemble') {
+      /* Collect 3 fragment modIds */
+      var fragModIds = [];
+      for (var si = 0; si < 3; si++) {
+        if (!_craftSlots[si] || _craftSlots[si].type !== 'fragment') return;
+        fragModIds.push(_craftSlots[si].fragmentId);
+      }
+
+      /* Try to assemble */
+      var result = h.assembleChip(fragModIds);
+      if (!result) {
+        if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftInvalidCombo', 'Невозможно создать чип из этих фрагментов'), 1800);
+        return;
+      }
+
+      /* Remove 3 fragments from inventory */
+      for (var ri = 0; ri < fragModIds.length; ri++) {
+        removePlayerFragment(fragModIds[ri], 1);
+      }
+
+      /* Resolve chipDef — if result.chipId === -1, find or create */
+      var chipDef = result;
+      if (result.chipId === -1) {
+        var found = h.getChipByKey(h.allChips, result.sourceComboKey);
+        if (found) chipDef = found;
+      }
+
+      /* Add assembled chip to inventory at level 1 */
+      addPlayerChip(chipDef, 1);
+
+      if (global.Game && global.Game.Toast) {
+        global.Game.Toast.show(t('chipCraftAssembled', 'Чип «{key}» создан!').replace('{key}', chipDef.sourceComboKey), 1800);
+      }
+
+      _resetCraftSlots();
+      renderChipCraftPanel();
+      renderChipUpgradeGrid();
+    }
   }
 
   /** Try to auto-install a chip into the first empty matching slot */
@@ -1816,6 +2294,7 @@
     chipLevelBonus: chipLevelBonus,
     renderChipUpgradeGrid: renderChipUpgradeGrid,
     renderTechUnlockPanel: renderTechUnlockPanel,
+    renderChipCraftPanel: renderChipCraftPanel,
     feedChipsForTech: feedChipsForTech,
     getTechFeedProgress: getTechFeedProgress,
     setTechFeedProgress: setTechFeedProgress,
@@ -1824,6 +2303,11 @@
       setTechStudying(obj);
       if (_techStudying) _startTechStudyTimer();
     },
+    getPlayerFragments: getPlayerFragments,
+    setPlayerFragments: setPlayerFragments,
+    addPlayerFragment: addPlayerFragment,
+    removePlayerFragment: removePlayerFragment,
+    getFragmentCount: getFragmentCount,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,

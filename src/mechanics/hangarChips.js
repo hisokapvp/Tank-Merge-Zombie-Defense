@@ -476,6 +476,72 @@
     return null;
   }
 
+  /* ── Chip Fragments (shard/piece system) ────────────────── */
+
+  /**
+   * A chip fragment represents one of the 3 modifier properties of a chip.
+   * fragmentId = modId (1–30). Each unique modifier is a fragment type.
+   * Visually: a "kite" / diamond shape (top half of a triangle).
+   * Fragments can be combined (3 fragments → 1 chip) or obtained by disassembling a chip.
+   */
+  var ALL_FRAGMENT_IDS = [];
+  (function () {
+    for (var m = 1; m <= 14; m++) ALL_FRAGMENT_IDS.push(m);
+    // Tech-upgraded fragments (15–30) are also valid after tech unlock
+    for (var t = 15; t <= 30; t++) ALL_FRAGMENT_IDS.push(t);
+  })();
+
+  /**
+   * Disassemble a whole chip into 3 fragments (one per modId).
+   * @param {object} chipDef - { modIds: [a, b, c], ... }
+   * @returns {array} Array of 3 fragment objects: { fragmentId, modId, name }
+   */
+  function disassembleChip(chipModIds) {
+    var frags = [];
+    for (var i = 0; i < chipModIds.length; i++) {
+      frags.push({ fragmentId: chipModIds[i], modId: chipModIds[i] });
+    }
+    return frags;
+  }
+
+  /**
+   * Assemble 3 fragments into a chip. Validates the combination.
+   * @param {array} fragmentModIds - array of 3 modIds
+   * @returns {object|null} chip definition or null if invalid
+   */
+  function assembleChip(fragmentModIds) {
+    if (!Array.isArray(fragmentModIds) || fragmentModIds.length !== 3) return null;
+    var sorted = fragmentModIds.slice().sort(function (a, b) { return a - b; });
+    // Check rules: no all-same, max 1 special
+    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return null;
+    var specCount = countSpecials(sorted);
+    if (specCount > 1) return null;
+    // Find matching chip in pool
+    var key = sorted.join('-');
+    var chipDef = getChipByKey(_allChips, key);
+    if (!chipDef) {
+      // May contain tech-upgraded mods (15+), need to find base equivalent
+      // Build a chipDef on the fly
+      return {
+        chipId: -1, // will need to be resolved
+        sourceComboKey: key,
+        modIds: sorted,
+        chipColor: specCount === 0 ? 'red' : 'yellow',
+        specCount: specCount
+      };
+    }
+    return chipDef;
+  }
+
+  /**
+   * Get the training speed bonus for a chip fragment (half of a whole chip).
+   * Whole chip = accelPerChip%. Fragment = accelPerChip / 2 %.
+   */
+  function getFragmentAccelBonus(modId, techDuration) {
+    var base = techDuration === TECH_STUDY_DURATION_LOCKED ? 2.5 : 5;
+    return base / 2; // half of whole chip
+  }
+
   /* ── Initialise chip pool at load time ─────────────────── */
 
   var _allChips = generateChipPool();
@@ -641,6 +707,11 @@
     canUnlockTech: canUnlockTech,
     getTechCost: getTechCost,
     getTechReplacesModId: getTechReplacesModId,
-    unlockTechnology: unlockTechnology
+    unlockTechnology: unlockTechnology,
+    /* Chip fragments API */
+    ALL_FRAGMENT_IDS: ALL_FRAGMENT_IDS,
+    disassembleChip: disassembleChip,
+    assembleChip: assembleChip,
+    getFragmentAccelBonus: getFragmentAccelBonus
   };
 })(typeof window !== 'undefined' ? window : this);
