@@ -77,7 +77,7 @@
       { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
     ];
 
-    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n      <button type="button" class="debugTab" data-tab="chips">Chips</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n      <div id="debugSectionChips" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Cell index (0–15)</label>\n          <select id="debugChipCell" class="debugSelect"></select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Slot</label>\n          <select id="debugChipSlot" class="debugSelect">\n            <option value="red-0">Red 0 (top)</option>\n            <option value="red-1">Red 1 (bottom)</option>\n            <option value="yellow-0">Yellow 0 (TL)</option>\n            <option value="yellow-1">Yellow 1 (TR)</option>\n            <option value="yellow-2">Yellow 2 (BL)</option>\n            <option value="yellow-3">Yellow 3 (BR)</option>\n          </select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key (e.g. 1-2-3)</label>\n          <input type="text" id="debugChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugChipInstall" style="margin-top:6px">Install chip</button>\n        <button type="button" class="debugBtn" id="debugChipRemove" style="margin-top:4px">Remove chip from slot</button>\n        <button type="button" class="debugBtn" id="debugChipClear" style="margin-top:4px">Clear entire cell</button>\n        <div id="debugChipStatus" class="debugRow" style="margin-top:8px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#4af626">Inventory</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key</label>\n          <input type="text" id="debugInvChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Level</label>\n          <input type="number" id="debugInvChipLevel" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugInvChipCount" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugInvAddChip" style="margin-top:6px">Add chip to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugInvQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugInvQuickAdd" style="margin-left:4px">Add random</button>\n        </div>\n        <div id="debugInvStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
+    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n      <button type="button" class="debugTab" data-tab="chips">Chips</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#fdd835">Learn Technology (instant)</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel" for="debugLearnTechSelect">Technology</label>\n          <select id="debugLearnTechSelect" class="debugSelect" style="max-width:200px"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugLearnTechApply" style="margin-top:6px">Learn selected tech</button>\n        <div id="debugLearnTechStatus" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n      <div id="debugSectionChips" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Cell index (0–15)</label>\n          <select id="debugChipCell" class="debugSelect"></select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Slot</label>\n          <select id="debugChipSlot" class="debugSelect">\n            <option value="red-0">Red 0 (top)</option>\n            <option value="red-1">Red 1 (bottom)</option>\n            <option value="yellow-0">Yellow 0 (TL)</option>\n            <option value="yellow-1">Yellow 1 (TR)</option>\n            <option value="yellow-2">Yellow 2 (BL)</option>\n            <option value="yellow-3">Yellow 3 (BR)</option>\n          </select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key (e.g. 1-2-3)</label>\n          <input type="text" id="debugChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugChipInstall" style="margin-top:6px">Install chip</button>\n        <button type="button" class="debugBtn" id="debugChipRemove" style="margin-top:4px">Remove chip from slot</button>\n        <button type="button" class="debugBtn" id="debugChipClear" style="margin-top:4px">Clear entire cell</button>\n        <div id="debugChipStatus" class="debugRow" style="margin-top:8px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#4af626">Inventory</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key</label>\n          <input type="text" id="debugInvChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Level</label>\n          <input type="number" id="debugInvChipLevel" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugInvChipCount" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugInvAddChip" style="margin-top:6px">Add chip to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugInvQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugInvQuickAdd" style="margin-left:4px">Add random</button>\n        </div>\n        <div id="debugInvStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
 
     var tankLevelSelect = panel.querySelector('#debugTankLevel');
     for (var l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) {
@@ -232,6 +232,56 @@
       if (talentValueEl) talentValueEl.textContent = 'Current talent points: ' + getCurrentTalentPointsForDebug();
       var damageValueEl = panel.querySelector('#debugDamagePointsValue');
       if (damageValueEl) damageValueEl.textContent = 'Current damage points: ' + getCurrentDamagePointsForDebug();
+
+      /* Task 6: Populate tech select dropdown */
+      var techSelect = panel.querySelector('#debugLearnTechSelect');
+      var techStatusEl = panel.querySelector('#debugLearnTechStatus');
+      if (techSelect) {
+        var HC = global.Game && global.Game.HangarChips;
+        var prevValue = techSelect.value;
+        techSelect.innerHTML = '';
+        if (HC && HC.TECH_TREE) {
+          var treeKeys = Object.keys(HC.TECH_TREE);
+          var techCount = 0;
+          for (var tk = 0; tk < treeKeys.length; tk++) {
+            var chain = HC.TECH_TREE[Number(treeKeys[tk])];
+            for (var ci = 0; ci < chain.length; ci++) {
+              var tech = chain[ci];
+              var isUnlocked = HC.isTechUnlocked(tech.modId);
+              var label = (HC.MOD_NAMES_RU ? (HC.MOD_NAMES_RU[tech.modId] || tech.modId) : tech.modId) +
+                ' (id:' + tech.modId + ')' +
+                (isUnlocked ? ' [DONE]' : '');
+              var opt = new Option(label, tech.modId);
+              if (isUnlocked) opt.style.color = '#4af626';
+              techSelect.appendChild(opt);
+              techCount++;
+            }
+          }
+          if (prevValue && techSelect.querySelector('option[value="' + prevValue + '"]')) {
+            techSelect.value = prevValue;
+          }
+          techSelect.disabled = techCount === 0;
+        } else {
+          techSelect.appendChild(new Option('HangarChips not loaded', ''));
+          techSelect.disabled = true;
+        }
+      }
+      if (techStatusEl) {
+        var HC2 = global.Game && global.Game.HangarChips;
+        if (HC2 && HC2.TECH_TREE) {
+          var unlocked = [];
+          var keys2 = Object.keys(HC2.TECH_TREE);
+          for (var t2 = 0; t2 < keys2.length; t2++) {
+            var ch2 = HC2.TECH_TREE[Number(keys2[t2])];
+            for (var c2 = 0; c2 < ch2.length; c2++) {
+              if (HC2.isTechUnlocked(ch2[c2].modId)) unlocked.push(ch2[c2].modId);
+            }
+          }
+          techStatusEl.textContent = 'Unlocked techs: ' + (unlocked.length ? unlocked.join(', ') : 'none');
+        } else {
+          techStatusEl.textContent = 'Tech tree not loaded';
+        }
+      }
     }
 
     function formatWaveSec(value) {
@@ -316,6 +366,48 @@
           refreshDebugUpdatesSection();
           debugLog('info', 'Updates: +' + amount + ' damage points added.');
         }, 'Add damage points failed ');
+      });
+    }
+
+    /* Task 6: Learn Technology button handler */
+    var learnTechBtn = panel.querySelector('#debugLearnTechApply');
+    if (learnTechBtn) {
+      learnTechBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var techSelect = panel.querySelector('#debugLearnTechSelect');
+          var modId = techSelect ? parseInt(techSelect.value, 10) : NaN;
+          if (!Number.isFinite(modId)) {
+            debugLog('warn', 'Updates: select a technology to learn.');
+            return;
+          }
+          var HC = global.Game && global.Game.HangarChips;
+          var UI = global.Game && global.Game.HangarChipsUI;
+          if (!HC) { debugLog('error', 'HangarChips module not loaded.'); return; }
+          if (HC.isTechUnlocked(modId)) {
+            debugLog('warn', 'Updates: technology ' + modId + ' is already unlocked.');
+            refreshDebugUpdatesSection();
+            return;
+          }
+          /* Force-unlock: skip prerequisites */
+          var chips = UI ? UI.getPlayerChips() : [];
+          var cells = UI ? UI.getCells() : [];
+          var result = HC.unlockTechnology(modId, chips, cells);
+          if (result && result.ok) {
+            debugLog('info', 'Updates: technology ' + modId + ' learned (forced via debug).');
+            if (UI && typeof UI.renderTechUnlockPanel === 'function') UI.renderTechUnlockPanel();
+            if (UI && typeof UI.renderChipUpgradeGrid === 'function') UI.renderChipUpgradeGrid();
+          } else {
+            /* If unlockTechnology requires prereqs, try a manual override */
+            if (HC._debugForceUnlockTech) {
+              HC._debugForceUnlockTech(modId);
+              debugLog('info', 'Updates: technology ' + modId + ' force-unlocked via debug override.');
+            } else {
+              debugLog('warn', 'Updates: failed to learn technology ' + modId + '. Reason: ' + (result ? result.error : 'unknown'));
+            }
+          }
+          if (typeof updateUI === 'function') updateUI();
+          refreshDebugUpdatesSection();
+        }, 'Learn technology failed ');
       });
     }
 

@@ -477,6 +477,7 @@
   /* ─── Tech Study state (Tasks 6-8) ────────────────────── */
   var _techStudying = null; // { modId, elapsed, duration, acceleratedPct } or null
   var _techStudyTimerId = null;
+  var _techStudyLastTick = 0; // wall-clock ms of last timer tick
   var TECH_STUDY_DURATION_OPEN = 7200;   // 2 hours in seconds for available techs
   var TECH_STUDY_DURATION_LOCKED = 18000; // 5 hours in seconds for locked techs
 
@@ -485,14 +486,19 @@
 
   function _startTechStudyTimer() {
     if (_techStudyTimerId) return;
+    _techStudyLastTick = Date.now();
+    /* Task 1: Use 250ms interval + wall-clock delta for smooth second-by-second countdown */
     _techStudyTimerId = setInterval(function() {
       if (!_techStudying) { _stopTechStudyTimer(); return; }
       /* Fix 4: Only pause timer when settings or bigMenu are open */
-      if (_isTechTimerPaused()) return;
+      if (_isTechTimerPaused()) { _techStudyLastTick = Date.now(); return; }
+      var now = Date.now();
+      var deltaSec = Math.max(0, (now - _techStudyLastTick) / 1000);
+      _techStudyLastTick = now;
       /* Fix 7: Speed multiplier — acceleratedPct increases tick speed, not reduces duration */
       var accelPct = _techStudying.acceleratedPct || 0;
       var speedMul = accelPct >= 100 ? 20 : (1 / (1 - accelPct / 100));
-      _techStudying.elapsed += speedMul;
+      _techStudying.elapsed += deltaSec * speedMul;
       /* Check completion against FULL duration (not reduced) */
       if (_techStudying.elapsed >= _techStudying.duration) {
         _completeTechStudy();
@@ -500,7 +506,7 @@
         /* Update timer display */
         _updateTechStudyTimerDisplay();
       }
-    }, 1000);
+    }, 250);
   }
 
   function _stopTechStudyTimer() {
@@ -629,13 +635,14 @@
           html += '<div class="techUnlockCard__durationInfo">' + t('techUnlockDuration', 'Время изучения: {time}').replace('{time}', _formatTime(TECH_STUDY_DURATION_LOCKED)) + '</div>';
         } else if (isStudying) {
           /* Show progress bar + timer + cancel + accelerate */
-          var effectiveDuration = _techStudying.duration * (1 - (_techStudying.acceleratedPct || 0) / 100);
-          var remaining = Math.max(0, Math.ceil(effectiveDuration - _techStudying.elapsed));
-          var pctW = effectiveDuration > 0 ? Math.min(100, Math.round(_techStudying.elapsed / effectiveDuration * 100)) : 0;
+          /* Use full duration — acceleration is handled via speedMul in timer */
+          var remaining = Math.max(0, Math.ceil(_techStudying.duration - _techStudying.elapsed));
+          var pctW = _techStudying.duration > 0 ? Math.min(100, Math.round(_techStudying.elapsed / _techStudying.duration * 100)) : 0;
 
           html += '<div class="techUnlockCard__progress">';
           html += '<div class="techUnlockCard__bar"><div class="techUnlockCard__barFill" data-tech-study-bar="' + tech.modId + '" style="width:' + pctW + '%"></div></div>';
-          html += '<span class="techUnlockCard__progressText" data-tech-timer="' + tech.modId + '">' + _formatTime(remaining) + '</span>';
+          /* Task 3: fixed-width timer text so progress bar doesn't jump */
+          html += '<span class="techUnlockCard__progressText techUnlockCard__progressText--fixed" data-tech-timer="' + tech.modId + '">' + _formatTime(remaining) + '</span>';
           html += '</div>';
 
           if (_techStudying.acceleratedPct > 0) {
@@ -829,10 +836,11 @@
     return newLevel;
   }
 
-  /** Get the attack bonus for a chip level (+10% per level, starting at level 1 = +10%). */
+  /** Get the attack bonus for a chip level. Level 1 = 0%, level 2 = +10%, level 3 = +20%, etc.
+   *  Task 2: Bonus starts from level 2, no bonus at level 1. */
   function chipLevelBonus(level) {
     var lvl = (Number.isFinite(level) && level >= 1) ? Math.floor(level) : 1;
-    return lvl * 10;
+    return Math.max(0, (lvl - 1) * 10);
   }
 
   /* ─── Render: chip upgrade grid ────────────────────────── */
@@ -964,6 +972,69 @@
   function hideChipUpgradeTooltip() {
     if (_chipUpgradeTooltipEl) {
       _chipUpgradeTooltipEl.style.display = 'none';
+    }
+  }
+
+  /* ─── Task 5: Tooltip for installed slot chips ─────────── */
+
+  var _slotTooltipEl = null;
+
+  function _showSlotChipTooltip(evt, slotPoly) {
+    var slotType = slotPoly.getAttribute('data-slot-type');
+    var slotId = slotPoly.getAttribute('data-slot-id');
+    if (!slotType || !slotId) return;
+
+    var cells = ensureCells();
+    var cell = cells[_selectedCell];
+    if (!cell) return;
+
+    var chipData = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
+    if (!chipData) { _hideSlotChipTooltip(); return; }
+
+    var h = hc();
+    if (!h) return;
+
+    /* Find chip in player inventory to get level info */
+    var chips = ensurePlayerChips();
+    var chipLevel = chipData.level || 1;
+    var chipName = chipData.sourceComboKey || '';
+    var chipModIds = chipData.modIds || [];
+
+    if (h && chipModIds.length) {
+      var names = [];
+      for (var ni = 0; ni < chipModIds.length; ni++) names.push(modName(chipModIds[ni]));
+      chipName = names.join(' + ');
+    }
+
+    if (!_slotTooltipEl) {
+      _slotTooltipEl = _doc.createElement('div');
+      _slotTooltipEl.className = 'chipUpgradeTooltip chipSlotTooltip';
+      _doc.body.appendChild(_slotTooltipEl);
+    }
+
+    var bonus = chipLevelBonus(chipLevel);
+    var colorLabel = slotType === 'red' ? 'Красный' : 'Жёлтый';
+    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
+    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chipLevel) + '</div>';
+    html += '<div style="color:' + (slotType === 'red' ? '#e53935' : '#fdd835') + ';font-size:11px">' + colorLabel + ' слот: ' + slotId + '</div>';
+    if (bonus > 0) {
+      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    } else {
+      html += '<div style="font-size:11px;color:rgba(255,255,255,.4)">' + t('chipTooltipNoBonus', 'Нет бонуса к атаке (нужен ур.2+)') + '</div>';
+    }
+    if (chipData.rotation) {
+      html += '<div style="font-size:10px;color:rgba(255,255,255,.35)">Поворот: ' + (chipData.rotation * 120) + '°</div>';
+    }
+
+    _slotTooltipEl.innerHTML = html;
+    _slotTooltipEl.style.display = 'block';
+    _slotTooltipEl.style.left = Math.min(evt.clientX + 12, global.innerWidth - 260) + 'px';
+    _slotTooltipEl.style.top = Math.max(0, evt.clientY + 16) + 'px';
+  }
+
+  function _hideSlotChipTooltip() {
+    if (_slotTooltipEl) {
+      _slotTooltipEl.style.display = 'none';
     }
   }
 
@@ -1219,6 +1290,13 @@
     var techAccelChip = tgt.closest ? tgt.closest('[data-accel-chip-id]') : null;
     if (techAccelChip) {
       var isChecked = techAccelChip.getAttribute('data-accel-checked') === 'true';
+      /* Task 4: If not checked and already at limit, block toggling on */
+      if (!isChecked && _isAccelSelectionAtMax()) {
+        if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого чипа, чтобы добавить новый.'), 2000);
+        }
+        return;
+      }
       techAccelChip.setAttribute('data-accel-checked', isChecked ? 'false' : 'true');
       var checkMark = techAccelChip.querySelector('.techAccelChip__check');
       if (checkMark) checkMark.textContent = isChecked ? '' : '✓';
@@ -1320,6 +1398,18 @@
     modal.style.display = 'flex';
   }
 
+  /** Task 4: Check if the current chip selection has reached the max acceleration limit */
+  function _isAccelSelectionAtMax() {
+    if (!_techModalEl || !_techStudying) return false;
+    var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
+    var count = checked.length;
+    var accelPerChip = _getAccelPerChip(_techStudying.modId);
+    var currentAccel = _techStudying.acceleratedPct || 0;
+    var maxMore = 95 - currentAccel;
+    var pct = count * accelPerChip;
+    return pct >= maxMore;
+  }
+
   function _updateAccelPercentage() {
     if (!_techModalEl || !_techStudying) return;
     var checked = _techModalEl.querySelectorAll('[data-accel-checked="true"]');
@@ -1336,6 +1426,22 @@
     if (confirmBtn) {
       confirmBtn.textContent = 'Ускорить на ' + pct + '%';
       confirmBtn.disabled = count === 0 || pct <= 0;
+    }
+    /* Task 4: Disable unchecked chips when max acceleration is reached */
+    var atMax = pct >= maxMore && maxMore > 0;
+    var allChipEls = _techModalEl.querySelectorAll('[data-accel-chip-id]');
+    for (var i = 0; i < allChipEls.length; i++) {
+      var chipEl = allChipEls[i];
+      var isChecked = chipEl.getAttribute('data-accel-checked') === 'true';
+      if (!isChecked && atMax) {
+        chipEl.classList.add('techAccelChip--disabled');
+        chipEl.style.pointerEvents = 'none';
+        chipEl.style.opacity = '0.35';
+      } else {
+        chipEl.classList.remove('techAccelChip--disabled');
+        chipEl.style.pointerEvents = '';
+        chipEl.style.opacity = '';
+      }
     }
   }
 
@@ -1439,11 +1545,28 @@
       /* tooltip hover events for chip upgrade cards */
       overlay.addEventListener('mouseover', function(evt) {
         var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
-        if (card) showChipUpgradeTooltip(evt);
+        if (card) { showChipUpgradeTooltip(evt); return; }
+        /* Task 5: tooltip for chips installed in SVG slot triangles */
+        var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
+        if (slotPoly) { _showSlotChipTooltip(evt, slotPoly); return; }
+      });
+      overlay.addEventListener('mousemove', function(evt) {
+        /* Task 5: update tooltip position when moving over slot */
+        if (_slotTooltipEl && _slotTooltipEl.style.display !== 'none') {
+          var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
+          if (slotPoly) {
+            _slotTooltipEl.style.left = Math.min(evt.clientX + 12, global.innerWidth - 260) + 'px';
+            _slotTooltipEl.style.top = Math.max(0, evt.clientY + 16) + 'px';
+          }
+        }
       });
       overlay.addEventListener('mouseout', function(evt) {
         var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
         if (!card || (evt.relatedTarget && !card.contains(evt.relatedTarget))) hideChipUpgradeTooltip();
+        /* Task 5: hide slot tooltip */
+        var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
+        if (slotPoly && evt.relatedTarget && !slotPoly.contains(evt.relatedTarget)) _hideSlotChipTooltip();
+        if (!slotPoly) _hideSlotChipTooltip();
       });
 
       /* ─── Chip drag-and-drop for merge ───────────────────── */

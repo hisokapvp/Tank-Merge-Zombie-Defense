@@ -3080,6 +3080,7 @@ input, select, textarea, button {
   gap:10px;
   height: calc(100vh - 180px); /* Req 5: Set height so only chips list scrolls */
   max-height: 800px;
+  overflow:hidden;
 }
 .hangarCellTitle{
   position: absolute;
@@ -3278,7 +3279,7 @@ input, select, textarea, button {
   flex: 1 1 auto; 
   display: flex;
   flex-direction: column;
-  min-height: 150px;
+  min-height: 0;
   overflow: hidden;
   margin-top: 10px;
 }
@@ -3681,6 +3682,11 @@ input, select, textarea, button {
   font-size:11px;
   color:rgba(255,255,255,.5);
   white-space:nowrap;
+}
+.techUnlockCard__progressText--fixed{
+  min-width:90px;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
 }
 .techUnlockCard__actions{
   display:flex;
