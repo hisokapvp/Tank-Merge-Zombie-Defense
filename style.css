@@ -47,7 +47,9 @@ body{
 body.menu-open::before,
 body.big-menu-open::before,
 body.scmodal-open::before,
-body.merge-popup-open::before{
+body.merge-popup-open::before,
+body.achievements-open::before,
+body.critical-open::before{
   content:"";
   position:fixed;
   inset:0;
@@ -134,7 +136,7 @@ body::after{
 .stageUiRight{
   right:16px;
   align-items:flex-end;
-  width:min(550px, 52vw);
+  width:min(380px, 36vw);
   padding: 0; 
   box-sizing:border-box;
   transition: width 0.3s ease;
@@ -1071,8 +1073,9 @@ body.menu-open .stageUi .hudItem{
 .achievementRow{
   border:1px solid var(--line);
   border-radius:10px;
-  padding:8px 10px;
+  padding:6px 8px;
   background:rgba(0,0,0,.22);
+  font-size:11px;
 }
 
 .achievementHeaderRow{
@@ -1102,6 +1105,7 @@ body.menu-open .stageUi .hudItem{
 
 .achievementName{
   font-weight:700;
+  font-size:11px;
 }
 
 .achievementToggleBtn{
@@ -1133,7 +1137,7 @@ body.menu-open .stageUi .hudItem{
 
 .achievementMeta{
   color:var(--muted);
-  font-size:12px;
+  font-size:10px;
   margin-top:0;
 }
 
@@ -3999,20 +4003,25 @@ input, select, textarea, button {
   right:3px;
   width:16px;
   height:16px;
-  border:1.5px solid rgba(255,255,255,.35);
+  border:2px solid rgba(255,152,0,.6);
   border-radius:3px;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:rgba(0,0,0,.4);
+  background:rgba(30,28,24,.8);
+  transition:border-color .12s, background .12s;
+}
+.techAccelChip:hover .techAccelChip__checkBox{
+  border-color:#ff9800;
+  background:rgba(255,152,0,.1);
 }
 .techAccelChip[data-accel-checked="true"] .techAccelChip__checkBox{
-  border-color:#4af626;
-  background:rgba(74,246,38,.2);
+  border-color:#ff9800;
+  background:rgba(255,152,0,.15);
 }
 .techAccelChip__check{
   font-size:11px;
-  color:#4af626;
+  color:#ff9800;
   font-weight:bold;
 }
 .techAccelChip__icon{

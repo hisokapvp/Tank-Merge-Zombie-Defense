@@ -106,6 +106,7 @@
       overlay.classList.toggle('hidden', !nextOpen);
       overlay.setAttribute('aria-hidden', (!nextOpen).toString());
       if (nextOpen) {
+        documentObj.body.classList.add('critical-open');
         if (typeof a11yOpen === 'function') {
           a11yOpen(overlay, {
             initialFocus: initialFocus || skipBtn,
@@ -114,6 +115,7 @@
         }
         return;
       }
+      documentObj.body.classList.remove('critical-open');
       if (typeof a11yClose === 'function') a11yClose(overlay);
     }
 

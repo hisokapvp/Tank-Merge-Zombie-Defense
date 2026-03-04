@@ -2059,18 +2059,14 @@
       }
       html += '</div>'; // chipCraftDropZone
 
-      /* ── Action button below drop zone (visible only when slots have content) ── */
-      if (hasContent) {
-        var slotMode = _detectCraftMode();
-        var canExec = (slotMode === 'disassemble' || slotMode === 'assemble');
-        var execLabel = slotMode === 'disassemble'
-          ? t('chipCraftDisassemble', 'Разобрать')
-          : slotMode === 'assemble'
-            ? t('chipCraftAssemble', 'Создать чип')
-            : (_craftMode === 'disassemble' ? t('chipCraftDisassemble', 'Разобрать') : t('chipCraftAssemble', 'Создать чип'));
-        html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
-          '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
-      }
+      /* ── Action button below drop zone (always visible, disabled when no valid content) ── */
+      var slotMode = _detectCraftMode();
+      var canExec = hasContent && (slotMode === 'disassemble' || slotMode === 'assemble');
+      var execLabel = _craftMode === 'disassemble'
+        ? t('chipCraftDisassemble', 'Разобрать')
+        : t('chipCraftAssemble', 'Создать чип');
+      html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
+        '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
 
       html += '</div>'; // chipCraftPreview
     }

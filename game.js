@@ -8187,6 +8187,7 @@ function openAchievementsModal(){
   renderAchievementsList();
   ui.achievementsModal.classList.remove('hidden');
   ui.achievementsModal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('achievements-open');
   a11yOpen(ui.achievementsModal, { initialFocus: ui.achievementsClose, onClose: closeAchievementsModal });
 }
 
@@ -8194,6 +8195,7 @@ function closeAchievementsModal(){
   if (!ui.achievementsModal) return;
   ui.achievementsModal.classList.add('hidden');
   ui.achievementsModal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('achievements-open');
   a11yClose(ui.achievementsModal);
 }
 
@@ -10277,13 +10279,13 @@ function drawBoard(){
       if (state.isDismantleMode){
         const r = dismantleCheckboxRect(c);
         ctx.fillStyle = 'rgba(0,0,0,.4)';
-        ctx.strokeStyle = isTankSelectedForDismantle(c.tank.id) ? 'rgba(110,168,255,.9)' : 'rgba(255,255,255,.5)';
+        ctx.strokeStyle = isTankSelectedForDismantle(c.tank.id) ? 'rgba(255,152,0,.9)' : 'rgba(255,255,255,.5)';
         ctx.lineWidth = 1.5;
         rr(ctx, r.x, r.y, r.w, r.h, 3);
         ctx.fill();
         ctx.stroke();
         if (isTankSelectedForDismantle(c.tank.id)){
-          ctx.strokeStyle = '#eaf1ff';
+          ctx.strokeStyle = '#ff9800';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(r.x + 3, r.y + r.h/2);
