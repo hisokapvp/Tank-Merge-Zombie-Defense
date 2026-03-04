@@ -110,6 +110,7 @@
       matryoshkaChain: null,      // array of {dmgMul, sizeMul} for each child level
       pushDistance: 0,            // mod 4/21/22
       pushExtraDmgMul: 0,
+      pushRadius: 0,               // AoE radius for push effect
       pullDistance: 0,            // mod 5/23/24
       pullExtraDmgMul: 0,
       comboShots: 0,              // mod 6/25/26
@@ -147,11 +148,12 @@
         result.matryoshkaSizeMul = 1.25;
         break;
       case 4: // Small Repulse
-        result.pushDistance = 10;
+        result.pushDistance = 40;
         result.pushExtraDmgMul = 0.5;
+        result.pushRadius = 40;
         break;
       case 5: // Small Vacuum
-        result.pullDistance = 50;
+        result.pullDistance = 40;
         result.pullExtraDmgMul = 0.5;
         break;
       case 6: // Small Combo Counter
@@ -226,19 +228,21 @@
         ];
         break;
       case 21: // Medium Repulse — ×0.75 extra dmg, 15px push
-        result.pushDistance = 15;
+        result.pushDistance = 60;
         result.pushExtraDmgMul = 0.75;
+        result.pushRadius = 50;
         break;
       case 22: // Large Repulse — ×1 extra dmg, 20px push
-        result.pushDistance = 20;
+        result.pushDistance = 80;
         result.pushExtraDmgMul = 1.0;
+        result.pushRadius = 60;
         break;
       case 23: // Medium Vacuum — ×0.75 extra dmg, 15px pull radius
-        result.pullDistance = 15;
+        result.pullDistance = 50;
         result.pullExtraDmgMul = 0.75;
         break;
       case 24: // Large Vacuum — ×1 extra dmg, 20px pull radius
-        result.pullDistance = 20;
+        result.pullDistance = 60;
         result.pullExtraDmgMul = 1.0;
         break;
       case 25: // Medium Combo — every 4th: 3 rapid shots ×1.5 dmg
@@ -361,6 +365,38 @@
       /* Cascade mods deferred; yellow deferred to final cascade */
       result.pendingCascadeMods = cascadeMods;
       result.pendingYellowMods = yellowMods;
+
+      /*
+       * Combo counter mods (6/25/26) need their counter incremented
+       * at shot time even when deferred — otherwise the counter never
+       * advances because cascade impacts don't correspond to tank shots.
+       * We track the combo fire state so the cascade spawn can read it.
+       */
+      var COMBO_MODS = [6, 25, 26];
+      for (var ci = 0; ci < cascadeMods.length; ci++) {
+        if (COMBO_MODS.indexOf(cascadeMods[ci].modId) !== -1) {
+          var tmpResult = _buildEmptyResult();
+          tmpResult.cellIndex = cellIndex;
+          _applyModToResult(tmpResult, cascadeMods[ci].modId, cellIndex);
+          if (tmpResult.comboShots > 0) {
+            cascadeMods[ci]._comboFired = true;
+            cascadeMods[ci]._comboShots = tmpResult.comboShots;
+            cascadeMods[ci]._comboDmgMul = tmpResult.comboDmgMul;
+          }
+        }
+      }
+      for (var yi = 0; yi < yellowMods.length; yi++) {
+        if (COMBO_MODS.indexOf(yellowMods[yi].modId) !== -1) {
+          var tmpResult2 = _buildEmptyResult();
+          tmpResult2.cellIndex = cellIndex;
+          _applyModToResult(tmpResult2, yellowMods[yi].modId, cellIndex);
+          if (tmpResult2.comboShots > 0) {
+            yellowMods[yi]._comboFired = true;
+            yellowMods[yi]._comboShots = tmpResult2.comboShots;
+            yellowMods[yi]._comboDmgMul = tmpResult2.comboDmgMul;
+          }
+        }
+      }
     }
 
     result.cascadeLevel = 0;
@@ -466,13 +502,27 @@
     var cascadeResult = _buildEmptyResult();
     cascadeResult.cellIndex = cellIndex;
     cascadeResult.activeModIds = [nextMod.modId];
-    _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
+
+    /* For combo counter mods: use pre-computed state from applyShotModifiers
+       to avoid double-incrementing the counter */
+    var COMBO_MODS_SET = {6: true, 25: true, 26: true};
+    if (COMBO_MODS_SET[nextMod.modId] && nextMod._comboFired) {
+      cascadeResult.comboShots = nextMod._comboShots;
+      cascadeResult.comboDmgMul = nextMod._comboDmgMul;
+    } else {
+      _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
+    }
 
     /* If this is the LAST cascade level, include yellow mods */
     if (remainingCascade.length === 0 && yellowMods.length > 0) {
       for (var yi = 0; yi < yellowMods.length; yi++) {
         cascadeResult.activeModIds.push(yellowMods[yi].modId);
-        _applyModToResult(cascadeResult, yellowMods[yi].modId, cellIndex);
+        if (COMBO_MODS_SET[yellowMods[yi].modId] && yellowMods[yi]._comboFired) {
+          cascadeResult.comboShots = yellowMods[yi]._comboShots;
+          cascadeResult.comboDmgMul = yellowMods[yi]._comboDmgMul;
+        } else {
+          _applyModToResult(cascadeResult, yellowMods[yi].modId, cellIndex);
+        }
       }
     }
 
@@ -564,7 +614,7 @@
 
     /* ─── Mod 4: Repulse ─── */
     if (sm.pushDistance > 0) {
-      _applyPushPull(x, y, b, sm.pushDistance, sm.pushExtraDmgMul, 'push', opts);
+      _applyPushPull(x, y, b, sm.pushDistance, sm.pushExtraDmgMul, sm.pushRadius, 'push', opts);
     }
 
     /* ─── Mod 5: Vacuum ─── */
@@ -806,31 +856,35 @@
 
   /* ─── push (mod 4) ─── */
   /* Zombies use polar coordinates (z.r, z.theta) around center.
-     Push = increase z.r (away from center = toward edge). */
-  function _applyPushPull(x, y, b, distance, extraDmgMul, direction, opts) {
+     Push = increase z.r (away from center = away from fence). */
+  function _applyPushPull(x, y, b, distance, extraDmgMul, pushRadius, direction, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
     var applyDmg = opts.applyDamage;
     var addNum = opts.addDamageNumber;
+    var effectRadius = pushRadius > 0 ? pushRadius : (b.aoe || 0);
 
     for (var i = 0; i < zombies.length; i++) {
       var z = zombies[i];
       if (z.state === 'dying') continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
-      if (d > b.aoe) continue;
+      if (d > effectRadius) continue;
+
+      /* Distance falloff: closer zombies get more push, farther get less */
+      var falloff = effectRadius > 0 ? Math.max(0.3, 1 - d / effectRadius) : 1;
+      var actualDistance = Math.round(distance * falloff);
 
       // extra damage
       if (extraDmgMul > 0) {
-        var extraDmg = Math.round(b.dmg * extraDmgMul);
+        var extraDmg = Math.round(b.dmg * extraDmgMul * falloff);
         if (applyDmg) applyDmg(z, extraDmg, 'tank');
         if (addNum) addNum(p.x, p.y, extraDmg, false);
       }
 
-      // displacement via polar z.r (push outward / pull inward)
+      // displacement: always push AWAY from fence (increase z.r)
       if (Number.isFinite(z.r)) {
-        var sign = direction === 'push' ? 1 : -1;
-        z.r = Math.max(0, z.r + distance * sign);
+        z.r = Math.max(0, z.r + actualDistance);
       }
     }
   }

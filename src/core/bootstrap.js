@@ -644,7 +644,11 @@
         settings.sfxVolume = opts.clamp(value, 0, 1);
         opts.applyAudioSettings();
       }
-      if (opts.ui.menuSfxValue) opts.ui.menuSfxValue.textContent = pct + '%';
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        if (opts.ui.menuSfxValue) opts.ui.menuSfxValue.textContent = pct + '%';
+      }
       if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
         opts.playUiSliderPreviewSfxThrottled();
       }
@@ -661,7 +665,11 @@
         settings.musicVolume = opts.clamp(value, 0, 1);
         opts.applyAudioSettings();
       }
-      if (opts.ui.menuMusicValue) opts.ui.menuMusicValue.textContent = pct + '%';
+      if (typeof opts.syncVolumeUIFromSettings === 'function') {
+        opts.syncVolumeUIFromSettings();
+      } else {
+        if (opts.ui.menuMusicValue) opts.ui.menuMusicValue.textContent = pct + '%';
+      }
       opts.saveSettings();
     });
 
