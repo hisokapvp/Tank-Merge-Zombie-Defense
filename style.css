@@ -2994,6 +2994,14 @@ input, select, textarea, button {
   flex-direction: column;
   padding:8px 10px calc(var(--ui-btn-press-shift,2px) + 4px);
 }
+/* Pass height through each visible tab panel inside the hangar overlay */
+#modsHangarOverlay .scTabPanel:not([hidden]){
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 #modsHangarOverlay .scTabs{
   flex: 0 0 auto;
   margin:8px 0 0;
@@ -3005,9 +3013,8 @@ input, select, textarea, button {
   display:flex;
   gap:14px;
   align-items: stretch;
-  min-height: 0;
   flex: 1 1 auto;
-  overflow: hidden;
+  min-height: 0;
 }
 
 /* --- 4×4 Cell Grid --- */
@@ -3075,12 +3082,11 @@ input, select, textarea, button {
 .hangarDetail{
   flex:1 1 0;
   min-width:0;
+  min-height:0;
+  overflow:hidden;
   display:flex;
   flex-direction:column;
   gap:10px;
-  height: calc(100vh - 180px); /* Req 5: Set height so only chips list scrolls */
-  max-height: 800px;
-  overflow:hidden;
 }
 .hangarCellTitle{
   position: absolute;
@@ -3274,12 +3280,12 @@ input, select, textarea, button {
 
 /* --- Available chips list --- */
 .hangarChipsList{
-  width: 100%; 
+  width: 100%;
   max-width: none;
-  flex: 1 1 auto; 
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   overflow: hidden;
   margin-top: 10px;
 }
@@ -3324,6 +3330,7 @@ input, select, textarea, button {
 }
 .hangarChipsGridWrap {
   flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(0,0,0,0.2);
   border-radius: 6px;
@@ -3336,11 +3343,11 @@ input, select, textarea, button {
   grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
   gap:8px;
   flex: 1 1 auto;
-  overflow-y:auto; /* Req 4: Internal scroll */
+  min-height: 0;
+  overflow-y:auto;
   padding:10px;
   scrollbar-width:thin;
-  scrollbar-color: rgba(74,246,38,0.3) transparent;
-  max-height: 280px;
+  scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
 .hangarChipsGrid::-webkit-scrollbar {
   width: 8px; /* Slightly wider for visibility */
@@ -3398,9 +3405,26 @@ input, select, textarea, button {
   padding:60px 0;
 }
 
+/* --- Workshop sub-panels: pass height down flex chain --- */
+.workshopSubPanel{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.chipCraftContainer{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* --- Workshop sub-tabs --- */
 .workshopSubTabs{
   display:flex;
+  flex:0 0 auto;
   gap:6px;
   margin-bottom:12px;
   border-bottom:1px solid rgba(255,255,255,.1);
@@ -3977,10 +4001,19 @@ input, select, textarea, button {
 .chipCraftLayout{
   display:flex;
   gap:14px;
-  min-height:380px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.chipCraftLeftCol{
+  flex:0 0 440px;
+  min-height: 0;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 .chipCraftInventory{
-  flex:0 0 440px;
+  flex:1 1 auto;
+  min-height: 0;
   border:1px solid rgba(255,255,255,.12);
   border-radius:6px;
   background:rgba(30,28,24,.6);
@@ -4004,9 +4037,14 @@ input, select, textarea, button {
   gap:6px;
   padding:8px;
   flex:1 1 auto;
+  min-height: 0;
   overflow-y:auto;
   scrollbar-width:thin;
+  scrollbar-color:rgba(74,246,38,0.35) rgba(0,0,0,0.15);
 }
+.chipCraftInvGrid::-webkit-scrollbar{width:6px}
+.chipCraftInvGrid::-webkit-scrollbar-track{background:rgba(0,0,0,.2);border-radius:3px}
+.chipCraftInvGrid::-webkit-scrollbar-thumb{background:rgba(74,246,38,0.5);border-radius:3px}
 .chipCraftInvGrid::-webkit-scrollbar{width:6px}
 .chipCraftInvGrid::-webkit-scrollbar-track{background:rgba(0,0,0,.2);border-radius:3px}
 .chipCraftInvGrid::-webkit-scrollbar-thumb{background:#4af626;border-radius:3px}
@@ -4055,9 +4093,10 @@ input, select, textarea, button {
 }
 .chipCraftPreview{
   flex:1;
+  min-height: 0;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:0;
 }
 .chipCraftDropZone{
   flex:1;
@@ -4067,6 +4106,8 @@ input, select, textarea, button {
   display:flex;
   align-items:center;
   justify-content:center;
+  flex-direction:column;
+  gap:12px;
   min-height:220px;
   position:relative;
 }
@@ -4145,6 +4186,8 @@ input, select, textarea, button {
   transition:background .12s, color .12s;
   font-family:'Press Start 2P',monospace;
   align-self:center;
+  margin-top:10px;
+  flex-shrink:0;
 }
 .chipCraftActionBtn:hover:not(:disabled){
   background:rgba(74,246,38,.2);
@@ -4233,33 +4276,40 @@ input, select, textarea, button {
   color:#ff9800;
 }
 
-/* ─── Mode toggle row ─── */
+/* ─── Mode tab row (sits above drop zone, always visible) ─── */
 .chipCraftModeRow{
   display:flex;
-  gap:8px;
-  padding:4px 0 8px;
+  gap:4px;
+  padding:0 0 8px;
+  flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  margin-bottom:8px;
 }
 .chipCraftModeBtn{
   flex:1;
   padding:8px 12px;
-  font-size:12px;
-  border:2px solid rgba(255,255,255,.2);
+  font-size:11px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:5px 5px 0 0;
   color:rgba(255,255,255,.5);
-  background:rgba(40,36,32,.4);
-  border-radius:4px;
+  background:rgba(60,55,50,.5);
   cursor:pointer;
   font-family:'Press Start 2P',monospace;
   text-transform:uppercase;
-  transition:border-color .15s,color .15s,background .15s;
+  transition:background .12s,color .12s,border-color .12s;
+}
+.chipCraftModeBtn + .chipCraftModeBtn{
+  border-left: none;
 }
 .chipCraftModeBtn:hover{
-  border-color:rgba(255,255,255,.4);
-  color:rgba(255,255,255,.7);
+  color:rgba(255,255,255,.8);
+  border-color:rgba(255,255,255,.25);
 }
 .chipCraftModeBtn--active{
+  background:#4af626 !important;
   border-color:#4af626;
-  color:#4af626;
-  background:rgba(74,246,38,.1);
+  color:#000 !important;
+  text-shadow:none;
 }
 
 /* ─── Dust checkbox (game-styled) ─── */

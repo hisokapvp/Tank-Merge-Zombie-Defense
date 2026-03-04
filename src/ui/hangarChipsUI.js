@@ -1920,6 +1920,9 @@
 
     var html = '<div class="chipCraftLayout">';
 
+    /* ── Left column: wrapper for inventory box + bottom bar ── */
+    html += '<div class="chipCraftLeftCol">';
+
     /* ── Left column: Inventory of fragments + whole chips ── */
     html += '<div class="chipCraftInventory">';
     html += '<div class="chipCraftInvGrid">';
@@ -1987,7 +1990,9 @@
 
     html += '</div>'; // chipCraftInvGrid
 
-    /* ── Bottom bar below inventory: dust controls + silicon dust display ── */
+    html += '</div>'; // chipCraftInventory
+
+    /* ── Bottom bar outside inventory: dust controls + silicon dust display ── */
     html += '<div class="chipCraftBottomBar">';
     html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
     if (_dustMode) {
@@ -2003,11 +2008,19 @@
     }
     html += '</div>'; // chipCraftBottomBar
 
-    html += '</div>'; // chipCraftInventory
+    html += '</div>'; // chipCraftLeftCol
 
     /* ── Right column: Craft preview area (hidden in dust mode) ── */
     if (!_dustMode) {
       html += '<div class="chipCraftPreview">';
+
+      /* ── Mode tabs: always visible at top of preview area ── */
+      html += '<div class="chipCraftModeRow">';
+      html += '<button class="chipCraftModeBtn' + (_craftMode === 'disassemble' ? ' chipCraftModeBtn--active' : '') +
+        '" data-craft-mode-btn="disassemble" type="button">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
+      html += '<button class="chipCraftModeBtn' + (_craftMode === 'assemble' ? ' chipCraftModeBtn--active' : '') +
+        '" data-craft-mode-btn="assemble" type="button">' + t('chipCraftAssemble', 'Создать чип') + '</button>';
+      html += '</div>';
 
       html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
       var hasContent = false;
@@ -2034,24 +2047,6 @@
           html += '</div>';
         }
         html += '</div>';
-
-        /* ── Mode toggle + action button inside drop zone (visible only with content) ── */
-        html += '<div class="chipCraftModeRow">';
-        html += '<button class="btn scButton chipCraftModeBtn' + (_craftMode === 'disassemble' ? ' chipCraftModeBtn--active' : '') +
-          '" data-craft-mode-btn="disassemble" type="button">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
-        html += '<button class="btn scButton chipCraftModeBtn' + (_craftMode === 'assemble' ? ' chipCraftModeBtn--active' : '') +
-          '" data-craft-mode-btn="assemble" type="button">' + t('chipCraftAssemble', 'Создать чип') + '</button>';
-        html += '</div>';
-
-        var slotMode = _detectCraftMode();
-        var canExec = (slotMode === 'disassemble' || slotMode === 'assemble');
-        var execLabel = slotMode === 'disassemble'
-          ? t('chipCraftDisassemble', 'Разобрать')
-          : slotMode === 'assemble'
-            ? t('chipCraftAssemble', 'Создать чип')
-            : (_craftMode === 'disassemble' ? t('chipCraftDisassemble', 'Разобрать') : t('chipCraftAssemble', 'Создать чип'));
-        html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
-          '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
       } else {
         html += '<div class="chipCraftEmptyPreview">';
         html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
@@ -2064,6 +2059,19 @@
         html += '</div>';
       }
       html += '</div>'; // chipCraftDropZone
+
+      /* ── Action button below drop zone (visible only when slots have content) ── */
+      if (hasContent) {
+        var slotMode = _detectCraftMode();
+        var canExec = (slotMode === 'disassemble' || slotMode === 'assemble');
+        var execLabel = slotMode === 'disassemble'
+          ? t('chipCraftDisassemble', 'Разобрать')
+          : slotMode === 'assemble'
+            ? t('chipCraftAssemble', 'Создать чип')
+            : (_craftMode === 'disassemble' ? t('chipCraftDisassemble', 'Разобрать') : t('chipCraftAssemble', 'Создать чип'));
+        html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
+          '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
+      }
 
       html += '</div>'; // chipCraftPreview
     }
