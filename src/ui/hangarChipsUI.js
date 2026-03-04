@@ -23,10 +23,11 @@
      TC-BC is the shared central vertical edge. */
   var SVG_W = 400, SVG_H = 300;
   var GAP_DEFAULT = 15;   // normal spacing between slot triangles
-  var GAP_MATCHED = 10;    // spacing when matching chips are installed (attract)
-  var side = 160; 
-  var h_tri = side * Math.sqrt(3) / 2; // ~112.5
-  
+  var GAP_MATCHED = 7;    // spacing when matching chips are installed (attract)
+  var ATTRACTION_DIST = 7; // translation distance (px) when chip matches
+  var side = 160;
+  var h_tri = side * Math.sqrt(3) / 2; // ~138.6
+
   var cy = SVG_H / 2;
   var cx = SVG_W / 2;
 
@@ -266,9 +267,6 @@
 
     /* Determine if red/yellow have matching chips → attract (shift position, keep size) */
     var redMatched = (cell.uiState && cell.uiState.redMatchSuccess === true);
-    
-    /* Constants for attraction */
-    var ATTRACTION_DIST = GAP_DEFAULT - GAP_MATCHED; // ~12px
 
     var svg = '<svg class="hangarSvg" viewBox="0 0 ' + SVG_W + ' ' + SVG_H + '" xmlns="http://www.w3.org/2000/svg">';
 
@@ -312,16 +310,17 @@
         if (def.slotId === 'slot1') tx = ATTRACTION_DIST; // R1 moves Right
         else if (def.slotId === 'slot2') tx = -ATTRACTION_DIST; // R2 moves Left
       } else if (yellowMatched && !isRed) {
-        // Yellow slots attract by shifting in sync with their adjacent Red slot
-        // Y1 (slot1) & Y3 (slot3) → adjacent to R1 → shift right (same as R1)
-        // Y2 (slot2) & Y4 (slot4) → adjacent to R2 → shift left (same as R2)
+        // Yellow slots attract diagonally toward their adjacent red triangle
+        // Equilateral-triangle geometry: shared-edge normal is at 60° → (0.5, ±0.866)
+        // Y1(slot1)/Y3(slot3) → adjacent to R1 (left-center)
+        // Y2(slot2)/Y4(slot4) → adjacent to R2 (right-center)
         var isLeftSide = (def.slotId === 'slot1' || def.slotId === 'slot3');
+        var isTopSide  = (def.slotId === 'slot1' || def.slotId === 'slot2');
+        tx = (isLeftSide ? 1 : -1) * ATTRACTION_DIST * 0.5;
+        ty = (isTopSide  ? 1 : -1) * ATTRACTION_DIST * 0.866;
         if (redMatched) {
-          // Both reds matched and shifted, yellow follows its adjacent red
-          tx = isLeftSide ? ATTRACTION_DIST : -ATTRACTION_DIST;
-        } else {
-          // Only this yellow matched its adjacent red
-          tx = isLeftSide ? ATTRACTION_DIST : -ATTRACTION_DIST;
+          // Also add the horizontal component that the adjacent red has shifted
+          tx += (isLeftSide ? 1 : -1) * (GAP_DEFAULT - GAP_MATCHED);
         }
       }
 
