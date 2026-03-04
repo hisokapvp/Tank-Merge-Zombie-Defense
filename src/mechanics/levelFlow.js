@@ -77,6 +77,8 @@
         });
       } else {
         if (!ui.levelModal) return;
+        var docObj = windowObj && windowObj.document;
+        if (docObj && docObj.body) docObj.body.classList.add('levelmodal-open');
         ui.levelModal.classList.remove('hidden');
         ui.levelModal.setAttribute('aria-hidden', 'false');
         if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: ignoreClose });
@@ -89,6 +91,8 @@
         UIModals.closeLevelModal({ ui: ui, a11yClose: a11yClose });
       } else {
         if (!ui.levelModal) return;
+        var docObj = windowObj && windowObj.document;
+        if (docObj && docObj.body) docObj.body.classList.remove('levelmodal-open');
         ui.levelModal.classList.add('hidden');
         ui.levelModal.setAttribute('aria-hidden', 'true');
         if (typeof a11yClose === 'function') a11yClose(ui.levelModal);

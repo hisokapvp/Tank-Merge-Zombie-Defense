@@ -9248,6 +9248,16 @@ if (DebugPanelEnabled) {
   window.addEventListener('keydown', toggleZombieAttackOverlayByHotkey);
 }
 
+window.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  if (menuPauseLocks.settings) {
+    setMenuOpen(false);
+  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+    setMenuOpen(true);
+  }
+});
+
+
 // ---------- Render ----------
 function draw(){
   ctx.clearRect(0,0,viewSize.w,viewSize.h);

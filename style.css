@@ -49,6 +49,7 @@ body.big-menu-open::before,
 body.scmodal-open::before,
 body.merge-popup-open::before,
 body.achievements-open::before,
+body.levelmodal-open::before,
 body.critical-open::before{
   content:"";
   position:fixed;
@@ -277,10 +278,18 @@ body::after{
   color: #000 !important;
 }
 
-.supercomputerHudBtn .supercomputerHudBtn__icon,
-.settingsGear {
-  filter: none !important; /* already handled by Hue rotate but let's make it cleaner */
-  color: inherit !important;
+.settingsGear{
+  position:fixed;
+  top:15px;
+  left:15px;
+  z-index:10000;
+  width:60px;
+  height:60px;
+  padding:4px 10px;
+  font-size:18px;
+  flex:none;
+  filter:none !important;
+  color:inherit !important;
 }
 .hudBelow{
   display:flex;
@@ -297,7 +306,7 @@ body::after{
   letter-spacing: 2px !important;
 }
 
-[class*="icon"], [class*="Icon"], .talentNodeIcon img, .supercomputerHudBtn__icon, .settingsGear, .btnIcon {
+[class*="icon"], [class*="Icon"], .talentNodeIcon img, .supercomputerHudBtn__icon, .btnIcon {
   filter: grayscale(1) sepia(1) saturate(5) hue-rotate(70deg) brightness(1.2) !important;
 }
 

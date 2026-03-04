@@ -2558,7 +2558,7 @@
     runtime._debug.counters.hitCalls += 1;
     runtime._debug.lastSeen.tank = tank || runtime._debug.lastSeen.tank;
     runtime._debug.lastSeen.zombie = zombie || runtime._debug.lastSeen.zombie;
-    if (DEV_MODE && runtime._debug.counters.hitCalls > runtime._debug.counters.shotCalls + 6) {
+    if (DEV_MODE && runtime._debug.counters.shotCalls > 0 && runtime._debug.counters.hitCalls > runtime._debug.counters.shotCalls * 15 + 20) {
       warnWithCooldown('missing_onShotFired', '[TalentsV2] onHit count significantly exceeds onShotFired count. Check integration hooks.', {
         onHit: runtime._debug.counters.hitCalls,
         onShotFired: runtime._debug.counters.shotCalls,

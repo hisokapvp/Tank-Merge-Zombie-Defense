@@ -162,6 +162,9 @@
     var opts = options || {};
     var ui = opts.ui;
     if (!ui || !ui.levelModal) return;
+    if (document && document.body) {
+      document.body.classList.add('levelmodal-open');
+    }
     showModal(ui.levelModal, opts.a11yOpen, ui.levelAccept, opts.onClose);
     if (typeof opts.updateLevelModal === 'function') {
       opts.updateLevelModal();
@@ -172,6 +175,9 @@
     var opts = options || {};
     var ui = opts.ui;
     if (!ui || !ui.levelModal) return;
+    if (document && document.body) {
+      document.body.classList.remove('levelmodal-open');
+    }
     hideModal(ui.levelModal, opts.a11yClose);
   }
 
