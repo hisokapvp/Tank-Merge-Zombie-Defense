@@ -2009,9 +2009,8 @@
 
     html += '</div>'; // chipCraftLeftCol
 
-    /* ── Right column: Craft preview area (hidden in dust mode) ── */
-    if (!_dustMode) {
-      html += '<div class="chipCraftPreview">';
+    /* ── Right column: Craft preview area ── */
+    html += '<div class="chipCraftPreview"' + (_dustMode ? ' style="opacity:0.5;pointer-events:none"' : '') + '>';
 
       /* ── Mode tabs: always visible at top of preview area ── */
       html += '<div class="chipCraftModeRow">';
@@ -2069,7 +2068,6 @@
         '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
 
       html += '</div>'; // chipCraftPreview
-    }
 
     html += '</div>'; // chipCraftLayout
 

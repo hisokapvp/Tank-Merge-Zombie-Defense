@@ -3627,21 +3627,21 @@ input, select, textarea, button {
   overflow-y:auto;
   padding-right:8px;
   scrollbar-width:thin;
-  scrollbar-color:#4af626 rgba(0,0,0,.3);
+  scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
 .techUnlockGrid::-webkit-scrollbar {
-  width: 8px;
+  width: var(--sb-width);
 }
 .techUnlockGrid::-webkit-scrollbar-track {
-  background: rgba(0,0,0,.2);
+  background: var(--sb-track);
   border-radius: 4px;
 }
 .techUnlockGrid::-webkit-scrollbar-thumb {
-  background: #4af626;
+  background: var(--sb-thumb);
   border-radius: 4px;
 }
 .techUnlockGrid::-webkit-scrollbar-thumb:hover {
-  background: #3ecf1f;
+  background: rgba(74,246,38,0.75);
 }
 .techUnlockGroup{
   grid-column: 1 / -1;
@@ -3973,7 +3973,7 @@ input, select, textarea, button {
   padding:8px 4px;
   justify-content:center;
   scrollbar-width:thin;
-  scrollbar-color:#4af626 rgba(0,0,0,.3);
+  scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
 .techAccelChip{
   display:flex;
