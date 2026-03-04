@@ -37,6 +37,7 @@ const ui = {
   bigMenuLoadRows: document.getElementById('bigMenuLoadRows'),
   bigMenuLoadBack: document.getElementById('bigMenuLoadBack'),
   bigMenuSound: document.getElementById('bigMenuSound'),
+  bigMenuSoundWrap: document.getElementById('bigMenuSoundWrap'),
   bigMenuLanguageWrap: document.getElementById('bigMenuLanguageWrap'),
   bigMenuLanguage: document.getElementById('bigMenuLanguage'),
   bigMenuDevs: document.getElementById('bigMenuDevs'),

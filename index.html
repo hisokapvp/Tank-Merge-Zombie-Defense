@@ -398,7 +398,26 @@
         <div class="bigMenuActions" aria-label="Главное меню">
           <button id="bigMenuNew" class="btn btnSecondary" type="button">Новая игра</button>
           <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
-          <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+          <div id="bigMenuSoundWrap" class="bigMenuActionWithPanel">
+            <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+            <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSoundInlinePanel" aria-hidden="true">
+              <div class="bigMenuSubpanelTitle">Звук</div>
+              <div class="menuRow">
+                <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
+                <div class="menuSlider">
+                  <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
+                  <span class="menuValue" id="bigMenuSfxValue">75%</span>
+                </div>
+              </div>
+              <div class="menuRow">
+                <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
+                <div class="menuSlider">
+                  <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+                  <span class="menuValue" id="bigMenuMusicValue">60%</span>
+                </div>
+              </div>
+            </div>
+          </div>
           <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
             <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
             <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
@@ -417,29 +436,6 @@
           </label>
         </div>
 
-        <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSubpanelHidden" aria-hidden="true">
-          <div class="bigMenuSubpanelTitle">Звук</div>
-          <div class="menuRow">
-            <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
-            <div class="menuSlider">
-              <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
-              <span class="menuValue" id="bigMenuSfxValue">75%</span>
-            </div>
-          </div>
-          <div class="menuRow">
-            <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
-            <div class="menuSlider">
-              <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
-              <span class="menuValue" id="bigMenuMusicValue">60%</span>
-            </div>
-          </div>
-          <div class="menuRow">
-            <label class="menuToggle" id="bigMenuAutoPauseLabel">
-              <input id="bigMenuAutoPause" type="checkbox" />
-              <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
-            </label>
-          </div>
-        </div>
       </div>
 
       <div id="bigMenuLoadView" class="smallMenuSaveView" aria-hidden="true">

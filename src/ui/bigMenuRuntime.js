@@ -6,6 +6,7 @@
 
     var runtime = {
       bigMenuLanguageOutsideListener: null,
+      bigMenuSoundOutsideListener: null,
       creditsEscListener: null,
       bigMenuInitialized: false,
       bigMenuStartPending: false,
@@ -226,6 +227,38 @@
       applyBigMenuSelectedState();
     }
 
+    function removeBigMenuSoundOutsideListener() {
+      if (!runtime.bigMenuSoundOutsideListener) return;
+      document.removeEventListener('pointerdown', runtime.bigMenuSoundOutsideListener, true);
+      runtime.bigMenuSoundOutsideListener = null;
+    }
+
+    function closeBigMenuSoundPanel() {
+      var ui = deps.getUi();
+      if (!ui.bigMenuSoundPanel) return;
+      ui.bigMenuSoundPanel.classList.remove('is-open');
+      ui.bigMenuSoundPanel.setAttribute('aria-hidden', 'true');
+      removeBigMenuSoundOutsideListener();
+    }
+
+    function toggleBigMenuSoundPanel() {
+      var ui = deps.getUi();
+      if (!ui.bigMenuSoundPanel) return;
+      var shouldOpen = !ui.bigMenuSoundPanel.classList.contains('is-open');
+      closeBigMenuPanels();
+      if (!shouldOpen) return;
+      ui.bigMenuSoundPanel.classList.add('is-open');
+      ui.bigMenuSoundPanel.setAttribute('aria-hidden', 'false');
+      if (!runtime.bigMenuSoundOutsideListener) {
+        runtime.bigMenuSoundOutsideListener = function (event) {
+          if (!ui.bigMenuSoundWrap) return;
+          if (ui.bigMenuSoundWrap.contains(event.target)) return;
+          closeBigMenuSoundPanel();
+        };
+        document.addEventListener('pointerdown', runtime.bigMenuSoundOutsideListener, true);
+      }
+    }
+
     function removeBigMenuLanguageOutsideListener() {
       if (!runtime.bigMenuLanguageOutsideListener) return;
       document.removeEventListener('pointerdown', runtime.bigMenuLanguageOutsideListener, true);
@@ -261,14 +294,7 @@
     }
 
     function closeBigMenuPanels() {
-      var ui = deps.getUi();
-      var panels = [ui.bigMenuSoundPanel];
-      for (var i = 0; i < panels.length; i++) {
-        var panel = panels[i];
-        if (!panel) continue;
-        panel.classList.add('bigMenuSubpanelHidden');
-        panel.setAttribute('aria-hidden', 'true');
-      }
+      closeBigMenuSoundPanel();
       closeBigMenuLanguagePanel();
     }
 
@@ -607,7 +633,7 @@
       });
       if (ui.bigMenuSound) ui.bigMenuSound.addEventListener('click', function () {
         markBigMenuButtonActive('bigMenuSound');
-        toggleBigMenuPanel(ui.bigMenuSoundPanel);
+        toggleBigMenuSoundPanel();
       });
       if (ui.bigMenuLanguage) ui.bigMenuLanguage.addEventListener('click', function () {
         markBigMenuButtonActive('bigMenuLanguage');
@@ -682,6 +708,9 @@
       removeBigMenuLanguageOutsideListener: removeBigMenuLanguageOutsideListener,
       closeBigMenuLanguagePanel: closeBigMenuLanguagePanel,
       toggleBigMenuLanguagePanel: toggleBigMenuLanguagePanel,
+      removeBigMenuSoundOutsideListener: removeBigMenuSoundOutsideListener,
+      closeBigMenuSoundPanel: closeBigMenuSoundPanel,
+      toggleBigMenuSoundPanel: toggleBigMenuSoundPanel,
       closeBigMenuPanels: closeBigMenuPanels,
       toggleBigMenuPanel: toggleBigMenuPanel,
       updateBigMenuVolumeState: updateBigMenuVolumeState,

@@ -635,19 +635,16 @@
     });
 
     opts.ui.menuSfx && opts.ui.menuSfx.addEventListener('input', function (e) {
+      var pct = Math.round(Number(e.target.value));
       if (typeof opts.setVolume === 'function') {
-        opts.setVolume('sfx', e.target.value, 'percent');
+        opts.setVolume('sfx', pct, 'percent');
       } else {
-        var value = Number(e.target.value) / 100;
+        var value = pct / 100;
         var settings = getSettings();
         settings.sfxVolume = opts.clamp(value, 0, 1);
         opts.applyAudioSettings();
       }
-      if (typeof opts.syncVolumeUIFromSettings === 'function') {
-        opts.syncVolumeUIFromSettings();
-      } else {
-        opts.updateMenuVolumes();
-      }
+      if (opts.ui.menuSfxValue) opts.ui.menuSfxValue.textContent = pct + '%';
       if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
         opts.playUiSliderPreviewSfxThrottled();
       }
@@ -655,19 +652,16 @@
     });
 
     opts.ui.menuMusic && opts.ui.menuMusic.addEventListener('input', function (e) {
+      var pct = Math.round(Number(e.target.value));
       if (typeof opts.setVolume === 'function') {
-        opts.setVolume('music', e.target.value, 'percent');
+        opts.setVolume('music', pct, 'percent');
       } else {
-        var value = Number(e.target.value) / 100;
+        var value = pct / 100;
         var settings = getSettings();
         settings.musicVolume = opts.clamp(value, 0, 1);
         opts.applyAudioSettings();
       }
-      if (typeof opts.syncVolumeUIFromSettings === 'function') {
-        opts.syncVolumeUIFromSettings();
-      } else {
-        opts.updateMenuVolumes();
-      }
+      if (opts.ui.menuMusicValue) opts.ui.menuMusicValue.textContent = pct + '%';
       opts.saveSettings();
     });
 

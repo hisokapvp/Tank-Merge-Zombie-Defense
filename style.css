@@ -227,7 +227,7 @@ body::after{
   height: 64px;
   background: #0d140b;
   border: 3px solid #4af626;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 6px;
   cursor: pointer;
   pointer-events: auto;
@@ -238,6 +238,8 @@ body::after{
   transition: transform 0.2s ease;
 }
 .terminalExpandBtn:hover {
+  background: #4af626 !important;
+  color: #000 !important;
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(74, 246, 38, 0.4), 3px 3px 0 #000;
 }
@@ -269,7 +271,7 @@ body::after{
   border: 2px solid #4af626 !important;
   color: #4af626 !important;
   box-shadow: 0 0 10px rgba(74, 246, 38, 0.2), 2px 2px 0 #000 !important;
-  border-radius: 4px !important;
+  border-radius: 0 !important;
 }
 
 .supercomputerHudBtn:hover,
@@ -552,6 +554,25 @@ body::after{
   padding-top:12px;
   padding-bottom:12px;
   max-height:120px;
+  opacity:1;
+}
+.bigMenuSoundInlinePanel{
+  position:static;
+  margin-top:0;
+  border-width:0;
+  padding-top:0;
+  padding-bottom:0;
+  max-height:0;
+  opacity:0;
+  overflow:hidden;
+  transition:max-height .2s ease, opacity .16s ease, padding .2s ease, border-width .2s ease, margin-top .2s ease;
+}
+.bigMenuSoundInlinePanel.is-open{
+  margin-top:8px;
+  border-width:1px;
+  padding-top:12px;
+  padding-bottom:12px;
+  max-height:200px;
   opacity:1;
 }
 .bigMenuSubpanelTitle{
