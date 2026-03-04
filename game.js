@@ -1378,7 +1378,7 @@ function resolveSfxPlaybackVolume(id, volumeMul){
   const trackLoopMul = id === TRACK_LOOP_ID
     ? clamp(TRACK_LOOP_CODE_VOLUME_MUL, 0, 2)
     : 1;
-  const final = base * mul * trackLoopMul;
+  const final = clamp(base * mul * trackLoopMul, 0, 1);
   if (!criticalAudioActive) return final;
   const policy = getCriticalAudioPolicy();
   if (!isCriticalSfxAllowed(id)) return 0;

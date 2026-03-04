@@ -283,6 +283,11 @@
 	- используется один shared ticker (`setInterval`) на весь таб `Орудия`, без 60 отдельных `requestAnimationFrame`/таймеров;
 	- ticker активен только пока открыт `Supercomputer -> Орудия`, и останавливается при закрытии/переключении таба.
 	- поворот иконок задаётся единой константой `WEAPON_ICON_ROT_DEG` в `src/ui/supercomputerMenu.js` и применяется в `drawGunsSpriteCanvas(...)` через `ctx.translate(center)` + `ctx.rotate(...)`; `imageSmoothingEnabled` остаётся `false`.
+- Иконки дронов:
+	- масштаб задаётся через `Game.Config.LayoutTuning.droneIconScale` (default `1.0`); применяется к `weaponIconW`/`weaponIconH` как множитель, итоговые размеры `dronIconW = round(iconW * droneIconScale)`, `dronIconH = round(iconH * droneIconScale)`;
+	- атрибут `data-icon-scale` проставляется на canvas дронов и считывается в `drawGunsSpriteCanvas` для применения масштаба, изолированно от орудий/стен;
+	- анимация дронов берётся из `DronSprites.getAnimation('fly')`, `frames` — массив frame ID, геометрия кадра через `DronSprites.pickFrame(frameId)`;
+	- `data-rot-deg="0"` для дронов (без поворота).
 
 ## Stage actions: boost button
 - Кнопка `#boost` и модалка `#boostModal` удалены; не добавлять обработчики `openBoostModal/closeBoostModal` обратно в runtime/UI.

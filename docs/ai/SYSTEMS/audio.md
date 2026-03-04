@@ -52,6 +52,6 @@
 ## Track loop volume
 - Пользовательский UI-слайдер для `trackLoop` отсутствует (small menu + big menu).
 - Громкость loop управляется кодом через `AudioUi.TANK_DRIVE_VOLUME_MULT` в `src/config/audioUi.js`.
-- Формула итоговой громкости loop: `final = globalSfxVolume * TANK_DRIVE_VOLUME_MULT`.
+- Формула итоговой громкости loop: `final = clamp(globalSfxVolume * TANK_DRIVE_VOLUME_MULT, 0, 1)`.
 - Применение идёт через `resolveSfxPlaybackVolume('trackLoop', ...)` + `setLoopSfxVolume('trackLoop', ...)`.
 - Изменение global SFX меняет итоговый `final`, кодовый множитель остаётся фиксированным до правки конфига.

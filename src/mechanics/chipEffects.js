@@ -50,6 +50,17 @@
    */
   var DOUBLE_SHOT_MIN_TARGET_DISTANCE = 1000;
 
+  /**
+   * Configurable AoE radius (px) for calming effect per upgrade level.
+   * Small = mod 9, Medium = mod 29, Large = mod 30.
+   * Zombies within this radius from impact point will stop attacking.
+   */
+  var CALM_RADIUS_BY_LEVEL = {
+    small: 40,     // mod 9  — Small Calming
+    medium: 60,    // mod 29 — Medium Calming
+    large: 80     // mod 30 — Large Calming
+  };
+
   function loadChipsCfg(cfg) { _chipsCfg = cfg; }
   function getChipsCfg() { return _chipsCfg; }
   function getModCfg(modId) { return _chipsCfg && _chipsCfg.modifiers ? _chipsCfg.modifiers[String(modId)] : null; }
@@ -120,6 +131,7 @@
       nukeRadius: 0,
       isCalming: false,           // mod 9/29/30
       calmDuration: 0,
+      calmRadius: 0,                // configurable AoE radius for calming
       firePool: false,            // mod 10
       iceZone: false,             // mod 11
       electroNode: false,         // mod 12
@@ -176,7 +188,8 @@
         break;
       case 9: // Small Calming
         result.isCalming = true;
-        result.calmDuration = 0.5;
+        result.calmDuration = 1;
+        result.calmRadius = CALM_RADIUS_BY_LEVEL.small;
         break;
       case 10: // Fire Pool
         result.firePool = true;
@@ -283,11 +296,13 @@
         break;
       case 29: // Medium Calming — 0.75s stun
         result.isCalming = true;
-        result.calmDuration = 0.75;
+        result.calmDuration = 2;
+        result.calmRadius = CALM_RADIUS_BY_LEVEL.medium;
         break;
       case 30: // Large Calming — 1s stun
         result.isCalming = true;
-        result.calmDuration = 1.0;
+        result.calmDuration = 3;
+        result.calmRadius = CALM_RADIUS_BY_LEVEL.large;
         break;
     }
   }
@@ -504,11 +519,18 @@
     cascadeResult.activeModIds = [nextMod.modId];
 
     /* For combo counter mods: use pre-computed state from applyShotModifiers
-       to avoid double-incrementing the counter */
+       to avoid double-incrementing the counter.
+       Counter was already advanced during applyShotModifiers, so we must
+       NOT call _applyModToResult again for combo mods. */
     var COMBO_MODS_SET = {6: true, 25: true, 26: true};
-    if (COMBO_MODS_SET[nextMod.modId] && nextMod._comboFired) {
-      cascadeResult.comboShots = nextMod._comboShots;
-      cascadeResult.comboDmgMul = nextMod._comboDmgMul;
+    if (COMBO_MODS_SET[nextMod.modId]) {
+      if (nextMod._comboFired) {
+        cascadeResult.comboShots = nextMod._comboShots;
+        cascadeResult.comboDmgMul = nextMod._comboDmgMul;
+      } else {
+        /* Combo counter not reached 4 yet — skip entire cascade this shot */
+        return;
+      }
     } else {
       _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
     }
@@ -517,9 +539,12 @@
     if (remainingCascade.length === 0 && yellowMods.length > 0) {
       for (var yi = 0; yi < yellowMods.length; yi++) {
         cascadeResult.activeModIds.push(yellowMods[yi].modId);
-        if (COMBO_MODS_SET[yellowMods[yi].modId] && yellowMods[yi]._comboFired) {
-          cascadeResult.comboShots = yellowMods[yi]._comboShots;
-          cascadeResult.comboDmgMul = yellowMods[yi]._comboDmgMul;
+        if (COMBO_MODS_SET[yellowMods[yi].modId]) {
+          if (yellowMods[yi]._comboFired) {
+            cascadeResult.comboShots = yellowMods[yi]._comboShots;
+            cascadeResult.comboDmgMul = yellowMods[yi]._comboDmgMul;
+          }
+          /* else: counter not reached — yellow combo simply not applied */
         } else {
           _applyModToResult(cascadeResult, yellowMods[yi].modId, cellIndex);
         }
@@ -624,7 +649,7 @@
 
     /* ─── Mod 9: Calming ─── */
     if (sm.isCalming) {
-      _applyCalming(x, y, b, sm.calmDuration, opts);
+      _applyCalming(x, y, b, sm.calmDuration, sm.calmRadius, opts);
     }
 
     /* ─── Mod 10: Fire Pool ─── */
@@ -911,7 +936,8 @@
       }
 
       // Pull toward impact point (x, y) in Cartesian, convert back to polar
-      var pullStrength = Math.min(d * 0.6, 15); // pull up to 15px or 60% of distance
+      // Pull strongly — almost all the way to the center of the explosion
+      var pullStrength = d * 0.85;
       var dirX = (x - p.x) / d;
       var dirY = (y - p.y) / d;
       var newX = p.x + dirX * pullStrength;
@@ -928,17 +954,18 @@
   }
 
   /* ─── calming (mod 9) ─── */
-  function _applyCalming(x, y, b, duration, opts) {
+  function _applyCalming(x, y, b, duration, calmRadius, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
     var now = _now();
+    var effectRadius = (calmRadius > 0) ? calmRadius : (b.aoe || 40);
 
     for (var i = 0; i < zombies.length; i++) {
       var z = zombies[i];
       if (z.state === 'dying') continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
-      if (d > b.aoe) continue;
+      if (d > effectRadius) continue;
       // max once per zombie per wave
       if (_calmedZombieIds[z.id]) continue;
       _calmedZombieIds[z.id] = true;
@@ -1088,7 +1115,9 @@
     GROUP_A_MODS: GROUP_A_MODS,
     /** Configurable min distance for Double Shot second-target selection */
     get DOUBLE_SHOT_MIN_TARGET_DISTANCE() { return DOUBLE_SHOT_MIN_TARGET_DISTANCE; },
-    set DOUBLE_SHOT_MIN_TARGET_DISTANCE(v) { DOUBLE_SHOT_MIN_TARGET_DISTANCE = v; }
+    set DOUBLE_SHOT_MIN_TARGET_DISTANCE(v) { DOUBLE_SHOT_MIN_TARGET_DISTANCE = v; },
+    /** Configurable AoE radius (px) for calming effect per level */
+    CALM_RADIUS_BY_LEVEL: CALM_RADIUS_BY_LEVEL
   };
 
 })(typeof window !== 'undefined' ? window : this);

@@ -519,6 +519,12 @@
       var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
       var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
 
+      var scaleAttr = Number(node.getAttribute('data-icon-scale'));
+      if (Number.isFinite(scaleAttr) && scaleAttr > 0) {
+        iconW = Math.round(iconW * scaleAttr);
+        iconH = Math.round(iconH * scaleAttr);
+      }
+
       if (node.width !== iconW) node.width = iconW;
       if (node.height !== iconH) node.height = iconH;
 
@@ -976,15 +982,37 @@
       var atlasSrc = atlasImg && (atlasImg.currentSrc || atlasImg.src)
         ? (atlasImg.currentSrc || atlasImg.src)
         : ('assets/' + ((global.DronSprites && global.DronSprites.config && global.DronSprites.config.atlas) || dronCfg.atlas || dronCfg.png || 'dron_atlas.png'));
-      var frameX = Number.isFinite(flyAnim && flyAnim.x) ? Math.floor(flyAnim.x) : 0;
-      var frameY = Number.isFinite(flyAnim && flyAnim.y) ? Math.floor(flyAnim.y) : 0;
-      var frameW = Number.isFinite(flyAnim && flyAnim.w) && flyAnim.w > 0 ? Math.floor(flyAnim.w) : 96;
-      var frameH = Number.isFinite(flyAnim && flyAnim.h) && flyAnim.h > 0 ? Math.floor(flyAnim.h) : 96;
-      var baseAnimFrames = Number.isFinite(flyAnim && flyAnim.frames) && flyAnim.frames > 0 ? Math.floor(flyAnim.frames) : 1;
+
+      /* Resolve frame geometry: sprite loader returns frames as an array
+         of frame IDs; raw dron.json stores x/y/w/h/frames directly.
+         When frames is an array, look up the first frame in DronSprites. */
+      var flyAnimFirstFrame = null;
+      if (flyAnim && Array.isArray(flyAnim.frames) && flyAnim.frames.length > 0
+          && global.DronSprites && typeof global.DronSprites.pickFrame === 'function') {
+        flyAnimFirstFrame = global.DronSprites.pickFrame(flyAnim.frames[0]);
+      }
+      var frameX = flyAnimFirstFrame && Number.isFinite(flyAnimFirstFrame.x)
+        ? Math.floor(flyAnimFirstFrame.x)
+        : (Number.isFinite(flyAnim && flyAnim.x) ? Math.floor(flyAnim.x) : 0);
+      var frameY = flyAnimFirstFrame && Number.isFinite(flyAnimFirstFrame.y)
+        ? Math.floor(flyAnimFirstFrame.y)
+        : (Number.isFinite(flyAnim && flyAnim.y) ? Math.floor(flyAnim.y) : 0);
+      var frameW = flyAnimFirstFrame && Number.isFinite(flyAnimFirstFrame.w) && flyAnimFirstFrame.w > 0
+        ? Math.floor(flyAnimFirstFrame.w)
+        : (Number.isFinite(flyAnim && flyAnim.w) && flyAnim.w > 0 ? Math.floor(flyAnim.w) : 96);
+      var frameH = flyAnimFirstFrame && Number.isFinite(flyAnimFirstFrame.h) && flyAnimFirstFrame.h > 0
+        ? Math.floor(flyAnimFirstFrame.h)
+        : (Number.isFinite(flyAnim && flyAnim.h) && flyAnim.h > 0 ? Math.floor(flyAnim.h) : 96);
+      var baseAnimFrames = Array.isArray(flyAnim && flyAnim.frames)
+        ? flyAnim.frames.length
+        : (Number.isFinite(flyAnim && flyAnim.frames) && flyAnim.frames > 0 ? Math.floor(flyAnim.frames) : 1);
       var baseAnimFps = Number.isFinite(flyAnim && flyAnim.frameRateFps) && flyAnim.frameRateFps > 0 ? Number(flyAnim.frameRateFps) : 10;
       var lt = (global.Game && global.Game.Config && global.Game.Config.LayoutTuning) || {};
       var iconW = Number.isFinite(lt.weaponIconW) && lt.weaponIconW > 0 ? lt.weaponIconW : 60;
       var iconH = Number.isFinite(lt.weaponIconH) && lt.weaponIconH > 0 ? lt.weaponIconH : 45;
+      var dronScale = Number.isFinite(lt.droneIconScale) && lt.droneIconScale > 0 ? lt.droneIconScale : 1;
+      var dronIconW = Math.round(iconW * dronScale);
+      var dronIconH = Math.round(iconH * dronScale);
 
       for (var i = 0; i < levelsCount; i++) {
         var level = i + 1;
@@ -1009,11 +1037,11 @@
         if (!Number.isFinite(rowAnimFps) || rowAnimFps <= 0) rowAnimFps = 10;
 
         var spriteHtml = '' +
-          '<span class="scGunsTable__spriteBox" style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px">' +
+          '<span class="scGunsTable__spriteBox" style="width:' + String(dronIconW) + 'px;height:' + String(dronIconH) + 'px">' +
             '<canvas class="scGunsTable__spriteCanvas"' +
-              ' width="' + String(iconW) + '"' +
-              ' height="' + String(iconH) + '"' +
-              ' style="width:' + String(iconW) + 'px;height:' + String(iconH) + 'px"' +
+              ' width="' + String(dronIconW) + '"' +
+              ' height="' + String(dronIconH) + '"' +
+              ' style="width:' + String(dronIconW) + 'px;height:' + String(dronIconH) + 'px"' +
               ' data-anim-frames="' + String(rowAnimFrames) + '"' +
               ' data-anim-fps="' + String(rowAnimFps) + '"' +
               ' data-sprite-src="' + atlasSrc + '"' +
@@ -1022,6 +1050,7 @@
               ' data-frame-w="' + String(frameW) + '"' +
               ' data-frame-h="' + String(frameH) + '"' +
               ' data-rot-deg="0"' +
+              ' data-icon-scale="' + String(dronScale) + '"' +
             '></canvas>' +
           '</span>';
 
