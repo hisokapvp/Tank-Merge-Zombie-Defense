@@ -135,7 +135,7 @@
 
 ## Инструменты балансировки
 - **Balance Editor (HTML Dashboard):** `tools/balance-editor.html` — визуальный редактор всех balance JSON с графиками, формулами прогрессии, diff-preview и экспортом. Открывать из корня проекта через `http-server` или `Live Server`.
-- **Balance Simulator (CLI):** `tools/balance-sim.js` — headless-симулятор боя (Node.js). Анализирует DPS/TTK, difficulty curve, breakpoints, wall survival. Запуск: `node tools/balance-sim.js --help`.
+- **Balance Simulator (CLI):** `tools/balance-sim.js` — headless-симулятор боя (Node.js). Использует реальные формулы из game.js. Анализирует DPS/TTK, difficulty curve, breakpoints, wall survival. Поддерживает таланты (`--talents`), чип-модификаторы (`--chip`), таблицу HP зомби (`--zombie-hp`). Запуск: `node tools/balance-sim.js --help`.
 
 ## Runtime reset (partial)
 - Оркестратор partial reset: `src/core/worldReset.js`

@@ -8,7 +8,7 @@
  *  3  Double Matryoshka — big shot (×1.25 visual size, ×2 dmg) spawns small child on impact toward a different target (≥12px away)
  *  4  Small Repulse     — on-hit: +0.5× extra dmg & push zombies 10px away
  *  5  Small Vacuum      — on-hit: +0.5× extra dmg & pull ALL zombies within 50px toward impact point
- *  6  Small Combo       — every 4th shot fires 3 rapid shots at ×1.25 dmg
+ *  6  Small Combo       — every 4th shot fires 3 rapid shots at ×1.25 dmg; shots 1-3 fire 1 normal cascade projectile
  *  7  Arcade Chaos      — each shot randomly picks one pattern from group A (mods 1–9)
  *  8  Small Nuke        — once per 30s: nuclear shot with ×3 blast, 100px radius
  *  9  Small Calming     — hit zombies stop attacking for 0.5s; max once per zombie
@@ -29,8 +29,8 @@
  * 22  Large Repulse     — on-hit: +1× extra dmg & push 20px
  * 23  Medium Vacuum     — on-hit: +0.75× extra dmg & pull 15px
  * 24  Large Vacuum      — on-hit: +1× extra dmg & pull 20px
- * 25  Medium Combo      — every 4th shot: 3 rapid shots ×1.5 dmg
- * 26  Large Combo       — every 4th shot: 4 rapid shots ×2 dmg
+ * 25  Medium Combo      — every 4th shot: 3 rapid shots ×1.5 dmg; shots 1-3 fire 1 normal cascade projectile
+ * 26  Large Combo       — every 4th shot: 4 rapid shots ×2 dmg; shots 1-3 fire 1 normal cascade projectile
  * 27  Medium Nuke       — once per 30s: ×4 dmg, 300px radius
  * 28  Large Nuke        — once per 30s: ×5 dmg, entire map radius
  * 29  Medium Calming    — 0.75s stun, max once per zombie
@@ -174,7 +174,7 @@
         if (_comboCounters[cellIndex] >= 4) {
           _comboCounters[cellIndex] = 0;
           result.comboShots = 3;
-          result.comboDmgMul = 1.25;
+          result.comboDmgMul = 3.75;
         }
         break;
       case 8: // Small Nuke
@@ -264,7 +264,7 @@
         if (_comboCounters[cellIndex] >= 4) {
           _comboCounters[cellIndex] = 0;
           result.comboShots = 3;
-          result.comboDmgMul = 1.5;
+          result.comboDmgMul = 4.5;
         }
         break;
       case 26: // Large Combo — every 4th: 4 rapid shots ×2 dmg
@@ -273,7 +273,7 @@
         if (_comboCounters[cellIndex] >= 4) {
           _comboCounters[cellIndex] = 0;
           result.comboShots = 4;
-          result.comboDmgMul = 2.0;
+          result.comboDmgMul = 8.0;
         }
         break;
       case 27: // Medium Nuke — every 30s: ×4 dmg, 300px radius
@@ -525,11 +525,13 @@
     var COMBO_MODS_SET = {6: true, 25: true, 26: true};
     if (COMBO_MODS_SET[nextMod.modId]) {
       if (nextMod._comboFired) {
+        /* Shot 4: burst of comboShots projectiles at comboDmgMul */
         cascadeResult.comboShots = nextMod._comboShots;
         cascadeResult.comboDmgMul = nextMod._comboDmgMul;
       } else {
-        /* Combo counter not reached 4 yet — skip entire cascade this shot */
-        return;
+        /* Shots 1-3: spawn a single normal-damage cascade projectile */
+        cascadeResult.comboShots = 1;
+        cascadeResult.comboDmgMul = 1.0;
       }
     } else {
       _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
@@ -560,6 +562,7 @@
 
     /* Determine damage multipliers */
     var cascadeDmg = b.dmg;
+    if (cascadeResult.comboDmgMul > 1) cascadeDmg *= cascadeResult.comboDmgMul;
     if (cascadeResult.isMatryoshka) cascadeDmg *= cascadeResult.matryoshkaDmgMul;
     if (cascadeResult.isNuke) cascadeDmg *= cascadeResult.nukeDmgMul;
     var splitDmg = cascadeDmg / Math.max(1, projCount);
