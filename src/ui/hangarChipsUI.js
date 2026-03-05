@@ -568,8 +568,7 @@
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
       var canMatch = canMatchMap[chip.chipId + '_' + chip.level] || false;
       var matchClass = canMatch ? ' hangarChipBtn--canMatch' : '';
-      html += '<button class="hangarChipBtn' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" ' +
-        'title="' + chip.sourceComboKey + ' (Ур.' + chip.level + ', ×' + chip.count + '): ' + chip.modIds.map(function(m) { return modName(m); }).join(', ') + '">' +
+      html += '<button class="hangarChipBtn' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button">' +
         chipSvgComposed(40, 36, borderColor, chip.modIds, 'hangarChipIcon', 2.5) +
         '<span class="hangarChipBtn__key">' + chip.sourceComboKey + '</span>' +
         '<span class="hangarChipBtn__lvl">Ур.' + chip.level + '</span>' +
@@ -1213,6 +1212,127 @@
     if (_chipUpgradeTooltipEl) {
       _chipUpgradeTooltipEl.style.display = 'none';
     }
+  }
+
+  /* ─── Generic game-styled tooltip (shared, reuses _chipUpgradeTooltipEl) ── */
+
+  function _ensureGameTooltip() {
+    if (!_chipUpgradeTooltipEl) {
+      _chipUpgradeTooltipEl = _doc.createElement('div');
+      _chipUpgradeTooltipEl.className = 'chipUpgradeTooltip';
+      _doc.body.appendChild(_chipUpgradeTooltipEl);
+    }
+    return _chipUpgradeTooltipEl;
+  }
+
+  function _showGameTooltip(htmlContent, anchorEl) {
+    var tip = _ensureGameTooltip();
+    tip.innerHTML = htmlContent;
+    tip.style.display = 'block';
+    var rect = anchorEl.getBoundingClientRect();
+    tip.style.left = Math.min(rect.right + 8, global.innerWidth - 240) + 'px';
+    tip.style.top = Math.max(0, rect.top - 10) + 'px';
+  }
+
+  function showHangarChipBtnTooltip(btn) {
+    var chipId = parseInt(btn.getAttribute('data-chip-id'), 10);
+    var level = parseInt(btn.getAttribute('data-chip-level'), 10) || 1;
+    var chips = ensurePlayerChips();
+    var chip = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
+    }
+    if (!chip) return;
+    var h = hc();
+    var chipName = chip.sourceComboKey;
+    if (h && chip.modIds.length) {
+      var names = [];
+      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
+      chipName = names.join(' + ');
+    }
+    var bonus = chipLevelBonus(chip.level);
+    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
+    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
+    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
+    _showGameTooltip(html, btn);
+  }
+
+  function showCraftInvChipTooltip(item) {
+    var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
+    var level = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
+    var chips = ensurePlayerChips();
+    var chip = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
+    }
+    if (!chip) return;
+    var h = hc();
+    var chipName = chip.sourceComboKey;
+    if (h && chip.modIds.length) {
+      var names = [];
+      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
+      chipName = names.join(' + ');
+    }
+    var bonus = chipLevelBonus(chip.level);
+    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
+    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
+    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
+    _showGameTooltip(html, item);
+  }
+
+  function showCraftInvFragTooltip(item) {
+    var fragId = parseInt(item.getAttribute('data-craft-frag-id'), 10);
+    if (!Number.isFinite(fragId)) return;
+    var frags = ensurePlayerFragments();
+    var frag = null;
+    for (var i = 0; i < frags.length; i++) {
+      if (frags[i].fragmentId === fragId) { frag = frags[i]; break; }
+    }
+    var name = modName(fragId);
+    var desc = _getModDescription(fragId);
+    var cnt = frag ? frag.count : 0;
+    var html = '<div class="chipUpgradeTooltip__title">' + name + '</div>';
+    if (desc) html += '<div style="font-size:11px;color:rgba(255,255,255,.7)">' + desc + '</div>';
+    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', cnt) + '</div>';
+    _showGameTooltip(html, item);
+  }
+
+  function showCraftSlotChipTooltip(slotEl) {
+    var chipId = parseInt(slotEl.getAttribute('data-hct-chip-id'), 10);
+    var level = parseInt(slotEl.getAttribute('data-hct-chip-level'), 10) || 1;
+    if (!Number.isFinite(chipId)) return;
+    var chips = ensurePlayerChips();
+    var chip = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
+    }
+    var h = hc();
+    var chipName = chip ? chip.sourceComboKey : '';
+    var modIds = chip ? chip.modIds : [];
+    if (h && modIds.length) {
+      var names = [];
+      for (var ni = 0; ni < modIds.length; ni++) names.push(modName(modIds[ni]));
+      chipName = names.join(' + ');
+    }
+    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
+    if (chip) {
+      var bonus = chipLevelBonus(chip.level);
+      html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
+      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    }
+    _showGameTooltip(html, slotEl);
+  }
+
+  function showCraftSlotFragTooltip(slotEl) {
+    var fragId = parseInt(slotEl.getAttribute('data-hct-frag-id'), 10);
+    if (!Number.isFinite(fragId)) return;
+    var name = modName(fragId);
+    var desc = _getModDescription(fragId);
+    var html = '<div class="chipUpgradeTooltip__title">' + name + '</div>';
+    if (desc) html += '<div style="font-size:11px;color:rgba(255,255,255,.7)">' + desc + '</div>';
+    _showGameTooltip(html, slotEl);
   }
 
   /* ─── Task 5: Tooltip for installed slot chips ─────────── */
@@ -2056,8 +2176,7 @@
       var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
       var dustSel = _dustSelected[dustKey] || 0;
       html += '<div class="chipCraftInvItem' + (_dustMode && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
-        '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" ' +
-        'title="' + chipName + ' (Ур.' + pc.level + ', ×' + pc.count + ')">';
+        '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '">';
       if (_dustMode) {
         html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
           (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
@@ -2088,8 +2207,7 @@
         fragHighlightClass = fragCanAdd ? ' chipCraftInvItem--canAdd' : ' chipCraftInvItem--cantAdd';
       }
       html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (_dustMode && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') + fragHighlightClass +
-        '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '" ' +
-        'title="' + fragName + ': ' + _getModDescription(frag.fragmentId) + ' (×' + frag.count + ')">';
+        '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '">';
       if (_dustMode) {
         html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyF + '" data-dust-type="fragment" data-dust-max="' + frag.count + '"' +
           (dustSelF > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
@@ -2153,13 +2271,7 @@
           for (var sj = 0; sj < _craftSlots.length; sj++) {
             var slot = _craftSlots[sj];
             if (!slot) continue;
-            var chipTooltip = '';
-            if (slot.modIds && slot.modIds.length) {
-              var slotNames = [];
-              for (var sni = 0; sni < slot.modIds.length; sni++) slotNames.push(modName(slot.modIds[sni]));
-              chipTooltip = slotNames.join(' + ') + ' (Ур.' + (slot.level || 1) + ')';
-            }
-            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '" title="' + chipTooltip + '">';
+            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '" data-hct-chip-id="' + slot.chipId + '" data-hct-chip-level="' + (slot.level || 1) + '">';
             var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
             html += chipSvgComposed(60, 54, sc, slot.modIds, 'chipCraftSlotIcon', 3);
             html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj + '" type="button">×</button>';
@@ -2179,11 +2291,8 @@
               html += '<div class="chipCraftSlotSep">+</div>';
             }
             var slot2 = _craftSlots[sj2];
-            var fragTooltip = '';
-            if (slot2 && slot2.type === 'fragment') {
-              fragTooltip = modName(slot2.fragmentId) + ': ' + _getModDescription(slot2.fragmentId);
-            }
-            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj2 + '" title="' + fragTooltip + '">';
+            var slotDataAttr2 = (slot2 && slot2.type === 'fragment') ? ' data-hct-frag-id="' + slot2.fragmentId + '"' : '';
+            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
             if (slot2) {
               if (slot2.type === 'chip') {
                 var sc2 = slot2.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -2548,7 +2657,7 @@
       if (Math.random() > craftChancePct) {
         /* Craft failed — fragments and dust already consumed */
         if (global.Game && global.Game.Toast) {
-          global.Game.Toast.show(t('chipCraftFailed', 'Крафт не удался! Фрагменты утеряны.'), 2500);
+          global.Game.Toast.show(t('chipCraftFailed', 'Создание чипа провалилось. Фрагменты не подлежат восстановлению'), 5000);
         }
         _resetCraftSlots();
         renderChipCraftPanel();
@@ -2623,11 +2732,30 @@
       overlay.addEventListener('click', handleOverlayClick);
       /* tooltip hover events for chip upgrade cards */
       overlay.addEventListener('mouseover', function(evt) {
-        var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
+        var tgt = evt.target;
+        if (!tgt || !tgt.closest) return;
+        /* Chip upgrade grid cards */
+        var card = tgt.closest('[data-chip-upgrade-id]');
         if (card) { showChipUpgradeTooltip(evt); return; }
+        /* Hangar inventory chip buttons (available chips list) */
+        var chipBtn = tgt.closest('.hangarChipBtn[data-chip-id]');
+        if (chipBtn) { showHangarChipBtnTooltip(chipBtn); return; }
+        /* Craft panel inventory items */
+        var craftItem = tgt.closest('.chipCraftInvItem');
+        if (craftItem) {
+          if (craftItem.getAttribute('data-craft-chip-id')) { showCraftInvChipTooltip(craftItem); return; }
+          if (craftItem.getAttribute('data-craft-frag-id')) { showCraftInvFragTooltip(craftItem); return; }
+        }
+        /* Craft drop zone slots */
+        var slotChip = tgt.closest('[data-hct-chip-id]');
+        if (slotChip) { showCraftSlotChipTooltip(slotChip); return; }
+        var slotFrag = tgt.closest('[data-hct-frag-id]');
+        if (slotFrag) { showCraftSlotFragTooltip(slotFrag); return; }
         /* Task 5: tooltip for chips installed in SVG slot triangles */
-        var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
+        var slotPoly = tgt.closest('[data-slot-type]');
         if (slotPoly) { _showSlotChipTooltip(evt, slotPoly); return; }
+        /* Moved over non-trigger area — hide game tooltip */
+        hideChipUpgradeTooltip();
       });
       overlay.addEventListener('mousemove', function(evt) {
         /* Task 5: update tooltip position when moving over slot */
@@ -2640,11 +2768,29 @@
         }
       });
       overlay.addEventListener('mouseout', function(evt) {
-        var card = evt.target.closest ? evt.target.closest('[data-chip-upgrade-id]') : null;
-        if (!card || (evt.relatedTarget && !card.contains(evt.relatedTarget))) hideChipUpgradeTooltip();
+        var tgt = evt.target;
+        var rel = evt.relatedTarget;
+        if (!tgt || !tgt.closest) return;
+        /* If leaving any known game-tooltip trigger element, hide when not entering another one */
+        var leavingTrigger =
+          tgt.closest('[data-chip-upgrade-id]') ||
+          tgt.closest('.hangarChipBtn[data-chip-id]') ||
+          tgt.closest('.chipCraftInvItem') ||
+          tgt.closest('[data-hct-chip-id]') ||
+          tgt.closest('[data-hct-frag-id]');
+        if (leavingTrigger) {
+          var staysInTrigger = rel && rel.closest && (
+            rel.closest('[data-chip-upgrade-id]') ||
+            rel.closest('.hangarChipBtn[data-chip-id]') ||
+            rel.closest('.chipCraftInvItem') ||
+            rel.closest('[data-hct-chip-id]') ||
+            rel.closest('[data-hct-frag-id]')
+          );
+          if (!staysInTrigger) hideChipUpgradeTooltip();
+        }
         /* Task 5: hide slot tooltip */
-        var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
-        if (slotPoly && evt.relatedTarget && !slotPoly.contains(evt.relatedTarget)) _hideSlotChipTooltip();
+        var slotPoly = tgt.closest('[data-slot-type]');
+        if (slotPoly && rel && !slotPoly.contains(rel)) _hideSlotChipTooltip();
         if (!slotPoly) _hideSlotChipTooltip();
       });
 

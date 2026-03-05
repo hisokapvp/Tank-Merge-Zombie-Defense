@@ -417,7 +417,7 @@
   ,"chipCraftNoMoreFrags": "Все экземпляры этого фрагмента уже добавлены"
   ,"chipCraftDisassembledMultiple": "Разобрано чипов: {count}, получено фрагментов: {frags}"
   ,"chipCraftChance": "Шанс: {chance}%"
-  ,"chipCraftFailed": "Крафт не удался! Фрагменты утеряны."
+  ,"chipCraftFailed": "Создание чипа провалилось. Фрагменты не подлежат восстановлению."
   ,"chipCraftNotEnoughDust": "Недостаточно кремниевой пыли"
   ,"hangarChipsWorkshopWIP": "В разработке"
   ,"hangarChipsCellLabel": "Ячейка"

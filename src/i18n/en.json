@@ -417,7 +417,7 @@
   ,"chipCraftNoMoreFrags": "All copies of this fragment are already added"
   ,"chipCraftDisassembledMultiple": "Disassembled chips: {count}, fragments received: {frags}"
   ,"chipCraftChance": "Chance: {chance}%"
-  ,"chipCraftFailed": "Craft failed! Fragments lost."
+  ,"chipCraftFailed": "Chip creation failed. Fragments cannot be recovered."
   ,"chipCraftNotEnoughDust": "Not enough silicon dust"
   ,"hangarChipsWorkshopWIP": "In development"
   ,"hangarChipsCellLabel": "Cell"

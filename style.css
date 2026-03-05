@@ -2077,9 +2077,8 @@ input, select, textarea, button {
   padding-top:10px;
 }
 #modsTankWallOverlay .scModal__body{
-  overflow-y:auto;
-  overflow-x:hidden;
-  scrollbar-gutter:stable;
+  overflow:hidden;
+  scrollbar-gutter:auto;
   padding-right:2px;
   padding-bottom:calc(var(--ui-btn-press-shift) + 4px);
 }
