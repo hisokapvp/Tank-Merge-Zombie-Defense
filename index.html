@@ -210,6 +210,25 @@
             <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
           </div>
         </div>
+        <!-- Production Line Storage Modal -->
+        <div class="plStorage hidden" id="productionLineStorageModal" aria-hidden="true">
+          <div class="plStorage__backdrop"></div>
+          <div class="plStorage__panel" role="dialog" aria-modal="true" aria-labelledby="plStorageTitle" tabindex="-1">
+            <button class="levelModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Склад коробок</div>
+            <div class="plStorage__grid" id="plStorageGrid"></div>
+            <div class="plStorage__confirm hidden" id="plConfirmOverlay">
+              <div class="plStorage__confirmBox">
+                <div id="plConfirmText" class="levelModal__line">Хотите открыть коробку?</div>
+                <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                  <button id="plConfirmYes" class="btn btnPrimary" type="button">Да</button>
+                  <button id="plConfirmNo" class="btn btnSecondary" type="button">Нет</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="levelModal hidden" id="supercomputerMenuOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-supercomputer-root-close="true"></div>
           <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
@@ -483,6 +502,7 @@
   <script src="src/mechanics/levelFlow.js"></script>
   <script src="src/mechanics/progression.js"></script>
   <script src="src/mechanics/supercomputer.js"></script>
+  <script src="src/mechanics/productionLine.js"></script>
   <script src="src/mechanics/combatProfiles.js"></script>
   <script src="src/mechanics/combat.js"></script>
   <script src="src/mechanics/fenceSides.js"></script>
@@ -502,6 +522,7 @@
   <script src="src/utils/seededRng.js"></script>
   <script src="src/render/groundLayer.js"></script>
   <script src="src/render/spriteLoaders.js"></script>
+  <script src="src/render/productionLineRender.js"></script>
   <script src="src/render/tankPortrait.js"></script>
   <script src="src/render/input.js"></script>
   <script src="src/ui/adService.js"></script>
@@ -539,6 +560,7 @@
   <script src="src/ui/modals.js"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/supercomputerMenu.js"></script>
+  <script src="src/ui/productionLineUI.js"></script>
   <script src="src/ui/criticalModal.js"></script>
   <script src="src/systems/pauseManager.js"></script>
   <script src="src/systems/depthSort.js"></script>

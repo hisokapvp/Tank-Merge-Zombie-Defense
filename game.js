@@ -2294,6 +2294,17 @@ function initBoard(){
   sc.offsetY = configOffset;
   sc.x = hangarCenterX;
   sc.y = hangarBottomY + sc.offsetY;
+  // ── Production Line: update render layout relative to supercomputer ──
+  {
+    const _PLR = window.Game && window.Game.ProductionLineRender;
+    if (_PLR && typeof _PLR.updateLayout === 'function') {
+      const scSprite = SupercomputerSprites && SupercomputerSprites.config;
+      const scW = (scSprite && scSprite.animations && scSprite.animations.idle)
+        ? scSprite.animations.idle.w * (scSprite.renderScale || 1) * balScale
+        : 68;
+      _PLR.updateLayout(sc.x, sc.y, scW);
+    }
+  }
   updateSupercomputerHudButtonPosition();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(sc, SupercomputerSprites.config);
@@ -4236,6 +4247,16 @@ function restoreFullState(saved){
   if (saved.techStudying && typeof saved.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
     window.Game.HangarChipsUI.setTechStudying(saved.techStudying);
   }
+  /* Restore production line state */
+  {
+    const _PL = window.Game && window.Game.ProductionLine;
+    if (_PL && typeof _PL.deserialize === 'function' && saved.productionLine) {
+      _PL.deserialize(state, saved.productionLine);
+    }
+    if (_PL && typeof _PL.resetTracking === 'function') {
+      _PL.resetTracking();
+    }
+  }
   const scRestored = getComputerState();
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(scRestored, SupercomputerSprites.config);
@@ -5670,6 +5691,7 @@ function isBlockingModalOpen(){
     'mergePopupModal',
     'achievementsModal',
     'achievementPopup',
+    'productionLineStorageModal',
   ];
   for (let i = 0; i < ids.length; i++) {
     const el = document.getElementById(ids[i]);
@@ -9048,6 +9070,17 @@ canvas.addEventListener('pointerdown', (e)=>{
     openSupercomputerMenu();
     return;
   }
+  // Production line: storage cell click
+  {
+    const PLRender = window.Game && window.Game.ProductionLineRender;
+    const PLUI = window.Game && window.Game.ProductionLineUI;
+    if (PLRender && typeof PLRender.hitTestStorage === 'function' && PLRender.hitTestStorage(p.x, p.y)) {
+      if (PLUI && typeof PLUI.open === 'function') {
+        PLUI.open(state);
+      }
+      return;
+    }
+  }
   if (crateHitTest(p.x, p.y)){
     if (state.crate) {
       state.crate.isHover = true;
@@ -9267,6 +9300,13 @@ function draw(){
   drawTankTrack();
   renderFenceBase();
   drawSupercomputer();
+  // ── Production Line draw ──
+  {
+    const _PLR = window.Game && window.Game.ProductionLineRender;
+    if (_PLR && typeof _PLR.draw === 'function') {
+      _PLR.draw(ctx, state);
+    }
+  }
   drawBoard();
   drawOrbitingTanks();
   drawCrate();
@@ -11367,6 +11407,13 @@ function loop(now){
     stepParticles(effDt);
     stepDamageNumbers(effDt);
     stepSupercomputer(effDt);
+    // ── Production Line step ──
+    {
+      const _PL = window.Game && window.Game.ProductionLine;
+      if (_PL && typeof _PL.step === 'function') {
+        _PL.step(state, effDt);
+      }
+    }
     if (DronesApi && typeof DronesApi.step === 'function') {
       DronesApi.step({
         state,
@@ -11638,6 +11685,32 @@ async function boot(){
 }
 
 initBigMainMenu();
+
+// ── Production Line UI init ──
+{
+  const _PLUI = window.Game && window.Game.ProductionLineUI;
+  if (_PLUI && typeof _PLUI.init === 'function') {
+    // Expose addDron callback for loot resolution
+    window.Game._productionLineAddDron = addDron;
+    _PLUI.init({
+      t: t,
+      a11yOpen: a11yOpen,
+      a11yClose: a11yClose,
+      toast: function (msg) {
+        if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+          window.Game.Toast.show(msg);
+        }
+      },
+      onOpenBox: function (boxIndex) {
+        const PL = window.Game && window.Game.ProductionLine;
+        if (!PL) return null;
+        const result = PL.openBox(state, boxIndex);
+        updateUI();
+        return result;
+      },
+    });
+  }
+}
 
 /*
 assets/zombies.json example:

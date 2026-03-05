@@ -120,6 +120,14 @@
       selectedTankIds: [],
       hangarCells: null,
       playerChips: [],
+      productionLine: {
+        killsTracked: 0,
+        boxesProduced: 0,
+        progress: 0,
+        storageSlots: 9,
+        storage: [],
+        conveyorAnimTime: 0,
+      },
     };
   }
 

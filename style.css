@@ -4569,3 +4569,80 @@ input, select, textarea, button {
 .chipFragmentIcon{
   display:block;
 }
+
+/* ─── Production Line: Storage Modal ─── */
+.plStorage{
+  position:fixed;
+  inset:0;
+  z-index:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.plStorage.hidden{display:none}
+.plStorage__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+}
+.plStorage__panel{
+  position:relative;
+  background:var(--bg1);
+  border:2px solid var(--line);
+  border-radius:8px;
+  padding:var(--uiModalPad);
+  min-width:260px;
+  max-width:90vw;
+  max-height:80vh;
+  overflow-y:auto;
+  z-index:1;
+  text-align:center;
+}
+.plStorage__grid{
+  display:grid;
+  gap:8px;
+  margin:16px auto;
+  max-width:320px;
+}
+.plStorage__cell{
+  width:64px;
+  height:64px;
+  border:2px solid var(--line);
+  border-radius:6px;
+  background:var(--card);
+  color:var(--text);
+  font-size:24px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background .15s, border-color .15s;
+}
+.plStorage__cell:hover:not(:disabled){
+  background:rgba(74,246,38,0.15);
+  border-color:var(--accent);
+}
+.plStorage__cell--filled{
+  border-color:var(--accent2);
+}
+.plStorage__cell--empty{
+  opacity:0.4;
+  cursor:default;
+}
+.plStorage__confirm{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  z-index:2;
+}
+.plStorage__confirm.hidden{display:none}
+.plStorage__confirmBox{
+  background:var(--bg1);
+  border:2px solid var(--accent);
+  border-radius:8px;
+  padding:20px 28px;
+}

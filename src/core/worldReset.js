@@ -67,6 +67,7 @@
         eventShown60: !!supercomputer.eventShown60,
       },
       drones: cloneObject(src.drones, []),
+      productionLine: cloneObject(src.productionLine, null),
     };
   }
 
@@ -128,6 +129,10 @@
     target.supercomputer.eventShown60 = !!supercomputer.eventShown60;
 
     target.drones = cloneObject(src.drones, []);
+
+    if (src.productionLine) {
+      target.productionLine = cloneObject(src.productionLine, target.productionLine || null);
+    }
   }
 
   function resetWorldRuntimeState(options) {
