@@ -4499,6 +4499,72 @@ input, select, textarea, button {
   font-family:'Press Start 2P',monospace;
 }
 
+/* ─── Silicon Dust reagent row (assemble mode) ─── */
+.chipCraftReagentRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  padding:8px 10px;
+  background:rgba(20,18,14,.45);
+  border:1px solid rgba(255,152,0,.2);
+  border-radius:5px;
+}
+.chipCraftReagentLabel{
+  font-size:9px;
+  color:#b0bec5;
+  font-family:'Press Start 2P',monospace;
+  flex-shrink:0;
+}
+.chipCraftReagentLabel b{
+  color:#ff9800;
+}
+.chipCraftReagentControls{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-shrink:0;
+}
+.chipCraftReagentBtn{
+  width:22px;
+  height:22px;
+  padding:0;
+  font-size:16px;
+  line-height:1;
+  border:2px solid #ff9800;
+  color:#ff9800;
+  background:rgba(255,152,0,.08);
+  border-radius:4px;
+  cursor:pointer;
+  font-family:'Press Start 2P',monospace;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background .1s;
+}
+.chipCraftReagentBtn:hover:not(:disabled){
+  background:rgba(255,152,0,.22);
+}
+.chipCraftReagentBtn:disabled{
+  border-color:rgba(255,255,255,.15);
+  color:rgba(255,255,255,.3);
+  cursor:not-allowed;
+}
+.chipCraftReagentAmount{
+  font-size:13px;
+  color:#ff9800;
+  font-family:'Press Start 2P',monospace;
+  min-width:16px;
+  text-align:center;
+}
+.chipCraftChanceLabel{
+  font-size:9px;
+  color:#4af626;
+  font-family:'Press Start 2P',monospace;
+  margin-left:auto;
+}
+
 /* ─── Chip Fragment Icon ─── */
 .chipFragmentIcon{
   display:block;

@@ -577,24 +577,68 @@
     var targets = _findCascadeTargets(x, y, projCount, opts);
     if (!targets.length) return;
 
-    for (var i = 0; i < projCount; i++) {
-      var t = targets[i % targets.length];
-      var tp = opts.getZombiePos(t);
-      opts.spawnProjectile({
-        fromX: x, fromY: y,
-        toZombieId: t.id, toX: tp.x, toY: tp.y,
-        level: b.level,
-        dmg: splitDmg,
-        aoe: cascadeAoe,
-        prof: b.prof,
-        bulletCfg: b.bulletCfg,
-        effectIntensity: (b.effectIntensity || 1) * sizeMul,
-        shotId: (b.shotId || 0) + 0.3 * cascadeResult.cascadeLevel,
-        isTankAttackingZombie: false,
-        tank: b.tank,
-        chipShotMods: cascadeResult,
-        isCascadeChild: true
-      });
+    /* For combo mods that fired: stagger spawns with 150ms delay (like primary combo) */
+    var COMBO_MODS_STAGGER = {6: true, 25: true, 26: true};
+    var useCascadeStagger = COMBO_MODS_STAGGER[nextMod.modId] && nextMod._comboFired && projCount > 1;
+
+    if (useCascadeStagger) {
+      /* Snapshot primitive values and stable references from b BEFORE the projectile
+         is returned to the pool (releaseProjectile resets b.prof/bulletCfg to null). */
+      var _level = b.level;
+      var _prof = b.prof;
+      var _bulletCfg = b.bulletCfg;
+      var _effectIntensity = b.effectIntensity || 1;
+      var _shotId = b.shotId || 0;
+      var _tank = b.tank;
+      var _cascadeResult = cascadeResult;
+      var _splitDmg = splitDmg;
+      var _cascadeAoe = cascadeAoe;
+      var _sizeMul = sizeMul;
+      var _x = x, _y = y;
+      var _targets = targets, _opts = opts;
+      for (var i = 0; i < projCount; i++) {
+        (function (delay, idx) {
+          setTimeout(function () {
+            var zt = _targets[idx % _targets.length];
+            var ztp = _opts.getZombiePos(zt);
+            _opts.spawnProjectile({
+              fromX: _x, fromY: _y,
+              toZombieId: zt.id, toX: ztp.x, toY: ztp.y,
+              level: _level,
+              dmg: _splitDmg,
+              aoe: _cascadeAoe,
+              prof: _prof,
+              bulletCfg: _bulletCfg,
+              effectIntensity: _effectIntensity * _sizeMul,
+              shotId: _shotId + 0.3 * _cascadeResult.cascadeLevel,
+              isTankAttackingZombie: false,
+              tank: _tank,
+              chipShotMods: _cascadeResult,
+              isCascadeChild: true
+            });
+          }, delay);
+        })(i * 150, i);
+      }
+    } else {
+      for (var i = 0; i < projCount; i++) {
+        var t = targets[i % targets.length];
+        var tp = opts.getZombiePos(t);
+        opts.spawnProjectile({
+          fromX: x, fromY: y,
+          toZombieId: t.id, toX: tp.x, toY: tp.y,
+          level: b.level,
+          dmg: splitDmg,
+          aoe: cascadeAoe,
+          prof: b.prof,
+          bulletCfg: b.bulletCfg,
+          effectIntensity: (b.effectIntensity || 1) * sizeMul,
+          shotId: (b.shotId || 0) + 0.3 * cascadeResult.cascadeLevel,
+          isTankAttackingZombie: false,
+          tank: b.tank,
+          chipShotMods: cascadeResult,
+          isCascadeChild: true
+        });
+      }
     }
 
     /* Visual burst at cascade spawn point */

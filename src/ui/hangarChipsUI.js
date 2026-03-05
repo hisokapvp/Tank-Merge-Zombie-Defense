@@ -1,4 +1,4 @@
-/**
+﻿/**
  * HangarChipsUI — full UI controller for the triangular-chip hangar system.
  *
  * Renders inside #modsHangarOverlay:
@@ -274,10 +274,10 @@
       var def = SLOT_DEFS[d];
       var isRed = def.type === 'red';
       var chipData = isRed ? cell.redSlots[def.slotId] : cell.yellowSlots[def.slotId];
-      
+
       /* Yellow attraction: only if this specific yellow slot is active and matched */
       var yellowMatched = (cell.uiState && cell.uiState.yellowMatchSuccess === true && cell.uiState.activeYellowSlotId === def.slotId);
-      
+
       var locked = !isRed && cell.uiState.yellowLocked && cell.uiState.activeYellowSlotId !== def.slotId;
       var selected = _selectedSlot && _selectedSlot.type === def.type && _selectedSlot.slotId === def.slotId;
 
@@ -299,7 +299,7 @@
         }
       }
       var workingClass = isWorking ? ' hangarSlotPoly--working' : '';
-      
+
       // Add individual animation delays to make shake effect individual for each element
       var animationDelay = (d * 0.05) + 's';
 
@@ -330,11 +330,11 @@
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer');
-      
+
       if (isWorking) {
         svg += '; animation-delay: ' + animationDelay;
       }
-      
+
       svg += '" />';
 
       /* vertex labels inside triangle */
@@ -1046,7 +1046,7 @@
     return false;
   }
 
-  /** Merge two identical chips (same chipId, same level) → one chip at level+1. 
+  /** Merge two identical chips (same chipId, same level) → one chip at level+1.
       Returns the new level or -1 on failure. */
   function mergeChips(chipId, level) {
     var chips = ensurePlayerChips();
@@ -1799,12 +1799,14 @@
   var _dustMode = false;       // true when "Распылить" flow is active
   var _dustSelected = {};      // { 'chip_<chipId>_<level>': count, 'frag_<fragId>': count }
   var _siliconDust = 0;        // player's silicon dust resource
+  var _craftReagentDust = 0;   // units of silicon dust to spend as reagent (0-5)
 
   var DUST_PER_CHIP = 10;
   var DUST_PER_FRAGMENT = 3;
 
   function _resetCraftSlots() {
     _craftSlots = [null, null, null];
+    _craftReagentDust = 0;
   }
 
   /**
@@ -2213,6 +2215,24 @@
             html += '</div>';
             html += '</div>';
           }
+
+          /* ── Silicon Dust reagent controls (always visible in assemble mode) ── */
+          var craftChance = 75 + _craftReagentDust * 5;
+          var minusDisabled = _craftReagentDust <= 0;
+          var plusDisabled = _craftReagentDust >= 5 || _siliconDust <= _craftReagentDust;
+          html += '<div class="chipCraftReagentRow">';
+          html += '<span class="chipCraftReagentLabel">' +
+            t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
+          html += '<div class="chipCraftReagentControls">';
+          html += '<button class="chipCraftReagentBtn" id="chipCraftReagentMinus" type="button"' +
+            (minusDisabled ? ' disabled' : '') + '>−</button>';
+          html += '<span class="chipCraftReagentAmount">' + _craftReagentDust + '</span>';
+          html += '<button class="chipCraftReagentBtn" id="chipCraftReagentPlus" type="button"' +
+            (plusDisabled ? ' disabled' : '') + '>+</button>';
+          html += '</div>';
+          html += '<span class="chipCraftChanceLabel">' +
+            t('chipCraftChance', 'Шанс: {chance}%').replace('{chance}', craftChance) + '</span>';
+          html += '</div>';
         }
       } else {
         html += '<div class="chipCraftEmptyPreview">';
@@ -2385,6 +2405,26 @@
       });
     }
 
+    /* ── Silicon Dust reagent +/- buttons ── */
+    var reagentMinus = el('chipCraftReagentMinus');
+    if (reagentMinus) {
+      reagentMinus.addEventListener('click', function () {
+        if (_craftReagentDust > 0) {
+          _craftReagentDust--;
+          renderChipCraftPanel();
+        }
+      });
+    }
+    var reagentPlus = el('chipCraftReagentPlus');
+    if (reagentPlus) {
+      reagentPlus.addEventListener('click', function () {
+        if (_craftReagentDust < 5 && _siliconDust > _craftReagentDust) {
+          _craftReagentDust++;
+          renderChipCraftPanel();
+        }
+      });
+    }
+
     /* Click on action button */
     var actionBtn = el('chipCraftActionBtn');
     if (actionBtn) {
@@ -2476,16 +2516,39 @@
         fragModIds.push(_craftSlots[si].fragmentId);
       }
 
-      /* Try to assemble */
+      /* Try to assemble (validate combo) */
       var result = h.assembleChip(fragModIds);
       if (!result) {
         if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftInvalidCombo', 'Невозможно создать чип из этих фрагментов'), 1800);
         return;
       }
 
+      /* Validate silicon dust reagent */
+      var dustUsed = _craftReagentDust;
+      if (dustUsed > 0 && _siliconDust < dustUsed) {
+        if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftNotEnoughDust', 'Недостаточно кремниевой пыли'), 1800);
+        return;
+      }
+
+      /* Consume silicon dust reagent */
+      if (dustUsed > 0) _siliconDust -= dustUsed;
+
       /* Remove 3 fragments from inventory */
       for (var ri = 0; ri < fragModIds.length; ri++) {
         removePlayerFragment(fragModIds[ri], 1);
+      }
+
+      /* Roll craft chance: base 75% + 5% per dust unit */
+      var craftChancePct = 0.75 + dustUsed * 0.05;
+      if (Math.random() > craftChancePct) {
+        /* Craft failed — fragments and dust already consumed */
+        if (global.Game && global.Game.Toast) {
+          global.Game.Toast.show(t('chipCraftFailed', 'Крафт не удался! Фрагменты утеряны.'), 2500);
+        }
+        _resetCraftSlots();
+        renderChipCraftPanel();
+        renderChipUpgradeGrid();
+        return;
       }
 
       /* Resolve chipDef — if result.chipId === -1, find or create */
