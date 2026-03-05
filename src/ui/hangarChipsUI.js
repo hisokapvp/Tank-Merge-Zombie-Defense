@@ -2171,9 +2171,13 @@
           html += '</div>';
           html += '</div>';
         } else {
-          /* Assemble mode: 3 fixed slots */
-          html += '<div class="chipCraftSlotRow">';
+          /* Assemble mode: 3 fixed slots + inline arrow + result chip in one row */
+          var assemblePreview = _previewAssembleResult();
+          html += '<div class="chipCraftSlotRow chipCraftSlotRow--withResult">';
           for (var sj2 = 0; sj2 < 3; sj2++) {
+            if (sj2 > 0) {
+              html += '<div class="chipCraftSlotSep">+</div>';
+            }
             var slot2 = _craftSlots[sj2];
             var fragTooltip = '';
             if (slot2 && slot2.type === 'fragment') {
@@ -2194,13 +2198,10 @@
             }
             html += '</div>';
           }
-          html += '</div>';
-
-          /* ── Result preview arrow + assembled chip (when all 3 fragments placed) ── */
-          var assemblePreview = _previewAssembleResult();
+          /* Arrow separator */
+          html += '<div class="chipCraftSlotSep chipCraftSlotSep--arrow">⇒</div>';
+          /* Result chip slot */
           if (assemblePreview) {
-            html += '<div class="chipCraftResultPreview">';
-            html += '<div class="chipCraftResultArrow">⇒</div>';
             var resultColor = assemblePreview.chipColor === 'red' ? '#e53935' : '#fdd835';
             var resultModIds = assemblePreview.modIds || [];
             html += '<div class="chipCraftResultChip">';
@@ -2213,8 +2214,12 @@
             }
             html += '<span class="chipCraftResultLabel">' + resultChipName + '</span>';
             html += '</div>';
+          } else {
+            html += '<div class="chipCraftSlot chipCraftSlot--resultSlot">';
+            html += '<div class="chipCraftSlotEmpty" style="opacity:0.3">?</div>';
             html += '</div>';
           }
+          html += '</div>'; // chipCraftSlotRow--withResult
 
           /* ── Silicon Dust reagent controls (always visible in assemble mode) ── */
           var craftChance = 75 + _craftReagentDust * 5;
@@ -2222,11 +2227,11 @@
           var plusDisabled = _craftReagentDust >= 5 || _siliconDust <= _craftReagentDust;
           html += '<div class="chipCraftReagentRow">';
           html += '<span class="chipCraftReagentLabel">' +
-            t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
+            t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>';
           html += '<div class="chipCraftReagentControls">';
           html += '<button class="chipCraftReagentBtn" id="chipCraftReagentMinus" type="button"' +
             (minusDisabled ? ' disabled' : '') + '>−</button>';
-          html += '<span class="chipCraftReagentAmount">' + _craftReagentDust + '</span>';
+          html += '<span class="chipCraftReagentAmount">' + _siliconDust + ' / ' + _craftReagentDust + '</span>';
           html += '<button class="chipCraftReagentBtn" id="chipCraftReagentPlus" type="button"' +
             (plusDisabled ? ' disabled' : '') + '>+</button>';
           html += '</div>';

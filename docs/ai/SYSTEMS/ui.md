@@ -46,7 +46,7 @@
 - **Разобрать (disassemble)**: игрок кладёт один или несколько целых чипов в слоты → получает по 3 фрагмента за каждый. Кликабельны только целые чипы. `_craftSlots` — динамический массив (каждый чип добавляется через `push`); `_executeCraftAction` обрабатывает все чипы в цикле. Переключение в режим disassemble сбрасывает `_craftSlots = []`; удаление чипа из слотов через `splice`. CSS: `.chipCraftSlotRow--disassemble`.
 - **Создать чип (assemble)**: игрок кладёт 3 фрагмента в слоты → получает целый чип. Кликабельны только фрагменты.
   - **Валидация фрагментов**: `_canAddFragment(fragId)` проверяет допустимость добавления: запрещены тройки одинаковых фрагментов, максимум 1 спецмод (id ≥ 10). Фрагменты в инвентаре подсвечиваются: зелёным (`.chipCraftInvItem--canAdd`) если можно добавить, красным (`.chipCraftInvItem--cantAdd`) если нельзя.
-  - **Превью результата**: `_previewAssembleResult()` показывает живой предпросмотр итогового чипа при заполнении всех 3 слотов. Отображается стрелка (`.chipCraftResultArrow`) + composed SVG чипа (`.chipCraftResultChip`) + описание модификаторов (`.chipCraftResultLabel`). `_getModDescription(modId)` возвращает текстовое описание мода для тултипов. Контейнер: `.chipCraftResultPreview`.
+  - **Превью результата**: `_previewAssembleResult()` показывает живой предпросмотр итогового чипа при заполнении всех 3 слотов. Все 3 слота + стрелка + чип результата расположены **в одну горизонтальную строку** внутри `.chipCraftSlotRow--withResult`. Между слотами — разделители `.chipCraftSlotSep` (текст «+»); после третьего слота — разделитель `.chipCraftSlotSep--arrow` (символ «⇒», зелёный). Если 3 слота не заполнены — на месте результата отображается пустой слот `.chipCraftSlot--resultSlot`. При заполнении — `chipCraftResultChip` содержит composed SVG (`chipCraftResultIcon`) и метку `chipCraftResultLabel`. **Классы `chipCraftResultPreview` и `chipCraftResultArrow` удалены.**
 - Drop-зона: 3 слота для элементов, кнопка «×» для снятия. Кнопка действия (Execute) становится активной при заполненных слотах в правильном режиме.
 - **Фрагменты SVG**: иконки фрагментов в инвентаре рендерятся с размером `22px` (через `_fragmentSvgUp`).
 - **Распылить (Pulverize / Dust mode)**: кнопка «Распылить» (`chipCraftDustBtn`) в нижней панели (`chipCraftBottomBar`) под сеткой инвентаря. При нажатии:
@@ -57,7 +57,7 @@
   - Чекбоксы используют кастомную стилизацию: скрытый `<input>` + span `.chipCraftDustCheckmark` с CSS-псевдоэлементами для галочки.
   - Клик по любой области карточки чипа/фрагмента в dust mode переключает чекбокс выбора (вспомогательная функция `_toggleDustCheckbox(cb)`). Защита от двойного toggle: `evt.target.closest('.chipCraftDustCheck')` предотвращает повторное срабатывание при клике непосредственно на чекбокс.
   - Подтверждение: выбранные элементы удаляются, `_siliconDust` увеличивается.
-- **Кремниевая пыль** (`_siliconDust`): ресурс, отображаемый в нижней панели (`chipCraftBottomBar`). Сохраняется через `getSiliconDust()`/`setSiliconDust()`.
+- **Кремниевая пыль** (`_siliconDust`): ресурс, отображаемый в нижней панели (`chipCraftBottomBar`). Сохраняется через `getSiliconDust()`/`setSiliconDust()`. В строке реагента (`chipCraftReagentRow`) счётчик `.chipCraftReagentAmount` показывает формат **`total / using`** (`_siliconDust + ' / ' + _craftReagentDust`); отдельная `<b>` с количеством пыли в лейбле **удалена**.
 
 ### Открытие технологий — процесс изучения
 - Все кнопки «Скормить x» удалены. Вместо них — кнопка «Начать процесс изучения» с таймером.
@@ -173,7 +173,7 @@
 - Для SC/Talents overlay shimmer-псевдоэлемент `.btn::after` отключён, чтобы hover не давал белый прямоугольник на кнопках.
 - Для `.scButton` обязателен `box-sizing:border-box`; на active/pressed запрещено менять `border-width`, `padding`, `height`, `margin`, `line-height`.
 - Правило overflow: одновременно скроллится только один контейнер (`.scModal__body`), а `overlay/panel/body` страницы не должны получать параллельный scroll.
-- Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll.
+- Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll. **Кнопка «Закрыть» (`modsTankWallBack`) должна быть прямым дочерним элементом `.levelModal__panel.scModal`, а НЕ внутри `.scModal__body`** — это предотвращает появление второго скроллбара на вкладке «Дроны», где таблица занимает всю высоту body.
 - Для root/hangar модалок SC body-скролл отключён; для `modsTankWall` скролл оставлен только у `#modsTankWallOverlay .scModal__body`.
 
 ### Диагностика: второй scrollbar в supercomputer modal
