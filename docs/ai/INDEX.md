@@ -133,6 +133,10 @@
 - Fence preview кадры в supercomputer: `assets/fence.json` (`levels[].uiIcon.{atlas,frame|frameId}` / `levels[].uiFrameId`, fallback `sideTop`)
 - Баланс апгрейдов орудий: `assets/balance/cannonUpgrades.json` (runtime fallback при ошибках загрузки/валидации)
 
+## Инструменты балансировки
+- **Balance Editor (HTML Dashboard):** `tools/balance-editor.html` — визуальный редактор всех balance JSON с графиками, формулами прогрессии, diff-preview и экспортом. Открывать из корня проекта через `http-server` или `Live Server`.
+- **Balance Simulator (CLI):** `tools/balance-sim.js` — headless-симулятор боя (Node.js). Анализирует DPS/TTK, difficulty curve, breakpoints, wall survival. Запуск: `node tools/balance-sim.js --help`.
+
 ## Runtime reset (partial)
 - Оркестратор partial reset: `src/core/worldReset.js`
 - Кнопка `Перезапустить симуляцию`: `src/ui/criticalModal.js` -> `game.js` (`restartSimulationPartial`)

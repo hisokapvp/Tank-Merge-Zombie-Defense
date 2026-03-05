@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Balance Editor — Tank Merge Zombie Defense</title>
+<style>
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --card: #0f3460;
+  --accent: #e94560;
+  --accent2: #53a8b6;
+  --text: #eee;
+  --muted: #888;
+  --green: #4caf50;
+  --yellow: #ffc107;
+  --red: #f44336;
+  --changed: #ffeb3b33;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+header { background: var(--surface); padding: 12px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 2px solid var(--accent); }
+header h1 { font-size: 18px; font-weight: 600; }
+header .actions { margin-left: auto; display: flex; gap: 8px; }
+.btn { padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: .15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #c73a52; }
+.btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--muted); }
+.btn-secondary:hover { background: #1a4a8a; }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success:hover { background: #388e3c; }
+nav { background: var(--surface); display: flex; gap: 0; border-bottom: 1px solid #333; }
+nav button { background: transparent; border: none; color: var(--muted); padding: 10px 20px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: .15s; }
+nav button:hover { color: var(--text); }
+nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+main { padding: 16px 24px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.section-title { font-size: 16px; font-weight: 600; margin: 16px 0 8px; color: var(--accent2); }
+.chart-container { background: var(--surface); border-radius: 8px; padding: 16px; margin-bottom: 16px; position: relative; }
+canvas.chart { width: 100%; height: 300px; }
+table.data-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+table.data-table th { background: var(--card); padding: 6px 10px; text-align: left; font-weight: 500; position: sticky; top: 0; z-index:1; }
+table.data-table td { padding: 4px 8px; border-bottom: 1px solid #222; }
+table.data-table tr:hover td { background: #ffffff08; }
+table.data-table input { background: transparent; border: 1px solid #444; color: var(--text); padding: 3px 6px; width: 80px; border-radius: 3px; font-size: 13px; text-align: right; }
+table.data-table input:focus { outline: none; border-color: var(--accent); }
+table.data-table input.changed { background: var(--changed); }
+.slider-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
+.slider-row label { min-width: 160px; font-size: 13px; }
+.slider-row input[type=range] { flex: 1; max-width: 300px; }
+.slider-row .val { font-size: 13px; min-width: 50px; color: var(--accent2); }
+.scroll-wrap { max-height: 500px; overflow-y: auto; border: 1px solid #333; border-radius: 6px; }
+.diff-badge { display: inline-block; background: var(--yellow); color: #000; padding: 1px 6px; border-radius: 8px; font-size: 11px; margin-left: 6px; }
+.status-bar { background: var(--surface); padding: 8px 24px; font-size: 12px; color: var(--muted); border-top: 1px solid #333; position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 16px; }
+.formula-bar { background: var(--card); padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.formula-bar label { font-size: 12px; }
+.formula-bar input { width: 70px; background: transparent; border: 1px solid #555; color: var(--text); padding: 3px 6px; border-radius: 3px; font-size: 12px; }
+.formula-bar select { background: var(--card); color: var(--text); border: 1px solid #555; padding: 3px 6px; border-radius: 3px; font-size: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+.talent-branch { margin-bottom: 12px; }
+.talent-branch h4 { color: var(--accent2); margin-bottom: 6px; text-transform: capitalize; }
+.info-box { background: var(--card); border-radius: 6px; padding: 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; }
+.info-box code { background: #0008; padding: 1px 4px; border-radius: 2px; }
+#exportDiffPre { background: #111; padding: 12px; border-radius: 6px; max-height: 400px; overflow: auto; font-family: 'Cascadia Code', monospace; font-size: 12px; white-space: pre-wrap; }
+.diff-add { color: var(--green); }
+.diff-del { color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚙ Balance Editor</h1>
+  <span id="changeCount" style="font-size:13px; color:var(--muted)">0 изменений</span>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="resetAll()">↻ Сбросить</button>
+    <button class="btn btn-primary" onclick="showDiff()">📋 Diff</button>
+    <button class="btn btn-success" onclick="exportAll()">⬇ Скачать JSON</button>
+  </div>
+</header>
+
+<nav id="tabs">
+  <button class="active" data-tab="tanks">🔫 Танки</button>
+  <button data-tab="zombies">🧟 Зомби</button>
+  <button data-tab="walls">🧱 Стены</button>
+  <button data-tab="drones">🤖 Дроны</button>
+  <button data-tab="bullets">💥 Снаряды</button>
+  <button data-tab="global">🌐 Глобальные</button>
+  <button data-tab="talents">🌟 Таланты</button>
+  <button data-tab="chips">🔧 Чипы</button>
+  <button data-tab="cannon">📐 Орудия (кривые)</button>
+  <button data-tab="diff">📊 Diff / Export</button>
+</nav>
+
+<main>
+  <!-- TANKS -->
+  <div id="tab-tanks" class="tab-content active">
+    <h3 class="section-title">Танки — Прогрессия урона (60 уровней)</h3>
+    <div class="chart-container"><canvas id="chartTanks" class="chart"></canvas></div>
+    <div class="formula-bar">
+      <label>Формула:</label>
+      <select id="tankFormula">
+        <option value="linear">base + step × (lvl-1)</option>
+        <option value="exp">base × factor^(lvl-1)</option>
+        <option value="poly">base + step × (lvl-1)^pow</option>
+      </select>
+      <label>base</label><input id="tankBase" type="number" value="20">
+      <label>step</label><input id="tankStep" type="number" value="10">
+      <label>pow/factor</label><input id="tankPow" type="number" value="1" step="0.01">
+      <button class="btn btn-secondary" onclick="applyTankFormula()">Применить</button>
+    </div>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableTanks">
+        <thead><tr><th>Уровень</th><th>baseDamage</th><th>moveSpeed</th><th>attackSpeed</th><th>bulletLevel</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ZOMBIES -->
+  <div id="tab-zombies" class="tab-content">
+    <h3 class="section-title">Зомби — Прогрессия (60 типов)</h3>
+    <div class="chart-container"><canvas id="chartZombies" class="chart"></canvas></div>
+    <div class="formula-bar">
+      <label>Формула attackDamage:</label>
+      <select id="zombieFormula"><option value="linear">base + step × (lvl-1)</option><option value="exp">base × factor^(lvl-1)</option></select>
+      <label>base</label><input id="zombieBase" type="number" value="10">
+      <label>step</label><input id="zombieStep" type="number" value="10">
+      <label>factor</label><input id="zombiePow" type="number" value="1.05" step="0.01">
+      <button class="btn btn-secondary" onclick="applyZombieFormula()">Применить</button>
+    </div>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableZombies">
+        <thead><tr><th>Уровень</th><th>attackDamage</th><th>hpMul</th><th>omegaMul</th><th>rewardMul</th><th>weight</th><th>atkRange</th><th>atkCooldown</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WALLS -->
+  <div id="tab-walls" class="tab-content">
+    <h3 class="section-title">Стены — Прогрессия (41 уровень)</h3>
+    <div class="chart-container"><canvas id="chartWalls" class="chart"></canvas></div>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableWalls">
+        <thead><tr><th>Уровень</th><th>segmentMaxHp</th><th>armorFlat</th><th>upgradeCost</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DRONES -->
+  <div id="tab-drones" class="tab-content">
+    <h3 class="section-title">Дроны — Прогрессия (10 уровней)</h3>
+    <div class="chart-container"><canvas id="chartDrones" class="chart"></canvas></div>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableDrones">
+        <thead><tr><th>Уровень</th><th>moveSpeedPxSec</th><th>repairSpeedMult</th><th>costMult</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="slider-row">
+      <label>baseRepairSec</label>
+      <input type="range" min="1" max="20" step="0.5" id="dronRepairSec" value="5">
+      <span class="val" id="dronRepairSecVal">5</span>
+    </div>
+  </div>
+
+  <!-- BULLETS -->
+  <div id="tab-bullets" class="tab-content">
+    <h3 class="section-title">Снаряды — bullet_base (3 уровня)</h3>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableBullets">
+        <thead><tr><th>Уровень</th><th>addDamage</th><th>aoe</th><th>projectileKind</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GLOBAL -->
+  <div id="tab-global" class="tab-content">
+    <h3 class="section-title">Глобальные множители (balance.json)</h3>
+    <div class="info-box">Эти множители влияют на ВСЮ боевую систему. <code>1.0</code> = без изменений.</div>
+    <div id="globalSliders"></div>
+    <h3 class="section-title">Спавн зомби</h3>
+    <div id="spawnSliders"></div>
+  </div>
+
+  <!-- TALENTS -->
+  <div id="tab-talents" class="tab-content">
+    <h3 class="section-title">Таланты v2</h3>
+    <div class="info-box">
+      <b>tierUnlockSpent:</b> <span id="tierUnlockDisplay"></span><br>
+      <b>Caps:</b> <span id="capsDisplay"></span>
+    </div>
+    <div id="talentBranches"></div>
+  </div>
+
+  <!-- CHIPS -->
+  <div id="tab-chips" class="tab-content">
+    <h3 class="section-title">Чип-модификаторы — runtime-параметры</h3>
+    <div class="scroll-wrap">
+      <table class="data-table" id="tableChips">
+        <thead><tr><th>ID</th><th>Название</th><th>Параметр</th><th>Значение</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CANNON -->
+  <div id="tab-cannon" class="tab-content">
+    <h3 class="section-title">Апгрейды орудий (cannonUpgrades.json)</h3>
+    <div class="chart-container"><canvas id="chartCannon" class="chart"></canvas></div>
+    <div class="scroll-wrap" style="max-height:600px">
+      <table class="data-table" id="tableCannon">
+        <thead><tr><th>Lvl</th><th>Col2</th><th>Col3</th><th>Col4</th><th>Col5</th><th>Col6</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DIFF -->
+  <div id="tab-diff" class="tab-content">
+    <h3 class="section-title">Предпросмотр изменений</h3>
+    <pre id="exportDiffPre">Нажмите "📋 Diff" для генерации или переключитесь на эту вкладку.</pre>
+    <div style="margin-top:12px">
+      <button class="btn btn-success" onclick="exportAll()">⬇ Скачать все изменённые JSON</button>
+    </div>
+  </div>
+</main>
+
+<div class="status-bar">
+  <span>📂 Загружено из assets/</span>
+  <span id="statusText"></span>
+</div>
+
+<script>
+'use strict';
+/* ======== STATE ======== */
+const DATA = {};       // original loaded data
+const EDIT = {};       // working copies
+let changeCounter = 0;
+const BASE_PATH = '../assets/';
+
+/* ======== LOAD ======== */
+async function loadJSON(path) {
+  const r = await fetch(BASE_PATH + path);
+  if (!r.ok) throw new Error('Failed to load ' + path + ': ' + r.status);
+  return r.json();
+}
+
+async function boot() {
+  try {
+    const [tanks, zombies, fence, dron, bullet, balance, chips, cannon, talents] = await Promise.all([
+      loadJSON('tanks.json'),
+      loadJSON('zombies.json'),
+      loadJSON('fence.json'),
+      loadJSON('dron.json'),
+      loadJSON('bullet.json'),
+      loadJSON('balance.json'),
+      loadJSON('chips.json'),
+      loadJSON('balance/cannonUpgrades.json'),
+      loadJSON('balance/talentTree_v2.json')
+    ]);
+    DATA.tanks = tanks;
+    DATA.zombies = zombies;
+    DATA.fence = fence;
+    DATA.dron = dron;
+    DATA.bullet = bullet;
+    DATA.balance = balance;
+    DATA.chips = chips;
+    DATA.cannon = cannon;
+    DATA.talents = talents;
+
+    EDIT.tanks = JSON.parse(JSON.stringify(tanks));
+    EDIT.zombies = JSON.parse(JSON.stringify(zombies));
+    EDIT.fence = JSON.parse(JSON.stringify(fence));
+    EDIT.dron = JSON.parse(JSON.stringify(dron));
+    EDIT.bullet = JSON.parse(JSON.stringify(bullet));
+    EDIT.balance = JSON.parse(JSON.stringify(balance));
+    EDIT.chips = JSON.parse(JSON.stringify(chips));
+    EDIT.cannon = JSON.parse(JSON.stringify(cannon));
+    EDIT.talents = JSON.parse(JSON.stringify(talents));
+
+    renderAll();
+    setStatus('Все конфиги загружены');
+  } catch (e) {
+    document.querySelector('main').innerHTML = '<div class="info-box" style="color:var(--red)">Ошибка загрузки: ' + e.message + '<br>Убедитесь, что файл открыт из корня проекта (папка с assets/).</div>';
+  }
+}
+
+/* ======== TABS ======== */
+document.getElementById('tabs').addEventListener('click', function (e) {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.remove('active'); });
+  e.target.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(function (t) { t.classList.remove('active'); });
+  const tab = document.getElementById('tab-' + e.target.dataset.tab);
+  if (tab) tab.classList.add('active');
+  if (e.target.dataset.tab === 'diff') showDiff();
+});
+
+/* ======== RENDER ALL ======== */
+function renderAll() {
+  renderTanks();
+  renderZombies();
+  renderWalls();
+  renderDrones();
+  renderBullets();
+  renderGlobal();
+  renderTalents();
+  renderChips();
+  renderCannon();
+  updateChangeCount();
+}
+
+/* ======== TANKS ======== */
+function getTankLevels() {
+  const levels = [];
+  for (let i = 1; i <= 60; i++) {
+    const k = 'tank_lvl' + i;
+    if (EDIT.tanks[k]) levels.push({ level: i, key: k, stats: EDIT.tanks[k].stats, bulletLevel: EDIT.tanks[k].bulletLevel });
+  }
+  return levels;
+}
+
+function renderTanks() {
+  const levels = getTankLevels();
+  const tbody = document.querySelector('#tableTanks tbody');
+  tbody.innerHTML = levels.map(function (t) {
+    return '<tr>' +
+      '<td>' + t.level + '</td>' +
+      '<td>' + editInput('tanks', t.key + '.stats.baseDamage', t.stats.baseDamage) + '</td>' +
+      '<td>' + editInput('tanks', t.key + '.stats.moveSpeed', t.stats.moveSpeed) + '</td>' +
+      '<td>' + editInput('tanks', t.key + '.stats.attackSpeed', t.stats.attackSpeed) + '</td>' +
+      '<td>' + editInput('tanks', t.key + '.bulletLevel', t.bulletLevel) + '</td>' +
+      '</tr>';
+  }).join('');
+  drawTankChart(levels);
+}
+
+function drawTankChart(levels) {
+  const canvas = document.getElementById('chartTanks');
+  drawLineChart(canvas, levels.map(function (t) { return t.level; }),
+    [{ label: 'baseDamage', data: levels.map(function (t) { return t.stats.baseDamage; }), color: '#e94560' }],
+    'Танки — baseDamage по уровню');
+}
+
+function applyTankFormula() {
+  const formula = document.getElementById('tankFormula').value;
+  const base = parseFloat(document.getElementById('tankBase').value) || 20;
+  const step = parseFloat(document.getElementById('tankStep').value) || 10;
+  const pow = parseFloat(document.getElementById('tankPow').value) || 1;
+  for (let i = 1; i <= 60; i++) {
+    const k = 'tank_lvl' + i;
+    if (!EDIT.tanks[k]) continue;
+    let val;
+    if (formula === 'linear') val = base + step * (i - 1);
+    else if (formula === 'exp') val = base * Math.pow(pow, i - 1);
+    else val = base + step * Math.pow(i - 1, pow);
+    EDIT.tanks[k].stats.baseDamage = Math.round(val);
+  }
+  renderTanks();
+  updateChangeCount();
+}
+
+/* ======== ZOMBIES ======== */
+function getZombieTypes() {
+  return EDIT.zombies.types.map(function (z, i) {
+    return { level: i + 1, data: z };
+  });
+}
+
+function renderZombies() {
+  const types = getZombieTypes();
+  const tbody = document.querySelector('#tableZombies tbody');
+  tbody.innerHTML = types.map(function (z, i) {
+    const d = z.data;
+    return '<tr>' +
+      '<td>' + z.level + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].attackDamage', d.attackDamage) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].hpMul', d.hpMul, 0.01) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].omegaMul', d.omegaMul, 0.01) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].rewardMul', d.rewardMul, 0.01) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].weight', d.weight, 0.1) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].attack.attackRangePx', d.attack.attackRangePx) + '</td>' +
+      '<td>' + editInput('zombies', 'types[' + i + '].attack.attackCooldownSec', d.attack.attackCooldownSec, 0.01) + '</td>' +
+      '</tr>';
+  }).join('');
+  drawZombieChart(types);
+}
+
+function drawZombieChart(types) {
+  const canvas = document.getElementById('chartZombies');
+  const tankLevels = getTankLevels();
+  drawLineChart(canvas, types.map(function (z) { return z.level; }),
+    [
+      { label: 'Zombie attackDmg', data: types.map(function (z) { return z.data.attackDamage; }), color: '#4caf50' },
+      { label: 'Tank baseDmg', data: tankLevels.map(function (t) { return t.stats.baseDamage; }), color: '#e94560' }
+    ],
+    'Танки vs Зомби — Урон по уровню');
+}
+
+function applyZombieFormula() {
+  const formula = document.getElementById('zombieFormula').value;
+  const base = parseFloat(document.getElementById('zombieBase').value) || 10;
+  const step = parseFloat(document.getElementById('zombieStep').value) || 10;
+  const factor = parseFloat(document.getElementById('zombiePow').value) || 1.05;
+  EDIT.zombies.types.forEach(function (z, i) {
+    let val;
+    if (formula === 'linear') val = base + step * i;
+    else val = base * Math.pow(factor, i);
+    z.attackDamage = Math.round(val);
+  });
+  renderZombies();
+  updateChangeCount();
+}
+
+/* ======== WALLS ======== */
+function renderWalls() {
+  const levels = EDIT.fence.levels;
+  const tbody = document.querySelector('#tableWalls tbody');
+  tbody.innerHTML = levels.map(function (l, i) {
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + editInput('fence', 'levels[' + i + '].segmentMaxHp', l.segmentMaxHp) + '</td>' +
+      '<td>' + editInput('fence', 'levels[' + i + '].armorFlat', l.armorFlat) + '</td>' +
+      '<td>' + editInput('fence', 'levels[' + i + '].upgradeCostDamagePoints', l.upgradeCostDamagePoints) + '</td>' +
+      '</tr>';
+  }).join('');
+  const canvas = document.getElementById('chartWalls');
+  drawLineChart(canvas, levels.map(function (_, i) { return i + 1; }),
+    [
+      { label: 'segmentMaxHp', data: levels.map(function (l) { return l.segmentMaxHp; }), color: '#53a8b6' },
+      { label: 'armorFlat ×1000', data: levels.map(function (l) { return l.armorFlat * 1000; }), color: '#ffc107' }
+    ],
+    'Стены — HP и Броня по уровню');
+}
+
+/* ======== DRONES ======== */
+function renderDrones() {
+  const levels = EDIT.dron.levels;
+  const keys = Object.keys(levels).sort(function (a, b) { return parseInt(a) - parseInt(b); });
+  const tbody = document.querySelector('#tableDrones tbody');
+  tbody.innerHTML = keys.map(function (k) {
+    const l = levels[k];
+    return '<tr>' +
+      '<td>' + k + '</td>' +
+      '<td>' + editInput('dron', 'levels.' + k + '.moveSpeedPxSec', l.moveSpeedPxSec) + '</td>' +
+      '<td>' + editInput('dron', 'levels.' + k + '.repairSpeedMult', l.repairSpeedMult, 0.01) + '</td>' +
+      '<td>' + editInput('dron', 'levels.' + k + '.costMult', l.costMult, 0.01) + '</td>' +
+      '</tr>';
+  }).join('');
+  const repairInput = document.getElementById('dronRepairSec');
+  repairInput.value = EDIT.dron.baseRepairSec;
+  document.getElementById('dronRepairSecVal').textContent = EDIT.dron.baseRepairSec;
+  repairInput.oninput = function () {
+    EDIT.dron.baseRepairSec = parseFloat(this.value);
+    document.getElementById('dronRepairSecVal').textContent = this.value;
+    updateChangeCount();
+  };
+  const canvas = document.getElementById('chartDrones');
+  drawLineChart(canvas, keys.map(Number),
+    [
+      { label: 'moveSpeedPxSec', data: keys.map(function (k) { return levels[k].moveSpeedPxSec; }), color: '#e94560' },
+      { label: 'repairMult ×100', data: keys.map(function (k) { return levels[k].repairSpeedMult * 100; }), color: '#53a8b6' }
+    ],
+    'Дроны — скорость и ремонт');
+}
+
+/* ======== BULLETS ======== */
+function renderBullets() {
+  const lvls = EDIT.bullet.bullets.bullet_base.levels;
+  const tbody = document.querySelector('#tableBullets tbody');
+  tbody.innerHTML = lvls.map(function (l, i) {
+    return '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + editInput('bullet', 'bullets.bullet_base.levels[' + i + '].addDamage', l.addDamage) + '</td>' +
+      '<td>' + editInput('bullet', 'bullets.bullet_base.levels[' + i + '].aoe', l.aoe, 0.01) + '</td>' +
+      '<td>' + l.projectileKind + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+/* ======== GLOBAL ======== */
+function renderGlobal() {
+  const container = document.getElementById('globalSliders');
+  const bal = EDIT.balance;
+  const sliders = [
+    { path: 'tank.speedMul', label: 'Tank speedMul', val: bal.tank.speedMul },
+    { path: 'tank.attackSpeedMul', label: 'Tank attackSpeedMul', val: bal.tank.attackSpeedMul },
+    { path: 'tank.attackDamageMul', label: 'Tank attackDamageMul', val: bal.tank.attackDamageMul },
+    { path: 'zombie.speedMul', label: 'Zombie speedMul', val: bal.zombie.speedMul },
+    { path: 'zombie.attackSpeedMul', label: 'Zombie attackSpeedMul', val: bal.zombie.attackSpeedMul },
+    { path: 'zombie.attackDamageMul', label: 'Zombie attackDamageMul', val: bal.zombie.attackDamageMul }
+  ];
+  container.innerHTML = sliders.map(function (s) {
+    return '<div class="slider-row">' +
+      '<label>' + s.label + '</label>' +
+      '<input type="range" min="0.1" max="5" step="0.05" value="' + s.val + '" data-path="' + s.path + '">' +
+      '<span class="val">' + s.val.toFixed(2) + '</span>' +
+      '</div>';
+  }).join('');
+  container.querySelectorAll('input[type=range]').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      setNestedValue(EDIT.balance, this.dataset.path, parseFloat(this.value));
+      this.nextElementSibling.textContent = parseFloat(this.value).toFixed(2);
+      updateChangeCount();
+    });
+  });
+
+  const spawnC = document.getElementById('spawnSliders');
+  const sp = EDIT.zombies.spawn;
+  const spawnSliders = [
+    { path: 'spawn.targetAlive', label: 'targetAlive', val: sp.targetAlive, min: 10, max: 1000, step: 10 },
+    { path: 'spawn.perSideTarget', label: 'perSideTarget', val: sp.perSideTarget, min: 5, max: 200, step: 5 },
+    { path: 'spawn.perSideTolerance', label: 'perSideTolerance', val: sp.perSideTolerance, min: 1, max: 50, step: 1 }
+  ];
+  spawnC.innerHTML = spawnSliders.map(function (s) {
+    return '<div class="slider-row">' +
+      '<label>' + s.label + '</label>' +
+      '<input type="range" min="' + s.min + '" max="' + s.max + '" step="' + s.step + '" value="' + s.val + '" data-path="' + s.path + '">' +
+      '<span class="val">' + s.val + '</span>' +
+      '</div>';
+  }).join('');
+  spawnC.querySelectorAll('input[type=range]').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      setNestedValue(EDIT.zombies, this.dataset.path, parseFloat(this.value));
+      this.nextElementSibling.textContent = this.value;
+      updateChangeCount();
+    });
+  });
+}
+
+/* ======== TALENTS ======== */
+function renderTalents() {
+  const tal = EDIT.talents;
+  document.getElementById('tierUnlockDisplay').textContent = JSON.stringify(tal.tierUnlockSpent);
+  document.getElementById('capsDisplay').textContent = JSON.stringify(tal.caps);
+  const container = document.getElementById('talentBranches');
+  const byBranch = {};
+  tal.talents.forEach(function (t) {
+    if (!byBranch[t.branch]) byBranch[t.branch] = [];
+    byBranch[t.branch].push(t);
+  });
+  let html = '';
+  Object.keys(byBranch).forEach(function (branch) {
+    html += '<div class="talent-branch"><h4>' + branch + ' (' + byBranch[branch].length + ' talents)</h4>';
+    html += '<table class="data-table"><thead><tr><th>ID</th><th>Tier</th><th>maxRank</th><th>Effects</th></tr></thead><tbody>';
+    byBranch[branch].forEach(function (t) {
+      const idx = tal.talents.indexOf(t);
+      const effectsStr = t.effects.map(function (e) {
+        if (e.perRank !== undefined) return e.stat || e.key || e.type + ' +' + e.perRank + '/rank';
+        if (e.value !== undefined) return (e.key || e.stat || e.type) + '=' + e.value;
+        return e.type + ':' + (e.key || e.stat || '');
+      }).join('; ');
+      html += '<tr><td>' + t.id + '</td><td>' + t.tier + '</td>' +
+        '<td>' + editInput('talents', 'talents[' + idx + '].maxRank', t.maxRank) + '</td>' +
+        '<td style="font-size:11px">' + effectsStr + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+  container.innerHTML = html;
+}
+
+/* ======== CHIPS ======== */
+function renderChips() {
+  const mods = EDIT.chips.modifiers;
+  const tbody = document.querySelector('#tableChips tbody');
+  const effectKeys = ['poolLife', 'poolDpsMul', 'poolRadius', 'slowFactor', 'nodeLife', 'nodeInterval', 'nodeRange', 'nodeDmgMul', 'markLife', 'damageMul', 'aoeMul'];
+  let html = '';
+  Object.keys(mods).sort(function (a, b) { return parseInt(a) - parseInt(b); }).forEach(function (id) {
+    const mod = mods[id];
+    const eff = mod.effect;
+    if (!eff || typeof eff !== 'object') return;
+    effectKeys.forEach(function (key) {
+      if (eff[key] === undefined) return;
+      html += '<tr>' +
+        '<td>' + id + '</td>' +
+        '<td>' + (mod.name || mod.nameEn || '') + '</td>' +
+        '<td>' + key + '</td>' +
+        '<td>' + editInput('chips', 'modifiers.' + id + '.effect.' + key, eff[key], 0.01) + '</td>' +
+        '</tr>';
+    });
+  });
+  tbody.innerHTML = html;
+}
+
+/* ======== CANNON ======== */
+function renderCannon() {
+  const data = EDIT.cannon;
+  const tbody = document.querySelector('#tableCannon tbody');
+  tbody.innerHTML = data.map(function (row, i) {
+    return '<tr>' +
+      '<td>' + row[0] + '</td>' +
+      '<td>' + editInput('cannon', '[' + i + '][1]', row[1]) + '</td>' +
+      '<td>' + editInput('cannon', '[' + i + '][2]', row[2]) + '</td>' +
+      '<td>' + editInput('cannon', '[' + i + '][3]', row[3], 0.0001) + '</td>' +
+      '<td>' + editInput('cannon', '[' + i + '][4]', row[4], 0.0001) + '</td>' +
+      '<td>' + editInput('cannon', '[' + i + '][5]', row[5]) + '</td>' +
+      '</tr>';
+  }).join('');
+  const canvas = document.getElementById('chartCannon');
+  drawLineChart(canvas, data.map(function (r) { return r[0]; }),
+    [
+      { label: 'Col2', data: data.map(function (r) { return r[1]; }), color: '#e94560' },
+      { label: 'Col3', data: data.map(function (r) { return r[2]; }), color: '#53a8b6' },
+      { label: 'Col4 ×10000', data: data.map(function (r) { return r[3] * 10000; }), color: '#ffc107' },
+      { label: 'Col5 ×10000', data: data.map(function (r) { return r[4] * 10000; }), color: '#4caf50' }
+    ],
+    'Cannon Upgrades — кривые прогрессии');
+}
+
+/* ======== CHART (minimal Canvas-based) ======== */
+function drawLineChart(canvas, labels, datasets, title) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width || 800;
+  const H = 300;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 30, right: 20, bottom: 30, left: 60 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  // find global min/max
+  let allMin = Infinity;
+  let allMax = -Infinity;
+  datasets.forEach(function (ds) {
+    ds.data.forEach(function (v) {
+      if (v < allMin) allMin = v;
+      if (v > allMax) allMax = v;
+    });
+  });
+  if (allMin === allMax) { allMin -= 1; allMax += 1; }
+  const range = allMax - allMin;
+  allMin -= range * 0.05;
+  allMax += range * 0.05;
+
+  // grid
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.top + plotH - (plotH * i / 5);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#888';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    const val = allMin + (allMax - allMin) * i / 5;
+    ctx.fillText(formatChartNum(val), pad.left - 4, y + 3);
+  }
+
+  // title
+  ctx.fillStyle = '#aaa';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(title, W / 2, 14);
+
+  // datasets
+  datasets.forEach(function (ds) {
+    ctx.strokeStyle = ds.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ds.data.forEach(function (v, i) {
+      const x = pad.left + (plotW * i / (labels.length - 1 || 1));
+      const y = pad.top + plotH - plotH * ((v - allMin) / (allMax - allMin));
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  // legend
+  let legendX = pad.left + 8;
+  ctx.font = '11px sans-serif';
+  datasets.forEach(function (ds) {
+    ctx.fillStyle = ds.color;
+    ctx.fillRect(legendX, H - 14, 12, 8);
+    ctx.fillStyle = '#ccc';
+    ctx.textAlign = 'left';
+    ctx.fillText(ds.label, legendX + 16, H - 6);
+    legendX += ctx.measureText(ds.label).width + 32;
+  });
+
+  // x labels (sparse)
+  ctx.fillStyle = '#666';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(labels.length / 15));
+  for (let i = 0; i < labels.length; i += step) {
+    const x = pad.left + (plotW * i / (labels.length - 1 || 1));
+    ctx.fillText(labels[i], x, H - pad.bottom + 14);
+  }
+}
+
+function formatChartNum(v) {
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  return v.toFixed(v % 1 === 0 ? 0 : 2);
+}
+
+/* ======== EDITABLE INPUT HELPER ======== */
+function editInput(configKey, path, value, step) {
+  if (step === undefined) step = 1;
+  const origVal = getNestedOriginal(configKey, path);
+  const isChanged = origVal !== undefined && value !== origVal;
+  return '<input type="number" value="' + value + '" step="' + step + '"' +
+    ' data-config="' + configKey + '" data-path="' + path + '"' +
+    (isChanged ? ' class="changed"' : '') +
+    ' onchange="handleEdit(this)">';
+}
+
+function handleEdit(inp) {
+  const config = inp.dataset.config;
+  const path = inp.dataset.path;
+  let val = parseFloat(inp.value);
+  if (isNaN(val)) return;
+  setNestedValue(EDIT[config], path, val);
+  const origVal = getNestedOriginal(config, path);
+  inp.classList.toggle('changed', origVal !== undefined && val !== origVal);
+  updateChangeCount();
+  // re-draw chart if relevant
+  if (config === 'tanks') drawTankChart(getTankLevels());
+  if (config === 'zombies') drawZombieChart(getZombieTypes());
+}
+
+/* ======== NESTED VALUE HELPERS ======== */
+function setNestedValue(obj, path, value) {
+  const parts = parsePath(path);
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    cur = cur[parts[i]];
+    if (cur === undefined) return;
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+function getNestedValue(obj, path) {
+  const parts = parsePath(path);
+  let cur = obj;
+  for (let i = 0; i < parts.length; i++) {
+    if (cur === undefined) return undefined;
+    cur = cur[parts[i]];
+  }
+  return cur;
+}
+
+function getNestedOriginal(configKey, path) {
+  return getNestedValue(DATA[configKey], path);
+}
+
+function parsePath(path) {
+  // handles: "a.b.c", "a[0].b", "[0][1]", "types[2].attackDamage"
+  const parts = [];
+  const re = /([^.\[\]]+)|\[(\d+)\]/g;
+  let m;
+  while ((m = re.exec(path)) !== null) {
+    if (m[2] !== undefined) parts.push(parseInt(m[2]));
+    else parts.push(m[1]);
+  }
+  return parts;
+}
+
+/* ======== CHANGE COUNT ======== */
+function updateChangeCount() {
+  let count = 0;
+  const configs = ['tanks', 'zombies', 'fence', 'dron', 'bullet', 'balance', 'chips', 'cannon', 'talents'];
+  configs.forEach(function (key) {
+    if (JSON.stringify(DATA[key]) !== JSON.stringify(EDIT[key])) count++;
+  });
+  document.getElementById('changeCount').textContent = count > 0 ? count + ' файл(ов) изменено' : '0 изменений';
+  document.getElementById('changeCount').style.color = count > 0 ? 'var(--yellow)' : 'var(--muted)';
+}
+
+/* ======== DIFF ======== */
+function showDiff() {
+  const pre = document.getElementById('exportDiffPre');
+  const configs = {
+    'tanks.json': { orig: DATA.tanks, edit: EDIT.tanks },
+    'zombies.json': { orig: DATA.zombies, edit: EDIT.zombies },
+    'fence.json': { orig: DATA.fence, edit: EDIT.fence },
+    'dron.json': { orig: DATA.dron, edit: EDIT.dron },
+    'bullet.json': { orig: DATA.bullet, edit: EDIT.bullet },
+    'balance.json': { orig: DATA.balance, edit: EDIT.balance },
+    'chips.json': { orig: DATA.chips, edit: EDIT.chips },
+    'balance/cannonUpgrades.json': { orig: DATA.cannon, edit: EDIT.cannon },
+    'balance/talentTree_v2.json': { orig: DATA.talents, edit: EDIT.talents }
+  };
+  let diffText = '';
+  Object.keys(configs).forEach(function (file) {
+    const c = configs[file];
+    const origStr = JSON.stringify(c.orig, null, 2);
+    const editStr = JSON.stringify(c.edit, null, 2);
+    if (origStr === editStr) return;
+    diffText += '=== ' + file + ' ===\n';
+    const origLines = origStr.split('\n');
+    const editLines = editStr.split('\n');
+    const maxLen = Math.max(origLines.length, editLines.length);
+    for (let i = 0; i < maxLen; i++) {
+      const ol = origLines[i] || '';
+      const el = editLines[i] || '';
+      if (ol !== el) {
+        if (ol) diffText += '<span class="diff-del">- ' + escapeHtml(ol) + '</span>\n';
+        if (el) diffText += '<span class="diff-add">+ ' + escapeHtml(el) + '</span>\n';
+      }
+    }
+    diffText += '\n';
+  });
+  pre.innerHTML = diffText || 'Нет изменений.';
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ======== EXPORT ======== */
+function exportAll() {
+  const configs = {
+    'tanks.json': EDIT.tanks,
+    'zombies.json': EDIT.zombies,
+    'fence.json': EDIT.fence,
+    'dron.json': EDIT.dron,
+    'bullet.json': EDIT.bullet,
+    'balance.json': EDIT.balance,
+    'chips.json': EDIT.chips,
+    'cannonUpgrades.json': EDIT.cannon,
+    'talentTree_v2.json': EDIT.talents
+  };
+  Object.keys(configs).forEach(function (name) {
+    if (JSON.stringify(DATA[name.replace('cannonUpgrades', 'cannon').replace('talentTree_v2', 'talents')] || {}) ===
+        JSON.stringify(configs[name])) return;
+    downloadJSON(name, configs[name]);
+  });
+  // fallback: always download all if nothing changed
+  let anyChanged = false;
+  Object.keys(configs).forEach(function () { anyChanged = true; });
+  if (!anyChanged) {
+    Object.keys(configs).forEach(function (name) { downloadJSON(name, configs[name]); });
+  }
+}
+
+function downloadJSON(name, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ======== RESET ======== */
+function resetAll() {
+  if (!confirm('Сбросить ВСЕ изменения к исходным значениям?')) return;
+  Object.keys(DATA).forEach(function (key) {
+    EDIT[key] = JSON.parse(JSON.stringify(DATA[key]));
+  });
+  renderAll();
+  setStatus('Все изменения сброшены');
+}
+
+/* ======== UTIL ======== */
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+
+/* ======== BOOT ======== */
+boot();
+</script>
+</body>
+</html>
