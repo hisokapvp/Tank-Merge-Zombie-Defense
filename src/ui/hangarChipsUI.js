@@ -1299,6 +1299,29 @@
     _showGameTooltip(html, item);
   }
 
+  /* Tooltip for craft preview (result chip) */
+  function showCraftResultTooltip(el) {
+    if (!el) return;
+    var modsAttr = el.getAttribute('data-hct-result-modids') || '';
+    var modIds = [];
+    if (modsAttr) {
+      var parts = modsAttr.split(',');
+      for (var pi = 0; pi < parts.length; pi++) {
+        var n = parseInt(parts[pi], 10);
+        if (Number.isFinite(n)) modIds.push(n);
+      }
+    }
+    var h = hc();
+    var title = t('chipCraftPreviewLabel', 'Превью чипа');
+    if (modIds.length) {
+      var names = [];
+      for (var mi = 0; mi < modIds.length; mi++) names.push(modName(modIds[mi]));
+      title = names.join(' + ');
+    }
+    var html = '<div class="chipUpgradeTooltip__title">' + title + '</div>';
+    _showGameTooltip(html, el);
+  }
+
   function showCraftSlotChipTooltip(slotEl) {
     var chipId = parseInt(slotEl.getAttribute('data-hct-chip-id'), 10);
     var level = parseInt(slotEl.getAttribute('data-hct-chip-level'), 10) || 1;
@@ -2313,7 +2336,9 @@
           if (assemblePreview) {
             var resultColor = assemblePreview.chipColor === 'red' ? '#e53935' : '#fdd835';
             var resultModIds = assemblePreview.modIds || [];
-            html += '<div class="chipCraftResultChip">';
+            var resultModsAttr = resultModIds.join(',');
+            var resultColorAttr = assemblePreview.chipColor || '';
+            html += '<div class="chipCraftResultChip" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '">';
             html += chipSvgComposed(60, 54, resultColor, resultModIds, 'chipCraftResultIcon', 3);
             var resultChipName = assemblePreview.sourceComboKey || '';
             if (resultModIds.length) {
@@ -2746,6 +2771,9 @@
           if (craftItem.getAttribute('data-craft-chip-id')) { showCraftInvChipTooltip(craftItem); return; }
           if (craftItem.getAttribute('data-craft-frag-id')) { showCraftInvFragTooltip(craftItem); return; }
         }
+        /* Craft preview result chip (assemble preview) */
+        var resultChip = tgt.closest('.chipCraftResultChip');
+        if (resultChip) { showCraftResultTooltip(resultChip); return; }
         /* Craft drop zone slots */
         var slotChip = tgt.closest('[data-hct-chip-id]');
         if (slotChip) { showCraftSlotChipTooltip(slotChip); return; }
@@ -2776,6 +2804,7 @@
           tgt.closest('[data-chip-upgrade-id]') ||
           tgt.closest('.hangarChipBtn[data-chip-id]') ||
           tgt.closest('.chipCraftInvItem') ||
+          tgt.closest('.chipCraftResultChip') ||
           tgt.closest('[data-hct-chip-id]') ||
           tgt.closest('[data-hct-frag-id]');
         if (leavingTrigger) {
@@ -2783,6 +2812,7 @@
             rel.closest('[data-chip-upgrade-id]') ||
             rel.closest('.hangarChipBtn[data-chip-id]') ||
             rel.closest('.chipCraftInvItem') ||
+            rel.closest('.chipCraftResultChip') ||
             rel.closest('[data-hct-chip-id]') ||
             rel.closest('[data-hct-frag-id]')
           );
