@@ -38,10 +38,18 @@
 - `animations.*.effects` — optional-массив визуальных эффектов для конкретной анимации:
 	- строковый preset (`"float"`, `"pulse"`, `"sway"`, `"wobble"`, `"vibration"`, `"vibrationStrong"`),
 	- либо объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
+- Анимация `buildTank` реально активируется runtime-логикой production line во время печати коробки; пока коробка печатается, supercomputer переводится в state `buildTank`, после завершения/паузы возвращается в обычное состояние.
 - `conveyor` — optional-конфиг ленточного конвейера рядом с суперкомпьютером: `atlas`, `offset`, `anchor`, `animations.idle`, `animations.work`.
+- `conveyorBox` — optional-конфиг печатаемой коробки на конвейере:
+	- обычно использует отдельный atlas `conveyor_box_atlas.png`, не root-atlas суперкомпьютера;
+	- поддерживает собственный `atlas`, `anchor` и анимации `printLow` / `printHigh`;
+	- runtime также понимает alias-ключи `buildLow`, `buildHigh`, `lessThanHalf`, `moreThanHalf`, `under50`, `over50`;
+	- `printLow` используется при прогрессе `< 50%`, `printHigh` — при прогрессе `>= 50%`;
+	- reveal выполняется **снизу вверх**, а `effects`/preset-механика работает так же, как у анимаций supercomputer;
+	- root-стейт `buildTank` и box-progress синхронизируются через механику production line, а не внутри renderer'а.
 - `storageCell` — optional-конфиг ячейки-склада: `atlas`, `offset`, `anchor`, `animations.idle`, `animations.hover`.
 - Для legacy-конфигов сохраняется обратная совместимость:
-	- отсутствие `conveyor`/`storageCell` оставляет старую fallback-геометрию и fallback-отрисовку;
+	- отсутствие `conveyor`/`conveyorBox`/`storageCell` оставляет старую fallback-геометрию и fallback-отрисовку;
 	- legacy-ключ `storage` при загрузке трактуется как `storageCell`.
 
 ## src/config/layoutTuning.js

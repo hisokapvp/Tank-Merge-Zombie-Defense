@@ -39,8 +39,19 @@
   let _storageHovered = false;
   let _storageElapsedSec = 0;
   let _lastDisplaySignature = '';
+  let _boxState = 'printLow';
+  let _boxElapsedSec = 0;
   const _conveyorBounds = { x: 0, y: 0, w: CONVEYOR_W, h: CONVEYOR_H };
   const _storageBounds = { x: 0, y: 0, w: STORAGE_SIZE, h: STORAGE_SIZE };
+
+  const PART_EFFECT_PRESETS = {
+    float: { kind: 'float', amplitudeY: 0.2, frequencyHz: 1.2 },
+    pulse: { kind: 'pulse', scaleMul: 0.03, frequencyHz: 3 },
+    sway: { kind: 'sway', angleDeg: 2.5, frequencyHz: 2 },
+    wobble: { kind: 'wobble', angleDeg: 2, amplitudeX: 0.15, frequencyHz: 2.2 },
+    vibration: { kind: 'vibration', amplitudeX: 0.18, amplitudeY: 0.22, frequencyHz: 9 },
+    vibrationStrong: { kind: 'vibrationStrong', amplitudeX: 0.28, amplitudeY: 0.34, frequencyHz: 14 },
+  };
 
   function clamp01(value) {
     if (!Number.isFinite(value)) return 0;
@@ -66,15 +77,21 @@
   }
 
   function getPartImage(partName) {
+    const source = getSpriteSource();
+    if (source && typeof source.getAtlasImage === 'function') {
+      const atlasImage = source.getAtlasImage(partName);
+      if (atlasImage) return atlasImage;
+    }
     if (partName === 'conveyor' && _conveyorAtlas && _conveyorAtlas.ready && _conveyorAtlas.image) {
       return _conveyorAtlas.image;
+    }
+    if ((partName === 'conveyorBox' || partName === 'box') && _boxAtlas && _boxAtlas.ready && _boxAtlas.image) {
+      return _boxAtlas.image;
     }
     if ((partName === 'storageCell' || partName === 'storage') && _storageAtlas && _storageAtlas.ready && _storageAtlas.image) {
       return _storageAtlas.image;
     }
-    const source = getSpriteSource();
-    if (!source || typeof source.getAtlasImage !== 'function') return null;
-    return source.getAtlasImage(partName);
+    return null;
   }
 
   function getClipScale(anim) {
@@ -122,6 +139,81 @@
   function computeDisplaySignature(pl) {
     const progress = clamp01(pl && pl.progress);
     return String(progress > 0 ? 1 : 0) + ':' + String(Math.round(progress * 1000));
+  }
+
+  function getBoxStateName(progress) {
+    return clamp01(progress) < 0.5 ? 'printLow' : 'printHigh';
+  }
+
+  function resolveEffectEntry(rawEffect) {
+    if (typeof rawEffect === 'string' && rawEffect) return { preset: rawEffect };
+    if (!rawEffect || typeof rawEffect !== 'object') return null;
+    return rawEffect;
+  }
+
+  function mergeEffectPreset(effect) {
+    const presetName = typeof effect.preset === 'string' && effect.preset
+      ? effect.preset
+      : (typeof effect.type === 'string' ? effect.type : '');
+    const preset = presetName && PART_EFFECT_PRESETS[presetName] ? PART_EFFECT_PRESETS[presetName] : null;
+    if (!preset) return effect;
+    return Object.assign({}, preset, effect, { kind: effect.kind || preset.kind || effect.type || presetName });
+  }
+
+  function buildEffectTransform(anim, elapsedSec, baseScale) {
+    const effects = Array.isArray(anim && anim.effects) ? anim.effects : [];
+    let offsetX = 0;
+    let offsetY = 0;
+    let rotationRad = 0;
+    let scaleX = 1;
+    let scaleY = 1;
+
+    for (let i = 0; i < effects.length; i++) {
+      const rawEffect = resolveEffectEntry(effects[i]);
+      if (!rawEffect) continue;
+      const effect = mergeEffectPreset(rawEffect);
+      const kind = typeof effect.kind === 'string' && effect.kind
+        ? effect.kind
+        : (typeof effect.type === 'string' ? effect.type : (typeof effect.preset === 'string' ? effect.preset : ''));
+      const frequencyHz = Number.isFinite(effect.frequencyHz) ? effect.frequencyHz : 1;
+      const phase = Math.max(0, elapsedSec) * frequencyHz * Math.PI * 2 + (Number.isFinite(effect.phase) ? effect.phase : 0);
+
+      if (Number.isFinite(effect.offsetX)) offsetX += effect.offsetX * baseScale;
+      if (Number.isFinite(effect.offsetY)) offsetY += effect.offsetY * baseScale;
+
+      if (kind === 'shake' || kind === 'vibration' || kind === 'vibrationStrong') {
+        const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+        const amplitudeY = Number.isFinite(effect.amplitudeY) ? effect.amplitudeY : amplitudeX;
+        offsetX += Math.sin(phase) * amplitudeX * baseScale;
+        offsetY += Math.cos(phase * 1.37) * amplitudeY * baseScale;
+        continue;
+      }
+
+      if (kind === 'bob' || kind === 'float' || kind === 'hover') {
+        const amplitudeY = Number.isFinite(effect.amplitudeY) ? effect.amplitudeY : 0;
+        const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+        offsetY += Math.sin(phase) * amplitudeY * baseScale;
+        offsetX += Math.cos(phase * 0.5) * amplitudeX * baseScale;
+        continue;
+      }
+
+      if (kind === 'sway' || kind === 'wobble') {
+        const angleDeg = Number.isFinite(effect.angleDeg) ? effect.angleDeg : 0;
+        const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+        rotationRad += Math.sin(phase) * angleDeg * Math.PI / 180;
+        offsetX += Math.sin(phase) * amplitudeX * baseScale;
+        continue;
+      }
+
+      if (kind === 'pulse') {
+        const scaleMul = Number.isFinite(effect.scaleMul) ? effect.scaleMul : 0;
+        const pulse = 1 + Math.sin(phase) * scaleMul;
+        scaleX *= pulse;
+        scaleY *= pulse;
+      }
+    }
+
+    return { offsetX: offsetX, offsetY: offsetY, rotationRad: rotationRad, scaleX: scaleX, scaleY: scaleY };
   }
 
   function triggerConveyorWork() {
@@ -182,11 +274,30 @@
       _conveyorElapsedSec = 0;
       _conveyorWorkTimerSec = 0;
       _lastDisplaySignature = '';
+      _boxState = 'printLow';
+      _boxElapsedSec = 0;
       refreshBounds();
       return;
     }
 
-    _lastDisplaySignature = computeDisplaySignature(pl);
+    const displaySignature = computeDisplaySignature(pl);
+    if (displaySignature !== _lastDisplaySignature) {
+      triggerConveyorWork();
+    }
+    _lastDisplaySignature = displaySignature;
+
+    if (clamp01(pl.progress) > 0) {
+      const nextBoxState = getBoxStateName(pl.progress);
+      if (nextBoxState !== _boxState) {
+        _boxState = nextBoxState;
+        _boxElapsedSec = 0;
+      } else {
+        _boxElapsedSec += dtSafe;
+      }
+    } else {
+      _boxState = 'printLow';
+      _boxElapsedSec = 0;
+    }
 
     if (_conveyorState === 'work') {
       _conveyorWorkTimerSec = Math.max(0, _conveyorWorkTimerSec - dtSafe);
@@ -216,6 +327,10 @@
   }
 
   function drawSpriteClip(ctx, partName, stateName, centerX, centerY, elapsedSec) {
+    let revealFromBottom = null;
+    if (arguments.length > 6 && Number.isFinite(arguments[6])) {
+      revealFromBottom = clamp01(arguments[6]);
+    }
     const config = getPartConfig(partName);
     if (!(config && config.defined)) return false;
     const img = getPartImage(partName);
@@ -225,20 +340,36 @@
     const anchor = config.anchor ? config.anchor : { x: 0.5, y: 0.5 };
     const scale = getClipScale(anim);
     const frameIndex = getFrameIndex(anim, elapsedSec);
-    const width = anim.w * scale;
-    const height = anim.h * scale;
+    const fx = buildEffectTransform(anim, elapsedSec, scale);
+    const localX = -anim.w * (Number.isFinite(anchor.x) ? anchor.x : 0.5);
+    const localY = -anim.h * (Number.isFinite(anchor.y) ? anchor.y : 0.5);
 
+    ctx.save();
+    ctx.translate(centerX + fx.offsetX, centerY + fx.offsetY);
+    if (fx.rotationRad) ctx.rotate(fx.rotationRad);
+    ctx.scale(scale * fx.scaleX, scale * fx.scaleY);
+    if (revealFromBottom !== null) {
+      const revealHeight = anim.h * revealFromBottom;
+      if (revealHeight <= 0) {
+        ctx.restore();
+        return true;
+      }
+      ctx.beginPath();
+      ctx.rect(localX, localY + anim.h - revealHeight, anim.w, revealHeight);
+      ctx.clip();
+    }
     ctx.drawImage(
       img,
       anim.x + frameIndex * anim.w,
       anim.y,
       anim.w,
       anim.h,
-      centerX - width * (Number.isFinite(anchor.x) ? anchor.x : 0.5),
-      centerY - height * (Number.isFinite(anchor.y) ? anchor.y : 0.5),
-      width,
-      height
+      localX,
+      localY,
+      anim.w,
+      anim.h
     );
+    ctx.restore();
     return true;
   }
 
@@ -284,30 +415,31 @@
 
   // ─── Draw: box on conveyor ─────────────────────────────────
   function drawBoxOnConveyor(ctx, progress) {
-    if (!_layoutReady || progress <= 0) return;
+    const progress01 = clamp01(progress);
+    if (!_layoutReady || progress01 <= 0) return;
 
-    // Box moves from left edge of conveyor to right edge
-    const boxSize = Math.max(10 * _worldScale, Math.min(BOX_SIZE * _worldScale, _conveyorBounds.h - 4 * _worldScale, _conveyorBounds.w * 0.36));
-    const startX = _conveyorBounds.x + 2 * _worldScale;
-    const endX   = _conveyorBounds.x + _conveyorBounds.w - boxSize - 2 * _worldScale;
-    const bx     = startX + (endX - startX) * progress;
-    const by     = _conveyorBounds.y + (_conveyorBounds.h - boxSize) * 0.5;
+    const stateName = getBoxStateName(progress01);
+    const anim = getPartAnimation('conveyorBox', stateName);
+    const fallbackSize = Math.max(10 * _worldScale, Math.min(BOX_SIZE * _worldScale, _conveyorBounds.h - 4 * _worldScale, _conveyorBounds.w * 0.36));
+    const boxWidth = anim ? anim.w * getClipScale(anim) : fallbackSize;
+    const boxHeight = anim ? anim.h * getClipScale(anim) : fallbackSize;
+    const startX = _conveyorBounds.x + 2 * _worldScale + boxWidth * 0.5;
+    const endX = _conveyorBounds.x + _conveyorBounds.w - boxWidth * 0.5 - 2 * _worldScale;
+    const centerX = startX + (endX - startX) * progress01;
+    const centerY = _conveyorBounds.y + _conveyorBounds.h * 0.5;
 
-    // "Printing" effect: reveal rows top-to-bottom (like tank stamp)
-    const revealH = Math.ceil(boxSize * progress);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(bx, by, boxSize, revealH);
-    ctx.clip();
-
-    if (_boxAtlas && _boxAtlas.ready && _boxAtlas.image) {
-      // TODO: draw from atlas
-      _drawBoxFallback(ctx, bx, by, boxSize);
-    } else {
-      _drawBoxFallback(ctx, bx, by, boxSize);
+    if (drawSpriteClip(ctx, 'conveyorBox', stateName, centerX, centerY, _boxElapsedSec, progress01)) {
+      return;
     }
 
+    const bx = centerX - boxWidth * 0.5;
+    const by = centerY - boxHeight * 0.5;
+    const revealH = Math.ceil(boxHeight * progress01);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, by + boxHeight - revealH, boxWidth, revealH);
+    ctx.clip();
+    _drawBoxFallback(ctx, bx, by, Math.max(boxWidth, boxHeight));
     ctx.restore();
   }
 

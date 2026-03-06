@@ -15,6 +15,7 @@
 - `docs/ai/HANGAR_CHIPS_UI_MAP.md` — большой UI-runtime ангара [HOT].
 - `docs/ai/SUPERCOMPUTER_MENU_MAP.md` — root/tank-wall/hangar overlays суперкомпьютера [HOT].
 - `docs/ai/SPRITE_LOADERS_MAP.md` — normalizer'ы и sprite-loader contracts [HOT].
+- `docs/ai/PRODUCTION_LINE_RENDER_MAP.md` — atlas-driven conveyor/storage/box render рядом с суперкомпьютером.
 - `docs/ai/CHIP_EFFECTS_MAP.md` — боевой runtime чип-модификаторов.
 - `docs/ai/TALENTS_V2_MAP.md` — монолит talents v2.
 
@@ -36,9 +37,10 @@
 
 ## Фокус документации на 2026-03-06
 - Production line: `work` у conveyor теперь стартует от kill-hook, проигрывает полный цикл и не перезапускается во время активной анимации.
+- `assets/supercomputer.json`: `conveyorBox` теперь использует отдельный atlas `conveyor_box_atlas.png` и две стадии печати `printLow` / `printHigh` с bottom-up reveal.
 - `assets/supercomputer.json`: `animations.*.effects[]` теперь реально используются как per-state/per-animation contract; `float` можно настраивать по-разному для каждого состояния.
 - HP bar суперкомпьютера вынесен в верхний overlay-слой world-render.
-- В craft preview «будущий» чип получил отдельную зелёную dashed-рамку контейнера.
+- В craft preview занятые слоты и «будущий» чип приведены к квадратным inventory-card, а remove/close controls переведены в игровой wasteland-style.
 - Для больших файлов проекта добавлены отдельные map-файлы, чтобы не читать монолиты вслепую.
 
 ## Hotspot summary

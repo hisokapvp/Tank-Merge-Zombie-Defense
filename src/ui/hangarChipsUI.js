@@ -2090,6 +2090,48 @@
     return _fragmentSvgUp(modId, size, strokeColor);
   }
 
+  function _getChipDisplayName(chipEntry) {
+    if (!chipEntry) return '';
+    var h = hc();
+    var chipName = chipEntry.sourceComboKey || '';
+    var modIds = chipEntry.modIds || [];
+    if (h && modIds.length) {
+      var names = [];
+      for (var ni = 0; ni < modIds.length; ni++) names.push(modName(modIds[ni]));
+      chipName = names.join(' + ');
+    }
+    return chipName;
+  }
+
+  function _truncateCraftCardLabel(label, maxLen) {
+    var text = label || '';
+    var limit = Number.isFinite(maxLen) ? maxLen : 16;
+    return text.length > limit ? (text.substring(0, Math.max(1, limit - 1)) + '…') : text;
+  }
+
+  function _renderCraftSlotCard(iconHtml, fullName, options) {
+    var opts = options || {};
+    var cardClass = 'chipCraftSlotCard';
+    if (opts.extraClass) cardClass += ' ' + opts.extraClass;
+    var labelClass = 'chipCraftSlotCard__name' + (opts.labelClass ? (' ' + opts.labelClass) : '');
+    var badgeHtml = opts.badgeText
+      ? '<span class="chipCraftSlotCard__badge">' + opts.badgeText + '</span>'
+      : '';
+    var cardLabel = fullName || '';
+    return '<div class="' + cardClass + '">' +
+      badgeHtml +
+      '<div class="chipCraftSlotCard__iconWrap">' + iconHtml + '</div>' +
+      '<span class="' + labelClass + '" title="' + cardLabel + '">' + _truncateCraftCardLabel(cardLabel, opts.maxLabelLength) + '</span>' +
+      '</div>';
+  }
+
+  function _renderCraftRemoveButton(slotIndex) {
+    var label = t('triageRemove', 'Удалить');
+    return '<button class="chipCraftSlotRemove uiButtonBehavior" data-craft-remove="' + slotIndex + '" type="button" aria-label="' + label + '" title="' + label + '">' +
+      '<span class="chipCraftSlotRemove__icon" aria-hidden="true"></span>' +
+      '</button>';
+  }
+
   /**
    * Add an inventory item to the craft slot. Auto-switches mode based on item type:
    * - chip → disassemble mode, fragment → assemble mode.
@@ -2189,12 +2231,7 @@
       var pc = playerChips[ci];
       if (pc.count <= 0) continue;
       var borderColor = pc.chipColor === 'red' ? '#e53935' : '#fdd835';
-      var chipName = pc.sourceComboKey;
-      if (h && pc.modIds.length) {
-        var names = [];
-        for (var ni = 0; ni < pc.modIds.length; ni++) names.push(modName(pc.modIds[ni]));
-        chipName = names.join('+');
-      }
+      var chipName = _getChipDisplayName(pc);
       var displayName = chipName.length > 14 ? chipName.substring(0, 12) + '..' : chipName;
       var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
       var dustSel = _dustSelected[dustKey] || 0;
@@ -2294,10 +2331,18 @@
           for (var sj = 0; sj < _craftSlots.length; sj++) {
             var slot = _craftSlots[sj];
             if (!slot) continue;
-            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj + '" data-hct-chip-id="' + slot.chipId + '" data-hct-chip-level="' + (slot.level || 1) + '">';
+            var slotChipName = _getChipDisplayName(slot);
+            html += '<div class="chipCraftSlot chipCraftSlot--filled" data-craft-slot-idx="' + sj + '" data-hct-chip-id="' + slot.chipId + '" data-hct-chip-level="' + (slot.level || 1) + '">';
             var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
-            html += chipSvgComposed(60, 54, sc, slot.modIds, 'chipCraftSlotIcon', 3);
-            html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj + '" type="button">×</button>';
+            html += _renderCraftSlotCard(
+              chipSvgComposed(60, 54, sc, slot.modIds, 'chipCraftSlotIcon', 3),
+              slotChipName,
+              {
+                badgeText: t('workshopChipLevelLabel', 'Ур.') + ' ' + (slot.level || 1),
+                extraClass: 'chipCraftSlotCard--chip'
+              }
+            );
+            html += _renderCraftRemoveButton(sj);
             html += '</div>';
           }
           /* Always show one empty "+" slot at the end */
@@ -2315,16 +2360,27 @@
             }
             var slot2 = _craftSlots[sj2];
             var slotDataAttr2 = (slot2 && slot2.type === 'fragment') ? ' data-hct-frag-id="' + slot2.fragmentId + '"' : '';
-            html += '<div class="chipCraftSlot" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
+            html += '<div class="chipCraftSlot' + (slot2 ? ' chipCraftSlot--filled' : '') + '" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
             if (slot2) {
               if (slot2.type === 'chip') {
                 var sc2 = slot2.chipColor === 'red' ? '#e53935' : '#fdd835';
-                html += chipSvgComposed(60, 54, sc2, slot2.modIds, 'chipCraftSlotIcon', 3);
+                html += _renderCraftSlotCard(
+                  chipSvgComposed(60, 54, sc2, slot2.modIds, 'chipCraftSlotIcon', 3),
+                  _getChipDisplayName(slot2),
+                  {
+                    badgeText: t('workshopChipLevelLabel', 'Ур.') + ' ' + (slot2.level || 1),
+                    extraClass: 'chipCraftSlotCard--chip'
+                  }
+                );
               } else if (slot2.type === 'fragment') {
                 var fSc = (h && h.isSpecialMod(slot2.fragmentId)) ? '#fdd835' : '#e53935';
-                html += _fragmentSvg(slot2.fragmentId, 50, fSc);
+                html += _renderCraftSlotCard(
+                  _fragmentSvg(slot2.fragmentId, 50, fSc),
+                  modName(slot2.fragmentId),
+                  { extraClass: 'chipCraftSlotCard--fragment', maxLabelLength: 15 }
+                );
               }
-              html += '<button class="chipCraftSlotRemove" data-craft-remove="' + sj2 + '" type="button">×</button>';
+              html += _renderCraftRemoveButton(sj2);
             } else {
               html += '<div class="chipCraftSlotEmpty">+</div>';
             }
@@ -2339,14 +2395,15 @@
             var resultModsAttr = resultModIds.join(',');
             var resultColorAttr = assemblePreview.chipColor || '';
             html += '<div class="chipCraftResultChip chipCraftResultChip--future" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '">';
-            html += chipSvgComposed(60, 54, resultColor, resultModIds, 'chipCraftResultIcon', 3);
-            var resultChipName = assemblePreview.sourceComboKey || '';
-            if (resultModIds.length) {
-              var rnames = [];
-              for (var rni = 0; rni < resultModIds.length; rni++) rnames.push(modName(resultModIds[rni]));
-              resultChipName = rnames.join(' + ');
-            }
-            html += '<span class="chipCraftResultLabel">' + resultChipName + '</span>';
+            var resultChipName = _getChipDisplayName(assemblePreview);
+            html += _renderCraftSlotCard(
+              chipSvgComposed(60, 54, resultColor, resultModIds, 'chipCraftResultIcon', 3),
+              resultChipName,
+              {
+                extraClass: 'chipCraftSlotCard--chip chipCraftSlotCard--future',
+                labelClass: 'chipCraftResultLabel'
+              }
+            );
             html += '</div>';
           } else {
             html += '<div class="chipCraftSlot chipCraftSlot--resultSlot">';

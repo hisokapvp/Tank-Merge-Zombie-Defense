@@ -1305,19 +1305,37 @@ body.scmodal-open{
   width:32px;
   height:32px;
   border-radius:10px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.08);
-  color:var(--text);
-  font-size:18px;
-  font-weight:700;
+  border:1px solid rgba(255,191,128,.35);
+  background:linear-gradient(180deg, rgba(71,57,44,.98) 0%, rgba(39,29,23,.98) 100%);
+  color:transparent;
+  font-size:0;
   cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
-  transition:transform .2s ease, filter .2s ease;
+  box-shadow:2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .2s ease, filter .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.levelModal__close::before,
+.levelModal__close::after{
+  content:'';
+  position:absolute;
+  width:3px;
+  height:16px;
+  border-radius:999px;
+  background:linear-gradient(180deg, #ffd7a1 0%, #ff965e 100%);
+  box-shadow:0 0 5px rgba(255,150,94,.28);
+}
+.levelModal__close::before{
+  transform:rotate(45deg);
+}
+.levelModal__close::after{
+  transform:rotate(-45deg);
 }
 .levelModal__close:hover{
-  filter:brightness(1.15);
+  border-color:rgba(255,214,171,.65);
+  box-shadow:0 0 10px rgba(255,143,91,.18), 2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
+  filter:brightness(1.08);
   transform:scale(1.05);
 }
 .criticalModal{
@@ -4224,8 +4242,8 @@ input, select, textarea, button {
   padding:0 4px;
 }
 .chipCraftSlot{
-  width:80px;
-  height:80px;
+  width:84px;
+  height:84px;
   border:1px dashed rgba(255,255,255,.2);
   border-radius:6px;
   display:flex;
@@ -4234,34 +4252,138 @@ input, select, textarea, button {
   position:relative;
   background:rgba(40,36,32,.4);
 }
+.chipCraftSlot--filled{
+  border:none;
+  background:transparent;
+}
 .chipCraftSlotIcon{
-  width:56px;
-  height:50px;
+  width:52px;
+  height:46px;
 }
 .chipCraftSlotEmpty{
   font-size:24px;
   color:rgba(255,255,255,.15);
   user-select:none;
 }
+.chipCraftSlotCard{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  height:100%;
+  padding:6px 4px 0;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:6px;
+  background:linear-gradient(180deg, rgba(58,52,47,.92) 0%, rgba(31,28,25,.96) 100%);
+  box-shadow:0 2px 0 rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  overflow:hidden;
+}
+.chipCraftSlotCard--chip{
+  border-color:rgba(255,255,255,.14);
+}
+.chipCraftSlotCard--fragment{
+  border-style:dashed;
+  border-color:rgba(255,255,255,.18);
+  background:linear-gradient(180deg, rgba(50,44,40,.9) 0%, rgba(34,30,27,.95) 100%);
+}
+.chipCraftSlotCard--future{
+  border-color:rgba(74,246,38,.34);
+  background:linear-gradient(180deg, rgba(48,58,38,.9) 0%, rgba(28,34,24,.96) 100%);
+}
+.chipCraftSlotCard__iconWrap{
+  flex:1 1 auto;
+  width:100%;
+  min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding-top:2px;
+}
+.chipCraftSlotCard__name{
+  width:calc(100% + 8px);
+  margin:0 -4px;
+  padding:5px 6px 4px;
+  border-top:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg, rgba(0,0,0,.06) 0%, rgba(0,0,0,.34) 100%);
+  font-size:8px;
+  line-height:1.2;
+  color:rgba(255,255,255,.62);
+  font-family:monospace;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-align:center;
+}
+.chipCraftSlotCard__badge{
+  position:absolute;
+  top:4px;
+  right:4px;
+  font-size:8px;
+  line-height:1.1;
+  color:#fdd835;
+  background:rgba(0,0,0,.58);
+  border:1px solid rgba(253,216,53,.2);
+  border-radius:3px;
+  padding:1px 4px;
+  pointer-events:none;
+}
 .chipCraftSlotRemove{
   position:absolute;
-  top:-6px;
-  right:-6px;
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:#e53935;
-  color:#fff;
-  border:none;
-  font-size:11px;
-  line-height:18px;
-  text-align:center;
+  top:-8px;
+  right:-8px;
+  width:28px;
+  height:28px;
+  border-radius:4px;
+  background:linear-gradient(180deg, rgba(76,54,44,.96) 0%, rgba(41,29,24,.98) 100%);
+  border:1px solid rgba(255,156,106,.45);
   cursor:pointer;
   padding:0;
   z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:2px 2px 0 rgba(0,0,0,.55);
+  transition:filter .12s ease, border-color .12s ease, box-shadow .12s ease, transform .12s ease;
 }
 .chipCraftSlotRemove:hover{
-  background:#ff5252;
+  border-color:rgba(255,181,143,.78);
+  filter:brightness(1.08);
+  box-shadow:0 0 8px rgba(229,57,53,.22), 2px 2px 0 rgba(0,0,0,.55);
+}
+.chipCraftSlotRemove:active{
+  transform:translate(1px,1px);
+  box-shadow:1px 1px 0 rgba(0,0,0,.55);
+}
+.chipCraftSlotRemove:focus-visible{
+  outline:2px solid #4af626;
+  outline-offset:1px;
+}
+.chipCraftSlotRemove__icon{
+  position:relative;
+  display:block;
+  width:12px;
+  height:12px;
+  pointer-events:none;
+}
+.chipCraftSlotRemove__icon::before,
+.chipCraftSlotRemove__icon::after{
+  content:'';
+  position:absolute;
+  left:5px;
+  top:-1px;
+  width:2px;
+  height:14px;
+  border-radius:1px;
+  background:linear-gradient(180deg, #ffd7a1 0%, #ff8c5a 100%);
+  box-shadow:0 0 4px rgba(255,140,90,.22);
+}
+.chipCraftSlotRemove__icon::before{
+  transform:rotate(45deg);
+}
+.chipCraftSlotRemove__icon::after{
+  transform:rotate(-45deg);
 }
 .chipCraftActionBtn{
   padding:10px 24px;
@@ -4486,19 +4608,18 @@ input, select, textarea, button {
 /* ─── Assemble result preview (inline in slot row) ─── */
 .chipCraftResultChip{
   display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:4px;
+  align-items:stretch;
+  justify-content:center;
   flex-shrink:0;
+  width:84px;
+  height:84px;
 }
 .chipCraftResultChip--future{
-  min-width:80px;
-  min-height:80px;
-  padding:6px 8px;
-  border:1px dashed rgba(74,246,38,.7);
+  padding:2px;
+  border:1px dashed rgba(74,246,38,.55);
   border-radius:6px;
-  background:rgba(40,36,32,.2);
-  box-shadow:inset 0 0 0 1px rgba(74,246,38,.08), 0 0 8px rgba(74,246,38,.08);
+  background:linear-gradient(180deg, rgba(34,40,29,.42) 0%, rgba(25,29,22,.28) 100%);
+  box-shadow:inset 0 0 0 1px rgba(74,246,38,.08), 0 0 10px rgba(74,246,38,.08);
 }
 .chipCraftSlot--resultSlot{
   border-style:dashed;
@@ -4507,18 +4628,13 @@ input, select, textarea, button {
   flex-shrink:0;
 }
 .chipCraftResultIcon{
-  width:56px;
-  height:50px;
+  width:52px;
+  height:46px;
 }
 .chipCraftResultLabel{
-  font-size:10px;
-  color:rgba(74,246,38,.8);
-  text-align:center;
-  max-width:120px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  font-family:'Press Start 2P',monospace;
+  color:rgba(74,246,38,.88);
+  border-top-color:rgba(74,246,38,.16);
+  background:linear-gradient(180deg, rgba(20,40,18,.12) 0%, rgba(20,40,18,.38) 100%);
 }
 
 /* ─── Silicon Dust reagent row (assemble mode) ─── */

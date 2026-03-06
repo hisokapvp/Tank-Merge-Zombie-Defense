@@ -1,5 +1,7 @@
 ﻿# Система: Assets
 
+> Обновлено: 2026-03-06.
+
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
 - `assets/ground.json`, `assets/decor.json`, `assets/fence.json`
@@ -34,25 +36,29 @@
 - Fallback: при отсутствии или невалидном значении runtime использует `0.45`.
 
 ## `assets/supercomputer.json` (боевой рендер + production line)
-- Верхний уровень по-прежнему описывает основной спрайт суперкомпьютера: `atlas`, `offsetY`, `anchor`, `renderScale`, `hpBar`, `boostIcons`, `glitch`, `stats`, `animations`.
+- Root-конфиг суперкомпьютера: [assets/supercomputer.json](../../../assets/supercomputer.json#L1-L123).
 - Для `animations.{idle,work,glitch,buildTank,destroy}` сохранены legacy-поля клипа (`x/y/w/h/frames/frameRateFps/loop`) и добавлены:
 	- `scale` — дополнительный множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
-	- `effects` — массив описателей эффекта. Допустимы:
-		- строка-пресет (например `"float"`),
-		- объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
-- Важно: `float` больше не «один на весь суперкомпьютер» — у каждого состояния можно задать свой preset/override в `animations.<state>.effects[]`. Например `idle.float` и `work.float` могут отличаться по `amplitudeY`, `frequencyHz`, `phase`.
+	- `effects` — массив описателей эффекта. Допустимы строка-пресет или объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
+- `buildTank` — не просто data-ключ: root-state реально включается механикой печати коробки, пока `0 < progress < 1` и storage не переполнен: [assets/supercomputer.json](../../../assets/supercomputer.json#L81-L101), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L97-L154).
 - Поддерживаемые preset-id в runtime: `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
-- Новые optional-блоки `conveyor` и `storageCell` описывают части production line рядом с суперкомпьютером:
-	- поля части: `atlas`, `offset`, `anchor`, `animations`;
-	- canonical-состояния: для `conveyor` — `idle`/`work`, для `storageCell` — `idle`/`hover`.
+- `conveyor` описывает ленту рядом с суперкомпьютером: [assets/supercomputer.json](../../../assets/supercomputer.json#L125-L152).
+	- canonical-состояния: `idle` / `work`.
+	- atlas может отличаться от root atlas.
+- `conveyorBox` описывает печатаемую коробку на конвейере: [assets/supercomputer.json](../../../assets/supercomputer.json#L154-L208).
+	- используется отдельный atlas `conveyor_box_atlas.png`;
+	- canonical-состояния: `printLow` / `printHigh`;
+	- loader также понимает alias-ключи `buildLow`, `buildHigh`, `under50`, `over50`, `lessThanHalf`, `moreThanHalf`;
+	- renderer делает reveal снизу вверх по `progress`: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L329-L444).
+- `storageCell` описывает ячейку-склад: [assets/supercomputer.json](../../../assets/supercomputer.json#L209-L237).
+	- canonical-состояния: `idle` / `hover`.
 - Backward compatibility:
 	- отсутствие `scale` или `effects` нормализуется в `1` и `[]`;
-	- отсутствие `conveyor`/`storageCell` оставляет legacy layout и fallback-отрисовку в `src/render/productionLineRender.js`;
+	- отсутствие `conveyor`/`conveyorBox`/`storageCell` оставляет legacy layout и fallback-отрисовку в `src/render/productionLineRender.js`;
 	- alias `storage` при загрузке принимается как legacy-синоним `storageCell`.
 - Loader-контракт:
-	- нормализация выполняется в `src/render/spriteLoaders.js`;
-	- runtime-логика чтения анимаций и их длительностей — в `src/mechanics/supercomputer.js`;
-	- если `conveyor.atlas`/`storageCell.atlas` совпадают с root `atlas`, loader переиспользует уже загруженное изображение без отдельной копии.
+	- нормализация выполняется в [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L45-L145) и [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L853-L1030);
+	- если atlas части совпадает с root atlas, loader переиспользует уже загруженное изображение без отдельной копии: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L914-L928);
 	- root `hpBar` остаётся частью data-contract, но рисуется отдельным финальным overlay в `game.js`, а не вместе с root sprite.
 
 ## `assets/balance/cannonUpgrades.json`

@@ -89,6 +89,12 @@
       "scale": 0.5,
       "effects": [
         {
+          "preset": "float",
+          "amplitudeY": 11.1,
+          "frequencyHz": 50.9,
+          "phase": 0.15
+        },
+        {
           "preset": "sway",
           "angleDeg": 11.8,
           "amplitudeX": 11.4
@@ -148,6 +154,61 @@
         "frameRateFps": 3,
         "loop": true,
         "scale": 1.5
+      }
+    }
+  },
+  "conveyorBox": {
+    "atlas": "conveyor_box_atlas.png",
+    "anchor": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "animations": {
+      "printLow": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 4,
+        "frameRateFps": 6,
+        "loop": true,
+        "scale": 0.56,
+        "effects": [
+          {
+            "preset": "vibration",
+            "amplitudeX": 0.2,
+            "amplitudeY": 0.22,
+            "frequencyHz": 8
+          },
+          {
+            "preset": "pulse",
+            "scaleMul": 0.015,
+            "frequencyHz": 3
+          }
+        ]
+      },
+      "printHigh": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 4,
+        "frameRateFps": 9,
+        "loop": true,
+        "scale": 0.56,
+        "effects": [
+          {
+            "preset": "vibrationStrong",
+            "amplitudeX": 0.26,
+            "amplitudeY": 0.3,
+            "frequencyHz": 12
+          },
+          {
+            "preset": "pulse",
+            "scaleMul": 0.03,
+            "frequencyHz": 4
+          }
+        ]
       }
     }
   },

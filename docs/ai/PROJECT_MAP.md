@@ -10,9 +10,9 @@
 | Правило | Где задано |
 |---|---|
 | Конвейер `work` запускается от kill-hook, проигрывает полный цикл кадров и не перезапускается в середине текущего клипа. | [game.js](../../game.js#L5908-L5913), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L127-L136) |
-| `assets/supercomputer.json` задаёт эффекты покадрово/per-state: `animations.*.effects[]` и `scale` читаются loader'ом как runtime-контракт. | [assets/supercomputer.json](../../assets/supercomputer.json#L22-L128), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L45-L80), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L823-L943) |
+| `assets/supercomputer.json` задаёт эффекты покадрово/per-state, `buildTank` и atlas-конфиги частей `conveyor` / `conveyorBox` / `storageCell`; loader читает это как runtime-контракт. | [assets/supercomputer.json](../../assets/supercomputer.json#L20-L237), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L45-L145), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L853-L1030) |
 | HP bar суперкомпьютера рисуется отдельным верхним overlay после основного world-render, иначе он уходит под ячейки ангара. | [game.js](../../game.js#L9339-L9398), [game.js](../../game.js#L9750-L9755) |
-| «Будущий» чип в craft preview получает отдельную зелёную dashed-рамку контейнера; цветовой смысл самого SVG-чипа не меняется. | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2171-L2354), [style.css](../../style.css#L4467-L4513) |
+| «Будущий» чип в craft preview получает отдельную зелёную dashed-рамку контейнера; цветовой смысл самого SVG-чипа не меняется, а remove-контролы остаются в игровом стиле. | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2213-L2463), [style.css](../../style.css#L4268-L4385), [style.css](../../style.css#L4617-L4639) |
 | Большая логика не добавляется в `game.js`, если уже есть модуль в `src/*`; `game.js` остаётся bootstrap/fallback-монолитом. | [ARCHITECTURE.md](ARCHITECTURE.md) |
 
 ## Глобальные точки входа
@@ -22,8 +22,8 @@
 | `loop()` | [game.js](../../game.js#L11460-L11713) | 11460–11713 | Главный simulation loop: step → draw → telemetry |
 | `draw()` | [game.js](../../game.js#L9339-L9398) | 9339–9398 | Главный render-orchestrator world/HUD |
 | `initBoard()` | [game.js](../../game.js#L2244-L2334) | 2244–2334 | Геометрия мира, позиция суперкомпьютера, layout production line |
-| `Game.HangarChipsUI.init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2743-L3249) | 2743–3249 | Инициализация overlay ангара, drag-drop, tooltips, public API |
-| `Game.ProductionLineRender.syncState()` | [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L173-L199) | 173–199 | Синхронизация conveyor/storage runtime с `state.productionLine` |
+| `Game.HangarChipsUI.init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2800-L3179) | 2800–3179 | Инициализация overlay ангара, drag-drop, tooltips |
+| `Game.ProductionLineRender.syncState()` | [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L265-L311) | 265–311 | Синхронизация conveyor/storage runtime с `state.productionLine` |
 | `Game.TalentsV2.init()` | [src/systems/talents/talentsV2.js](../../src/systems/talents/talentsV2.js#L2491-L2505) | 2491–2505 | Поднятие runtime талантов v2 |
 
 ## Разделы документации
@@ -45,6 +45,7 @@
 | `src/ui/hangarChipsUI.js` map | [HANGAR_CHIPS_UI_MAP.md](HANGAR_CHIPS_UI_MAP.md) | [HOT] |
 | `src/ui/supercomputerMenu.js` map | [SUPERCOMPUTER_MENU_MAP.md](SUPERCOMPUTER_MENU_MAP.md) | [HOT] |
 | `src/render/spriteLoaders.js` map | [SPRITE_LOADERS_MAP.md](SPRITE_LOADERS_MAP.md) | [HOT] |
+| `src/render/productionLineRender.js` map | [PRODUCTION_LINE_RENDER_MAP.md](PRODUCTION_LINE_RENDER_MAP.md) | |
 
 ### Gameplay / mechanics / persistence
 | Подраздел | Файл документации | Hotspot |

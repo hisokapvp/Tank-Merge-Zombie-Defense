@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-06
+- **Документация: update после правок суперкомпьютера, conveyor box и мастерской чипов**
+  - Перепроверены реальные диапазоны строк в больших map-файлах `HANGAR_CHIPS_UI_MAP.md`, `STYLE_CSS_MAP.md`, `SPRITE_LOADERS_MAP.md`.
+  - Добавлен новый map-файл `docs/ai/PRODUCTION_LINE_RENDER_MAP.md` для `src/render/productionLineRender.js`.
+  - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/INDEX.md`, `docs/ai/ARCHITECTURE.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/ui.md`, `docs/configs.md`.
+  - Зафиксированы: runtime-активация `buildTank`, отдельный atlas `conveyor_box_atlas.png`, две стадии печати коробки `printLow/printHigh`, bottom-up reveal, craft-slot inventory-card shell и игровые close/remove controls.
+
 - **Документация: полная актуализация agent docs + map-файлы для монолитов**
   - Добавлен `docs/ai/PROJECT_MAP.md` как главная карта проекта.
   - Добавлены map-файлы: `STYLE_CSS_MAP.md`, `HANGAR_CHIPS_UI_MAP.md`, `SUPERCOMPUTER_MENU_MAP.md`, `SPRITE_LOADERS_MAP.md`, `CHIP_EFFECTS_MAP.md`, `TALENTS_V2_MAP.md`.
@@ -27,6 +33,11 @@
 - **UI: Drag-drop из инвентаря в craft-зону**
   - Реализован pointer-based drag-drop: при перетаскивании чипа автоматически переключается режим на «Разобрать», при перетаскивании фрагмента — на «Создать чип».
   - Новая функция `_addItemToSlot(itemEl, srcType)` с авто-определением режима.
+
+- **UI/UX: craft preview приведён к паттерну inventory-карточек**
+  - `src/ui/hangarChipsUI.js`: занятые craft-слоты и future-chip preview рендерятся через общий карточный паттерн `chipCraftSlotCard`.
+  - `style.css`: remove-кнопка в craft-слоте переведена из simple red circle в game-styled micro-close control; добавлены footer-title/badge состояния для slot/result cards.
+  - `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`: зафиксированы новые UX-инварианты craft-зоны.
 
 - **UI: Кнопка «Распылить» зафиксирована внизу**
   - CSS: `.chipCraftBottomBar` — `margin-top:auto; flex-shrink:0` для привязки к нижней части панели.

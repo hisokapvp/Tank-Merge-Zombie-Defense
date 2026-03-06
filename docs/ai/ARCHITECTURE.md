@@ -6,7 +6,7 @@
 ## Документационные entrypoints
 - Главная карта: `docs/ai/PROJECT_MAP.md`
 - Монолиты: `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`
-- Большие runtime-файлы: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/CHIP_EFFECTS_MAP.md`, `docs/ai/TALENTS_V2_MAP.md`
+- Большие runtime-файлы: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/CHIP_EFFECTS_MAP.md`, `docs/ai/TALENTS_V2_MAP.md`
 
 ## Слои
 - Вход: `index.html`, `game.js` (~11.9k строк), `src/core/bootstrap.js`
@@ -19,6 +19,7 @@
 ## Ключевые runtime-швы
 - `game.js` связывает `SupercomputerSprites` с `Game.ProductionLineRender`: `setSpriteSource(...)` выполняется в [game.js](../../game.js#L1869-L1875).
 - Геометрия production line пересчитывается из позиции/размера суперкомпьютера в [initBoard()](../../game.js#L2244-L2334).
+- Механика printing/runtime сама поднимает root-state `buildTank` через [syncSupercomputerBuildTankState()](../../src/mechanics/productionLine.js#L97-L108) и [step()](../../src/mechanics/productionLine.js#L114-L154); renderer только читает этот state.
 - World render разделён на: root supercomputer (`drawSupercomputer()`), conveyor/storage (`Game.ProductionLineRender.draw(...)`), board/cells и финальный HP overlay суперкомпьютера: [game.js](../../game.js#L9339-L9398), [game.js](../../game.js#L9699-L9794).
 - UI суперкомпьютера разделён на root/router (`src/ui/supercomputerMenu.js`), hangar workshop (`src/ui/hangarChipsUI.js`) и CSS-контракт (`style.css`).
 - Kill side-effect идёт не через render, а через combat cleanup hook: [game.js](../../game.js#L5908-L5913) → [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L127-L136).

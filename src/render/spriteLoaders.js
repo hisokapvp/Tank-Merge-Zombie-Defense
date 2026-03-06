@@ -115,6 +115,36 @@
       };
     }
 
+    function normalizeSupercomputerBoxPart(raw, fallbackAtlas, fallbackClip) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      var animationsRaw = src.animations && typeof src.animations === 'object' ? src.animations : {};
+      var lowRaw = animationsRaw.printLow || animationsRaw.buildLow || animationsRaw.lessThanHalf || animationsRaw.under50 || animationsRaw.idle;
+      var lowClip = normalizeAnimationClip(lowRaw, fallbackClip);
+      var highRaw = animationsRaw.printHigh || animationsRaw.buildHigh || animationsRaw.moreThanHalf || animationsRaw.over50 || animationsRaw.work || lowRaw;
+      var highClip = normalizeAnimationClip(highRaw, lowClip);
+
+      return {
+        defined: !!(raw && typeof raw === 'object'),
+        atlas: typeof src.atlas === 'string' && src.atlas ? src.atlas : fallbackAtlas,
+        offset: src.offset && typeof src.offset === 'object'
+          ? {
+              x: Number.isFinite(src.offset.x) ? src.offset.x : 0,
+              y: Number.isFinite(src.offset.y) ? src.offset.y : 0,
+            }
+          : { x: 0, y: 0 },
+        anchor: src.anchor && typeof src.anchor === 'object'
+          ? {
+              x: Number.isFinite(src.anchor.x) ? src.anchor.x : 0.5,
+              y: Number.isFinite(src.anchor.y) ? src.anchor.y : 0.5,
+            }
+          : { x: 0.5, y: 0.5 },
+        animations: {
+          printLow: lowClip,
+          printHigh: highClip,
+        },
+      };
+    }
+
     function collectAnimationFrameIds(rawAnim, fallbackIds, frameMap, animationName) {
       var src = rawAnim && typeof rawAnim === 'object' ? rawAnim : {};
       var ids = Array.isArray(src.frames)
@@ -847,11 +877,23 @@
           var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
           var idleClip = normalizeAnimationClip(animationsRaw.idle || animationsRaw.work, fallbackClip);
           var workClip = normalizeAnimationClip(animationsRaw.work || animationsRaw.idle, idleClip);
+          var mainAtlasName = data && data.atlas ? data.atlas : 'decor.png';
           var conveyorCfg = normalizeSupercomputerPart(data && data.conveyor, data && data.atlas ? data.atlas : 'decor.png', ['idle', 'work'], {
             x: 0,
             y: 0,
             w: 80,
             h: 22,
+            frames: 1,
+            frameRateFps: 1,
+            loop: true,
+            scale: 1,
+            effects: [],
+          });
+          var conveyorBoxCfg = normalizeSupercomputerBoxPart(data && (data.conveyorBox || data.box), 'bonusbox_atlas.png', {
+            x: 0,
+            y: 0,
+            w: 32,
+            h: 32,
             frames: 1,
             frameRateFps: 1,
             loop: true,
@@ -869,14 +911,22 @@
             scale: 1,
             effects: [],
           });
+          async function loadSharedAtlas(atlasName) {
+            var resolved = typeof atlasName === 'string' && atlasName ? atlasName : mainAtlasName;
+            if (resolved === mainAtlasName) return img;
+            if (!sharedAtlasImages[resolved]) {
+              sharedAtlasImages[resolved] = await loadImage('assets/' + resolved);
+            }
+            return sharedAtlasImages[resolved];
+          }
+          var sharedAtlasImages = Object.create(null);
+          sharedAtlasImages[mainAtlasName] = img;
           var atlasImages = {
             main: img,
-            conveyor: conveyorCfg.atlas === (data && data.atlas ? data.atlas : 'decor.png') ? img : await loadImage('assets/' + conveyorCfg.atlas),
-            storageCell: storageCfg.atlas === (data && data.atlas ? data.atlas : 'decor.png')
-              ? img
-              : (storageCfg.atlas === conveyorCfg.atlas ? null : await loadImage('assets/' + storageCfg.atlas)),
+            conveyor: await loadSharedAtlas(conveyorCfg.atlas),
+            conveyorBox: await loadSharedAtlas(conveyorBoxCfg.atlas),
+            storageCell: await loadSharedAtlas(storageCfg.atlas),
           };
-          if (!atlasImages.storageCell) atlasImages.storageCell = atlasImages.conveyor;
 
           var glitchRaw = data && data.glitch && typeof data.glitch === 'object' ? data.glitch : {};
           var minLoops = Number.isFinite(glitchRaw.minLoops) ? Math.max(1, Math.floor(glitchRaw.minLoops)) : 1;
@@ -919,6 +969,7 @@
               destroy: normalizeAnimationClip(animationsRaw.destroy, idleClip),
             },
             conveyor: conveyorCfg,
+            conveyorBox: conveyorBoxCfg,
             storageCell: storageCfg,
             glitch: {
               chancePerSecond: Number.isFinite(glitchRaw.chancePerSecond) ? Math.max(0, glitchRaw.chancePerSecond) : 0,
@@ -953,18 +1004,28 @@
           if (!storageAnimations) return null;
           return storageAnimations[stateName] || storageAnimations.idle || storageAnimations.hover || null;
         }
+        if (partName === 'conveyorBox' || partName === 'box') {
+          var boxAnimations = this.config.conveyorBox && this.config.conveyorBox.animations ? this.config.conveyorBox.animations : null;
+          if (!boxAnimations) return null;
+          return boxAnimations[stateName]
+            || boxAnimations.printLow
+            || boxAnimations.printHigh
+            || null;
+        }
         if (!this.config.animations) return null;
         return this.config.animations[stateName] || this.config.animations.idle || this.config.animations.work || null;
       },
       getAtlasImage: function (partName) {
         if (!this.atlasImages) return this.atlasImg || null;
         if (partName === 'conveyor') return this.atlasImages.conveyor || this.atlasImg || null;
+        if (partName === 'conveyorBox' || partName === 'box') return this.atlasImages.conveyorBox || this.atlasImg || null;
         if (partName === 'storageCell' || partName === 'storage') return this.atlasImages.storageCell || this.atlasImg || null;
         return this.atlasImages.main || this.atlasImg || null;
       },
       getPartConfig: function (partName) {
         if (!this.config) return null;
         if (partName === 'conveyor') return this.config.conveyor || null;
+        if (partName === 'conveyorBox' || partName === 'box') return this.config.conveyorBox || null;
         if (partName === 'storageCell' || partName === 'storage') return this.config.storageCell || null;
         return this.config;
       },
