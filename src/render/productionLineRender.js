@@ -125,12 +125,14 @@
   }
 
   function triggerConveyorWork() {
+    if (_conveyorState === 'work' && _conveyorWorkTimerSec > 0) return false;
     const workAnim = getPartAnimation('conveyor', 'work');
     const duration = getClipDuration(workAnim);
-    const fps = Math.max(0.01, Number(workAnim && workAnim.frameRateFps) || 1);
     _conveyorState = 'work';
     _conveyorElapsedSec = 0;
-    _conveyorWorkTimerSec = Math.max(0.2, duration > 0 && workAnim && workAnim.loop === false ? duration : (2 / fps));
+    _conveyorWorkTimerSec = Math.max(0.2, duration > 0 ? duration : 0.2);
+    refreshBounds();
+    return true;
   }
 
   function updateLayout(scX, scY, scW, scH, worldScale) {
@@ -184,11 +186,7 @@
       return;
     }
 
-    const displaySignature = computeDisplaySignature(pl);
-    if (_lastDisplaySignature) {
-      if (displaySignature !== _lastDisplaySignature) triggerConveyorWork();
-    }
-    _lastDisplaySignature = displaySignature;
+    _lastDisplaySignature = computeDisplaySignature(pl);
 
     if (_conveyorState === 'work') {
       _conveyorWorkTimerSec = Math.max(0, _conveyorWorkTimerSec - dtSafe);
@@ -406,6 +404,7 @@
   global.Game.ProductionLineRender = {
     updateLayout: updateLayout,
     syncState: syncState,
+    triggerConveyorWork: triggerConveyorWork,
     syncHoverAt: syncHoverAt,
     clearHover: clearHover,
     draw: draw,

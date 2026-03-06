@@ -1,43 +1,36 @@
 ﻿# Система: Render
 
+> Обновлено: 2026-03-06.
+> Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+
 ## Где править
-- Canvas root и слои: `src/render/canvasRoot.js`, `src/render/groundLayer.js`
-- Земля/декор: `src/render/groundGen.js`, `src/render/fenceLayout.js`
-- Спрайты: `src/render/spriteLoaders.js`
+- Canvas root и layout: `src/render/canvasRoot.js`, `src/render/groundLayer.js`, `src/render/fenceLayout.js`
+- Спрайты и JSON-normalization: `src/render/spriteLoaders.js`
+- Production line: `src/render/productionLineRender.js`
 - Zombie render runtime: `src/render/zombieRender.js`
+- World render orchestration: `game.js`
 
-## Интеграция
-- `drawZombieEntity` в `game.js` делегируется в `Game.ZombieRender` через `ensureZombieRenderRuntimeController()`. Устаревшие fallback-функции `drawZombieSprite`/`drawZombieFallback` удалены как мёртвый код (весь рендер зомби обрабатывается runtime-модулем).
-- Talents v2 status icons рендерятся в `game.js::draw()` через `Game.TalentsV2.renderStatusIcons(...)` только в world-render боя (не в UI/hangar).
-- Fade трупов применяется в `src/render/zombieRender.js` через `ctx.globalAlpha` в конце corpse-life (`assets/zombies.json: corpseFadeOutSec`).
-- Fence render order в `game.js::draw()`:
-	1) `renderFenceBase()`
-	2) `renderZombiesAndCorpses()`
-	3) `renderFenceHpBars()`
-	4) `renderProjectilesAndEffects()`
+## Ключевые точки входа
+- `draw()` — основной render-orchestrator: [game.js](../../../game.js#L9339-L9398)
+- `drawSupercomputerSpriteClip()` / `drawSupercomputerHpBarOverlay()` — root sprite + верхний HP overlay: [game.js](../../../game.js#L9699-L9755)
+- `Game.ProductionLineRender.updateLayout()` / `.syncState()` / `.draw()` — runtime conveyor/storage: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L138-L199), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L385-L402)
+- `SupercomputerSprites.load()` — loader root/parts/effects: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L823-L969)
 
-	Это гарантирует видимость HP-баров поверх зомби/трупов и допускает перекрытие HP FX-слоем.
-
-## Спрайты зомби: deathCommon
-- `ZombieSprites.deathCommon` — **массив** объектов-вариантов анимации общей смерти (не единичный объект).
-- В `zombies.json` поле `deathCommon` может быть объектом (legacy) или массивом. При парсинге в `spriteLoaders.js` единичный объект оборачивается в `[]`.
-- `pickDeathAnim()` в `combat.js` при отсутствии персональной анимации выбирает случайный вариант из массива `deathCommon`.
-
-## Правила
-- `draw()` только рисует; обновления состояния  вне отрисовки.
-- В горячем пути избегать новых объектов и массивов на кадр.
-- Использовать существующие JSON-конфиги (`assets/ground.json`, `assets/decor.json`, `assets/fence.json`).
+## Инварианты render-пайплайна ⚠️
+- `draw()` только рисует; состояние меняется вне render-step.
+- Конвейер `work` запускается не из `draw()`, а из kill-hook: [game.js](../../../game.js#L5908-L5913).
+- Повторный kill не должен перезапускать conveyor, пока текущий `work`-цикл не закончился: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L127-L136).
+- Fence HP bars остаются над зомби/трупами, а HP bar суперкомпьютера — финальным world overlay: [game.js](../../../game.js#L9339-L9398), [game.js](../../../game.js#L9750-L9755).
 
 ## Supercomputer / production line
-- `SupercomputerSprites` в `src/render/spriteLoaders.js` теперь является источником не только root-спрайта, но и частей production line.
-- Loader нормализует:
-	- per-animation `scale` и `effects` для root-анимаций суперкомпьютера;
-	- part-конфиги `conveyor` и `storageCell` с собственными `atlas`/`offset`/`anchor`/`animations`.
-- `game.js` рисует supercomputer-клип через отдельный runtime-пайплайн:
-	- выбор визуального состояния вынесен в helper-слой (`resolveSupercomputerVisualStateName`, `resolveSupercomputerAnimationScale`, `drawSupercomputerSpriteClip`);
-	- `effects[]` применяются во время draw как трансформации (`shake`/`bob`/`sway`/`pulse`-подобные пресеты).
-- `Game.ProductionLineRender` синхронизируется с runtime мира отдельно от `draw()`:
-	- `updateLayout(scX, scY, scW, scH, worldScale)` учитывает configured offsets частей;
-	- `syncState(state, dt)` переключает conveyor между `idle` и `work` по изменению display-signature production line;
-	- `syncHoverAt(px, py)` и `clearHover()` управляют состоянием storage cell `idle`/`hover`.
-- Fallback-контракт сохранён: при отсутствии part-конфига или атласа рендер остаётся на legacy geometry и векторных fallback-примитивах.
+- `SupercomputerSprites` теперь нормализует не только root sprite, но и части `conveyor`/`storageCell`: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L823-L969).
+- `initBoard()` рассчитывает world-геометрию суперкомпьютера и сразу прокидывает её в production line layout: [game.js](../../../game.js#L2244-L2334).
+- `effects[]` из `assets/supercomputer.json` применяются во время draw как трансформации root sprite (float/sway/vibration/pulse и т. п.): [game.js](../../../game.js#L9699-L9724), [assets/supercomputer.json](../../../assets/supercomputer.json#L22-L128).
+- `Game.ProductionLineRender.draw()` рисуется сразу после `drawSupercomputer()`, но до `drawBoard()`: [game.js](../../../game.js#L9339-L9354).
+
+## Спрайты зомби: deathCommon
+- `ZombieSprites.deathCommon` — массив вариантов общей анимации смерти: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L179-L259).
+- В `assets/zombies.json` разрешены legacy-object и array; loader приводит к массиву.
+
+## Fallback-контракт
+- Если atlas или part-config недоступен, рендер остаётся на legacy geometry и vector fallback без падения runtime: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L215-L383).

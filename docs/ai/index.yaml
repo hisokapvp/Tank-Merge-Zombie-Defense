@@ -1,5 +1,14 @@
 version: 2
 updated_at: 2026-03-06
+project_map: docs/ai/PROJECT_MAP.md
+maps:
+  - docs/ai/GAME_JS_MAP.md
+  - docs/ai/STYLE_CSS_MAP.md
+  - docs/ai/HANGAR_CHIPS_UI_MAP.md
+  - docs/ai/SUPERCOMPUTER_MENU_MAP.md
+  - docs/ai/SPRITE_LOADERS_MAP.md
+  - docs/ai/CHIP_EFFECTS_MAP.md
+  - docs/ai/TALENTS_V2_MAP.md
 entrypoints:
   boot:
     file: game.js

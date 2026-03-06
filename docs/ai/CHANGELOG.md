@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-06
+- **Документация: полная актуализация agent docs + map-файлы для монолитов**
+  - Добавлен `docs/ai/PROJECT_MAP.md` как главная карта проекта.
+  - Добавлены map-файлы: `STYLE_CSS_MAP.md`, `HANGAR_CHIPS_UI_MAP.md`, `SUPERCOMPUTER_MENU_MAP.md`, `SPRITE_LOADERS_MAP.md`, `CHIP_EFFECTS_MAP.md`, `TALENTS_V2_MAP.md`.
+  - Обновлены `INDEX.md`, `ARCHITECTURE.md`, `GAME_JS_MAP.md`, `SYSTEMS/render.md`, `SYSTEMS/ui.md`, `SYSTEMS/assets.md`, `index.yaml`.
+  - Зафиксированы новые инварианты: kill-driven conveyor work cycle, per-state supercomputer `effects[]`, верхний overlay HP bar суперкомпьютера, отдельная dashed-рамка future chip preview.
+
 - **Supercomputer render: расширена схема `assets/supercomputer.json` и production line runtime**
   - `assets/supercomputer.json`: для root-анимаций добавлены per-animation `scale` и `effects`; поддержаны preset-эффекты `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
   - Добавлены optional-секции `conveyor` и `storageCell` с собственными `atlas`/`offset`/`animations`; legacy alias `storage` и fallback-поведение сохранены.

@@ -49,325 +49,108 @@
 | 607–774 | Damage progress, cannon upgrade cost/apply, `GameApi.getDamagePoints` |
 | 775–870 | Supercomputer state management (`getComputerState`, `getComputerLevel`) |
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
+# game.js — карта монолита
 
-### Внешние API-ссылки
-| Диапазон | Описание |
-|---|---|
-| 964–1000 | ~20 API refs: `ZombieSpawnApi`, `UIModals`, `CombatProfilesApi`, `LevelFlowApi`, `BootstrapApi`, `FenceLayoutApi`, `GroundLayerApi`, `PauseManagerApi`, `DepthSortApi`, `AutoMergeApi`, `SupercomputerMenuApi`, `CriticalModalApi`, `AchievementsModalApi`, `WorldResetApi`, etc. |
+> Обновлено: 2026-03-06.
+> Текущая длина файла: ~11 885 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
-### Настройки / Audio / SFX
-| Диапазон | Описание |
-|---|---|
-| 1000–1070 | `loadSettings`, `saveSettings`, `applyAudioSettings`, `audioSettingsController` |
-| 1070–1600 | SFX system: pools, dedup, channels, `playSfx`, `playLoopSfx`, `stopLoopSfx`, gameplay audio fade, critical audio policy; делегирование в `Game.SfxPoolRuntime` |
-| 1600–1690 | `SFX_SOURCES`, volume helpers (`getVolume`, `setVolume`, `syncVolumeUIFromSettings`) |
+## Что это
+`game.js` остаётся главным bootstrap/runtime-монолитом проекта: здесь живут глобальные aliases `window.Game`, world loop, render orchestration, часть fallback-логики, UI wiring и интеграция всех extracted модулей из `src/*`.
 
-### i18n
-| Диапазон | Описание |
-|---|---|
-| 1690–1780 | `STRINGS`, `currentLang`, `getI18n`, `getCurrentLang`, `t()`, `setLanguage`, `applyTranslations` |
+## Быстрый старт для агента
+- Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
+- Нужен world loop → [loop()](../../game.js#L11460-L11713)
+- Нужен render order → [draw()](../../game.js#L9339-L9398)
+- Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
+- Нужен production line hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [kill hook](../../game.js#L5908-L5913)
 
-### Загрузка спрайтов
-| Диапазон | Описание |
-|---|---|
-| 1780–1960 | Все sprite loaders: `ZombieSprites`, `TankSprites`, `FenceSprites`, `DecorSprites`, `GroundSprites`, `SupercomputerSprites`, `BoostIconsSprites`, `DronSprites`, `BonusBoxSprites`, `BulletSprites` |
+## Инварианты ⚠️
+- Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
+- `draw()` не мутирует gameplay-state; render side-effects выносятся в step/runtime-модули.
+- HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 
-### World Events (погода / атаки)
-| Диапазон | Описание |
-|---|---|
-| 1960–2010 | `WorldEventsCfg`, `worldEventsState`, `groundLayer` |
-| 2530–2840 | Weather system: rain, lightning, evening dim, attack mode cycling; делегирование в `Game.WorldEventsRuntime` |
-
-### Canvas / Layout / Board / Decor
-| Диапазон | Описание |
-|---|---|
-| 2010–2080 | `BASE_CANVAS`, `balScale`, `applyBalScale`, `resizeCanvas` |
-| 2080–2200 | `initBoard()` — layout, fence radius, supercomputer positioning |
-| 2200–2460 | `initDecors()` — seeded procedural decor placement |
-| 2460–2530 | `buildBackground`, `rebuildGroundLayer` |
-
-### Доменная логика / Механика
-| Диапазон | Описание |
-|---|---|
-| 2840–2980 | `makeTank`, `addDron`, economy (`buyTankLevel`, `baseBuyPrice`, `buyTankCost`) |
-| 2980–3100 | Achievements system |
-| 3100–3450 | Bulk buy, tank purchasing, merge system (`performMerge`, `mergeCells`, `mergeAutoPair`) |
-| 3450–3520 | `incomeMult`, `speedMult`, `coinsForShot`, `coinsForKill`, `tankStats` |
-| 3520–3620 | XP/leveling, level flow controller |
-| 3620–3650 | Center notification system |
-| 3650–4000 | Talent tree: `TALENT_BRANCHES`, `TALENT_DEFS` (51 talents), mods computation, ability system |
-| 4000–4200 | Save/restore progress |
-| 4200–4350 | `PROJECTILE_KINDS`, bullet config, combat profiles |
-| 4350–4600 | Zombie spawning (`makeZombie`, `ensureZombieCount`), zombie positioning |
-| 4600–5000 | Fence system (levels, HP, armor, upgrades, repair, segment math) |
-| 5000–5200 | Breach tracking by side |
-| 5200–5700 | Zombie attack/combat (target selection, `stepZombies`) |
-| 5700–5850 | `stepTanks` (orbit, targeting, firing) |
-| 5850–6030 | Projectile system (`spawnProjectile`, `stepProjectiles`, projectile pool) |
-| 6028–6175 | Combat math: `critChanceFromTankLevel`, `impactAt`, `chainLightning`, damage numbers |
-| 6175–6210 | Decals (pool DOT) |
-| 6207–6310 | Crates (`pickCrateRewardLevel`, `spawnCrate`, `stepCrate`, `crateHitTest`) |
-| 6310–6370 | `cleanupKills`, particles |
-| 7100–7145 | `spawnInitialTanksLvl1`, `clearAllTanksFromCells` |
-| 7144–7200 | `forceAutosaveSafely`, `restoreFenceSegmentsToMaxHp`, `restoreSupercomputerAfterCritical` |
-| 7197–7282 | Critical flow: modal controller, restart, save & exit |
-| 7283–7345 | `resetGameState()` — полный сброс состояния |
-| 7323–7370 | `buildPreRetryPayload()` — snapshot перед retry (включая защиту дронов) |
-| 7506–7545 | `applyCriticalRestartPostLoad()` — post-load restore при critical restart (с защитой дронов) |
-| 10315–10391 | `stepImpacts`, `setSupercomputerWantsBuildTank`, `applySupercomputerDamage`, `stepSupercomputer` |
-
-### UI / Модальные окна
-| Диапазон | Описание |
-|---|---|
-| 6371–6500 | `setMenuOpen`, `setBigMenuOpen`, `setSessionStartGate`, `setBigMenuView` |
-| 6451–7000 | Big Menu: save/load rows, language panel, credits modal, `startFromBigMenu`; делегирование в `Game.BigMenuRuntime` |
-| 7001–7100 | `initBigMainMenu()` — привязка событий Big Menu |
-| 7347–7410 | `a11yOpen`, `a11yClose`, `updateUI()` |
-| 7409–7465 | Auto-merge button, dismantle button |
-| 7464–7575 | Dismantle modal (open/close/confirm/toggle) |
-| 7576–7650 | Achievements modal |
-| 7647–7690 | Progress UI (XP bar) |
-| 7690–7820 | Talent UI DOM builder |
-| 7871–7960 | `updateTalentUI`, `updateStageAbilitySlots` |
-| 7965–8050 | Crate modal, boost modal, reset talents modal |
-| 8106–8175 | Supercomputer menu controller |
-
-### Input / Events
-| Диапазон | Описание |
-|---|---|
-| 8178–8310 | `getPointerPos`, `cellAt`, canvas pointer events (down/move/up/leave) |
-| 8311–8405 | UI button event listeners (buy, bulk, merge, boost, achievements, crate, dismantle, level, talents) |
-| 8392–8405 | PauseManager creation, debug hotkey |
-
-### Render / Draw
-| Диапазон | Описание |
-|---|---|
-| 8409–8438 | `draw()` — main render orchestrator |
-| 8439–8500 | `drawZombieAttackOverlay`, `drawAttackModeEveningDim`, `drawLevelUpVfx` |
-| 8539–8610 | `drawBackground`, `drawDecorSpriteAt`, `drawDecorZombieLayer`, `drawDecors` |
-| 8611–8660 | `drawTrack` (disabled), `drawTankTrack` |
-| 8660–8745 | `drawSupercomputerHpBar`, `drawSupercomputerFallback`, `drawSupercomputer` |
-| 8745–8980 | Boost icons: config, layout, positioning, `drawSupercomputerBoostIcons` |
-| 9001–9090 | `drawSupercomputerBoostIcons` body, `drawDrones` |
-| 9091–9250 | `drawZombieFence` (sprite + fallback), `resolveFenceSpriteKeys` |
-| 9249–9300 | `drawFence` (hangar visual), `clipRoundedRect` |
-| 9298–9375 | `drawBoard` (cells, drag preview), `drawTankSlot` (stamp-reveal), `drawOrbitingTanks` |
-| 9370–9500 | `drawTankIcon`, `drawTankIconTo` |
-| 9503–9640 | `computeAuraBand`, `AuraStyleByBand`, `drawTankAura`, `drawTankAuraSprite` |
-| 9634–9810 | `drawTank` — полный рендер танка (sprite + vector fallback) |
-| 9814–10020 | `drawZombieEntity`, `drawZombieSprite`, `drawZombieFallback`; делегирование в `Game.ZombieRender` |
-| 10024–10070 | `drawProjectiles` |
-| 10067–10120 | `drawImpacts` |
-| 10121–10200 | `drawCrate`, `drawDecals` |
-| 10201–10250 | `drawDamageNumbers`, `drawParticles`, `drawHint` |
-
-### Helpers / Утилиты
-| Диапазон | Описание |
-|---|---|
-| 921–963 | `viewSize`, `center`, `nowSec`, `clamp` |
-| 10252–10315 | `tankOnTrackAt`, `getMobileMode`, `getFxLevel`, `getFxScale`, `isFxLite`, `isFxUltraLite`, `smoothAngle`, `rr`, `shade`, `seededNoise` |
-
-### Main Loop
-| Диапазон | Описание |
-|---|---|
-| 10394–10399 | Loop variables |
-| 10401–10537 | `scheduleMainLoop`, `loop()` — game loop (step + draw + telemetry) |
-
-### Debug
-| Диапазон | Описание |
-|---|---|
-| 10540–10625 | `debugLog`, `debugReset`, `safeDebug`, `initDebugPanel` |
-
----
-
-## 2. Все `Game.*` / `GameApi.*` / `window.Game.*` присвоения
-
-| Строка | Присвоение | Тип |
+## Ключевые блоки файла
+| Блок | Строки | Назначение |
 |---|---|---|
-| 6 | `GameApi = (window.Game = window.Game \|\| {})` | alias, bootstrap |
-| 7 | `SeededRngApi = window.Game.SeededRng \|\| {}` | read |
-| 410 | `GameApi.Balance = GameApi.Balance \|\| {}` | object |
-| 411 | `GameApi.Balance.CannonUpgrades = getCannonUpgradeConfig()` | object |
-| 761 | `GameApi.getDamagePoints = getDamagePoints` | function |
-| 774 | `GameApi.debugAdjustDamagePoints = debugAdjustDamagePoints` | function |
-| 1850 | `window.TankSprites = TankSprites` | object (sprite loader) |
-| 1853 | `window.Game.TankSprites = TankSprites` | object (sprite loader) |
-| 10385 | `GameApi.setSupercomputerWantsBuildTank = setSupercomputerWantsBuildTank` | function |
-| 10386 | `GameApi.applySupercomputerDamage = applySupercomputerDamage` | function |
-| 10387–10391 | `GameApi.SupercomputerRuntime = { setWantsBuildTank, applyDamage, getState }` | object (API façade) |
+| Canvas / aliases / DOM refs | [game.js](../../game.js#L1-L109) | `canvas`, `ctx`, `window.Game`, `ui` |
+| Баланс / апгрейды / начальное состояние | [game.js](../../game.js#L110-L815) | `BAL`, cannon/fence/dron upgrades, `createInitialState()` |
+| Supercomputer state / sim clock / API refs | [game.js](../../game.js#L816-L1013) | `getComputerState()`, seeds, debug flag, world helpers |
+| i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L1875) | language, audio, `SupercomputerSprites`, loader wiring |
+| Board / layout / production line placement | [game.js](../../game.js#L2244-L2334) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
+| Core combat pipeline | [game.js](../../game.js#L5918-L6961) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `cleanupKills` |
+| Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L7107-L8822) | big menu, restartSimulationPartial, talents UI wiring |
+| World render | [game.js](../../game.js#L9339-L11278) | `draw()`, supercomputer, board, tanks, projectiles, HUD world overlay |
+| Step tail / loop / boot | [game.js](../../game.js#L11425-L11885) | `stepSupercomputer`, `loop`, `boot` |
 
-Внутри `boot()` (строка ~10670):
-| Строка | Присвоение | Контекст |
+## Функциональное оглавление
+
+### Bootstrap / state / runtime API
+| Функция | Строки | Назначение |
 |---|---|---|
-| ~10680 | `GameApi.Balance.CannonUpgrades = CannonUpgradesBalance` | повторное, после загрузки JSON |
+| `computePowerTier()` | [game.js](../../game.js#L113-L125) | Power-tier helper |
+| `createInitialState()` | [game.js](../../game.js#L454-L514) | Стартовое состояние мира |
+| `getDamagePoints()` / `applyCannonUpgrade()` | [game.js](../../game.js#L572-L693) | Damage points и апгрейды |
+| `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
 
----
+### Layout / world init
+| Функция | Строки | Назначение |
+|---|---|---|
+| `initBoard()` | [game.js](../../game.js#L2244-L2334) | Геометрия карты, fence, supercomputer, production line layout |
+| `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
 
-## 3. Все top-level функции
+### Combat / cleanup hooks
+| Функция | Строки | Назначение |
+|---|---|---|
+| `restoreFullState()` | [game.js](../../game.js#L4179-L4580) | Полное восстановление сейва / post-restore sync |
+| `stepZombies()` | [game.js](../../game.js#L5918-L6166) | Zombie AI / movement / fence interaction |
+| `stepTanks()` | [game.js](../../game.js#L6167-L6538) | Танки, таргетинг, стрельба |
+| `spawnProjectile()` | [game.js](../../game.js#L6539-L6638) | Projectile pool / init |
+| `impactAt()` | [game.js](../../game.js#L6639-L6960) | Impact effects / damage application |
+| `cleanupKills()` | [game.js](../../game.js#L6961-L7106) | Награды за убийство, XP, conveyor work trigger |
 
-### Инициализация / Boot
-| Строка | Функция |
-|---|---|
-| 99 | `RuntimeTasks.install()` |
-| 6998 | `initBigMainMenu()` |
-| 10586 | `initDebugPanel()` |
-| 10625 | `boot()` — async |
-| 10401 | `scheduleMainLoop()` |
+### UI / reset / menus
+| Функция | Строки | Назначение |
+|---|---|---|
+| `setBigMenuOpen()` | [game.js](../../game.js#L7107-L7462) | Big menu open/close wiring |
+| `initBigMainMenu()` | [game.js](../../game.js#L7463-L7741) | Root menu event wiring |
+| `restartSimulationPartial()` | [game.js](../../game.js#L7742-L7760) | Partial restart orchestration |
+| `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization |
+| `resetGameState()` | [game.js](../../game.js#L7871-L8174) | Full reset |
+| `updateTalentUI()` | [game.js](../../game.js#L8822-L9338) | Talents DOM refresh / HUD slots |
 
-### Состояние / State
-| Строка | Функция |
-|---|---|
-| 182 | `computePowerTier(level)` |
-| 192 | `createFallbackCannonUpgrades(count)` |
-| 216 | `sanitizeCannonUpgradeRow(row, index)` |
-| 235 | `normalizeCannonUpgradesConfig(raw)` |
-| 274 | `getCannonUpgradeConfig()` |
-| 278 | `getCannonUpgradeRow(level)` |
-| 485 | `createInitialState(options)` |
-| 601 | (inline) `state = createInitialState()` |
-| 607+ | `normalizeTotalDamageDealtRaw()`, `ensureDamageProgressState()`, `ensurePlayerDamagePointsState()` |
-| 650+ | `getDamagePoints()`, `debugAdjustDamagePoints()` |
-| 680+ | `getCannonUpgradeStepCost()`, `getCannonUpgradeTotalCost()`, `applyCannonUpgrade()` |
-| 787 | `getComputerState()` |
-| 810 | `getComputerLevel()` |
-| 872 | `resolveGroundStampsSeed()` |
-| 885 | `resolveDecorSeed()` |
-| 890 | `ensureMapSeedsState()` |
-| 912 | `isDebugPanelEnabled()` |
-| 7283 | `resetGameState(options)` |
-| 7323 | `buildPreRetryPayload(currentState)` |
-| 7506 | `applyCriticalRestartPostLoad()` |
+### Render / world draw
+| Функция | Строки | Назначение |
+|---|---|---|
+| `draw()` | [game.js](../../game.js#L9339-L9398) | Main render orchestrator |
+| `drawBackground()` / `drawTankTrack()` | [game.js](../../game.js#L9490-L9568) | Фон и track |
+| `drawSupercomputerSpriteClip()` | [game.js](../../game.js#L9699-L9724) | Root sprite + animation effects |
+| `drawSupercomputerHpBar()` / `drawSupercomputerHpBarOverlay()` | [game.js](../../game.js#L9725-L9755) | Финальный HP overlay |
+| `drawSupercomputer()` | [game.js](../../game.js#L9774-L9794) | Root supercomputer draw |
+| `renderFenceHpBars()` | [game.js](../../game.js#L10331-L10350) | Fence HP bars поверх зомби/трупов |
+| `drawBoard()` | [game.js](../../game.js#L10460-L10520) | Hangar cells / board |
+| `drawTankSlot()` / `drawTankIconWithStampReveal()` | [game.js](../../game.js#L10521-L10585) | Hangar slot visuals |
+| `drawProjectiles()` | [game.js](../../game.js#L11032-L11073) | Projectiles |
+| `drawDrones()` | [game.js](../../game.js#L10152-L10330) | Drone render |
 
-### Settings / Audio
-| Строка | Функция |
-|---|---|
-| ~1010 | `loadSettings()` |
-| ~1020 | `saveSettings()` |
-| ~1030 | `applyAudioSettings()` |
-| 1070+ | `playSfx(name)` |
-| ~1180 | `playLoopSfx(name)` |
-| ~1210 | `stopLoopSfx(name)` |
-| ~1600 | `getVolume(channel)` |
-| ~1610 | `setVolume(channel, value, unit)` |
-| ~1630 | `syncVolumeUIFromSettings()` |
-| ~1640 | `updateMenuVolumes()` |
+### Loop / boot
+| Функция | Строки | Назначение |
+|---|---|---|
+| `stepSupercomputer()` | [game.js](../../game.js#L11425-L11459) | Supercomputer state tick |
+| `loop()` | [game.js](../../game.js#L11460-L11713) | Step + draw + runtime sync |
+| `boot()` | [game.js](../../game.js#L11714-L11885) | Загрузка JSON, sprites, bootstrap controllers |
 
-### i18n
-| Строка | Функция |
-|---|---|
-| ~1695 | `getI18n()` |
-| ~1700 | `getCurrentLang()` |
-| ~1705 | `t(key, params)` |
-| ~1720 | `getTankWordKey()` |
-| ~1730 | `bulkBuyLabel(count)` |
-| ~1740 | `setLanguage(lang)` |
-| ~1750 | `applyTranslations()` |
+## Горячие зоны от 2026-03-06
+- `SupercomputerSprites` → `ProductionLineRender` wiring: [game.js](../../game.js#L1869-L1875)
+- Layout sync production line к суперкомпьютеру: [game.js](../../game.js#L2314-L2328)
+- Kill-driven conveyor work trigger: [game.js](../../game.js#L5908-L5913)
+- Draw order + финальный HP overlay: [game.js](../../game.js#L9339-L9398)
+- Root supercomputer effects / hp overlay helpers: [game.js](../../game.js#L9699-L9794)
 
-### Canvas / Layout
-| Строка | Функция |
-|---|---|
-| ~2020 | `applyBalScale()` |
-| ~2040 | `resizeCanvas()` |
-| 2080 | `initBoard()` |
-| 2200 | `initDecors()` |
-| ~2460 | `buildBackground()` |
-| ~2490 | `rebuildGroundLayer()` |
-
-### World Events
-| Строка | Функция |
-|---|---|
-| ~2540 | `getWorldEventsAttackCfg()` |
-| ~2560 | `getWeatherCfg()` |
-| ~2600 | `processWeatherLightning(dt)` |
-| ~2650 | `isZombieAttackModeActive()` |
-| ~2700 | `updateWorldEvents(dt)` |
-| ~2800 | `drawWeather()` |
-
-### Экономика / Покупка
-| Строка | Функция |
-|---|---|
-| 2840 | `makeTank(level, onTrack = false, options = null)` |
-| 2860 | `addDron(level)` |
-| 2870 | `recordTankLevel(level)` |
-| 2880 | `buyTankLevel()` |
-| 2890 | `baseBuyPrice(level)` |
-| 2910 | `buyTankCost(level)` |
-| 2920 | `bumpBuyPrice()` |
-| 3100 | `calculateAffordableBuyCount()` |
-| 3120 | `getBulkBuyPlan()` |
-| 3160 | `performTankPurchaseOnce()` |
-| 3200 | `tryBuyTank()` |
-| 3220 | `tryBuyBulk()` |
-
-### Achievements
-| Строка | Функция |
-|---|---|
-| 2980 | `ensureAchievementsState()` |
-| 3000 | `processAchievementProgress()` |
-| 7576 | `getAchievementDefinitions()` |
-| 7581 | `getAchievementById(id)` |
-| 7588 | `ensureAchievementsModalController()` |
-| 7601 | `renderAchievementsList()` |
-| 7619 | `openAchievementsModal()` |
-| 7629 | `closeAchievementsModal()` |
-| 7636 | `closeAchievementPopup()` |
-| 7643 | `maybeShowNextAchievementPopup()` |
-
-### Merge / Auto-Merge
-| Строка | Функция |
-|---|---|
-| 3250 | `performMerge(fromIndex, toIndex, opts)` |
-| 3350 | `mergeCells(fromIndex, toIndex)` |
-| 3400 | `mergeAutoPair(pairA, pairB)` |
-| 7409 | `refreshAutoMergeButton()` |
-| 7424 | `runAutoMergeClick()` |
-
-### Боевые формулы
-| Строка | Функция |
-|---|---|
-| 3450 | `incomeMult()` |
-| 3460 | `speedMult()` |
-| 3470 | `coinsForShot()` |
-| 3480 | `coinsForKill(zombieLevel)` |
-| 3490 | `tankStats(level)` |
-
-### XP / Уровни
-| Строка | Функция |
-|---|---|
-| 3520 | `xpNeededForLevel(level)` |
-| 3540 | `levelGoldReward(level)` |
-| 3560 | `onComputerLevelChanged()` |
-| ~3580 | `grantXP(amount)` |
-| ~3590 | `acceptLevelReward()` |
-
-### Уведомления
-| Строка | Функция |
-|---|---|
-| 3620 | `showCenterNotification(text, duration)` |
-| 3635 | `updateCenterNotification()` |
-
-### Таланты
-| Строка | Функция |
-|---|---|
-| 3650 | `initTalentDefs()` — создаёт 51 талант |
-| 3870 | `baseMods()` |
-| 3880 | `computeModsFromApplied()` |
-| 3900 | `getMods()` |
-| 3920 | `openTalents()` |
-| 3930 | `closeTalents()` |
-| 3940 | `canSelectTalent(index)` |
-| 3960 | `applyTalentSelections()` |
-| 3975 | `canUseActive(branch)` |
-| 3980 | `useActiveAbility(branch)` |
-| 3990 | `activateTimedBoost(kind, durationSec)` |
-| 7690 | `ensureTalentUI()` — построение DOM дерева талантов |
-| 7815 | `resetBranchPending(branch)` |
-| 7822 | `drawTalentEdges(branch)` |
-| 7871 | `updateTalentUI()` |
-| 7942 | `updateStageAbilitySlots()` |
-
-### Save / Load
-| Строка | Функция |
+## Связанные map-файлы
+- `docs/ai/SPRITE_LOADERS_MAP.md`
+- `docs/ai/SUPERCOMPUTER_MENU_MAP.md`
+- `docs/ai/HANGAR_CHIPS_UI_MAP.md`
+- `docs/ai/STYLE_CSS_MAP.md`
 |---|---|
 | 4000 | `saveProgress()` |
 | 4030 | `getSavedProgress()` |

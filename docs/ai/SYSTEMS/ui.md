@@ -3,6 +3,7 @@
 ## Где править
 - Разметка: `index.html`
 - Логика UI: `src/ui/*`
+- Большие карты: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`
 - Big menu runtime: `src/ui/bigMenuRuntime.js`
 - Инициализация: `src/core/bootstrap.js`
 - Critical modal: `src/ui/criticalModal.js`
@@ -47,6 +48,7 @@
 - **Создать чип (assemble)**: игрок кладёт 3 фрагмента в слоты → получает целый чип. Кликабельны только фрагменты.
   - **Валидация фрагментов**: `_canAddFragment(fragId)` проверяет допустимость добавления: запрещены тройки одинаковых фрагментов, максимум 1 спецмод (id ≥ 10). Фрагменты в инвентаре подсвечиваются: зелёным (`.chipCraftInvItem--canAdd`) если можно добавить, красным (`.chipCraftInvItem--cantAdd`) если нельзя.
   - **Превью результата**: `_previewAssembleResult()` показывает живой предпросмотр итогового чипа при заполнении всех 3 слотов. Все 3 слота + стрелка + чип результата расположены **в одну горизонтальную строку** внутри `.chipCraftSlotRow--withResult`. Между слотами — разделители `.chipCraftSlotSep` (текст «+»); после третьего слота — разделитель `.chipCraftSlotSep--arrow` (символ «⇒», зелёный). Если 3 слота не заполнены — на месте результата отображается пустой слот `.chipCraftSlot--resultSlot`. При заполнении — `chipCraftResultChip` содержит composed SVG (`chipCraftResultIcon`) и метку `chipCraftResultLabel`. **Классы `chipCraftResultPreview` и `chipCraftResultArrow` удалены.**
+	- **Future chip frame**: «будущий» чип получает **отдельную** зелёную dashed-рамку контейнера `.chipCraftResultChip--future`; сам SVG остаётся в своей красной/жёлтой семантике и не перекрашивается. Placeholder-слот `.chipCraftSlot--resultSlot` остаётся отдельным muted-состоянием. Код: `src/ui/hangarChipsUI.js` (`renderChipCraftPanel`), CSS: `style.css` (`.chipCraftResultChip--future`, `.chipCraftSlot--resultSlot`).
 - Drop-зона: 3 слота для элементов, кнопка «×» для снятия. Кнопка действия (Execute) становится активной при заполненных слотах в правильном режиме.
 - **Фрагменты SVG**: иконки фрагментов в инвентаре рендерятся с размером `22px` (через `_fragmentSvgUp`).
 - **Распылить (Pulverize / Dust mode)**: кнопка «Распылить» (`chipCraftDustBtn`) в нижней панели (`chipCraftBottomBar`) под сеткой инвентаря. При нажатии:

@@ -4491,6 +4491,15 @@ input, select, textarea, button {
   gap:4px;
   flex-shrink:0;
 }
+.chipCraftResultChip--future{
+  min-width:80px;
+  min-height:80px;
+  padding:6px 8px;
+  border:1px dashed rgba(74,246,38,.7);
+  border-radius:6px;
+  background:rgba(40,36,32,.2);
+  box-shadow:inset 0 0 0 1px rgba(74,246,38,.08), 0 0 8px rgba(74,246,38,.08);
+}
 .chipCraftSlot--resultSlot{
   border-style:dashed;
   border-color:rgba(74,246,38,.25);

@@ -2338,7 +2338,7 @@
             var resultModIds = assemblePreview.modIds || [];
             var resultModsAttr = resultModIds.join(',');
             var resultColorAttr = assemblePreview.chipColor || '';
-            html += '<div class="chipCraftResultChip" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '">';
+            html += '<div class="chipCraftResultChip chipCraftResultChip--future" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '">';
             html += chipSvgComposed(60, 54, resultColor, resultModIds, 'chipCraftResultIcon', 3);
             var resultChipName = assemblePreview.sourceComboKey || '';
             if (resultModIds.length) {

@@ -8,6 +8,7 @@
 - `assets/chips.json` (спрайты, эффекты и звуки чип-модификаторов ангара)
 - `assets/balance/talentTree_v2.json` (PACK 1 baseline для data-driven дерева талантов v2)
 - `assets/ui/icons/talents/*.png`, `assets/ui/icons/status/*.png` (stable icon keys; placeholder допустим)
+- Для больших loader-contract файлов см. `docs/ai/SPRITE_LOADERS_MAP.md`
 
 ## Правила
 - Новые игровые параметры добавлять в JSON, не хардкодить в JS.
@@ -39,6 +40,7 @@
 	- `effects` — массив описателей эффекта. Допустимы:
 		- строка-пресет (например `"float"`),
 		- объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
+- Важно: `float` больше не «один на весь суперкомпьютер» — у каждого состояния можно задать свой preset/override в `animations.<state>.effects[]`. Например `idle.float` и `work.float` могут отличаться по `amplitudeY`, `frequencyHz`, `phase`.
 - Поддерживаемые preset-id в runtime: `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
 - Новые optional-блоки `conveyor` и `storageCell` описывают части production line рядом с суперкомпьютером:
 	- поля части: `atlas`, `offset`, `anchor`, `animations`;
@@ -51,6 +53,7 @@
 	- нормализация выполняется в `src/render/spriteLoaders.js`;
 	- runtime-логика чтения анимаций и их длительностей — в `src/mechanics/supercomputer.js`;
 	- если `conveyor.atlas`/`storageCell.atlas` совпадают с root `atlas`, loader переиспользует уже загруженное изображение без отдельной копии.
+	- root `hpBar` остаётся частью data-contract, но рисуется отдельным финальным overlay в `game.js`, а не вместе с root sprite.
 
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.

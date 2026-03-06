@@ -5905,6 +5905,12 @@ function startZombieDying(z){
   const baseXp = 9 * Math.pow(2, lvl - 1);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
   grantXP(Math.floor(baseXp * mods.xpMul * activeMul * BAL.zombieKillXpMul));
+  {
+    const _PLR = window.Game && window.Game.ProductionLineRender;
+    if (_PLR && typeof _PLR.triggerConveyorWork === 'function') {
+      _PLR.triggerConveyorWork();
+    }
+  }
   const p = zombiePos(z);
   burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
 }
@@ -9389,6 +9395,7 @@ function draw(){
     const previewDt = Math.min(0.033, 1/60);
     window.Game.ZombieAnimPreview.renderPreview(ctx, viewSize.w, viewSize.h, previewDt);
   }
+  drawSupercomputerHpBarOverlay();
 }
 
 function drawZombieAttackOverlay(){
@@ -9740,6 +9747,13 @@ function drawSupercomputerHpBar(sc, hpBarCfg){
   ctx.restore();
 }
 
+function drawSupercomputerHpBarOverlay(){
+  const sc = getComputerState();
+  if (!sc) return;
+  const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
+  drawSupercomputerHpBar(sc, config && config.hpBar ? config.hpBar : null);
+}
+
 function drawSupercomputerFallback(sc){
   ctx.save();
   ctx.translate(sc.x, sc.y);
@@ -9776,8 +9790,6 @@ function drawSupercomputer(){
   } else {
     drawSupercomputerFallback(sc);
   }
-
-  drawSupercomputerHpBar(sc, config && config.hpBar ? config.hpBar : null);
 }
 
 function getBoostEffectUntil(def){

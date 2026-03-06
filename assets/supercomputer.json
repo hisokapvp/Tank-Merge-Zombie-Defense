@@ -30,7 +30,12 @@
       "loop": true,
       "scale": 0.5,
       "effects": [
-        "float",
+        {
+          "preset": "float",
+          "amplitudeY": 0.1,
+          "frequencyHz": 0.9,
+          "phase": 0.15
+        },
         {
           "preset": "sway",
           "angleDeg": 150
@@ -47,10 +52,11 @@
       "loop": true,
       "scale": 0.5,
       "effects": [
-        "float",
         {
-          "preset": "sway",
-          "angleDeg": 0.2
+          "preset": "float",
+          "amplitudeY": 0.25,
+          "frequencyHz": 10,
+          "phase": 1
         }
       ]
     },
@@ -67,8 +73,8 @@
         "vibrationStrong",
         {
           "preset": "pulse",
-          "scaleMul": 0.05,
-          "frequencyHz": 3.1
+          "scaleMul": 0.01,
+          "frequencyHz": 10
         }
       ]
     },
@@ -84,12 +90,12 @@
       "effects": [
         {
           "preset": "sway",
-          "angleDeg": 1.8,
-          "amplitudeX": 1.4
+          "angleDeg": 11.8,
+          "amplitudeX": 11.4
         },
         {
           "preset": "vibration",
-          "amplitudeY": 0.8
+          "amplitudeY": 10.8
         }
       ]
     },
