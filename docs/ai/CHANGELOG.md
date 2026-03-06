@@ -1,6 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-06
+- **Supercomputer render: расширена схема `assets/supercomputer.json` и production line runtime**
+  - `assets/supercomputer.json`: для root-анимаций добавлены per-animation `scale` и `effects`; поддержаны preset-эффекты `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
+  - Добавлены optional-секции `conveyor` и `storageCell` с собственными `atlas`/`offset`/`animations`; legacy alias `storage` и fallback-поведение сохранены.
+  - `src/render/spriteLoaders.js`: `SupercomputerSprites` нормализует part-конфиги, умеет возвращать `getAtlasImage(part)` и `getPartConfig(part)`.
+  - `src/render/productionLineRender.js`: layout и hitbox production line теперь зависят от конфигурации частей, conveyor поддерживает состояния `idle/work`, storage cell — `idle/hover`.
+  - `game.js`: draw суперкомпьютера применяет animation-level эффекты/scale и синхронизирует hover/state production line через отдельный runtime-контракт.
+
 - **Механика: Авто-апгрейд modIds новых чипов**
   - Новая функция `applyTechUpgradesToModIds(modIds)` в `hangarChips.js`: при получении нового чипа его modIds автоматически обновляются до максимального разблокированного уровня по TECH_TREE.
   - `addPlayerChip()` в `hangarChipsUI.js` вызывает `applyTechUpgradesToModIds` перед добавлением в инвентарь.

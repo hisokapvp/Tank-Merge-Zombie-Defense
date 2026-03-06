@@ -32,6 +32,18 @@
 - Приоритет выбора кадра: `uiIcon.frame` -> `uiIcon.frameId` -> `uiFrameId` -> fallback `sideTop`.
 - Приоритет выбора атласа: `uiIcon.atlas` -> `uiAtlas` -> `levels[].atlas` -> root `atlas`.
 
+## assets/supercomputer.json
+
+- `animations.*.scale` — optional-множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
+- `animations.*.effects` — optional-массив визуальных эффектов для конкретной анимации:
+	- строковый preset (`"float"`, `"pulse"`, `"sway"`, `"wobble"`, `"vibration"`, `"vibrationStrong"`),
+	- либо объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
+- `conveyor` — optional-конфиг ленточного конвейера рядом с суперкомпьютером: `atlas`, `offset`, `anchor`, `animations.idle`, `animations.work`.
+- `storageCell` — optional-конфиг ячейки-склада: `atlas`, `offset`, `anchor`, `animations.idle`, `animations.hover`.
+- Для legacy-конфигов сохраняется обратная совместимость:
+	- отсутствие `conveyor`/`storageCell` оставляет старую fallback-геометрию и fallback-отрисовку;
+	- legacy-ключ `storage` при загрузке трактуется как `storageCell`.
+
 ## src/config/layoutTuning.js
 
 - `weaponIconW` — ширина превью оружия в UI суперкомпьютера (включая `canvas` в таблице `Оружия`).

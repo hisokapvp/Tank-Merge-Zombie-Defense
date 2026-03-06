@@ -32,6 +32,26 @@
 - Нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.ui.onTrackIconOpacity`, clamp `0..1`).
 - Fallback: при отсутствии или невалидном значении runtime использует `0.45`.
 
+## `assets/supercomputer.json` (боевой рендер + production line)
+- Верхний уровень по-прежнему описывает основной спрайт суперкомпьютера: `atlas`, `offsetY`, `anchor`, `renderScale`, `hpBar`, `boostIcons`, `glitch`, `stats`, `animations`.
+- Для `animations.{idle,work,glitch,buildTank,destroy}` сохранены legacy-поля клипа (`x/y/w/h/frames/frameRateFps/loop`) и добавлены:
+	- `scale` — дополнительный множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
+	- `effects` — массив описателей эффекта. Допустимы:
+		- строка-пресет (например `"float"`),
+		- объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
+- Поддерживаемые preset-id в runtime: `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
+- Новые optional-блоки `conveyor` и `storageCell` описывают части production line рядом с суперкомпьютером:
+	- поля части: `atlas`, `offset`, `anchor`, `animations`;
+	- canonical-состояния: для `conveyor` — `idle`/`work`, для `storageCell` — `idle`/`hover`.
+- Backward compatibility:
+	- отсутствие `scale` или `effects` нормализуется в `1` и `[]`;
+	- отсутствие `conveyor`/`storageCell` оставляет legacy layout и fallback-отрисовку в `src/render/productionLineRender.js`;
+	- alias `storage` при загрузке принимается как legacy-синоним `storageCell`.
+- Loader-контракт:
+	- нормализация выполняется в `src/render/spriteLoaders.js`;
+	- runtime-логика чтения анимаций и их длительностей — в `src/mechanics/supercomputer.js`;
+	- если `conveyor.atlas`/`storageCell.atlas` совпадают с root `atlas`, loader переиспользует уже загруженное изображение без отдельной копии.
+
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.
 - Формат строки (backward compatible):

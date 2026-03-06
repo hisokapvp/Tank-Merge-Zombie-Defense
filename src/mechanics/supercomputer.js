@@ -44,6 +44,8 @@
       frames: 1,
       frameRateFps: 1,
       loop: true,
+      scale: 1,
+      effects: [],
     };
     if (!config || !config.animations) return fallback;
     var anim = config.animations[stateName] || config.animations.idle || config.animations.work;
@@ -56,6 +58,8 @@
       frames: Math.max(1, Math.floor(toPositiveNumber(anim.frames, fallback.frames))),
       frameRateFps: toPositiveNumber(anim.frameRateFps, fallback.frameRateFps),
       loop: anim.loop !== false,
+      scale: toPositiveNumber(anim.scale, fallback.scale),
+      effects: Array.isArray(anim.effects) ? anim.effects.slice() : [],
     };
   }
 

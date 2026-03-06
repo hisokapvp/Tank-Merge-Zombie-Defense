@@ -951,6 +951,14 @@ let autoMergeBusyTimeout = null;
 let mergeFxQueue = [];
 let mergeFxQueueTimer = null;
 const SUPERCOMPUTER_FALLBACK_BOUNDS = { w: 68, h: 62, anchorX: 0.5, anchorY: 42 / 62 };
+const SUPERCOMPUTER_EFFECT_PRESETS = {
+  vibration: { kind: 'shake', amplitudeX: 2.2, amplitudeY: 1.4, frequencyHz: 14 },
+  vibrationStrong: { kind: 'shake', amplitudeX: 3.4, amplitudeY: 2.4, frequencyHz: 18 },
+  sway: { kind: 'sway', angleDeg: 1.6, amplitudeX: 0.9, frequencyHz: 1.15 },
+  wobble: { kind: 'sway', angleDeg: 2.3, amplitudeX: 1.5, frequencyHz: 1.8 },
+  float: { kind: 'bob', amplitudeY: 2.8, frequencyHz: 1.25 },
+  pulse: { kind: 'pulse', scaleMul: 0.035, frequencyHz: 2.1 },
+};
 const supercomputerHudRuntime = {
   activeDefs: [],
   activeRemainingSec: [],
@@ -1852,10 +1860,20 @@ const SupercomputerSprites = spriteLoaders && spriteLoaders.SupercomputerSprites
   ready: false,
   error: 'SpriteLoaders module is unavailable',
   atlasImg: null,
+  atlasImages: null,
   config: null,
   async load() {},
   getAnimation() { return null; },
+  getAtlasImage() { return null; },
+  getPartConfig() { return null; },
 };
+
+{
+  const productionLineRender = window.Game && window.Game.ProductionLineRender;
+  if (productionLineRender && typeof productionLineRender.setSpriteSource === 'function') {
+    productionLineRender.setSpriteSource(SupercomputerSprites);
+  }
+}
 
 const BoostIconsSprites = spriteLoaders && spriteLoaders.BoostIconsSprites ? spriteLoaders.BoostIconsSprites : {
   ready: false,
@@ -2299,10 +2317,13 @@ function initBoard(){
     const _PLR = window.Game && window.Game.ProductionLineRender;
     if (_PLR && typeof _PLR.updateLayout === 'function') {
       const scSprite = SupercomputerSprites && SupercomputerSprites.config;
-      const scW = (scSprite && scSprite.animations && scSprite.animations.idle)
-        ? scSprite.animations.idle.w * (scSprite.renderScale || 1) * balScale
-        : 68;
-      _PLR.updateLayout(sc.x, sc.y, scW);
+      const scAnim = SupercomputerSprites && SupercomputerSprites.getAnimation
+        ? SupercomputerSprites.getAnimation(resolveSupercomputerVisualStateName(sc))
+        : null;
+      const scScale = resolveSupercomputerAnimationScale(scSprite, scAnim);
+      const scW = scAnim && Number.isFinite(scAnim.w) ? scAnim.w * scScale : 68 * balScale;
+      const scH = scAnim && Number.isFinite(scAnim.h) ? scAnim.h * scScale : 62 * balScale;
+      _PLR.updateLayout(sc.x, sc.y, scW, scH, balScale);
     }
   }
   updateSupercomputerHudButtonPosition();
@@ -9009,10 +9030,9 @@ function supercomputerHitTest(x, y){
   const sc = getComputerState();
   if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return false;
   const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
-  const stateName = sc.state === 'idle' ? 'work' : sc.state;
+  const stateName = resolveSupercomputerVisualStateName(sc);
   const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
-  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
-  const scale = scaleCfg * balScale;
+  const scale = resolveSupercomputerAnimationScale(config, anim);
   let radius = 44 * balScale;
 
   if (config && config.hitbox && Number.isFinite(config.hitbox.r) && config.hitbox.r > 0) {
@@ -9050,6 +9070,10 @@ canvas.addEventListener('pointerdown', (e)=>{
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
+  {
+    const PLRender = window.Game && window.Game.ProductionLineRender;
+    if (PLRender && typeof PLRender.syncHoverAt === 'function') PLRender.syncHoverAt(p.x, p.y);
+  }
   if (isBlockingModalOpen()) return;
   if (DronesApi && typeof DronesApi.handlePointerDown === 'function') {
     const dronInput = DronesApi.handlePointerDown({
@@ -9138,6 +9162,10 @@ canvas.addEventListener('pointerdown', (e)=>{
 canvas.addEventListener('pointermove', (e)=>{
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
+  {
+    const PLRender = window.Game && window.Game.ProductionLineRender;
+    if (PLRender && typeof PLRender.syncHoverAt === 'function') PLRender.syncHoverAt(p.x, p.y);
+  }
   if (isLevelModalOpen()) {
     state.dragging = null;
     return;
@@ -9155,6 +9183,10 @@ canvas.addEventListener('pointermove', (e)=>{
 canvas.addEventListener('pointerup', (e)=>{
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
+  {
+    const PLRender = window.Game && window.Game.ProductionLineRender;
+    if (PLRender && typeof PLRender.syncHoverAt === 'function') PLRender.syncHoverAt(p.x, p.y);
+  }
   if (isLevelModalOpen()) {
     state.dragging = null;
     return;
@@ -9202,6 +9234,11 @@ canvas.addEventListener('pointerleave', ()=>{
   if (!state.crate.isHover) return;
   state.crate.isHover = false;
   if (state.crate.animState === 'hover') setCrateAnimationState(state.crate, 'idle', true);
+});
+
+canvas.addEventListener('pointerleave', ()=>{
+  const PLRender = window.Game && window.Game.ProductionLineRender;
+  if (PLRender && typeof PLRender.clearHover === 'function') PLRender.clearHover();
 });
 
 ui.buy.addEventListener('click', ()=> tryBuyTank());
@@ -9555,6 +9592,129 @@ function drawTankTrack(){
   ctx.restore();
 }
 
+function resolveSupercomputerVisualStateName(sc){
+  if (!sc || typeof sc.state !== 'string' || !sc.state) return 'idle';
+  return sc.state === 'idle' ? 'work' : sc.state;
+}
+
+function resolveSupercomputerAnimationScale(config, anim){
+  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
+  const animScale = Number.isFinite(anim && anim.scale) ? Math.max(0.05, anim.scale) : 1;
+  return scaleCfg * animScale * balScale;
+}
+
+function resolveSupercomputerAnimationFrameIndex(anim, elapsedSec){
+  const frames = Math.max(1, anim && Number.isFinite(anim.frames) ? anim.frames : 1);
+  const fps = Math.max(0.01, anim && Number.isFinite(anim.frameRateFps) ? anim.frameRateFps : 1);
+  const duration = frames / fps;
+  if (duration <= 0) return 0;
+  if (anim && anim.loop === false) {
+    return Math.min(frames - 1, Math.floor(Math.max(0, elapsedSec) * fps));
+  }
+  return Math.floor((Math.max(0, elapsedSec) % duration) * fps) % frames;
+}
+
+function resolveSupercomputerEffectEntry(rawEffect){
+  if (typeof rawEffect === 'string' && rawEffect) {
+    return { preset: rawEffect };
+  }
+  if (!rawEffect || typeof rawEffect !== 'object') return null;
+  return rawEffect;
+}
+
+function mergeSupercomputerEffectPreset(effect){
+  const presetName = typeof effect.preset === 'string' && effect.preset
+    ? effect.preset
+    : (typeof effect.type === 'string' ? effect.type : '');
+  const preset = presetName && SUPERCOMPUTER_EFFECT_PRESETS[presetName]
+    ? SUPERCOMPUTER_EFFECT_PRESETS[presetName]
+    : null;
+  if (!preset) return effect;
+  return { ...preset, ...effect, kind: effect.kind || preset.kind || effect.type || presetName };
+}
+
+function buildSupercomputerEffectTransform(anim, timeSec, baseScale){
+  const effects = Array.isArray(anim && anim.effects) ? anim.effects : [];
+  let offsetX = 0;
+  let offsetY = 0;
+  let rotationRad = 0;
+  let scaleX = 1;
+  let scaleY = 1;
+
+  for (let i = 0; i < effects.length; i++) {
+    const rawEffect = resolveSupercomputerEffectEntry(effects[i]);
+    if (!rawEffect) continue;
+    const effect = mergeSupercomputerEffectPreset(rawEffect);
+    const kind = typeof effect.kind === 'string' && effect.kind
+      ? effect.kind
+      : (typeof effect.type === 'string' ? effect.type : (typeof effect.preset === 'string' ? effect.preset : ''));
+    const frequencyHz = Number.isFinite(effect.frequencyHz) ? effect.frequencyHz : 1;
+    const phase = timeSec * frequencyHz * Math.PI * 2 + (Number.isFinite(effect.phase) ? effect.phase : 0);
+
+    if (Number.isFinite(effect.offsetX)) offsetX += effect.offsetX * baseScale;
+    if (Number.isFinite(effect.offsetY)) offsetY += effect.offsetY * baseScale;
+
+    if (kind === 'shake' || kind === 'vibration' || kind === 'vibrationStrong') {
+      const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+      const amplitudeY = Number.isFinite(effect.amplitudeY) ? effect.amplitudeY : amplitudeX;
+      offsetX += Math.sin(phase) * amplitudeX * baseScale;
+      offsetY += Math.cos(phase * 1.37) * amplitudeY * baseScale;
+      continue;
+    }
+
+    if (kind === 'bob' || kind === 'float' || kind === 'hover') {
+      const amplitudeY = Number.isFinite(effect.amplitudeY) ? effect.amplitudeY : 0;
+      const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+      offsetY += Math.sin(phase) * amplitudeY * baseScale;
+      offsetX += Math.cos(phase * 0.5) * amplitudeX * baseScale;
+      continue;
+    }
+
+    if (kind === 'sway' || kind === 'wobble') {
+      const angleDeg = Number.isFinite(effect.angleDeg) ? effect.angleDeg : 0;
+      const amplitudeX = Number.isFinite(effect.amplitudeX) ? effect.amplitudeX : 0;
+      rotationRad += Math.sin(phase) * angleDeg * Math.PI / 180;
+      offsetX += Math.sin(phase) * amplitudeX * baseScale;
+      continue;
+    }
+
+    if (kind === 'pulse') {
+      const scaleMul = Number.isFinite(effect.scaleMul) ? effect.scaleMul : 0;
+      const pulse = 1 + Math.sin(phase) * scaleMul;
+      scaleX *= pulse;
+      scaleY *= pulse;
+    }
+  }
+
+  return { offsetX, offsetY, rotationRad, scaleX, scaleY };
+}
+
+function drawSupercomputerSpriteClip(sc, config, anim, elapsedSec){
+  if (!(SupercomputerSprites.ready && SupercomputerSprites.atlasImg && anim)) return false;
+  const anchor = config && config.anchor ? config.anchor : { x: 0.5, y: 0.75 };
+  const baseScale = resolveSupercomputerAnimationScale(config, anim);
+  const frameIndex = resolveSupercomputerAnimationFrameIndex(anim, elapsedSec);
+  const fx = buildSupercomputerEffectTransform(anim, performance.now() * 0.001, baseScale);
+
+  ctx.save();
+  ctx.translate(sc.x + fx.offsetX, sc.y + fx.offsetY);
+  if (fx.rotationRad) ctx.rotate(fx.rotationRad);
+  ctx.scale(baseScale * fx.scaleX, baseScale * fx.scaleY);
+  ctx.drawImage(
+    SupercomputerSprites.atlasImg,
+    anim.x + frameIndex * anim.w,
+    anim.y,
+    anim.w,
+    anim.h,
+    -anim.w * (Number.isFinite(anchor.x) ? anchor.x : 0.5),
+    -anim.h * (Number.isFinite(anchor.y) ? anchor.y : 0.75),
+    anim.w,
+    anim.h
+  );
+  ctx.restore();
+  return true;
+}
+
 function drawSupercomputerHpBar(sc, hpBarCfg){
   const barW = Number.isFinite(hpBarCfg && hpBarCfg.width) ? hpBarCfg.width * balScale : 92 * balScale;
   const barH = Number.isFinite(hpBarCfg && hpBarCfg.height) ? hpBarCfg.height * balScale : 8 * balScale;
@@ -9602,34 +9762,17 @@ function drawSupercomputer(){
   if (!sc) return;
 
   const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
-  const stateName = sc.state === 'idle' ? 'work' : sc.state;
+  const stateName = resolveSupercomputerVisualStateName(sc);
   const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
-  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
-  const scale = scaleCfg * balScale;
 
   if (SupercomputerSprites.ready && SupercomputerSprites.atlasImg && anim) {
-    const frames = Math.max(1, anim.frames || 1);
-    const fps = Math.max(0.01, anim.frameRateFps || 1);
-    const duration = frames / fps;
     var elapsed = Number.isFinite(sc.animElapsedSec) ? sc.animElapsedSec : 0;
-    if (sc.state === 'destroyed') elapsed = Math.max(0, duration - (1 / fps));
-    var frameIndex = 0;
-    if (duration > 0) {
-      if (anim.loop !== false) frameIndex = Math.floor((elapsed % duration) * fps) % frames;
-      else frameIndex = Math.min(frames - 1, Math.floor(elapsed * fps));
+    if (sc.state === 'destroyed') {
+      const fps = Math.max(0.01, anim.frameRateFps || 1);
+      const duration = Math.max(0, Math.max(1, anim.frames || 1) / fps);
+      elapsed = Math.max(0, duration - (1 / fps));
     }
-    const anchor = config && config.anchor ? config.anchor : { x: 0.5, y: 0.75 };
-    ctx.drawImage(
-      SupercomputerSprites.atlasImg,
-      anim.x + frameIndex * anim.w,
-      anim.y,
-      anim.w,
-      anim.h,
-      sc.x - anim.w * scale * anchor.x,
-      sc.y - anim.h * scale * anchor.y,
-      anim.w * scale,
-      anim.h * scale
-    );
+    drawSupercomputerSpriteClip(sc, config, anim, elapsed);
   } else {
     drawSupercomputerFallback(sc);
   }
@@ -9686,10 +9829,9 @@ function collectActiveSupercomputerBoosts(now){
 
 function resolveSupercomputerSpriteMetrics(sc){
   const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
-  const stateName = sc.state === 'idle' ? 'work' : sc.state;
+  const stateName = resolveSupercomputerVisualStateName(sc);
   const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
-  const scaleCfg = Number.isFinite(config && config.renderScale) ? Math.max(0.1, config.renderScale) : 1;
-  const scale = scaleCfg * balScale;
+  const scale = resolveSupercomputerAnimationScale(config, anim);
 
   let width = SUPERCOMPUTER_FALLBACK_BOUNDS.w * balScale;
   let height = SUPERCOMPUTER_FALLBACK_BOUNDS.h * balScale;
@@ -11412,6 +11554,12 @@ function loop(now){
       const _PL = window.Game && window.Game.ProductionLine;
       if (_PL && typeof _PL.step === 'function') {
         _PL.step(state, effDt);
+      }
+    }
+    {
+      const _PLR = window.Game && window.Game.ProductionLineRender;
+      if (_PLR && typeof _PLR.syncState === 'function') {
+        _PLR.syncState(state, effDt);
       }
     }
     if (DronesApi && typeof DronesApi.step === 'function') {

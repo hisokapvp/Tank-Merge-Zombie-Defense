@@ -44,6 +44,29 @@
 
     function normalizeAnimationClip(raw, fallback) {
       var src = raw && typeof raw === 'object' ? raw : {};
+      var rawEffects = Array.isArray(src.effects) ? src.effects : [];
+      var effects = [];
+      for (var e = 0; e < rawEffects.length; e++) {
+        var effectEntry = rawEffects[e];
+        if (typeof effectEntry === 'string' && effectEntry) {
+          effects.push({ preset: effectEntry });
+          continue;
+        }
+        if (effectEntry && typeof effectEntry === 'object') {
+          effects.push({
+            preset: typeof effectEntry.preset === 'string' ? effectEntry.preset : '',
+            type: typeof effectEntry.type === 'string' ? effectEntry.type : '',
+            amplitudeX: Number.isFinite(effectEntry.amplitudeX) ? effectEntry.amplitudeX : null,
+            amplitudeY: Number.isFinite(effectEntry.amplitudeY) ? effectEntry.amplitudeY : null,
+            angleDeg: Number.isFinite(effectEntry.angleDeg) ? effectEntry.angleDeg : null,
+            scaleMul: Number.isFinite(effectEntry.scaleMul) ? effectEntry.scaleMul : null,
+            frequencyHz: Number.isFinite(effectEntry.frequencyHz) ? effectEntry.frequencyHz : null,
+            phase: Number.isFinite(effectEntry.phase) ? effectEntry.phase : null,
+            offsetX: Number.isFinite(effectEntry.offsetX) ? effectEntry.offsetX : null,
+            offsetY: Number.isFinite(effectEntry.offsetY) ? effectEntry.offsetY : null,
+          });
+        }
+      }
       return {
         x: Number.isFinite(src.x) ? src.x : fallback.x,
         y: Number.isFinite(src.y) ? src.y : fallback.y,
@@ -52,6 +75,43 @@
         frames: Math.max(1, Math.floor(toPositiveNumber(src.frames, fallback.frames))),
         frameRateFps: toPositiveNumber(src.frameRateFps, fallback.frameRateFps),
         loop: src.loop !== false,
+        scale: toPositiveNumber(src.scale, Number.isFinite(fallback.scale) ? fallback.scale : 1),
+        effects: effects,
+      };
+    }
+
+    function normalizeSupercomputerPart(raw, fallbackAtlas, fallbackAnimationNames, fallbackClip) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      var animationsRaw = src.animations && typeof src.animations === 'object' ? src.animations : {};
+      var fallbackNames = Array.isArray(fallbackAnimationNames) && fallbackAnimationNames.length
+        ? fallbackAnimationNames
+        : ['idle'];
+      var animations = {};
+      var firstAnim = normalizeAnimationClip(animationsRaw[fallbackNames[0]], fallbackClip);
+
+      for (var i = 0; i < fallbackNames.length; i++) {
+        var animName = fallbackNames[i];
+        var fallbackName = fallbackNames[0];
+        var rawAnim = animationsRaw[animName] || animationsRaw[fallbackName];
+        animations[animName] = normalizeAnimationClip(rawAnim, i === 0 ? firstAnim : animations[fallbackName] || firstAnim);
+      }
+
+      return {
+        defined: !!(raw && typeof raw === 'object'),
+        atlas: typeof src.atlas === 'string' && src.atlas ? src.atlas : fallbackAtlas,
+        offset: src.offset && typeof src.offset === 'object'
+          ? {
+              x: Number.isFinite(src.offset.x) ? src.offset.x : 0,
+              y: Number.isFinite(src.offset.y) ? src.offset.y : 0,
+            }
+          : { x: 0, y: 0 },
+        anchor: src.anchor && typeof src.anchor === 'object'
+          ? {
+              x: Number.isFinite(src.anchor.x) ? src.anchor.x : 0.5,
+              y: Number.isFinite(src.anchor.y) ? src.anchor.y : 0.5,
+            }
+          : { x: 0.5, y: 0.5 },
+        animations: animations,
       };
     }
 
@@ -764,6 +824,7 @@
       ready: false,
       error: '',
       atlasImg: null,
+      atlasImages: null,
       config: null,
       load: async function () {
         try {
@@ -786,6 +847,36 @@
           var animationsRaw = data && data.animations && typeof data.animations === 'object' ? data.animations : {};
           var idleClip = normalizeAnimationClip(animationsRaw.idle || animationsRaw.work, fallbackClip);
           var workClip = normalizeAnimationClip(animationsRaw.work || animationsRaw.idle, idleClip);
+          var conveyorCfg = normalizeSupercomputerPart(data && data.conveyor, data && data.atlas ? data.atlas : 'decor.png', ['idle', 'work'], {
+            x: 0,
+            y: 0,
+            w: 80,
+            h: 22,
+            frames: 1,
+            frameRateFps: 1,
+            loop: true,
+            scale: 1,
+            effects: [],
+          });
+          var storageCfg = normalizeSupercomputerPart((data && (data.storageCell || data.storage)), data && data.atlas ? data.atlas : 'decor.png', ['idle', 'hover'], {
+            x: 0,
+            y: 0,
+            w: 28,
+            h: 28,
+            frames: 1,
+            frameRateFps: 1,
+            loop: true,
+            scale: 1,
+            effects: [],
+          });
+          var atlasImages = {
+            main: img,
+            conveyor: conveyorCfg.atlas === (data && data.atlas ? data.atlas : 'decor.png') ? img : await loadImage('assets/' + conveyorCfg.atlas),
+            storageCell: storageCfg.atlas === (data && data.atlas ? data.atlas : 'decor.png')
+              ? img
+              : (storageCfg.atlas === conveyorCfg.atlas ? null : await loadImage('assets/' + storageCfg.atlas)),
+          };
+          if (!atlasImages.storageCell) atlasImages.storageCell = atlasImages.conveyor;
 
           var glitchRaw = data && data.glitch && typeof data.glitch === 'object' ? data.glitch : {};
           var minLoops = Number.isFinite(glitchRaw.minLoops) ? Math.max(1, Math.floor(glitchRaw.minLoops)) : 1;
@@ -827,6 +918,8 @@
               buildTank: normalizeAnimationClip(animationsRaw.buildTank, idleClip),
               destroy: normalizeAnimationClip(animationsRaw.destroy, idleClip),
             },
+            conveyor: conveyorCfg,
+            storageCell: storageCfg,
             glitch: {
               chancePerSecond: Number.isFinite(glitchRaw.chancePerSecond) ? Math.max(0, glitchRaw.chancePerSecond) : 0,
               minLoops: minLoops,
@@ -837,18 +930,43 @@
           };
 
           this.atlasImg = img;
+          this.atlasImages = atlasImages;
           this.ready = true;
           this.error = '';
         } catch (e) {
           this.ready = false;
           this.atlasImg = null;
+          this.atlasImages = null;
           this.config = null;
           this.error = String(e);
         }
       },
-      getAnimation: function (stateName) {
-        if (!this.config || !this.config.animations) return null;
+      getAnimation: function (stateName, partName) {
+        if (!this.config) return null;
+        if (partName === 'conveyor') {
+          var conveyorAnimations = this.config.conveyor && this.config.conveyor.animations ? this.config.conveyor.animations : null;
+          if (!conveyorAnimations) return null;
+          return conveyorAnimations[stateName] || conveyorAnimations.idle || conveyorAnimations.work || null;
+        }
+        if (partName === 'storageCell' || partName === 'storage') {
+          var storageAnimations = this.config.storageCell && this.config.storageCell.animations ? this.config.storageCell.animations : null;
+          if (!storageAnimations) return null;
+          return storageAnimations[stateName] || storageAnimations.idle || storageAnimations.hover || null;
+        }
+        if (!this.config.animations) return null;
         return this.config.animations[stateName] || this.config.animations.idle || this.config.animations.work || null;
+      },
+      getAtlasImage: function (partName) {
+        if (!this.atlasImages) return this.atlasImg || null;
+        if (partName === 'conveyor') return this.atlasImages.conveyor || this.atlasImg || null;
+        if (partName === 'storageCell' || partName === 'storage') return this.atlasImages.storageCell || this.atlasImg || null;
+        return this.atlasImages.main || this.atlasImg || null;
+      },
+      getPartConfig: function (partName) {
+        if (!this.config) return null;
+        if (partName === 'conveyor') return this.config.conveyor || null;
+        if (partName === 'storageCell' || partName === 'storage') return this.config.storageCell || null;
+        return this.config;
       },
     };
 

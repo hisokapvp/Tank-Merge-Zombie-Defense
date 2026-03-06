@@ -1,5 +1,5 @@
 version: 2
-updated_at: 2026-02-15
+updated_at: 2026-03-06
 entrypoints:
   boot:
     file: game.js
@@ -19,6 +19,8 @@ systems:
       - src/render/canvasRoot.js
       - src/render/groundGen.js
       - src/render/groundLayer.js
+      - src/render/productionLineRender.js
+      - src/render/spriteLoaders.js
       - src/render/layout/hangarLayout.js
       - src/config/worldEvents.js
       - src/perf/mobileMode.js
@@ -54,6 +56,7 @@ systems:
       - assets/tanks.json
       - assets/zombies.json
       - assets/fence.json
+      - assets/supercomputer.json
       - assets/decor.json
       - assets/ground.json
       - src/render/spriteLoaders.js

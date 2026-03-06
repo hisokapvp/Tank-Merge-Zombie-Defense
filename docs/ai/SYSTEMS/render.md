@@ -27,3 +27,17 @@
 - `draw()` только рисует; обновления состояния  вне отрисовки.
 - В горячем пути избегать новых объектов и массивов на кадр.
 - Использовать существующие JSON-конфиги (`assets/ground.json`, `assets/decor.json`, `assets/fence.json`).
+
+## Supercomputer / production line
+- `SupercomputerSprites` в `src/render/spriteLoaders.js` теперь является источником не только root-спрайта, но и частей production line.
+- Loader нормализует:
+	- per-animation `scale` и `effects` для root-анимаций суперкомпьютера;
+	- part-конфиги `conveyor` и `storageCell` с собственными `atlas`/`offset`/`anchor`/`animations`.
+- `game.js` рисует supercomputer-клип через отдельный runtime-пайплайн:
+	- выбор визуального состояния вынесен в helper-слой (`resolveSupercomputerVisualStateName`, `resolveSupercomputerAnimationScale`, `drawSupercomputerSpriteClip`);
+	- `effects[]` применяются во время draw как трансформации (`shake`/`bob`/`sway`/`pulse`-подобные пресеты).
+- `Game.ProductionLineRender` синхронизируется с runtime мира отдельно от `draw()`:
+	- `updateLayout(scX, scY, scW, scH, worldScale)` учитывает configured offsets частей;
+	- `syncState(state, dt)` переключает conveyor между `idle` и `work` по изменению display-signature production line;
+	- `syncHoverAt(px, py)` и `clearHover()` управляют состоянием storage cell `idle`/`hover`.
+- Fallback-контракт сохранён: при отсутствии part-конфига или атласа рендер остаётся на legacy geometry и векторных fallback-примитивах.

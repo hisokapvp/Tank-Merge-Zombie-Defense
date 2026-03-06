@@ -9,7 +9,7 @@
   "hpBar": {
     "width": 92,
     "height": 8,
-    "offsetY": -30
+    "offsetY": -50
   },
   "boostIcons": {
     "anchor": "top",
@@ -23,47 +23,155 @@
     "idle": {
       "x": 0,
       "y": 0,
-      "w": 61,
-      "h": 31,
-      "frames": 1,
-      "frameRateFps": 1,
-      "loop": true
+      "w": 255,
+      "h": 157,
+      "frames": 3,
+      "frameRateFps": 3,
+      "loop": true,
+      "scale": 0.5,
+      "effects": [
+        "float",
+        {
+          "preset": "sway",
+          "angleDeg": 150
+        }
+      ]
     },
     "work": {
       "x": 0,
-      "y": 0,
-      "w": 61,
-      "h": 31,
-      "frames": 1,
-      "frameRateFps": 1,
-      "loop": true
+      "y": 158,
+      "w": 255,
+      "h": 157,
+      "frames": 3,
+      "frameRateFps": 15,
+      "loop": true,
+      "scale": 0.5,
+      "effects": [
+        "float",
+        {
+          "preset": "sway",
+          "angleDeg": 0.2
+        }
+      ]
     },
     "glitch": {
-      "x": 96,
+      "x": 0,
       "y": 0,
-      "w": 61,
-      "h": 31,
-      "frames": 2,
-      "frameRateFps": 8,
-      "loop": true
+      "w": 255,
+      "h": 157,
+      "frames": 3,
+      "frameRateFps": 3,
+      "loop": true,
+      "scale": 0.5,
+      "effects": [
+        "vibrationStrong",
+        {
+          "preset": "pulse",
+          "scaleMul": 0.05,
+          "frequencyHz": 3.1
+        }
+      ]
     },
     "buildTank": {
-      "x": 192,
+      "x": 0,
       "y": 0,
-      "w": 61,
-      "h": 31,
-      "frames": 2,
+      "w": 255,
+      "h": 157,
+      "frames": 3,
       "frameRateFps": 7,
-      "loop": true
+      "loop": true,
+      "scale": 0.5,
+      "effects": [
+        {
+          "preset": "sway",
+          "angleDeg": 1.8,
+          "amplitudeX": 1.4
+        },
+        {
+          "preset": "vibration",
+          "amplitudeY": 0.8
+        }
+      ]
     },
     "destroy": {
-      "x": 288,
+      "x": 0,
       "y": 0,
-      "w": 61,
-      "h": 31,
-      "frames": 4,
+      "w": 255,
+      "h": 157,
+      "frames": 3,
       "frameRateFps": 10,
-      "loop": false
+      "loop": false,
+      "scale": 0.5,
+      "effects": [
+        {
+          "preset": "wobble",
+          "angleDeg": 2.8,
+          "amplitudeX": 2.1
+        },
+        {
+          "preset": "vibrationStrong",
+          "amplitudeX": 2.4,
+          "amplitudeY": 2.8
+        }
+      ]
+    }
+  },
+  "conveyor": {
+    "atlas": "Conveyor_atlas.png",
+    "offset": {
+      "x": -122,
+      "y": -25
+    },
+    "animations": {
+      "idle": {
+        "x": 0,
+        "y": 0,
+        "w": 49,
+        "h": 15,
+        "frames": 1,
+        "frameRateFps": 1,
+        "loop": true,
+        "scale": 1.5
+      },
+      "work": {
+        "x": 0,
+        "y": 0,
+        "w": 49,
+        "h": 15,
+        "frames": 3,
+        "frameRateFps": 3,
+        "loop": true,
+        "scale": 1.5
+      }
+    }
+  },
+  "storageCell": {
+    "atlas": "slot_warehouse_atlas.png",
+    "offset": {
+      "x": -60,
+      "y": -30
+    },
+    "animations": {
+      "idle": {
+        "x": 32,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 2,
+        "frameRateFps": 4,
+        "loop": true,
+        "scale": 1
+      },
+      "hover": {
+        "x": 128,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 4,
+        "frameRateFps": 8,
+        "loop": true,
+        "scale": 1
+      }
     }
   },
   "glitch": {
