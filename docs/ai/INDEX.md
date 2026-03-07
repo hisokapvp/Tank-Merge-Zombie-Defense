@@ -35,14 +35,13 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-06
-- `New game` теперь идёт отдельным reset-path: legacy `progress` очищается, игрок стартует без бесплатных очков талантов/улучшений, а суперкомпьютер — с `computerLevel = 0` и `xpToNext = 50`.
-- Production line по-прежнему считает убийства и дёргает только conveyor `work`, но root-анимация `buildTank` теперь стартует только от `Создать танк X уровня` и гаснет через `assets/tanks.json -> tankPrintDurationSec`.
-- `assets/supercomputer.json`: `conveyorBox.offset.x/y` стал каноническим data-driven тюнингом посадки коробки поверх ленты; `drawBoxOnConveyor()` больше не должен получать такие смещения хардкодом.
-- Во вкладке `Разобрать` remove-кнопка craft-слота должна оставаться полностью видимой и сидеть в том же углу, что и эталонный close-контрол preview из `Создать чип`.
-- `computePowerTier(0)` и `xpNeededForLevel(0)` теперь валидны: стартовый компьютер уровня `0` — штатный runtime-сценарий, а не legacy-крайний случай.
-- Для больших файлов проекта отдельные map-файлы по supercomputer/hangar/render остаются обязательной точкой входа перед правками этих зон.
+## Фокус документации на 2026-03-07
+- `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста и разрешает opt-out только через skip-список / `data-font-floor-ignore="true"`.
+- Close-кнопки `productionLineStorage` / supercomputer root / hangar / tank-wall overlays унифицированы через `scModal__close`; склад коробок получает тот же CRT/grain overlay через `body.pl-storage-open`.
+- Stage active slots Talents v2 берут branch-иконки из `assets/ui/icons/talents/*` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` остаётся fallback'ом.
+- `_renderChipNameHtml()` — канонический helper для полных названий чипов/фрагментов: перенос разрешён только по ` + `; им пользуются workshop grid, tech accel modal, craft inventory и result cards.
+- Для этих UI-правок читать в порядке: `docs/ai/SYSTEMS/ui.md` → `docs/ai/GAME_JS_MAP.md` → `docs/ai/HANGAR_CHIPS_UI_MAP.md` → `docs/ai/STYLE_CSS_MAP.md`.
 
 ## Hotspot summary
-- Кодовые hotspot-файлы: `game.js`, `style.css`, `src/ui/supercomputerMenu.js`, `src/ui/hangarChipsUI.js`, `src/render/spriteLoaders.js`, `src/persistence/storage.js`.
+- Кодовые hotspot-файлы: `game.js`, `index.html`, `style.css`, `src/ui/supercomputerMenu.js`, `src/ui/hangarChipsUI.js`, `src/render/spriteLoaders.js`, `src/persistence/storage.js`.
 - Документационные hotspot-файлы: `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/CHANGELOG.md`.

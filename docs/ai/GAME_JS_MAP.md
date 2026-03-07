@@ -51,8 +51,8 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-03-06.
-> Текущая длина файла: ~11 885 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
+> Обновлено: 2026-03-07.
+> Текущая длина файла: ~11 880 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
 ## Что это
 `game.js` остаётся главным bootstrap/runtime-монолитом проекта: здесь живут глобальные aliases `window.Game`, world loop, render orchestration, часть fallback-логики, UI wiring и интеграция всех extracted модулей из `src/*`.
@@ -61,6 +61,7 @@
 - Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L9339-L9398)
+- Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
 - Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [performTankPurchaseOnce()](../../game.js#L3289-L3307), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L11374-L11382)
 
@@ -68,6 +69,7 @@
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
 - `draw()` не мутирует gameplay-state; render side-effects выносятся в step/runtime-модули.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
+- Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
 
 ## Ключевые блоки файла
 | Блок | Строки | Назначение |
@@ -78,7 +80,7 @@
 | i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L1875) | language, audio, `SupercomputerSprites`, loader wiring |
 | Board / layout / production line placement | [game.js](../../game.js#L2244-L2334) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
 | Core combat pipeline | [game.js](../../game.js#L5918-L6961) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `cleanupKills` |
-| Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L7107-L8822) | big menu, restartSimulationPartial, talents UI wiring |
+| Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L7107-L8838) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
 | World render | [game.js](../../game.js#L9339-L11278) | `draw()`, supercomputer, board, tanks, projectiles, HUD world overlay |
 | Step tail / loop / boot | [game.js](../../game.js#L11425-L11885) | `stepSupercomputer`, `loop`, `boot` |
 
@@ -99,6 +101,7 @@
 | `getTankPrintDurationSec()` | [game.js](../../game.js#L2744-L2756) | Единая длительность печати/штампа из `assets/tanks.json` |
 | `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
 | `performTankPurchaseOnce()` | [game.js](../../game.js#L3289-L3307) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
+| `getTalentV2ActiveIconByBranch()` / `getTalentV2ActiveIconUrlByBranch()` | [game.js](../../game.js#L3759-L3802) | Branch → active talent icon key/url для stage HUD |
 
 ### Combat / cleanup hooks
 | Функция | Строки | Назначение |
@@ -118,6 +121,7 @@
 | `restartSimulationPartial()` | [game.js](../../game.js#L7742-L7760) | Partial restart orchestration |
 | `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization |
 | `resetGameState()` | [game.js](../../game.js#L7875-L7952) | Full reset; `new_game` path даёт baseline `computerLevel=0`, `xpToNext=50`, free talent points = `0` |
+| `updateTalentAbilitySlotsV2()` / `updateStageAbilitySlots()` | [game.js](../../game.js#L8688-L8838) | Runtime icon wiring, charge badges, cooldown fill и HUD slot delegation |
 | `updateTalentUI()` | [game.js](../../game.js#L8822-L9338) | Talents DOM refresh / HUD slots |
 
 ### Render / world draw
@@ -144,6 +148,7 @@
 ## Горячие зоны от 2026-03-06
 - `SupercomputerSprites` → `ProductionLineRender` wiring: [game.js](../../game.js#L1869-L1875)
 - Layout sync production line к суперкомпьютеру: [game.js](../../game.js#L2314-L2328)
+- Talents v2 stage active icon resolution и HUD-slot wiring: [game.js](../../game.js#L3759-L3802), [game.js](../../game.js#L8688-L8838)
 - Purchase-driven `buildTank` FX window: [game.js](../../game.js#L3289-L3307), [game.js](../../game.js#L11374-L11382)
 - Kill-driven conveyor work trigger: [game.js](../../game.js#L5902-L5917)
 - Draw order + финальный HP overlay: [game.js](../../game.js#L9339-L9398)

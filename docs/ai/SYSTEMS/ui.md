@@ -3,6 +3,8 @@
 ## Где править
 - Разметка: `index.html`
 - Логика UI: `src/ui/*`
+- Runtime floor для шрифта/Canvas текста: `src/ui/fontFloor.js`
+- UI склада коробок production line: `src/ui/productionLineUI.js`
 - Большие карты: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`
 - Big menu runtime: `src/ui/bigMenuRuntime.js`
 - Инициализация: `src/core/bootstrap.js`
@@ -10,7 +12,8 @@
 - Restart simulation flow: `game.js` (`restartSimulationPartial`) + `src/core/worldReset.js`
 - Talents v2 UI (overlay + HUD активок): `game.js` (`ensureTalentUI`, `updateTalentUI`, `updateStageAbilitySlots`) + контракт в `docs/ui_talents_v2.md`.
 	- Overlay Talents v2: одновременно рендерятся все 3 ветки (`offense/defense/economy`) в отдельных колонках.
-	- Stage HUD active slots для v2 используют иконки активных талантов из `assets/ui/icons/talents/*` (через `Game.TalentsV2.getTalentUi(...)`), а не legacy `assets/active_*.png`.
+	- Stage HUD active slots для v2 резолвят branch-иконку через [getTalentV2ActiveIconByBranch()](../../../game.js#L3759-L3772) → [getTalentV2ActiveIconUrlByBranch()](../../../game.js#L3800-L3802) и применяют её в [updateTalentAbilitySlotsV2()](../../../game.js#L8688-L8752); canonical source — `assets/ui/icons/talents/*`, а не legacy `assets/active_*.png`.
+	- CSS-идентификаторы `#stageActive0/1/2` и классы `.talentAbilitySlot_attack/.talentAbilitySlot_defense/.talentAbilitySlot_economy` держат `activeOff/activeDef/activeEco` только как fallback background при отсутствии runtime `--talentAbilityIcon`: [style.css](../../../style.css#L2384-L2406).
 	- Stage HUD active slots (v2) обязаны показывать: корректный hover-tooltip (имя/описание/заряды/перезарядка), бейдж зарядов в правом верхнем углу, секундный countdown перезарядки всегда при идущем recharge (даже если есть оставшиеся заряды), и секторную cooldown-заливку по часовой стрелке от центра (`rgba(20,20,20,0.62)` при `charges>0`, `rgba(255,255,255,0.58)` при `charges=0`).
 	- Бейдж зарядов на stage active slots должен оставаться читаемым при стандартном масштабе HUD (увеличенный размер цифры/плашки).
 	- Tooltip для talent nodes и stage active slots рендерится через unified DOM-tooltip (`#settingsTooltip` + `data-ui-tooltip`), не через нативный `title` браузера.
@@ -29,6 +32,16 @@
 - Для загрузки save через small/big menu действует единый контракт: `restoreFullState(payload)` должен завершаться post-restore синхронизацией (`postRestoreSync`) для runtime-систем (в т.ч. TalentsV2), чтобы ранги/очки и UI состояния были согласованы сразу после старта.
 - Runtime crate-логика вынесена в `src/mechanics/crateRuntime.js`; в `game.js` crate entrypoints делегируются через `ensureCrateRuntimeController()`.
 
+## Runtime font floor
+- `index.html` подключает [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L1-L133) как отдельный runtime-слой: [index.html](../../../index.html#L538).
+- `Game.FontFloor` патчит и `CanvasRenderingContext2D.font`, и DOM через `MutationObserver`, поднимая всё ниже `12px` до `12px`: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L22-L133).
+- Исключения разрешены только для явных контролов из `SKIP_SELECTOR` (`.levelModal__close:not(.scModal__close)`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`) или через `data-font-floor-ignore="true"`: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L4-L8).
+
+## Production line storage modal
+- Разметка `#productionLineStorageModal` использует тот же close-skin `scModal__close`, что и root/hangar/tank-wall overlays: [index.html](../../../index.html#L214-L217), [index.html](../../../index.html#L233-L309), [style.css](../../../style.css#L1346-L1372).
+- `Game.ProductionLineUI.open()` / `.close()` переключают `body.pl-storage-open`; этот class участвует в общем CRT/grain overlay `body::before`, поэтому склад визуально остаётся в одной семье с SC-модалками: [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L44-L61), [style.css](../../../style.css#L40-L68).
+- Не возвращать storage modal к plain `levelModal__close`: у `.scModal__close` отключены legacy pseudo-bars `::before/::after`, и он сознательно не двигает layout на hover/active: [style.css](../../../style.css#L1346-L1372).
+
 ## Мастерская (Workshop) — под-вкладки в модификациях ангара
 - Расположение: `#modsHangarOverlay` → три основные вкладки: «Улучшение ячеек» (`hangarTabCells`), «Мастерская» (`hangarTabWorkshop`), «Открытие технологий» (`hangarTabTechUnlock`).
 - Под-вкладки Мастерской: «Улучшение чипов» (`workshopTabChipUpgrade`, панель `workshopPanelChipUpgrade`) и «Создание чипов» (`workshopTabChipCraft`, панель `workshopPanelChipCraft`).
@@ -40,21 +53,22 @@
 - Бонус урона интегрирован в `fireTankProjectile` через `getChipLevelDmgMul(cellIndex)`.
 
 ### Создание чипов (Chip Craft) — вкладка Мастерской
-- Панель `workshopPanelChipCraft`, рендер: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2213-L2463), стили: [style.css](../../../style.css#L4088-L4787).
+- Панель `workshopPanelChipCraft`, рендер: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2235-L2483), стили: [style.css](../../../style.css#L4150-L4890).
 - **Лейаут панели**: `chipCraftLayout` делится на `chipCraftLeftCol` (инвентарь + `chipCraftBottomBar`) и `chipCraftPreview` (mode row, drop-zone, action button). `chipCraftModeRow` всегда видим над `chipCraftDropZone`, а `#chipCraftActionBtn` всегда рендерится под ней и только переключается между disabled/enabled по `_detectCraftMode()`.
-- **Drag-drop из инвентаря**: элементы инвентаря поддерживают pointer-based drag-drop в drop-зону. При перетаскивании целого чипа автоматически включается режим «Разобрать», при перетаскивании фрагмента — «Создать чип». Каноническая точка этого автопереключения — [_addItemToSlot()](../../../src/ui/hangarChipsUI.js#L2139-L2211); pointer handlers лишь делегируют в неё через [_attachCraftPanelEvents()](../../../src/ui/hangarChipsUI.js#L2465-L2632).
+- **Drag-drop из инвентаря**: элементы инвентаря поддерживают pointer-based drag-drop в drop-зону. При перетаскивании целого чипа автоматически включается режим «Разобрать», при перетаскивании фрагмента — «Создать чип». Каноническая точка этого автопереключения — [_addItemToSlot()](../../../src/ui/hangarChipsUI.js#L2161-L2233); pointer handlers лишь делегируют в неё через [_attachCraftPanelEvents()](../../../src/ui/hangarChipsUI.js#L2485-L2652).
 - **Режимы**: два постоянных toggle-кнопки «Разобрать» и «Создать чип» (`chipCraftModeBtn`). Активный режим подсвечивается зелёным (`chipCraftModeBtn--active`). По умолчанию — «Создать чип» (`_craftMode = 'assemble'`).
-- **Карточный паттерн craft-слотов**: занятые assemble/disassemble-слоты и preview результата рендерятся через общий helper [_renderCraftSlotCard()](../../../src/ui/hangarChipsUI.js#L2112-L2126). Это квадратные inventory-style карточки: крупная иконка сверху, частично видимый footer-title снизу, чипы получают badge уровня, фрагменты — dashed-вариант карточки. Remove-контрол [chipCraftSlotRemove](../../../style.css#L4332-L4385) сделан в игровом wasteland-стиле, рендерится sibling'ом карточки и не должен клиппиться: во вкладке `Разобрать` он обязан сидеть в том же углу, что и эталонный close-контрол preview `Создать чип`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2112-L2137), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2361-L2413), [style.css](../../../style.css#L4217-L4385).
-- **Разобрать (disassemble)**: игрок кладёт один или несколько целых чипов в слоты → получает по 3 фрагмента за каждый. `_craftSlots` — динамический массив; удаление слота идёт через `splice`, а `_executeCraftAction()` обрабатывает все занятые chip-slots в цикле: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2666-L2716).
+- **Карточный паттерн craft-слотов**: занятые assemble/disassemble-слоты и preview результата рендерятся через общий helper [_renderCraftSlotCard()](../../../src/ui/hangarChipsUI.js#L2134-L2148). Это квадратные inventory-style карточки: крупная иконка сверху, footer-title снизу, чипы получают badge уровня, фрагменты — dashed-вариант карточки. Remove-контрол [chipCraftSlotRemove](../../../style.css#L4413-L4466) сделан в игровом wasteland-стиле, рендерится sibling'ом карточки и не должен клиппиться: во вкладке `Разобрать` он обязан сидеть в том же углу, что и эталонный close-контрол preview `Создать чип`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2134-L2159), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2369-L2429), [style.css](../../../style.css#L4288-L4466).
+- **Полные названия без mid-word wrap**: `_renderChipNameHtml()` — единый helper для workshop grid, tech accel modal, craft inventory и result cards; безопасный перенос разрешён только по ` + `, а размер карточек фиксируется общими CSS vars `--chipLabelCardWidth/Height`. `_truncateCraftCardLabel()` остаётся только compact-helper'ом для тесных assemble ingredient cards: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1760-L1801), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2094-L2148), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2235-L2429), [style.css](../../../style.css#L4063-L4139), [style.css](../../../style.css#L4224-L4398), [style.css](../../../style.css#L4692-L4719).
+- **Разобрать (disassemble)**: игрок кладёт один или несколько целых чипов в слоты → получает по 3 фрагмента за каждый. `_craftSlots` — динамический массив; удаление слота идёт через `splice`, а `_executeCraftAction()` обрабатывает все занятые chip-slots в цикле: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2686-L2739).
 - **Создать чип (assemble)**: игрок кладёт 3 фрагмента в фиксированные слоты → получает целый чип.
-	- **Валидация фрагментов**: `_canAddFragment(fragId)` запрещает тройки одинаковых фрагментов и больше одного спецмода (id ≥ 10): [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1961-L1985). Фрагменты в инвентаре подсвечиваются зелёным (`.chipCraftInvItem--canAdd`) если можно добавить, красным (`.chipCraftInvItem--cantAdd`) если нельзя: [style.css](../../../style.css#L4589-L4597).
-	- **Превью результата**: `_previewAssembleResult()` и `renderChipCraftPanel()` раскладывают 3 слота + стрелку + результат в одну горизонтальную строку `.chipCraftSlotRow--withResult`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1987-L2091), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2361-L2418).
-	- **Future chip frame**: «будущий» чип получает отдельную зелёную dashed-рамку контейнера `.chipCraftResultChip--future`; placeholder остаётся отдельным muted-состоянием `.chipCraftSlot--resultSlot`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2384-L2413), [style.css](../../../style.css#L4617-L4639).
+	- **Валидация фрагментов**: `_canAddFragment(fragId)` запрещает тройки одинаковых фрагментов и больше одного спецмода (id ≥ 10): [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1962-L1986). Фрагменты в инвентаре подсвечиваются зелёным (`.chipCraftInvItem--canAdd`) если можно добавить, красным (`.chipCraftInvItem--cantAdd`) если нельзя: [style.css](../../../style.css#L4670-L4678).
+	- **Превью результата**: `_previewAssembleResult()` и `renderChipCraftPanel()` раскладывают 3 слота + стрелку + результат в одну горизонтальную строку `.chipCraftSlotRow--withResult`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1988-L2092), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2369-L2434).
+	- **Future chip frame**: «будущий» чип получает отдельную зелёную dashed-рамку контейнера `.chipCraftResultChip--future`; placeholder остаётся отдельным muted-состоянием `.chipCraftSlot--resultSlot`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2417-L2429), [style.css](../../../style.css#L4701-L4719).
 - **Фрагменты SVG**: иконки фрагментов в инвентаре рендерятся с размером `22px` (через `_fragmentSvgUp`).
-- **Распылить (Pulverize / Dust mode)**: кнопка `chipCraftDustBtn` живёт в нижней панели `chipCraftBottomBar` под сеткой инвентаря. При входе в `_dustMode = true` на карточках инвентаря появляются кастомные чекбоксы, а `chipCraftDustActions` заменяет кнопку «Распылить»: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2468-L2519), [style.css](../../../style.css#L4416-L4597).
+- **Распылить (Pulverize / Dust mode)**: кнопка `chipCraftDustBtn` живёт в нижней панели `chipCraftBottomBar` под сеткой инвентаря. При входе в `_dustMode = true` на карточках инвентаря появляются кастомные чекбоксы, а `chipCraftDustActions` заменяет кнопку «Распылить»: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2488-L2539), [style.css](../../../style.css#L4497-L4644).
 	- Большой чип = 10 ед. кремниевой пыли (`DUST_PER_CHIP`), фрагмент = 3 ед. (`DUST_PER_FRAGMENT`).
-	- Клик по любой области карточки в dust mode переключает чекбокс выбора; двойной toggle от клика по самому checkbox блокируется через `closest('.chipCraftDustCheck')`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2497-L2519).
-	- Подтверждение удаления/начисления пыли идёт через [_executeDust()](../../../src/ui/hangarChipsUI.js#L2634-L2664).
+	- Клик по любой области карточки в dust mode переключает чекбокс выбора; двойной toggle от клика по самому checkbox блокируется через `closest('.chipCraftDustCheck')`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2517-L2539).
+	- Подтверждение удаления/начисления пыли идёт через [_executeDust()](../../../src/ui/hangarChipsUI.js#L2654-L2684).
 - **Кремниевая пыль** (`_siliconDust`): ресурс, отображаемый в `chipCraftBottomBar` и в строке реагента `chipCraftReagentRow`. Счётчик `.chipCraftReagentAmount` показывает формат **`total / using`** (`_siliconDust + ' / ' + _craftReagentDust`); отдельная `<b>` с количеством пыли в лейбле удалена.
 
 ### Открытие технологий — процесс изучения
@@ -64,7 +78,7 @@
 - Состояние изучения: `_techStudying = { techId, remaining, total, timer }`, хранится в `HangarChipsUI`.
 - Таймер: `setInterval(1000)` декрементирует `remaining`; при `remaining <= 0` технология разблокируется, таймер останавливается.
 - Кнопка «Отменить»: показывает модальное окно подтверждения (`_showTechCancelConfirm`). При подтверждении прогресс изучения теряется полностью.
-- Кнопка «Ускорить процесс открытия»: показывает модальное окно (`_showTechAccelModal`) со списком чипов из инвентаря. Каждый выбранный чип = +5% ускорения. Максимум ускорения: 95%. Выбранные чипы «сжигаются» (удаляются из инвентаря).
+- Кнопка «Ускорить процесс открытия»: показывает модальное окно (`_showTechAccelModal`) с unified grid чипов и фрагментов. Ускорение за целый чип считается через `_getAccelPerChip(modId)` по длительности текущей технологии, фрагмент даёт половину, total cap = `95%`; выбранные элементы «сжигаются» из инвентаря. Full-name labels в этой модалке также идут через `_renderChipNameHtml()`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1760-L1849).
 - Сериализация: `techStudying: { techId, remaining, total }` сохраняется в save payload; при восстановлении таймер автоматически перезапускается через `setTechStudying()`.
 
 ## Правила

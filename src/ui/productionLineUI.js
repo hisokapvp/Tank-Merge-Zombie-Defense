@@ -47,15 +47,18 @@
     _pendingIdx = -1;
     _hideConfirm();
     _renderGrid(state.productionLine);
+    if (document.body) document.body.classList.add('pl-storage-open');
     _modalEl.classList.remove('hidden');
     _modalEl.setAttribute('aria-hidden', 'false');
-    if (_a11yOpen) _a11yOpen(_modalEl, { initialFocus: _gridEl });
+    const initialFocus = document.getElementById('plStorageClose') || _modalEl.querySelector('.plStorage__panel') || _gridEl;
+    if (_a11yOpen) _a11yOpen(_modalEl, { initialFocus: initialFocus });
   }
 
   function close() {
     if (!_modalEl) return;
     _isOpen = false;
     _pendingIdx = -1;
+    if (document.body) document.body.classList.remove('pl-storage-open');
     _modalEl.classList.add('hidden');
     _modalEl.setAttribute('aria-hidden', 'true');
     if (_a11yClose) _a11yClose(_modalEl);

@@ -1137,9 +1137,9 @@
       if (h && chip.modIds.length) {
         var names = [];
         for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
-        chipName = names.join('+');
+        chipName = names.join(' + ');
       }
-      html += '<span class="chipUpgradeCard__name" title="' + chipName + '">' + chipName + '</span>';
+      html += '<span class="chipUpgradeCard__name" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
 
       /* level label */
       html += '<span class="chipUpgradeCard__level">' + t('workshopChipLevelLabel', 'Ур.') + ' ' + chip.level + '</span>';
@@ -1780,11 +1780,12 @@
       for (var i = 0; i < chips.length; i++) {
         var chip = chips[i];
         var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
+        var accelChipName = _getChipDisplayName(chip) + ' • ' + t('workshopChipLevelLabel', 'Ур.') + ' ' + chip.level;
         for (var ci = 0; ci < chip.count; ci++) {
           html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
           html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
           html += chipSvgComposed(40, 36, borderColor, chip.modIds, 'techAccelChip__icon', 2.5);
-          html += '<span class="techAccelChip__label">' + chip.sourceComboKey + ' Ур.' + chip.level + '</span>';
+          html += '<span class="techAccelChip__label" title="' + _escapeHtml(accelChipName) + '">' + _renderChipNameHtml(accelChipName) + '</span>';
           html += '</div>';
         }
       }
@@ -1797,7 +1798,7 @@
             html += '<div class="techAccelChip" data-accel-frag-id="' + frag.fragmentId + '" data-accel-checked="false">';
             html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
             html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
-            html += '<span class="techAccelChip__label">' + modName(frag.fragmentId) + '</span>';
+            html += '<span class="techAccelChip__label" title="' + _escapeHtml(modName(frag.fragmentId)) + '">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
             html += '</div>';
           }
         }
@@ -2103,10 +2104,31 @@
     return chipName;
   }
 
+  function _escapeHtml(text) {
+    return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function _renderChipNameHtml(label) {
+    var text = String(label || '').trim();
+    if (!text) return '';
+    var parts = text.split(/\s*\+\s*/);
+    var out = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (i > 0) out += '<span class="chipNameJoin"> + </span><wbr>';
+      out += '<span class="chipNameToken">' + _escapeHtml(parts[i]) + '</span>';
+    }
+    return out;
+  }
+
   function _truncateCraftCardLabel(label, maxLen) {
     var text = label || '';
-    var limit = Number.isFinite(maxLen) ? maxLen : 16;
-    return text.length > limit ? (text.substring(0, Math.max(1, limit - 1)) + '…') : text;
+    var limit = Number.isFinite(maxLen) ? maxLen : 0;
+    return limit > 0 && text.length > limit ? (text.substring(0, Math.max(1, limit - 1)) + '…') : text;
   }
 
   function _renderCraftSlotCard(iconHtml, fullName, options) {
@@ -2121,7 +2143,7 @@
     return '<div class="' + cardClass + '">' +
       badgeHtml +
       '<div class="chipCraftSlotCard__iconWrap">' + iconHtml + '</div>' +
-      '<span class="' + labelClass + '" title="' + cardLabel + '">' + _truncateCraftCardLabel(cardLabel, opts.maxLabelLength) + '</span>' +
+      '<span class="' + labelClass + '" title="' + _escapeHtml(cardLabel) + '">' + _renderChipNameHtml(_truncateCraftCardLabel(cardLabel, opts.maxLabelLength)) + '</span>' +
       '</div>';
   }
 
@@ -2232,7 +2254,6 @@
       if (pc.count <= 0) continue;
       var borderColor = pc.chipColor === 'red' ? '#e53935' : '#fdd835';
       var chipName = _getChipDisplayName(pc);
-      var displayName = chipName.length > 14 ? chipName.substring(0, 12) + '..' : chipName;
       var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
       var dustSel = _dustSelected[dustKey] || 0;
       html += '<div class="chipCraftInvItem' + (_dustMode && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
@@ -2245,7 +2266,7 @@
         }
       }
       html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
-      html += '<span class="chipCraftInvLabel">' + displayName + '</span>';
+      html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
       html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
       html += '</div>';
     }
@@ -2257,7 +2278,6 @@
       if (frag.count <= 0) continue;
       var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
       var fragName = modName(frag.fragmentId);
-      var fragDisplayName = fragName.length > 14 ? fragName.substring(0, 12) + '..' : fragName;
       var dustKeyF = 'frag_' + frag.fragmentId;
       var dustSelF = _dustSelected[dustKeyF] || 0;
       /* Determine if fragment can be added (green/red highlight in assemble mode) */
@@ -2276,7 +2296,7 @@
         }
       }
       html += _fragmentSvg(frag.fragmentId, 22, fragStroke);
-      html += '<span class="chipCraftInvLabel">' + fragDisplayName + '</span>';
+      html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>';
       html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
       html += '</div>';
     }

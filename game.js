@@ -3798,15 +3798,6 @@ function talentIconPath(name){
 }
 
 function getTalentV2ActiveIconUrlByBranch(branchId){
-  const api = getTalentsV2Api();
-  const talentId = getTalentV2ActiveTalentIdByBranch(branchId);
-  if (api && talentId && typeof api.getTalentUi === 'function') {
-    const ui = api.getTalentUi(talentId);
-    if (ui && ui.nameKey) {
-      const localizedName = t(ui.nameKey);
-      return talentIconPath(localizedName);
-    }
-  }
   const iconKey = getTalentV2ActiveIconByBranch(branchId);
   return `assets/ui/icons/talents/${iconKey}.png`;
 }
