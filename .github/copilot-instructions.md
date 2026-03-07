@@ -105,7 +105,7 @@ folder that is **not part of the game repository**.
 
 | Agent | File | Purpose |
 |---|---|---|
-| Programmer | `agents/Programmer.md` | Routes tasks → UX-Designer or Fullstack-Developer skills |
+| Programmer | `agents/Programmer.md` | Routes tasks → UX-Designer or Fullstack-Developer skills; uses RAG+Memory |
 | Log-Writer | `agents/Log-Writer.md` | Delegates to `session-logger` skill after task is done |
 | Spec-Refiner | `agents/Spec-Refiner.md` | Improves informal TZ before passing to pipeline |
 
@@ -117,6 +117,48 @@ folder that is **not part of the game repository**.
 | fullstack-developer | `skills/fullstack-developer/SKILL.md` | Implements code tasks end-to-end |
 | ux-designer | `skills/ux-designer/SKILL.md` | Produces UX specs, wireframes, flows |
 | spec-refiner | `skills/spec-refiner/SKILL.md` | Converts informal TZ to structured spec |
+
+### MCP Servers (AI tools, always available)
+
+| Server | MCP name | Tools | Purpose |
+|---|---|---|---|
+| chroma-mcp (RAG) | `rag-chromadb` | `chroma_query`, `chroma_list_collections`, `chroma_add_documents` | Semantic search over docs & source code |
+| agent-memory | `agent-memory` | `memory_add`, `memory_search`, `memory_list`, `memory_delete` | Persistent cross-session agent memory |
+
+**RAG Collections (pre-indexed):**
+- `game_docs` — `docs/ai/**`, `docs/*.md`, `assets/balance/*.json`, `agents/*.md`, `skills/*.md`
+- `src_code` — `src/**/*.js`
+- `session_summaries` — `spec_raw + postmortem` из `D:\agent-logs\sessions.jsonl`
+
+**Typical RAG usage:**
+```
+chroma_query(collection_name="game_docs", query_texts=["как работает fence?"], n_results=5)
+```
+
+**Typical Memory usage:**
+```
+# Before task:
+memory_search(query="fence render constraints", user_id="tank-merge-zombie-defense", limit=5)
+# After task (save non-trivial finding):
+memory_add(content="В fence draw() нельзя мутировать state", user_id="tank-merge-zombie-defense", tags="fence,render")
+```
+
+**Re-index after significant changes to docs/src:**
+```powershell
+# Auto-mode (checks mtime, only re-indexes changed collections)
+powershell -ExecutionPolicy Bypass -File `
+  C:\Users\hisok\.agents\.github\scripts\auto_reindex.ps1
+
+# Force full re-index
+powershell -ExecutionPolicy Bypass -File `
+  C:\Users\hisok\.agents\.github\scripts\auto_reindex.ps1 -Force
+
+# Manual full re-index via Python
+d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
+  C:\Users\hisok\.agents\.github\scripts\rag_indexer.py
+```
+
+Full reference: `agents/shared/RAG_AND_MEMORY.md`
 
 ### Session Logger
 
@@ -151,6 +193,7 @@ Dashboard features:
 - Manual & auto backups (daily, 14-day retention)
 - CSV / Parquet / DuckDB download
 - **Session deletion** with 2-step confirmation (type `DELETE` to confirm)
+- **🧠 Memory page** — view, search and delete agent memories (ChromaDB) with 2-step confirmation
 
 **Write a log** after completing a session — call `session-logger` skill or use the script:
 
@@ -161,6 +204,15 @@ Dashboard features:
 ```
 
 Payload schema: see `skills/session-logger/payload.json` for a full example.
+
+**Auto-memory extraction** runs automatically after every `write_session_log.py` call.
+Extracts postmortem facts and low-quality items into ChromaDB `agent_memory`.
+Manual run:
+```powershell
+d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
+  C:\Users\hisok\.agents\.github\scripts\memory_extractor.py `
+  --session-id <id> --log-root D:\agent-logs
+```
 
 ### When to call agents
 
