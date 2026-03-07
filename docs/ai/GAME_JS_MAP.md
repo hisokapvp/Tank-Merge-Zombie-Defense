@@ -62,7 +62,7 @@
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L9339-L9398)
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
-- Нужен production line hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [kill hook](../../game.js#L5908-L5913)
+- Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [performTankPurchaseOnce()](../../game.js#L3289-L3307), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L11374-L11382)
 
 ## Инварианты ⚠️
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
@@ -96,7 +96,9 @@
 | Функция | Строки | Назначение |
 |---|---|---|
 | `initBoard()` | [game.js](../../game.js#L2244-L2334) | Геометрия карты, fence, supercomputer, production line layout |
+| `getTankPrintDurationSec()` | [game.js](../../game.js#L2744-L2756) | Единая длительность печати/штампа из `assets/tanks.json` |
 | `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
+| `performTankPurchaseOnce()` | [game.js](../../game.js#L3289-L3307) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
 
 ### Combat / cleanup hooks
 | Функция | Строки | Назначение |
@@ -115,7 +117,7 @@
 | `initBigMainMenu()` | [game.js](../../game.js#L7463-L7741) | Root menu event wiring |
 | `restartSimulationPartial()` | [game.js](../../game.js#L7742-L7760) | Partial restart orchestration |
 | `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization |
-| `resetGameState()` | [game.js](../../game.js#L7871-L8174) | Full reset |
+| `resetGameState()` | [game.js](../../game.js#L7875-L7952) | Full reset; `new_game` path даёт baseline `computerLevel=0`, `xpToNext=50`, free talent points = `0` |
 | `updateTalentUI()` | [game.js](../../game.js#L8822-L9338) | Talents DOM refresh / HUD slots |
 
 ### Render / world draw
@@ -142,7 +144,8 @@
 ## Горячие зоны от 2026-03-06
 - `SupercomputerSprites` → `ProductionLineRender` wiring: [game.js](../../game.js#L1869-L1875)
 - Layout sync production line к суперкомпьютеру: [game.js](../../game.js#L2314-L2328)
-- Kill-driven conveyor work trigger: [game.js](../../game.js#L5908-L5913)
+- Purchase-driven `buildTank` FX window: [game.js](../../game.js#L3289-L3307), [game.js](../../game.js#L11374-L11382)
+- Kill-driven conveyor work trigger: [game.js](../../game.js#L5902-L5917)
 - Draw order + финальный HP overlay: [game.js](../../game.js#L9339-L9398)
 - Root supercomputer effects / hp overlay helpers: [game.js](../../game.js#L9699-L9794)
 

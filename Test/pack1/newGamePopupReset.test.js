@@ -122,13 +122,13 @@ test('T5-9: boot path keeps default talentPoints=0', () => {
   assert(initStateJs.indexOf('talentPoints: 0') !== -1, 'default initial talent points are zero');
 });
 
-// Test 10: New Game path sets exactly one talent point
-test('T5-10: new game reset sets player.talentPoints to 1 via assignment', () => {
+// Test 10: New Game path resets talent points to zero
+test('T5-10: new game reset keeps player.talentPoints at 0', () => {
   const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
   assert(gameJs.indexOf("const reason = opts.reason === 'new_game' ? 'new_game' : 'reset';") !== -1, 'reset has explicit reason split');
   assert(gameJs.indexOf("state = createInitialState({ reason });") !== -1, 'reset passes reason into initial state creation');
-  const assignIdx = gameJs.indexOf('initialState.player.talentPoints = 1;');
-  assert(assignIdx !== -1, 'new_game flow uses direct assignment to 1');
+  const assignIdx = gameJs.indexOf('initialState.player.talentPoints = 0;');
+  assert(assignIdx !== -1, 'new_game flow uses direct assignment to 0');
   assert(gameJs.indexOf('talentPoints += 1') === -1, 'no accumulating increment for reset talent point');
 });
 

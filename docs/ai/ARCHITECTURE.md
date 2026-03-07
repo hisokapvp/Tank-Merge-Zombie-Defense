@@ -19,10 +19,10 @@
 ## Ключевые runtime-швы
 - `game.js` связывает `SupercomputerSprites` с `Game.ProductionLineRender`: `setSpriteSource(...)` выполняется в [game.js](../../game.js#L1869-L1875).
 - Геометрия production line пересчитывается из позиции/размера суперкомпьютера в [initBoard()](../../game.js#L2244-L2334).
-- Механика printing/runtime сама поднимает root-state `buildTank` через [syncSupercomputerBuildTankState()](../../src/mechanics/productionLine.js#L97-L108) и [step()](../../src/mechanics/productionLine.js#L114-L154); renderer только читает этот state.
+- `Game.ProductionLine.step()` считает только kill-driven progress/storage коробок, а root-state `buildTank` поднимается отдельным таймером покупки танка: [performTankPurchaseOnce()](../../game.js#L3289-L3307) → [Game.SupercomputerBuildTankFx.start()](../../src/ui/supercomputerBuildTankFx.js#L41-L53) → [setSupercomputerWantsBuildTank()](../../game.js#L11374-L11382); renderer только читает итоговый state.
 - World render разделён на: root supercomputer (`drawSupercomputer()`), conveyor/storage (`Game.ProductionLineRender.draw(...)`), board/cells и финальный HP overlay суперкомпьютера: [game.js](../../game.js#L9339-L9398), [game.js](../../game.js#L9699-L9794).
 - UI суперкомпьютера разделён на root/router (`src/ui/supercomputerMenu.js`), hangar workshop (`src/ui/hangarChipsUI.js`) и CSS-контракт (`style.css`).
-- Kill side-effect идёт не через render, а через combat cleanup hook: [game.js](../../game.js#L5908-L5913) → [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L127-L136).
+- Kill side-effect идёт не через render, а через combat cleanup hook, но он запускает только conveyor `work`, а не root `buildTank`: [game.js](../../game.js#L5902-L5917) → [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L219-L227).
 
 ## Извлечённые runtime-блоки из `game.js`
 - Audio/SFX pool runtime: `src/audio/sfxPoolRuntime.js` (`Game.SfxPoolRuntime`)

@@ -36,12 +36,12 @@
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
 ## Фокус документации на 2026-03-06
-- Production line: `work` у conveyor теперь стартует от kill-hook, проигрывает полный цикл и не перезапускается во время активной анимации.
-- `assets/supercomputer.json`: `conveyorBox` теперь использует отдельный atlas `conveyor_box_atlas.png` и две стадии печати `printLow` / `printHigh` с bottom-up reveal.
-- `assets/supercomputer.json`: `animations.*.effects[]` теперь реально используются как per-state/per-animation contract; `float` можно настраивать по-разному для каждого состояния.
-- HP bar суперкомпьютера вынесен в верхний overlay-слой world-render.
-- В craft preview занятые слоты и «будущий» чип приведены к квадратным inventory-card, а remove/close controls переведены в игровой wasteland-style.
-- Для больших файлов проекта добавлены отдельные map-файлы, чтобы не читать монолиты вслепую.
+- `New game` теперь идёт отдельным reset-path: legacy `progress` очищается, игрок стартует без бесплатных очков талантов/улучшений, а суперкомпьютер — с `computerLevel = 0` и `xpToNext = 50`.
+- Production line по-прежнему считает убийства и дёргает только conveyor `work`, но root-анимация `buildTank` теперь стартует только от `Создать танк X уровня` и гаснет через `assets/tanks.json -> tankPrintDurationSec`.
+- `assets/supercomputer.json`: `conveyorBox.offset.x/y` стал каноническим data-driven тюнингом посадки коробки поверх ленты; `drawBoxOnConveyor()` больше не должен получать такие смещения хардкодом.
+- Во вкладке `Разобрать` remove-кнопка craft-слота должна оставаться полностью видимой и сидеть в том же углу, что и эталонный close-контрол preview из `Создать чип`.
+- `computePowerTier(0)` и `xpNeededForLevel(0)` теперь валидны: стартовый компьютер уровня `0` — штатный runtime-сценарий, а не legacy-крайний случай.
+- Для больших файлов проекта отдельные map-файлы по supercomputer/hangar/render остаются обязательной точкой входа перед правками этих зон.
 
 ## Hotspot summary
 - Кодовые hotspot-файлы: `game.js`, `style.css`, `src/ui/supercomputerMenu.js`, `src/ui/hangarChipsUI.js`, `src/render/spriteLoaders.js`, `src/persistence/storage.js`.

@@ -13,7 +13,7 @@
   }
 
   function normalizeLevel(level) {
-    return Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+    return Math.max(0, Math.floor(Number.isFinite(level) ? level : 0));
   }
 
   function resolveStatByFormula(entry, level, fallback) {
@@ -77,7 +77,9 @@
     if (sc.computerLevel > sc.maxLevel) sc.computerLevel = sc.maxLevel;
 
     sc.xp = Number.isFinite(sc.xp) ? Math.max(0, Math.floor(sc.xp)) : 0;
-    sc.xpToNext = Number.isFinite(sc.xpToNext) ? Math.max(1, Math.floor(sc.xpToNext)) : 500;
+    sc.xpToNext = Number.isFinite(sc.xpToNext)
+      ? Math.max(1, Math.floor(sc.xpToNext))
+      : (sc.computerLevel <= 0 ? 50 : 500);
 
     var stats = resolveStatsForLevel(config, sc.computerLevel);
     sc.maxHp = Number.isFinite(sc.maxHp) ? Math.max(1, Math.floor(sc.maxHp)) : stats.maxHp;

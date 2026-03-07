@@ -22,13 +22,17 @@
     var onTalentPointsGained = typeof opts.onTalentPointsGained === 'function' ? opts.onTalentPointsGained : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
 
+    function getDefaultXpToNext(level) {
+      return Number.isFinite(level) && level <= 0 ? 50 : 500;
+    }
+
     function getComputer() {
       if (state.supercomputer) return state.supercomputer;
       if (state.player && Number.isFinite(state.player.level)) {
         return {
           computerLevel: state.player.level,
           xp: Number.isFinite(state.player.xp) ? state.player.xp : 0,
-          xpToNext: Number.isFinite(state.player.xpToNext) ? state.player.xpToNext : 500,
+          xpToNext: Number.isFinite(state.player.xpToNext) ? state.player.xpToNext : getDefaultXpToNext(state.player.level),
           maxLevel: Number.isFinite(state.player.maxLevel) ? state.player.maxLevel : 60,
           eventShown40: !!state.player.eventShown40,
           eventShown50: !!state.player.eventShown50,

@@ -4,17 +4,18 @@
 > Файл большой (551 строка): сначала открой этот map, потом исходник.
 
 ## Что это
-`src/render/productionLineRender.js` — renderer production line рядом с суперкомпьютером. Здесь живут layout conveyor/storage, двухстадийная печать коробки, bottom-up reveal, hover-hitbox склада и векторные fallback'и на случай отсутствия atlas-конфига.
+`src/render/productionLineRender.js` — renderer production line рядом с суперкомпьютером. Здесь живут layout conveyor/storage, двухстадийная печать коробки, `conveyorBox.offset.x/y`, bottom-up reveal, hover-hitbox склада и векторные fallback'и на случай отсутствия atlas-конфига.
 
 ## Быстрый старт для агента
 - Нужен layout относительно суперкомпьютера → [updateLayout()](../../src/render/productionLineRender.js#L230-L258).
 - Нужна синхронизация runtime-state conveyor/box → [syncState()](../../src/render/productionLineRender.js#L265-L311).
-- Нужна логика bottom-up печати коробки → [drawSpriteClip()](../../src/render/productionLineRender.js#L329-L375), [drawBoxOnConveyor()](../../src/render/productionLineRender.js#L417-L444).
+- Нужна логика bottom-up печати коробки и data-driven посадки её на ленту → [drawSpriteClip()](../../src/render/productionLineRender.js#L329-L375), [drawBoxOnConveyor()](../../src/render/productionLineRender.js#L417-L445).
 - Нужен hover/click склада → [drawStorageCell()](../../src/render/productionLineRender.js#L462-L515), [hitTestStorage()](../../src/render/productionLineRender.js#L527-L531).
 
 ## Инварианты этого модуля ⚠️
 - `work` для conveyor не перезапускается, пока активный цикл ещё идёт: [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L219-L227), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L301-L306).
-- Root-состояние `buildTank` приходит из механики production line, а не вычисляется самим renderer'ом: [src/mechanics/productionLine.js](../../src/mechanics/productionLine.js#L97-L154).
+- Renderer не поднимает root-состояние `buildTank`: он читает только belt/storage runtime, а сама root-анимация живёт во внешнем helper `Game.SupercomputerBuildTankFx` + `setSupercomputerWantsBuildTank()`: [src/ui/supercomputerBuildTankFx.js](../../src/ui/supercomputerBuildTankFx.js#L41-L53), [game.js](../../game.js#L11374-L11382).
+- `conveyorBox.offset.x/y` из JSON — канонический способ смещать коробку относительно belt-plane; не дублировать эти поправки хардкодом: [assets/supercomputer.json](../../assets/supercomputer.json#L160-L166), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L417-L445).
 - Печать коробки всегда открывается снизу вверх через clip по прогрессу; это касается и sprite-atlas, и fallback box: [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L329-L375), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L417-L444).
 - Если atlas части недоступен, renderer обязан сохранить legacy geometry и vector fallback без runtime-crash: [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L377-L515).
 
@@ -64,8 +65,8 @@
 
 ## Зависимости
 - Использует: `Game.SupercomputerSprites` через `setSpriteSource()`, `state.productionLine`, `assets/supercomputer.json`.
-- Используется из: `game.js` (draw/layout wiring) и UI суперкомпьютера для hover/click склада.
+- Используется из: `game.js` (draw/layout wiring) и UI суперкомпьютера для hover/click склада; root `buildTank` animation window приходит извне и сюда не пробрасывается.
 
 ## Известные ограничения / TODO
-- Модуль не решает механику печати сам: прогресс и `buildTank` state приходят из `src/mechanics/productionLine.js`.
+- Модуль не решает механику печати сам: прогресс приходит из `state.productionLine`, а root `buildTank` state управляется внешним таймером покупки танка.
 - Legacy setter'ы `setConveyorAtlas()` / `setBoxAtlas()` / `setStorageAtlas()` сохранены для совместимости, но canonical source теперь `setSpriteSource()`.

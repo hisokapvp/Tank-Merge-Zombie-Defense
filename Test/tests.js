@@ -67,6 +67,8 @@ loadModule('src/mechanics/economy.js');
 loadModule('src/mechanics/combat.js');
 // Load level flow
 loadModule('src/mechanics/levelFlow.js');
+// Load progression
+loadModule('src/mechanics/progression.js');
 // Load fence layout
 loadModule('src/render/fenceLayout.js');
 // Load ground modules
@@ -81,6 +83,7 @@ loadModule('src/render/groundLayer.js');
 console.log('\n── T1: computeBuyTankLevel (max-5, cap=50) ──');
 
 const { computeBuyTankLevel, MAX_BUY_TANK_LEVEL } = Game.Economy;
+const { computePowerTier, xpNeededForLevel } = Game.Progression;
 const { formatShortNumber, formatCompactRu } = Game.NumberFormat;
 
 test('T1-1: max=6 → 1', () => {
@@ -100,6 +103,14 @@ test('T1-5: max=0 → 1', () => {
 });
 test('T1-6: max=55 → 50', () => {
   assertEqual(computeBuyTankLevel(55), 50);
+});
+
+test('T1-7: xpNeededForLevel(0) → 50', () => {
+  assertEqual(xpNeededForLevel(0), 50);
+});
+
+test('T1-8: computePowerTier(0) → 0', () => {
+  assertEqual(computePowerTier(0), 0);
 });
 
 test('T2-1: 9999 → "9999"', () => {

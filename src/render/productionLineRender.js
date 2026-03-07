@@ -418,6 +418,9 @@
     const progress01 = clamp01(progress);
     if (!_layoutReady || progress01 <= 0) return;
 
+    const boxCfg = getPartConfig('conveyorBox');
+    const boxOffsetX = boxCfg && boxCfg.offset ? boxCfg.offset.x * _worldScale : 0;
+    const boxOffsetY = boxCfg && boxCfg.offset ? boxCfg.offset.y * _worldScale : 0;
     const stateName = getBoxStateName(progress01);
     const anim = getPartAnimation('conveyorBox', stateName);
     const fallbackSize = Math.max(10 * _worldScale, Math.min(BOX_SIZE * _worldScale, _conveyorBounds.h - 4 * _worldScale, _conveyorBounds.w * 0.36));
@@ -425,8 +428,8 @@
     const boxHeight = anim ? anim.h * getClipScale(anim) : fallbackSize;
     const startX = _conveyorBounds.x + 2 * _worldScale + boxWidth * 0.5;
     const endX = _conveyorBounds.x + _conveyorBounds.w - boxWidth * 0.5 - 2 * _worldScale;
-    const centerX = startX + (endX - startX) * progress01;
-    const centerY = _conveyorBounds.y + _conveyorBounds.h * 0.5;
+    const centerX = startX + (endX - startX) * progress01 + boxOffsetX;
+    const centerY = _conveyorBounds.y + _conveyorBounds.h * 0.5 + boxOffsetY;
 
     if (drawSpriteClip(ctx, 'conveyorBox', stateName, centerX, centerY, _boxElapsedSec, progress01)) {
       return;

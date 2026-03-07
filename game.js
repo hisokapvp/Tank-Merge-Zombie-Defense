@@ -114,7 +114,7 @@ function computePowerTier(computerLevel){
   if (ProgressionApi && ProgressionApi.computePowerTier) {
     return ProgressionApi.computePowerTier(computerLevel);
   }
-  const lvl = Math.max(1, Math.floor(computerLevel));
+  const lvl = Math.max(0, Math.floor(Number.isFinite(computerLevel) ? computerLevel : 0));
   if (lvl < 10) return 0;
   if (lvl < 20) return 1;
   if (lvl < 30) return 2;
@@ -464,7 +464,7 @@ function createInitialState(options){
         fenceSegments: [], fenceSegmentsMeta: null, savedFenceState: null,
         crate: null, nextCrateAt: 0, dragging: null, boostUntil: 0, empUntil: 0,
         activeEffects: { attackUntil: 0, speedUntil: 0, economyUntil: 0 },
-        supercomputer: { computerLevel: 1, xp: 0, xpToNext: 500, maxLevel: MAX_TANK_LEVEL,
+        supercomputer: { computerLevel: 0, xp: 0, xpToNext: 50, maxLevel: MAX_TANK_LEVEL,
           hp: 920, maxHp: 920, armorFlat: 2, x: 0, y: 0, offsetY: 64,
           state: 'idle', animElapsedSec: 0, glitchLoopsRemaining: 0,
           glitchCooldownUntil: 0, wantsBuildTank: false, pendingBuildTank: false,
@@ -488,15 +488,15 @@ function createInitialState(options){
         selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [] };
   if (reason === 'new_game') {
     if (!initialState.player || typeof initialState.player !== 'object') {
-      initialState.player = { talentPoints: 1, talentsV2: { ranksById: {}, freePoints: 1 }, freeTalentPointsV2: 1 };
+      initialState.player = { talentPoints: 0, talentsV2: { ranksById: {}, freePoints: 0 }, freeTalentPointsV2: 0 };
     } else {
-      initialState.player.talentPoints = 1;
+      initialState.player.talentPoints = 0;
       if (!initialState.player.talentsV2 || typeof initialState.player.talentsV2 !== 'object') {
-        initialState.player.talentsV2 = { ranksById: {}, freePoints: 1 };
+        initialState.player.talentsV2 = { ranksById: {}, freePoints: 0 };
       } else {
-        initialState.player.talentsV2.freePoints = 1;
+        initialState.player.talentsV2.freePoints = 0;
       }
-      initialState.player.freeTalentPointsV2 = 1;
+      initialState.player.freeTalentPointsV2 = 0;
     }
   }
   if (!Number.isFinite(initialState.runtimeMaxTankLevelAchieved)) {
@@ -3300,6 +3300,9 @@ function performTankPurchaseOnce(){
   recordTankLevel(level);
   state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
   bumpBuyPrice(level);
+  if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
+    window.Game.SupercomputerBuildTankFx.start(getTankPrintDurationSec());
+  }
   popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level });
@@ -3572,6 +3575,7 @@ function xpNeededForLevel(level){
   if (ProgressionApi && ProgressionApi.xpNeededForLevel) {
     return ProgressionApi.xpNeededForLevel(level);
   }
+  if (Math.floor(Number.isFinite(level) ? level : 0) <= 0) return 50;
   const growth = 3 ** (level - 1);
   const correction = level >= 4 ? (10 / 9) : 1;
   const decadeBoost = 2 ** Math.floor((level - 1) / 10);
@@ -4203,8 +4207,8 @@ function restoreFullState(saved){
   ensureCannonUpgradesAppliedState();
   if (!saved.supercomputer) {
     const sc = getComputerState();
-    if (Number.isFinite(saved.computerLevel)) sc.computerLevel = Math.max(1, Math.floor(saved.computerLevel));
-    else if (saved.player && Number.isFinite(saved.player.level)) sc.computerLevel = Math.max(1, Math.floor(saved.player.level));
+    if (Number.isFinite(saved.computerLevel)) sc.computerLevel = Math.max(0, Math.floor(saved.computerLevel));
+    else if (saved.player && Number.isFinite(saved.player.level)) sc.computerLevel = Math.max(0, Math.floor(saved.player.level));
     if (Number.isFinite(saved.xp)) sc.xp = Math.max(0, Math.floor(saved.xp));
     else if (saved.player && Number.isFinite(saved.player.xp)) sc.xp = Math.max(0, Math.floor(saved.player.xp));
     if (Number.isFinite(saved.xpToNext)) sc.xpToNext = Math.max(1, Math.floor(saved.xpToNext));
@@ -4354,8 +4358,8 @@ function applySavedProgress(data){
     Object.assign(getComputerState(), supercomputer);
   } else {
     const sc = getComputerState();
-    if (Number.isFinite(computerLevel)) sc.computerLevel = Math.max(1, Math.floor(computerLevel));
-    else if (Number.isFinite(playerData.level)) sc.computerLevel = Math.max(1, Math.floor(playerData.level));
+    if (Number.isFinite(computerLevel)) sc.computerLevel = Math.max(0, Math.floor(computerLevel));
+    else if (Number.isFinite(playerData.level)) sc.computerLevel = Math.max(0, Math.floor(playerData.level));
     if (Number.isFinite(playerData.xp)) sc.xp = Math.max(0, Math.floor(playerData.xp));
     if (Number.isFinite(playerData.xpToNext)) sc.xpToNext = Math.max(1, Math.floor(playerData.xpToNext));
     if (Number.isFinite(playerData.maxLevel)) sc.maxLevel = Math.max(1, Math.floor(playerData.maxLevel));

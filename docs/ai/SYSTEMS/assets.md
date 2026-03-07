@@ -26,7 +26,12 @@
 	- `corpseFadeOutSec` дополнительно clamp'ится до `corpseDespawnSec`.
 - Edge-case: при `corpseDespawnSec = 0` труп удаляется сразу после завершения death-анимации.
 
-## `assets/tanks.json` (UI-параметры)
+## `assets/tanks.json` (UI-параметры + печать танка)
+- Top-level `tankPrintDurationSec`:
+	- диапазон: `> 0`;
+	- default/fallback: `1.5` сек;
+	- назначение: единая длительность stamp-reveal в слоте и root-анимации `buildTank` у суперкомпьютера;
+	- нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.tankPrintDurationSec`), затем чтение из `game.js` / `src/ui/supercomputerBuildTankFx.js`: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L22-L53).
 - Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
 - Ключ `ui.onTrackIconOpacity`:
 	- диапазон: `0..1`;
@@ -40,12 +45,13 @@
 - Для `animations.{idle,work,glitch,buildTank,destroy}` сохранены legacy-поля клипа (`x/y/w/h/frames/frameRateFps/loop`) и добавлены:
 	- `scale` — дополнительный множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
 	- `effects` — массив описателей эффекта. Допустимы строка-пресет или объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
-- `buildTank` — не просто data-ключ: root-state реально включается механикой печати коробки, пока `0 < progress < 1` и storage не переполнен: [assets/supercomputer.json](../../../assets/supercomputer.json#L81-L101), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L97-L154).
+- `buildTank` — не просто data-ключ: root-state реально включается только explicit helper'ом покупки танка и живёт одно окно `tankPrintDurationSec`: [assets/supercomputer.json](../../../assets/supercomputer.json#L81-L101), [game.js](../../../game.js#L3289-L3307), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L41-L53).
 - Поддерживаемые preset-id в runtime: `vibration`, `vibrationStrong`, `sway`, `wobble`, `float`, `pulse`.
 - `conveyor` описывает ленту рядом с суперкомпьютером: [assets/supercomputer.json](../../../assets/supercomputer.json#L125-L152).
 	- canonical-состояния: `idle` / `work`.
 	- atlas может отличаться от root atlas.
 - `conveyorBox` описывает печатаемую коробку на конвейере: [assets/supercomputer.json](../../../assets/supercomputer.json#L154-L208).
+	- `offset.x` и `offset.y` напрямую смещают центр коробки относительно belt-layout в renderer; через них коробку сажают «на ленту» без правок JS: [assets/supercomputer.json](../../../assets/supercomputer.json#L160-L166), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L417-L445).
 	- используется отдельный atlas `conveyor_box_atlas.png`;
 	- canonical-состояния: `printLow` / `printHigh`;
 	- loader также понимает alias-ключи `buildLow`, `buildHigh`, `under50`, `over50`, `lessThanHalf`, `moreThanHalf`;

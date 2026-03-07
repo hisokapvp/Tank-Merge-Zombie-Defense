@@ -23,6 +23,13 @@
     }
   }
 
+  function getSupercomputerXpFallback(supercomputer) {
+    var level = Number.isFinite(supercomputer && supercomputer.computerLevel)
+      ? Math.floor(supercomputer.computerLevel)
+      : 0;
+    return level <= 0 ? 50 : 500;
+  }
+
   function takeProgressSnapshot(state) {
     var src = state && typeof state === 'object' ? state : {};
     var player = src.player && typeof src.player === 'object' ? src.player : {};
@@ -58,9 +65,9 @@
         damagePointsSpent: toSafeInt(src.damagePointsSpent, 0, 0),
       },
       supercomputer: {
-        computerLevel: toSafeInt(supercomputer.computerLevel, 1, 1),
+        computerLevel: toSafeInt(supercomputer.computerLevel, 0, 0),
         xp: toSafeInt(supercomputer.xp, 0, 0),
-        xpToNext: toSafeInt(supercomputer.xpToNext, 1, 1),
+        xpToNext: toSafeInt(supercomputer.xpToNext, getSupercomputerXpFallback(supercomputer), 1),
         maxLevel: toSafeInt(supercomputer.maxLevel, 60, 1),
         eventShown40: !!supercomputer.eventShown40,
         eventShown50: !!supercomputer.eventShown50,
@@ -120,9 +127,9 @@
     target.damagePointsSpent = toSafeInt(modifications.damagePointsSpent, 0, 0);
 
     var supercomputer = src.supercomputer && typeof src.supercomputer === 'object' ? src.supercomputer : {};
-    target.supercomputer.computerLevel = toSafeInt(supercomputer.computerLevel, 1, 1);
+  target.supercomputer.computerLevel = toSafeInt(supercomputer.computerLevel, 0, 0);
     target.supercomputer.xp = toSafeInt(supercomputer.xp, 0, 0);
-    target.supercomputer.xpToNext = toSafeInt(supercomputer.xpToNext, 1, 1);
+  target.supercomputer.xpToNext = toSafeInt(supercomputer.xpToNext, getSupercomputerXpFallback(supercomputer), 1);
     target.supercomputer.maxLevel = toSafeInt(supercomputer.maxLevel, 60, 1);
     target.supercomputer.eventShown40 = !!supercomputer.eventShown40;
     target.supercomputer.eventShown50 = !!supercomputer.eventShown50;

@@ -1,6 +1,10 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-06
+- **Документация: update после правок New Game baseline, computer level 0 и buildTank timing**
+  - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/INDEX.md`, `docs/ai/ARCHITECTURE.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: `New game` как отдельный reset-path (`0` free talent points, `computerLevel=0`, `xpToNext=50`), partial reset snapshot без потери `damagePoints/computerLevel`, purchase-driven root `buildTank` с длительностью из `assets/tanks.json -> tankPrintDurationSec`, data-driven `conveyorBox.offset.x/y`, unclipped craft remove-cross во вкладке `Разобрать`.
+
 - **Документация: update после правок суперкомпьютера, conveyor box и мастерской чипов**
   - Перепроверены реальные диапазоны строк в больших map-файлах `HANGAR_CHIPS_UI_MAP.md`, `STYLE_CSS_MAP.md`, `SPRITE_LOADERS_MAP.md`.
   - Добавлен новый map-файл `docs/ai/PRODUCTION_LINE_RENDER_MAP.md` для `src/render/productionLineRender.js`.

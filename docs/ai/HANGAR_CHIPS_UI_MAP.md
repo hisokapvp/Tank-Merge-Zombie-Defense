@@ -17,7 +17,7 @@
 - Вкладки переключаются только через [switchHangarTab()](../../src/ui/hangarChipsUI.js#L602-L632) и [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L634-L662): они синхронизируют `hidden`, `active` и `aria-selected`.
 - В assemble-режиме `_canAddFragment()` запрещает тройку одинаковых фрагментов и больше одного special-мода: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1961-L1985).
 - `chipCraftModeRow` рендерится всегда над drop-zone, а `#chipCraftActionBtn` всегда существует под ней и только переключается между disabled/enabled по `_detectCraftMode()`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2213-L2463).
-- Occupied craft slots и future-preview используют общий карточный паттерн `chipCraftSlotCard`: квадратная карточка, footer-title с ellipsis, badge уровня для целых чипов; remove-контрол — `chipCraftSlotRemove` в game-styled исполнении: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2112-L2137), [style.css](../../style.css#L4268-L4385).
+- Occupied craft slots и future-preview используют общий карточный паттерн `chipCraftSlotCard`: квадратная карточка, footer-title с ellipsis, badge уровня для целых чипов; remove-контрол — sibling `chipCraftSlotRemove` в game-styled исполнении. Во вкладке `Разобрать` он не должен клиппиться и остаётся в том же углу, что у эталонного preview `Создать чип`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2112-L2137), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2361-L2413), [style.css](../../style.css#L4217-L4385).
 - «Будущий» чип в craft preview — это отдельный контейнер `.chipCraftResultChip--future`, а не смена палитры самого SVG: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2384-L2413), [style.css](../../style.css#L4617-L4639).
 - Авто-переключение craft-mode при клике/drag из инвентаря живёт только в `_addItemToSlot()`; не дублировать это ветвление в pointer handlers: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2139-L2211), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2527-L2577).
 
@@ -74,7 +74,8 @@
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2093-L2463) — craft cards, result preview и future-chip frame.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2465-L2798) — pointer events, dust mode, execute flow.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2800-L3179) — overlay-level drag-drop/tooltips.
-- [style.css](../../style.css#L4138-L4664) — inventory-card shell, `chipCraftSlotRemove`, future-frame и reagent states.
+- [style.css](../../style.css#L4217-L4385) — slot row / card shell / `chipCraftSlotRemove` без clipping.
+- [style.css](../../style.css#L4611-L4635) — future-frame эталонного result preview.
 
 ## Зависимости
 - Использует: `Game.HangarChips`, `Game.Toast`, `Game.I18n`.

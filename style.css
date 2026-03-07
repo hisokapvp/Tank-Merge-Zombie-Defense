@@ -4603,6 +4603,8 @@ input, select, textarea, button {
   gap:8px;
   max-height:240px;
   overflow-y:auto;
+  padding:8px 10px 6px 0;
+  box-sizing:border-box;
 }
 
 /* ─── Assemble result preview (inline in slot row) ─── */

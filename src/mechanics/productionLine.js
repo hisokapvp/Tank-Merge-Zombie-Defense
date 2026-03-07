@@ -94,20 +94,6 @@
     return pl;
   }
 
-  function syncSupercomputerBuildTankState(pl) {
-    var runtime = global.Game || {};
-    var setBuildTank = typeof runtime.setSupercomputerWantsBuildTank === 'function'
-      ? runtime.setSupercomputerWantsBuildTank
-      : (runtime.SupercomputerRuntime && typeof runtime.SupercomputerRuntime.setWantsBuildTank === 'function'
-        ? runtime.SupercomputerRuntime.setWantsBuildTank
-        : null);
-    if (!setBuildTank) return;
-
-    var hasRoom = pl && Number.isFinite(pl.storageSlots) ? pl.storage.length < pl.storageSlots : false;
-    var progress = Number.isFinite(pl && pl.progress) ? pl.progress : 0;
-    setBuildTank(progress > 0 && progress < 1 && hasRoom);
-  }
-
   // ─── Step (called every frame) ─────────────────────────────
   let _prevKills = -1;
 
@@ -150,8 +136,6 @@
         pl.progress = 1;
       }
     }
-
-    syncSupercomputerBuildTankState(pl);
   }
 
   // ─── Open box: resolve loot ────────────────────────────────

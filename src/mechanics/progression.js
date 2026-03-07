@@ -4,7 +4,7 @@
   var POWER_TIER_THRESHOLDS = [10, 20, 30, 40, 50, 60];
 
   function computePowerTier(computerLevel) {
-    var lvl = Math.max(1, Math.floor(computerLevel));
+    var lvl = Math.max(0, Math.floor(Number.isFinite(computerLevel) ? computerLevel : 0));
     if (lvl < 10) return 0;
     if (lvl < 20) return 1;
     if (lvl < 30) return 2;
@@ -14,6 +14,8 @@
   }
 
   function xpNeededForLevel(level) {
+    var lvl = Math.floor(Number.isFinite(level) ? level : 0);
+    if (lvl <= 0) return 50;
     var growth = Math.pow(3, level - 1);
     var correction = level >= 4 ? (10 / 9) : 1;
     var decadeBoost = Math.pow(2, Math.floor((level - 1) / 10));

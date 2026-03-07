@@ -16,6 +16,7 @@
 - `.supercomputerHudBtn` позиционируется только через `transform`; анимации по `transform` для runtime-перемещения запрещены: [style.css](../../style.css#L1443-L1547).
 - В supercomputer/talents overlays pressed/hover behavior не должен создавать layout shift и второй scrollbar: [style.css](../../style.css#L2061-L2124).
 - Игровые close-кнопки используют общий визуальный язык wasteland UI: `.levelModal__close` и craft-slot remove `chipCraftSlotRemove` не должны превращаться в plain red circles: [style.css](../../style.css#L1301-L1339), [style.css](../../style.css#L4332-L4385).
+- `chipCraftSlot` / `chipCraftSlotRow--withResult` обязаны оставлять headroom для внешнего `chipCraftSlotRemove`, чтобы крестик во вкладке `Разобрать` не клиппился и совпадал по позиции с future-preview эталоном: [style.css](../../style.css#L4217-L4254), [style.css](../../style.css#L4332-L4385), [style.css](../../style.css#L4611-L4625).
 - Craft slots и future-preview используют квадратный карточный shell `chipCraftSlotCard`, визуально согласованный с inventory-карточками: [style.css](../../style.css#L4268-L4385).
 - «Будущий» чип получает dashed-рамку на `.chipCraftResultChip--future`, placeholder — на `.chipCraftSlot--resultSlot`, а не через перекраску SVG: [style.css](../../style.css#L4617-L4639).
 
@@ -34,7 +35,7 @@
 - [style.css](../../style.css#L1443-L1547) — runtime контракт `.supercomputerHudBtn`.
 - [style.css](../../style.css#L2061-L2124) — `.scModal__body` и scroll/pressed behavior.
 - [style.css](../../style.css#L3063-L4087) — Hangar/Workshop/Tech Unlock.
-- [style.css](../../style.css#L4138-L4385) — craft inventory cards, `chipCraftSlotCard`, `chipCraftSlotRemove`.
+- [style.css](../../style.css#L4217-L4385) — craft slot row, `chipCraftSlotCard`, `chipCraftSlotRemove`.
 - [style.css](../../style.css#L4416-L4664) — bottom bar, dust states, future chip frame, reagent row.
 - [style.css](../../style.css#L4711-L4787) — production line storage modal.
 
