@@ -93,3 +93,78 @@ There is **no npm, no bundler**. Do not add `package.json` or a build pipeline.
 - Add asset variant: [docs/ai/PLAYBOOKS/add-asset-variant.md](docs/ai/PLAYBOOKS/add-asset-variant.md)
 - Debug lag: [docs/ai/PLAYBOOKS/debug-lag.md](docs/ai/PLAYBOOKS/debug-lag.md)
 - Change input control: [docs/ai/PLAYBOOKS/change-input-control.md](docs/ai/PLAYBOOKS/change-input-control.md)
+
+---
+
+## Agent System & AI Workflow
+
+All agents and skills live in **`c:\Users\hisok\.agents\.github\`** — a separate workspace
+folder that is **not part of the game repository**.
+
+### Agent entry points
+
+| Agent | File | Purpose |
+|---|---|---|
+| Programmer | `agents/Programmer.md` | Routes tasks → UX-Designer or Fullstack-Developer skills |
+| Log-Writer | `agents/Log-Writer.md` | Delegates to `session-logger` skill after task is done |
+| Spec-Refiner | `agents/Spec-Refiner.md` | Improves informal TZ before passing to pipeline |
+
+### Skills
+
+| Skill | Path | Purpose |
+|---|---|---|
+| session-logger | `skills/session-logger/SKILL.md` | Logs completed sessions to JSONL + DuckDB |
+| fullstack-developer | `skills/fullstack-developer/SKILL.md` | Implements code tasks end-to-end |
+| ux-designer | `skills/ux-designer/SKILL.md` | Produces UX specs, wireframes, flows |
+| spec-refiner | `skills/spec-refiner/SKILL.md` | Converts informal TZ to structured spec |
+
+### Session Logger
+
+Logs are stored in **`D:\agent-logs\`**:
+
+```
+D:\agent-logs\
+  sessions.jsonl            ← master append-only log
+  sessions.duckdb           ← queryable DB (rebuilt from JSONL)
+  backups\                  ← daily backups (14-day retention)
+  YYYY\MM\DD\<session_id>\  ← per-session JSON files
+```
+
+**Dashboard** — local web UI for browsing, filtering and managing logs:
+
+```powershell
+# Start the dashboard (port 8777)
+& d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
+  c:\Users\hisok\.agents\.github\skills\session-logger\scripts\dashboard.py --open
+
+# Full rebuild of DuckDB from JSONL
+& d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
+  c:\Users\hisok\.agents\.github\skills\session-logger\scripts\sync_to_duckdb.py `
+  --log-root "D:\agent-logs" --full-rebuild
+```
+
+Dashboard features:
+- Rating trend & duration charts (Chart.js)
+- Full-text search across `spec_raw`
+- Session comparison (diff view)
+- Rating editing from UI
+- Manual & auto backups (daily, 14-day retention)
+- CSV / Parquet / DuckDB download
+- **Session deletion** with 2-step confirmation (type `DELETE` to confirm)
+
+**Write a log** after completing a session — call `session-logger` skill or use the script:
+
+```powershell
+& d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
+  c:\Users\hisok\.agents\.github\skills\session-logger\scripts\write_session_log.py `
+  --json-file path\to\payload.json
+```
+
+Payload schema: see `skills/session-logger/payload.json` for a full example.
+
+### When to call agents
+
+- **Start of any non-trivial task** → call `Spec-Refiner` to structure the TZ first.
+- **Multi-step implementation** → call `TZ-Orchestrator` to decompose, then `Implementer` per step.
+- **After completing a task** → call `Log-Writer` / `session-logger` to record the session.
+- **Code review before commit** → call `Code-Reviewer` or `Verifier`.
