@@ -83,6 +83,8 @@
   var _chipFilter = 'all';  // 'all' | 'red' | 'yellow'
   var _initialized = false;
   var _doc = null;
+  var _workshopSubTab = 'chipUpgrade';
+  var _chipRecycleSubTab = 'dust';
 
   /* ─── Chip drag-and-drop state (Workshop) ──────────────── */
   var _chipDragging = null; // { chipId, level, startX, startY, x, y, moved, ghostEl, sourceEl }
@@ -625,7 +627,10 @@
     if (panelTechUnlock) panelTechUnlock.hidden = !isTech;
 
     if (isCells) render();
-    if (isWorkshop) renderChipUpgradeGrid();
+    if (isWorkshop) {
+      if (_workshopSubTab === 'chipCraft' || _workshopSubTab === 'chipRecycle') renderChipCraftPanel();
+      else renderChipUpgradeGrid();
+    }
     if (isTech) renderTechUnlockPanel();
   }
 
@@ -634,12 +639,17 @@
   function switchWorkshopSubTab(tabId) {
     var tabChipUpgrade = el('workshopTabChipUpgrade');
     var tabChipCraft = el('workshopTabChipCraft');
+    var tabChipRecycle = el('workshopTabChipRecycle');
     var panelChipUpgrade = el('workshopPanelChipUpgrade');
     var panelChipCraft = el('workshopPanelChipCraft');
+    var panelChipRecycle = el('workshopPanelChipRecycle');
     if (!tabChipUpgrade) return;
 
     var isChips = tabId === 'chipUpgrade';
     var isCraft = tabId === 'chipCraft';
+    var isRecycle = tabId === 'chipRecycle';
+
+    _workshopSubTab = isRecycle ? 'chipRecycle' : (isCraft ? 'chipCraft' : 'chipUpgrade');
 
     tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
     tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
@@ -650,12 +660,43 @@
       tabChipCraft.setAttribute('tabindex', isCraft ? '0' : '-1');
       tabChipCraft.classList.toggle('workshopSubTab--active', isCraft);
     }
+    if (tabChipRecycle) {
+      tabChipRecycle.setAttribute('aria-selected', isRecycle ? 'true' : 'false');
+      tabChipRecycle.setAttribute('tabindex', isRecycle ? '0' : '-1');
+      tabChipRecycle.classList.toggle('workshopSubTab--active', isRecycle);
+    }
 
     if (panelChipUpgrade) panelChipUpgrade.hidden = !isChips;
     if (panelChipCraft) panelChipCraft.hidden = !isCraft;
+    if (panelChipRecycle) panelChipRecycle.hidden = !isRecycle;
 
     if (isChips) renderChipUpgradeGrid();
-    if (isCraft) renderChipCraftPanel();
+    if (isCraft) {
+      _dustMode = false;
+      if (_craftMode !== 'assemble') _resetCraftSlots();
+      _craftMode = 'assemble';
+      renderChipCraftPanel();
+    }
+    if (isRecycle) {
+      switchChipRecycleSubTab(_chipRecycleSubTab);
+    }
+  }
+
+  function switchChipRecycleSubTab(tabId) {
+    _workshopSubTab = 'chipRecycle';
+    _chipRecycleSubTab = tabId === 'disassemble' ? 'disassemble' : 'dust';
+
+    if (_chipRecycleSubTab === 'disassemble') {
+      _dustMode = false;
+      if (_craftMode !== 'disassemble') {
+        _craftMode = 'disassemble';
+        _craftSlots = [];
+      }
+    } else {
+      _dustMode = true;
+    }
+
+    renderChipCraftPanel();
   }
 
   /* ─── Tech Unlock state ────────────────────────────────── */
@@ -1628,6 +1669,10 @@
       switchWorkshopSubTab('chipCraft');
       return;
     }
+    if (tgt.id === 'workshopTabChipRecycle' || tgt.closest && tgt.closest('#workshopTabChipRecycle')) {
+      switchWorkshopSubTab('chipRecycle');
+      return;
+    }
 
     /* merge chip button — removed, now uses drag-and-drop */
 
@@ -1881,7 +1926,7 @@
     if (!hasItems) {
       html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет больших чипов, фрагментов или кремниевой пыли') + '</div>';
     } else if (hasCards) {
-      html += '<div class="techAccelGrid">';
+      html += '<div class="techAccelGridWrap"><div class="techAccelGrid">';
       for (var i = 0; i < chips.length; i++) {
         var chip = chips[i];
         var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -1909,16 +1954,10 @@
           }
         }
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
     html += '<div class="techModal__footer">';
-    html += '<div class="techModal__selectionInfo" data-tech-accel-summary>'
-      + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%')
-        .replace('{pct}', '0')
-        .replace('{total}', String(currentAccel))
-        .replace('{left}', String(Math.max(0, 95 - currentAccel)))
-      + '</div>';
     html += '<div class="techModal__dustRow">';
     html += '<div class="techModal__dustLabel">'
       + '<span>' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>'
@@ -1929,6 +1968,12 @@
     html += '<button class="techAccelDustControls__btn" data-accel-dust-step="1" type="button" aria-label="+">+</button>';
     html += '</div>';
     html += '</div>';
+    html += '<div class="techModal__selectionInfo" data-tech-accel-summary>'
+      + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%')
+        .replace('{pct}', '0')
+        .replace('{total}', String(currentAccel))
+        .replace('{left}', String(Math.max(0, 95 - currentAccel)))
+      + '</div>';
     html += '</div>';
     html += '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-tech-accel-confirm="' + modId + '" type="button">' +
@@ -2363,75 +2408,102 @@
 
   /** Render the chip crafting panel */
   function renderChipCraftPanel() {
-    var panel = el('workshopPanelChipCraft');
+    var panel = _workshopSubTab === 'chipRecycle'
+      ? el('workshopPanelChipRecycle')
+      : el('workshopPanelChipCraft');
     if (!panel) return;
     var h = hc();
     if (!h) { panel.innerHTML = '<div class="chipUpgradeEmptyLabel">Модуль не загружен</div>'; return; }
 
-    var html = '<div class="chipCraftLayout">';
+    var isRecyclePanel = _workshopSubTab === 'chipRecycle';
+    var recycleMode = _chipRecycleSubTab === 'disassemble' ? 'disassemble' : 'dust';
+    var isDustView = isRecyclePanel && recycleMode === 'dust';
+    var isDisassembleView = isRecyclePanel && recycleMode === 'disassemble';
+    var isAssembleView = !isRecyclePanel;
+    var showChipItems = isDisassembleView || isDustView;
+    var showFragmentItems = isAssembleView || isDustView;
+
+    _dustMode = isDustView;
+    if (isAssembleView) _craftMode = 'assemble';
+    if (isDisassembleView) _craftMode = 'disassemble';
+
+    var html = '';
+    if (isRecyclePanel) {
+      html += '<div class="workshopSubTabs workshopSubTabs--nested" role="tablist" aria-label="' + _escapeHtml(t('workshopTabChipRecycle', 'Переработка чипов')) + '">';
+      html += '<button id="chipRecycleTabDust" class="btn scButton workshopSubTab workshopSubTab--nested' + (isDustView ? ' workshopSubTab--active' : '') + '" type="button" role="tab" aria-selected="' + (isDustView ? 'true' : 'false') + '" aria-controls="workshopPanelChipRecycle" tabindex="' + (isDustView ? '0' : '-1') + '" data-i18n="chipCraftDustBtn">' + t('chipCraftDustBtn', 'Распылить') + '</button>';
+      html += '<button id="chipRecycleTabDisassemble" class="btn scButton workshopSubTab workshopSubTab--nested' + (isDisassembleView ? ' workshopSubTab--active' : '') + '" type="button" role="tab" aria-selected="' + (isDisassembleView ? 'true' : 'false') + '" aria-controls="workshopPanelChipRecycle" tabindex="' + (isDisassembleView ? '0' : '-1') + '" data-i18n="chipCraftDisassemble">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
+      html += '</div>';
+    }
+
+    html += '<div class="chipCraftLayout' + (isDustView ? ' chipCraftLayout--singleCol' : '') + '">';
 
     /* ── Left column: wrapper for inventory box + bottom bar ── */
     html += '<div class="chipCraftLeftCol">';
 
-    /* ── Left column: Inventory of fragments + whole chips ── */
+    /* ── Left column: Inventory of fragments / whole chips ── */
     html += '<div class="chipCraftInventory">';
     html += '<div class="chipCraftInvGrid">';
 
-    /* Show whole chips */
+    var displayedItems = 0;
+
     var playerChips = ensurePlayerChips();
-    for (var ci = 0; ci < playerChips.length; ci++) {
-      var pc = playerChips[ci];
-      if (pc.count <= 0) continue;
-      var borderColor = pc.chipColor === 'red' ? '#e53935' : '#fdd835';
-      var chipName = _getChipDisplayName(pc);
-      var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
-      var dustSel = _dustSelected[dustKey] || 0;
-      html += '<div class="chipCraftInvItem' + (_dustMode && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
-        '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '">';
-      if (_dustMode) {
-        html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
-          (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
-        if (dustSel > 0 && pc.count > 1) {
-          html += '<span class="chipCraftDustCount">' + dustSel + '/' + pc.count + '</span>';
+    if (showChipItems) {
+      for (var ci = 0; ci < playerChips.length; ci++) {
+        var pc = playerChips[ci];
+        if (pc.count <= 0) continue;
+        displayedItems++;
+        var borderColor = pc.chipColor === 'red' ? '#e53935' : '#fdd835';
+        var chipName = _getChipDisplayName(pc);
+        var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
+        var dustSel = _dustSelected[dustKey] || 0;
+        html += '<div class="chipCraftInvItem' + (isDustView && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
+          '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '">';
+        if (isDustView) {
+          html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
+            (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
+          if (dustSel > 0 && pc.count > 1) {
+            html += '<span class="chipCraftDustCount">' + dustSel + '/' + pc.count + '</span>';
+          }
         }
+        html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
+        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
+        html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
+        html += '</div>';
       }
-      html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
-      html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
-      html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
-      html += '</div>';
     }
 
-    /* Show fragments */
     var playerFrags = ensurePlayerFragments();
-    for (var fi = 0; fi < playerFrags.length; fi++) {
-      var frag = playerFrags[fi];
-      if (frag.count <= 0) continue;
-      var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
-      var fragName = modName(frag.fragmentId);
-      var dustKeyF = 'frag_' + frag.fragmentId;
-      var dustSelF = _dustSelected[dustKeyF] || 0;
-      /* Determine if fragment can be added (green/red highlight in assemble mode) */
-      var fragCanAdd = _craftMode === 'assemble' && !_dustMode ? _canAddFragment(frag.fragmentId) : true;
-      var fragHighlightClass = '';
-      if (_craftMode === 'assemble' && !_dustMode) {
-        fragHighlightClass = fragCanAdd ? ' chipCraftInvItem--canAdd' : ' chipCraftInvItem--cantAdd';
-      }
-      html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (_dustMode && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') + fragHighlightClass +
-        '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '">';
-      if (_dustMode) {
-        html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyF + '" data-dust-type="fragment" data-dust-max="' + frag.count + '"' +
-          (dustSelF > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
-        if (dustSelF > 0 && frag.count > 1) {
-          html += '<span class="chipCraftDustCount">' + dustSelF + '/' + frag.count + '</span>';
+    if (showFragmentItems) {
+      for (var fi = 0; fi < playerFrags.length; fi++) {
+        var frag = playerFrags[fi];
+        if (frag.count <= 0) continue;
+        displayedItems++;
+        var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
+        var fragName = modName(frag.fragmentId);
+        var dustKeyF = 'frag_' + frag.fragmentId;
+        var dustSelF = _dustSelected[dustKeyF] || 0;
+        var fragCanAdd = isAssembleView && !isDustView ? _canAddFragment(frag.fragmentId) : true;
+        var fragHighlightClass = '';
+        if (isAssembleView && !isDustView) {
+          fragHighlightClass = fragCanAdd ? ' chipCraftInvItem--canAdd' : ' chipCraftInvItem--cantAdd';
         }
+        html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (isDustView && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') + fragHighlightClass +
+          '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '">';
+        if (isDustView) {
+          html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyF + '" data-dust-type="fragment" data-dust-max="' + frag.count + '"' +
+            (dustSelF > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
+          if (dustSelF > 0 && frag.count > 1) {
+            html += '<span class="chipCraftDustCount">' + dustSelF + '/' + frag.count + '</span>';
+          }
+        }
+        html += _fragmentSvg(frag.fragmentId, 22, fragStroke);
+        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>';
+        html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
+        html += '</div>';
       }
-      html += _fragmentSvg(frag.fragmentId, 22, fragStroke);
-      html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>';
-      html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
-      html += '</div>';
     }
 
-    if (!playerChips.length && !playerFrags.length) {
+    if (!displayedItems) {
       html += '<div class="chipUpgradeEmptyLabel" style="padding:20px 0">' + t('chipCraftNoItems', 'Нет чипов или фрагментов') + '</div>';
     }
 
@@ -2442,7 +2514,7 @@
     /* ── Bottom bar outside inventory: dust controls + silicon dust display ── */
     html += '<div class="chipCraftBottomBar">';
     html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
-    if (_dustMode) {
+    if (isDustView) {
       html += '<div class="chipCraftDustActions">';
       html += '<button class="btn scButton chipCraftDustConfirmBtn" id="chipCraftDustConfirm" type="button">' + t('chipCraftDustConfirm', 'Подтвердить') + '</button>';
       html += '<button class="btn scButton chipCraftDustCancelBtn" id="chipCraftDustCancel" type="button">' + t('chipCraftDustCancel', 'Отменить') + '</button>';
@@ -2450,24 +2522,14 @@
       html += '<span class="chipCraftDustTotal" id="chipCraftDustTotal">' +
         t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', dustTotal) + '</span>';
       html += '</div>';
-    } else {
-      html += '<button class="btn scButton chipCraftDustBtn" id="chipCraftDustBtn" type="button">' + t('chipCraftDustBtn', 'Распылить') + '</button>';
     }
     html += '</div>'; // chipCraftBottomBar
 
     html += '</div>'; // chipCraftLeftCol
 
-    /* ── Right column: Craft preview area ── */
-    html += '<div class="chipCraftPreview"' + (_dustMode ? ' style="opacity:0.5;pointer-events:none"' : '') + '>';
-
-      /* ── Mode tabs: always visible at top of preview area ── */
-      html += '<div class="chipCraftModeRow">';
-      html += '<button class="chipCraftModeBtn' + (_craftMode === 'disassemble' ? ' chipCraftModeBtn--active' : '') +
-        '" data-craft-mode-btn="disassemble" type="button">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
-      html += '<button class="chipCraftModeBtn' + (_craftMode === 'assemble' ? ' chipCraftModeBtn--active' : '') +
-        '" data-craft-mode-btn="assemble" type="button">' + t('chipCraftAssemble', 'Создать чип') + '</button>';
-      html += '</div>';
-
+    if (!isDustView) {
+      /* ── Right column: Craft preview area ── */
+      html += '<div class="chipCraftPreview">';
       html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
       var hasContent = false;
       var slotsLen = _craftSlots.length;
@@ -2475,7 +2537,7 @@
         if (_craftSlots[si]) { hasContent = true; break; }
       }
       if (hasContent) {
-        if (_craftMode === 'disassemble') {
+        if (isDisassembleView) {
           /* Dynamic disassemble slots: show all chips + one empty "+" slot */
           html += '<div class="chipCraftSlotRow chipCraftSlotRow--disassemble">';
           for (var sj = 0; sj < _craftSlots.length; sj++) {
@@ -2595,14 +2657,16 @@
 
       /* ── Action button below drop zone (always visible, disabled when no valid content) ── */
       var slotMode = _detectCraftMode();
-      var canExec = hasContent && (slotMode === 'disassemble' || slotMode === 'assemble');
-      var execLabel = _craftMode === 'disassemble'
+      var expectedMode = isDisassembleView ? 'disassemble' : 'assemble';
+      var canExec = hasContent && slotMode === expectedMode;
+      var execLabel = isDisassembleView
         ? t('chipCraftDisassemble', 'Разобрать')
         : t('chipCraftAssemble', 'Создать чип');
       html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
         '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
 
       html += '</div>'; // chipCraftPreview
+    }
 
     html += '</div>'; // chipCraftLayout
 
@@ -2613,6 +2677,19 @@
   }
 
   function _attachCraftPanelEvents(panel) {
+
+    var recycleDustTab = el('chipRecycleTabDust');
+    if (recycleDustTab) {
+      recycleDustTab.addEventListener('click', function () {
+        switchChipRecycleSubTab('dust');
+      });
+    }
+    var recycleDisassembleTab = el('chipRecycleTabDisassemble');
+    if (recycleDisassembleTab) {
+      recycleDisassembleTab.addEventListener('click', function () {
+        switchChipRecycleSubTab('disassemble');
+      });
+    }
 
     /* ── Dust mode buttons ── */
     var dustBtn = el('chipCraftDustBtn');
@@ -2632,7 +2709,7 @@
     var dustCancel = el('chipCraftDustCancel');
     if (dustCancel) {
       dustCancel.addEventListener('click', function () {
-        _resetDustMode();
+        _dustSelected = {};
         renderChipCraftPanel();
       });
     }

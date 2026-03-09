@@ -163,7 +163,7 @@
         <div class="levelModal hidden" id="levelModal" aria-hidden="true">
           <div class="levelModal__backdrop"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="levelTitle" tabindex="-1">
-            <button class="levelModal__close" id="levelModalClose" type="button" aria-label="Close">×</button>
+            <button class="levelModal__close scModal__close" id="levelModalClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="levelTitle">Вы достигли 1 уровня!</div>
             <div class="levelModal__line" id="levelTalent">Вы получили: 1 Очки улучшений</div>
             <div class="levelModal__line" id="levelGold">Вы получили 0 золота</div>
@@ -195,7 +195,7 @@
         <div class="levelModal hidden" id="achievementsModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-achievements-close="true"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle" tabindex="-1">
-            <button class="levelModal__close" id="achievementsClose" type="button" aria-label="Close">×</button>
+            <button class="levelModal__close scModal__close" id="achievementsClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="achievementsTitle" data-i18n="achievementsTitle">Достижения</div>
             <div class="achievementsList" id="achievementsList"></div>
           </div>
@@ -203,7 +203,7 @@
         <div class="levelModal hidden" id="achievementPopup" aria-hidden="true">
           <div class="levelModal__backdrop" data-achievement-popup-close="true"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementPopupTitle" tabindex="-1">
-            <button class="levelModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
+            <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">Достижение получено</div>
             <div class="levelModal__line" id="achievementPopupName"></div>
             <div class="levelModal__line" id="achievementPopupReward"></div>
@@ -214,8 +214,11 @@
         <div class="plStorage hidden" id="productionLineStorageModal" aria-hidden="true">
           <div class="plStorage__backdrop"></div>
           <div class="plStorage__panel" role="dialog" aria-modal="true" aria-labelledby="plStorageTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Склад коробок</div>
+            <div class="plStorage__header">
+              <div class="plStorage__headerSpacer" aria-hidden="true"></div>
+              <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Производственный склад</div>
+              <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+            </div>
             <div class="plStorage__grid" id="plStorageGrid"></div>
             <div class="plStorage__confirm hidden" id="plConfirmOverlay">
               <div class="plStorage__confirmBox">
@@ -286,12 +289,16 @@
                 <div class="workshopSubTabs" role="tablist" aria-label="Workshop sub-tabs">
                   <button id="workshopTabChipUpgrade" class="btn scButton workshopSubTab workshopSubTab--active" type="button" role="tab" aria-selected="true" aria-controls="workshopPanelChipUpgrade" tabindex="0" data-i18n="workshopTabChipUpgrade">Улучшение чипов</button>
                   <button id="workshopTabChipCraft" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipCraft" tabindex="-1" data-i18n="workshopTabChipCraft">Создание чипов</button>
+                  <button id="workshopTabChipRecycle" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipRecycle" tabindex="-1" data-i18n="workshopTabChipRecycle">Переработка чипов</button>
                 </div>
                 <section class="workshopSubPanel" id="workshopPanelChipUpgrade" role="tabpanel" aria-labelledby="workshopTabChipUpgrade">
                   <div class="chipUpgradeGrid" id="chipUpgradeGrid"></div>
                 </section>
                 <section class="workshopSubPanel" id="workshopPanelChipCraft" role="tabpanel" aria-labelledby="workshopTabChipCraft" hidden>
                   <div class="chipCraftContainer" id="chipCraftContainer"></div>
+                </section>
+                <section class="workshopSubPanel" id="workshopPanelChipRecycle" role="tabpanel" aria-labelledby="workshopTabChipRecycle" hidden>
+                  <div class="chipCraftContainer" id="chipRecycleContainer"></div>
                 </section>
               </section>
               <section class="scTabPanel" id="hangarPanelTechUnlock" role="tabpanel" aria-labelledby="hangarTabTechUnlock" hidden>

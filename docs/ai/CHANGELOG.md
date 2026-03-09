@@ -1,6 +1,10 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-09
+- **Документация: update после workshop recycle, storage header и unified X hover fix**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: третья под-вкладка Мастерской `workshopTabChipRecycle`, nested recycle-tabs `Распылить/Разобрать`, split assemble/recycle в `renderChipCraftPanel()`, single-column dust view, bordered `techAccelGridWrap` со summary под dust-row, новый header `Производственный склад` с правым `scModal__close`, а также отсутствие hover/active transform-сдвигов у unified close-кнопок.
+
 - **Документация: update после fix close-кнопок, guaranteed red chip и tech accel dust planner**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
   - Зафиксированы: гарантированная первая `new_game` коробка теперь выдаёт канонический рабочий red chip (`chipId`, `sourceComboKey`, `3` уникальных base `modIds`), accel modal показывает строку пыли как `доступно / выбрано`, live-summary `{pct}/{total}/{left}` и применяет тот же выбранный объём, а `fontFloor` больше не вмешивается в unified close-кнопки (`crate/level/modal/lesson/sc`).
