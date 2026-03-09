@@ -1086,6 +1086,7 @@ body.menu-open .stageUi .hudItem{
   border-color:rgba(255,214,171,.65);
   box-shadow:0 0 10px rgba(255,143,91,.18), 2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
   filter:brightness(1.08);
+  transform:none !important;
 }
 .crateModal__close:focus-visible{
   outline:none;
@@ -1384,6 +1385,7 @@ body.scmodal-open{
   border-color:rgba(255,214,171,.65);
   box-shadow:0 0 10px rgba(255,143,91,.18), 2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
   filter:brightness(1.08);
+  transform:none !important;
 }
 .levelModal__close:focus-visible{
   outline:none;
@@ -1412,6 +1414,7 @@ body.scmodal-open{
   border-color:#84ff68 !important;
   box-shadow:0 0 16px rgba(74,246,38,.38), 2px 2px 0 #000 !important;
   filter:none !important;
+  transform:none !important;
 }
 .scModal__close:hover::before,
 .scModal__close:hover::after,
@@ -1905,6 +1908,7 @@ input, select, textarea, button {
   border-color:rgba(255,214,171,.65);
   box-shadow:0 0 10px rgba(255,143,91,.18), 2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
   filter:brightness(1.08);
+  transform:none !important;
 }
 .modalClose:focus-visible{
   outline:none;
@@ -1935,6 +1939,7 @@ input, select, textarea, button {
   border-color:#84ff68 !important;
   box-shadow:0 0 16px rgba(74,246,38,.38), 2px 2px 0 #000 !important;
   filter:none !important;
+  transform:none !important;
 }
 #talentOverlay .modalClose:hover::before,
 #talentOverlay .modalClose:hover::after,
@@ -3163,6 +3168,7 @@ input, select, textarea, button {
   border-color:rgba(255,214,171,.65);
   box-shadow:0 0 10px rgba(255,143,91,.18), 2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
   filter:brightness(1.08);
+  transform:none !important;
 }
 .lessonProgress__close:focus-visible{
   outline:none;
@@ -4252,6 +4258,7 @@ input, select, textarea, button {
   border-radius:12px;
   background:rgba(12,18,15,.3);
   padding:6px;
+  overflow-x:hidden;
 }
 .techModal__dustLabel{
   display:flex;
@@ -4269,6 +4276,7 @@ input, select, textarea, button {
   display:flex;
   gap:12px;
   justify-content:center;
+  margin-top:5px;
 }
 .techModal__yesBtn{
   background:rgba(229,57,53,.15) !important;
@@ -4512,6 +4520,10 @@ input, select, textarea, button {
 .chipCraftInvGrid::-webkit-scrollbar{width:6px}
 .chipCraftInvGrid::-webkit-scrollbar-track{background:rgba(0,0,0,.2);border-radius:3px}
 .chipCraftInvGrid::-webkit-scrollbar-thumb{background:rgba(74,246,38,0.5);border-radius:3px}
+/* Force single-column inventory for assemble and disassemble views (not dust) */
+.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid{
+  grid-template-columns:1fr;
+}
 .chipCraftInvItem{
   position:relative;
   display:flex;

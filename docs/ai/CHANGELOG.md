@@ -1,5 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-09 (session 2)
+- **UX: 5 UI-правок — close-hover, techModal gap, hscroll, workshop inventory (`style.css`, `src/ui/hangarChipsUI.js`)**
+  - Fix 1: Все close-кнопки (`.crateModal__close`, `.levelModal__close`, `.scModal__close`, `.modalClose`, `#talentOverlay .modalClose`, `.modalClose.scModal__close`, `.lessonProgress__close`) получили `transform:none !important` в `:hover`-правиле. Корневая причина: `buttonBehavior.js/decorateTree()` добавляет `uiButtonBehavior` ко ВСЕМ `<button>`, что давало `transform: translateY(-2px) scale(1.01)` на hover; combined с `overflow:hidden` на close-кнопках это обрезало псевдоэлементный X.
+  - Fix 2: `.techModal__btns` получил `margin-top:5px`. Кнопки находятся вне `.techModal__footer`, поэтому `gap:12px` footer-а на них не действовал.
+  - Fix 3: `.techAccelGridWrap` получил `overflow-x:hidden` — запрет горизонтального скролла в accel grid.
+  - Fix 4+5 CSS: `.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid { grid-template-columns:1fr }` — один чип в ряду в вкладках `Создание чипов` и `Разобрать` без изменения JS-flow.
+  - Fix 4+5 JS: весь `chipCraftBottomBar` (включая `chipCraftDustResource`) перенесён в `if (isDustView)` guard — полностью отсутствует для assemble/disassemble видов: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2514-L2527).
+
 ## 2026-03-09
 - **Документация: update после workshop recycle, storage header и unified X hover fix**
   - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.

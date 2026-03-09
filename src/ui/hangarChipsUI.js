@@ -2511,10 +2511,10 @@
 
     html += '</div>'; // chipCraftInventory
 
-    /* ── Bottom bar outside inventory: dust controls + silicon dust display ── */
-    html += '<div class="chipCraftBottomBar">';
-    html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
+    /* ── Bottom bar outside inventory: dust controls + silicon dust display (dust view only) ── */
     if (isDustView) {
+      html += '<div class="chipCraftBottomBar">';
+      html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
       html += '<div class="chipCraftDustActions">';
       html += '<button class="btn scButton chipCraftDustConfirmBtn" id="chipCraftDustConfirm" type="button">' + t('chipCraftDustConfirm', 'Подтвердить') + '</button>';
       html += '<button class="btn scButton chipCraftDustCancelBtn" id="chipCraftDustCancel" type="button">' + t('chipCraftDustCancel', 'Отменить') + '</button>';
@@ -2522,8 +2522,8 @@
       html += '<span class="chipCraftDustTotal" id="chipCraftDustTotal">' +
         t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', dustTotal) + '</span>';
       html += '</div>';
+      html += '</div>'; // chipCraftBottomBar
     }
-    html += '</div>'; // chipCraftBottomBar
 
     html += '</div>'; // chipCraftLeftCol
 
