@@ -37,10 +37,12 @@
 
 ## Фокус документации на 2026-03-07
 - `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста и разрешает opt-out только через skip-список / `data-font-floor-ignore="true"`.
-- Close-кнопки `productionLineStorage` / supercomputer root / hangar / tank-wall overlays унифицированы через `scModal__close`; склад коробок получает тот же CRT/grain overlay через `body.pl-storage-open`.
-- Stage active slots Talents v2 берут branch-иконки из `assets/ui/icons/talents/*` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` остаётся fallback'ом.
-- `_renderChipNameHtml()` — канонический helper для полных названий чипов/фрагментов: перенос разрешён только по ` + `; им пользуются workshop grid, tech accel modal, craft inventory и result cards.
-- Для этих UI-правок читать в порядке: `docs/ai/SYSTEMS/ui.md` → `docs/ai/GAME_JS_MAP.md` → `docs/ai/HANGAR_CHIPS_UI_MAP.md` → `docs/ai/STYLE_CSS_MAP.md`.
+- `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в `one_big_chip`, пока флаг не будет погашен через `openBox()`.
+- Модалка ускорения технологий использует `_getTechAccelRates()`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; кремниевая пыль встроена в тот же accel-grid и делит общий cap `95%`.
+- `techAccelChip--disabled` и summary line показывают остаток бюджета / badge `Лимит`; fallback i18n для accel UI синхронизирован между `ru.json`, `en.json`, `fallbackStrings.js`.
+- Close-кнопки `productionLineStorage` / supercomputer root / hangar / tank-wall / talent tree унифицированы через 44×44 `scModal__close`; для `talentOverlay` класс навешивается runtime из `applySharedTalentModalClass()`.
+- `_renderChipNameHtml()` остаётся каноническим helper'ом для полных названий чипов/фрагментов: перенос разрешён только по ` + `; им пользуются workshop grid, tech accel modal, craft inventory и result cards.
+- Для этих правок читать в порядке: `docs/ai/SYSTEMS/save.md` → `docs/ai/SYSTEMS/render.md` → `docs/ai/SYSTEMS/ui.md` → `docs/ai/HANGAR_CHIPS_UI_MAP.md` → `docs/ai/SUPERCOMPUTER_MENU_MAP.md` → `docs/ai/STYLE_CSS_MAP.md`.
 
 ## Hotspot summary
 - Кодовые hotspot-файлы: `game.js`, `index.html`, `style.css`, `src/ui/supercomputerMenu.js`, `src/ui/hangarChipsUI.js`, `src/render/spriteLoaders.js`, `src/persistence/storage.js`.

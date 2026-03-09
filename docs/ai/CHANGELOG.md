@@ -1,6 +1,10 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-07
+- **Документация: update после гаранта первого большого чипа, tech accel dust и unified close-кнопок**
+  - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: `productionLine.firstNewGameBoxGuaranteedPending` и гарантия `one_big_chip` для первой коробки после true `new_game`; accel modal технологий с кремниевой пылью, ставками `2/20/6` для 2ч tech и `1/10/1` для 5ч tech, общим cap `95%` и badge `Лимит`; единый 44×44 close-pattern `scModal__close` для storage/supercomputer/talent tree.
+
 - **Документация: update после UI-правок font floor, SC modal close и chip label wrapping**
   - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/GAME_JS_MAP.md`.
   - Зафиксированы: глобальный runtime floor `12px` для DOM/canvas-текста через `src/ui/fontFloor.js` с skip-листом для close/remove-контролов; общий close-скин `scModal__close` для supercomputer/hangar/tank-wall/storage modal; grain overlay склада коробок через `body.pl-storage-open`; branch-driven иконки stage active abilities через `getTalentV2ActiveIconUrlByBranch()` с CSS fallback `activeOff/activeDef/activeEco`; полные названия чипов/фрагментов с переносом только по ` + ` и унифицированным карточным размером.

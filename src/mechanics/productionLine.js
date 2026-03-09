@@ -7,6 +7,7 @@
   const MAX_KILL_COST         = 16000;
   const DEFAULT_STORAGE_SLOTS = 9;
   const STORAGE_COLS          = 3;
+  const GUARANTEED_NEW_GAME_LOOT_ID = 'one_big_chip';
 
   // ─── Loot table ────────────────────────────────────────────
   // weight = relative chance (sum → 1.0 normalised at runtime)
@@ -22,6 +23,10 @@
   ];
 
   const TOTAL_WEIGHT = LOOT_TABLE.reduce(function (s, e) { return s + e.weight; }, 0);
+  const LOOT_BY_ID = LOOT_TABLE.reduce(function (acc, entry) {
+    acc[entry.id] = entry;
+    return acc;
+  }, Object.create(null));
 
   // ─── Helpers ───────────────────────────────────────────────
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -33,6 +38,11 @@
       if (r <= 0) return LOOT_TABLE[i];
     }
     return LOOT_TABLE[LOOT_TABLE.length - 1];
+  }
+
+  function getLootById(lootId) {
+    if (typeof lootId !== 'string' || !lootId) return null;
+    return LOOT_BY_ID[lootId] || null;
   }
 
   function getRandomModId() {
@@ -77,6 +87,7 @@
       storageSlots: DEFAULT_STORAGE_SLOTS,
       storage: [],            // array of { id: string } (box items)
       conveyorAnimTime: 0,    // running conveyor animation timer
+      firstNewGameBoxGuaranteedPending: false,
     };
   }
 
@@ -91,6 +102,9 @@
     if (!Number.isFinite(pl.storageSlots))  pl.storageSlots  = DEFAULT_STORAGE_SLOTS;
     if (!Array.isArray(pl.storage))         pl.storage       = [];
     if (!Number.isFinite(pl.conveyorAnimTime)) pl.conveyorAnimTime = 0;
+    if (typeof pl.firstNewGameBoxGuaranteedPending !== 'boolean') {
+      pl.firstNewGameBoxGuaranteedPending = false;
+    }
     return pl;
   }
 
@@ -124,9 +138,14 @@
     if (pl.killsTracked >= cost) {
       // Only produce if storage has room
       if (pl.storage.length < pl.storageSlots) {
+        const guaranteedLootId = pl.firstNewGameBoxGuaranteedPending ? GUARANTEED_NEW_GAME_LOOT_ID : '';
         pl.storage.push({
           id: 'box_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          guaranteedLootId: guaranteedLootId,
         });
+        if (pl.firstNewGameBoxGuaranteedPending) {
+          pl.firstNewGameBoxGuaranteedPending = false;
+        }
         pl.killsTracked -= cost;
         pl.boxesProduced += 1;
         pl.progress = 0;
@@ -146,7 +165,7 @@
     const box = pl.storage[boxIndex];
     pl.storage.splice(boxIndex, 1);
 
-    const loot = rollLoot();
+    const loot = getLootById(box && box.guaranteedLootId) || rollLoot();
     const result = { lootId: loot.id, label: loot.label, items: [] };
 
     const ChipsUI = global.Game && global.Game.HangarChipsUI;
@@ -234,6 +253,7 @@
       progress: pl.progress,
       storageSlots: pl.storageSlots,
       storage: pl.storage.slice(),
+      firstNewGameBoxGuaranteedPending: !!pl.firstNewGameBoxGuaranteedPending,
     };
   }
 
@@ -245,6 +265,9 @@
     if (Number.isFinite(saved.progress))      pl.progress      = clamp(saved.progress, 0, 1);
     if (Number.isFinite(saved.storageSlots))  pl.storageSlots  = Math.max(1, Math.floor(saved.storageSlots));
     if (Array.isArray(saved.storage))         pl.storage       = saved.storage.slice();
+    if (typeof saved.firstNewGameBoxGuaranteedPending === 'boolean') {
+      pl.firstNewGameBoxGuaranteedPending = saved.firstNewGameBoxGuaranteedPending;
+    }
   }
 
   function resetTracking() {

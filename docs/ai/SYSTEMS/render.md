@@ -1,6 +1,6 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-06.
+> Обновлено: 2026-03-07.
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
 
 ## Где править
@@ -14,7 +14,7 @@
 ## Ключевые точки входа
 - `draw()` — основной render-orchestrator: [game.js](../../../game.js#L9339-L9398)
 - `drawSupercomputerSpriteClip()` / `drawSupercomputerHpBarOverlay()` — root sprite + верхний HP overlay: [game.js](../../../game.js#L9699-L9755)
-- `Game.ProductionLine.step()` — kill-driven progress, storage-full pause и сериализуемое состояние коробок: [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L94-L135)
+- `Game.ProductionLine.step()` — kill-driven progress, storage-full pause и одноразовый `guaranteedLootId` для первой коробки после `new_game`: [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L114-L156)
 - `Game.SupercomputerBuildTankFx.start()` / `setSupercomputerWantsBuildTank()` — explicit window root-анимации `buildTank` на время печати танка: [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L41-L53), [game.js](../../../game.js#L3289-L3307), [game.js](../../../game.js#L11374-L11382)
 - `Game.ProductionLineRender.updateLayout()` / `.syncState()` / `.draw()` — runtime conveyor/storage/box: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L230-L311), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L517-L524)
 - `SupercomputerSprites.load()` — loader root/parts/effects: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L853-L1030)
@@ -32,6 +32,7 @@
 - `initBoard()` рассчитывает world-геометрию суперкомпьютера и сразу прокидывает её в production line layout: [game.js](../../../game.js#L2244-L2334).
 - `conveyorBox.offset.x/y` из `assets/supercomputer.json` напрямую смещает центр коробки поверх belt-plane; это authoring-контракт, а не место для новых хардкодов в renderer: [assets/supercomputer.json](../../../assets/supercomputer.json#L160-L166), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L417-L445).
 - `tankPrintDurationSec` из `assets/tanks.json` нормализуется loader'ом один раз и переиспользуется и для stamp-reveal в слоте, и для root `buildTank` animation window: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L22-L53).
+- `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая изготовленная коробка кладётся с `guaranteedLootId='one_big_chip'`, `openBox()` резолвит эту гарантию один раз и затем возвращается к обычной weight-table: [src/persistence/initialState.js](../../../src/persistence/initialState.js#L123-L130), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L114-L168), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L248-L269).
 - `effects[]` из `assets/supercomputer.json` применяются во время draw как трансформации root sprite и частей (float/sway/vibration/pulse и т. п.): [game.js](../../../game.js#L9699-L9724), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L146-L375), [assets/supercomputer.json](../../../assets/supercomputer.json#L20-L237).
 - `Game.ProductionLineRender.draw()` рисуется сразу после `drawSupercomputer()`, но до `drawBoard()`: [game.js](../../../game.js#L9339-L9354).
 - Для большого render-модуля production line сначала открывайте [docs/ai/PRODUCTION_LINE_RENDER_MAP.md](../PRODUCTION_LINE_RENDER_MAP.md).

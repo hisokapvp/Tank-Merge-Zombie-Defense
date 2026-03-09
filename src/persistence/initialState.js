@@ -127,6 +127,7 @@
         storageSlots: 9,
         storage: [],
         conveyorAnimTime: 0,
+        firstNewGameBoxGuaranteedPending: reason === 'new_game',
       },
     };
   }

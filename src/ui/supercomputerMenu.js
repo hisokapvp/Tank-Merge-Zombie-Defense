@@ -196,6 +196,11 @@
       var panel = talentOverlay.querySelector('.modal');
       if (!panel) return;
       panel.classList.add('scModal');
+      var closeBtn = talentOverlay.querySelector('.modalClose');
+      if (closeBtn) {
+        closeBtn.classList.add('scModal__close');
+        closeBtn.setAttribute('data-font-floor-ignore', 'true');
+      }
     }
 
     function setTankWallTab(nextTab, options) {

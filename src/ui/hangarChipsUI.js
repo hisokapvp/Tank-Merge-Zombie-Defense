@@ -766,10 +766,25 @@
     return TECH_STUDY_DURATION_LOCKED; // Tier 2: 5h
   }
 
-  /** Get acceleration percentage per burned chip based on tech duration */
-  function _getAccelPerChip(modId) {
+  /** Get acceleration rates per resource based on tech duration */
+  function _getTechAccelRates(modId) {
     var dur = _getTechDuration(modId);
-    return dur === TECH_STUDY_DURATION_LOCKED ? 2.5 : 5; // 2.5% for 5h techs, 5% for 2h techs
+    if (dur === TECH_STUDY_DURATION_LOCKED) {
+      return {
+        chip: 10,
+        fragment: 1,
+        dust: 1,
+      };
+    }
+    return {
+      chip: 20,
+      fragment: 6,
+      dust: 2,
+    };
+  }
+
+  function _getAccelPerChip(modId) {
+    return _getTechAccelRates(modId).chip;
   }
 
   /** Check if the tech study timer should be paused (only when settings/bigMenu open) */
@@ -841,9 +856,15 @@
 
           html += '<div class="techUnlockCard__actions">';
           html += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
-          /* Fix 2: Disable accel button when already at 95% */
-          var accelDisabled = (_techStudying.acceleratedPct || 0) >= 95;
-          html += '<button class="btn scButton techUnlockCard__accelBtn' + (accelDisabled ? ' techUnlockCard__accelBtn--disabled' : '') + '" data-tech-accel="' + tech.modId + '" type="button"' + (accelDisabled ? ' disabled' : '') + '>' + (accelDisabled ? t('techUnlockAccelMax', 'Максимальное ускорение') : t('techUnlockAccel', 'Ускорить процесс открытия')) + '</button>';
+          var accelReachedMax = (_techStudying.acceleratedPct || 0) >= 95;
+          var accelHasResources = _hasTechAccelerationResources();
+          var accelDisabled = accelReachedMax || !accelHasResources;
+          var accelLabel = accelReachedMax
+            ? t('techUnlockAccelMax', 'Максимальное ускорение')
+            : (!accelHasResources
+              ? t('techUnlockAccelNoResources', 'Нет ресурсов для ускорения')
+              : t('techUnlockAccel', 'Ускорить процесс открытия'));
+          html += '<button class="btn scButton techUnlockCard__accelBtn' + (accelDisabled ? ' techUnlockCard__accelBtn--disabled' : '') + '" data-tech-accel="' + tech.modId + '" type="button"' + (accelDisabled ? ' disabled aria-disabled="true"' : '') + (accelDisabled ? ' title="' + _escapeHtml(accelLabel) + '"' : '') + '>' + accelLabel + '</button>';
           html += '</div>';
         } else {
           /* Show "Start study" button + duration */
@@ -1680,9 +1701,18 @@
     if (techAccelChip) {
       var isChecked = techAccelChip.getAttribute('data-accel-checked') === 'true';
       /* Task 4: If not checked and already at limit, block toggling on */
+      if (!isChecked) {
+        var chipRate = _getTechAccelRates(_techStudying.modId).chip;
+        if (chipRate > _getTechAccelRemainingBudget()) {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('techAccelSelectionLimit', 'Этот ресурс превысит лимит ускорения. Выберите другой.'), 2000);
+          }
+          return;
+        }
+      }
       if (!isChecked && _isAccelSelectionAtMax()) {
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого элемента, чтобы добавить новый.'), 2000);
+          global.Game.Toast.show(t('techAccelSelectionLimit', 'Этот ресурс превысит лимит ускорения. Выберите другой.'), 2000);
         }
         return;
       }
@@ -1698,15 +1728,45 @@
     var techAccelFrag = tgt.closest ? tgt.closest('[data-accel-frag-id]') : null;
     if (techAccelFrag) {
       var isFragChecked = techAccelFrag.getAttribute('data-accel-checked') === 'true';
+      if (!isFragChecked) {
+        var fragRate = _getTechAccelRates(_techStudying.modId).fragment;
+        if (fragRate > _getTechAccelRemainingBudget()) {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('techAccelSelectionLimit', 'Этот ресурс превысит лимит ускорения. Выберите другой.'), 2000);
+          }
+          return;
+        }
+      }
       if (!isFragChecked && _isAccelSelectionAtMax()) {
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-          global.Game.Toast.show(t('techAccelMaxSelected', 'Набрано максимальное ускорение. Снимите галочку с другого элемента, чтобы добавить новый.'), 2000);
+          global.Game.Toast.show(t('techAccelSelectionLimit', 'Этот ресурс превысит лимит ускорения. Выберите другой.'), 2000);
         }
         return;
       }
       techAccelFrag.setAttribute('data-accel-checked', isFragChecked ? 'false' : 'true');
       var fragCheckMark = techAccelFrag.querySelector('.techAccelChip__check');
       if (fragCheckMark) fragCheckMark.textContent = isFragChecked ? '' : '✓';
+      _updateAccelPercentage();
+      return;
+    }
+
+    var techAccelDustStepBtn = tgt.closest ? tgt.closest('[data-accel-dust-step]') : null;
+    if (techAccelDustStepBtn) {
+      var step = parseInt(techAccelDustStepBtn.getAttribute('data-accel-dust-step'), 10);
+      if (!Number.isFinite(step) || !_techStudying) return;
+      if (step > 0) {
+        var dustRate = _getTechAccelRates(_techStudying.modId).dust;
+        if (_techAccelDustSelected >= _siliconDust) return;
+        if (dustRate > _getTechAccelRemainingBudget()) {
+          if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
+            global.Game.Toast.show(t('techAccelSelectionLimit', 'Этот ресурс превысит лимит ускорения. Выберите другой.'), 2000);
+          }
+          return;
+        }
+        _techAccelDustSelected += 1;
+      } else if (step < 0) {
+        _techAccelDustSelected = Math.max(0, _techAccelDustSelected - 1);
+      }
       _updateAccelPercentage();
       return;
     }
@@ -1722,6 +1782,7 @@
   /* ─── Tech study modals ────────────────────────────────── */
 
   var _techModalEl = null;
+  var _techAccelDustSelected = 0;
 
   function _ensureTechModal() {
     if (!_techModalEl) {
@@ -1736,10 +1797,53 @@
   }
 
   function _closeTechModal() {
+    _techAccelDustSelected = 0;
     if (_techModalEl) {
       _techModalEl.style.display = 'none';
       _techModalEl.innerHTML = '';
     }
+  }
+
+  function _sumEntryCounts(entries, countKey) {
+    var total = 0;
+    if (!Array.isArray(entries)) return total;
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i];
+      var raw = entry && Number.isFinite(entry[countKey]) ? entry[countKey] : 0;
+      total += Math.max(0, Math.floor(raw));
+    }
+    return total;
+  }
+
+  function _hasTechAccelerationResources() {
+    return _sumEntryCounts(ensurePlayerChips(), 'count') > 0
+      || _sumEntryCounts(ensurePlayerFragments(), 'count') > 0
+      || _siliconDust > 0;
+  }
+
+  function _getTechAccelSelectionState() {
+    var state = {
+      chipCount: 0,
+      fragmentCount: 0,
+      dustCount: 0,
+      pct: 0,
+    };
+    if (!_techStudying) return state;
+    var rates = _getTechAccelRates(_techStudying.modId);
+    if (_techModalEl) {
+      state.chipCount = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]').length;
+      state.fragmentCount = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]').length;
+    }
+    state.dustCount = Math.max(0, Math.min(_techAccelDustSelected, _siliconDust));
+    state.pct = state.chipCount * rates.chip + state.fragmentCount * rates.fragment + state.dustCount * rates.dust;
+    return state;
+  }
+
+  function _getTechAccelRemainingBudget() {
+    if (!_techStudying) return 0;
+    var currentAccel = _techStudying.acceleratedPct || 0;
+    var selectedPct = _getTechAccelSelectionState().pct;
+    return Math.max(0, 95 - currentAccel - selectedPct);
   }
 
   function _showTechCancelConfirm(modId) {
@@ -1763,20 +1867,31 @@
     var frags = ensurePlayerFragments();
     var h = hc();
 
-    /* Fix 6: Show correct per-chip percentage based on tech duration */
-    var accelPerChip = _getAccelPerChip(modId);
-    var accelPerFrag = accelPerChip / 2; // fragments give half acceleration
+    _techAccelDustSelected = 0;
+    var accelRates = _getTechAccelRates(modId);
     var html = '<div class="techModal__dialog techModal__dialog--wide">' +
       '<div class="techModal__title">' + t('techAccelTitle', 'Ускорить процесс открытия') + '</div>' +
-      '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите чипы для ускорения (каждый чип = +{pct}%)').replace('{pct}', accelPerChip) + '</div>';
+      '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите ресурсы для ускорения.') + '</div>' +
+      '<div class="techModal__rateLine">' + t('techAccelRateSummary', 'Кремниевая пыль +{dust}% • большой чип +{chip}% • фрагмент +{fragment}%').replace('{dust}', accelRates.dust).replace('{chip}', accelRates.chip).replace('{fragment}', accelRates.fragment) + '</div>';
 
-    var hasItems = chips.length > 0 || frags.length > 0;
+    var hasItems = chips.length > 0 || frags.length > 0 || _siliconDust > 0;
 
     if (!hasItems) {
-      html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет чипов или фрагментов в инвентаре') + '</div>';
+      html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет больших чипов, фрагментов или кремниевой пыли') + '</div>';
     } else {
-      /* ── Unified grid: whole chips first, then fragments ── */
       html += '<div class="techAccelGrid">';
+      if (_siliconDust > 0) {
+        html += '<div class="techAccelChip techAccelChip--dust" data-accel-dust-card="true">';
+        html += '<div class="techAccelChip__icon techAccelChip__icon--dust" aria-hidden="true">✦</div>';
+        html += '<span class="techAccelChip__label">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + '</span>';
+        html += '<span class="techAccelChip__meta">' + t('techAccelDustMeta', '+{pct}% за 1 ед.').replace('{pct}', accelRates.dust) + '</span>';
+        html += '<div class="techAccelDustControls">';
+        html += '<button class="techAccelDustControls__btn" data-accel-dust-step="-1" type="button" aria-label="-">−</button>';
+        html += '<span class="techAccelDustControls__value" data-accel-dust-count>0 / ' + _siliconDust + '</span>';
+        html += '<button class="techAccelDustControls__btn" data-accel-dust-step="1" type="button" aria-label="+">+</button>';
+        html += '</div>';
+        html += '</div>';
+      }
       for (var i = 0; i < chips.length; i++) {
         var chip = chips[i];
         var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -1786,11 +1901,11 @@
           html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
           html += chipSvgComposed(40, 36, borderColor, chip.modIds, 'techAccelChip__icon', 2.5);
           html += '<span class="techAccelChip__label" title="' + _escapeHtml(accelChipName) + '">' + _renderChipNameHtml(accelChipName) + '</span>';
+          html += '<span class="techAccelChip__meta">+' + accelRates.chip + '%</span>';
           html += '</div>';
         }
       }
       if (frags.length) {
-        /* ── Fragments inline after chips (each grants half acceleration) ── */
         for (var fi = 0; fi < frags.length; fi++) {
           var frag = frags[fi];
           var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
@@ -1799,6 +1914,7 @@
             html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
             html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
             html += '<span class="techAccelChip__label" title="' + _escapeHtml(modName(frag.fragmentId)) + '">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
+            html += '<span class="techAccelChip__meta">+' + accelRates.fragment + '%</span>';
             html += '</div>';
           }
         }
@@ -1806,6 +1922,7 @@
       html += '</div>';
     }
 
+    html += '<div class="techModal__selectionInfo" data-tech-accel-summary>' + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • осталось до лимита: {left}%').replace('{pct}', '0').replace('{left}', String(Math.max(0, 95 - (_techStudying ? (_techStudying.acceleratedPct || 0) : 0))) ) + '</div>';
     html += '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-tech-accel-confirm="' + modId + '" type="button">' +
       t('techAccelBtnLabel', 'Ускорить на 0%') + '</button>' +
@@ -1814,56 +1931,52 @@
 
     modal.innerHTML = html;
     modal.style.display = 'flex';
+    _updateAccelPercentage();
   }
 
   /** Task 4: Check if the current chip/fragment selection has reached the max acceleration limit */
   function _isAccelSelectionAtMax() {
-    if (!_techModalEl || !_techStudying) return false;
-    var accelPerChip = _getAccelPerChip(_techStudying.modId);
-    var accelPerFrag = accelPerChip / 2;
-    var currentAccel = _techStudying.acceleratedPct || 0;
-    var maxMore = 95 - currentAccel;
-
-    var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
-    var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
-    var pct = checkedChips.length * accelPerChip + checkedFrags.length * accelPerFrag;
-    return pct >= maxMore;
+    return _getTechAccelRemainingBudget() <= 0;
   }
 
   function _updateAccelPercentage() {
     if (!_techModalEl || !_techStudying) return;
-    /* Fix 6: Use per-chip rate based on tech duration */
-    var accelPerChip = _getAccelPerChip(_techStudying.modId);
-    var accelPerFrag = accelPerChip / 2;
-
-    var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
-    var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
-    var pct = checkedChips.length * accelPerChip + checkedFrags.length * accelPerFrag;
-
-    /* Fix 2: Cap at remaining room to 95% */
+    var selection = _getTechAccelSelectionState();
+    var rates = _getTechAccelRates(_techStudying.modId);
+    var pct = selection.pct;
     var currentAccel = _techStudying.acceleratedPct || 0;
-    var maxMore = 95 - currentAccel;
-    if (pct > maxMore) pct = maxMore;
-    if (pct < 0) pct = 0;
+    var left = Math.max(0, 95 - currentAccel - pct);
     var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
     if (confirmBtn) {
-      confirmBtn.textContent = 'Ускорить на ' + pct + '%';
-      confirmBtn.disabled = (checkedChips.length + checkedFrags.length) === 0 || pct <= 0;
+      confirmBtn.textContent = t('techAccelBtnLabel', 'Ускорить на {pct}%').replace('{pct}', pct);
+      confirmBtn.disabled = (selection.chipCount + selection.fragmentCount + selection.dustCount) === 0 || pct <= 0;
     }
-    /* Task 4: Disable unchecked items when max acceleration is reached */
-    var atMax = pct >= maxMore && maxMore > 0;
+    var summaryEl = _techModalEl.querySelector('[data-tech-accel-summary]');
+    if (summaryEl) {
+      summaryEl.textContent = t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • осталось до лимита: {left}%').replace('{pct}', pct).replace('{left}', left);
+    }
+    var dustCountEl = _techModalEl.querySelector('[data-accel-dust-count]');
+    if (dustCountEl) {
+      dustCountEl.textContent = selection.dustCount + ' / ' + _siliconDust;
+    }
+    var dustMinusBtn = _techModalEl.querySelector('[data-accel-dust-step="-1"]');
+    if (dustMinusBtn) dustMinusBtn.disabled = selection.dustCount <= 0;
+    var dustPlusBtn = _techModalEl.querySelector('[data-accel-dust-step="1"]');
+    if (dustPlusBtn) dustPlusBtn.disabled = selection.dustCount >= _siliconDust || rates.dust > left;
+
     var allItems = _techModalEl.querySelectorAll('[data-accel-chip-id], [data-accel-frag-id]');
     for (var i = 0; i < allItems.length; i++) {
       var itemEl = allItems[i];
       var isChecked = itemEl.getAttribute('data-accel-checked') === 'true';
-      if (!isChecked && atMax) {
+      var itemDelta = itemEl.hasAttribute('data-accel-chip-id') ? rates.chip : rates.fragment;
+      if (!isChecked && itemDelta > left) {
         itemEl.classList.add('techAccelChip--disabled');
-        itemEl.style.pointerEvents = 'none';
-        itemEl.style.opacity = '0.35';
+        itemEl.setAttribute('aria-disabled', 'true');
+        itemEl.setAttribute('data-accel-disabled-reason', t('techAccelLimitBadge', 'Лимит'));
       } else {
         itemEl.classList.remove('techAccelChip--disabled');
-        itemEl.style.pointerEvents = '';
-        itemEl.style.opacity = '';
+        itemEl.removeAttribute('aria-disabled');
+        itemEl.removeAttribute('data-accel-disabled-reason');
       }
     }
   }
@@ -1882,7 +1995,8 @@
 
     var checkedChips = _techModalEl.querySelectorAll('[data-accel-chip-id][data-accel-checked="true"]');
     var checkedFrags = _techModalEl.querySelectorAll('[data-accel-frag-id][data-accel-checked="true"]');
-    if (!checkedChips.length && !checkedFrags.length) {
+    var dustToBurn = Math.max(0, Math.min(_techAccelDustSelected, _siliconDust));
+    if (!checkedChips.length && !checkedFrags.length && !dustToBurn) {
       _closeTechModal();
       return;
     }
@@ -1912,10 +2026,12 @@
       removePlayerFragment(fragsToBurn[fj], 1);
     }
 
-    /* Fix 6: Acceleration per chip depends on tech duration; fragments = half */
-    var accelPerChip = _getAccelPerChip(_techStudying.modId);
-    var accelPerFrag = accelPerChip / 2;
-    var totalAccel = chipsToBurn.length * accelPerChip + fragsToBurn.length * accelPerFrag;
+    if (dustToBurn > 0) {
+      _siliconDust -= dustToBurn;
+    }
+
+    var accelRates = _getTechAccelRates(_techStudying.modId);
+    var totalAccel = chipsToBurn.length * accelRates.chip + fragsToBurn.length * accelRates.fragment + dustToBurn * accelRates.dust;
     _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + totalAccel;
     if (_techStudying.acceleratedPct > 95) _techStudying.acceleratedPct = 95; // Cap at 95%
 
@@ -1926,9 +2042,8 @@
       return;
     }
 
-    var burnedCount = chipsToBurn.length + fragsToBurn.length;
     if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-      global.Game.Toast.show(t('techAccelApplied', 'Сожжено {n} элементов. Ускорение: {pct}%').replace('{n}', burnedCount).replace('{pct}', _techStudying.acceleratedPct), 2000);
+      global.Game.Toast.show(t('techAccelApplied', 'Ускорение применено. Итоговое ускорение: {pct}%').replace('{pct}', _techStudying.acceleratedPct), 2000);
     }
 
     _closeTechModal();
