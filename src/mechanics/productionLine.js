@@ -50,25 +50,76 @@
     return Math.floor(Math.random() * 14) + 1;
   }
 
-  function getRandomChipColor() {
-    const colors = ['red', 'blue', 'green', 'yellow'];
-    return colors[Math.floor(Math.random() * colors.length)];
+  function getRandomBaseModId() {
+    // Red chips can only contain non-special mods (1–9).
+    return Math.floor(Math.random() * 9) + 1;
   }
 
-  function makeRandomBigChip() {
-    const m1 = getRandomModId();
-    let m2 = getRandomModId();
-    while (m2 === m1) m2 = getRandomModId();
-    let m3 = getRandomModId();
-    while (m3 === m1 || m3 === m2) m3 = getRandomModId();
+  function sortNumericAsc(a, b) {
+    return a - b;
+  }
+
+  function resolveChipDefByModIds(modIds) {
+    const normalized = Array.isArray(modIds) ? modIds.slice().sort(sortNumericAsc) : [];
+    if (normalized.length !== 3) return null;
+    const HangarChips = global.Game && global.Game.HangarChips;
+    if (HangarChips && Array.isArray(HangarChips.allChips) && typeof HangarChips.getChipByKey === 'function') {
+      const fromPool = HangarChips.getChipByKey(HangarChips.allChips, normalized.join('-'));
+      if (fromPool) return fromPool;
+    }
+    let chipId = 1;
+    for (let a = 1; a <= 14; a++) {
+      for (let b = a; b <= 14; b++) {
+        for (let c = b; c <= 14; c++) {
+          if (a === b && b === c) continue;
+          const spec = (a >= 10 ? 1 : 0) + (b >= 10 ? 1 : 0) + (c >= 10 ? 1 : 0);
+          if (spec > 1) continue;
+          if (a === normalized[0] && b === normalized[1] && c === normalized[2]) {
+            return {
+              chipId: chipId,
+              sourceComboKey: normalized.join('-'),
+              modIds: normalized,
+              chipColor: spec === 0 ? 'red' : 'yellow',
+              specCount: spec,
+            };
+          }
+          chipId += 1;
+        }
+      }
+    }
+    return null;
+  }
+
+  function cloneRewardChip(chipDef) {
+    if (!chipDef) return null;
     return {
-      chipId: 'box_chip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      chipColor: getRandomChipColor(),
-      modIds: [m1, m2, m3],
-      sourceComboKey: '',
+      chipId: chipDef.chipId,
+      chipColor: chipDef.chipColor,
+      modIds: Array.isArray(chipDef.modIds) ? chipDef.modIds.slice() : [],
+      sourceComboKey: chipDef.sourceComboKey || '',
       level: 1,
       count: 1,
     };
+  }
+
+  function makeGuaranteedNewGameBigChip() {
+    const modIds = [];
+    while (modIds.length < 3) {
+      const modId = getRandomBaseModId();
+      if (modIds.indexOf(modId) === -1) modIds.push(modId);
+    }
+    const chipDef = resolveChipDefByModIds(modIds);
+    return cloneRewardChip(chipDef);
+  }
+
+  function makeRandomBigChip() {
+    const HangarChips = global.Game && global.Game.HangarChips;
+    if (HangarChips && Array.isArray(HangarChips.allChips) && HangarChips.allChips.length) {
+      const pool = HangarChips.allChips;
+      const chipDef = pool[Math.floor(Math.random() * pool.length)];
+      return cloneRewardChip(chipDef);
+    }
+    return makeGuaranteedNewGameBigChip();
   }
 
   // ─── Cost progression ─────────────────────────────────────
@@ -188,7 +239,9 @@
         break;
       }
       case 'one_big_chip': {
-        const c = makeRandomBigChip();
+        const c = box && box.guaranteedLootId === GUARANTEED_NEW_GAME_LOOT_ID
+          ? makeGuaranteedNewGameBigChip()
+          : makeRandomBigChip();
         if (ChipsUI && typeof ChipsUI.addPlayerChip === 'function') {
           ChipsUI.addPlayerChip(c, 1);
         }

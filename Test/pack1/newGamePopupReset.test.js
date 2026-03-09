@@ -143,6 +143,77 @@ test('T5-11: load path keeps talentPoints from save', () => {
   assert(loadFnBody.indexOf('talentPoints = 1') === -1, 'load path does not inject new_game talent grant');
 });
 
+// Test 12: First guaranteed new-game box grants a working red big chip
+test('T5-12: guaranteed one_big_chip yields working red level-1 chip with 3 unique mods', () => {
+  const global = globalThis;
+  global.window = global;
+  let capturedChip = null;
+  let capturedLevel = null;
+  global.Game = {
+    HangarChipsUI: {
+      addPlayerChip: (chip, level) => {
+        capturedChip = chip;
+        capturedLevel = level;
+      }
+    }
+  };
+
+  const code = fs.readFileSync(path.resolve(__dirname, '../../src/mechanics/productionLine.js'), 'utf-8');
+  const fn = new Function('window', 'global', code);
+  fn(global, global);
+
+  const state = {
+    productionLine: {
+      killsTracked: 0,
+      boxesProduced: 0,
+      progress: 0,
+      storageSlots: 9,
+      storage: [{ id: 'box_test', guaranteedLootId: 'one_big_chip' }],
+      conveyorAnimTime: 0,
+      firstNewGameBoxGuaranteedPending: false,
+    }
+  };
+
+  const result = global.Game.ProductionLine.openBox(state, 0);
+  const chip = capturedChip || (result && result.items && result.items[0] ? result.items[0].chip : null);
+
+  assert(result && result.lootId === 'one_big_chip', 'one_big_chip loot returned');
+  assert(chip, 'chip payload exists');
+  assertEqual(capturedLevel, 1, 'chip added at level 1');
+  assertEqual(chip.chipColor, 'red', 'guaranteed chip is red');
+  assert(Number.isFinite(chip.chipId) && chip.chipId > 0, 'chipId is canonical positive number');
+  assert(Array.isArray(chip.modIds) && chip.modIds.length === 3, 'chip has 3 modifiers');
+  assert(new Set(chip.modIds).size === 3, 'chip modifiers are unique');
+  assert(chip.modIds.every((id) => Number.isFinite(id) && id >= 1 && id <= 9), 'chip modifiers are valid non-special ids');
+  assertEqual(chip.sourceComboKey, chip.modIds.slice().sort((a, b) => a - b).join('-'), 'combo key matches modifiers');
+});
+
+// Test 13: Close buttons use unified X skin and are skipped by font floor
+test('T5-13: close buttons use unified X skin and font-floor skips all close variants', () => {
+  const css = fs.readFileSync(path.resolve(__dirname, '../../style.css'), 'utf-8');
+  const fontFloor = fs.readFileSync(path.resolve(__dirname, '../../src/ui/fontFloor.js'), 'utf-8');
+
+  assert(css.indexOf('.crateModal__close::before') !== -1, 'crate close uses pseudo-element X');
+  assert(css.indexOf('.lessonProgress__close::before') !== -1, 'lesson progress close uses pseudo-element X');
+  assert(css.indexOf('.crateModal__close{') !== -1 && css.indexOf('min-width:44px;') !== -1, 'close buttons keep 44x44 hit area');
+  assert(fontFloor.indexOf("'.levelModal__close'") !== -1, 'font floor skips all level close buttons');
+  assert(fontFloor.indexOf("'.crateModal__close'") !== -1, 'font floor skips crate close button');
+});
+
+// Test 14: Tech acceleration modal renders bottom silicon dust row and total summary
+test('T5-14: tech acceleration modal has bottom dust row and total summary placeholder', () => {
+  const uiJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/hangarChipsUI.js'), 'utf-8');
+  const ru = fs.readFileSync(path.resolve(__dirname, '../../src/i18n/ru.json'), 'utf-8');
+  const en = fs.readFileSync(path.resolve(__dirname, '../../src/i18n/en.json'), 'utf-8');
+
+  assert(uiJs.indexOf('techModal__dustRow') !== -1, 'dust row markup exists');
+  assert(uiJs.indexOf('data-accel-dust-count') !== -1, 'dust row contains live counter');
+  assert(uiJs.indexOf("return _siliconDust + ' / ' + Math.max(0, selectedDustCount || 0);") !== -1, 'dust counter shows available first and selected second');
+  assert(uiJs.indexOf("replace('{total}'") !== -1, 'summary updates total acceleration placeholder');
+  assert(ru.indexOf('{total}%') !== -1, 'ru summary includes total placeholder');
+  assert(en.indexOf('{total}%') !== -1, 'en summary includes total placeholder');
+});
+
 // Summary
 console.log('\n═══════════════════════════');
 console.log('NewGamePopupReset: ' + passCount + ' passed, ' + failCount + ' failed');

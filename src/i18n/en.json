@@ -457,6 +457,6 @@
   ,"techAccelMaxReached": "Maximum acceleration reached (95%)"
   ,"techAccelSelectionLimit": "This resource would exceed the acceleration limit. Choose another one."
   ,"techAccelLimitBadge": "Limit"
-  ,"techAccelSelectedSummary": "Selected acceleration: {pct}% • remaining to cap: {left}%"
+  ,"techAccelSelectedSummary": "Selected acceleration: {pct}% • total after apply: {total}% • remaining to cap: {left}%"
   ,"techAccelDustMeta": "+{pct}% per 1 unit"
 }

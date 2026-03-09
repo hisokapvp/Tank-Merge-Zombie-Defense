@@ -1,5 +1,11 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-09
+- **Документация: update после fix close-кнопок, guaranteed red chip и tech accel dust planner**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: гарантированная первая `new_game` коробка теперь выдаёт канонический рабочий red chip (`chipId`, `sourceComboKey`, `3` уникальных base `modIds`), accel modal показывает строку пыли как `доступно / выбрано`, live-summary `{pct}/{total}/{left}` и применяет тот же выбранный объём, а `fontFloor` больше не вмешивается в unified close-кнопки (`crate/level/modal/lesson/sc`).
+  - Внешний update `c:\Users\hisok\.agents\.github\skills\spec-refiner\SKILL.md` сознательно не документировался как часть game repo.
+
 ## 2026-03-07
 - **Документация: update после гаранта первого большого чипа, tech accel dust и unified close-кнопок**
   - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.

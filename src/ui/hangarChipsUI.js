@@ -1869,29 +1869,19 @@
 
     _techAccelDustSelected = 0;
     var accelRates = _getTechAccelRates(modId);
+    var currentAccel = _techStudying ? (_techStudying.acceleratedPct || 0) : 0;
     var html = '<div class="techModal__dialog techModal__dialog--wide">' +
       '<div class="techModal__title">' + t('techAccelTitle', 'Ускорить процесс открытия') + '</div>' +
       '<div class="techModal__subtitle">' + t('techAccelSubtitle', 'Выберите ресурсы для ускорения.') + '</div>' +
       '<div class="techModal__rateLine">' + t('techAccelRateSummary', 'Кремниевая пыль +{dust}% • большой чип +{chip}% • фрагмент +{fragment}%').replace('{dust}', accelRates.dust).replace('{chip}', accelRates.chip).replace('{fragment}', accelRates.fragment) + '</div>';
 
-    var hasItems = chips.length > 0 || frags.length > 0 || _siliconDust > 0;
+    var hasCards = chips.length > 0 || frags.length > 0;
+    var hasItems = hasCards || _siliconDust > 0;
 
     if (!hasItems) {
       html += '<div class="techModal__empty">' + t('techAccelNoChips', 'Нет больших чипов, фрагментов или кремниевой пыли') + '</div>';
-    } else {
+    } else if (hasCards) {
       html += '<div class="techAccelGrid">';
-      if (_siliconDust > 0) {
-        html += '<div class="techAccelChip techAccelChip--dust" data-accel-dust-card="true">';
-        html += '<div class="techAccelChip__icon techAccelChip__icon--dust" aria-hidden="true">✦</div>';
-        html += '<span class="techAccelChip__label">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + '</span>';
-        html += '<span class="techAccelChip__meta">' + t('techAccelDustMeta', '+{pct}% за 1 ед.').replace('{pct}', accelRates.dust) + '</span>';
-        html += '<div class="techAccelDustControls">';
-        html += '<button class="techAccelDustControls__btn" data-accel-dust-step="-1" type="button" aria-label="-">−</button>';
-        html += '<span class="techAccelDustControls__value" data-accel-dust-count>0 / ' + _siliconDust + '</span>';
-        html += '<button class="techAccelDustControls__btn" data-accel-dust-step="1" type="button" aria-label="+">+</button>';
-        html += '</div>';
-        html += '</div>';
-      }
       for (var i = 0; i < chips.length; i++) {
         var chip = chips[i];
         var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -1922,7 +1912,24 @@
       html += '</div>';
     }
 
-    html += '<div class="techModal__selectionInfo" data-tech-accel-summary>' + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • осталось до лимита: {left}%').replace('{pct}', '0').replace('{left}', String(Math.max(0, 95 - (_techStudying ? (_techStudying.acceleratedPct || 0) : 0))) ) + '</div>';
+    html += '<div class="techModal__footer">';
+    html += '<div class="techModal__selectionInfo" data-tech-accel-summary>'
+      + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%')
+        .replace('{pct}', '0')
+        .replace('{total}', String(currentAccel))
+        .replace('{left}', String(Math.max(0, 95 - currentAccel)))
+      + '</div>';
+    html += '<div class="techModal__dustRow">';
+    html += '<div class="techModal__dustLabel">'
+      + '<span>' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>'
+      + '<span class="techModal__dustValue" data-accel-dust-count>' + _formatTechAccelDustCount(0) + '</span>'
+      + '</div>';
+    html += '<div class="techAccelDustControls">';
+    html += '<button class="techAccelDustControls__btn" data-accel-dust-step="-1" type="button" aria-label="-">−</button>';
+    html += '<button class="techAccelDustControls__btn" data-accel-dust-step="1" type="button" aria-label="+">+</button>';
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
     html += '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-tech-accel-confirm="' + modId + '" type="button">' +
       t('techAccelBtnLabel', 'Ускорить на 0%') + '</button>' +
@@ -1939,12 +1946,17 @@
     return _getTechAccelRemainingBudget() <= 0;
   }
 
+  function _formatTechAccelDustCount(selectedDustCount) {
+    return _siliconDust + ' / ' + Math.max(0, selectedDustCount || 0);
+  }
+
   function _updateAccelPercentage() {
     if (!_techModalEl || !_techStudying) return;
     var selection = _getTechAccelSelectionState();
     var rates = _getTechAccelRates(_techStudying.modId);
     var pct = selection.pct;
     var currentAccel = _techStudying.acceleratedPct || 0;
+    var total = Math.min(95, currentAccel + pct);
     var left = Math.max(0, 95 - currentAccel - pct);
     var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
     if (confirmBtn) {
@@ -1953,16 +1965,19 @@
     }
     var summaryEl = _techModalEl.querySelector('[data-tech-accel-summary]');
     if (summaryEl) {
-      summaryEl.textContent = t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • осталось до лимита: {left}%').replace('{pct}', pct).replace('{left}', left);
+      summaryEl.textContent = t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%')
+        .replace('{pct}', pct)
+        .replace('{total}', total)
+        .replace('{left}', left);
     }
     var dustCountEl = _techModalEl.querySelector('[data-accel-dust-count]');
     if (dustCountEl) {
-      dustCountEl.textContent = selection.dustCount + ' / ' + _siliconDust;
+      dustCountEl.textContent = _formatTechAccelDustCount(selection.dustCount);
     }
     var dustMinusBtn = _techModalEl.querySelector('[data-accel-dust-step="-1"]');
     if (dustMinusBtn) dustMinusBtn.disabled = selection.dustCount <= 0;
     var dustPlusBtn = _techModalEl.querySelector('[data-accel-dust-step="1"]');
-    if (dustPlusBtn) dustPlusBtn.disabled = selection.dustCount >= _siliconDust || rates.dust > left;
+    if (dustPlusBtn) dustPlusBtn.disabled = _siliconDust <= 0 || selection.dustCount >= _siliconDust || rates.dust > left;
 
     var allItems = _techModalEl.querySelectorAll('[data-accel-chip-id], [data-accel-frag-id]');
     for (var i = 0; i < allItems.length; i++) {

@@ -457,6 +457,6 @@
   ,"techAccelMaxReached": "Достигнуто максимальное ускорение (95%)"
   ,"techAccelSelectionLimit": "Этот ресурс превысит лимит ускорения. Выберите другой."
   ,"techAccelLimitBadge": "Лимит"
-  ,"techAccelSelectedSummary": "Выбрано ускорение: {pct}% • осталось до лимита: {left}%"
+  ,"techAccelSelectedSummary": "Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%"
   ,"techAccelDustMeta": "+{pct}% за 1 ед."
 }

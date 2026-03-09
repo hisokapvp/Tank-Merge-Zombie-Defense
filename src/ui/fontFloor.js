@@ -3,7 +3,8 @@
 
   var MIN_FONT_PX = 12;
   var SKIP_SELECTOR = [
-    '.levelModal__close:not(.scModal__close)',
+    '.levelModal__close',
+    '.crateModal__close',
     '.modalClose',
     '.chipCraftSlotRemove',
     '.lessonProgress__close',

@@ -1,7 +1,7 @@
 # hangarChipsUI.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-07.
-> Файл большой (3441 строка): используйте этот map перед чтением исходника.
+> Агент-ориентировано. Обновлён: 2026-03-09.
+> Файл большой (3456 строк): используйте этот map перед чтением исходника.
 
 ## Что это
 `src/ui/hangarChipsUI.js` — единый runtime/UI-контроллер ангара: сетка ячеек, butterfly-SVG слоты, инвентарь чипов/фрагментов, workshop sub-tabs, tech unlock, chip craft, drag-drop и сохранение клиентского состояния.
@@ -10,7 +10,7 @@
 - Хочешь править вкладки ангара → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L602-L632), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L634-L662).
 - Хочешь править полные названия чипов/фрагментов и safe-wrap только по ` + ` → [_renderChipNameHtml()](../../src/ui/hangarChipsUI.js#L2231-L2248), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1864-L1939), [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2350-L2598).
 - Хочешь править карточный шаблон craft-слотов / игровую кнопку удаления → [_renderCraftSlotCard()](../../src/ui/hangarChipsUI.js#L2249-L2264), [_renderCraftRemoveButton()](../../src/ui/hangarChipsUI.js#L2265-L2274).
-- Хочешь править rates и общий бюджет ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L770-L785), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1864-L1939), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L1942-L1982), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L1984-L2064).
+- Хочешь править rates, dust planner и итоговый summary ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L770-L785), [_getTechAccelSelectionState()](../../src/ui/hangarChipsUI.js#L1824-L1840), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1864-L1941), [_formatTechAccelDustCount()](../../src/ui/hangarChipsUI.js#L1949-L1951), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L1953-L1997), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L1999-L2064).
 - Хочешь править craft preview / future-chip frame → [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2350-L2598).
 - Хочешь править drag-drop и клики craft panel → [_attachCraftPanelEvents()](../../src/ui/hangarChipsUI.js#L2600-L2767).
 - Хочешь править overlay wiring / tooltips / slot-drag → [init()](../../src/ui/hangarChipsUI.js#L2935-L3315).
@@ -19,7 +19,8 @@
 - Вкладки переключаются только через [switchHangarTab()](../../src/ui/hangarChipsUI.js#L602-L632) и [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L634-L662): они синхронизируют `hidden`, `active` и `aria-selected`.
 - В assemble-режиме `_canAddFragment()` запрещает тройку одинаковых фрагментов и больше одного special-мода: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2077-L2101).
 - `chipCraftModeRow` рендерится всегда над drop-zone, а `#chipCraftActionBtn` всегда существует под ней и только переключается между disabled/enabled по `_detectCraftMode()`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2350-L2598).
-- `_getTechAccelRates()` — канонический источник accel-ставок: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; кремниевая пыль, целые чипы и фрагменты делят общий remaining budget до cap `95%`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L770-L785), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1818-L1982), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1984-L2064).
+- `_getTechAccelRates()` — канонический источник accel-ставок: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; кремниевая пыль, целые чипы и фрагменты делят общий remaining budget до cap `95%`, а `_formatTechAccelDustCount()` обязан показывать строку `доступно / выбрано`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L770-L785), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1824-L1951).
+- `_updateAccelPercentage()` — единственный источник live-summary `{pct}/{total}/{left}`, disabled-state для `+/-` и badge `Лимит`; `_applyTechAcceleration()` обязан сжигать тот же `_techAccelDustSelected`, который показывался в модалке: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1953-L2064).
 - `_renderChipNameHtml()` — канонический helper для полных названий чипов/фрагментов: он создаёт wrap-points только по ` + ` и переиспользуется в upgrade grid, tech accel modal, craft inventory и result cards; mid-word wrap запрещён. Карточный размер держится CSS vars `--chipLabelCardWidth/Height`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1864-L1939), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2248), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2350-L2598), [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915).
 - Occupied craft slots и future-preview используют общий карточный паттерн `chipCraftSlotCard`: квадратная карточка, footer-title снизу, badge уровня для целых чипов; remove-контрол — sibling `chipCraftSlotRemove` в game-styled исполнении. Во вкладке `Разобрать` он не должен клиппиться и остаётся в том же углу, что у эталонного preview `Создать чип`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2249-L2274), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2532-L2544), [style.css](../../style.css#L4599-L4652).
 - «Будущий» чип в craft preview — это отдельный контейнер `.chipCraftResultChip--future`, а не смена палитры самого SVG: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2532-L2544), [style.css](../../style.css#L4887-L4904).
@@ -60,7 +61,7 @@
 ### Блок: tech modals + chip craft
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `_ensureTechModal()`, resource helpers, `_showTechCancelConfirm()`, `_showTechAccelModal()`, `_updateAccelPercentage()`, `_applyTechAcceleration()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1785-L2064) | Модалки tech cancel/acceleration; общий budget для dust/chip/fragment и cap badges |
+| `_ensureTechModal()`, resource helpers, `_showTechCancelConfirm()`, `_showTechAccelModal()`, `_updateAccelPercentage()`, `_applyTechAcceleration()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1785-L2064) | Модалки tech cancel/acceleration; общий budget для dust/chip/fragment, строка `доступно / выбрано`, summary `{pct}/{total}/{left}` и cap badges |
 | `_resetCraftSlots()`, `_canAddFragment()`, `_previewAssembleResult()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2066-L2207) | Валидация craft state и live-preview |
 | `_getChipDisplayName()`, `_renderChipNameHtml()`, `_truncateCraftCardLabel()`, `_renderCraftSlotCard()`, `_renderCraftRemoveButton()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2274) | Канонический display-name pipeline и общий карточный шаблон craft UI |
 | `_addItemToSlot()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2276-L2348) | Авто-переключение mode и добавление item в craft slots |
@@ -76,11 +77,11 @@
 | Debug/public API export | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3341-L3441) | Экспорт в `Game.HangarChipsUI` |
 
 ## Hotspots
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1864-L2031) — tech accel modal, dust card, budget summary и full-name labels.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1824-L2064) — tech accel modal, dust planner, total-summary и apply flow.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2598) — chip-name pipeline, craft cards, result preview и future-chip frame.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2600-L2933) — pointer events, dust mode, execute flow.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2935-L3315) — overlay-level drag-drop/tooltips.
-- [style.css](../../style.css#L4104-L4327) — tech accel rate line, disabled state и dust controls.
+- [style.css](../../style.css#L4206-L4422) — tech accel summary row, dust row, disabled state и dust controls.
 - [style.css](../../style.css#L4410-L4652) — inventory / slot labels и `chipCraftSlotCard` shell.
 - [style.css](../../style.css#L4887-L4915) — future-frame и result label эталонного preview.
 

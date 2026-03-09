@@ -1,5 +1,7 @@
 ﻿# Система: UI
 
+> Обновлено: 2026-03-09.
+
 ## Где править
 - Разметка: `index.html`
 - Логика UI: `src/ui/*`
@@ -35,7 +37,11 @@
 ## Runtime font floor
 - `index.html` подключает [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L1-L133) как отдельный runtime-слой: [index.html](../../../index.html#L538).
 - `Game.FontFloor` патчит и `CanvasRenderingContext2D.font`, и DOM через `MutationObserver`, поднимая всё ниже `12px` до `12px`: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L22-L133).
-- Исключения разрешены только для явных контролов из `SKIP_SELECTOR` (`.levelModal__close:not(.scModal__close)`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`) или через `data-font-floor-ignore="true"`: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L4-L8).
+- Исключения разрешены только для явных контролов из `SKIP_SELECTOR` (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`): [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L5-L11), [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L47-L48).
+
+## Close controls / X-pattern
+- Обычные close-кнопки `.crateModal__close`, `.levelModal__close`, `.modalClose`, `.lessonProgress__close` используют одну orange 44×44 pseudo-element X-геометрию; `scModal__close`, `#talentOverlay .modalClose` и `.modalClose.scModal__close` — green SC-ветку того же паттерна: [style.css](../../../style.css#L1042-L1091), [style.css](../../../style.css#L1337-L1423), [style.css](../../../style.css#L1859-L1951), [style.css](../../../style.css#L3116-L3164).
+- `fontFloor` обязан пропускать все эти close-селекторы и `chipCraftSlotRemove`, иначе ломаются крестик, hit-area и визуальная унификация модалок/lesson popup/craft preview: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L5-L11), [style.css](../../../style.css#L4698-L4751).
 
 ## Production line storage modal
 - Разметка `#productionLineStorageModal` использует тот же close-skin `scModal__close`, что и root/hangar/tank-wall overlays: [index.html](../../../index.html#L214-L217), [index.html](../../../index.html#L233-L309), [style.css](../../../style.css#L1359-L1393).
@@ -69,7 +75,7 @@
 	- Большой чип = 10 ед. кремниевой пыли (`DUST_PER_CHIP`), фрагмент = 3 ед. (`DUST_PER_FRAGMENT`).
 	- Клик по любой области карточки в dust mode переключает чекбокс выбора; двойной toggle от клика по самому checkbox блокируется через `closest('.chipCraftDustCheck')`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2632-L2664).
 	- Подтверждение удаления/начисления пыли идёт через [_executeDust()](../../../src/ui/hangarChipsUI.js#L2769-L2799).
-- **Кремниевая пыль** (`_siliconDust`): ресурс, отображаемый в `chipCraftBottomBar`, в строке реагента `chipCraftReagentRow` и в модалке ускорения технологий. В accel modal пыль выбирается через `+/-` stepper и делит общий лимит `95%` с целыми чипами и фрагментами: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1818-L2031), [style.css](../../../style.css#L4104-L4327), [style.css](../../../style.css#L4962-L4969).
+- **Кремниевая пыль** (`_siliconDust`): ресурс, отображаемый в `chipCraftBottomBar`, в строке реагента `chipCraftReagentRow` и в модалке ускорения технологий. В accel modal пыль выбирается через `+/-` stepper, нижняя строка показывает `доступно / выбрано`, summary live-обновляет `{pct}/{total}/{left}`, а `_applyTechAcceleration()` сжигает тот же `_techAccelDustSelected`, который виден пользователю: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1753-L1770), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1824-L2050), [style.css](../../../style.css#L4206-L4422), [style.css](../../../style.css#L4962-L4969).
 
 ### Открытие технологий — процесс изучения
 - Все кнопки «Скормить x» удалены. Вместо них — кнопка «Начать процесс изучения» с таймером.
@@ -78,12 +84,13 @@
 - Состояние изучения: `_techStudying = { techId, remaining, total, timer }`, хранится в `HangarChipsUI`.
 - Таймер: `setInterval(1000)` декрементирует `remaining`; при `remaining <= 0` технология разблокируется, таймер останавливается.
 - Кнопка «Отменить»: показывает модальное окно подтверждения (`_showTechCancelConfirm`). При подтверждении прогресс изучения теряется полностью.
-- Кнопка «Ускорить процесс открытия»: показывает модальное окно (`_showTechAccelModal`) с единым grid для кремниевой пыли, больших чипов и фрагментов. Ставки считаются через `_getTechAccelRates(modId)`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; все ресурсы делят общий cap `95%`, а элементы, не влезающие в остаток, получают `techAccelChip--disabled` + badge `Лимит`. Пыль выбирается отдельным `+/-` stepper, а summary строка показывает выбранный процент и оставшийся бюджет: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L770-L785), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1818-L2031), [style.css](../../../style.css#L4104-L4327).
+- Кнопка «Ускорить процесс открытия»: показывает модальное окно (`_showTechAccelModal`) с единым grid для кремниевой пыли, больших чипов и фрагментов. Ставки считаются через `_getTechAccelRates(modId)`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; все ресурсы делят общий cap `95%`, а элементы, не влезающие в остаток, получают `techAccelChip--disabled` + badge `Лимит`. Пыль выбирается отдельным `+/-` stepper, нижняя строка всегда показывает `доступно / выбрано`, а summary строка показывает выбранный процент, итог после применения и остаток до cap; `apply` использует тот же selection-state без отдельного скрытого пересчёта: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L770-L785), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1753-L1770), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1824-L2050), [style.css](../../../style.css#L4206-L4422).
 - Сериализация: `techStudying: { techId, remaining, total }` сохраняется в save payload; при восстановлении таймер автоматически перезапускается через `setTechStudying()`.
 
 ## Правила
 - Не добавлять тексты мимо `src/i18n/ru.json` и `src/i18n/en.json`.
 - `src/i18n/fallbackStrings.js` — синхронный fallback, применяется до загрузки JSON; при добавлении нового i18n-ключа его нужно добавлять **одновременно** в `ru.json`, `en.json` **и** `fallbackStrings.js` (иначе до async-загрузки ключ отображается как literal-строка).
+- Для accel modal строки `techAccelRateSummary`, `techAccelSelectedSummary`, `techAccelDustMeta` должны обновляться синхронно в `ru.json`, `en.json` и `fallbackStrings.js`: [src/i18n/ru.json](../../../src/i18n/ru.json#L452-L461), [src/i18n/en.json](../../../src/i18n/en.json#L452-L461), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L264-L273), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L562-L571).
 - Не переносить доменную логику в слой UI.
 - Тени UI-элементов (кнопки/панели/модалки/уведомления/debug) должны оставаться тонкими: baseline `box-shadow` с Y-offset не более `3px`.
 - Debug-панели и admin-кнопки оставлять за `?debug=1`.
