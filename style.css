@@ -4302,15 +4302,23 @@ input, select, textarea, button {
   width:90%;
   box-shadow:0 8px 40px rgba(0,0,0,.6);
   text-align:center;
+  position:relative;
 }
 .techModal__dialog--wide{
   max-width:520px;
+}
+.techModal__dialog--craft{
+  max-width:480px;
+  padding:28px 28px 24px;
 }
 .techModal__title{
   font-size:16px;
   font-weight:bold;
   color:#4af626;
   margin-bottom:8px;
+}
+.techModal__title--warn{
+  color:#fdd835;
 }
 .techModal__subtitle{
   font-size:12px;
@@ -4328,6 +4336,59 @@ input, select, textarea, button {
   color:rgba(255,255,255,.85);
   line-height:1.5;
   margin-bottom:20px;
+}
+.techModal__text--compact{
+  margin-bottom:16px;
+}
+.techModal__close{
+  position:absolute !important;
+  top:14px;
+  right:14px;
+}
+.chipCraftOutcomeGrid{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:14px;
+  margin-bottom:18px;
+}
+.chipCraftOutcomeCard{
+  width:var(--chipLabelCardWidth);
+  height:152px;
+  display:flex;
+}
+.chipCraftOutcomeCard .chipCraftSlotCard{
+  height:100%;
+}
+.chipCraftOutcomeCard--dust{
+  border:1px solid rgba(255,214,102,.18);
+  border-radius:8px;
+  background:linear-gradient(180deg, rgba(64,48,18,.92) 0%, rgba(36,28,10,.96) 100%);
+  box-shadow:0 2px 0 rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  align-items:center;
+  justify-content:center;
+}
+.chipCraftOutcomeDust{
+  width:100%;
+  padding:14px 12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.chipCraftOutcomeDust__label{
+  font-size:11px;
+  line-height:1.35;
+  color:rgba(255,255,255,.82);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.chipCraftOutcomeDust__value{
+  font-size:20px;
+  line-height:1;
+  color:#fdd835;
+  font-family:'Press Start 2P',monospace;
 }
 .techModal__empty{
   font-size:13px;
@@ -4693,7 +4754,7 @@ input, select, textarea, button {
   min-height: 0;
   display:flex;
   flex-direction:column;
-  gap:0;
+  gap:8px;
   overflow:visible;
 }
 .chipCraftPreview--disassemble{
@@ -4705,13 +4766,13 @@ input, select, textarea, button {
   border-radius:8px;
   background:rgba(30,28,24,.5);
   display:flex;
-  align-items:center;
-  justify-content:center;
+  align-items:stretch;
+  justify-content:flex-start;
   flex-direction:column;
-  gap:12px;
+  gap:10px;
   min-height:220px;
   position:relative;
-  padding:16px 14px 14px;
+  padding:18px 16px 10px;
   overflow:visible;
 }
 .chipCraftDropZone--disassemble{
@@ -4720,6 +4781,16 @@ input, select, textarea, button {
   align-items:stretch;
   justify-content:flex-start;
   padding:18px 16px 16px;
+}
+.chipCraftDropZone__body{
+  flex:1 1 auto;
+  width:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
 }
 .chipCraftEmptyPreview{
   display:flex;
@@ -4736,6 +4807,81 @@ input, select, textarea, button {
   font-size:11px;
   color:rgba(255,255,255,.3);
   text-align:center;
+}
+.chipCraftPlaceholderText--stage{
+  max-width:260px;
+}
+.chipCraftAssemblyStage{
+  width:min(100%, 470px);
+  display:grid;
+  grid-template-columns:var(--chipLabelCardWidth) minmax(120px, 1fr) var(--chipLabelCardWidth);
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+}
+.chipCraftIngredientStack{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.chipCraftEnergyRail{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:196px;
+  pointer-events:none;
+}
+.chipCraftEnergySvg{
+  width:100%;
+  min-width:140px;
+  height:196px;
+  overflow:visible;
+}
+.chipCraftEnergyLine{
+  transform-box:fill-box;
+  transform-origin:left center;
+}
+.chipCraftEnergyLine__base,
+.chipCraftEnergyLine__glow{
+  fill:none;
+  stroke-linecap:round;
+}
+.chipCraftEnergyLine__base{
+  stroke:rgba(130,190,92,.26);
+  stroke-width:3;
+}
+.chipCraftEnergyLine__glow{
+  stroke:rgba(170,255,149,.2);
+  stroke-width:1.6;
+  stroke-dasharray:12 10;
+}
+.chipCraftEnergyLine__node{
+  fill:rgba(170,255,149,.14);
+  stroke:rgba(255,224,142,.26);
+  stroke-width:1.2;
+}
+.chipCraftEnergyLine--filled{
+  animation:chipCraftEnergyShake .34s ease-in-out infinite alternate;
+}
+.chipCraftEnergyLine--filled .chipCraftEnergyLine__base{
+  stroke:rgba(138,255,109,.5);
+}
+.chipCraftEnergyLine--filled .chipCraftEnergyLine__glow{
+  stroke:rgba(255,233,132,.88);
+  animation:chipCraftEnergyFlow .72s linear infinite, chipCraftEnergyPulse .92s ease-in-out infinite alternate;
+}
+.chipCraftEnergyLine--filled .chipCraftEnergyLine__node{
+  fill:rgba(138,255,109,.34);
+  stroke:rgba(255,239,167,.62);
+  filter:drop-shadow(0 0 6px rgba(120,255,103,.32));
+}
+.chipCraftAssemblyResult,
+.chipCraftResultChip{
+  width:var(--chipLabelCardWidth);
+  height:152px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 .chipCraftSlotRow{
   display:flex;
@@ -4778,6 +4924,9 @@ input, select, textarea, button {
   position:relative;
   background:rgba(40,36,32,.4);
   overflow:visible;
+}
+.chipCraftSlot--assembleIngredient{
+  width:var(--chipLabelCardWidth);
 }
 .chipCraftSlot--filled{
   border:none;
@@ -4938,7 +5087,7 @@ input, select, textarea, button {
   transition:background .12s, color .12s;
   font-family:'Press Start 2P',monospace;
   align-self:center;
-  margin-top:10px;
+  margin-top:2px;
   flex-shrink:0;
 }
 .chipCraftActionBtn:hover:not(:disabled){
@@ -5197,11 +5346,14 @@ input, select, textarea, button {
   align-items:center;
   gap:8px;
   flex-wrap:wrap;
-  margin-top:10px;
-  padding:8px 10px;
+  width:100%;
+  margin-top:auto;
+  margin-bottom:6px;
+  padding:8px 12px;
   background:rgba(20,18,14,.45);
   border:1px solid rgba(255,152,0,.2);
   border-radius:5px;
+  justify-content:space-between;
 }
 .chipCraftReagentLabel{
   font-size:9px;
@@ -5255,6 +5407,19 @@ input, select, textarea, button {
   color:#4af626;
   font-family:'Press Start 2P',monospace;
   margin-left:auto;
+}
+
+@keyframes chipCraftEnergyFlow{
+  from{stroke-dashoffset:0}
+  to{stroke-dashoffset:-22}
+}
+@keyframes chipCraftEnergyShake{
+  from{transform:translate3d(-1px, 0, 0)}
+  to{transform:translate3d(1px, -1px, 0)}
+}
+@keyframes chipCraftEnergyPulse{
+  from{opacity:.66}
+  to{opacity:1}
 }
 
 /* ─── Chip Fragment Icon ─── */

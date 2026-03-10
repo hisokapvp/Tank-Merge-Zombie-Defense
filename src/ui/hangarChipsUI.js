@@ -1746,6 +1746,19 @@
       return;
     }
 
+    var craftModalClose = tgt.closest ? tgt.closest('[data-craft-modal-close]') : null;
+    if (craftModalClose) {
+      _closeTechModal();
+      return;
+    }
+
+    var craftRiskConfirm = tgt.closest ? tgt.closest('[data-craft-risk-confirm]') : null;
+    if (craftRiskConfirm) {
+      _closeTechModal();
+      _executeCraftAction(true);
+      return;
+    }
+
     /* tech accel confirm button */
     var techAccelConfirm = tgt.closest ? tgt.closest('[data-tech-accel-confirm]') : null;
     if (techAccelConfirm) {
@@ -2347,6 +2360,174 @@
       '</button>';
   }
 
+  function _renderCraftEnergyLines() {
+    var html = '<svg class="chipCraftEnergySvg" viewBox="0 0 220 196" preserveAspectRatio="none" aria-hidden="true">';
+    var slotYs = [30, 98, 166];
+    for (var i = 0; i < 3; i++) {
+      var lineClass = 'chipCraftEnergyLine chipCraftEnergyLine--' + (i + 1);
+      if (_craftSlots[i] && _craftSlots[i].type === 'fragment') lineClass += ' chipCraftEnergyLine--filled';
+      var startY = slotYs[i];
+      var midY = i === 1 ? 98 : (i === 0 ? 52 : 144);
+      html += '<g class="' + lineClass + '">';
+      html += '<path class="chipCraftEnergyLine__base" d="M10 ' + startY + ' C74 ' + startY + ', 118 ' + midY + ', 196 98"></path>';
+      html += '<path class="chipCraftEnergyLine__glow" d="M10 ' + startY + ' C74 ' + startY + ', 118 ' + midY + ', 196 98"></path>';
+      html += '<circle class="chipCraftEnergyLine__node" cx="196" cy="98" r="4"></circle>';
+      html += '</g>';
+    }
+    html += '</svg>';
+    return html;
+  }
+
+  function _getCraftChancePct() {
+    return Math.max(75, Math.min(100, 75 + _craftReagentDust * 5));
+  }
+
+  function _buildCraftReagentRowHtml() {
+    var minusDisabled = _craftReagentDust <= 0;
+    var plusDisabled = _craftReagentDust >= 5 || _siliconDust <= _craftReagentDust;
+    return '<div class="chipCraftReagentRow">' +
+      '<span class="chipCraftReagentLabel">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>' +
+      '<div class="chipCraftReagentControls">' +
+      '<button class="chipCraftReagentBtn" id="chipCraftReagentMinus" type="button"' + (minusDisabled ? ' disabled' : '') + '>−</button>' +
+      '<span class="chipCraftReagentAmount">' + _siliconDust + ' / ' + _craftReagentDust + '</span>' +
+      '<button class="chipCraftReagentBtn" id="chipCraftReagentPlus" type="button"' + (plusDisabled ? ' disabled' : '') + '>+</button>' +
+      '</div>' +
+      '<span class="chipCraftChanceLabel">' + t('chipCraftChance', 'Шанс: {chance}%').replace('{chance}', _getCraftChancePct()) + '</span>' +
+      '</div>';
+  }
+
+  function _collectAssembleCraftPayload() {
+    var h = hc();
+    if (!h) return { error: 'module' };
+
+    var fragModIds = [];
+    var requiredFragments = {};
+    for (var i = 0; i < 3; i++) {
+      if (!_craftSlots[i] || _craftSlots[i].type !== 'fragment') return { error: 'slots' };
+      var fragmentId = _craftSlots[i].fragmentId;
+      fragModIds.push(fragmentId);
+      requiredFragments[fragmentId] = (requiredFragments[fragmentId] || 0) + 1;
+    }
+
+    var result = h.assembleChip(fragModIds);
+    if (!result) return { error: 'combo' };
+
+    var requiredKeys = Object.keys(requiredFragments);
+    for (var ri = 0; ri < requiredKeys.length; ri++) {
+      var reqKey = requiredKeys[ri];
+      var reqId = parseInt(reqKey, 10);
+      if (getFragmentCount(reqId) < requiredFragments[reqKey]) {
+        return { error: 'inventory' };
+      }
+    }
+
+    var dustUsed = _craftReagentDust;
+    if (dustUsed > 0 && _siliconDust < dustUsed) return { error: 'dust' };
+
+    return {
+      result: result,
+      fragModIds: fragModIds,
+      dustUsed: dustUsed,
+      craftChancePct: _getCraftChancePct()
+    };
+  }
+
+  function _resolveCraftResultChipDef(result) {
+    var h = hc();
+    if (!result || !h) return result;
+    if (result.chipId !== -1) return result;
+    var found = h.getChipByKey(h.allChips, result.sourceComboKey);
+    return found || result;
+  }
+
+  function _renderCraftOutcomeItemHtml(item) {
+    var h = hc();
+    if (!item) return '';
+    if (item.type === 'chip' && item.chipDef) {
+      var chipColor = item.chipDef.chipColor === 'red' ? '#e53935' : '#fdd835';
+      return '<div class="chipCraftOutcomeCard">' +
+        _renderCraftSlotCard(
+          chipSvgComposed(60, 54, chipColor, item.chipDef.modIds || [], 'chipCraftResultIcon', 3),
+          _getChipDisplayName(item.chipDef),
+          {
+            badgeText: t('workshopChipLevelLabel', 'Ур.') + ' 1',
+            extraClass: 'chipCraftSlotCard--chip chipCraftSlotCard--future',
+            labelClass: 'chipCraftResultLabel'
+          }
+        ) +
+        '</div>';
+    }
+    if (item.type === 'fragment') {
+      var fragStroke = (h && h.isSpecialMod(item.fragmentId)) ? '#fdd835' : '#e53935';
+      return '<div class="chipCraftOutcomeCard">' +
+        _renderCraftSlotCard(
+          _fragmentSvg(item.fragmentId, 50, fragStroke),
+          modName(item.fragmentId),
+          {
+            extraClass: 'chipCraftSlotCard--fragment',
+            labelClass: 'chipCraftSlotCard__name--wrapWords'
+          }
+        ) +
+        '</div>';
+    }
+    if (item.type === 'dust') {
+      return '<div class="chipCraftOutcomeCard chipCraftOutcomeCard--dust">' +
+        '<div class="chipCraftOutcomeDust">' +
+        '<span class="chipCraftOutcomeDust__label">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + '</span>' +
+        '<span class="chipCraftOutcomeDust__value">-' + item.amount + '</span>' +
+        '</div>' +
+        '</div>';
+    }
+    return '';
+  }
+
+  function _showCraftOutcomeModal(success, items) {
+    var modal = _ensureTechModal();
+    var closeLabel = t('techAccelClose', 'Закрыть');
+    var title = success
+      ? t('chipCraftResultSuccessTitle', 'Соединение удалось')
+      : t('chipCraftResultFailureTitle', 'Соединение не удалось');
+    var bodyText = success
+      ? t('chipCraftResultSuccessText', 'Поздравляем! Вы получили новый чип.')
+      : t('chipCraftResultFailureText', 'Попытка оказалась неудачной. Потеряны следующие ресурсы:');
+    var titleClass = 'techModal__title' + (success ? '' : ' techModal__title--warn');
+    var itemsHtml = '';
+    for (var i = 0; i < items.length; i++) itemsHtml += _renderCraftOutcomeItemHtml(items[i]);
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<div class="' + titleClass + '" id="chipCraftModalTitle">' + title + '</div>' +
+      '<div class="techModal__text techModal__text--compact">' + bodyText + '</div>' +
+      '<div class="chipCraftOutcomeGrid">' + itemsHtml + '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + closeLabel + '</button>' +
+      '</div>' +
+      '</div>';
+    modal.style.display = 'flex';
+  }
+
+  function _showCraftRiskConfirmModal(craftPayload) {
+    var modal = _ensureTechModal();
+    var closeLabel = t('techAccelClose', 'Закрыть');
+    var continueLabel = t('chipCraftContinue', 'Продолжить');
+    var cancelLabel = t('chipCraftDustCancel', 'Отменить');
+    var dustClause = craftPayload.dustUsed > 0
+      ? t('chipCraftRiskDustClause', ' и {amount} ед. кремниевой пыли').replace('{amount}', craftPayload.dustUsed)
+      : '';
+    var riskText = t('chipCraftRiskText', 'Шанс успеха: {chance}%. При неудаче вы потеряете 1 случайный фрагмент{dustClause}. Продолжить?')
+      .replace('{chance}', craftPayload.craftChancePct)
+      .replace('{dustClause}', dustClause);
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<div class="techModal__title techModal__title--warn" id="chipCraftModalTitle">' + t('chipCraftRiskTitle', 'Риск потери ресурсов') + '</div>' +
+      '<div class="techModal__text">' + riskText + '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__accelConfirmBtn" data-craft-risk-confirm type="button">' + continueLabel + '</button>' +
+      '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
+      '</div>' +
+      '</div>';
+    modal.style.display = 'flex';
+  }
+
   /**
    * Add an inventory item to the craft slot. Auto-switches mode based on item type:
    * - chip → disassemble mode, fragment → assemble mode.
@@ -2574,8 +2755,7 @@
       var dropZoneClass = 'chipCraftDropZone' + (isDisassembleView && hasContent ? ' chipCraftDropZone--disassemble' : '');
       html += '<div class="' + previewClass + '">';
       html += '<div class="' + dropZoneClass + '" id="chipCraftDropZone">';
-      if (hasContent) {
-        if (isDisassembleView) {
+      if (isDisassembleView && hasContent) {
           /* Dynamic disassemble slots: show all chips + one empty "+" slot */
           html += '<div class="chipCraftSlotRow chipCraftSlotRow--disassemble">';
           for (var sj = 0; sj < _craftSlots.length; sj++) {
@@ -2600,17 +2780,16 @@
           html += '<div class="chipCraftSlotEmpty">+</div>';
           html += '</div>';
           html += '</div>';
-        } else {
-          /* Assemble mode: 3 fixed slots + inline arrow + result chip in one row */
+      } else if (isAssembleView) {
+          /* Assemble mode: 3 fixed slots + power lines + result chip */
           var assemblePreview = _previewAssembleResult();
-          html += '<div class="chipCraftSlotRow chipCraftSlotRow--withResult">';
+          html += '<div class="chipCraftDropZone__body">';
+          html += '<div class="chipCraftAssemblyStage">';
+          html += '<div class="chipCraftIngredientStack">';
           for (var sj2 = 0; sj2 < 3; sj2++) {
-            if (sj2 > 0) {
-              html += '<div class="chipCraftSlotSep">+</div>';
-            }
             var slot2 = _craftSlots[sj2];
             var slotDataAttr2 = (slot2 && slot2.type === 'fragment') ? ' data-hct-frag-id="' + slot2.fragmentId + '"' : '';
-            html += '<div class="chipCraftSlot' + (slot2 ? ' chipCraftSlot--filled' : '') + '" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
+            html += '<div class="chipCraftSlot chipCraftSlot--assembleIngredient' + (slot2 ? ' chipCraftSlot--filled' : '') + '" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
             if (slot2) {
               if (slot2.type === 'chip') {
                 var sc2 = slot2.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -2639,9 +2818,9 @@
             }
             html += '</div>';
           }
-          /* Arrow separator */
-          html += '<div class="chipCraftSlotSep chipCraftSlotSep--arrow">⇒</div>';
-          /* Result chip slot */
+          html += '</div>';
+          html += '<div class="chipCraftEnergyRail">' + _renderCraftEnergyLines() + '</div>';
+          html += '<div class="chipCraftAssemblyResult">';
           if (assemblePreview) {
             var resultColor = assemblePreview.chipColor === 'red' ? '#e53935' : '#fdd835';
             var resultModIds = assemblePreview.modIds || [];
@@ -2663,26 +2842,11 @@
             html += '<div class="chipCraftSlotEmpty" style="opacity:0.3">?</div>';
             html += '</div>';
           }
-          html += '</div>'; // chipCraftSlotRow--withResult
-
-          /* ── Silicon Dust reagent controls (always visible in assemble mode) ── */
-          var craftChance = 75 + _craftReagentDust * 5;
-          var minusDisabled = _craftReagentDust <= 0;
-          var plusDisabled = _craftReagentDust >= 5 || _siliconDust <= _craftReagentDust;
-          html += '<div class="chipCraftReagentRow">';
-          html += '<span class="chipCraftReagentLabel">' +
-            t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>';
-          html += '<div class="chipCraftReagentControls">';
-          html += '<button class="chipCraftReagentBtn" id="chipCraftReagentMinus" type="button"' +
-            (minusDisabled ? ' disabled' : '') + '>−</button>';
-          html += '<span class="chipCraftReagentAmount">' + _siliconDust + ' / ' + _craftReagentDust + '</span>';
-          html += '<button class="chipCraftReagentBtn" id="chipCraftReagentPlus" type="button"' +
-            (plusDisabled ? ' disabled' : '') + '>+</button>';
           html += '</div>';
-          html += '<span class="chipCraftChanceLabel">' +
-            t('chipCraftChance', 'Шанс: {chance}%').replace('{chance}', craftChance) + '</span>';
           html += '</div>';
-        }
+          html += '<span class="chipCraftPlaceholderText chipCraftPlaceholderText--stage">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
+          html += '</div>';
+          html += _buildCraftReagentRowHtml();
       } else {
         html += '<div class="chipCraftEmptyPreview">';
         html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
@@ -2935,7 +3099,7 @@
   }
 
   /** Execute the craft action (disassemble or assemble) */
-  function _executeCraftAction() {
+  function _executeCraftAction(skipRiskConfirm) {
     var h = hc();
     if (!h) return;
     var mode = _detectCraftMode();
@@ -2977,65 +3141,57 @@
       renderChipUpgradeGrid();
 
     } else if (mode === 'assemble') {
-      /* Collect 3 fragment modIds */
-      var fragModIds = [];
-      for (var si = 0; si < 3; si++) {
-        if (!_craftSlots[si] || _craftSlots[si].type !== 'fragment') return;
-        fragModIds.push(_craftSlots[si].fragmentId);
-      }
-
-      /* Try to assemble (validate combo) */
-      var result = h.assembleChip(fragModIds);
-      if (!result) {
+      var craftPayload = _collectAssembleCraftPayload();
+      if (craftPayload.error === 'combo') {
         if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftInvalidCombo', 'Невозможно создать чип из этих фрагментов'), 1800);
         return;
       }
-
-      /* Validate silicon dust reagent */
-      var dustUsed = _craftReagentDust;
-      if (dustUsed > 0 && _siliconDust < dustUsed) {
+      if (craftPayload.error === 'dust') {
         if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftNotEnoughDust', 'Недостаточно кремниевой пыли'), 1800);
         return;
       }
-
-      /* Consume silicon dust reagent */
-      if (dustUsed > 0) _siliconDust -= dustUsed;
-
-      /* Remove 3 fragments from inventory */
-      for (var ri = 0; ri < fragModIds.length; ri++) {
-        removePlayerFragment(fragModIds[ri], 1);
+      if (craftPayload.error) {
+        if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftNoChipInv', 'Не удалось подтвердить выбранные фрагменты'), 1800);
+        return;
       }
 
-      /* Roll craft chance: base 75% + 5% per dust unit */
-      var craftChancePct = 0.75 + dustUsed * 0.05;
-      if (Math.random() > craftChancePct) {
-        /* Craft failed — fragments and dust already consumed */
-        if (global.Game && global.Game.Toast) {
-          global.Game.Toast.show(t('chipCraftFailed', 'Создание чипа провалилось. Фрагменты не подлежат восстановлению'), 5000);
+      if (!skipRiskConfirm && craftPayload.craftChancePct < 100) {
+        _showCraftRiskConfirmModal(craftPayload);
+        return;
+      }
+
+      if (Math.random() * 100 >= craftPayload.craftChancePct) {
+        var lostFragmentId = craftPayload.fragModIds[Math.floor(Math.random() * craftPayload.fragModIds.length)];
+        var lostItems = [];
+        removePlayerFragment(lostFragmentId, 1);
+        lostItems.push({ type: 'fragment', fragmentId: lostFragmentId });
+        if (craftPayload.dustUsed > 0) {
+          _siliconDust = Math.max(0, _siliconDust - craftPayload.dustUsed);
+          lostItems.push({ type: 'dust', amount: craftPayload.dustUsed });
         }
         _resetCraftSlots();
         renderChipCraftPanel();
         renderChipUpgradeGrid();
+        _showCraftOutcomeModal(false, lostItems);
         return;
       }
 
-      /* Resolve chipDef — if result.chipId === -1, find or create */
-      var chipDef = result;
-      if (result.chipId === -1) {
-        var found = h.getChipByKey(h.allChips, result.sourceComboKey);
-        if (found) chipDef = found;
+      for (var ri = 0; ri < craftPayload.fragModIds.length; ri++) {
+        removePlayerFragment(craftPayload.fragModIds[ri], 1);
       }
+      if (craftPayload.dustUsed > 0) {
+        _siliconDust = Math.max(0, _siliconDust - craftPayload.dustUsed);
+      }
+
+      var chipDef = _resolveCraftResultChipDef(craftPayload.result);
 
       /* Add assembled chip to inventory at level 1 */
       addPlayerChip(chipDef, 1);
 
-      if (global.Game && global.Game.Toast) {
-        global.Game.Toast.show(t('chipCraftAssembled', 'Чип «{key}» создан!').replace('{key}', chipDef.sourceComboKey), 1800);
-      }
-
       _resetCraftSlots();
       renderChipCraftPanel();
       renderChipUpgradeGrid();
+      _showCraftOutcomeModal(true, [{ type: 'chip', chipDef: chipDef }]);
     }
   }
 

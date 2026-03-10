@@ -1,7 +1,7 @@
 # hangarChipsUI.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-09.
-> Файл большой (3532 строки): используйте этот map перед чтением исходника.
+> Агент-ориентировано. Обновлён: 2026-03-10.
+> Файл большой (~3740 строк): используйте этот map перед чтением исходника.
 
 ## Что это
 `src/ui/hangarChipsUI.js` — единый runtime/UI-контроллер ангара: сетка ячеек, butterfly-SVG слоты, инвентарь чипов/фрагментов, workshop sub-tabs, tech unlock, chip craft, drag-drop и сохранение клиентского состояния.
@@ -9,8 +9,8 @@
 ## Быстрый старт для агента
 - Хочешь править вкладки ангара → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L604-L636), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L639-L683), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L685-L697).
 - Хочешь править сброс временного состояния мастерской при выходе из вкладок/окна → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L604-L636), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L639-L683), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L685-L697), [resetTransientUiState()](../../src/ui/hangarChipsUI.js#L2170-L2174) _(строки приблизительные, проверить после 2026-03-10)_ .
-- Хочешь править полные названия чипов/фрагментов и safe-wrap только по ` + ` → [_renderChipNameHtml()](../../src/ui/hangarChipsUI.js#L2231-L2248), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1864-L1939), [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2350-L2598).
-- Хочешь править карточный шаблон craft-слотов / игровую кнопку удаления → [_renderCraftSlotCard()](../../src/ui/hangarChipsUI.js#L2249-L2264), [_renderCraftRemoveButton()](../../src/ui/hangarChipsUI.js#L2265-L2274).
+- Хочешь править полные названия чипов/фрагментов и safe-wrap только по ` + ` → [_renderChipNameHtml()](../../src/ui/hangarChipsUI.js#L2311-L2320), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1934-L2012), [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2609-L2878).
+- Хочешь править карточный шаблон craft-слотов / силовые линии / результатные модалки → [_renderCraftSlotCard()](../../src/ui/hangarChipsUI.js#L2333-L2348), [_renderCraftRemoveButton()](../../src/ui/hangarChipsUI.js#L2350-L2355), [_renderCraftEnergyLines()](../../src/ui/hangarChipsUI.js#L2363-L2376), [_showCraftOutcomeModal()](../../src/ui/hangarChipsUI.js#L2484-L2506), [_showCraftRiskConfirmModal()](../../src/ui/hangarChipsUI.js#L2508-L2528).
 - Хочешь править rates, dust planner и итоговый summary ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L770-L785), [_getTechAccelSelectionState()](../../src/ui/hangarChipsUI.js#L1824-L1840), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1909-L1988), [_formatTechAccelDustCount()](../../src/ui/hangarChipsUI.js#L1999-L2001), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L2003-L2047), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L2049-L2114).
 - Хочешь править split между assemble-panel и recycle-panel → [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2410-L2677), [_attachCraftPanelEvents()](../../src/ui/hangarChipsUI.js#L2679-L2789).
 - Хочешь править overlay wiring / tooltips / slot-drag → [init()](../../src/ui/hangarChipsUI.js#L2935-L3315).
@@ -27,6 +27,8 @@
 - `_renderChipNameHtml()` — канонический helper для полных названий чипов/фрагментов: он создаёт wrap-points только по ` + ` и переиспользуется в upgrade grid, tech accel modal, craft inventory и result cards; mid-word wrap запрещён. Карточный размер держится CSS vars `--chipLabelCardWidth/Height`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1864-L1939), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2248), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2350-L2598), [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915).
 - Occupied craft slots и future-preview используют общий карточный паттерн `chipCraftSlotCard`: квадратная карточка, footer-title снизу, badge уровня для целых чипов; remove-контрол — sibling `chipCraftSlotRemove` в game-styled исполнении. Во вкладке `Разобрать` он не должен клиппиться и остаётся в том же углу, что у эталонного preview `Создать чип`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2249-L2274), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2532-L2544), [style.css](../../style.css#L4599-L4652).
 - «Будущий» чип в craft preview — это отдельный контейнер `.chipCraftResultChip--future`, а не смена палитры самого SVG: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2532-L2544), [style.css](../../style.css#L4887-L4904).
+- Assemble preview всегда рендерит 3 ingredient-slots, отдельную колонку силовых линий и result-card; зелёная стрелка больше не используется. Пустые линии статичны, заполненные получают `chipCraftEnergyLine--filled`, а блок `chipCraftReagentRow` закреплён внизу drop-zone через `margin-top:auto`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2363-L2397), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2758-L2850), [style.css](../../style.css#L4814-L4879), [style.css](../../style.css#L5344-L5408).
+- Assemble craft перед шансом < 100% обязан показывать confirm modal, а после любого roll — result modal. При провале сжигается только один случайный выбранный фрагмент и reagent dust, если он был добавлен; остальные выбранные фрагменты остаются в инвентаре: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1746-L1758), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2484-L2528), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3102-L3194), [style.css](../../style.css#L4310-L4379).
 - Авто-переключение craft-mode при клике/drag из инвентаря живёт только в `_addItemToSlot()`; не дублировать это ветвление в pointer handlers: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2276-L2348), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2600-L2679).
 
 ## Оглавление файла
@@ -65,13 +67,13 @@
 ### Блок: tech modals + chip craft
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `_ensureTechModal()`, resource helpers, `_showTechCancelConfirm()`, `_showTechAccelModal()`, `_updateAccelPercentage()`, `_applyTechAcceleration()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1785-L2114) | Модалки tech cancel/acceleration; общий budget для dust/chip/fragment, bordered grid ресурсов, строка `доступно / выбрано`, summary `{pct}/{total}/{left}` под dust-row и cap badges |
+| `_ensureTechModal()`, resource helpers, `_showTechCancelConfirm()`, `_showTechAccelModal()`, `_updateAccelPercentage()`, `_applyTechAcceleration()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1844-L2121) | Модалки tech cancel/acceleration и общий modal-host для craft confirm/result |
 | `_resetCraftSlots()`, `_canAddFragment()`, `_previewAssembleResult()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2066-L2207) | Валидация craft state и live-preview |
-| `_getChipDisplayName()`, `_renderChipNameHtml()`, `_truncateCraftCardLabel()`, `_renderCraftSlotCard()`, `_renderCraftRemoveButton()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2274) | Канонический display-name pipeline и общий карточный шаблон craft UI |
+| `_getChipDisplayName()`, `_renderChipNameHtml()`, `_truncateCraftCardLabel()`, `_renderCraftSlotCard()`, `_renderCraftRemoveButton()`, `_renderCraftEnergyLines()`, `_collectAssembleCraftPayload()`, `_showCraftOutcomeModal()`, `_showCraftRiskConfirmModal()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2227-L2528) | Канонический display-name pipeline, assemble energy-lines, confirm/result modals и payload-сборка для craft roll |
 | `_addItemToSlot()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2276-L2348) | Общее добавление item в craft slots; assemble/disassemble UX route задаётся активной panel/tab-state |
-| `renderChipCraftPanel()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2410-L2677) | Split DOM для assemble-only panel и recycle panel: nested tabs, single-column dust view, disassemble preview |
-| `_attachCraftPanelEvents()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2679-L2789) | Клики nested recycle-tabs, dust confirm/cancel, pointer-drag из inventory |
-| `_executeDust()`, `_executeCraftAction()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2769-L2933) | Распыление и создание/разборка чипов |
+| `renderChipCraftPanel()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2609-L2878) | Split DOM для assemble-only panel и recycle panel: nested tabs, single-column dust view, assemble energy-stage, нижний reagent footer и disassemble preview |
+| `_attachCraftPanelEvents()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2880-L3066) | Клики nested recycle-tabs, dust confirm/cancel, pointer-drag из inventory, reagent stepper |
+| `_executeDust()`, `_executeCraftAction()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3068-L3194) | Распыление и создание/разборка чипов; confirm-before-risk и loss-policy одного случайного фрагмента |
 
 ### Блок: init / drag-drop / persistence API
 | Функция / блок | Строки | Назначение |
@@ -83,13 +85,13 @@
 ## Hotspots
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L639-L699) — routing workshop/recycle tabs и derived UI-state `_workshopSubTab/_chipRecycleSubTab`.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1909-L2114) — tech accel modal, dust planner, total-summary и apply flow.
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2209-L2677) — chip-name pipeline, craft cards, split assemble/recycle layout и future-chip frame.
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2679-L2933) — nested recycle-tab events, dust mode, execute flow.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2227-L2878) — chip-name pipeline, craft cards, силовые линии assemble-stage и result/confirm modal helpers.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2880-L3194) — nested recycle-tab events, reagent footer, craft confirm/result flow и loss-policy.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2935-L3315) — overlay-level drag-drop/tooltips.
 - [style.css](../../style.css#L3749-L3756) — nested recycle subtabs.
-- [style.css](../../style.css#L4222-L4315) — tech accel summary row, dust row, bordered grid wrapper, disabled state и dust controls.
-- [style.css](../../style.css#L4410-L4652) — inventory / slot labels и `chipCraftSlotCard` shell.
-- [style.css](../../style.css#L4887-L4915) — future-frame и result label эталонного preview.
+- [style.css](../../style.css#L4302-L4379) — tech modal shell + craft confirm/result modal skin.
+- [style.css](../../style.css#L4754-L4879) — assemble-stage, energy lines и ingredient/result spacing.
+- [style.css](../../style.css#L5344-L5408) — pinned reagent footer и craft energy animations.
 
 ## Зависимости
 - Использует: `Game.HangarChips`, `Game.Toast`, `Game.I18n`.
