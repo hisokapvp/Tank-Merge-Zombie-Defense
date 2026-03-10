@@ -1058,7 +1058,7 @@ body.menu-open .stageUi .hudItem{
   align-items:center;
   justify-content:center;
   padding:0;
-  overflow:hidden;
+  overflow:visible;
   box-shadow:2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
   transition:filter .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
   user-select:none;
@@ -1075,6 +1075,7 @@ body.menu-open .stageUi .hudItem{
   background:linear-gradient(180deg, #ffd7a1 0%, #ff965e 100%);
   box-shadow:0 0 8px rgba(255,150,94,.3);
   transform-origin:center;
+  transition:background .16s ease, box-shadow .16s ease;
 }
 .crateModal__close::before{
   transform:translate(-50%, -50%) rotate(45deg);
@@ -1357,7 +1358,7 @@ body.scmodal-open{
   align-items:center;
   justify-content:center;
   padding:0;
-  overflow:hidden;
+  overflow:visible;
   box-shadow:2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
   transition:filter .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
   user-select:none;
@@ -1374,6 +1375,7 @@ body.scmodal-open{
   background:linear-gradient(180deg, #ffd7a1 0%, #ff965e 100%);
   box-shadow:0 0 8px rgba(255,150,94,.3);
   transform-origin:center;
+  transition:background .16s ease, box-shadow .16s ease;
 }
 .levelModal__close::before{
   transform:translate(-50%, -50%) rotate(45deg);
@@ -1400,7 +1402,7 @@ body.scmodal-open{
   border:2px solid #4af626 !important;
   box-shadow:0 0 14px rgba(74,246,38,.18), 2px 2px 0 #000 !important;
   filter:none !important;
-  overflow:hidden;
+  overflow:visible;
 }
 .scModal__close::before,
 .scModal__close::after{
@@ -1408,6 +1410,7 @@ body.scmodal-open{
   height:24px;
   background:linear-gradient(180deg, #e6ffd7 0%, #4af626 100%);
   box-shadow:0 0 10px rgba(74,246,38,.36);
+  transition:background .16s ease, box-shadow .16s ease;
 }
 .scModal__close:hover{
   background:linear-gradient(180deg, #57ff2d 0%, #39cf1d 100%) !important;
@@ -1420,8 +1423,8 @@ body.scmodal-open{
 .scModal__close:hover::after,
 .scModal__close:focus-visible::before,
 .scModal__close:focus-visible::after{
-  background:linear-gradient(180deg, #0e180b 0%, #000 100%);
-  box-shadow:none;
+  background:linear-gradient(180deg, #fff 0%, #0a2200 100%);
+  box-shadow:0 0 6px rgba(0,0,0,.5);
 }
 .scModal__close:focus-visible{
   outline:none !important;
@@ -4480,7 +4483,7 @@ input, select, textarea, button {
   flex:1 1 auto;
 }
 .chipCraftLeftCol{
-  flex:0 0 440px;
+  flex:0 0 220px;
   min-height: 0;
   display:flex;
   flex-direction:column;

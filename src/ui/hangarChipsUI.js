@@ -2677,14 +2677,18 @@
   }
 
   function _attachCraftPanelEvents(panel) {
+    /* NOTE: use panel.querySelector instead of el() (getElementById) to avoid
+       binding to stale elements in the hidden sibling panel (chipCraft / chipRecycle
+       both use the same id strings, so getElementById returns the first in DOM). */
+    function pelq(id) { return panel.querySelector('#' + id); }
 
-    var recycleDustTab = el('chipRecycleTabDust');
+    var recycleDustTab = pelq('chipRecycleTabDust');
     if (recycleDustTab) {
       recycleDustTab.addEventListener('click', function () {
         switchChipRecycleSubTab('dust');
       });
     }
-    var recycleDisassembleTab = el('chipRecycleTabDisassemble');
+    var recycleDisassembleTab = pelq('chipRecycleTabDisassemble');
     if (recycleDisassembleTab) {
       recycleDisassembleTab.addEventListener('click', function () {
         switchChipRecycleSubTab('disassemble');
@@ -2692,7 +2696,7 @@
     }
 
     /* ── Dust mode buttons ── */
-    var dustBtn = el('chipCraftDustBtn');
+    var dustBtn = pelq('chipCraftDustBtn');
     if (dustBtn) {
       dustBtn.addEventListener('click', function () {
         _dustMode = true;
@@ -2700,13 +2704,13 @@
         renderChipCraftPanel();
       });
     }
-    var dustConfirm = el('chipCraftDustConfirm');
+    var dustConfirm = pelq('chipCraftDustConfirm');
     if (dustConfirm) {
       dustConfirm.addEventListener('click', function () {
         _executeDust();
       });
     }
-    var dustCancel = el('chipCraftDustCancel');
+    var dustCancel = pelq('chipCraftDustCancel');
     if (dustCancel) {
       dustCancel.addEventListener('click', function () {
         _dustSelected = {};
@@ -2829,7 +2833,7 @@
     }
 
     /* ── Silicon Dust reagent +/- buttons ── */
-    var reagentMinus = el('chipCraftReagentMinus');
+    var reagentMinus = pelq('chipCraftReagentMinus');
     if (reagentMinus) {
       reagentMinus.addEventListener('click', function () {
         if (_craftReagentDust > 0) {
@@ -2838,7 +2842,7 @@
         }
       });
     }
-    var reagentPlus = el('chipCraftReagentPlus');
+    var reagentPlus = pelq('chipCraftReagentPlus');
     if (reagentPlus) {
       reagentPlus.addEventListener('click', function () {
         if (_craftReagentDust < 5 && _siliconDust > _craftReagentDust) {
@@ -2849,7 +2853,7 @@
     }
 
     /* Click on action button */
-    var actionBtn = el('chipCraftActionBtn');
+    var actionBtn = pelq('chipCraftActionBtn');
     if (actionBtn) {
       actionBtn.addEventListener('click', function () {
         _executeCraftAction();
