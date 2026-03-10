@@ -3181,6 +3181,81 @@ input, select, textarea, button {
 .lessonProgress__close:active{
   box-shadow:1px 1px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
 }
+.crateModal__close,
+.levelModal__close,
+.modalClose,
+.lessonProgress__close{
+  overflow:visible;
+}
+.crateModal__close::after,
+.levelModal__close::after,
+.modalClose::after,
+.lessonProgress__close::after{
+  content:none;
+}
+.crateModal__close::before,
+.levelModal__close::before,
+.modalClose::before,
+.lessonProgress__close::before{
+  content:'✕';
+  width:auto;
+  height:auto;
+  border-radius:0;
+  background:none;
+  color:#ffd7a1;
+  font-family:'Segoe UI Symbol','Arial Unicode MS','Noto Sans Symbols','Segoe UI',sans-serif;
+  font-size:28px;
+  font-weight:900;
+  line-height:1;
+  letter-spacing:0;
+  text-shadow:0 0 10px rgba(255,150,94,.28);
+  box-shadow:none;
+  transform:translate(-50%, -54%);
+  transition:transform .16s ease, color .16s ease, text-shadow .16s ease;
+}
+.crateModal__close:hover,
+.levelModal__close:hover,
+.modalClose:hover,
+.lessonProgress__close:hover{
+  transform:translate3d(0,-1px,0) !important;
+}
+.crateModal__close:hover::before,
+.levelModal__close:hover::before,
+.modalClose:hover::before,
+.lessonProgress__close:hover::before,
+.crateModal__close:focus-visible::before,
+.levelModal__close:focus-visible::before,
+.modalClose:focus-visible::before,
+.lessonProgress__close:focus-visible::before{
+  transform:translate(-50%, -58%) scale(1.06);
+}
+.crateModal__close:active,
+.levelModal__close:active,
+.modalClose:active,
+.lessonProgress__close:active{
+  transform:translate3d(0,1px,0) !important;
+}
+.crateModal__close:active::before,
+.levelModal__close:active::before,
+.modalClose:active::before,
+.lessonProgress__close:active::before{
+  transform:translate(-50%, -48%) scale(0.98);
+}
+.scModal__close::before,
+#talentOverlay .modalClose::before,
+.modalClose.scModal__close::before{
+  color:#d8ffcb;
+  text-shadow:0 0 12px rgba(74,246,38,.34);
+}
+.scModal__close:hover::before,
+.scModal__close:focus-visible::before,
+#talentOverlay .modalClose:hover::before,
+#talentOverlay .modalClose:focus-visible::before,
+.modalClose.scModal__close:hover::before,
+.modalClose.scModal__close:focus-visible::before{
+  color:#081403;
+  text-shadow:0 0 10px rgba(255,255,255,.18);
+}
 .lessonProgress__list{
   flex:1;
   overflow-y:auto;
@@ -4069,13 +4144,27 @@ input, select, textarea, button {
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:3px;
-  width:72px;
+  gap:6px;
+  width:var(--chipDragGhostWidth, 72px);
   padding:6px 4px 4px;
   border:2px solid #4af626;
   border-radius:6px;
   background:rgba(40,36,32,.92);
   box-shadow:0 8px 32px rgba(0,0,0,.6), 0 0 16px rgba(74,246,38,.3);
+}
+.chipUpgradeCard.chipDragGhost,
+.chipUpgradeCard--dragGhost{
+  gap:6px;
+  width:var(--chipDragGhostWidth, var(--chipLabelCardWidth));
+  min-height:var(--chipDragGhostHeight, var(--chipLabelCardHeight));
+  padding:8px 8px 6px;
+  border:1px solid rgba(74,246,38,.78);
+  background:rgba(40,36,32,.96);
+  box-shadow:0 10px 28px rgba(0,0,0,.62), 0 0 18px rgba(74,246,38,.2);
+}
+.chipUpgradeCard.chipDragGhost .chipUpgradeCard__name,
+.chipUpgradeCard--dragGhost .chipUpgradeCard__name{
+  min-height:30px;
 }
 .chipUpgradeCard--dragging{
   opacity:0.35;
@@ -4589,6 +4678,9 @@ input, select, textarea, button {
   flex-direction:column;
   gap:0;
 }
+.chipCraftPreview--disassemble{
+  justify-content:flex-start;
+}
 .chipCraftDropZone{
   flex:1;
   border:2px solid rgba(255,255,255,.15);
@@ -4601,6 +4693,13 @@ input, select, textarea, button {
   gap:12px;
   min-height:220px;
   position:relative;
+}
+.chipCraftDropZone--disassemble{
+  flex:0 0 auto;
+  min-height:0;
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:12px;
 }
 .chipCraftEmptyPreview{
   display:flex;
@@ -5013,12 +5112,21 @@ input, select, textarea, button {
 
 /* ─── Disassemble slot row (dynamic width) ─── */
 .chipCraftSlotRow--disassemble{
-  flex-wrap:wrap;
-  gap:8px;
-  max-height:240px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(var(--chipLabelCardWidth), var(--chipLabelCardWidth)));
+  justify-content:flex-start;
+  align-content:flex-start;
+  gap:10px;
+  width:100%;
+  max-height:280px;
   overflow-y:auto;
-  padding:8px 10px 6px 0;
+  padding:0 2px 0 0;
   box-sizing:border-box;
+}
+.chipCraftSlotRow--disassemble .chipCraftSlot,
+.chipCraftSlotRow--disassemble .chipCraftResultChip{
+  width:var(--chipLabelCardWidth);
+  min-height:var(--chipLabelCardHeight);
 }
 
 /* ─── Assemble result preview (inline in slot row) ─── */

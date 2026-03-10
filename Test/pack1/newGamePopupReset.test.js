@@ -188,13 +188,14 @@ test('T5-12: guaranteed one_big_chip yields working red level-1 chip with 3 uniq
   assertEqual(chip.sourceComboKey, chip.modIds.slice().sort((a, b) => a - b).join('-'), 'combo key matches modifiers');
 });
 
-// Test 13: Close buttons use unified X skin and are skipped by font floor
+// Test 13: Close buttons use unified single-glyph skin and are skipped by font floor
 test('T5-13: close buttons use unified X skin and font-floor skips all close variants', () => {
   const css = fs.readFileSync(path.resolve(__dirname, '../../style.css'), 'utf-8');
   const fontFloor = fs.readFileSync(path.resolve(__dirname, '../../src/ui/fontFloor.js'), 'utf-8');
 
-  assert(css.indexOf('.crateModal__close::before') !== -1, 'crate close uses pseudo-element X');
-  assert(css.indexOf('.lessonProgress__close::before') !== -1, 'lesson progress close uses pseudo-element X');
+  assert(css.indexOf("content:'✕';") !== -1, 'close buttons use unified glyph icon');
+  assert(css.indexOf('.crateModal__close::after') !== -1 && css.indexOf('content:none;') !== -1, 'close buttons disable second pseudo element');
+  assert(css.indexOf('.lessonProgress__close::before') !== -1, 'lesson progress close keeps unified close selector');
   assert(css.indexOf('.crateModal__close{') !== -1 && css.indexOf('min-width:44px;') !== -1, 'close buttons keep 44x44 hit area');
   assert(fontFloor.indexOf("'.levelModal__close'") !== -1, 'font floor skips all level close buttons');
   assert(fontFloor.indexOf("'.crateModal__close'") !== -1, 'font floor skips crate close button');
@@ -212,6 +213,18 @@ test('T5-14: tech acceleration modal has bottom dust row and total summary place
   assert(uiJs.indexOf("replace('{total}'") !== -1, 'summary updates total acceleration placeholder');
   assert(ru.indexOf('{total}%') !== -1, 'ru summary includes total placeholder');
   assert(en.indexOf('{total}%') !== -1, 'en summary includes total placeholder');
+});
+
+// Test 15: Workshop transient state resets on tab exit and dust fragments render per unit
+test('T5-15: workshop reset API and unit fragment dust rendering are present', () => {
+  const uiJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/hangarChipsUI.js'), 'utf-8');
+  const scJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/supercomputerMenu.js'), 'utf-8');
+
+  assert(uiJs.indexOf('function resetTransientUiState()') !== -1, 'hangar chips UI exposes resetTransientUiState');
+  assert(uiJs.indexOf("resetTransientUiState: resetTransientUiState") !== -1, 'resetTransientUiState is exported in public API');
+  assert(uiJs.indexOf("var dustKeyUnit = 'frag_' + frag.fragmentId + '_' + unitIndex;") !== -1, 'dust view renders fragment keys per unit');
+  assert(uiJs.indexOf("if (wasWorkshop && !isWorkshop) resetTransientUiState();") !== -1, 'leaving workshop top tab resets transient state');
+  assert(scJs.indexOf("chipsUi.resetTransientUiState()") !== -1, 'closing hangar overlay resets transient state');
 });
 
 // Summary

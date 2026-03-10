@@ -1392,12 +1392,20 @@
 
     function backFromChild() {
       if (!state.isOpen) return;
+      if (state.view === 'hangar') {
+        var chipsUi = global.Game && global.Game.HangarChipsUI;
+        if (chipsUi && typeof chipsUi.resetTransientUiState === 'function') chipsUi.resetTransientUiState();
+      }
       if (state.view === 'talents' && closeTalents) closeTalents();
       openRoot();
     }
 
     function closeAll() {
       if (!state.isOpen) return;
+      if (state.view === 'hangar') {
+        var chipsUi = global.Game && global.Game.HangarChipsUI;
+        if (chipsUi && typeof chipsUi.resetTransientUiState === 'function') chipsUi.resetTransientUiState();
+      }
       if (state.view === 'talents' && closeTalents) closeTalents();
       stopGunsIconTicker();
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);

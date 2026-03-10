@@ -609,10 +609,13 @@
     var panelWorkshop = el('hangarPanelWorkshop');
     var panelTechUnlock = el('hangarPanelTechUnlock');
     if (!tabCells || !tabWorkshop) return;
+    var wasWorkshop = !!(panelWorkshop && !panelWorkshop.hidden);
 
     var isCells = tabId === 'cells';
     var isWorkshop = tabId === 'workshop';
     var isTech = tabId === 'techUnlock';
+
+    if (wasWorkshop && !isWorkshop) resetTransientUiState();
 
     tabCells.setAttribute('aria-selected', isCells ? 'true' : 'false');
     tabCells.setAttribute('tabindex', isCells ? '0' : '-1');
@@ -648,8 +651,13 @@
     var isChips = tabId === 'chipUpgrade';
     var isCraft = tabId === 'chipCraft';
     var isRecycle = tabId === 'chipRecycle';
+    var nextTab = isRecycle ? 'chipRecycle' : (isCraft ? 'chipCraft' : 'chipUpgrade');
 
-    _workshopSubTab = isRecycle ? 'chipRecycle' : (isCraft ? 'chipCraft' : 'chipUpgrade');
+    if (_workshopSubTab !== nextTab && (_workshopSubTab === 'chipCraft' || _workshopSubTab === 'chipRecycle')) {
+      resetTransientUiState();
+    }
+
+    _workshopSubTab = nextTab;
 
     tabChipUpgrade.setAttribute('aria-selected', isChips ? 'true' : 'false');
     tabChipUpgrade.setAttribute('tabindex', isChips ? '0' : '-1');
@@ -683,8 +691,12 @@
   }
 
   function switchChipRecycleSubTab(tabId) {
+    var nextTab = tabId === 'disassemble' ? 'disassemble' : 'dust';
+
+    if (_chipRecycleSubTab !== nextTab) resetTransientUiState();
+
     _workshopSubTab = 'chipRecycle';
-    _chipRecycleSubTab = tabId === 'disassemble' ? 'disassemble' : 'dust';
+    _chipRecycleSubTab = nextTab;
 
     if (_chipRecycleSubTab === 'disassemble') {
       _dustMode = false;
@@ -2213,6 +2225,12 @@
     _dustSelected = {};
   }
 
+  function resetTransientUiState() {
+    _resetDustMode();
+    _craftMode = 'assemble';
+    _resetCraftSlots();
+  }
+
   function _calcDustTotal() {
     var total = 0;
     var keys = Object.keys(_dustSelected);
@@ -2477,6 +2495,24 @@
       for (var fi = 0; fi < playerFrags.length; fi++) {
         var frag = playerFrags[fi];
         if (frag.count <= 0) continue;
+        if (isDustView) {
+          for (var unitIndex = 0; unitIndex < frag.count; unitIndex++) {
+            displayedItems++;
+            var fragDustStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
+            var fragDustName = modName(frag.fragmentId);
+            var dustKeyUnit = 'frag_' + frag.fragmentId + '_' + unitIndex;
+            var dustSelUnit = _dustSelected[dustKeyUnit] || 0;
+            html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (dustSelUnit > 0 ? ' chipCraftInvItem--dustSelected' : '') +
+              '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '">';
+            html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyUnit + '" data-dust-type="fragment" data-dust-max="1"' +
+              (dustSelUnit > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
+            html += _fragmentSvg(frag.fragmentId, 22, fragDustStroke);
+            html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragDustName) + '">' + _renderChipNameHtml(fragDustName) + '</span>';
+            html += '<span class="chipCraftInvLevel">×1</span>';
+            html += '</div>';
+          }
+          continue;
+        }
         displayedItems++;
         var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
         var fragName = modName(frag.fragmentId);
@@ -2529,13 +2565,15 @@
 
     if (!isDustView) {
       /* ── Right column: Craft preview area ── */
-      html += '<div class="chipCraftPreview">';
-      html += '<div class="chipCraftDropZone" id="chipCraftDropZone">';
       var hasContent = false;
       var slotsLen = _craftSlots.length;
       for (var si = 0; si < slotsLen; si++) {
         if (_craftSlots[si]) { hasContent = true; break; }
       }
+      var previewClass = 'chipCraftPreview' + (isDisassembleView ? ' chipCraftPreview--disassemble' : '');
+      var dropZoneClass = 'chipCraftDropZone' + (isDisassembleView && hasContent ? ' chipCraftDropZone--disassemble' : '');
+      html += '<div class="' + previewClass + '">';
+      html += '<div class="' + dropZoneClass + '" id="chipCraftDropZone">';
       if (hasContent) {
         if (isDisassembleView) {
           /* Dynamic disassemble slots: show all chips + one empty "+" slot */
@@ -3175,17 +3213,22 @@
 
         evt.preventDefault();
 
-        /* Create ghost element */
-        var ghost = _doc.createElement('div');
-        ghost.className = 'chipDragGhost';
-        ghost.innerHTML = card.innerHTML;
+        /* Create ghost element with the same footprint as the source card. */
+        var rect = card.getBoundingClientRect();
+        var ghost = card.cloneNode(true);
+        ghost.className = card.className + ' chipDragGhost chipUpgradeCard--dragGhost';
         ghost.style.position = 'fixed';
         ghost.style.left = evt.clientX + 'px';
         ghost.style.top = evt.clientY + 'px';
+        ghost.style.width = Math.ceil(rect.width) + 'px';
+        ghost.style.minHeight = Math.ceil(rect.height) + 'px';
+        ghost.style.height = Math.ceil(rect.height) + 'px';
+        ghost.style.boxSizing = 'border-box';
         ghost.style.pointerEvents = 'none';
         ghost.style.zIndex = '99999';
         ghost.style.opacity = '0.85';
         ghost.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        ghost.setAttribute('aria-hidden', 'true');
         _doc.body.appendChild(ghost);
 
         card.classList.add('chipUpgradeCard--dragging');
@@ -3527,6 +3570,7 @@
     getFragmentCount: getFragmentCount,
     getSiliconDust: function () { return _siliconDust; },
     setSiliconDust: function (v) { _siliconDust = (typeof v === 'number' && v >= 0) ? v : 0; },
+    resetTransientUiState: resetTransientUiState,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,
     debugRemoveChip: debugRemoveChip,

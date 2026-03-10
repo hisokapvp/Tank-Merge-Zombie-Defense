@@ -1,5 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-10
+- **Workshop: reset transient-state, unit dust fragments, stable drag ghost, normalized disassemble preview, single-glyph modal close (`src/ui/hangarChipsUI.js`, `src/ui/supercomputerMenu.js`, `style.css`, `Test/pack1/newGamePopupReset.test.js`)**
+  - `switchHangarTab()` / `switchWorkshopSubTab()` / `switchChipRecycleSubTab()` и закрытие окна ангара теперь вызывают `resetTransientUiState()`, что очищает `_dustSelected`, `_craftSlots` и reagent dust при уходе со вкладки/модалки.
+  - Во вкладке `Распылить` фрагменты чипов рендерятся по одной единице с уникальным `data-dust-key`, поэтому можно распылить ровно один фрагмент без распыления всего стека.
+  - Drag ghost карточки в `Улучшение чипов` клонирует исходную карточку с её реальными размерами, поэтому текст и ширина не схлопываются во время перетаскивания.
+  - Во вкладке `Разобрать` preview area выравнивает карточки от верхнего края и раскладывает их равномерной grid-сеткой одинакового размера, без больших пустых зон.
+  - Все modal close-кнопки переведены на единый одинарный glyph `✕` вместо пары pseudo-bars; green SC/talent variant сохранён, hover/active снова дают лёгкое движение без потери hit-area 44×44.
+
 ## 2026-03-09 (session 2)
 - **UX: 5 UI-правок — close-hover, techModal gap, hscroll, workshop inventory (`style.css`, `src/ui/hangarChipsUI.js`)**
   - Fix 1: Все close-кнопки (`.crateModal__close`, `.levelModal__close`, `.scModal__close`, `.modalClose`, `#talentOverlay .modalClose`, `.modalClose.scModal__close`, `.lessonProgress__close`) получили `transform:none !important` в `:hover`-правиле. Корневая причина: `buttonBehavior.js/decorateTree()` добавляет `uiButtonBehavior` ко ВСЕМ `<button>`, что давало `transform: translateY(-2px) scale(1.01)` на hover; combined с `overflow:hidden` на close-кнопках это обрезало псевдоэлементный X.
