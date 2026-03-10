@@ -105,7 +105,8 @@ folder that is **not part of the game repository**.
 
 | Agent | File | Purpose |
 |---|---|---|
-| Programmer | `agents/Programmer.md` | Routes tasks → UX-Designer or Fullstack-Developer skills; uses RAG+Memory |
+| Orchestrator | `agents/Orchestrator.md` | **Main entry point.** Routes tasks: calls Programmer for code, Log-Writer after task, Spec-Refiner before pipeline |
+| Programmer | `agents/Programmer.md` | Routes tasks → UX-Designer or tmzd-developer/Fullstack-Developer skills; uses RAG+Memory |
 | Log-Writer | `agents/Log-Writer.md` | Delegates to `session-logger` skill after task is done |
 | Spec-Refiner | `agents/Spec-Refiner.md` | Improves informal TZ before passing to pipeline |
 
@@ -114,7 +115,8 @@ folder that is **not part of the game repository**.
 | Skill | Path | Purpose |
 |---|---|---|
 | session-logger | `skills/session-logger/SKILL.md` | Logs completed sessions to JSONL + DuckDB |
-| fullstack-developer | `skills/fullstack-developer/SKILL.md` | Implements code tasks end-to-end |
+| tmzd-developer | `skills/tmzd-developer/SKILL.md` | Implements code tasks for Tank-Merge-Zombie-Defense (vanilla JS, IIFE, Canvas 2D) |
+| fullstack-developer | `skills/fullstack-developer/SKILL.md` | Implements code tasks for generic web/fullstack projects |
 | ux-designer | `skills/ux-designer/SKILL.md` | Produces UX specs, wireframes, flows |
 | spec-refiner | `skills/spec-refiner/SKILL.md` | Converts informal TZ to structured spec |
 
@@ -216,7 +218,8 @@ d:\Tank-Merge-Zombie-Defense\.venv\Scripts\python.exe `
 
 ### When to call agents
 
-- **Start of any non-trivial task** → call `Spec-Refiner` to structure the TZ first.
-- **Multi-step implementation** → call `TZ-Orchestrator` to decompose, then `Implementer` per step.
+- **Any task (default entry point)** → call `Orchestrator` first.
+- **Start of any non-trivial task** → `Orchestrator` calls `Spec-Refiner` automatically.
+- **Code changes in Tank-Merge-Zombie-Defense** → `Orchestrator` → `Programmer` → `tmzd-developer`.
 - **After completing a task** → call `Log-Writer` / `session-logger` to record the session.
 - **Code review before commit** → call `Code-Reviewer` or `Verifier`.
