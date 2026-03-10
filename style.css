@@ -4809,8 +4809,11 @@ input, select, textarea, button {
 }
 .chipCraftEmptyPreview{
   display:flex;
+  flex:1 1 auto;
+  width:100%;
   flex-direction:column;
   align-items:center;
+  justify-content:center;
   gap:8px;
   opacity:.5;
 }
@@ -4861,6 +4864,67 @@ input, select, textarea, button {
   flex-direction:column;
   align-items:center;
   gap:0;
+}
+.chipCraftReprogramStage{
+  width:100%;
+  max-width:720px;
+  display:grid;
+  grid-template-columns:var(--chipLabelCardWidth) minmax(180px, 1fr) var(--chipLabelCardWidth);
+  gap:18px;
+  align-items:center;
+}
+.chipCraftReprogramColumn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.chipCraftReprogramControls{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-height:132px;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;
+  background:linear-gradient(180deg, rgba(52,46,40,.9) 0%, rgba(26,23,20,.96) 100%);
+  box-shadow:0 2px 0 rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.chipCraftReprogramLabel{
+  font-size:10px;
+  line-height:1.4;
+  color:#fdd835;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftReprogramSelectWrap{
+  position:relative;
+}
+.chipCraftReprogramSelect{
+  width:100%;
+  padding:10px 12px;
+  border-radius:6px;
+  border:1px solid rgba(125,255,178,.35);
+  background:rgba(24,22,18,.92);
+  color:rgba(255,255,255,.86);
+  font-size:13px;
+  font-weight:700;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.chipCraftReprogramSelect:focus-visible{
+  outline:2px solid #4af626;
+  outline-offset:2px;
+}
+.chipCraftReprogramSelect:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.chipCraftReprogramDustInfo{
+  font-size:11px;
+  line-height:1.4;
+  color:rgba(255,255,255,.68);
+  text-align:center;
+}
+.chipCraftReprogramDustInfo--warn{
+  color:#ff8c5a;
 }
 .chipCraftIngredientRow{
   display:flex;
@@ -5467,6 +5531,16 @@ input, select, textarea, button {
   color:#4af626;
   font-family:'Press Start 2P',monospace;
   margin-left:auto;
+}
+
+@media (max-width: 760px){
+  .chipCraftReprogramStage{
+    grid-template-columns:1fr;
+    justify-items:center;
+  }
+  .chipCraftReprogramControls{
+    width:min(100%, 320px);
+  }
 }
 
 @keyframes chipCraftEnergyFlow{

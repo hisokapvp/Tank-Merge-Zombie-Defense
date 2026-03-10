@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-10
+- **Workshop: disassemble empty overlay + drag-drop fix + confirm modal + reprogram subtab (`src/ui/hangarChipsUI.js`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
+  - `Переработка чипов` получила третью nested-подвкладку `Перепрограммировать`: фрагмент выбирается из инвентаря, целевое свойство берётся из dropdown только по текущему tech-progress, обмен стоит `2` ед. кремниевой пыли и меняет один фрагмент на другой без обхода unlock-цепочек.
+  - Во вкладке `Разобрать` пустое состояние теперь использует тот же серый overlay-паттерн, что и `Создать чип`: centered `chipCraftPlaceholderSvg` + текст `Перетащите сюда чип`, overlay скрывается сразу после добавления хотя бы одного чипа и возвращается при очистке слотов.
+  - Drag-and-drop в `Разобрать` теперь резолвит drop-zone локально в активной recycle-panel, поэтому drop из списка слева больше не попадает в скрытый sibling-panel при совпадающих DOM id.
+  - Кнопка `Разобрать` теперь сначала открывает confirm modal в общем `techModal__dialog` shell с `modalClose scModal__close`, а реальное разложение на 3 фрагмента происходит только после явного подтверждения.
+
 - **Workshop: reset transient-state, unit dust fragments, stable drag ghost, normalized disassemble preview, single-glyph modal close (`src/ui/hangarChipsUI.js`, `src/ui/supercomputerMenu.js`, `style.css`, `Test/pack1/newGamePopupReset.test.js`)**
   - `switchHangarTab()` / `switchWorkshopSubTab()` / `switchChipRecycleSubTab()` и закрытие окна ангара теперь вызывают `resetTransientUiState()`, что очищает `_dustSelected`, `_craftSlots` и reagent dust при уходе со вкладки/модалки.
   - Во вкладке `Распылить` фрагменты чипов рендерятся по одной единице с уникальным `data-dust-key`, поэтому можно распылить ровно один фрагмент без распыления всего стека.

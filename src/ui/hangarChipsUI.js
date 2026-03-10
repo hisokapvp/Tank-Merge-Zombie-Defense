@@ -691,7 +691,9 @@
   }
 
   function switchChipRecycleSubTab(tabId) {
-    var nextTab = tabId === 'disassemble' ? 'disassemble' : 'dust';
+    var nextTab = tabId === 'disassemble'
+      ? 'disassemble'
+      : (tabId === 'reprogram' ? 'reprogram' : 'dust');
 
     if (_chipRecycleSubTab !== nextTab) resetTransientUiState();
 
@@ -704,6 +706,9 @@
         _craftMode = 'disassemble';
         _craftSlots = [];
       }
+    } else if (_chipRecycleSubTab === 'reprogram') {
+      _dustMode = false;
+      _craftMode = 'reprogram';
     } else {
       _dustMode = true;
     }
@@ -1759,6 +1764,13 @@
       return;
     }
 
+    var craftDisassembleConfirm = tgt.closest ? tgt.closest('[data-craft-disassemble-confirm]') : null;
+    if (craftDisassembleConfirm) {
+      _closeTechModal();
+      _executeCraftAction({ skipDisassembleConfirm: true });
+      return;
+    }
+
     /* tech accel confirm button */
     var techAccelConfirm = tgt.closest ? tgt.closest('[data-tech-accel-confirm]') : null;
     if (techAccelConfirm) {
@@ -2139,18 +2151,26 @@
   /* ─── Chip Crafting Panel (Создание чипов) ─────────────── */
 
   var _craftSlots = [null, null, null]; // 3 slots for fragments or dynamic array for disassemble
-  var _craftMode = 'assemble'; // 'disassemble' | 'assemble' — always one of two
+  var _craftMode = 'assemble'; // 'disassemble' | 'assemble' | 'reprogram'
   var _dustMode = false;       // true when "Распылить" flow is active
   var _dustSelected = {};      // { 'chip_<chipId>_<level>': count, 'frag_<fragId>': count }
   var _siliconDust = 0;        // player's silicon dust resource
   var _craftReagentDust = 0;   // units of silicon dust to spend as reagent (0-5)
+  var _reprogramSourceFragmentId = null;
+  var _reprogramTargetFragmentId = null;
 
   var DUST_PER_CHIP = 10;
   var DUST_PER_FRAGMENT = 3;
+  var REPROGRAM_DUST_COST = 2;
 
   function _resetCraftSlots() {
     _craftSlots = [null, null, null];
     _craftReagentDust = 0;
+  }
+
+  function _resetReprogramState() {
+    _reprogramSourceFragmentId = null;
+    _reprogramTargetFragmentId = null;
   }
 
   /**
@@ -2238,8 +2258,78 @@
     _dustSelected = {};
   }
 
+  function _getAvailableReprogramModIds() {
+    var h = hc();
+    var available = [];
+    if (!h) return available;
+    for (var baseModId = 1; baseModId <= 14; baseModId++) {
+      var resolvedModId = baseModId;
+      var chain = h.TECH_TREE && h.TECH_TREE[baseModId];
+      if (Array.isArray(chain)) {
+        for (var ci = 0; ci < chain.length; ci++) {
+          if (chain[ci] && h.isTechUnlocked(chain[ci].modId)) resolvedModId = chain[ci].modId;
+        }
+      }
+      available.push(resolvedModId);
+    }
+    return available;
+  }
+
+  function _getDefaultReprogramTargetId(availableModIds, sourceFragmentId) {
+    for (var i = 0; i < availableModIds.length; i++) {
+      if (availableModIds[i] !== sourceFragmentId) return availableModIds[i];
+    }
+    return null;
+  }
+
+  function _getReprogramState() {
+    var availableModIds = _getAvailableReprogramModIds();
+    var hasSource = Number.isFinite(_reprogramSourceFragmentId) && getFragmentCount(_reprogramSourceFragmentId) > 0;
+    if (!hasSource) {
+      _reprogramSourceFragmentId = null;
+      _reprogramTargetFragmentId = null;
+      return {
+        availableModIds: availableModIds,
+        sourceFragmentId: null,
+        targetFragmentId: null,
+        canExecute: false,
+        missingDust: _siliconDust < REPROGRAM_DUST_COST,
+      };
+    }
+
+    var targetValid = false;
+    for (var i = 0; i < availableModIds.length; i++) {
+      if (availableModIds[i] === _reprogramTargetFragmentId && availableModIds[i] !== _reprogramSourceFragmentId) {
+        targetValid = true;
+        break;
+      }
+    }
+    if (!targetValid) {
+      _reprogramTargetFragmentId = _getDefaultReprogramTargetId(availableModIds, _reprogramSourceFragmentId);
+    }
+
+    return {
+      availableModIds: availableModIds,
+      sourceFragmentId: _reprogramSourceFragmentId,
+      targetFragmentId: _reprogramTargetFragmentId,
+      canExecute: Number.isFinite(_reprogramSourceFragmentId)
+        && Number.isFinite(_reprogramTargetFragmentId)
+        && _reprogramTargetFragmentId !== _reprogramSourceFragmentId
+        && _siliconDust >= REPROGRAM_DUST_COST,
+      missingDust: _siliconDust < REPROGRAM_DUST_COST,
+    };
+  }
+
+  function _setReprogramSource(fragmentId) {
+    if (!Number.isFinite(fragmentId) || getFragmentCount(fragmentId) <= 0) return;
+    _reprogramSourceFragmentId = fragmentId;
+    if (_reprogramTargetFragmentId === fragmentId) _reprogramTargetFragmentId = null;
+    _getReprogramState();
+  }
+
   function resetTransientUiState() {
     _resetDustMode();
+    _resetReprogramState();
     _craftMode = 'assemble';
     _resetCraftSlots();
   }
@@ -2545,11 +2635,63 @@
     modal.style.display = 'flex';
   }
 
+  function _showDisassembleConfirmModal(selectedCount) {
+    var modal = _ensureTechModal();
+    var closeLabel = t('techAccelClose', 'Закрыть');
+    var confirmLabel = t('chipCraftDustConfirm', 'Подтвердить');
+    var cancelLabel = t('chipCraftDustCancel', 'Отменить');
+    var bodyText = t('chipRecycleConfirmText', 'Выбранные чипы ({count}) будут разобраны на составные элементы. Продолжить?')
+      .replace('{count}', selectedCount);
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipRecycleConfirmTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<div class="techModal__title techModal__title--warn" id="chipRecycleConfirmTitle">' + t('chipRecycleConfirmTitle', 'Подтвердить разборку') + '</div>' +
+      '<div class="techModal__text">' + bodyText + '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__accelConfirmBtn" data-craft-disassemble-confirm type="button">' + confirmLabel + '</button>' +
+      '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
+      '</div>' +
+      '</div>';
+    modal.style.display = 'flex';
+  }
+
+  function _executeReprogram() {
+    var state = _getReprogramState();
+    if (!state.sourceFragmentId || !state.targetFragmentId || state.targetFragmentId === state.sourceFragmentId) return;
+    if (state.missingDust) {
+      if (global.Game && global.Game.Toast) {
+        global.Game.Toast.show(t('chipReprogramNeedDust', 'Для перепрограммирования нужно 2 ед. кремниевой пыли'), 1800);
+      }
+      return;
+    }
+    if (!removePlayerFragment(state.sourceFragmentId, 1)) return;
+    addPlayerFragment(state.targetFragmentId, 1);
+    _siliconDust = Math.max(0, _siliconDust - REPROGRAM_DUST_COST);
+    _resetReprogramState();
+    renderChipCraftPanel();
+    renderChipUpgradeGrid();
+    if (global.Game && global.Game.Toast) {
+      global.Game.Toast.show(
+        t('chipReprogramSuccess', 'Фрагмент перепрограммирован: {from} → {to}')
+          .replace('{from}', modName(state.sourceFragmentId))
+          .replace('{to}', modName(state.targetFragmentId)),
+        2000
+      );
+    }
+  }
+
   /**
    * Add an inventory item to the craft slot. Auto-switches mode based on item type:
    * - chip → disassemble mode, fragment → assemble mode.
    */
   function _addItemToSlot(itemEl, srcType) {
+    if (srcType === 'fragment' && _workshopSubTab === 'chipRecycle' && _chipRecycleSubTab === 'reprogram') {
+      var reprogramFragmentId = parseInt(itemEl.getAttribute('data-craft-frag-id'), 10);
+      if (!Number.isFinite(reprogramFragmentId)) return;
+      _setReprogramSource(reprogramFragmentId);
+      renderChipCraftPanel();
+      return;
+    }
+
     if (srcType === 'chip') {
       /* Auto-switch to disassemble mode when dragging/clicking a whole chip */
       if (_craftMode !== 'disassemble') {
@@ -2634,22 +2776,28 @@
     if (!h) { panel.innerHTML = '<div class="chipUpgradeEmptyLabel">Модуль не загружен</div>'; return; }
 
     var isRecyclePanel = _workshopSubTab === 'chipRecycle';
-    var recycleMode = _chipRecycleSubTab === 'disassemble' ? 'disassemble' : 'dust';
+    var recycleMode = _chipRecycleSubTab === 'disassemble'
+      ? 'disassemble'
+      : (_chipRecycleSubTab === 'reprogram' ? 'reprogram' : 'dust');
     var isDustView = isRecyclePanel && recycleMode === 'dust';
     var isDisassembleView = isRecyclePanel && recycleMode === 'disassemble';
+    var isReprogramView = isRecyclePanel && recycleMode === 'reprogram';
     var isAssembleView = !isRecyclePanel;
     var showChipItems = isDisassembleView || isDustView;
-    var showFragmentItems = isAssembleView || isDustView;
+    var showFragmentItems = isAssembleView || isDustView || isReprogramView;
+    var reprogramState = isReprogramView ? _getReprogramState() : null;
 
     _dustMode = isDustView;
     if (isAssembleView) _craftMode = 'assemble';
     if (isDisassembleView) _craftMode = 'disassemble';
+    if (isReprogramView) _craftMode = 'reprogram';
 
     var html = '';
     if (isRecyclePanel) {
       html += '<div class="workshopSubTabs workshopSubTabs--nested" role="tablist" aria-label="' + _escapeHtml(t('workshopTabChipRecycle', 'Переработка чипов')) + '">';
       html += '<button id="chipRecycleTabDust" class="btn scButton workshopSubTab workshopSubTab--nested' + (isDustView ? ' workshopSubTab--active' : '') + '" type="button" role="tab" aria-selected="' + (isDustView ? 'true' : 'false') + '" aria-controls="workshopPanelChipRecycle" tabindex="' + (isDustView ? '0' : '-1') + '" data-i18n="chipCraftDustBtn">' + t('chipCraftDustBtn', 'Распылить') + '</button>';
       html += '<button id="chipRecycleTabDisassemble" class="btn scButton workshopSubTab workshopSubTab--nested' + (isDisassembleView ? ' workshopSubTab--active' : '') + '" type="button" role="tab" aria-selected="' + (isDisassembleView ? 'true' : 'false') + '" aria-controls="workshopPanelChipRecycle" tabindex="' + (isDisassembleView ? '0' : '-1') + '" data-i18n="chipCraftDisassemble">' + t('chipCraftDisassemble', 'Разобрать') + '</button>';
+      html += '<button id="chipRecycleTabReprogram" class="btn scButton workshopSubTab workshopSubTab--nested' + (isReprogramView ? ' workshopSubTab--active' : '') + '" type="button" role="tab" aria-selected="' + (isReprogramView ? 'true' : 'false') + '" aria-controls="workshopPanelChipRecycle" tabindex="' + (isReprogramView ? '0' : '-1') + '" data-i18n="workshopTabChipReprogram">' + t('workshopTabChipReprogram', 'Перепрограммировать') + '</button>';
       html += '</div>';
     }
 
@@ -2774,7 +2922,7 @@
       var dropZoneClass = 'chipCraftDropZone' + (isDisassembleView && hasContent ? ' chipCraftDropZone--disassemble' : '');
       html += '<div class="' + previewClass + '">';
       html += '<div class="' + dropZoneClass + '" id="chipCraftDropZone">';
-      if (isDisassembleView && hasContent) {
+        if (isDisassembleView && hasContent) {
           /* Dynamic disassemble slots: show all chips + one empty "+" slot */
           html += '<div class="chipCraftSlotRow chipCraftSlotRow--disassemble">';
           for (var sj = 0; sj < _craftSlots.length; sj++) {
@@ -2798,6 +2946,20 @@
           html += '<div class="chipCraftSlot chipCraftSlot--addMore">';
           html += '<div class="chipCraftSlotEmpty">+</div>';
           html += '</div>';
+          html += '</div>';
+      } else if (isDisassembleView) {
+          html += '<div class="chipCraftDropZone__body">';
+          html += '<div class="chipCraftEmptyPreview">';
+          html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
+            '<polygon points="60,8 112,100 8,100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="6,3"/>' +
+            '<line x1="60" y1="8" x2="60" y2="66" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+            '<line x1="60" y1="66" x2="24" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+            '<line x1="60" y1="66" x2="96" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
+            '</svg>';
+          html += '</div>';
+          html += '<div class="chipCraftSlotOverlay" aria-hidden="true">' +
+            '<span class="chipCraftSlotOverlay__text">' + t('chipCraftDisassembleOverlayHint', 'Перетащите сюда чип') + '</span>' +
+            '</div>';
           html += '</div>';
       } else if (isAssembleView) {
           /* Assemble mode: 3 fixed slots horizontal + power lines (top→bottom) + result chip */
@@ -2872,6 +3034,76 @@
           }
           html += '</div>'; // chipCraftDropZone__body
           html += _buildCraftReagentRowHtml();
+      } else if (isReprogramView) {
+          html += '<div class="chipCraftDropZone__body">';
+          html += '<div class="chipCraftReprogramStage">';
+          html += '<div class="chipCraftReprogramColumn">';
+          if (reprogramState && reprogramState.sourceFragmentId) {
+            var sourceStroke = (h && h.isSpecialMod(reprogramState.sourceFragmentId)) ? '#fdd835' : '#e53935';
+            html += '<div class="chipCraftSlot chipCraftSlot--filled" data-reprogram-source-slot data-hct-frag-id="' + reprogramState.sourceFragmentId + '">';
+            html += _renderCraftSlotCard(
+              _fragmentSvg(reprogramState.sourceFragmentId, 50, sourceStroke),
+              modName(reprogramState.sourceFragmentId),
+              {
+                extraClass: 'chipCraftSlotCard--fragment',
+                labelClass: 'chipCraftSlotCard__name--wrapWords'
+              }
+            );
+            html += _renderCraftRemoveButton('reprogram');
+            html += '</div>';
+          } else {
+            html += '<div class="chipCraftSlot">';
+            html += '<div class="chipCraftSlotEmpty">+</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+          html += '<div class="chipCraftReprogramControls">';
+          html += '<label class="chipCraftReprogramLabel" for="chipCraftReprogramSelect">' + t('chipReprogramSelectLabel', 'Новое свойство') + '</label>';
+          html += '<div class="chipCraftReprogramSelectWrap">';
+          html += '<select class="chipCraftReprogramSelect" id="chipCraftReprogramSelect"' + (!reprogramState || !reprogramState.sourceFragmentId ? ' disabled' : '') + '>';
+          if (reprogramState && reprogramState.sourceFragmentId) {
+            for (var rpi = 0; rpi < reprogramState.availableModIds.length; rpi++) {
+              var reprogramModId = reprogramState.availableModIds[rpi];
+              if (reprogramModId === reprogramState.sourceFragmentId) continue;
+              html += '<option value="' + reprogramModId + '"' + (reprogramModId === reprogramState.targetFragmentId ? ' selected' : '') + '>' + _escapeHtml(modName(reprogramModId)) + '</option>';
+            }
+          } else {
+            html += '<option value="">' + _escapeHtml(t('chipCraftSlotOverlayHint', 'Перетащите сюда фрагмент чипа')) + '</option>';
+          }
+          html += '</select>';
+          html += '</div>';
+          html += '<div class="chipCraftReprogramDustInfo' + (reprogramState && reprogramState.missingDust ? ' chipCraftReprogramDustInfo--warn' : '') + '">' +
+            t('chipReprogramDustCost', 'Кремниевая пыль: {have} / {need}')
+              .replace('{have}', _siliconDust)
+              .replace('{need}', REPROGRAM_DUST_COST) +
+            '</div>';
+          html += '</div>';
+          html += '<div class="chipCraftReprogramColumn">';
+          if (reprogramState && reprogramState.targetFragmentId) {
+            var targetStroke = (h && h.isSpecialMod(reprogramState.targetFragmentId)) ? '#fdd835' : '#4af626';
+            html += '<div class="chipCraftResultChip chipCraftResultChip--future">';
+            html += _renderCraftSlotCard(
+              _fragmentSvg(reprogramState.targetFragmentId, 50, targetStroke),
+              modName(reprogramState.targetFragmentId),
+              {
+                extraClass: 'chipCraftSlotCard--fragment chipCraftSlotCard--future',
+                labelClass: 'chipCraftSlotCard__name--wrapWords chipCraftResultLabel'
+              }
+            );
+            html += '</div>';
+          } else {
+            html += '<div class="chipCraftSlot chipCraftSlot--resultSlot">';
+            html += '<div class="chipCraftSlotEmpty" style="opacity:0.3">?</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+          if (!reprogramState || !reprogramState.sourceFragmentId) {
+            html += '<div class="chipCraftSlotOverlay" aria-hidden="true">' +
+              '<span class="chipCraftSlotOverlay__text">' + t('chipCraftSlotOverlayHint', 'Перетащите сюда фрагмент чипа') + '</span>' +
+              '</div>';
+          }
+          html += '</div>';
       } else {
         html += '<div class="chipCraftEmptyPreview">';
         html += '<svg viewBox="0 0 120 108" class="chipCraftPlaceholderSvg">' +
@@ -2887,10 +3119,14 @@
       /* ── Action button below drop zone (always visible, disabled when no valid content) ── */
       var slotMode = _detectCraftMode();
       var expectedMode = isDisassembleView ? 'disassemble' : 'assemble';
-      var canExec = hasContent && slotMode === expectedMode;
+      var canExec = isReprogramView
+        ? !!(reprogramState && reprogramState.canExecute)
+        : (hasContent && slotMode === expectedMode);
       var execLabel = isDisassembleView
         ? t('chipCraftDisassemble', 'Разобрать')
-        : t('chipCraftAssemble', 'Создать чип');
+        : (isReprogramView
+          ? t('chipReprogramAction', 'Перепрограммировать')
+          : t('chipCraftAssemble', 'Создать чип'));
       html += '<button class="btn scButton chipCraftActionBtn' + (!canExec ? ' chipCraftActionBtn--disabled' : '') +
         '" id="chipCraftActionBtn" type="button"' + (!canExec ? ' disabled' : '') + '>' + execLabel + '</button>';
 
@@ -2921,6 +3157,12 @@
     if (recycleDisassembleTab) {
       recycleDisassembleTab.addEventListener('click', function () {
         switchChipRecycleSubTab('disassemble');
+      });
+    }
+    var recycleReprogramTab = pelq('chipRecycleTabReprogram');
+    if (recycleReprogramTab) {
+      recycleReprogramTab.addEventListener('click', function () {
+        switchChipRecycleSubTab('reprogram');
       });
     }
 
@@ -2988,6 +3230,7 @@
     /* ── Click on inventory item → add to craft slot (only when NOT in dust mode) ── */
     /* Auto-switches mode: chip → disassemble, fragment → assemble */
     if (!_dustMode) {
+      var dropZone = pelq('chipCraftDropZone');
       var invItems = panel.querySelectorAll('.chipCraftInvItem');
       for (var i = 0; i < invItems.length; i++) {
         (function (item) {
@@ -3041,7 +3284,6 @@
               if (ghost) { ghost.remove(); ghost = null; }
               if (!moved) return; // handled by click
               /* Did we drop over chipCraftDropZone? */
-              var dropZone = el('chipCraftDropZone');
               if (dropZone) {
                 var rect = dropZone.getBoundingClientRect();
                 if (e.clientX >= rect.left && e.clientX <= rect.right &&
@@ -3063,7 +3305,13 @@
     for (var ri = 0; ri < removeButtons.length; ri++) {
       removeButtons[ri].addEventListener('click', function (evt) {
         evt.stopPropagation();
-        var idx = parseInt(evt.currentTarget.getAttribute('data-craft-remove'), 10);
+        var rawIdx = evt.currentTarget.getAttribute('data-craft-remove');
+        if (rawIdx === 'reprogram') {
+          _resetReprogramState();
+          renderChipCraftPanel();
+          return;
+        }
+        var idx = parseInt(rawIdx, 10);
         if (_craftMode === 'disassemble') {
           /* Dynamic array: splice the item out */
           _craftSlots.splice(idx, 1);
@@ -3101,6 +3349,15 @@
         _executeCraftAction();
       });
     }
+
+    var reprogramSelect = pelq('chipCraftReprogramSelect');
+    if (reprogramSelect) {
+      reprogramSelect.addEventListener('change', function (evt) {
+        var nextTargetId = parseInt(evt.target.value, 10);
+        _reprogramTargetFragmentId = Number.isFinite(nextTargetId) ? nextTargetId : null;
+        renderChipCraftPanel();
+      });
+    }
   }
 
   /** Execute dust conversion: destroy selected items, gain silicon dust */
@@ -3136,12 +3393,35 @@
   }
 
   /** Execute the craft action (disassemble or assemble) */
-  function _executeCraftAction(skipRiskConfirm) {
+  function _executeCraftAction(options) {
     var h = hc();
     if (!h) return;
+    var skipRiskConfirm = false;
+    var skipDisassembleConfirm = false;
+    if (options === true) {
+      skipRiskConfirm = true;
+    } else if (options && typeof options === 'object') {
+      skipRiskConfirm = !!options.skipRiskConfirm;
+      skipDisassembleConfirm = !!options.skipDisassembleConfirm;
+    }
+
+    if (_craftMode === 'reprogram' && _workshopSubTab === 'chipRecycle' && _chipRecycleSubTab === 'reprogram') {
+      _executeReprogram();
+      return;
+    }
+
     var mode = _detectCraftMode();
 
     if (mode === 'disassemble') {
+      var selectedChipCount = 0;
+      for (var ci = 0; ci < _craftSlots.length; ci++) {
+        if (_craftSlots[ci] && _craftSlots[ci].type === 'chip') selectedChipCount++;
+      }
+      if (!skipDisassembleConfirm && selectedChipCount > 0) {
+        _showDisassembleConfirmModal(selectedChipCount);
+        return;
+      }
+
       /* Disassemble all chips in the dynamic slots */
       var totalDisassembled = 0;
       for (var di = 0; di < _craftSlots.length; di++) {
