@@ -2337,6 +2337,17 @@
     return limit > 0 && text.length > limit ? (text.substring(0, Math.max(1, limit - 1)) + '…') : text;
   }
 
+  function _getAvailableChipCopies(chipId, level) {
+    var chips = ensurePlayerChips();
+    var total = 0;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level && chips[i].count > 0) {
+        total += chips[i].count;
+      }
+    }
+    return total;
+  }
+
   function _renderCraftSlotCard(iconHtml, fullName, options) {
     var opts = options || {};
     var cardClass = 'chipCraftSlotCard';
@@ -2555,6 +2566,8 @@
         }
       }
       if (!chipEntry) return;
+      var availableCopies = _getAvailableChipCopies(chipId, chipLevel);
+      if (availableCopies <= 0) return;
       /* Check how many of this chip type are already in slots */
       var alreadyInSlots = 0;
       for (var si = 0; si < _craftSlots.length; si++) {
@@ -2562,7 +2575,7 @@
           alreadyInSlots++;
         }
       }
-      if (alreadyInSlots >= chipEntry.count) {
+      if (alreadyInSlots >= availableCopies) {
         if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftNoMoreOfThis', 'Все экземпляры этого чипа уже добавлены'), 1500);
         return;
       }
@@ -2994,6 +3007,11 @@
             var startX = evt.clientX, startY = evt.clientY;
             var moved = false;
             var ghost = null;
+            var rect = item.getBoundingClientRect();
+            var ghostWidth = Math.ceil(rect.width);
+            var ghostHeight = Math.ceil(rect.height);
+            var ghostOffsetX = Math.round(ghostWidth / 2);
+            var ghostOffsetY = Math.round(ghostHeight / 2);
 
             function onMove(e) {
               var dx = e.clientX - startX, dy = e.clientY - startY;
@@ -3001,12 +3019,20 @@
               moved = true;
               if (!ghost) {
                 ghost = item.cloneNode(true);
-                ghost.className = 'chipCraftInvItem chipCraftDragGhost';
-                ghost.style.cssText = 'position:fixed;z-index:10000;pointer-events:none;opacity:0.75;width:72px;';
+                ghost.className = item.className + ' chipCraftDragGhost';
+                ghost.style.position = 'fixed';
+                ghost.style.zIndex = '10000';
+                ghost.style.pointerEvents = 'none';
+                ghost.style.opacity = '0.75';
+                ghost.style.width = ghostWidth + 'px';
+                ghost.style.minHeight = ghostHeight + 'px';
+                ghost.style.height = ghostHeight + 'px';
+                ghost.style.boxSizing = 'border-box';
+                ghost.style.margin = '0';
                 _doc.body.appendChild(ghost);
               }
-              ghost.style.left = (e.clientX - 36) + 'px';
-              ghost.style.top = (e.clientY - 36) + 'px';
+              ghost.style.left = (e.clientX - ghostOffsetX) + 'px';
+              ghost.style.top = (e.clientY - ghostOffsetY) + 'px';
             }
 
             function onUp(e) {

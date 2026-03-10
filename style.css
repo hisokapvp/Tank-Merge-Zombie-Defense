@@ -1931,8 +1931,8 @@ input, select, textarea, button {
 #talentOverlay .modalClose::after,
 .modalClose.scModal__close::before,
 .modalClose.scModal__close::after{
-  width:4px;
-  height:24px;
+  /* width:4px; */
+  /* height:24px; */
   background:linear-gradient(180deg, #e6ffd7 0%, #4af626 100%);
   box-shadow:0 0 10px rgba(74,246,38,.36);
 }
@@ -4348,6 +4348,17 @@ input, select, textarea, button {
   top:14px;
   right:14px;
 }
+#talentOverlay .modalClose,
+.techModal__close.modalClose.scModal__close{
+  display:grid;
+  place-items:center;
+  text-align:center;
+}
+#talentOverlay .modalClose::before,
+.techModal__close.modalClose.scModal__close::before{
+  display:block;
+  line-height:1;
+}
 .chipCraftOutcomeGrid{
   display:flex;
   flex-wrap:wrap;
@@ -4827,11 +4838,21 @@ input, select, textarea, button {
   z-index:3;
 }
 .chipCraftSlotOverlay__text{
-  font-size:13px;
-  color:rgba(255,255,255,.45);
+  font-size:16px;
+  color:#fdd835;
+  font-weight:800;
+  text-shadow:0 0 10px rgba(253,216,53,.18);
   text-align:center;
   padding:0 20px;
   line-height:1.45;
+}
+.chipCraftDragGhost{
+  margin:0 !important;
+  flex-shrink:0;
+}
+.chipCraftDragGhost .chipCraftInvLabel,
+.chipCraftDragGhost .chipCraftInvLevel{
+  width:100%;
 }
 .chipCraftAssemblyStage{
   width:100%;
