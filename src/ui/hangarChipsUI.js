@@ -2627,7 +2627,10 @@
                 html += _renderCraftSlotCard(
                   _fragmentSvg(slot2.fragmentId, 50, fSc),
                   modName(slot2.fragmentId),
-                  { extraClass: 'chipCraftSlotCard--fragment', maxLabelLength: 15 }
+                  {
+                    extraClass: 'chipCraftSlotCard--fragment',
+                    labelClass: 'chipCraftSlotCard__name--wrapWords'
+                  }
                 );
               }
               html += _renderCraftRemoveButton(sj2);
