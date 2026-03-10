@@ -2361,17 +2361,23 @@
   }
 
   function _renderCraftEnergyLines() {
-    var html = '<svg class="chipCraftEnergySvg" viewBox="0 0 220 196" preserveAspectRatio="none" aria-hidden="true">';
-    var slotYs = [30, 98, 166];
+    /* Vertical fan: 3 start points at top (x=50,150,250) → single end at bottom center (x=150).
+       Lines start at y=-10 (inside slot card below, using svg overflow:visible)
+       and end at y=91 (inside result chip above). */
+    var slotXs = [50, 150, 250];
+    var endX = 150;
+    var startY = -10;
+    var endY = 91;
+    var html = '<svg class="chipCraftEnergySvg" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true">';
     for (var i = 0; i < 3; i++) {
       var lineClass = 'chipCraftEnergyLine chipCraftEnergyLine--' + (i + 1);
       if (_craftSlots[i] && _craftSlots[i].type === 'fragment') lineClass += ' chipCraftEnergyLine--filled';
-      var startY = slotYs[i];
-      var midY = i === 1 ? 98 : (i === 0 ? 52 : 144);
+      var sx = slotXs[i];
+      var d = 'M' + sx + ' ' + startY + ' C' + sx + ' 30,' + endX + ' 55,' + endX + ' ' + endY;
       html += '<g class="' + lineClass + '">';
-      html += '<path class="chipCraftEnergyLine__base" d="M10 ' + startY + ' C74 ' + startY + ', 118 ' + midY + ', 196 98"></path>';
-      html += '<path class="chipCraftEnergyLine__glow" d="M10 ' + startY + ' C74 ' + startY + ', 118 ' + midY + ', 196 98"></path>';
-      html += '<circle class="chipCraftEnergyLine__node" cx="196" cy="98" r="4"></circle>';
+      html += '<path class="chipCraftEnergyLine__base" d="' + d + '"></path>';
+      html += '<path class="chipCraftEnergyLine__glow" d="' + d + '"></path>';
+      html += '<circle class="chipCraftEnergyLine__node" cx="' + endX + '" cy="' + endY + '" r="4"></circle>';
       html += '</g>';
     }
     html += '</svg>';
@@ -2781,12 +2787,14 @@
           html += '</div>';
           html += '</div>';
       } else if (isAssembleView) {
-          /* Assemble mode: 3 fixed slots + power lines + result chip */
+          /* Assemble mode: 3 fixed slots horizontal + power lines (top→bottom) + result chip */
           var assemblePreview = _previewAssembleResult();
+          var anyFilled = _craftSlots.some(function(s) { return s !== null && s !== undefined; });
           html += '<div class="chipCraftDropZone__body">';
           html += '<div class="chipCraftAssemblyStage">';
-          html += '<div class="chipCraftIngredientStack">';
+          html += '<div class="chipCraftIngredientRow">';
           for (var sj2 = 0; sj2 < 3; sj2++) {
+            if (sj2 > 0) html += '<span class="chipCraftSlotSep" aria-hidden="true">+</span>';
             var slot2 = _craftSlots[sj2];
             var slotDataAttr2 = (slot2 && slot2.type === 'fragment') ? ' data-hct-frag-id="' + slot2.fragmentId + '"' : '';
             html += '<div class="chipCraftSlot chipCraftSlot--assembleIngredient' + (slot2 ? ' chipCraftSlot--filled' : '') + '" data-craft-slot-idx="' + sj2 + '"' + slotDataAttr2 + '>';
@@ -2818,7 +2826,7 @@
             }
             html += '</div>';
           }
-          html += '</div>';
+          html += '</div>'; // chipCraftIngredientRow
           html += '<div class="chipCraftEnergyRail">' + _renderCraftEnergyLines() + '</div>';
           html += '<div class="chipCraftAssemblyResult">';
           if (assemblePreview) {
@@ -2842,10 +2850,14 @@
             html += '<div class="chipCraftSlotEmpty" style="opacity:0.3">?</div>';
             html += '</div>';
           }
-          html += '</div>';
-          html += '</div>';
-          html += '<span class="chipCraftPlaceholderText chipCraftPlaceholderText--stage">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
-          html += '</div>';
+          html += '</div>'; // chipCraftAssemblyResult
+          html += '</div>'; // chipCraftAssemblyStage
+          if (!anyFilled) {
+            html += '<div class="chipCraftSlotOverlay" aria-hidden="true">' +
+              '<span class="chipCraftSlotOverlay__text">' + t('chipCraftSlotOverlayHint', 'Перетащите сюда фрагмент чипа') + '</span>' +
+              '</div>';
+          }
+          html += '</div>'; // chipCraftDropZone__body
           html += _buildCraftReagentRowHtml();
       } else {
         html += '<div class="chipCraftEmptyPreview">';
@@ -2855,7 +2867,6 @@
           '<line x1="60" y1="66" x2="24" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
           '<line x1="60" y1="66" x2="96" y2="80" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>' +
           '</svg>';
-        html += '<span class="chipCraftPlaceholderText">' + t('chipCraftDragHere', 'Перетащите чип или фрагменты сюда') + '</span>';
         html += '</div>';
       }
       html += '</div>'; // chipCraftDropZone

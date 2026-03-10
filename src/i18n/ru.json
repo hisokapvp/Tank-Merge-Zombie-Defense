@@ -426,6 +426,7 @@
   ,"chipCraftResultSuccessText": "Поздравляем! Вы получили новый чип."
   ,"chipCraftResultFailureTitle": "Соединение не удалось"
   ,"chipCraftResultFailureText": "Попытка оказалась неудачной. Потеряны следующие ресурсы:"
+  ,"chipCraftSlotOverlayHint": "Перетащите сюда фрагмент чипа"
   ,"chipCraftFailed": "Создание чипа провалилось."
   ,"chipCraftNotEnoughDust": "Недостаточно кремниевой пыли"
   ,"hangarChipsWorkshopWIP": "В разработке"

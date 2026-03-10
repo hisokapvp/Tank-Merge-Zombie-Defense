@@ -426,6 +426,7 @@
   ,"chipCraftResultSuccessText": "Congratulations! You received a new chip."
   ,"chipCraftResultFailureTitle": "Craft failed"
   ,"chipCraftResultFailureText": "The attempt failed. You lost these resources:"
+  ,"chipCraftSlotOverlayHint": "Drag a chip fragment here"
   ,"chipCraftFailed": "Chip creation failed."
   ,"chipCraftNotEnoughDust": "Not enough silicon dust"
   ,"hangarChipsWorkshopWIP": "In development"

@@ -1883,7 +1883,7 @@ input, select, textarea, button {
   justify-content:center;
   position:relative;
   padding:0;
-  overflow:hidden;
+  overflow:visible;
   box-shadow:2px 2px 0 rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
   transition:filter .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
   user-select:none;
@@ -3198,6 +3198,9 @@ input, select, textarea, button {
 .modalClose::before,
 .lessonProgress__close::before{
   content:'✕';
+  position:static !important;
+  top:auto;
+  left:auto;
   width:auto;
   height:auto;
   border-radius:0;
@@ -3210,7 +3213,7 @@ input, select, textarea, button {
   letter-spacing:0;
   text-shadow:0 0 10px rgba(255,150,94,.28);
   box-shadow:none !important;
-  transform:translate(-50%, -54%);
+  transform:none;
   transition:transform .16s ease, color .16s ease, text-shadow .16s ease;
 }
 .crateModal__close:hover,
@@ -3229,7 +3232,7 @@ input, select, textarea, button {
 .lessonProgress__close:focus-visible::before{
   background:none !important;
   box-shadow:none !important;
-  transform:translate(-50%, -58%) scale(1.06);
+  transform:scale(1.06);
 }
 .crateModal__close:active,
 .levelModal__close:active,
@@ -3243,7 +3246,7 @@ input, select, textarea, button {
 .lessonProgress__close:active::before{
   background:none !important;
   box-shadow:none !important;
-  transform:translate(-50%, -48%) scale(0.98);
+  transform:scale(0.98);
 }
 .scModal__close::before,
 #talentOverlay .modalClose::before,
@@ -3252,7 +3255,7 @@ input, select, textarea, button {
   box-shadow:none !important;
   color:#d8ffcb;
   text-shadow:0 0 12px rgba(74,246,38,.34);
-  transform:translate(-50%, -50%);
+  transform:none;
 }
 .scModal__close:hover::before,
 .scModal__close:focus-visible::before,
@@ -3264,14 +3267,14 @@ input, select, textarea, button {
   box-shadow:none !important;
   color:#081403;
   text-shadow:0 0 10px rgba(255,255,255,.18);
-  transform:translate(-50%, -50%) scale(1.05);
+  transform:scale(1.05);
 }
 .scModal__close:active::before,
 #talentOverlay .modalClose:active::before,
 .modalClose.scModal__close:active::before{
   background:none !important;
   box-shadow:none !important;
-  transform:translate(-50%, -50%) scale(0.98);
+  transform:scale(0.98);
 }
 .lessonProgress__list{
   flex:1;
@@ -4791,6 +4794,7 @@ input, select, textarea, button {
   align-items:center;
   justify-content:center;
   gap:10px;
+  position:relative;
 }
 .chipCraftEmptyPreview{
   display:flex;
@@ -4811,35 +4815,61 @@ input, select, textarea, button {
 .chipCraftPlaceholderText--stage{
   max-width:260px;
 }
-.chipCraftAssemblyStage{
-  width:min(100%, 470px);
-  display:grid;
-  grid-template-columns:var(--chipLabelCardWidth) minmax(120px, 1fr) var(--chipLabelCardWidth);
+.chipCraftSlotOverlay{
+  position:absolute;
+  inset:0;
+  display:flex;
   align-items:center;
   justify-content:center;
-  gap:24px;
+  background:rgba(30,28,24,.72);
+  border-radius:6px;
+  pointer-events:none;
+  z-index:3;
 }
-.chipCraftIngredientStack{
+.chipCraftSlotOverlay__text{
+  font-size:13px;
+  color:rgba(255,255,255,.45);
+  text-align:center;
+  padding:0 20px;
+  line-height:1.45;
+}
+.chipCraftAssemblyStage{
+  width:100%;
+  max-width:660px;
   display:flex;
   flex-direction:column;
-  gap:14px;
+  align-items:center;
+  gap:0;
+}
+.chipCraftIngredientRow{
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  flex-shrink:0;
+  width:100%;
+}
+.chipCraftIngredientRow .chipCraftSlotSep{
+  flex-shrink:0;
+  padding:0 8px;
 }
 .chipCraftEnergyRail{
   display:flex;
   align-items:center;
   justify-content:center;
-  min-height:196px;
+  width:100%;
+  height:60px;
   pointer-events:none;
 }
 .chipCraftEnergySvg{
   width:100%;
-  min-width:140px;
-  height:196px;
+  height:60px;
   overflow:visible;
 }
 .chipCraftEnergyLine{
   transform-box:fill-box;
-  transform-origin:left center;
+  transform-origin:top center;
 }
 .chipCraftEnergyLine__base,
 .chipCraftEnergyLine__glow{
@@ -4863,6 +4893,14 @@ input, select, textarea, button {
 .chipCraftEnergyLine--filled{
   animation:chipCraftEnergyShake .34s ease-in-out infinite alternate;
 }
+.chipCraftEnergyLine--filled.chipCraftEnergyLine--2{
+  animation-name:chipCraftEnergyShakeB;
+  animation-duration:.38s;
+}
+.chipCraftEnergyLine--filled.chipCraftEnergyLine--3{
+  animation-name:chipCraftEnergyShakeC;
+  animation-duration:.30s;
+}
 .chipCraftEnergyLine--filled .chipCraftEnergyLine__base{
   stroke:rgba(138,255,109,.5);
 }
@@ -4882,6 +4920,7 @@ input, select, textarea, button {
   display:flex;
   align-items:center;
   justify-content:center;
+  flex-shrink:0;
 }
 .chipCraftSlotRow{
   display:flex;
@@ -5416,6 +5455,14 @@ input, select, textarea, button {
 @keyframes chipCraftEnergyShake{
   from{transform:translate3d(-1px, 0, 0)}
   to{transform:translate3d(1px, -1px, 0)}
+}
+@keyframes chipCraftEnergyShakeB{
+  from{transform:translate3d(-0.7px, 0, 0)}
+  to{transform:translate3d(0.7px, -0.7px, 0)}
+}
+@keyframes chipCraftEnergyShakeC{
+  from{transform:translate3d(-1.3px, 0, 0)}
+  to{transform:translate3d(1.3px, -1.3px, 0)}
 }
 @keyframes chipCraftEnergyPulse{
   from{opacity:.66}

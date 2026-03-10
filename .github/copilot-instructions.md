@@ -126,6 +126,8 @@ folder that is **not part of the game repository**.
 |---|---|---|---|
 | chroma-mcp (RAG) | `rag-chromadb` | `chroma_query`, `chroma_list_collections`, `chroma_add_documents` | Semantic search over docs & source code |
 | agent-memory | `agent-memory` | `memory_add`, `memory_search`, `memory_list`, `memory_delete` | Persistent cross-session agent memory |
+| Context7 | `context7` | `resolve-library-id`, `get-library-docs` | Up-to-date library documentation. **Обязательно** при работе с внешними библиотеками |
+| Playwright | `playwright` | `browser_navigate`, `browser_screenshot`, `browser_click`, ... | Browser automation, visual UI verification, screenshots |
 
 **RAG Collections (pre-indexed):**
 - `game_docs` — `docs/ai/**`, `docs/*.md`, `assets/balance/*.json`, `agents/*.md`, `skills/*.md`
