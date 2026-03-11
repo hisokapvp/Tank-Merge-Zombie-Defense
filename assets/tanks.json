@@ -6,6 +6,28 @@
   "ui": {
     "onTrackIconOpacity": 0.35
   },
+  "hangarAnimations": {
+    "defaultCycle": ["alertPulse", "idleBob", "hoverScan"],
+    "hoverScan": {
+      "effects": [
+        { "preset": "float", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.1 },
+        { "preset": "sway", "angleDeg": 1.6, "frequencyHz": 0.48, "phase": 0.22 }
+      ]
+    },
+    "idleBob": {
+      "effects": [
+        { "preset": "bob", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.35 },
+        { "preset": "pulse", "scaleMul": 0.01, "frequencyHz": 5, "phase": 0.18 }
+      ]
+    },
+    "alertPulse": {
+      "effects": [
+        { "preset": "hover", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.52 },
+        { "preset": "vibration", "amplitudeX": 0.15, "amplitudeY": 0.15, "frequencyHz": 5, "phase": 0.08 },
+        { "preset": "pulse", "scaleMul": 0.005, "frequencyHz": 5, "phase": 0.4 }
+      ]
+    }
+  },
 
   "tank_lvl1": {
     "stats": {

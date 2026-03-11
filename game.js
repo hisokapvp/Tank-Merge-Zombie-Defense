@@ -449,6 +449,7 @@ const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
 const DronesApi = GameApi?.Drones ?? null;
+const TankHangarAnimationApi = GameApi?.TankHangarAnimation ?? null;
 const FenceSidesApi = GameApi?.FenceSides ?? null;
 
 function createInitialState(options){
@@ -10657,11 +10658,20 @@ function drawBoard(){
 function drawTankSlot(cell){
   const cx = cell.x + cell.w/2;
   const cy = cell.y + cell.h/2;
+  const hangarRenderState = !cell.tank.onTrack && !isTankPrinting(cell.tank) && TankHangarAnimationApi && typeof TankHangarAnimationApi.computeRenderState === 'function'
+    ? TankHangarAnimationApi.computeRenderState(cell, cell.tank, TankSprites && TankSprites.config, nowSec())
+    : null;
+  const iconCx = cx + (hangarRenderState ? hangarRenderState.offsetX : 0);
+  const iconCy = cy + (hangarRenderState ? hangarRenderState.offsetY : 0);
   ctx.save();
   ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
   rr(ctx, cx-18, cy-12, 36, 26, 8);
   ctx.fill();
-  drawTankIconWithStampReveal(cell, cx, cy, { showShadow: false });
+  drawTankIconWithStampReveal(cell, iconCx, iconCy, {
+    showShadow: false,
+    rotation: hangarRenderState ? hangarRenderState.rotation : 0,
+    scaleMul: hangarRenderState ? hangarRenderState.scale : 1,
+  });
   ctx.restore();
 }
 
@@ -10684,7 +10694,11 @@ function drawTankIconWithStampReveal(cell, cx, cy, options = null){
   const showShadow = opts && opts.showShadow === false ? false : true;
   const progress = getTankStampProgress(cell.tank);
   if (progress >= 1) {
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, { showShadow });
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, opts ? {
+      showShadow,
+      rotation: opts.rotation,
+      scaleMul: opts.scaleMul,
+    } : { showShadow });
     return;
   }
 
@@ -10713,7 +10727,11 @@ function drawTankIconWithStampReveal(cell, cx, cy, options = null){
     ctx.beginPath();
     ctx.rect(left, clipY, iconW, clipH + 0.5);
     ctx.clip();
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, { showShadow });
+    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, opts ? {
+      showShadow,
+      rotation: opts.rotation,
+      scaleMul: opts.scaleMul,
+    } : { showShadow });
     ctx.restore();
   }
   ctx.restore();
@@ -10746,6 +10764,8 @@ function getOnTrackIconOpacity(){
 function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, options=null){
   const opts = options && typeof options === 'object' ? options : null;
   const showShadow = !(opts && opts.showShadow === false);
+  const extraScaleMul = opts && Number.isFinite(opts.scaleMul) && opts.scaleMul > 0 ? opts.scaleMul : 1;
+  const drawRotation = opts && Number.isFinite(opts.rotation) ? opts.rotation : 0;
   const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
   const onTrackIconOpacity = mutedSlot ? getOnTrackIconOpacity() : 0;
@@ -10754,11 +10774,12 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
     const bodyH = body.cfg.frame?.h ?? body.img.height;
     const bodyFrameX = body.cfg.frame?.x ?? 0;
     const bodyFrameY = body.cfg.frame?.y ?? 0;
-    const maxW = 51 * balScale * scaleMul;
-    const maxH = 39 * balScale * scaleMul;
+    const maxW = 51 * balScale * scaleMul * extraScaleMul;
+    const maxH = 39 * balScale * scaleMul * extraScaleMul;
     const scale = Math.min(maxW / bodyW, maxH / bodyH);
     targetCtx.save();
     targetCtx.translate(x, y);
+    if (drawRotation) targetCtx.rotate(drawRotation);
     targetCtx.globalAlpha = mutedSlot ? onTrackIconOpacity : 0.92;
     const drawW = bodyW * scale;
     const drawH = bodyH * scale;
@@ -10806,7 +10827,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
   const hull = ['#b83232','#c63a3a','#d14646','#e05a5a','#f07171'][clamp(tier,0,4)];
   targetCtx.save();
   targetCtx.translate(x, y);
-  targetCtx.scale(0.52 * balScale * scaleMul, 0.52 * balScale * scaleMul);
+  if (drawRotation) targetCtx.rotate(drawRotation);
+  targetCtx.scale(0.52 * balScale * scaleMul * extraScaleMul, 0.52 * balScale * scaleMul * extraScaleMul);
   targetCtx.globalAlpha = mutedSlot ? onTrackIconOpacity : 0.95;
   if (showShadow) {
     targetCtx.fillStyle = 'rgba(0,0,0,.35)';

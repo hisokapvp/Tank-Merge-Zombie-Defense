@@ -597,11 +597,9 @@
   }
 
   function updateStandbyPatrol(drone, nowSec, speed, dt, worldBounds) {
-    var radius = 20 + (Math.sin(drone.patrolSeed || 0) + 1) * 8;
-    var angle = (drone.patrolSeed || 0) + nowSec * 0.8;
-    var tx = drone.basePos.x + Math.cos(angle) * radius;
-    var ty = drone.basePos.y + Math.sin(angle * 0.9) * radius * 0.6;
-    moveTowards(drone, tx, ty, speed * 0.6, dt, worldBounds);
+    drone.pos.x = drone.basePos.x;
+    drone.pos.y = drone.basePos.y;
+    clampDroneToBounds(drone, worldBounds);
   }
 
   function pointOnPerimeter(bounds, progress) {
@@ -914,63 +912,24 @@
     ctx.closePath();
   }
 
-  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec) {
-    var isSelected = _selectedSlotIndex === slot.slotIndex;
-    var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
-    var slotUiScale = Math.max(0.55, Math.min(1, slot.w / 34));
-    var fill = drone ? 'rgba(19, 28, 36, 0.92)' : 'rgba(12, 16, 22, 0.72)';
-    var stroke = drone
-      ? (drone.mode === MODE_REPAIR ? 'rgba(255,181,112,0.96)' : 'rgba(123,224,255,0.92)')
-      : 'rgba(154,176,198,0.36)';
-    var glow = drone
-      ? (drone.mode === MODE_REPAIR ? 'rgba(255,156,84,0.22)' : 'rgba(74,195,255,0.2)')
-      : 'rgba(0,0,0,0)';
-    var pulse = drone ? (1 + Math.sin(timeSec * (drone.mode === MODE_REPAIR ? 5.2 : 2.4) + slot.slotIndex) * 0.04) : 1;
-
-    ctx.save();
-    ctx.shadowBlur = drone ? Math.max(5, slot.w * 0.42 * pulse) : 0;
-    ctx.shadowColor = glow;
-    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, Math.max(5, slot.w * 0.2));
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    ctx.lineWidth = isSelected ? Math.max(1.4, 2.1 * slotUiScale) : Math.max(1, 1.25 * slotUiScale);
-    ctx.strokeStyle = isDragSource ? 'rgba(255,236,179,0.98)' : stroke;
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    drawRoundedRect(ctx, slot.x + 1.5, slot.y + 1.5, Math.max(0, slot.w - 3), Math.max(0, slot.h - 3), Math.max(4, slot.w * 0.14));
-    ctx.stroke();
-
-    if (drone) {
-      ctx.fillStyle = drone.mode === MODE_REPAIR ? 'rgba(255,193,122,0.95)' : 'rgba(156,230,255,0.95)';
-      ctx.beginPath();
-      ctx.arc(slot.x + slot.w - Math.max(5, 6 * slotUiScale), slot.y + Math.max(5, 6 * slotUiScale), Math.max(2, 2.6 * slotUiScale), 0, Math.PI * 2);
-      ctx.fill();
-
-      var badgeW = Math.max(11, slot.w * 0.56);
-      var badgeH = Math.max(8, slot.h * 0.32);
-      var badgeX = slot.x + Math.max(3, slot.w * 0.12);
-      var badgeY = slot.y + slot.h - badgeH - Math.max(3, slot.h * 0.08);
-      ctx.fillStyle = 'rgba(7,10,14,0.92)';
-      drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, Math.max(3, badgeH * 0.4));
-      ctx.fill();
-      ctx.fillStyle = '#f4fbff';
-      ctx.font = Math.floor(Math.max(7, badgeH * 0.72)) + 'px Courier New, monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(drone.level), badgeX + badgeW * 0.5, badgeY + badgeH * 0.55);
+  function getLevelShortLabel(global) {
+    var i18n = global && global.Game && global.Game.I18n;
+    if (i18n && typeof i18n.t === 'function') {
+      var translated = i18n.t('levelShort');
+      if (typeof translated === 'string' && translated.length) return translated;
     }
-
-    ctx.restore();
+    return 'Lv';
   }
 
-  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites) {
+  function drawDroneSpriteAt(ctx, x, y, animName, nowSec, balScale, dronSprites, renderOptions) {
+    var options = renderOptions && typeof renderOptions === 'object' ? renderOptions : null;
     var cfg = dronSprites && dronSprites.config ? dronSprites.config : {};
-    var modeAnimName = drone.mode === MODE_REPAIR ? (drone.substate === SUBSTATE_REPAIR_WORK ? 'repair' : 'fly') : 'idle';
-    var anim = dronSprites && dronSprites.getAnimation ? dronSprites.getAnimation(modeAnimName) : null;
+    var resolvedAnimName = typeof animName === 'string' && animName ? animName : 'wait';
+    var anim = dronSprites && dronSprites.getAnimation ? dronSprites.getAnimation(resolvedAnimName) : null;
+
+    ctx.save();
+    if (options && Number.isFinite(options.alpha)) ctx.globalAlpha = clamp(options.alpha, 0, 1);
+    if (options && options.grayscale) ctx.filter = 'grayscale(1) brightness(0.8)';
 
     if (dronSprites && dronSprites.ready && dronSprites.atlasImg && anim && Array.isArray(anim.frames) && anim.frames.length) {
       var fps = Math.max(0.01, Number(anim.frameRateFps) || 6);
@@ -978,26 +937,75 @@
       var frameIndex = anim.loop === false ? Math.min(anim.frames.length - 1, rawFrame) : (rawFrame % anim.frames.length);
       var frame = dronSprites.pickFrame ? dronSprites.pickFrame(anim.frames[frameIndex]) : null;
       if (frame) {
-        var scale = (Number.isFinite(cfg.scale) ? cfg.scale : 1) * balScale;
+        var scale = (Number.isFinite(cfg.scale) ? cfg.scale : 1) * balScale * (options && Number.isFinite(options.scaleMul) ? options.scaleMul : 1);
         var anchor = cfg.anchor || { x: 0.5, y: 0.5 };
         ctx.drawImage(
           dronSprites.atlasImg,
           frame.x, frame.y, frame.w, frame.h,
-          drone.pos.x - frame.w * scale * anchor.x,
-          drone.pos.y - frame.h * scale * anchor.y,
+          x - frame.w * scale * anchor.x,
+          y - frame.h * scale * anchor.y,
           frame.w * scale,
           frame.h * scale
         );
+        ctx.restore();
         return;
       }
     }
 
-    ctx.save();
-    ctx.fillStyle = drone.mode === MODE_REPAIR ? 'rgba(130,199,255,0.95)' : 'rgba(177,203,255,0.9)';
+    ctx.fillStyle = 'rgba(177,203,255,0.9)';
     ctx.beginPath();
-    ctx.arc(drone.pos.x, drone.pos.y, 10 * balScale, 0, Math.PI * 2);
+    ctx.arc(x, y, 10 * balScale, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec, dronSprites) {
+    var isSelected = _selectedSlotIndex === slot.slotIndex;
+    var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
+    var slotUiScale = Math.max(0.55, Math.min(1, slot.w / 34));
+    var fill = drone ? 'rgba(19, 28, 36, 0.92)' : 'rgba(12, 16, 22, 0.72)';
+    var stroke = !drone ? 'rgba(154,176,198,0.36)' : 'rgba(0,0,0,0)';
+
+    ctx.save();
+    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, Math.max(5, slot.w * 0.2));
+    ctx.fillStyle = fill;
+    ctx.fill();
+
+    if (stroke !== 'rgba(0,0,0,0)' || isDragSource) {
+      ctx.lineWidth = isSelected ? Math.max(1.4, 2.1 * slotUiScale) : Math.max(1, 1.25 * slotUiScale);
+      ctx.strokeStyle = isDragSource ? 'rgba(255,236,179,0.98)' : stroke;
+      ctx.stroke();
+    }
+
+    if (drone) {
+      if (drone.mode === MODE_REPAIR && !isDragSource) {
+        drawDroneSpriteAt(ctx, slot.cx, slot.cy, 'wait', timeSec, balScale, dronSprites, {
+          alpha: 0.92,
+          grayscale: true,
+          scaleMul: Math.max(0.44, Math.min(0.6, slot.w / 42))
+        });
+      }
+
+      var badgeW = Math.max(18, slot.w * 0.76);
+      var badgeH = Math.max(8, slot.h * 0.32);
+      var badgeX = slot.x + Math.max(2, slot.w * 0.07);
+      var badgeY = slot.y + slot.h - badgeH - Math.max(3, slot.h * 0.08);
+      ctx.fillStyle = 'rgba(7,10,14,0.92)';
+      drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, Math.max(3, badgeH * 0.4));
+      ctx.fill();
+      ctx.fillStyle = '#f4fbff';
+      ctx.font = Math.floor(Math.max(6, badgeH * 0.62)) + 'px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(getLevelShortLabel(global) + drone.level, badgeX + badgeW * 0.5, badgeY + badgeH * 0.55);
+    }
+
+    ctx.restore();
+  }
+
+  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites) {
+    var modeAnimName = drone.mode === MODE_REPAIR ? (drone.substate === SUBSTATE_REPAIR_WORK ? 'repair' : 'fly') : 'wait';
+    drawDroneSpriteAt(ctx, drone.pos.x, drone.pos.y, modeAnimName, nowSec, balScale, dronSprites, null);
   }
 
   function draw(options) {
@@ -1014,7 +1022,10 @@
     for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
       var slot = slots[slotIndex];
       var slotDrone = getDroneBySlotIndex(state, slot.slotIndex);
-      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec);
+      if (_slotDragState && _slotDragState.moved && slotDrone && slotDrone.slotIndex === _slotDragState.slotIndex) {
+        slotDrone = null;
+      }
+      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites);
     }
 
     for (var i = 0; i < state.drones.length; i++) {

@@ -391,6 +391,9 @@
             ui: {
               onTrackIconOpacity: clamp01(rawCfg && rawCfg.ui && rawCfg.ui.onTrackIconOpacity, 0.45),
             },
+            hangarAnimations: rawCfg && rawCfg.hangarAnimations && typeof rawCfg.hangarAnimations === 'object'
+              ? rawCfg.hangarAnimations
+              : null,
           };
           var maxLevel = 0;
           var levelsFound = 0;
@@ -1149,10 +1152,12 @@
           }
 
           var idleAnimRaw = animationsRaw.idle && typeof animationsRaw.idle === 'object' ? animationsRaw.idle : {};
+          var waitAnimRaw = animationsRaw.wait && typeof animationsRaw.wait === 'object' ? animationsRaw.wait : {};
           var flyAnimRaw = animationsRaw.fly && typeof animationsRaw.fly === 'object' ? animationsRaw.fly : {};
           var repairAnimRaw = animationsRaw.repair && typeof animationsRaw.repair === 'object' ? animationsRaw.repair : {};
 
           var idleAnim = normalizeAnim(idleAnimRaw, idleFallback, this.framesById, 'idle');
+          var waitAnim = normalizeAnim(waitAnimRaw, idleAnim ? idleAnim.frames : idleFallback, this.framesById, 'wait');
           var flyAnim = normalizeAnim(flyAnimRaw, idleAnim ? idleAnim.frames : idleFallback, this.framesById, 'fly');
           var repairAnim = normalizeAnim(repairAnimRaw, flyAnim ? flyAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById, 'repair');
 
@@ -1199,6 +1204,7 @@
             maxLevel: maxLevel,
             animations: {
               idle: idleAnim,
+              wait: waitAnim,
               fly: flyAnim,
               repair: repairAnim,
             },
