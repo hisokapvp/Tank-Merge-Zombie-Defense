@@ -48,6 +48,24 @@ body{
   padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
   text-shadow: 0 0 5px rgba(74, 246, 38, 0.5);
 }
+body,
+body *{
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+input,
+textarea,
+select,
+[contenteditable="true"]{
+  -webkit-user-select:text;
+  user-select:text;
+}
+img,
+svg,
+canvas{
+  -webkit-user-drag:none;
+}
 body.menu-open::before,
 body.big-menu-open::before,
 body.scmodal-open::before,

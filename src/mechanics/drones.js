@@ -18,6 +18,22 @@
   var REPAIR_SCAN_PERIOD_SEC = 0.5;
   var REPAIR_PATROL_SPEED_MULT = 0.5;
   var REPAIR_ARRIVE_EPSILON_PX = 6;
+  var DRONE_SLOT_COUNT = 9;
+  var DRONE_SLOT_DRAG_THRESHOLD_PX = 6;
+  var DRONE_SLOT_LAYOUT = [
+    { slotIndex: 0, side: 'top', lane: 0 },
+    { slotIndex: 1, side: 'top', lane: 1 },
+    { slotIndex: 2, side: 'top', lane: 2 },
+    { slotIndex: 3, side: 'left', lane: 0 },
+    { slotIndex: 4, side: 'left', lane: 1 },
+    { slotIndex: 5, side: 'left', lane: 2 },
+    { slotIndex: 6, side: 'right', lane: 0 },
+    { slotIndex: 7, side: 'right', lane: 1 },
+    { slotIndex: 8, side: 'right', lane: 2 },
+  ];
+
+  var _slotDragState = null;
+  var _selectedSlotIndex = null;
 
   function clamp(value, min, max) {
     if (!Number.isFinite(value)) return min;
@@ -45,6 +61,154 @@
   function ensureState(state) {
     if (!state || typeof state !== 'object') return;
     if (!Array.isArray(state.drones)) state.drones = [];
+  }
+
+  function isValidSlotIndex(slotIndex) {
+    return Number.isFinite(slotIndex) && slotIndex >= 0 && slotIndex < DRONE_SLOT_COUNT;
+  }
+
+  function getDroneBySlotIndex(state, slotIndex) {
+    if (!state || !Array.isArray(state.drones) || !isValidSlotIndex(slotIndex)) return null;
+    for (var i = 0; i < state.drones.length; i++) {
+      var drone = state.drones[i];
+      if (drone && drone.slotIndex === slotIndex) return drone;
+    }
+    return null;
+  }
+
+  function findFirstFreeSlotIndex(state) {
+    if (!state || !Array.isArray(state.drones)) return 0;
+    var occupied = Object.create(null);
+    for (var i = 0; i < state.drones.length; i++) {
+      var drone = state.drones[i];
+      if (drone && isValidSlotIndex(drone.slotIndex)) occupied[drone.slotIndex] = true;
+    }
+    for (var slotIndex = 0; slotIndex < DRONE_SLOT_COUNT; slotIndex++) {
+      if (!occupied[slotIndex]) return slotIndex;
+    }
+    return null;
+  }
+
+  function assignMissingDroneSlots(state) {
+    if (!state || !Array.isArray(state.drones)) return;
+
+    var occupied = Object.create(null);
+    for (var i = 0; i < state.drones.length; i++) {
+      var drone = state.drones[i];
+      if (!drone) continue;
+      if (!isValidSlotIndex(drone.slotIndex) || occupied[drone.slotIndex]) {
+        drone.slotIndex = null;
+        continue;
+      }
+      occupied[drone.slotIndex] = true;
+    }
+
+    for (var j = 0; j < state.drones.length; j++) {
+      var pending = state.drones[j];
+      if (!pending || isValidSlotIndex(pending.slotIndex)) continue;
+      for (var slotIndex = 0; slotIndex < DRONE_SLOT_COUNT; slotIndex++) {
+        if (!occupied[slotIndex]) {
+          pending.slotIndex = slotIndex;
+          occupied[slotIndex] = true;
+          break;
+        }
+      }
+    }
+  }
+
+  function getHangarRect(state, options) {
+    var boardRect = options && options.boardRect && typeof options.boardRect === 'object'
+      ? options.boardRect
+      : (state && state.boardRect && typeof state.boardRect === 'object' ? state.boardRect : null);
+    if (boardRect
+      && Number.isFinite(boardRect.x)
+      && Number.isFinite(boardRect.y)
+      && Number.isFinite(boardRect.w)
+      && Number.isFinite(boardRect.h)
+      && boardRect.w > 0
+      && boardRect.h > 0) {
+      return {
+        x: boardRect.x,
+        y: boardRect.y,
+        w: boardRect.w,
+        h: boardRect.h,
+      };
+    }
+
+    var sc = state && state.supercomputer && typeof state.supercomputer === 'object' ? state.supercomputer : null;
+    var fallbackW = 196;
+    var fallbackH = 196;
+    var baseX = Number.isFinite(sc && sc.x) ? sc.x : fallbackW * 0.5;
+    var baseY = Number.isFinite(sc && sc.y) ? sc.y : fallbackH * 0.5;
+    return {
+      x: baseX - fallbackW * 0.5,
+      y: baseY - fallbackH - 72,
+      w: fallbackW,
+      h: fallbackH,
+    };
+  }
+
+  function getDroneSlotsLayout(state, options) {
+    var rect = getHangarRect(state, options);
+    var balScale = Number.isFinite(options && options.balScale) ? Math.max(0.5, options.balScale) : 1;
+    var slotSize = clamp(Math.min(rect.w, rect.h) * 0.24, 30 * balScale, 58 * balScale);
+    var sideGap = Math.max(8, slotSize * 0.22);
+    var topOffset = Math.max(12, slotSize * 0.78);
+    var laneStepX = rect.w / 3;
+    var laneStepY = rect.h / 3;
+    var slots = [];
+
+    for (var i = 0; i < DRONE_SLOT_LAYOUT.length; i++) {
+      var def = DRONE_SLOT_LAYOUT[i];
+      var cx = rect.x + laneStepX * (def.lane + 0.5);
+      var cy = rect.y + laneStepY * (def.lane + 0.5);
+      if (def.side === 'top') {
+        cy = rect.y - topOffset;
+      } else if (def.side === 'left') {
+        cx = rect.x - slotSize * 0.72 - sideGap;
+      } else if (def.side === 'right') {
+        cx = rect.x + rect.w + slotSize * 0.72 + sideGap;
+      }
+      slots.push({
+        slotIndex: def.slotIndex,
+        side: def.side,
+        lane: def.lane,
+        cx: cx,
+        cy: cy,
+        x: cx - slotSize * 0.5,
+        y: cy - slotSize * 0.5,
+        w: slotSize,
+        h: slotSize,
+      });
+    }
+
+    return slots;
+  }
+
+  function syncDroneBasePositionFromSlot(state, drone, options) {
+    if (!drone || !isValidSlotIndex(drone.slotIndex)) return false;
+    var slots = getDroneSlotsLayout(state, options);
+    var slot = slots[drone.slotIndex];
+    if (!slot) return false;
+
+    if (!drone.basePos || typeof drone.basePos !== 'object') {
+      drone.basePos = { x: slot.cx, y: slot.cy };
+    } else {
+      drone.basePos.x = slot.cx;
+      drone.basePos.y = slot.cy;
+    }
+
+    if (!drone.pos || typeof drone.pos !== 'object') {
+      drone.pos = { x: slot.cx, y: slot.cy };
+    }
+    return true;
+  }
+
+  function snapDroneToAssignedSlot(state, drone, options) {
+    if (!syncDroneBasePositionFromSlot(state, drone, options)) return false;
+    drone.pos.x = drone.basePos.x;
+    drone.pos.y = drone.basePos.y;
+    return true;
   }
 
   function ensureRepairClaimsStore(state) {
@@ -123,9 +287,14 @@
   }
 
   function normalizeBasePosition(state, drone) {
+    var resolvedBySlot = syncDroneBasePositionFromSlot(state, drone, null);
     var sc = state && state.supercomputer && typeof state.supercomputer === 'object' ? state.supercomputer : null;
-    var baseX = Number.isFinite(sc && sc.x) ? sc.x : Number.isFinite(drone.basePos && drone.basePos.x) ? drone.basePos.x : 0;
-    var baseY = Number.isFinite(sc && sc.y) ? sc.y : Number.isFinite(drone.basePos && drone.basePos.y) ? drone.basePos.y : 0;
+    var baseX = resolvedBySlot
+      ? drone.basePos.x
+      : (Number.isFinite(sc && sc.x) ? sc.x : Number.isFinite(drone.basePos && drone.basePos.x) ? drone.basePos.x : 0);
+    var baseY = resolvedBySlot
+      ? drone.basePos.y
+      : (Number.isFinite(sc && sc.y) ? sc.y : Number.isFinite(drone.basePos && drone.basePos.y) ? drone.basePos.y : 0);
     drone.basePos = drone.basePos && typeof drone.basePos === 'object' ? drone.basePos : { x: baseX, y: baseY };
     drone.basePos.x = baseX;
     drone.basePos.y = baseY;
@@ -149,6 +318,7 @@
       targetSegmentId: src.targetSegmentId != null ? src.targetSegmentId : null,
       reservedSegmentId: src.reservedSegmentId != null ? src.reservedSegmentId : null,
       repair: src.repair && typeof src.repair === 'object' ? src.repair : null,
+      slotIndex: isValidSlotIndex(src.slotIndex) ? src.slotIndex : null,
       patrolSeed: Number.isFinite(src.patrolSeed) ? src.patrolSeed : Math.random() * Math.PI * 2,
       nextRepairScanAtSec: Number.isFinite(src.nextRepairScanAtSec) ? src.nextRepairScanAtSec : 0,
       patrolPerimeterProgressPx: Number.isFinite(src.patrolPerimeterProgressPx) ? src.patrolPerimeterProgressPx : Math.random() * 100,
@@ -184,6 +354,12 @@
         drone.substate = SUBSTATE_REPAIR_PATROL;
       }
       state.drones.push(drone);
+    }
+    assignMissingDroneSlots(state);
+    for (var j = 0; j < state.drones.length; j++) {
+      var restored = state.drones[j];
+      if (!restored) continue;
+      if (restored.mode !== MODE_REPAIR) snapDroneToAssignedSlot(state, restored, null);
     }
   }
 
@@ -659,6 +835,7 @@
     var state = opts.state;
     if (!state) return;
     ensureState(state);
+    assignMissingDroneSlots(state);
     ensureReservationConsistency(state);
 
     var dt = Number.isFinite(opts.dt) ? Math.max(0, opts.dt) : 0;
@@ -683,16 +860,37 @@
     }
   }
 
+  function tryAbsorbIncomingDroneIntoFullSlots(state, level, maxLevel) {
+    if (!state || !Array.isArray(state.drones)) return null;
+    for (var i = 0; i < state.drones.length; i++) {
+      var drone = state.drones[i];
+      if (!drone || !isValidSlotIndex(drone.slotIndex) || drone.level !== level) continue;
+      drone.level = clamp(drone.level + 1, 1, Math.max(1, maxLevel));
+      setStandbyMode(state, drone);
+      snapDroneToAssignedSlot(state, drone, null);
+      return drone;
+    }
+    return null;
+  }
+
   function addDron(state, level, options) {
     ensureState(state);
+    assignMissingDroneSlots(state);
+
     var opts = options || {};
     var dronConfig = opts.dronConfig || {};
-    var maxLevel = Number.isFinite(dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 1;
+    var maxLevel = Number.isFinite(dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
     var lvl = clamp(toSafeInt(level, 1), 1, maxLevel);
+    var freeSlotIndex = findFirstFreeSlotIndex(state);
+    if (freeSlotIndex == null) {
+      return tryAbsorbIncomingDroneIntoFullSlots(state, lvl, maxLevel);
+    }
+
     var drone = sanitizeDrone(state, {
       level: lvl,
       mode: MODE_STANDBY,
       substate: SUBSTATE_REPAIR_PATROL,
+      slotIndex: freeSlotIndex,
       basePos: state.supercomputer ? { x: state.supercomputer.x, y: state.supercomputer.y } : { x: 0, y: 0 },
       pos: state.supercomputer ? { x: state.supercomputer.x, y: state.supercomputer.y } : { x: 0, y: 0 },
       patrolSeed: Math.random() * Math.PI * 2,
@@ -700,27 +898,9 @@
       patrolPerimeterProgressPx: Math.random() * 100,
     }, lvl);
 
-    var idx = state.drones.length;
-    drone.pos.x += ((idx % 3) - 1) * 18;
-    drone.pos.y += (Math.floor(idx / 3) % 3) * 12;
     state.drones.push(drone);
+    snapDroneToAssignedSlot(state, drone, opts);
     return drone;
-  }
-
-  function getIconsLayout(drone, dronConfig, balScale) {
-    var iconSize = dronConfig && dronConfig.iconSize ? dronConfig.iconSize : { w: 20, h: 20 };
-    var iconW = Math.max(10, (Number(iconSize.w) || 20) * balScale);
-    var iconH = Math.max(10, (Number(iconSize.h) || 20) * balScale);
-    var offsetY = (Number.isFinite(dronConfig && dronConfig.iconsOffsetY) ? dronConfig.iconsOffsetY : -32) * balScale;
-    var gap = Math.max(3, 4 * balScale);
-    var totalW = iconW * 2 + gap;
-    var leftX = drone.pos.x - totalW * 0.5;
-    var topY = drone.pos.y + offsetY;
-
-    return {
-      standby: { x: leftX, y: topY, w: iconW, h: iconH },
-      repair: { x: leftX + iconW + gap, y: topY, w: iconW, h: iconH },
-    };
   }
 
   function drawRoundedRect(ctx, x, y, w, h, r) {
@@ -734,22 +914,60 @@
     ctx.closePath();
   }
 
-  function drawIcon(ctx, rect, glyph, active, disabled) {
-    var bg = disabled ? 'rgba(48,48,48,0.7)' : active ? 'rgba(255,184,114,0.35)' : 'rgba(20,26,36,0.72)';
-    var stroke = active ? 'rgba(255,219,160,0.95)' : 'rgba(255,255,255,0.35)';
+  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec) {
+    var isSelected = _selectedSlotIndex === slot.slotIndex;
+    var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
+    var fill = drone ? 'rgba(19, 28, 36, 0.92)' : 'rgba(12, 16, 22, 0.72)';
+    var stroke = drone
+      ? (drone.mode === MODE_REPAIR ? 'rgba(255,181,112,0.96)' : 'rgba(123,224,255,0.92)')
+      : 'rgba(154,176,198,0.36)';
+    var glow = drone
+      ? (drone.mode === MODE_REPAIR ? 'rgba(255,156,84,0.22)' : 'rgba(74,195,255,0.2)')
+      : 'rgba(0,0,0,0)';
+    var pulse = drone ? (1 + Math.sin(timeSec * (drone.mode === MODE_REPAIR ? 5.2 : 2.4) + slot.slotIndex) * 0.04) : 1;
+
     ctx.save();
-    drawRoundedRect(ctx, rect.x, rect.y, rect.w, rect.h, Math.max(3, rect.h * 0.22));
-    ctx.fillStyle = bg;
+    ctx.shadowBlur = drone ? Math.max(6, 14 * balScale * pulse) : 0;
+    ctx.shadowColor = glow;
+    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, Math.max(7, slot.w * 0.16));
+    ctx.fillStyle = fill;
     ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = stroke;
+    ctx.shadowBlur = 0;
+
+    ctx.lineWidth = isSelected ? Math.max(2, 2.4 * balScale) : Math.max(1, 1.5 * balScale);
+    ctx.strokeStyle = isDragSource ? 'rgba(255,236,179,0.98)' : stroke;
     ctx.stroke();
-    ctx.globalAlpha = disabled ? 0.55 : 1;
-    ctx.font = Math.floor(Math.max(10, rect.h * 0.7)) + 'px system-ui, Segoe UI Emoji, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#f4f6fb';
-    ctx.fillText(glyph, rect.x + rect.w * 0.5, rect.y + rect.h * 0.52);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    drawRoundedRect(ctx, slot.x + 2, slot.y + 2, Math.max(0, slot.w - 4), Math.max(0, slot.h - 4), Math.max(5, slot.w * 0.12));
+    ctx.stroke();
+
+    if (drone) {
+      ctx.fillStyle = drone.mode === MODE_REPAIR ? 'rgba(255,193,122,0.95)' : 'rgba(156,230,255,0.95)';
+      ctx.beginPath();
+      ctx.arc(slot.x + slot.w - 8 * balScale, slot.y + 8 * balScale, Math.max(2.5, 3.5 * balScale), 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(7,10,14,0.92)';
+      drawRoundedRect(ctx, slot.x + 5 * balScale, slot.y + slot.h - 15 * balScale, Math.max(14, 16 * balScale), Math.max(9, 10 * balScale), Math.max(3, 4 * balScale));
+      ctx.fill();
+      ctx.fillStyle = '#f4fbff';
+      ctx.font = Math.floor(Math.max(8, 9 * balScale)) + 'px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(drone.level), slot.x + 13 * balScale, slot.y + slot.h - 10 * balScale);
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(slot.cx, slot.y + slot.h * 0.27);
+      ctx.lineTo(slot.x + slot.w * 0.32, slot.y + slot.h * 0.68);
+      ctx.lineTo(slot.x + slot.w * 0.68, slot.y + slot.h * 0.68);
+      ctx.closePath();
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -794,25 +1012,88 @@
 
     var balScale = Number.isFinite(opts.balScale) ? opts.balScale : 1;
     var nowSec = Number.isFinite(opts.nowSec) ? opts.nowSec : 0;
-    var dronConfig = opts.dronConfig || {};
+    assignMissingDroneSlots(state);
+    var slots = getDroneSlotsLayout(state, opts);
+
+    for (var slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+      var slot = slots[slotIndex];
+      var slotDrone = getDroneBySlotIndex(state, slot.slotIndex);
+      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec);
+    }
 
     for (var i = 0; i < state.drones.length; i++) {
       var drone = state.drones[i];
       if (!drone) continue;
 
+      if (_slotDragState && _slotDragState.moved && drone.slotIndex === _slotDragState.slotIndex) continue;
       drawDroneBody(ctx, drone, nowSec, balScale, opts.dronSprites);
+    }
 
-      var layout = getIconsLayout(drone, dronConfig, balScale);
-      drawIcon(ctx, layout.standby, '⏳', drone.mode === MODE_STANDBY, false);
-      drawIcon(ctx, layout.repair, '🔧', drone.mode === MODE_REPAIR, false);
-
-      drone._iconLayout = layout;
-      drone._repairEnabled = true;
+    if (_slotDragState && _slotDragState.moved) {
+      var draggingDrone = getDroneBySlotIndex(state, _slotDragState.slotIndex);
+      if (draggingDrone) {
+        var ghostDrone = {
+          pos: { x: _slotDragState.x, y: _slotDragState.y },
+          mode: draggingDrone.mode,
+          substate: draggingDrone.substate,
+        };
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        drawDroneBody(ctx, ghostDrone, nowSec, balScale, opts.dronSprites);
+        ctx.restore();
+      }
     }
   }
 
   function hitRect(rect, x, y) {
     return rect && x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+  }
+
+  function getSlotAtPoint(state, x, y, options) {
+    var slots = getDroneSlotsLayout(state, options);
+    for (var i = 0; i < slots.length; i++) {
+      if (hitRect(slots[i], x, y)) return slots[i];
+    }
+    return null;
+  }
+
+  function toggleSlotDroneMode(state, drone, fenceRepairCost, dronConfig, nowSec) {
+    if (!drone) return false;
+    if (drone.mode === MODE_REPAIR) {
+      setStandbyMode(state, drone);
+      snapDroneToAssignedSlot(state, drone, null);
+      return true;
+    }
+    if (tryEnableRepairMode(state, drone, fenceRepairCost, dronConfig, nowSec)) return true;
+    return false;
+  }
+
+  function removeDroneById(state, droneId) {
+    if (!state || !Array.isArray(state.drones)) return false;
+    for (var i = 0; i < state.drones.length; i++) {
+      if (state.drones[i] && state.drones[i].id === droneId) {
+        state.drones.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function moveDroneToSlot(state, drone, slotIndex) {
+    if (!drone || !isValidSlotIndex(slotIndex)) return false;
+    drone.slotIndex = slotIndex;
+    if (drone.mode !== MODE_REPAIR) snapDroneToAssignedSlot(state, drone, null);
+    return true;
+  }
+
+  function mergeDroneSlots(state, sourceDrone, targetDrone, dronConfig) {
+    if (!sourceDrone || !targetDrone) return false;
+    var maxLevel = Number.isFinite(dronConfig && dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
+    targetDrone.level = clamp(targetDrone.level + 1, 1, maxLevel);
+    setStandbyMode(state, targetDrone);
+    snapDroneToAssignedSlot(state, targetDrone, null);
+    removeDroneById(state, sourceDrone.id);
+    return true;
   }
 
   function tryEnableRepairMode(state, drone, fenceRepairCost, dronConfig, nowSec) {
@@ -826,36 +1107,78 @@
     var opts = options || {};
     var state = opts.state;
     if (!state || !Array.isArray(state.drones)) return { handled: false, changed: false };
-    var x = opts.x;
-    var y = opts.y;
-    var balScale = Number.isFinite(opts.balScale) ? opts.balScale : 1;
-    var dronConfig = opts.dronConfig || {};
-    var nowSec = Number.isFinite(opts.nowSec) ? opts.nowSec : 0;
+    assignMissingDroneSlots(state);
 
-    for (var i = state.drones.length - 1; i >= 0; i--) {
-      var drone = state.drones[i];
-      if (!drone) continue;
-      var layout = drone._iconLayout || getIconsLayout(drone, dronConfig, balScale);
+    var slot = getSlotAtPoint(state, opts.x, opts.y, opts);
+    if (!slot) return { handled: false, changed: false };
 
-      if (hitRect(layout.standby, x, y)) {
-        if (drone.mode !== MODE_STANDBY || drone.substate !== SUBSTATE_REPAIR_PATROL) {
-          setStandbyMode(state, drone);
-          return { handled: true, changed: true };
-        }
-        return { handled: true, changed: false };
-      }
+    _selectedSlotIndex = slot.slotIndex;
+    var drone = getDroneBySlotIndex(state, slot.slotIndex);
+    if (drone) {
+      _slotDragState = {
+        slotIndex: slot.slotIndex,
+        startX: opts.x,
+        startY: opts.y,
+        x: opts.x,
+        y: opts.y,
+        moved: false,
+      };
+    }
+    return { handled: true, changed: false };
+  }
 
-      if (hitRect(layout.repair, x, y)) {
-        if (drone.mode === MODE_REPAIR) {
-          setStandbyMode(state, drone);
-          return { handled: true, changed: true };
-        }
-        if (tryEnableRepairMode(state, drone, opts.fenceRepairCost, dronConfig, nowSec)) return { handled: true, changed: true };
-        return { handled: true, changed: false };
-      }
+  function handlePointerMove(options) {
+    if (!_slotDragState) return { handled: false, changed: false };
+    var opts = options || {};
+    var dx = opts.x - _slotDragState.startX;
+    var dy = opts.y - _slotDragState.startY;
+    if (!_slotDragState.moved && Math.hypot(dx, dy) > DRONE_SLOT_DRAG_THRESHOLD_PX) {
+      _slotDragState.moved = true;
+    }
+    _slotDragState.x = opts.x;
+    _slotDragState.y = opts.y;
+    return { handled: true, changed: _slotDragState.moved };
+  }
+
+  function handlePointerUp(options) {
+    if (!_slotDragState) return { handled: false, changed: false };
+
+    var opts = options || {};
+    var state = opts.state;
+    var sourceSlotIndex = _slotDragState.slotIndex;
+    var wasMoved = _slotDragState.moved;
+    _slotDragState = null;
+
+    if (!state || !Array.isArray(state.drones)) return { handled: true, changed: false };
+    assignMissingDroneSlots(state);
+
+    var sourceDrone = getDroneBySlotIndex(state, sourceSlotIndex);
+    if (!sourceDrone) return { handled: true, changed: false };
+
+    if (!wasMoved) {
+      return {
+        handled: true,
+        changed: toggleSlotDroneMode(state, sourceDrone, opts.fenceRepairCost, opts.dronConfig || {}, Number.isFinite(opts.nowSec) ? opts.nowSec : 0),
+      };
     }
 
-    return { handled: false, changed: false };
+    var targetSlot = getSlotAtPoint(state, opts.x, opts.y, opts);
+    if (!targetSlot || targetSlot.slotIndex === sourceSlotIndex) {
+      if (sourceDrone.mode !== MODE_REPAIR) snapDroneToAssignedSlot(state, sourceDrone, opts);
+      return { handled: true, changed: false };
+    }
+
+    var targetDrone = getDroneBySlotIndex(state, targetSlot.slotIndex);
+    if (!targetDrone) {
+      return { handled: true, changed: moveDroneToSlot(state, sourceDrone, targetSlot.slotIndex) };
+    }
+
+    if (targetDrone.level === sourceDrone.level) {
+      return { handled: true, changed: mergeDroneSlots(state, sourceDrone, targetDrone, opts.dronConfig || {}) };
+    }
+
+    if (sourceDrone.mode !== MODE_REPAIR) snapDroneToAssignedSlot(state, sourceDrone, opts);
+    return { handled: true, changed: false };
   }
 
   global.Game = global.Game || {};
@@ -876,9 +1199,13 @@
     getDroneLevelConfig: getDroneLevelConfig,
     evaluateRepairAction: evaluateRepairAction,
     tryEnableRepairMode: tryEnableRepairMode,
+    DRONE_SLOT_COUNT: DRONE_SLOT_COUNT,
+    isSlotIndexValid: isValidSlotIndex,
     addDron: addDron,
     step: step,
     draw: draw,
     handlePointerDown: handlePointerDown,
+    handlePointerMove: handlePointerMove,
+    handlePointerUp: handlePointerUp,
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -2102,6 +2102,18 @@ function normalizeAndTeleportDronesAfterRestore(stateRef){
     const drone = targetState.drones[i];
     if (!drone || typeof drone !== 'object') continue;
 
+    const hasAssignedSlot = DronesApi
+      && typeof DronesApi.isSlotIndexValid === 'function'
+      && DronesApi.isSlotIndexValid(drone.slotIndex);
+    if (hasAssignedSlot) {
+      drone.targetSegmentId = null;
+      drone.reservedSegmentId = null;
+      drone.repair = null;
+      if (drone.mode === 'repair') drone.substate = DronesApi && DronesApi.SUBSTATE_REPAIR_PATROL ? DronesApi.SUBSTATE_REPAIR_PATROL : 'repair_patrol';
+      drone.nextRepairScanAtSec = 0;
+      continue;
+    }
+
     const col = i % cols;
     const row = Math.floor(i / cols);
     const offsetX = (col - ((cols - 1) * 0.5)) * stepX;
@@ -9083,6 +9095,7 @@ canvas.addEventListener('pointerdown', (e)=>{
       y: p.y,
       nowSec: nowSec(),
       balScale,
+      boardRect: state.boardRect,
       dronConfig: getDronRuntimeConfig(),
       fenceRepairCost: getFenceRepairCostCoins(),
     });
@@ -9171,6 +9184,19 @@ canvas.addEventListener('pointermove', (e)=>{
     state.dragging = null;
     return;
   }
+  if (DronesApi && typeof DronesApi.handlePointerMove === 'function') {
+    const dronMove = DronesApi.handlePointerMove({
+      state,
+      x: p.x,
+      y: p.y,
+      nowSec: nowSec(),
+      balScale,
+      boardRect: state.boardRect,
+      dronConfig: getDronRuntimeConfig(),
+      fenceRepairCost: getFenceRepairCostCoins(),
+    });
+    if (dronMove && dronMove.handled) return;
+  }
   if (!state.dragging) return;
   const dx = p.x - state.dragging.startX;
   const dy = p.y - state.dragging.startY;
@@ -9191,6 +9217,22 @@ canvas.addEventListener('pointerup', (e)=>{
   if (isLevelModalOpen()) {
     state.dragging = null;
     return;
+  }
+  if (DronesApi && typeof DronesApi.handlePointerUp === 'function') {
+    const dronUp = DronesApi.handlePointerUp({
+      state,
+      x: p.x,
+      y: p.y,
+      nowSec: nowSec(),
+      balScale,
+      boardRect: state.boardRect,
+      dronConfig: getDronRuntimeConfig(),
+      fenceRepairCost: getFenceRepairCostCoins(),
+    });
+    if (dronUp && dronUp.handled) {
+      if (dronUp.changed) updateUI();
+      return;
+    }
   }
   if (!state.dragging) return;
   const target = cellAt(p.x, p.y);
@@ -9717,27 +9759,125 @@ function drawSupercomputerSpriteClip(sc, config, anim, elapsedSec){
   return true;
 }
 
-function drawSupercomputerHpBar(sc, hpBarCfg){
-  const barW = Number.isFinite(hpBarCfg && hpBarCfg.width) ? hpBarCfg.width * balScale : 92 * balScale;
-  const barH = Number.isFinite(hpBarCfg && hpBarCfg.height) ? hpBarCfg.height * balScale : 8 * balScale;
-  const offsetY = Number.isFinite(hpBarCfg && hpBarCfg.offsetY) ? hpBarCfg.offsetY * balScale : -56 * balScale;
-  const maxHp = Math.max(1, Number.isFinite(sc.maxHp) ? sc.maxHp : 1);
-  const hp = clamp(Number.isFinite(sc.hp) ? sc.hp : 0, 0, maxHp);
-  const ratio = hp / maxHp;
+function drawSupercomputerHpBar(sc, config){
+  const hpBarCfg = config && config.hpBar ? config.hpBar : config;
+  const visual = SupercomputerApi && typeof SupercomputerApi.resolveHpBarVisual === 'function'
+    ? SupercomputerApi.resolveHpBarVisual(config || { hpBar: hpBarCfg || null }, sc, nowSec())
+    : null;
+  const ratio = visual ? visual.ratio : (Math.max(0, Math.min(1, (Number(sc.hp) || 0) / Math.max(1, Number(sc.maxHp) || 1))));
+  const barW = (visual ? visual.width : (Number.isFinite(hpBarCfg && hpBarCfg.width) ? hpBarCfg.width : 92)) * balScale;
+  const barH = (visual ? visual.height : (Number.isFinite(hpBarCfg && hpBarCfg.height) ? hpBarCfg.height : 8)) * balScale;
+  const offsetY = (visual ? visual.offsetY : (Number.isFinite(hpBarCfg && hpBarCfg.offsetY) ? hpBarCfg.offsetY : -56)) * balScale;
+  const radius = Math.max(3, (visual ? visual.frameRadius : 7) * balScale);
+  const pulse = visual ? visual.pulse : 1;
+  const phase = visual && visual.phase ? visual.phase : {
+    fillStart: '#8effbe',
+    fillEnd: '#32d38c',
+    glow: 'rgba(98,255,172,0.42)',
+    frame: 'rgba(168,255,218,0.88)',
+    shadow: 'rgba(24,96,68,0.72)',
+    scanAlpha: 0.18,
+    hazardAlpha: 0.04,
+    sparkCount: 1,
+    noiseAlpha: 0.04,
+  };
+  const fillW = Math.max(0, Math.min(barW, barW * ratio));
+  const time = nowSec();
 
   ctx.save();
   ctx.translate(sc.x, sc.y + offsetY);
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  rr(ctx, -barW * 0.5, -barH * 0.5, barW, barH, Math.max(2, barH * 0.5));
+
+  ctx.shadowBlur = Math.max(10, 18 * pulse * balScale);
+  ctx.shadowColor = phase.glow;
+  ctx.fillStyle = phase.shadow;
+  rr(ctx, -barW * 0.5 - 2, -barH * 0.5 - 2, barW + 4, barH + 4, radius + 2);
   ctx.fill();
-  if (ratio > 0) {
-    ctx.fillStyle = 'rgba(104,224,128,0.95)';
-    rr(ctx, -barW * 0.5, -barH * 0.5, barW * ratio, barH, Math.max(2, barH * 0.5));
-    ctx.fill();
+
+  ctx.shadowBlur = 0;
+  const bgGradient = ctx.createLinearGradient(-barW * 0.5, 0, barW * 0.5, 0);
+  bgGradient.addColorStop(0, 'rgba(8, 11, 16, 0.96)');
+  bgGradient.addColorStop(0.5, 'rgba(19, 24, 33, 0.98)');
+  bgGradient.addColorStop(1, 'rgba(6, 8, 12, 0.96)');
+  ctx.fillStyle = bgGradient;
+  rr(ctx, -barW * 0.5, -barH * 0.5, barW, barH, radius);
+  ctx.fill();
+
+  ctx.save();
+  rr(ctx, -barW * 0.5 + 1, -barH * 0.5 + 1, barW - 2, barH - 2, Math.max(2, radius - 1));
+  ctx.clip();
+
+  if (phase.hazardAlpha > 0) {
+    ctx.strokeStyle = 'rgba(255,255,255,' + phase.hazardAlpha + ')';
+    ctx.lineWidth = Math.max(1, 2 * balScale);
+    for (let stripeX = -barW; stripeX < barW * 1.5; stripeX += Math.max(8, 12 * balScale)) {
+      const drift = (time * 22 * balScale) % Math.max(8, 12 * balScale);
+      ctx.beginPath();
+      ctx.moveTo(stripeX + drift, -barH);
+      ctx.lineTo(stripeX + drift + barH * 1.6, barH);
+      ctx.stroke();
+    }
   }
-  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+
+  if (fillW > 0) {
+    const fillGradient = ctx.createLinearGradient(-barW * 0.5, 0, -barW * 0.5 + fillW, 0);
+    fillGradient.addColorStop(0, phase.fillStart);
+    fillGradient.addColorStop(0.55, phase.fillEnd);
+    fillGradient.addColorStop(1, 'rgba(255,255,255,0.86)');
+    ctx.fillStyle = fillGradient;
+    rr(ctx, -barW * 0.5, -barH * 0.5, fillW, barH, radius);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    rr(ctx, -barW * 0.5 + 2, -barH * 0.5 + 1, Math.max(0, fillW - 4), Math.max(1, barH * 0.34), Math.max(1, radius - 2));
+    ctx.fill();
+
+    const scanWidth = Math.max(10, fillW * 0.18);
+    const scanX = -barW * 0.5 + ((time * 48 * balScale) % Math.max(scanWidth + fillW, 1)) - scanWidth;
+    const scanGradient = ctx.createLinearGradient(scanX, 0, scanX + scanWidth, 0);
+    scanGradient.addColorStop(0, 'rgba(255,255,255,0)');
+    scanGradient.addColorStop(0.5, 'rgba(255,255,255,' + phase.scanAlpha + ')');
+    scanGradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = scanGradient;
+    ctx.fillRect(-barW * 0.5, -barH * 0.5, fillW, barH);
+
+    if (phase.noiseAlpha > 0) {
+      ctx.fillStyle = 'rgba(255,255,255,' + phase.noiseAlpha + ')';
+      const noiseStep = Math.max(3, Math.round(5 * balScale));
+      for (let noiseX = 0; noiseX < fillW; noiseX += noiseStep) {
+        const wave = Math.sin(time * 7 + noiseX * 0.21);
+        const alpha = Math.max(0.02, phase.noiseAlpha * (0.45 + wave * 0.55));
+        ctx.fillStyle = 'rgba(255,255,255,' + alpha.toFixed(3) + ')';
+        ctx.fillRect(-barW * 0.5 + noiseX, -barH * 0.5 + 1, Math.max(1, noiseStep - 1), Math.max(1, barH - 2));
+      }
+    }
+  }
+
+  ctx.restore();
+
+  if (phase.sparkCount > 0 && fillW > 0) {
+    const sparkBaseX = -barW * 0.5 + fillW;
+    for (let sparkIndex = 0; sparkIndex < phase.sparkCount; sparkIndex++) {
+      const seed = sparkIndex * 1.73 + 0.4;
+      const sparkY = Math.sin(time * (4.5 + sparkIndex) + seed) * Math.max(2, barH * 0.85);
+      const sparkLen = Math.max(4, (6 + sparkIndex * 2) * balScale * pulse);
+      const sparkAlpha = Math.max(0.12, 0.42 - sparkIndex * 0.05);
+      ctx.strokeStyle = 'rgba(255,240,210,' + sparkAlpha.toFixed(3) + ')';
+      ctx.lineWidth = Math.max(1, 1.1 * balScale);
+      ctx.beginPath();
+      ctx.moveTo(sparkBaseX - sparkLen * 0.35, sparkY - sparkLen * 0.2);
+      ctx.lineTo(sparkBaseX + sparkLen * 0.65, sparkY + sparkLen * 0.25);
+      ctx.stroke();
+    }
+  }
+
+  ctx.strokeStyle = phase.frame;
+  ctx.lineWidth = Math.max(1, 1.2 * balScale);
+  rr(ctx, -barW * 0.5, -barH * 0.5, barW, barH, radius);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
   ctx.lineWidth = 1;
-  rr(ctx, -barW * 0.5, -barH * 0.5, barW, barH, Math.max(2, barH * 0.5));
+  rr(ctx, -barW * 0.5 + 1.5, -barH * 0.5 + 1.5, Math.max(0, barW - 3), Math.max(0, barH - 3), Math.max(2, radius - 2));
   ctx.stroke();
   ctx.restore();
 }
@@ -9746,7 +9886,7 @@ function drawSupercomputerHpBarOverlay(){
   const sc = getComputerState();
   if (!sc) return;
   const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
-  drawSupercomputerHpBar(sc, config && config.hpBar ? config.hpBar : null);
+  drawSupercomputerHpBar(sc, config);
 }
 
 function drawSupercomputerFallback(sc){
@@ -10151,6 +10291,7 @@ function drawDrones(){
     ctx,
     nowSec: nowSec(),
     balScale,
+    boardRect: state.boardRect,
     dronConfig: getDronRuntimeConfig(),
     dronSprites: DronSprites,
     fenceRepairCost: getFenceRepairCostCoins(),
@@ -11576,6 +11717,7 @@ function loop(now){
         nowSec: nowSec(),
         fenceRepairCost: getFenceRepairCostCoins(),
         dronConfig: getDronRuntimeConfig(),
+        boardRect: state.boardRect,
         fenceOrigin: center,
         worldBounds: { minX: 0, minY: 0, maxX: viewSize.w, maxY: viewSize.h },
         onFenceSegmentStateChanged: syncFenceBreachForSegment,

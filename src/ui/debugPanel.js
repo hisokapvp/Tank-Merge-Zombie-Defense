@@ -391,11 +391,15 @@
           /* Force-unlock: skip prerequisites */
           var chips = UI ? UI.getPlayerChips() : [];
           var cells = UI ? UI.getCells() : [];
-          var result = HC.unlockTechnology(modId, chips, cells);
+          var fragments = UI && typeof UI.getPlayerFragments === 'function' ? UI.getPlayerFragments() : [];
+          var result = HC.unlockTechnology(modId, chips, cells, fragments);
           if (result && result.ok) {
             debugLog('info', 'Updates: technology ' + modId + ' learned (forced via debug).');
-            if (UI && typeof UI.renderTechUnlockPanel === 'function') UI.renderTechUnlockPanel();
-            if (UI && typeof UI.renderChipUpgradeGrid === 'function') UI.renderChipUpgradeGrid();
+            if (UI && typeof UI.render === 'function') UI.render();
+            else {
+              if (UI && typeof UI.renderTechUnlockPanel === 'function') UI.renderTechUnlockPanel();
+              if (UI && typeof UI.renderChipUpgradeGrid === 'function') UI.renderChipUpgradeGrid();
+            }
           } else {
             /* If unlockTechnology requires prereqs, try a manual override */
             if (HC._debugForceUnlockTech) {

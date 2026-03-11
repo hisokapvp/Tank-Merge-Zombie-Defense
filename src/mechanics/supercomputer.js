@@ -68,6 +68,136 @@
     return anim.frames / anim.frameRateFps;
   }
 
+  var DEFAULT_HP_BAR_PHASES = [
+    {
+      minRatio: 0.8,
+      fillStart: '#8effbe',
+      fillEnd: '#32d38c',
+      glow: 'rgba(98,255,172,0.42)',
+      frame: 'rgba(168,255,218,0.88)',
+      shadow: 'rgba(24,96,68,0.72)',
+      pulseAmp: 0.03,
+      pulseHz: 1.25,
+      scanAlpha: 0.18,
+      hazardAlpha: 0.04,
+      sparkCount: 1,
+      noiseAlpha: 0.04
+    },
+    {
+      minRatio: 0.6,
+      fillStart: '#7ff0ff',
+      fillEnd: '#2fb6ff',
+      glow: 'rgba(76,212,255,0.44)',
+      frame: 'rgba(162,236,255,0.9)',
+      shadow: 'rgba(18,66,92,0.78)',
+      pulseAmp: 0.05,
+      pulseHz: 1.8,
+      scanAlpha: 0.22,
+      hazardAlpha: 0.06,
+      sparkCount: 2,
+      noiseAlpha: 0.06
+    },
+    {
+      minRatio: 0.4,
+      fillStart: '#ffd36f',
+      fillEnd: '#ff8f3a',
+      glow: 'rgba(255,171,72,0.46)',
+      frame: 'rgba(255,224,154,0.92)',
+      shadow: 'rgba(98,56,12,0.82)',
+      pulseAmp: 0.08,
+      pulseHz: 2.4,
+      scanAlpha: 0.28,
+      hazardAlpha: 0.1,
+      sparkCount: 3,
+      noiseAlpha: 0.08
+    },
+    {
+      minRatio: 0.2,
+      fillStart: '#ff9a62',
+      fillEnd: '#ff4d4d',
+      glow: 'rgba(255,94,94,0.5)',
+      frame: 'rgba(255,194,170,0.94)',
+      shadow: 'rgba(116,28,28,0.88)',
+      pulseAmp: 0.12,
+      pulseHz: 3.1,
+      scanAlpha: 0.34,
+      hazardAlpha: 0.18,
+      sparkCount: 4,
+      noiseAlpha: 0.12
+    },
+    {
+      minRatio: 0,
+      fillStart: '#ff7d5d',
+      fillEnd: '#ff1d1d',
+      glow: 'rgba(255,54,54,0.6)',
+      frame: 'rgba(255,210,210,0.98)',
+      shadow: 'rgba(142,0,0,0.94)',
+      pulseAmp: 0.17,
+      pulseHz: 4.2,
+      scanAlpha: 0.42,
+      hazardAlpha: 0.28,
+      sparkCount: 5,
+      noiseAlpha: 0.18
+    }
+  ];
+
+  function resolveHpRatio(sc) {
+    var maxHp = Math.max(1, Number.isFinite(sc && sc.maxHp) ? sc.maxHp : 1);
+    var hp = clamp(Number.isFinite(sc && sc.hp) ? sc.hp : 0, 0, maxHp);
+    return hp / maxHp;
+  }
+
+  function resolveHpBarPhases(config) {
+    var phases = config && config.hpBar && Array.isArray(config.hpBar.phases)
+      ? config.hpBar.phases
+      : DEFAULT_HP_BAR_PHASES;
+    var normalized = [];
+
+    for (var i = 0; i < phases.length; i++) {
+      var phase = phases[i] && typeof phases[i] === 'object' ? phases[i] : {};
+      normalized.push({
+        minRatio: Number.isFinite(phase.minRatio) ? clamp(phase.minRatio, 0, 1) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].minRatio,
+        fillStart: typeof phase.fillStart === 'string' ? phase.fillStart : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].fillStart,
+        fillEnd: typeof phase.fillEnd === 'string' ? phase.fillEnd : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].fillEnd,
+        glow: typeof phase.glow === 'string' ? phase.glow : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].glow,
+        frame: typeof phase.frame === 'string' ? phase.frame : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].frame,
+        shadow: typeof phase.shadow === 'string' ? phase.shadow : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].shadow,
+        pulseAmp: Number.isFinite(phase.pulseAmp) ? Math.max(0, phase.pulseAmp) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].pulseAmp,
+        pulseHz: Number.isFinite(phase.pulseHz) ? Math.max(0, phase.pulseHz) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].pulseHz,
+        scanAlpha: Number.isFinite(phase.scanAlpha) ? clamp(phase.scanAlpha, 0, 1) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].scanAlpha,
+        hazardAlpha: Number.isFinite(phase.hazardAlpha) ? clamp(phase.hazardAlpha, 0, 1) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].hazardAlpha,
+        sparkCount: Number.isFinite(phase.sparkCount) ? Math.max(0, Math.floor(phase.sparkCount)) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].sparkCount,
+        noiseAlpha: Number.isFinite(phase.noiseAlpha) ? clamp(phase.noiseAlpha, 0, 1) : DEFAULT_HP_BAR_PHASES[Math.min(i, DEFAULT_HP_BAR_PHASES.length - 1)].noiseAlpha,
+      });
+    }
+
+    normalized.sort(function (left, right) { return right.minRatio - left.minRatio; });
+    return normalized;
+  }
+
+  function resolveHpBarVisual(config, sc, timeSec) {
+    var ratio = resolveHpRatio(sc);
+    var phases = resolveHpBarPhases(config);
+    var activePhase = phases[phases.length - 1];
+    for (var i = 0; i < phases.length; i++) {
+      if (ratio >= phases[i].minRatio) {
+        activePhase = phases[i];
+        break;
+      }
+    }
+
+    var hpBarCfg = config && config.hpBar ? config.hpBar : {};
+    return {
+      ratio: ratio,
+      width: toPositiveNumber(hpBarCfg.width, 92),
+      height: toPositiveNumber(hpBarCfg.height, 8),
+      offsetY: Number.isFinite(hpBarCfg.offsetY) ? hpBarCfg.offsetY : -56,
+      frameRadius: toPositiveNumber(hpBarCfg.frameRadius, 7),
+      pulse: 1 + Math.sin(Math.max(0, Number(timeSec) || 0) * activePhase.pulseHz * Math.PI * 2) * activePhase.pulseAmp,
+      phase: activePhase,
+    };
+  }
+
   function ensureSupercomputerState(sc, config, maxLevel) {
     if (!sc || typeof sc !== 'object') return null;
     var fallbackLevel = Number.isFinite(maxLevel) ? Math.max(1, Math.floor(maxLevel)) : 60;
@@ -256,6 +386,7 @@
       ensureSupercomputerState: ensureSupercomputerState,
       resolveStatsForLevel: resolveStatsForLevel,
       getAnimation: getAnimation,
+      resolveHpBarVisual: resolveHpBarVisual,
       syncLevel: syncLevel,
       onLevelChanged: onLevelChanged,
       setWantsBuildTank: setWantsBuildTank,
@@ -267,6 +398,7 @@
   global.Game = global.Game || {};
   global.Game.Supercomputer = {
     resolveStatsForLevel: resolveStatsForLevel,
+    resolveHpBarVisual: resolveHpBarVisual,
     createController: createController,
   };
 })(typeof window !== 'undefined' ? window : this);

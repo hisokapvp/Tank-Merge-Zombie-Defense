@@ -435,6 +435,7 @@
           level: Number.isFinite(d.level) ? Math.max(1, Math.floor(d.level)) : 1,
           mode: d.mode,
           substate: d.substate,
+          slotIndex: Number.isFinite(d.slotIndex) ? Math.max(0, Math.floor(d.slotIndex)) : null,
           pos: {
             x: Number.isFinite(d.pos && d.pos.x) ? d.pos.x : 0,
             y: Number.isFinite(d.pos && d.pos.y) ? d.pos.y : 0,

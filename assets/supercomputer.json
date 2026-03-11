@@ -9,7 +9,80 @@
   "hpBar": {
     "width": 92,
     "height": 8,
-    "offsetY": -50
+    "offsetY": -50,
+    "frameRadius": 7,
+    "phases": [
+      {
+        "minRatio": 0.8,
+        "fillStart": "#8effbe",
+        "fillEnd": "#32d38c",
+        "glow": "rgba(98,255,172,0.42)",
+        "frame": "rgba(168,255,218,0.88)",
+        "shadow": "rgba(24,96,68,0.72)",
+        "pulseAmp": 0.03,
+        "pulseHz": 1.25,
+        "scanAlpha": 0.18,
+        "hazardAlpha": 0.04,
+        "sparkCount": 1,
+        "noiseAlpha": 0.04
+      },
+      {
+        "minRatio": 0.6,
+        "fillStart": "#7ff0ff",
+        "fillEnd": "#2fb6ff",
+        "glow": "rgba(76,212,255,0.44)",
+        "frame": "rgba(162,236,255,0.9)",
+        "shadow": "rgba(18,66,92,0.78)",
+        "pulseAmp": 0.05,
+        "pulseHz": 1.8,
+        "scanAlpha": 0.22,
+        "hazardAlpha": 0.06,
+        "sparkCount": 2,
+        "noiseAlpha": 0.06
+      },
+      {
+        "minRatio": 0.4,
+        "fillStart": "#ffd36f",
+        "fillEnd": "#ff8f3a",
+        "glow": "rgba(255,171,72,0.46)",
+        "frame": "rgba(255,224,154,0.92)",
+        "shadow": "rgba(98,56,12,0.82)",
+        "pulseAmp": 0.08,
+        "pulseHz": 2.4,
+        "scanAlpha": 0.28,
+        "hazardAlpha": 0.1,
+        "sparkCount": 3,
+        "noiseAlpha": 0.08
+      },
+      {
+        "minRatio": 0.2,
+        "fillStart": "#ff9a62",
+        "fillEnd": "#ff4d4d",
+        "glow": "rgba(255,94,94,0.5)",
+        "frame": "rgba(255,194,170,0.94)",
+        "shadow": "rgba(116,28,28,0.88)",
+        "pulseAmp": 0.12,
+        "pulseHz": 3.1,
+        "scanAlpha": 0.34,
+        "hazardAlpha": 0.18,
+        "sparkCount": 4,
+        "noiseAlpha": 0.12
+      },
+      {
+        "minRatio": 0.0,
+        "fillStart": "#ff7d5d",
+        "fillEnd": "#ff1d1d",
+        "glow": "rgba(255,54,54,0.6)",
+        "frame": "rgba(255,210,210,0.98)",
+        "shadow": "rgba(142,0,0,0.94)",
+        "pulseAmp": 0.17,
+        "pulseHz": 4.2,
+        "scanAlpha": 0.42,
+        "hazardAlpha": 0.28,
+        "sparkCount": 5,
+        "noiseAlpha": 0.18
+      }
+    ]
   },
   "boostIcons": {
     "anchor": "top",

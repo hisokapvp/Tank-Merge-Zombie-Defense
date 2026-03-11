@@ -118,6 +118,59 @@
   /** Check if a modId is a tech-unlockable mod (15–30) */
   function isTechMod(modId) { return modId >= 15 && modId <= 30; }
 
+  function resolveLatestTechModId(modId) {
+    var current = Number.isFinite(modId) ? Math.floor(modId) : 0;
+    if (current <= 0) return current;
+
+    var advanced = true;
+    while (advanced) {
+      advanced = false;
+      var keys = Object.keys(TECH_TREE);
+      for (var k = 0; k < keys.length; k++) {
+        var chain = TECH_TREE[keys[k]];
+        for (var c = 0; c < chain.length; c++) {
+          if (chain[c].replacesModId === current && _unlockedTechs[chain[c].modId]) {
+            current = chain[c].modId;
+            advanced = true;
+          }
+        }
+      }
+    }
+
+    return current;
+  }
+
+  function normalizeFragmentId(fragmentId) {
+    return resolveLatestTechModId(fragmentId);
+  }
+
+  function normalizeFragmentsInventory(fragments) {
+    if (!Array.isArray(fragments) || !fragments.length) return [];
+
+    var merged = [];
+    var byId = Object.create(null);
+    for (var i = 0; i < fragments.length; i++) {
+      var entry = fragments[i];
+      if (!entry || typeof entry !== 'object') continue;
+
+      var rawId = Number.isFinite(entry.fragmentId)
+        ? Math.floor(entry.fragmentId)
+        : (Number.isFinite(entry.modId) ? Math.floor(entry.modId) : 0);
+      var nextId = normalizeFragmentId(rawId);
+      var count = Number.isFinite(entry.count) ? Math.max(0, Math.floor(entry.count)) : 0;
+      if (nextId <= 0 || count <= 0) continue;
+
+      if (!byId[nextId]) {
+        byId[nextId] = { fragmentId: nextId, count: 0 };
+        merged.push(byId[nextId]);
+      }
+      byId[nextId].count += count;
+    }
+
+    merged.sort(function (a, b) { return a.fragmentId - b.fragmentId; });
+    return merged;
+  }
+
   var SPECIAL_MODS = [10, 11, 12, 13, 14];
   var YELLOW_SLOT_KEYS = ['slot1', 'slot2', 'slot3', 'slot4'];
   var RED_SLOT_KEYS = ['slot1', 'slot2'];
@@ -552,19 +605,7 @@
   function applyTechUpgradesToModIds(modIds) {
     if (!modIds || !modIds.length) return modIds;
     for (var i = 0; i < modIds.length; i++) {
-      var cur = modIds[i];
-      // Walk each tech tree chain to find highest unlocked upgrade
-      var keys = Object.keys(TECH_TREE);
-      for (var k = 0; k < keys.length; k++) {
-        var chain = TECH_TREE[keys[k]];
-        for (var c = 0; c < chain.length; c++) {
-          if (chain[c].replacesModId === cur && _unlockedTechs[chain[c].modId]) {
-            modIds[i] = chain[c].modId;
-            cur = chain[c].modId;
-            // continue checking if there's a further upgrade in this chain
-          }
-        }
-      }
+      modIds[i] = resolveLatestTechModId(modIds[i]);
     }
     return modIds;
   }
@@ -628,7 +669,7 @@
    * @param {array} hangarCells - all 16 hangar cells
    * @returns {object} { ok, replaced, error }
    */
-  function unlockTechnology(modId, playerChips, hangarCells) {
+  function unlockTechnology(modId, playerChips, hangarCells, playerFragments) {
     if (_unlockedTechs[modId]) return { ok: false, replaced: 0, error: 'already_unlocked' };
     if (!canUnlockTech(modId)) return { ok: false, replaced: 0, error: 'prerequisite_not_met' };
 
@@ -688,6 +729,27 @@
       }
     }
 
+    if (Array.isArray(playerFragments)) {
+      for (var fi = 0; fi < playerFragments.length; fi++) {
+        var fragment = playerFragments[fi];
+        if (!fragment || typeof fragment !== 'object') continue;
+        var previousId = Number.isFinite(fragment.fragmentId)
+          ? Math.floor(fragment.fragmentId)
+          : (Number.isFinite(fragment.modId) ? Math.floor(fragment.modId) : 0);
+        var nextId = normalizeFragmentId(previousId);
+        if (nextId !== previousId) {
+          var changedCount = Number.isFinite(fragment.count) ? Math.max(0, Math.floor(fragment.count)) : 0;
+          replaced += changedCount;
+        }
+      }
+
+      var normalizedFragments = normalizeFragmentsInventory(playerFragments);
+      playerFragments.length = 0;
+      for (var nfi = 0; nfi < normalizedFragments.length; nfi++) {
+        playerFragments.push(normalizedFragments[nfi]);
+      }
+    }
+
     return { ok: true, replaced: replaced };
   }
 
@@ -740,6 +802,9 @@
     disassembleChip: disassembleChip,
     assembleChip: assembleChip,
     getFragmentAccelBonus: getFragmentAccelBonus,
-    applyTechUpgradesToModIds: applyTechUpgradesToModIds
+    applyTechUpgradesToModIds: applyTechUpgradesToModIds,
+    resolveLatestTechModId: resolveLatestTechModId,
+    normalizeFragmentId: normalizeFragmentId,
+    normalizeFragmentsInventory: normalizeFragmentsInventory
   };
 })(typeof window !== 'undefined' ? window : this);

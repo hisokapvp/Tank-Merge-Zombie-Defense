@@ -775,15 +775,14 @@
     if (h) {
       var chips = ensurePlayerChips();
       var cells = ensureCells();
-      var result = h.unlockTechnology(modId, chips, cells);
+      var result = h.unlockTechnology(modId, chips, cells, ensurePlayerFragments());
       if (result.ok) {
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
           global.Game.Toast.show(t('techUnlockSuccess', 'Технология «{name}» открыта! Все чипы обновлены.').replace('{name}', modName(modId)), 2500);
         }
       }
     }
-    renderTechUnlockPanel();
-    renderChipUpgradeGrid();
+    render();
   }
 
   function _updateTechStudyTimerDisplay() {
@@ -1012,7 +1011,7 @@
     if (_techFeedProgress[modId] >= cost) {
       /* Unlock technology! */
       var cells = ensureCells();
-      var result = h.unlockTechnology(modId, chips, cells);
+      var result = h.unlockTechnology(modId, chips, cells, ensurePlayerFragments());
       _techFeedProgress[modId] = cost; // cap at cost
       return { ok: true, unlocked: true, fed: removed, replaced: result.replaced };
     }
@@ -1037,25 +1036,38 @@
   }
 
   function ensurePlayerFragments() {
-    if (_playerFragments) return _playerFragments;
-    _playerFragments = [];
+    if (!_playerFragments) _playerFragments = [];
+    var h = hc();
+    if (h && typeof h.normalizeFragmentsInventory === 'function') {
+      _playerFragments = h.normalizeFragmentsInventory(_playerFragments);
+    }
     return _playerFragments;
   }
 
   function getPlayerFragments() { return ensurePlayerFragments(); }
-  function setPlayerFragments(frags) { _playerFragments = Array.isArray(frags) ? frags : []; }
+  function setPlayerFragments(frags) {
+    _playerFragments = Array.isArray(frags) ? frags.slice() : [];
+    var h = hc();
+    if (h && typeof h.normalizeFragmentsInventory === 'function') {
+      _playerFragments = h.normalizeFragmentsInventory(_playerFragments);
+    }
+  }
 
   /** Add fragment(s) to inventory. fragmentId = modId (1–30). */
   function addPlayerFragment(fragmentId, count) {
     var frags = ensurePlayerFragments();
     var cnt = (Number.isFinite(count) && count >= 1) ? Math.floor(count) : 1;
+    var h = hc();
+    var normalizedId = h && typeof h.normalizeFragmentId === 'function'
+      ? h.normalizeFragmentId(fragmentId)
+      : fragmentId;
     for (var i = 0; i < frags.length; i++) {
-      if (frags[i].fragmentId === fragmentId) {
+      if (frags[i].fragmentId === normalizedId) {
         frags[i].count += cnt;
         return frags[i];
       }
     }
-    var entry = { fragmentId: fragmentId, count: cnt };
+    var entry = { fragmentId: normalizedId, count: cnt };
     frags.push(entry);
     return entry;
   }
@@ -1064,8 +1076,12 @@
   function removePlayerFragment(fragmentId, count) {
     var frags = ensurePlayerFragments();
     var cnt = (Number.isFinite(count) && count >= 1) ? Math.floor(count) : 1;
+    var h = hc();
+    var normalizedId = h && typeof h.normalizeFragmentId === 'function'
+      ? h.normalizeFragmentId(fragmentId)
+      : fragmentId;
     for (var i = 0; i < frags.length; i++) {
-      if (frags[i].fragmentId === fragmentId) {
+      if (frags[i].fragmentId === normalizedId) {
         frags[i].count -= cnt;
         if (frags[i].count <= 0) frags.splice(i, 1);
         return true;
@@ -1077,8 +1093,12 @@
   /** Get fragment count for a given fragmentId */
   function getFragmentCount(fragmentId) {
     var frags = ensurePlayerFragments();
+    var h = hc();
+    var normalizedId = h && typeof h.normalizeFragmentId === 'function'
+      ? h.normalizeFragmentId(fragmentId)
+      : fragmentId;
     for (var i = 0; i < frags.length; i++) {
-      if (frags[i].fragmentId === fragmentId) return frags[i].count;
+      if (frags[i].fragmentId === normalizedId) return frags[i].count;
     }
     return 0;
   }
