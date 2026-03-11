@@ -1153,11 +1153,13 @@
 
           var idleAnimRaw = animationsRaw.idle && typeof animationsRaw.idle === 'object' ? animationsRaw.idle : {};
           var waitAnimRaw = animationsRaw.wait && typeof animationsRaw.wait === 'object' ? animationsRaw.wait : {};
+          var workAnimRaw = animationsRaw.work && typeof animationsRaw.work === 'object' ? animationsRaw.work : {};
           var flyAnimRaw = animationsRaw.fly && typeof animationsRaw.fly === 'object' ? animationsRaw.fly : {};
           var repairAnimRaw = animationsRaw.repair && typeof animationsRaw.repair === 'object' ? animationsRaw.repair : {};
 
           var idleAnim = normalizeAnim(idleAnimRaw, idleFallback, this.framesById, 'idle');
           var waitAnim = normalizeAnim(waitAnimRaw, idleAnim ? idleAnim.frames : idleFallback, this.framesById, 'wait');
+          var workAnim = normalizeAnim(workAnimRaw, waitAnim ? waitAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById, 'work');
           var flyAnim = normalizeAnim(flyAnimRaw, idleAnim ? idleAnim.frames : idleFallback, this.framesById, 'fly');
           var repairAnim = normalizeAnim(repairAnimRaw, flyAnim ? flyAnim.frames : (idleAnim ? idleAnim.frames : idleFallback), this.framesById, 'repair');
 
@@ -1205,6 +1207,7 @@
             animations: {
               idle: idleAnim,
               wait: waitAnim,
+              work: workAnim,
               fly: flyAnim,
               repair: repairAnim,
             },

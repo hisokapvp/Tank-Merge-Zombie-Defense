@@ -9,6 +9,7 @@
   "animations": {
     "idle": { "x": 0, "y": 96, "w": 96, "h": 96, "frames": 4, "frameRateFps": 15, "loop": true },
     "wait": { "x": 960, "y": 56, "w": 96, "h": 96, "frames": 4, "frameRateFps": 6, "loop": true },
+    "work": { "x": 960, "y": 56, "w": 96, "h": 96, "frames": 1, "frameRateFps": 12, "loop": true },
     "fly": { "x": 0, "y": 192, "w": 96, "h": 96, "frames": 4, "frameRateFps": 30, "loop": true },
     "repair": { "x": 0, "y": 0, "w": 96, "h": 96, "frames": 16, "frameRateFps": 15, "loop": true }
   },

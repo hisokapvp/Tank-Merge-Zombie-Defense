@@ -9857,18 +9857,25 @@ function drawSupercomputerHpBar(sc, config){
 
   if (phase.sparkCount > 0 && fillW > 0) {
     const sparkBaseX = -barW * 0.5 + fillW;
+    ctx.save();
+    rr(ctx, -barW * 0.5, -barH * 0.5, barW, barH, radius);
+    ctx.clip();
     for (let sparkIndex = 0; sparkIndex < phase.sparkCount; sparkIndex++) {
       const seed = sparkIndex * 1.73 + 0.4;
       const sparkY = Math.sin(time * (4.5 + sparkIndex) + seed) * Math.max(2, barH * 0.85);
       const sparkLen = Math.max(4, (6 + sparkIndex * 2) * balScale * pulse);
       const sparkAlpha = Math.max(0.12, 0.42 - sparkIndex * 0.05);
+      const sparkStartX = Math.max(-barW * 0.5, sparkBaseX - sparkLen * 0.35);
+      const sparkEndX = Math.min(barW * 0.5, sparkBaseX + sparkLen * 0.65);
+      if (sparkEndX <= sparkStartX) continue;
       ctx.strokeStyle = 'rgba(255,240,210,' + sparkAlpha.toFixed(3) + ')';
       ctx.lineWidth = Math.max(1, 1.1 * balScale);
       ctx.beginPath();
-      ctx.moveTo(sparkBaseX - sparkLen * 0.35, sparkY - sparkLen * 0.2);
-      ctx.lineTo(sparkBaseX + sparkLen * 0.65, sparkY + sparkLen * 0.25);
+      ctx.moveTo(sparkStartX, sparkY - sparkLen * 0.2);
+      ctx.lineTo(sparkEndX, sparkY + sparkLen * 0.25);
       ctx.stroke();
     }
+    ctx.restore();
   }
 
   ctx.strokeStyle = phase.frame;
@@ -10594,6 +10601,39 @@ function clipRoundedRect(targetCtx, x, y, w, h, r){
   targetCtx.closePath();
 }
 
+function drawSlotActivityOverlay(targetCtx, x, y, w, h, r, timeSec){
+  if (!targetCtx || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
+  const phase = Math.floor((Number.isFinite(timeSec) ? timeSec : 0) * 14);
+
+  targetCtx.save();
+  targetCtx.beginPath();
+  clipRoundedRect(targetCtx, x, y, w, h, r);
+  targetCtx.clip();
+
+  targetCtx.fillStyle = 'rgba(255,152,0,0.44)';
+  targetCtx.fillRect(x, y, w, h);
+
+  targetCtx.fillStyle = 'rgba(255,232,196,0.11)';
+  for (let gy = Math.floor(y) - 4; gy < y + h + 4; gy += 4){
+    const jitter = ((phase + gy) % 7) - 3;
+    for (let gx = Math.floor(x) - 4; gx < x + w + 4; gx += 7){
+      targetCtx.fillRect(gx + jitter, gy, 2, 1);
+    }
+  }
+
+  targetCtx.fillStyle = 'rgba(255,242,214,0.14)';
+  targetCtx.fillRect(x, y, w, Math.max(1, h * 0.38));
+  targetCtx.fillStyle = 'rgba(120,60,0,0.12)';
+  targetCtx.fillRect(x, y + h * 0.56, w, Math.max(1, h * 0.44));
+
+  targetCtx.strokeStyle = 'rgba(255,216,156,0.72)';
+  targetCtx.lineWidth = 1;
+  targetCtx.beginPath();
+  clipRoundedRect(targetCtx, x + 0.5, y + 0.5, Math.max(0, w - 1), Math.max(0, h - 1), Math.max(1, r - 1));
+  targetCtx.stroke();
+  targetCtx.restore();
+}
+
 function drawBoard(){
   const br = state.boardRect;
   ctx.save();
@@ -10659,19 +10699,22 @@ function drawTankSlot(cell){
   const cx = cell.x + cell.w/2;
   const cy = cell.y + cell.h/2;
   const hangarRenderState = !cell.tank.onTrack && !isTankPrinting(cell.tank) && TankHangarAnimationApi && typeof TankHangarAnimationApi.computeRenderState === 'function'
-    ? TankHangarAnimationApi.computeRenderState(cell, cell.tank, TankSprites && TankSprites.config, nowSec())
+    ? TankHangarAnimationApi.computeRenderState(cell, cell.tank, TankSprites && TankSprites.config, nowSec(), 'hangar')
     : null;
   const iconCx = cx + (hangarRenderState ? hangarRenderState.offsetX : 0);
   const iconCy = cy + (hangarRenderState ? hangarRenderState.offsetY : 0);
   ctx.save();
-  ctx.fillStyle = cell.tank.onTrack ? 'rgba(10,12,16,.38)' : 'rgba(0,0,0,.30)';
-  rr(ctx, cx-18, cy-12, 36, 26, 8);
-  ctx.fill();
   drawTankIconWithStampReveal(cell, iconCx, iconCy, {
     showShadow: false,
     rotation: hangarRenderState ? hangarRenderState.rotation : 0,
     scaleMul: hangarRenderState ? hangarRenderState.scale : 1,
+    mutedSlot: false,
+    labelX: cx,
+    labelY: cell.y + cell.h - Math.max(7, cell.h * 0.16),
   });
+  if (cell.tank.onTrack) {
+    drawSlotActivityOverlay(ctx, cell.x, cell.y, cell.w, cell.h, 10, nowSec());
+  }
   ctx.restore();
 }
 
@@ -10692,12 +10735,15 @@ function drawTankIconWithStampReveal(cell, cx, cy, options = null){
   if (!cell || !cell.tank) return;
   const opts = options && typeof options === 'object' ? options : null;
   const showShadow = opts && opts.showShadow === false ? false : true;
+  const mutedSlot = opts && typeof opts.mutedSlot === 'boolean' ? opts.mutedSlot : cell.tank.onTrack;
   const progress = getTankStampProgress(cell.tank);
   if (progress >= 1) {
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, opts ? {
+    drawTankIcon(cx, cy, cell.tank.level, mutedSlot, opts ? {
       showShadow,
       rotation: opts.rotation,
       scaleMul: opts.scaleMul,
+      labelX: opts.labelX,
+      labelY: opts.labelY,
     } : { showShadow });
     return;
   }
@@ -10727,10 +10773,12 @@ function drawTankIconWithStampReveal(cell, cx, cy, options = null){
     ctx.beginPath();
     ctx.rect(left, clipY, iconW, clipH + 0.5);
     ctx.clip();
-    drawTankIcon(cx, cy, cell.tank.level, cell.tank.onTrack, opts ? {
+    drawTankIcon(cx, cy, cell.tank.level, mutedSlot, opts ? {
       showShadow,
       rotation: opts.rotation,
       scaleMul: opts.scaleMul,
+      labelX: opts.labelX,
+      labelY: opts.labelY,
     } : { showShadow });
     ctx.restore();
   }
@@ -10743,9 +10791,14 @@ function drawOrbitingTanks(){
     if (!c.tank || !c.tank.onTrack) continue;
     if (state.dragging && state.dragging.cellIndex === c.i) continue;
     const pos = tankOrbitState(c, t);
-    c.tank._statusWorldX = pos.x;
-    c.tank._statusWorldY = pos.y;
-    drawTank(pos.x, pos.y, c.tank, false, pos.heading, false);
+    const trackRenderState = TankHangarAnimationApi && typeof TankHangarAnimationApi.computeRenderState === 'function'
+      ? TankHangarAnimationApi.computeRenderState(c, c.tank, TankSprites && TankSprites.config, t, 'track')
+      : null;
+    const statusX = pos.x + (trackRenderState ? trackRenderState.offsetX : 0);
+    const statusY = pos.y + (trackRenderState ? trackRenderState.offsetY : 0);
+    c.tank._statusWorldX = statusX;
+    c.tank._statusWorldY = statusY;
+    drawTank(pos.x, pos.y, c.tank, false, pos.heading, false, false, trackRenderState);
   }
 }
 
@@ -10766,6 +10819,8 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
   const showShadow = !(opts && opts.showShadow === false);
   const extraScaleMul = opts && Number.isFinite(opts.scaleMul) && opts.scaleMul > 0 ? opts.scaleMul : 1;
   const drawRotation = opts && Number.isFinite(opts.rotation) ? opts.rotation : 0;
+  const fixedLabelX = opts && Number.isFinite(opts.labelX) ? opts.labelX : null;
+  const fixedLabelY = opts && Number.isFinite(opts.labelY) ? opts.labelY : null;
   const body = TankSprites?.pickBody?.(level);
   const cannon = TankSprites?.pickCannon?.(level);
   const onTrackIconOpacity = mutedSlot ? getOnTrackIconOpacity() : 0;
@@ -10812,14 +10867,17 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
       cannonDrawW,
       cannonDrawH
     );
+    targetCtx.restore();
     if (level != null) {
+      targetCtx.save();
+      targetCtx.globalAlpha = mutedSlot ? Math.max(onTrackIconOpacity, 0.82) : 1;
       targetCtx.fillStyle = '#eaf1ff';
       targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
       targetCtx.textAlign = 'center';
-      targetCtx.textBaseline = 'top';
-      targetCtx.fillText(`${t('levelShort')}${level}`, 0, drawH * 0.5 + 4);
+      targetCtx.textBaseline = fixedLabelY != null ? 'middle' : 'top';
+      targetCtx.fillText(`${t('levelShort')}${level}`, fixedLabelX != null ? fixedLabelX : x, fixedLabelY != null ? fixedLabelY : (y + drawH * 0.5 + 4));
+      targetCtx.restore();
     }
-    targetCtx.restore();
     return;
   }
 
@@ -10845,14 +10903,18 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
   targetCtx.fillStyle = shade(hull, -30);
   rr(targetCtx, 2, -20, 16 + clamp(tier,0,4)*2, 4, 2);
   targetCtx.fill();
+  targetCtx.restore();
   if (level != null) {
+    const fallbackScale = 0.52 * balScale * scaleMul * extraScaleMul;
+    targetCtx.save();
+    targetCtx.globalAlpha = mutedSlot ? Math.max(onTrackIconOpacity, 0.82) : 1;
     targetCtx.fillStyle = '#eaf1ff';
     targetCtx.font = '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
     targetCtx.textAlign = 'center';
-    targetCtx.textBaseline = 'top';
-    targetCtx.fillText(`${t('levelShort')}${level}`, 0, 10);
+    targetCtx.textBaseline = fixedLabelY != null ? 'middle' : 'top';
+    targetCtx.fillText(`${t('levelShort')}${level}`, fixedLabelX != null ? fixedLabelX : x, fixedLabelY != null ? fixedLabelY : (y + 10 * fallbackScale));
+    targetCtx.restore();
   }
-  targetCtx.restore();
 }
 
 // Aura: per-level auraVariant. If string — спрайт из auras; если number 1–6 — процедурная полоса; если null/false — нет ауры.
@@ -10975,15 +11037,22 @@ function drawTankAuraSprite(x, y, aura){
   ctx.restore();
 }
 
-function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPreview=false){
+function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPreview=false,renderOptions=null){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
+  const renderState = renderOptions && typeof renderOptions === 'object' ? renderOptions : null;
+  const renderOffsetX = renderState && Number.isFinite(renderState.offsetX) ? renderState.offsetX : 0;
+  const renderOffsetY = renderState && Number.isFinite(renderState.offsetY) ? renderState.offsetY : 0;
+  const renderRotation = renderState && Number.isFinite(renderState.rotation) ? renderState.rotation : 0;
+  const renderScaleMul = renderState && Number.isFinite(renderState.scale) && renderState.scale > 0 ? renderState.scale : 1;
+  const drawX = x + renderOffsetX;
+  const drawY = y + renderOffsetY;
   if (!isDragPreview){
     const auraSprite = TankSprites?.pickAura?.(level);
     if (auraSprite) {
-      drawTankAuraSprite(x, y, auraSprite);
+      drawTankAuraSprite(drawX, drawY, auraSprite);
     } else {
       const auraBand = computeAuraBand(level);
-      if (auraBand != null) drawTankAura(x, y, auraBand);
+      if (auraBand != null) drawTankAura(drawX, drawY, auraBand);
     }
   }
   // Try sprite-based tanks if assets/tanks.json exists
@@ -10991,12 +11060,12 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   const cannon = TankSprites?.pickCannon?.(level);
   if (body && cannon){
     ctx.save();
-    ctx.translate(x,y);
-    ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
+    ctx.translate(drawX,y + renderOffsetY);
+    ctx.rotate(rotation + renderRotation + (BAL.tankSpriteRotOffset ?? 0));
     ctx.globalAlpha = ghost ? 0.78 : 1;
 
     const configScale = TankSprites?.config?.tankScale ?? 1;
-    const baseScale = 0.065 * balScale * (BAL.tankSpriteScaleMul ?? 1) * configScale;            // tuned for typical PNG sizes
+    const baseScale = 0.065 * balScale * (BAL.tankSpriteScaleMul ?? 1) * configScale * renderScaleMul;            // tuned for typical PNG sizes
     const levelScale = 1.0 + Math.min(0.20, level*0.010);
     const s = baseScale * levelScale;
 
@@ -11069,13 +11138,13 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
 
   // Fallback: vector tank (smaller)
   const configScale = TankSprites?.config?.tankScale ?? 1;
-  const baseScale = 0.56 * balScale * configScale;
+  const baseScale = 0.56 * balScale * configScale * renderScaleMul;
   const levelScale = 1.0 + Math.min(0.20, level*0.010);
   const scale = baseScale * levelScale;
 
   ctx.save();
-  ctx.translate(x,y);
-  ctx.rotate(rotation + (BAL.tankSpriteRotOffset ?? 0));
+  ctx.translate(drawX,drawY);
+  ctx.rotate(rotation + renderRotation + (BAL.tankSpriteRotOffset ?? 0));
   ctx.scale(scale, scale);
   ctx.globalAlpha = ghost ? 0.78 : 1;
 

@@ -76,8 +76,16 @@
     return Math.sin((timeValue * freq + phase + seed) * Math.PI * 2);
   }
 
-  function computeRenderState(cell, tank, config, timeSec) {
-    if (!tank || tank.onTrack) {
+  function computeRenderState(cell, tank, config, timeSec, options) {
+    var scope = options && typeof options === 'object'
+      ? (options.scope === 'track' ? 'track' : 'hangar')
+      : (options === 'track' ? 'track' : 'hangar');
+
+    if (!tank) {
+      return { offsetX: 0, offsetY: 0, rotation: 0, scale: 1, presetName: '' };
+    }
+
+    if ((scope === 'track' && !tank.onTrack) || (scope !== 'track' && tank.onTrack)) {
       return { offsetX: 0, offsetY: 0, rotation: 0, scale: 1, presetName: '' };
     }
 

@@ -20,6 +20,7 @@
   var REPAIR_ARRIVE_EPSILON_PX = 6;
   var DRONE_SLOT_COUNT = 9;
   var DRONE_SLOT_DRAG_THRESHOLD_PX = 6;
+  var DRONE_SLOT_GAP_PX = 10;
   var DRONE_SLOT_LAYOUT = [
     { slotIndex: 0, side: 'top', lane: 0 },
     { slotIndex: 1, side: 'top', lane: 1 },
@@ -151,23 +152,31 @@
   function getDroneSlotsLayout(state, options) {
     var rect = getHangarRect(state, options);
     var balScale = Number.isFinite(options && options.balScale) ? Math.max(0.5, options.balScale) : 1;
-    var slotSize = clamp(Math.min(rect.w, rect.h) * 0.12, Math.max(16, 18 * balScale), Math.max(24, 29 * balScale));
+    var slotGap = DRONE_SLOT_GAP_PX;
+    var maxTopSlotSize = Math.max(14, (rect.w - slotGap * 2) / 3);
+    var maxSideSlotSize = Math.max(14, (rect.h - slotGap * 2) / 3);
+    var minSlotSize = Math.max(16, 18 * balScale);
+    var maxSlotSize = Math.max(minSlotSize, Math.max(24, 29 * balScale));
+    var slotSize = Math.min(maxSlotSize, Math.max(minSlotSize, Math.min(maxTopSlotSize, maxSideSlotSize, Math.min(rect.w, rect.h) * 0.12)));
     var borderGap = Math.max(2, 3 * balScale);
-    var topOffset = slotSize * 0.5 + borderGap;
-    var laneStepX = rect.w / 3;
-    var laneStepY = rect.h / 3;
+    var groupSpan = slotSize * 3 + slotGap * 2;
+    var topStartX = rect.x + (rect.w - groupSpan) * 0.5;
+    var sideStartY = rect.y + (rect.h - groupSpan) * 0.5;
     var slots = [];
 
     for (var i = 0; i < DRONE_SLOT_LAYOUT.length; i++) {
       var def = DRONE_SLOT_LAYOUT[i];
-      var cx = rect.x + laneStepX * (def.lane + 0.5);
-      var cy = rect.y + laneStepY * (def.lane + 0.5);
+      var cx = rect.x + rect.w * 0.5;
+      var cy = rect.y + rect.h * 0.5;
       if (def.side === 'top') {
-        cy = rect.y - topOffset;
+        cx = topStartX + def.lane * (slotSize + slotGap) + slotSize * 0.5;
+        cy = rect.y - slotSize * 0.5 - borderGap;
       } else if (def.side === 'left') {
         cx = rect.x - slotSize * 0.5 - borderGap;
+        cy = sideStartY + def.lane * (slotSize + slotGap) + slotSize * 0.5;
       } else if (def.side === 'right') {
         cx = rect.x + rect.w + slotSize * 0.5 + borderGap;
+        cy = sideStartY + def.lane * (slotSize + slotGap) + slotSize * 0.5;
       }
       slots.push({
         slotIndex: def.slotIndex,
@@ -183,6 +192,54 @@
     }
 
     return slots;
+  }
+
+  function hasAssignedRepairDrone(state) {
+    if (!state || !Array.isArray(state.drones)) return false;
+    for (var i = 0; i < state.drones.length; i++) {
+      if (state.drones[i] && state.drones[i].mode === MODE_REPAIR) return true;
+    }
+    return false;
+  }
+
+  function resolveHangarDroneAnimName(drone, hasAssignedPeers) {
+    if (!drone) return 'wait';
+    if (drone.mode === MODE_REPAIR) {
+      return drone.substate === SUBSTATE_REPAIR_WORK ? 'repair' : 'fly';
+    }
+    return hasAssignedPeers ? 'work' : 'wait';
+  }
+
+  function drawSlotActivityOverlay(ctx, slot, nowSec) {
+    if (!ctx || !slot) return;
+    var phase = Math.floor((Number.isFinite(nowSec) ? nowSec : 0) * 14);
+    var radius = Math.max(5, slot.w * 0.2);
+
+    ctx.save();
+    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, radius);
+    ctx.clip();
+
+    ctx.fillStyle = 'rgba(255,152,0,0.44)';
+    ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
+
+    ctx.fillStyle = 'rgba(255,232,196,0.12)';
+    for (var gy = Math.floor(slot.y) - 4; gy < slot.y + slot.h + 4; gy += 4) {
+      var jitter = ((phase + gy) % 7) - 3;
+      for (var gx = Math.floor(slot.x) - 4; gx < slot.x + slot.w + 4; gx += 7) {
+        ctx.fillRect(gx + jitter, gy, 2, 1);
+      }
+    }
+
+    ctx.fillStyle = 'rgba(255,242,214,0.14)';
+    ctx.fillRect(slot.x, slot.y, slot.w, Math.max(1, slot.h * 0.38));
+    ctx.fillStyle = 'rgba(120,60,0,0.12)';
+    ctx.fillRect(slot.x, slot.y + slot.h * 0.56, slot.w, Math.max(1, slot.h * 0.44));
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,216,156,0.72)';
+    drawRoundedRect(ctx, slot.x + 0.5, slot.y + 0.5, Math.max(0, slot.w - 1), Math.max(0, slot.h - 1), Math.max(1, radius - 1));
+    ctx.stroke();
+    ctx.restore();
   }
 
   function syncDroneBasePositionFromSlot(state, drone, options) {
@@ -959,9 +1016,10 @@
     ctx.restore();
   }
 
-  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec, dronSprites) {
+  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec, dronSprites, hasAssignedPeers) {
     var isSelected = _selectedSlotIndex === slot.slotIndex;
     var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
+    var isAssigned = !!(drone && drone.mode === MODE_REPAIR);
     var slotUiScale = Math.max(0.55, Math.min(1, slot.w / 34));
     var fill = drone ? 'rgba(19, 28, 36, 0.92)' : 'rgba(12, 16, 22, 0.72)';
     var stroke = !drone ? 'rgba(154,176,198,0.36)' : 'rgba(0,0,0,0)';
@@ -978,33 +1036,32 @@
     }
 
     if (drone) {
-      if (drone.mode === MODE_REPAIR && !isDragSource) {
-        drawDroneSpriteAt(ctx, slot.cx, slot.cy, 'wait', timeSec, balScale, dronSprites, {
+      if (!isDragSource) {
+        drawDroneSpriteAt(ctx, slot.cx, slot.cy, resolveHangarDroneAnimName(drone, hasAssignedPeers), timeSec, balScale, dronSprites, {
           alpha: 0.92,
-          grayscale: true,
           scaleMul: Math.max(0.44, Math.min(0.6, slot.w / 42))
         });
       }
 
-      var badgeW = Math.max(18, slot.w * 0.76);
-      var badgeH = Math.max(8, slot.h * 0.32);
-      var badgeX = slot.x + Math.max(2, slot.w * 0.07);
-      var badgeY = slot.y + slot.h - badgeH - Math.max(3, slot.h * 0.08);
-      ctx.fillStyle = 'rgba(7,10,14,0.92)';
-      drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, Math.max(3, badgeH * 0.4));
-      ctx.fill();
+      if (isAssigned) {
+        drawSlotActivityOverlay(ctx, slot, timeSec);
+      }
+
       ctx.fillStyle = '#f4fbff';
-      ctx.font = Math.floor(Math.max(6, badgeH * 0.62)) + 'px Courier New, monospace';
+      ctx.strokeStyle = 'rgba(7,10,14,0.78)';
+      ctx.lineWidth = Math.max(1.2, slotUiScale * 1.5);
+      ctx.font = Math.floor(Math.max(7, slot.h * 0.24)) + 'px Courier New, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(getLevelShortLabel(global) + drone.level, badgeX + badgeW * 0.5, badgeY + badgeH * 0.55);
+      ctx.strokeText(getLevelShortLabel(global) + drone.level, slot.cx, slot.y + slot.h - Math.max(6, slot.h * 0.16));
+      ctx.fillText(getLevelShortLabel(global) + drone.level, slot.cx, slot.y + slot.h - Math.max(6, slot.h * 0.16));
     }
 
     ctx.restore();
   }
 
-  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites) {
-    var modeAnimName = drone.mode === MODE_REPAIR ? (drone.substate === SUBSTATE_REPAIR_WORK ? 'repair' : 'fly') : 'wait';
+  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites, hasAssignedPeers) {
+    var modeAnimName = resolveHangarDroneAnimName(drone, hasAssignedPeers);
     drawDroneSpriteAt(ctx, drone.pos.x, drone.pos.y, modeAnimName, nowSec, balScale, dronSprites, null);
   }
 
@@ -1016,6 +1073,7 @@
 
     var balScale = Number.isFinite(opts.balScale) ? opts.balScale : 1;
     var nowSec = Number.isFinite(opts.nowSec) ? opts.nowSec : 0;
+    var hasAssignedPeers = hasAssignedRepairDrone(state);
     assignMissingDroneSlots(state);
     var slots = getDroneSlotsLayout(state, opts);
 
@@ -1025,7 +1083,7 @@
       if (_slotDragState && _slotDragState.moved && slotDrone && slotDrone.slotIndex === _slotDragState.slotIndex) {
         slotDrone = null;
       }
-      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites);
+      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites, hasAssignedPeers);
     }
 
     for (var i = 0; i < state.drones.length; i++) {
@@ -1033,7 +1091,7 @@
       if (!drone) continue;
 
       if (_slotDragState && _slotDragState.moved && drone.slotIndex === _slotDragState.slotIndex) continue;
-      drawDroneBody(ctx, drone, nowSec, balScale, opts.dronSprites);
+      drawDroneBody(ctx, drone, nowSec, balScale, opts.dronSprites, hasAssignedPeers);
     }
 
     if (_slotDragState && _slotDragState.moved) {
@@ -1046,7 +1104,7 @@
         };
         ctx.save();
         ctx.globalAlpha = 0.88;
-        drawDroneBody(ctx, ghostDrone, nowSec, balScale, opts.dronSprites);
+        drawDroneBody(ctx, ghostDrone, nowSec, balScale, opts.dronSprites, hasAssignedPeers);
         ctx.restore();
       }
     }

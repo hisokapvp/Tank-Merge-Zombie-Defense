@@ -46,6 +46,10 @@
       ui.crateGet.textContent = t('crateGet');
     }
 
+    if (document && document.body) {
+      document.body.classList.add('crate-open');
+    }
+
     showModal(ui.crateModal, opts.a11yOpen, ui.crateGet, opts.onClose);
 
     if (typeof opts.renderCrateIcon === 'function') {
@@ -57,6 +61,9 @@
     var opts = options || {};
     var ui = opts.ui;
     if (!ui || !ui.crateModal) return;
+    if (document && document.body) {
+      document.body.classList.remove('crate-open');
+    }
     hideModal(ui.crateModal, opts.a11yClose);
   }
 
