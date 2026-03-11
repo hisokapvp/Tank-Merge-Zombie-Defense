@@ -8,6 +8,7 @@
       var WorldEventsCfg = deps.getWorldEventsCfg();
       var state = deps.getState();
       var cfg = WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {};
+      var idleWaveCfg = cfg && cfg.idleWave && typeof cfg.idleWave === 'object' ? cfg.idleWave : {};
       var debugForceAttack = !!(state && state.debug && (
         typeof state.debug.forceAttackMode === 'boolean'
           ? state.debug.forceAttackMode
@@ -25,6 +26,23 @@
         targetAliveRampSec: Number.isFinite(cfg.targetAliveRampSec) ? Math.max(0, cfg.targetAliveRampSec) : 2,
         speedMult: Number.isFinite(cfg.speedMult) ? Math.max(0.1, cfg.speedMult) : 1,
         damageMult: Number.isFinite(cfg.damageMult) ? Math.max(0.1, cfg.damageMult) : 1,
+        idleWave: {
+          enabled: autoEnabled && idleWaveCfg.enabled !== false,
+          attackDamageMul: Number.isFinite(idleWaveCfg.attackDamageMul) ? Math.max(0, idleWaveCfg.attackDamageMul) : 0.01,
+          betweenWavesSec: Number.isFinite(idleWaveCfg.betweenWavesSec) ? Math.max(0, idleWaveCfg.betweenWavesSec) : 12,
+          attackDurationSec: Number.isFinite(idleWaveCfg.attackDurationSec) ? Math.max(0, idleWaveCfg.attackDurationSec) : 4,
+          wanderDurationSec: Number.isFinite(idleWaveCfg.wanderDurationSec) ? Math.max(0, idleWaveCfg.wanderDurationSec) : 8,
+          retreatDistanceMinPx: Number.isFinite(idleWaveCfg.retreatDistanceMinPx) ? Math.max(0, idleWaveCfg.retreatDistanceMinPx) : 30,
+          retreatDistanceMaxPx: Number.isFinite(idleWaveCfg.retreatDistanceMaxPx)
+            ? Math.max(
+                Number.isFinite(idleWaveCfg.retreatDistanceMinPx) ? Math.max(0, idleWaveCfg.retreatDistanceMinPx) : 30,
+                idleWaveCfg.retreatDistanceMaxPx
+              )
+            : Math.max(
+                Number.isFinite(idleWaveCfg.retreatDistanceMinPx) ? Math.max(0, idleWaveCfg.retreatDistanceMinPx) : 30,
+                50
+              ),
+        },
         safeWaves: Number.isFinite(cfg.safeWaves) ? Math.max(0, Math.floor(cfg.safeWaves)) : 3,
         eveningDimAlpha: Number.isFinite(cfg.eveningDimAlpha) ? deps.clamp(cfg.eveningDimAlpha, 0, 1) : 0.16,
         eveningTransitionSec: Number.isFinite(cfg.eveningTransitionSec) ? deps.clamp(cfg.eveningTransitionSec, 0.1, 30) : 4,
@@ -215,6 +233,90 @@
       };
     }
 
+    function resetIdleWaveRuntime(worldEventsState, nextPhase, nextAt) {
+      if (!worldEventsState || typeof worldEventsState !== 'object') return;
+      worldEventsState.idleWavePhase = typeof nextPhase === 'string' ? nextPhase : 'inactive';
+      worldEventsState.idleWaveNextTransitionAt = Number.isFinite(nextAt) ? nextAt : 0;
+    }
+
+    function updateIdleWaveState(now, attackCfg) {
+      var worldEventsState = deps.getWorldEventsState();
+      var idleCfg = attackCfg && attackCfg.idleWave ? attackCfg.idleWave : null;
+      if (!worldEventsState || !idleCfg || !idleCfg.enabled) {
+        resetIdleWaveRuntime(worldEventsState, 'inactive', 0);
+        return;
+      }
+      if (isZombieAttackModeActive()) {
+        resetIdleWaveRuntime(worldEventsState, 'suppressed', 0);
+        return;
+      }
+
+      var phase = typeof worldEventsState.idleWavePhase === 'string' ? worldEventsState.idleWavePhase : 'between';
+      var nextAt = Number.isFinite(worldEventsState.idleWaveNextTransitionAt) ? worldEventsState.idleWaveNextTransitionAt : 0;
+      if (phase === 'inactive' || phase === 'suppressed' || nextAt <= 0) {
+        phase = 'between';
+        nextAt = now + idleCfg.betweenWavesSec;
+      }
+
+      var guard = 0;
+      while (now >= nextAt && guard < 6) {
+        if (phase === 'between') {
+          phase = 'attack';
+          nextAt += Math.max(0.05, idleCfg.attackDurationSec);
+        } else if (phase === 'attack') {
+          phase = 'wander';
+          nextAt += Math.max(0.05, idleCfg.wanderDurationSec);
+        } else {
+          phase = 'between';
+          nextAt += Math.max(0.05, idleCfg.betweenWavesSec);
+        }
+        guard++;
+      }
+
+      worldEventsState.idleWavePhase = phase;
+      worldEventsState.idleWaveNextTransitionAt = nextAt;
+    }
+
+    function getZombieIdleWavePhase() {
+      var worldEventsState = deps.getWorldEventsState();
+      return worldEventsState && typeof worldEventsState.idleWavePhase === 'string'
+        ? worldEventsState.idleWavePhase
+        : 'inactive';
+    }
+
+    function isZombieIdleWaveAttackActive() {
+      var attackCfg = getWorldEventsAttackCfg();
+      if (!attackCfg.idleWave || !attackCfg.idleWave.enabled) return false;
+      if (isZombieAttackModeActive()) return false;
+      return getZombieIdleWavePhase() === 'attack';
+    }
+
+    function shouldZombieAttemptAttack() {
+      return isZombieAttackModeActive() || isZombieIdleWaveAttackActive();
+    }
+
+    function getZombieFenceAttackDamageMul() {
+      var attackCfg = getWorldEventsAttackCfg();
+      if (isZombieAttackModeActive()) return attackCfg.damageMult;
+      if (isZombieIdleWaveAttackActive()) return attackCfg.idleWave.attackDamageMul;
+      return 0;
+    }
+
+    function getZombieIdleRetreatOffsetPx(zombie) {
+      var attackCfg = getWorldEventsAttackCfg();
+      var idleCfg = attackCfg && attackCfg.idleWave ? attackCfg.idleWave : null;
+      if (!idleCfg || !idleCfg.enabled || isZombieAttackModeActive() || isZombieIdleWaveAttackActive()) return 0;
+      if (!zombie || typeof zombie !== 'object') {
+        return (idleCfg.retreatDistanceMinPx + idleCfg.retreatDistanceMaxPx) * 0.5;
+      }
+      if (!Number.isFinite(zombie.idleWaveRetreatPx)) {
+        var anchorSeed = Number.isFinite(zombie.anchorTheta) ? Math.abs(Math.sin(zombie.anchorTheta * 13.37)) : Math.random();
+        zombie.idleWaveRetreatPx = idleCfg.retreatDistanceMinPx
+          + (idleCfg.retreatDistanceMaxPx - idleCfg.retreatDistanceMinPx) * anchorSeed;
+      }
+      return zombie.idleWaveRetreatPx;
+    }
+
     function updateWorldEvents(dt) {
       var worldEventsState = deps.getWorldEventsState();
       var state = deps.getState();
@@ -285,6 +387,8 @@
         if (!Number.isFinite(worldEventsState.attackSpawnPrimaryStreak)) worldEventsState.attackSpawnPrimaryStreak = 0;
         pickAttackEpisodeDirections(worldEventsState);
       }
+
+      updateIdleWaveState(now, attackCfg);
 
       updateDesiredAliveMultCurrent(dt, attackCfg);
 
@@ -400,6 +504,7 @@
       worldEventsState.aliveMultCurrent = 1;
       worldEventsState.eveningDimBlend = 0;
       worldEventsState.waveNumber = 0;
+      resetIdleWaveRuntime(worldEventsState, 'inactive', 0);
       resetAttackEpisodeRuntime(worldEventsState);
       if (state && typeof state === 'object') {
         state.zombieWaveAtkMult = 1;
@@ -422,6 +527,10 @@
       desiredAliveMultTarget: desiredAliveMultTarget,
       updateDesiredAliveMultCurrent: updateDesiredAliveMultCurrent,
       getZombieAttackMultipliers: getZombieAttackMultipliers,
+      getZombieIdleWavePhase: getZombieIdleWavePhase,
+      shouldZombieAttemptAttack: shouldZombieAttemptAttack,
+      getZombieFenceAttackDamageMul: getZombieFenceAttackDamageMul,
+      getZombieIdleRetreatOffsetPx: getZombieIdleRetreatOffsetPx,
       forceDisableAttackModeRuntime: forceDisableAttackModeRuntime,
       updateWorldEvents: updateWorldEvents,
       ensureRainCache: ensureRainCache,

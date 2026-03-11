@@ -202,43 +202,39 @@
     return false;
   }
 
-  function resolveHangarDroneAnimName(drone, hasAssignedPeers) {
+  function resolveHangarDroneAnimName(drone) {
+    if (!drone) return 'wait';
+    return drone.mode === MODE_REPAIR ? 'work' : 'wait';
+  }
+
+  function resolveWorldDroneAnimName(drone) {
     if (!drone) return 'wait';
     if (drone.mode === MODE_REPAIR) {
       return drone.substate === SUBSTATE_REPAIR_WORK ? 'repair' : 'fly';
     }
-    return hasAssignedPeers ? 'work' : 'wait';
+    return 'wait';
   }
 
   function drawSlotActivityOverlay(ctx, slot, nowSec) {
     if (!ctx || !slot) return;
-    var phase = Math.floor((Number.isFinite(nowSec) ? nowSec : 0) * 14);
+    var overlayApi = global.Game && global.Game.SlotActivityOverlay;
     var radius = Math.max(5, slot.w * 0.2);
+    if (overlayApi && typeof overlayApi.draw === 'function') {
+      overlayApi.draw(ctx, slot.x, slot.y, slot.w, slot.h, radius, {
+        baseAlpha: 0.52,
+        brightAlpha: 0.18,
+        darkAlpha: 0.16,
+        borderAlpha: 0.78,
+        seed: slot.slotIndex * 101 + Math.floor(slot.x) * 17 + Math.floor(slot.y) * 29,
+      });
+      return;
+    }
 
     ctx.save();
     drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, radius);
     ctx.clip();
-
-    ctx.fillStyle = 'rgba(255,152,0,0.44)';
+    ctx.fillStyle = 'rgba(255,152,0,0.52)';
     ctx.fillRect(slot.x, slot.y, slot.w, slot.h);
-
-    ctx.fillStyle = 'rgba(255,232,196,0.12)';
-    for (var gy = Math.floor(slot.y) - 4; gy < slot.y + slot.h + 4; gy += 4) {
-      var jitter = ((phase + gy) % 7) - 3;
-      for (var gx = Math.floor(slot.x) - 4; gx < slot.x + slot.w + 4; gx += 7) {
-        ctx.fillRect(gx + jitter, gy, 2, 1);
-      }
-    }
-
-    ctx.fillStyle = 'rgba(255,242,214,0.14)';
-    ctx.fillRect(slot.x, slot.y, slot.w, Math.max(1, slot.h * 0.38));
-    ctx.fillStyle = 'rgba(120,60,0,0.12)';
-    ctx.fillRect(slot.x, slot.y + slot.h * 0.56, slot.w, Math.max(1, slot.h * 0.44));
-
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255,216,156,0.72)';
-    drawRoundedRect(ctx, slot.x + 0.5, slot.y + 0.5, Math.max(0, slot.w - 1), Math.max(0, slot.h - 1), Math.max(1, radius - 1));
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -1016,7 +1012,7 @@
     ctx.restore();
   }
 
-  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec, dronSprites, hasAssignedPeers) {
+  function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec, dronSprites) {
     var isSelected = _selectedSlotIndex === slot.slotIndex;
     var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
     var isAssigned = !!(drone && drone.mode === MODE_REPAIR);
@@ -1037,7 +1033,7 @@
 
     if (drone) {
       if (!isDragSource) {
-        drawDroneSpriteAt(ctx, slot.cx, slot.cy, resolveHangarDroneAnimName(drone, hasAssignedPeers), timeSec, balScale, dronSprites, {
+        drawDroneSpriteAt(ctx, slot.cx, slot.cy, resolveHangarDroneAnimName(drone), timeSec, balScale, dronSprites, {
           alpha: 0.92,
           scaleMul: Math.max(0.44, Math.min(0.6, slot.w / 42))
         });
@@ -1060,8 +1056,8 @@
     ctx.restore();
   }
 
-  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites, hasAssignedPeers) {
-    var modeAnimName = resolveHangarDroneAnimName(drone, hasAssignedPeers);
+  function drawDroneBody(ctx, drone, nowSec, balScale, dronSprites) {
+    var modeAnimName = resolveWorldDroneAnimName(drone);
     drawDroneSpriteAt(ctx, drone.pos.x, drone.pos.y, modeAnimName, nowSec, balScale, dronSprites, null);
   }
 
@@ -1073,7 +1069,6 @@
 
     var balScale = Number.isFinite(opts.balScale) ? opts.balScale : 1;
     var nowSec = Number.isFinite(opts.nowSec) ? opts.nowSec : 0;
-    var hasAssignedPeers = hasAssignedRepairDrone(state);
     assignMissingDroneSlots(state);
     var slots = getDroneSlotsLayout(state, opts);
 
@@ -1083,15 +1078,16 @@
       if (_slotDragState && _slotDragState.moved && slotDrone && slotDrone.slotIndex === _slotDragState.slotIndex) {
         slotDrone = null;
       }
-      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites, hasAssignedPeers);
+      drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites);
     }
 
     for (var i = 0; i < state.drones.length; i++) {
       var drone = state.drones[i];
       if (!drone) continue;
+      if (drone.mode !== MODE_REPAIR) continue;
 
       if (_slotDragState && _slotDragState.moved && drone.slotIndex === _slotDragState.slotIndex) continue;
-      drawDroneBody(ctx, drone, nowSec, balScale, opts.dronSprites, hasAssignedPeers);
+      drawDroneBody(ctx, drone, nowSec, balScale, opts.dronSprites);
     }
 
     if (_slotDragState && _slotDragState.moved) {
@@ -1104,7 +1100,7 @@
         };
         ctx.save();
         ctx.globalAlpha = 0.88;
-        drawDroneBody(ctx, ghostDrone, nowSec, balScale, opts.dronSprites, hasAssignedPeers);
+        drawDroneBody(ctx, ghostDrone, nowSec, balScale, opts.dronSprites);
         ctx.restore();
       }
     }
@@ -1269,6 +1265,8 @@
     addDron: addDron,
     step: step,
     draw: draw,
+    _resolveHangarDroneAnimName: resolveHangarDroneAnimName,
+    _resolveWorldDroneAnimName: resolveWorldDroneAnimName,
     handlePointerDown: handlePointerDown,
     handlePointerMove: handlePointerMove,
     handlePointerUp: handlePointerUp,

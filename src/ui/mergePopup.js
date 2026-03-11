@@ -2,7 +2,7 @@
  * MergePopup — state-machine merge popup with asset display, stats and manual close.
  * States: IDLE → MERGE_ANIM (3 s, plays once) → SHOWCASE (loop, fire) → IDLE (on close).
  * Assets loaded from TankSprites (tanks.json). Stats computed from BAL constants.
- * Buttons: #btn-fight / #btn-close — the only way to dismiss the popup.
+ * Buttons: #btn-fight / #btn-close / #mergePopupCloseX dismiss the popup.
  */
 (function (global) {
   'use strict';
@@ -31,7 +31,7 @@
   var lastCanvasH = 0;
 
   /* ── DOM refs ── */
-  var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose;
+  var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose, btnCloseX;
 
   function getI18n() {
     return global.Game && global.Game.I18n ? global.Game.I18n : null;
@@ -113,6 +113,7 @@
     statsEl    = document.getElementById('mergePopupStats');
     btnFight   = document.getElementById('btn-fight');
     btnClose   = document.getElementById('btn-close');
+    btnCloseX  = document.getElementById('mergePopupCloseX');
 
     if (canvas) {
       ctxPopup = canvas.getContext('2d');
@@ -127,6 +128,10 @@
     if (btnClose) {
       btnClose.addEventListener('click', function (e) { e.stopPropagation(); close(); });
       btnClose.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+    }
+    if (btnCloseX) {
+      btnCloseX.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnCloseX.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
     }
     // NO global click-to-close — manual close only via buttons
     if (global.Game && global.Game.A11y && modal) {

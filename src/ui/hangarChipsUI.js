@@ -259,6 +259,67 @@
     return s;
   }
 
+  function pointListToString(points) {
+    var s = '';
+    for (var i = 0; i < points.length; i++) {
+      if (i > 0) s += ' ';
+      s += points[i][0] + ',' + points[i][1];
+    }
+    return s;
+  }
+
+  function insetTrianglePoints(points, factor) {
+    var centroidX = 0;
+    var centroidY = 0;
+    var t = typeof factor === 'number' ? factor : 0.12;
+    var result = [];
+    for (var i = 0; i < points.length; i++) {
+      centroidX += points[i][0];
+      centroidY += points[i][1];
+    }
+    centroidX /= Math.max(1, points.length);
+    centroidY /= Math.max(1, points.length);
+    for (var j = 0; j < points.length; j++) {
+      result.push([
+        points[j][0] + (centroidX - points[j][0]) * t,
+        points[j][1] + (centroidY - points[j][1]) * t
+      ]);
+    }
+    return result;
+  }
+
+  function buildSlotDecoration(points, isRed, locked, filled) {
+    if (!Array.isArray(points) || points.length !== 3) return '';
+    var centroidX = (points[0][0] + points[1][0] + points[2][0]) / 3;
+    var centroidY = (points[0][1] + points[1][1] + points[2][1]) / 3;
+    var innerPoints = insetTrianglePoints(points, filled ? 0.12 : 0.16);
+    var outerFill = locked
+      ? 'rgba(52,52,52,0.26)'
+      : (isRed ? 'rgba(92,26,21,0.28)' : 'rgba(118,88,14,0.28)');
+    var facetA = locked
+      ? 'rgba(98,98,98,0.10)'
+      : (isRed ? 'rgba(255,160,142,0.14)' : 'rgba(255,236,148,0.14)');
+    var facetB = locked
+      ? 'rgba(38,38,38,0.24)'
+      : (isRed ? 'rgba(64,18,14,0.30)' : 'rgba(88,66,12,0.30)');
+    var facetC = locked
+      ? 'rgba(74,74,74,0.12)'
+      : (isRed ? 'rgba(184,56,46,0.16)' : 'rgba(214,176,40,0.16)');
+    var seamStroke = locked
+      ? 'rgba(180,180,180,0.08)'
+      : (isRed ? 'rgba(255,180,164,0.14)' : 'rgba(255,241,170,0.14)');
+    var centerFill = locked
+      ? 'rgba(28,28,28,0.32)'
+      : (isRed ? 'rgba(25,8,8,0.30)' : 'rgba(28,20,6,0.30)');
+
+    return '' +
+      '<polygon points="' + pointListToString(points) + '" fill="' + outerFill + '" pointer-events="none" />' +
+      '<polygon points="' + points[0][0] + ',' + points[0][1] + ' ' + points[1][0] + ',' + points[1][1] + ' ' + centroidX + ',' + centroidY + '" fill="' + facetA + '" stroke="' + seamStroke + '" stroke-width="1" pointer-events="none" />' +
+      '<polygon points="' + points[1][0] + ',' + points[1][1] + ' ' + points[2][0] + ',' + points[2][1] + ' ' + centroidX + ',' + centroidY + '" fill="' + facetB + '" stroke="' + seamStroke + '" stroke-width="1" pointer-events="none" />' +
+      '<polygon points="' + points[2][0] + ',' + points[2][1] + ' ' + points[0][0] + ',' + points[0][1] + ' ' + centroidX + ',' + centroidY + '" fill="' + facetC + '" stroke="' + seamStroke + '" stroke-width="1" pointer-events="none" />' +
+      '<polygon points="' + pointListToString(innerPoints) + '" fill="' + centerFill + '" stroke="' + seamStroke + '" stroke-width="1" pointer-events="none" />';
+  }
+
   function renderButterfly() {
     var view = dom.slotView;
     if (!view) return;
@@ -282,9 +343,15 @@
 
       var locked = !isRed && cell.uiState.yellowLocked && cell.uiState.activeYellowSlotId !== def.slotId;
       var selected = _selectedSlot && _selectedSlot.type === def.type && _selectedSlot.slotId === def.slotId;
+      var slotPoints = getGappedPoints(def.pts, GAP_DEFAULT);
+      var slotPointsMarkup = pointListToString(slotPoints);
 
       var strokeColor = locked ? '#555' : (isRed ? '#e53935' : '#fdd835');
-      var fillColor = locked ? 'rgba(60,60,60,0.35)' : (chipData ? (isRed ? 'rgba(229,57,53,0.18)' : 'rgba(253,216,53,0.18)') : 'rgba(80,80,80,0.12)');
+      var fillColor = locked
+        ? 'rgba(60,60,60,0.24)'
+        : (chipData
+          ? (isRed ? 'rgba(229,57,53,0.12)' : 'rgba(253,216,53,0.12)')
+          : (isRed ? 'rgba(132,36,30,0.08)' : 'rgba(164,130,16,0.08)'));
       var strokeW = selected ? 4 : 2.5;
       var selectedClass = selected ? ' hangarSlotPoly--selected' : '';
 
@@ -328,7 +395,8 @@
 
       /* Always use GAP_DEFAULT to keep size constant */
       svg += '<g class="hangarSlotGroup" style="transform: translate(' + tx + 'px, ' + ty + 'px)">';
-      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + polyPoints(def.pts, GAP_DEFAULT) + '" ' +
+      svg += buildSlotDecoration(slotPoints, isRed, locked, !!chipData);
+      svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + slotPointsMarkup + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
         'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer');

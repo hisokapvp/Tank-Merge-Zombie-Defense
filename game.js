@@ -2723,6 +2723,38 @@ function getZombieAttackMultipliers(){
     || { targetAliveMult: 1, speedMult: 1, damageMult: 1 };
 }
 
+function shouldZombieAttemptAttack(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.shouldZombieAttemptAttack === 'function') {
+    return !!controller.shouldZombieAttemptAttack();
+  }
+  return isZombieAttackModeActive();
+}
+
+function getZombieFenceAttackDamageMul(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.getZombieFenceAttackDamageMul === 'function') {
+    return controller.getZombieFenceAttackDamageMul();
+  }
+  return isZombieAttackModeActive() ? getZombieAttackMultipliers().damageMult : 0;
+}
+
+function getZombieIdleRetreatOffsetPx(zombie){
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.getZombieIdleRetreatOffsetPx === 'function') {
+    return controller.getZombieIdleRetreatOffsetPx(zombie);
+  }
+  return 0;
+}
+
+function getZombieIdleWavePhase(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.getZombieIdleWavePhase === 'function') {
+    return controller.getZombieIdleWavePhase();
+  }
+  return 'inactive';
+}
+
 function updateWorldEvents(dt){
   ensureWorldEventsRuntimeController()?.updateWorldEvents(dt);
 }
@@ -5927,8 +5959,9 @@ function stepZombies(dt){
   const slow = (state.empUntil && nowSec() < state.empUntil) ? 0.5 : 1;
   const attackMult = getZombieAttackMultipliers();
   const speedMul = attackMult.speedMult;
-  const damageMul = attackMult.damageMult;
   const attackActive = isZombieAttackModeActive();
+  const shouldAttackTargets = shouldZombieAttemptAttack();
+  const fenceAttackDamageMul = getZombieFenceAttackDamageMul();
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
   const breachAwarenessRadiusPx = getFenceBreachAwarenessRadiusPx();
@@ -5976,7 +6009,7 @@ function stepZombies(dt){
       z.chipSlowFactor = 1; // reset
     }
 
-    const shouldMove = !attackActive || z.attackState !== 'attack';
+    const shouldMove = !shouldAttackTargets || z.attackState !== 'attack';
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
     const prevY = center.y + Math.sin(prevTheta) * z.r;
@@ -5987,7 +6020,7 @@ function stepZombies(dt){
       ? null
       : getNearestKnownBreachForZombie(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
     z.knowsBreach = !!nearestBreach;
-    const allowSupercomputerTarget = !!z.breached;
+    const allowSupercomputerTarget = !!z.breached && attackActive;
 
     let radialSpeed = 0;
     if (shouldMove) {
@@ -6037,13 +6070,15 @@ function stepZombies(dt){
         const desiredTheta = z.anchorTheta + swayOffset;
 
         const blend = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
+        const fenceLimit = zombieFenceLimit(z);
+        const retreatOffset = z.breached ? 0 : getZombieIdleRetreatOffsetPx(z);
+        z.targetR = fenceLimit + retreatOffset;
         let desiredR = z.r + (z.targetR - z.r) * blend;
-        if (!z.breached) desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
+        if (!z.breached && shouldAttackTargets) desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
 
         z.theta = desiredTheta;
         z.r = desiredR;
 
-        const fenceLimit = zombieFenceLimit(z);
         if (z.targetR < fenceLimit) z.targetR = fenceLimit;
         if (z.r < fenceLimit) z.r = fenceLimit;
 
@@ -6073,13 +6108,13 @@ function stepZombies(dt){
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
 
-    const targetNow = attackActive ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
+    const targetNow = shouldAttackTargets ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
     // ── Chip: calming effect (mod 9) — suppress attacks ──
     const isCalmed = z.calmUntil && (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000) < z.calmUntil;
 
-    if (!attackActive || isCalmed) {
+    if (!shouldAttackTargets || isCalmed) {
       z.attackState = 'walk';
       z.attackAnimTimeSec = 0;
       z.attackCooldownTimerSec = 0;
@@ -6102,10 +6137,10 @@ function stepZombies(dt){
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
         const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget);
         if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
-          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, damageMul));
+          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, fenceAttackDamageMul));
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
         } else if (hitTarget && hitTarget.kind === 'supercomputer') {
-          applySupercomputerDamage(getZombieFinalAttackDamage(z, damageMul));
+          applySupercomputerDamage(getZombieFinalAttackDamage(z, fenceAttackDamageMul));
           z.attackTargetId = 'supercomputer';
         }
         z.attackDidHit = true;
@@ -6137,7 +6172,7 @@ function stepZombies(dt){
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
-        applyDamageToZombie(z, ((z.dotDps || 0) * dt) / damageMul, 'tank');
+        applyDamageToZombie(z, ((z.dotDps || 0) * dt) / attackMult.damageMult, 'tank');
       } else {
         z.dotUntil = 0;
         z.dotDps = 0;
@@ -10603,34 +10638,24 @@ function clipRoundedRect(targetCtx, x, y, w, h, r){
 
 function drawSlotActivityOverlay(targetCtx, x, y, w, h, r, timeSec){
   if (!targetCtx || !Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return;
-  const phase = Math.floor((Number.isFinite(timeSec) ? timeSec : 0) * 14);
+  const overlayApi = window.Game && window.Game.SlotActivityOverlay;
+  if (overlayApi && typeof overlayApi.draw === 'function') {
+    overlayApi.draw(targetCtx, x, y, w, h, r, {
+      baseAlpha: 0.52,
+      brightAlpha: 0.18,
+      darkAlpha: 0.16,
+      borderAlpha: 0.78,
+      seed: Math.floor(x) * 17 + Math.floor(y) * 29 + Math.floor(w) * 31 + Math.floor(h) * 37,
+    });
+    return;
+  }
 
   targetCtx.save();
   targetCtx.beginPath();
   clipRoundedRect(targetCtx, x, y, w, h, r);
   targetCtx.clip();
-
-  targetCtx.fillStyle = 'rgba(255,152,0,0.44)';
+  targetCtx.fillStyle = 'rgba(255,152,0,0.52)';
   targetCtx.fillRect(x, y, w, h);
-
-  targetCtx.fillStyle = 'rgba(255,232,196,0.11)';
-  for (let gy = Math.floor(y) - 4; gy < y + h + 4; gy += 4){
-    const jitter = ((phase + gy) % 7) - 3;
-    for (let gx = Math.floor(x) - 4; gx < x + w + 4; gx += 7){
-      targetCtx.fillRect(gx + jitter, gy, 2, 1);
-    }
-  }
-
-  targetCtx.fillStyle = 'rgba(255,242,214,0.14)';
-  targetCtx.fillRect(x, y, w, Math.max(1, h * 0.38));
-  targetCtx.fillStyle = 'rgba(120,60,0,0.12)';
-  targetCtx.fillRect(x, y + h * 0.56, w, Math.max(1, h * 0.44));
-
-  targetCtx.strokeStyle = 'rgba(255,216,156,0.72)';
-  targetCtx.lineWidth = 1;
-  targetCtx.beginPath();
-  clipRoundedRect(targetCtx, x + 0.5, y + 0.5, Math.max(0, w - 1), Math.max(0, h - 1), Math.max(1, r - 1));
-  targetCtx.stroke();
   targetCtx.restore();
 }
 
@@ -11889,6 +11914,7 @@ function initDebugPanel(){
       attackEndsInSec: attackActive && Number.isFinite(worldEventsState.attackEndAt)
         ? Math.max(0, worldEventsState.attackEndAt - now)
         : 0,
+      idleWavePhase: getZombieIdleWavePhase(),
       zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       zombiesAlive: Array.isArray(state.zombies)
         ? state.zombies.filter(function (z) { return z && z.state !== 'dying'; }).length

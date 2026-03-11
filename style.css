@@ -3448,6 +3448,22 @@ input, select, textarea, button {
   min-height: 0;
 }
 
+.mergePopupModal__close{
+  top:8px;
+  right:8px;
+  width:36px;
+  height:36px;
+  min-width:36px;
+  min-height:36px;
+  border-radius:12px;
+}
+
+.mergePopupModal__close::before,
+.mergePopupModal__close::after{
+  width:4px;
+  height:18px;
+}
+
 /* --- 4×4 Cell Grid --- */
 .hangarGridWrap{
   flex: 1 1 auto;

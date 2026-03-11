@@ -105,6 +105,7 @@ test('T5-7: mergePopup.js references btn-fight and btn-close', () => {
   const mpJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/mergePopup.js'), 'utf-8');
   assert(mpJs.indexOf('btn-fight') !== -1, 'btn-fight referenced');
   assert(mpJs.indexOf('btn-close') !== -1, 'btn-close referenced');
+  assert(mpJs.indexOf('mergePopupCloseX') !== -1, 'mergePopupCloseX referenced');
 });
 
 // Test 8: index.html contains the buttons
@@ -112,6 +113,7 @@ test('T5-8: index.html has btn-fight and btn-close', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../../index.html'), 'utf-8');
   assert(html.indexOf('id="btn-fight"') !== -1, 'btn-fight in HTML');
   assert(html.indexOf('id="btn-close"') !== -1, 'btn-close in HTML');
+  assert(html.indexOf('id="mergePopupCloseX"') !== -1, 'mergePopupCloseX in HTML');
 });
 
 // Test 9: Boot default does not auto-grant talent point
