@@ -931,6 +931,9 @@ body::after{
   border:1px solid rgba(255, 184, 114, 0.12);
   background:rgba(13, 9, 6, 0.7);
 }
+#bigMenuRootAutoPauseLabel{
+  margin-top:12px;
+}
 .menuLabel{
   font-size:12px;
   font-weight:700;
@@ -1046,15 +1049,11 @@ body.menu-open .stageUi .hudItem{
   background:rgba(5, 10, 18, 0.6);
   backdrop-filter: blur(3px);
 }
-.crateModal__panel{
+.crateModal .crateModal__panel{
   position:relative;
   z-index:1;
-  width:min(320px, 80%);
-  padding:18px;
-  border-radius:18px;
-  border:2px solid rgba(0,0,0,.25);
-  background:linear-gradient(160deg, rgba(17, 30, 55, 0.95), rgba(9, 18, 36, 0.95));
-  box-shadow:0 3px 0 rgba(0,0,0,.22), 0 0 10px rgba(0,0,0,.35);
+  width:min(400px, 92vw);
+  max-width:400px;
   text-align:center;
 }
 .crateModal__close{
@@ -1119,19 +1118,37 @@ body.menu-open .stageUi .hudItem{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:12px;
-  padding-top:8px;
+  gap:16px;
+  padding-top:4px;
+  width:100%;
+}
+.crateModal__iconWrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
 }
 #crateTankIcon{
-  width:80px;
-  height:80px;
-  border-radius:16px;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.12);
+  width:96px;
+  height:96px;
+  border-radius:18px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,184,114,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 14px rgba(255,184,114,.1);
 }
 .crateModal__text{
+  max-width:280px;
   font-weight:700;
   color:var(--text);
+  line-height:1.5;
+}
+.crateModal__actions{
+  display:flex;
+  justify-content:center;
+  width:100%;
+}
+.crateModal__actions .btn{
+  min-width:180px;
 }
 
 .achievementsList{
@@ -2380,7 +2397,6 @@ input, select, textarea, button {
 .scTab:active:not([aria-selected='true']){
   background: rgba(74, 246, 38, 0.2);
 }
-}
 .scTab[aria-selected='true']{
   border: 1px solid #4af626 !important;
   border-bottom-color: transparent !important;
@@ -3603,10 +3619,7 @@ input, select, textarea, button {
 /* Individual shakes (randomly delayed or offset could be done via JS, 
    but here we provide classes that can be assigned) */
 .shake-fast { animation-duration: 0.1s; }
-.shake-alt { animation-direction: reverse;   25% { transform: translate(0.5px, 0.5px) rotate(0.2deg); }
-  50% { transform: translate(-0.5px, 0.5px) rotate(-0.2deg); }
-  75% { transform: translate(0.5px, -0.5px) rotate(0.1deg); }
-}
+.shake-alt { animation-direction: reverse; }
 @keyframes slotPulse{
   0%,100%{filter:brightness(1) drop-shadow(0 0 0 transparent);}
   50%{filter:brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,.6));}
@@ -5414,6 +5427,21 @@ input, select, textarea, button {
   border-color:#ff9800 !important;
   background:rgba(255,152,0,.12) !important;
   box-shadow:0 0 6px rgba(255,152,0,.3);
+}
+.chipCraftInvStateCount{
+  position:absolute;
+  top:4px;
+  right:4px;
+  font-size:11px;
+  color:#ffb74d;
+  font-family:'Press Start 2P',monospace;
+}
+.chipCraftInvItem--selectedStack{
+  cursor:default;
+}
+.chipCraftInvItem--selectedStack:hover{
+  border-color:#ff9800 !important;
+  background:rgba(255,152,0,.12) !important;
 }
 
 /* ─── Fragment validity highlights (assemble mode) ─── */

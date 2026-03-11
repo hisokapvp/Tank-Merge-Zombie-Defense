@@ -151,9 +151,9 @@
   function getDroneSlotsLayout(state, options) {
     var rect = getHangarRect(state, options);
     var balScale = Number.isFinite(options && options.balScale) ? Math.max(0.5, options.balScale) : 1;
-    var slotSize = clamp(Math.min(rect.w, rect.h) * 0.24, 30 * balScale, 58 * balScale);
-    var sideGap = Math.max(8, slotSize * 0.22);
-    var topOffset = Math.max(12, slotSize * 0.78);
+    var slotSize = clamp(Math.min(rect.w, rect.h) * 0.12, Math.max(16, 18 * balScale), Math.max(24, 29 * balScale));
+    var borderGap = Math.max(2, 3 * balScale);
+    var topOffset = slotSize * 0.5 + borderGap;
     var laneStepX = rect.w / 3;
     var laneStepY = rect.h / 3;
     var slots = [];
@@ -165,9 +165,9 @@
       if (def.side === 'top') {
         cy = rect.y - topOffset;
       } else if (def.side === 'left') {
-        cx = rect.x - slotSize * 0.72 - sideGap;
+        cx = rect.x - slotSize * 0.5 - borderGap;
       } else if (def.side === 'right') {
-        cx = rect.x + rect.w + slotSize * 0.72 + sideGap;
+        cx = rect.x + rect.w + slotSize * 0.5 + borderGap;
       }
       slots.push({
         slotIndex: def.slotIndex,
@@ -917,6 +917,7 @@
   function drawDroneSlot(ctx, slot, drone, dragState, balScale, timeSec) {
     var isSelected = _selectedSlotIndex === slot.slotIndex;
     var isDragSource = !!(dragState && dragState.slotIndex === slot.slotIndex && dragState.moved);
+    var slotUiScale = Math.max(0.55, Math.min(1, slot.w / 34));
     var fill = drone ? 'rgba(19, 28, 36, 0.92)' : 'rgba(12, 16, 22, 0.72)';
     var stroke = drone
       ? (drone.mode === MODE_REPAIR ? 'rgba(255,181,112,0.96)' : 'rgba(123,224,255,0.92)')
@@ -927,45 +928,40 @@
     var pulse = drone ? (1 + Math.sin(timeSec * (drone.mode === MODE_REPAIR ? 5.2 : 2.4) + slot.slotIndex) * 0.04) : 1;
 
     ctx.save();
-    ctx.shadowBlur = drone ? Math.max(6, 14 * balScale * pulse) : 0;
+    ctx.shadowBlur = drone ? Math.max(5, slot.w * 0.42 * pulse) : 0;
     ctx.shadowColor = glow;
-    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, Math.max(7, slot.w * 0.16));
+    drawRoundedRect(ctx, slot.x, slot.y, slot.w, slot.h, Math.max(5, slot.w * 0.2));
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    ctx.lineWidth = isSelected ? Math.max(2, 2.4 * balScale) : Math.max(1, 1.5 * balScale);
+    ctx.lineWidth = isSelected ? Math.max(1.4, 2.1 * slotUiScale) : Math.max(1, 1.25 * slotUiScale);
     ctx.strokeStyle = isDragSource ? 'rgba(255,236,179,0.98)' : stroke;
     ctx.stroke();
 
     ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
-    drawRoundedRect(ctx, slot.x + 2, slot.y + 2, Math.max(0, slot.w - 4), Math.max(0, slot.h - 4), Math.max(5, slot.w * 0.12));
+    drawRoundedRect(ctx, slot.x + 1.5, slot.y + 1.5, Math.max(0, slot.w - 3), Math.max(0, slot.h - 3), Math.max(4, slot.w * 0.14));
     ctx.stroke();
 
     if (drone) {
       ctx.fillStyle = drone.mode === MODE_REPAIR ? 'rgba(255,193,122,0.95)' : 'rgba(156,230,255,0.95)';
       ctx.beginPath();
-      ctx.arc(slot.x + slot.w - 8 * balScale, slot.y + 8 * balScale, Math.max(2.5, 3.5 * balScale), 0, Math.PI * 2);
+      ctx.arc(slot.x + slot.w - Math.max(5, 6 * slotUiScale), slot.y + Math.max(5, 6 * slotUiScale), Math.max(2, 2.6 * slotUiScale), 0, Math.PI * 2);
       ctx.fill();
 
+      var badgeW = Math.max(11, slot.w * 0.56);
+      var badgeH = Math.max(8, slot.h * 0.32);
+      var badgeX = slot.x + Math.max(3, slot.w * 0.12);
+      var badgeY = slot.y + slot.h - badgeH - Math.max(3, slot.h * 0.08);
       ctx.fillStyle = 'rgba(7,10,14,0.92)';
-      drawRoundedRect(ctx, slot.x + 5 * balScale, slot.y + slot.h - 15 * balScale, Math.max(14, 16 * balScale), Math.max(9, 10 * balScale), Math.max(3, 4 * balScale));
+      drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, Math.max(3, badgeH * 0.4));
       ctx.fill();
       ctx.fillStyle = '#f4fbff';
-      ctx.font = Math.floor(Math.max(8, 9 * balScale)) + 'px Courier New, monospace';
+      ctx.font = Math.floor(Math.max(7, badgeH * 0.72)) + 'px Courier New, monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(drone.level), slot.x + 13 * balScale, slot.y + slot.h - 10 * balScale);
-    } else {
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(slot.cx, slot.y + slot.h * 0.27);
-      ctx.lineTo(slot.x + slot.w * 0.32, slot.y + slot.h * 0.68);
-      ctx.lineTo(slot.x + slot.w * 0.68, slot.y + slot.h * 0.68);
-      ctx.closePath();
-      ctx.stroke();
+      ctx.fillText(String(drone.level), badgeX + badgeW * 0.5, badgeY + badgeH * 0.55);
     }
 
     ctx.restore();

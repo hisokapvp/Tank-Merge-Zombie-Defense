@@ -1360,6 +1360,7 @@
   function showCraftInvChipTooltip(item) {
     var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
     var level = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
+    var displayCount = parseInt(item.getAttribute('data-craft-display-count'), 10);
     var chips = ensurePlayerChips();
     var chip = null;
     for (var i = 0; i < chips.length; i++) {
@@ -1377,12 +1378,13 @@
     var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
     html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
     html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
+    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', Number.isFinite(displayCount) ? displayCount : chip.count) + '</div>';
     _showGameTooltip(html, item);
   }
 
   function showCraftInvFragTooltip(item) {
     var fragId = parseInt(item.getAttribute('data-craft-frag-id'), 10);
+    var displayCount = parseInt(item.getAttribute('data-craft-display-count'), 10);
     if (!Number.isFinite(fragId)) return;
     var frags = ensurePlayerFragments();
     var frag = null;
@@ -1391,7 +1393,7 @@
     }
     var name = modName(fragId);
     var desc = _getModDescription(fragId);
-    var cnt = frag ? frag.count : 0;
+    var cnt = Number.isFinite(displayCount) ? displayCount : (frag ? frag.count : 0);
     var html = '<div class="chipUpgradeTooltip__title">' + name + '</div>';
     if (desc) html += '<div style="font-size:11px;color:rgba(255,255,255,.7)">' + desc + '</div>';
     html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', cnt) + '</div>';
@@ -2458,6 +2460,26 @@
     return total;
   }
 
+  function _countSelectedCraftChipCopies(chipId, level) {
+    var selected = 0;
+    for (var i = 0; i < _craftSlots.length; i++) {
+      var slot = _craftSlots[i];
+      if (!slot || slot.type !== 'chip') continue;
+      if (slot.chipId === chipId && slot.level === level) selected++;
+    }
+    return selected;
+  }
+
+  function _countSelectedCraftFragments(fragmentId) {
+    var selected = 0;
+    for (var i = 0; i < _craftSlots.length; i++) {
+      var slot = _craftSlots[i];
+      if (!slot || slot.type !== 'fragment') continue;
+      if (slot.fragmentId === fragmentId) selected++;
+    }
+    return selected;
+  }
+
   function _renderCraftSlotCard(iconHtml, fullName, options) {
     var opts = options || {};
     var cardClass = 'chipCraftSlotCard';
@@ -2832,6 +2854,18 @@
 
     var displayedItems = 0;
 
+    function renderFragmentInventoryCard(fragmentId, displayCount, extraClass, isDisabled) {
+      var fragStroke = (h && h.isSpecialMod(fragmentId)) ? '#fdd835' : '#e53935';
+      var fragName = modName(fragmentId);
+      var disabledAttr = isDisabled ? ' data-craft-disabled="true"' : '';
+      return '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (extraClass || '') +
+        '" data-craft-src="fragment" data-craft-frag-id="' + fragmentId + '" data-craft-display-count="' + displayCount + '"' + disabledAttr + '>' +
+        _fragmentSvg(fragmentId, 22, fragStroke) +
+        '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>' +
+        '<span class="chipCraftInvLevel">×' + displayCount + '</span>' +
+        '</div>';
+    }
+
     var playerChips = ensurePlayerChips();
     if (showChipItems) {
       for (var ci = 0; ci < playerChips.length; ci++) {
@@ -2842,18 +2876,22 @@
         var chipName = _getChipDisplayName(pc);
         var dustKey = 'chip_' + pc.chipId + '_' + pc.level;
         var dustSel = _dustSelected[dustKey] || 0;
-        html += '<div class="chipCraftInvItem' + (isDustView && dustSel > 0 ? ' chipCraftInvItem--dustSelected' : '') +
-          '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '">';
+        var selectedChipCount = isDisassembleView ? _countSelectedCraftChipCopies(pc.chipId, pc.level) : 0;
+        var chipSelectedClass = ((isDustView && dustSel > 0) || selectedChipCount > 0) ? ' chipCraftInvItem--dustSelected' : '';
+        html += '<div class="chipCraftInvItem' + chipSelectedClass +
+          '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" data-craft-display-count="' + pc.count + '">';
         if (isDustView) {
           html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
             (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
           if (dustSel > 0 && pc.count > 1) {
             html += '<span class="chipCraftDustCount">' + dustSel + '/' + pc.count + '</span>';
           }
+        } else if (selectedChipCount > 0 && pc.count > 1) {
+          html += '<span class="chipCraftInvStateCount">' + selectedChipCount + '/' + pc.count + '</span>';
         }
         html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
         html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
-        html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + '</span>';
+        html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + (pc.count > 1 ? ' • ×' + pc.count : '') + '</span>';
         html += '</div>';
       }
     }
@@ -2882,17 +2920,29 @@
           continue;
         }
         displayedItems++;
-        var fragStroke = (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935';
-        var fragName = modName(frag.fragmentId);
         var dustKeyF = 'frag_' + frag.fragmentId;
         var dustSelF = _dustSelected[dustKeyF] || 0;
-        var fragCanAdd = isAssembleView && !isDustView ? _canAddFragment(frag.fragmentId) : true;
-        var fragHighlightClass = '';
-        if (isAssembleView && !isDustView) {
-          fragHighlightClass = fragCanAdd ? ' chipCraftInvItem--canAdd' : ' chipCraftInvItem--cantAdd';
+        if (isAssembleView) {
+          displayedItems--;
+          var selectedFragCount = _countSelectedCraftFragments(frag.fragmentId);
+          var remainingFragCount = Math.max(0, frag.count - selectedFragCount);
+          if (selectedFragCount > 0) {
+            displayedItems++;
+            html += renderFragmentInventoryCard(frag.fragmentId, selectedFragCount, ' chipCraftInvItem--dustSelected chipCraftInvItem--selectedStack', true);
+          }
+          if (remainingFragCount > 0) {
+            displayedItems++;
+            html += renderFragmentInventoryCard(
+              frag.fragmentId,
+              remainingFragCount,
+              _canAddFragment(frag.fragmentId) ? ' chipCraftInvItem--canAdd' : ' chipCraftInvItem--cantAdd',
+              false
+            );
+          }
+          continue;
         }
-        html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (isDustView && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') + fragHighlightClass +
-          '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '">';
+        html += '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (isDustView && dustSelF > 0 ? ' chipCraftInvItem--dustSelected' : '') +
+          '" data-craft-src="fragment" data-craft-frag-id="' + frag.fragmentId + '" data-craft-display-count="' + frag.count + '">';
         if (isDustView) {
           html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyF + '" data-dust-type="fragment" data-dust-max="' + frag.count + '"' +
             (dustSelF > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
@@ -2900,8 +2950,8 @@
             html += '<span class="chipCraftDustCount">' + dustSelF + '/' + frag.count + '</span>';
           }
         }
-        html += _fragmentSvg(frag.fragmentId, 22, fragStroke);
-        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>';
+        html += _fragmentSvg(frag.fragmentId, 22, (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935');
+        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(modName(frag.fragmentId)) + '">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
         html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
         html += '</div>';
       }
@@ -3258,6 +3308,7 @@
           item.addEventListener('click', function (evt) {
             /* Skip if click was on a checkbox */
             if (evt.target.tagName === 'INPUT') return;
+            if (item.getAttribute('data-craft-disabled') === 'true') return;
             var srcType = item.getAttribute('data-craft-src');
             _addItemToSlot(item, srcType);
           });
@@ -3266,6 +3317,7 @@
           item.addEventListener('pointerdown', function (evt) {
             if (_dustMode) return;
             if (evt.target.tagName === 'INPUT') return;
+            if (item.getAttribute('data-craft-disabled') === 'true') return;
             var srcType = item.getAttribute('data-craft-src');
             var startX = evt.clientX, startY = evt.clientY;
             var moved = false;
