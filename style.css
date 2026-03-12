@@ -765,7 +765,6 @@ body::after{
 .menuSettings{
   display:flex;
   flex-direction:column;
-  gap:12px;
   text-align:left;
 }
 .menuSaveSlotsList{
@@ -929,12 +928,12 @@ body::after{
   flex-direction:column;
   gap:8px;
   padding:10px 12px;
-  border-radius:14px;
   border:1px solid rgba(255, 184, 114, 0.12);
   background:rgba(13, 9, 6, 0.7);
+  margin-top:10px;
 }
 #bigMenuRootAutoPauseLabel{
-  margin-top:12px;
+  margin-top:0px;
 }
 .menuLabel{
   font-size:12px;
@@ -3169,26 +3168,33 @@ input, select, textarea, button {
 
 .gameTutorial__pointer{
   position:absolute;
-  width:56px;
-  height:56px;
-  border:3px solid rgba(74, 246, 38, 0.95);
-  border-radius:999px;
-  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.2), rgba(74,246,38,.12) 52%, rgba(10,12,10,.92) 100%);
-  box-shadow:0 0 18px rgba(74,246,38,.26), 2px 2px 0 rgba(0,0,0,.8);
-  transform-origin:center;
+  width:32px;
+  height:48px;
+  border:none;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  transform-origin:center bottom;
   animation:gameTutorialPointerPulse 1.15s ease-in-out infinite;
+  filter:drop-shadow(0 0 12px rgba(74,246,38,.55)) drop-shadow(0 2px 6px rgba(0,0,0,.7));
+  pointer-events:none;
 }
 
 .gameTutorial__pointer::after{
   content:'';
   position:absolute;
-  right:-10px;
-  top:20px;
-  width:0;
-  height:0;
-  border-top:8px solid transparent;
-  border-bottom:8px solid transparent;
-  border-left:14px solid rgba(74, 246, 38, 0.92);
+  inset:0;
+  background:linear-gradient(180deg, rgba(90,255,50,.95) 0%, rgba(50,210,30,.9) 40%, rgba(30,160,15,.85) 100%);
+  clip-path:polygon(50% 100%, 8% 48%, 32% 48%, 32% 0, 68% 0, 68% 48%, 92% 48%);
+}
+
+.gameTutorial__pointer::before{
+  content:'';
+  position:absolute;
+  inset:2px;
+  background:linear-gradient(180deg, rgba(180,255,140,.4) 0%, rgba(74,246,38,.15) 50%, transparent 100%);
+  clip-path:polygon(50% 100%, 8% 48%, 32% 48%, 32% 0, 68% 0, 68% 48%, 92% 48%);
+  pointer-events:none;
 }
 
 .gameTutorial__bubble{
@@ -3199,10 +3205,11 @@ input, select, textarea, button {
   background:linear-gradient(180deg, rgba(10, 12, 10, 0.96), rgba(20, 26, 19, 0.96));
   box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
   pointer-events:auto;
-  border-radius:18px;
+  border-radius:0;
   display:flex;
   flex-direction:column;
   gap:14px;
+  z-index:2;
 }
 
 .gameTutorial__bubble--hidden{
@@ -3241,13 +3248,26 @@ input, select, textarea, button {
 
 .gameTutorial__continueBtn,
 .gameTutorial__disableBtn{
-  min-width:148px;
   white-space:nowrap;
+  overflow:visible;
+  width:auto;
+  min-width:fit-content;
+  pointer-events:auto;
+}
+.gameTutorial__continueBtn{
+  min-width:148px;
+}
+.gameTutorial__close{
+  pointer-events:auto;
+  z-index:3;
 }
 
 [data-tutorial-locked="true"]{
   position:relative;
   cursor:not-allowed !important;
+}
+.supercomputerHudBtn[data-tutorial-locked="true"]{
+  position:absolute;
 }
 
 button[data-tutorial-locked="true"]::before,
@@ -3277,10 +3297,10 @@ button[data-tutorial-locked="true"]::after,
 
 @keyframes gameTutorialPointerPulse{
   0%, 100% {
-    transform:translate3d(0, 0, 0) scale(1);
+    transform:translateY(0) scale(1);
   }
   50% {
-    transform:translate3d(18px, -8px, 0) scale(.92);
+    transform:translateY(10px) scale(.94);
   }
 }
 
@@ -3302,6 +3322,7 @@ button[data-tutorial-locked="true"]::after,
   .gameTutorial__disableBtn{
     min-width:0;
     width:auto;
+    overflow:visible;
   }
 }
 .lessonProgressPanel__header{

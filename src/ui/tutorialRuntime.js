@@ -256,6 +256,7 @@
     const hadTutorial = !!(state.tutorial && typeof state.tutorial === 'object');
     normalizeTutorialState(state);
     runtime.lastStateRef = state;
+    runtime.pauseActive = false;
     if (!hadTutorial) persist();
   }
 
@@ -434,8 +435,8 @@
     const centerX = canvasRect.left - stageRect.left + cell.x + cell.w * 0.5;
     const centerY = canvasRect.top - stageRect.top + cell.y + cell.h * 0.5;
 
-    runtime.pointerEl.style.left = Math.round(centerX - 74) + 'px';
-    runtime.pointerEl.style.top = Math.round(centerY - 18) + 'px';
+    runtime.pointerEl.style.left = Math.round(centerX - 18) + 'px';
+    runtime.pointerEl.style.top = Math.round(centerY - 54) + 'px';
 
     if (!runtime.bubbleEl || runtime.bubbleEl.classList.contains('gameTutorial__bubble--hidden')) return;
 
@@ -619,9 +620,10 @@
   function dismissCurrentBubble(reason) {
     const state = getState();
     if (!state) return;
-    const tutorial = normalizeTutorialState(state);
     const activeStepId = getActiveStepId(state);
-    if (!activeStepId || !tutorial.steps[activeStepId]) return;
+    if (!activeStepId) return;
+    const tutorial = state.tutorial;
+    if (!tutorial || !tutorial.steps || !tutorial.steps[activeStepId]) return;
 
     tutorial.steps[activeStepId].bubbleOpen = false;
     if (reason === 'close') tutorial.steps[activeStepId].dismissed = true;
@@ -632,9 +634,10 @@
   function completeCurrentStep(reason) {
     const state = getState();
     if (!state) return;
-    const tutorial = normalizeTutorialState(state);
     const activeStepId = getActiveStepId(state);
-    if (!activeStepId || tutorial.disabled || tutorial.completed) return;
+    if (!activeStepId) return;
+    const tutorial = state.tutorial;
+    if (!tutorial || tutorial.disabled || tutorial.completed) return;
 
     const stepState = tutorial.steps[activeStepId] || createDefaultStepState();
     stepState.completed = true;

@@ -68,11 +68,11 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
 });
 
 test('TUT-2: starter tank spawn and pre-retry reset keep the tank in hangar', () => {
-  assert(gameJs.indexOf('cell.tank = makeTank(1, false);') !== -1, 'starter tank spawns with onTrack=false');
+  assert(gameJs.indexOf('cell.tank = makeTank(1, false, { enableStamp: false });') !== -1, 'starter tank spawns with onTrack=false and no stamp');
   const firstSpawnIdx = gameJs.indexOf('function spawnInitialTanksLvl1');
   const secondSpawnIdx = gameJs.indexOf('function clearAllTanksFromCells', firstSpawnIdx);
   const spawnBlock = firstSpawnIdx !== -1 && secondSpawnIdx !== -1 ? gameJs.slice(firstSpawnIdx, secondSpawnIdx) : '';
-  assert(spawnBlock.indexOf('makeTank(1, false)') !== -1, 'spawnInitialTanksLvl1 keeps starter tank in hangar');
+  assert(spawnBlock.indexOf('makeTank(1, false') !== -1, 'spawnInitialTanksLvl1 keeps starter tank in hangar');
   const retryIdx = gameJs.indexOf('function applyPreRetryRuntimeReset');
   const retryEndIdx = gameJs.indexOf('function buildPreRetryPayload', retryIdx);
   const retryBlock = retryIdx !== -1 && retryEndIdx !== -1 ? gameJs.slice(retryIdx, retryEndIdx) : '';

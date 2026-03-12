@@ -565,6 +565,9 @@
       opts.saveProgress();
       openMainMenuView();
       opts.setMenuOpen(false);
+      if (windowObj.Game && windowObj.Game.TutorialRuntime && typeof windowObj.Game.TutorialRuntime.syncNow === 'function') {
+        windowObj.Game.TutorialRuntime.syncNow();
+      }
     });
     opts.ui.menuNewConfirmBack && opts.ui.menuNewConfirmBack.addEventListener('click', function () {
       openMainMenuView();

@@ -7528,7 +7528,7 @@ function spawnInitialTanksLvl1(targetState, count = 1){
     if (Garage && typeof Garage.isCellAvailableForTank === 'function' && !Garage.isCellAvailableForTank(cell, stateRef)) {
       return false;
     }
-    cell.tank = makeTank(1, false);
+    cell.tank = makeTank(1, false, { enableStamp: false });
     spawned += 1;
     return true;
   }
@@ -7991,6 +7991,9 @@ function resetGameState(options){
 
   resizeCanvas();
   state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+  if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.stop === 'function') {
+    window.Game.SupercomputerBuildTankFx.stop();
+  }
   spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
   updateDamagePointsUI();
@@ -10211,9 +10214,12 @@ function updateSupercomputerHudButtonPosition(){
   btnState.width = btnW;
   btnState.height = btnH;
 
-  const btnMargin = 10;
-  let x = spriteMetrics.centerX + spriteMetrics.halfW + btnMargin;
-  let y = spriteMetrics.centerY - btnH * 0.5;
+  const scConfig = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
+  const btnOffset = scConfig && scConfig.button && scConfig.button.offset ? scConfig.button.offset : null;
+  const btnMarginX = btnOffset && Number.isFinite(btnOffset.x) ? btnOffset.x : 10;
+  const btnMarginY = btnOffset && Number.isFinite(btnOffset.y) ? btnOffset.y : 0;
+  let x = spriteMetrics.centerX + spriteMetrics.halfW + btnMarginX;
+  let y = spriteMetrics.centerY - btnH * 0.5 + btnMarginY;
 
   const boostBBox = supercomputerHudRuntime.layout.boostBBox;
   const buttonBox = {

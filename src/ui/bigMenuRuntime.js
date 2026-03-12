@@ -574,6 +574,9 @@
         deps.setMenuOpen(false);
         setBigMenuOpen(false);
         openBigMenuRootView();
+        if (global.Game && global.Game.TutorialRuntime && typeof global.Game.TutorialRuntime.syncNow === 'function') {
+          global.Game.TutorialRuntime.syncNow();
+        }
       } catch (err) {
         console.error('Big menu start failed', err);
         setBigMenuOpen(true);

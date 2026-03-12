@@ -335,5 +335,11 @@
       "perLevel": 1,
       "max": 80
     }
+  },
+  "button": {
+    "offset": {
+      "x": 10,
+      "y": 0
+    }
   }
 }
