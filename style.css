@@ -3040,8 +3040,8 @@ input, select, textarea, button {
 .mergePopupModal__panel{
   position:relative;
   z-index:1;
-  width:min(280px,90%);
-  padding:20px 16px 16px;
+  width:min(320px,90%);
+  padding:52px 18px 18px;
   border-radius:18px;
   border:2px solid rgba(125,255,178,.35);
   background:linear-gradient(160deg, rgba(17,30,55,0.98), rgba(9,18,36,0.98));
@@ -3068,6 +3068,7 @@ input, select, textarea, button {
 }
 .mergePopupModal__subtitle{
   font-size:12px;
+  padding-top: 10px;
   color:var(--accent);
   font-weight:700;
   text-transform:uppercase;
@@ -3199,7 +3200,6 @@ input, select, textarea, button {
 
 .gameTutorial__bubble{
   position:absolute;
-  width:min(340px, calc(100vw - 32px));
   padding:56px 18px 18px;
   border:2px solid rgba(74, 246, 38, 0.72);
   background:linear-gradient(180deg, rgba(10, 12, 10, 0.96), rgba(20, 26, 19, 0.96));
@@ -3209,6 +3209,7 @@ input, select, textarea, button {
   display:flex;
   flex-direction:column;
   gap:14px;
+  overflow:hidden;
   z-index:2;
 }
 
@@ -3232,10 +3233,11 @@ input, select, textarea, button {
 
 .gameTutorial__message{
   margin:0;
+  padding-top: 10px;
   font-size:15px;
   line-height:1.35;
   color:#ebffe2;
-  text-align:left;
+  text-align:center;
 }
 
 .gameTutorial__actions{
@@ -3249,17 +3251,83 @@ input, select, textarea, button {
 .gameTutorial__continueBtn,
 .gameTutorial__disableBtn{
   white-space:nowrap;
-  overflow:visible;
+  overflow:hidden;
   width:auto;
   min-width:fit-content;
   pointer-events:auto;
+  box-shadow:2px 2px 0 #000;
 }
 .gameTutorial__continueBtn{
   min-width:148px;
 }
+.gameTutorial__continueBtn:hover:not(:disabled),
+.gameTutorial__disableBtn:hover:not(:disabled){
+  box-shadow:2px 2px 0 #000;
+}
+.gameTutorial__continueBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after,
+.gameTutorial__disableBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after{
+  transform:none;
+  opacity:1;
+}
 .gameTutorial__close{
   pointer-events:auto;
   z-index:3;
+}
+
+.gameTutorial__confirm{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:auto;
+  z-index:4;
+}
+
+.gameTutorial__confirm--hidden{
+  display:none;
+}
+
+.gameTutorial__confirmBackdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(5,10,18,0.65);
+  backdrop-filter:blur(4px);
+}
+
+.gameTutorial__confirmPanel{
+  position:relative;
+  z-index:1;
+  width:min(420px, calc(100vw - 32px));
+  margin:0 16px;
+  padding:56px 20px 20px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.gameTutorial__confirmClose{
+  pointer-events:auto;
+  z-index:2;
+}
+
+.gameTutorial__confirmText{
+  margin:0;
+  font-size:15px;
+  line-height:1.4;
+  color:#ebffe2;
+  text-align:center;
+}
+
+.gameTutorial__confirmActions{
+  display:flex;
+  justify-content:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.gameTutorial__confirmBtn{
+  min-width:148px;
 }
 
 [data-tutorial-locked="true"]{
@@ -3322,7 +3390,12 @@ button[data-tutorial-locked="true"]::after,
   .gameTutorial__disableBtn{
     min-width:0;
     width:auto;
-    overflow:visible;
+    overflow:hidden;
+  }
+
+  .gameTutorial__confirmPanel{
+    width:min(300px, calc(100vw - 24px));
+    padding:54px 14px 14px;
   }
 }
 .lessonProgressPanel__header{
@@ -3624,19 +3697,16 @@ button[data-tutorial-locked="true"]::after,
 }
 
 .mergePopupModal__close{
-  top:8px;
-  right:8px;
-  width:36px;
-  height:36px;
-  min-width:36px;
-  min-height:36px;
+  top:10px;
+  right:10px;
   border-radius:12px;
+  z-index:2;
 }
 
 .mergePopupModal__close::before,
 .mergePopupModal__close::after{
-  width:4px;
-  height:18px;
+  /* width:4px;
+  height:18px; */
 }
 
 /* --- 4×4 Cell Grid --- */

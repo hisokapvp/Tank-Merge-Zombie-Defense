@@ -965,6 +965,26 @@
     ctx.closePath();
   }
 
+  function drawDroneSlotLevelLabel(ctx, slot, level) {
+    if (!ctx || !slot || !Number.isFinite(level)) return;
+    var tier = Math.floor((level - 1) / 3);
+    var badge = ['rgba(0, 0, 0, 0)','rgba(0,0,0,.35)','rgba(110,168,255,.22)','rgba(125,255,178,.22)','rgba(185,139,255,.22)'][clamp(tier, 0, 4)];
+    var labelY = slot.y + slot.h - Math.max(6, slot.h * 0.16);
+    var badgeW = Math.max(26, Math.min(32, slot.w + 6));
+    var badgeH = 16;
+
+    ctx.save();
+    ctx.fillStyle = badge;
+    drawRoundedRect(ctx, slot.cx - badgeW * 0.5, labelY - badgeH * 0.5, badgeW, badgeH, 8);
+    ctx.fill();
+    ctx.fillStyle = '#eaf1ff';
+    ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(getLevelShortLabel(global) + level, slot.cx, labelY);
+    ctx.restore();
+  }
+
   function getLevelShortLabel(global) {
     var i18n = global && global.Game && global.Game.I18n;
     if (i18n && typeof i18n.t === 'function') {
@@ -1039,18 +1059,11 @@
         });
       }
 
+      drawDroneSlotLevelLabel(ctx, slot, drone.level);
+
       if (isAssigned) {
         drawSlotActivityOverlay(ctx, slot, timeSec);
       }
-
-      ctx.fillStyle = '#f4fbff';
-      ctx.strokeStyle = 'rgba(7,10,14,0.78)';
-      ctx.lineWidth = Math.max(1.2, slotUiScale * 1.5);
-      ctx.font = Math.floor(Math.max(7, slot.h * 0.24)) + 'px Courier New, monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.strokeText(getLevelShortLabel(global) + drone.level, slot.cx, slot.y + slot.h - Math.max(6, slot.h * 0.16));
-      ctx.fillText(getLevelShortLabel(global) + drone.level, slot.cx, slot.y + slot.h - Math.max(6, slot.h * 0.16));
     }
 
     ctx.restore();

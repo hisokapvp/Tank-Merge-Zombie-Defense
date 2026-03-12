@@ -18,10 +18,17 @@
     stageEl: null,
     pointerEl: null,
     bubbleEl: null,
+    confirmWrapEl: null,
+    confirmPanelEl: null,
+    confirmTextEl: null,
+    confirmCloseBtn: null,
+    confirmAcceptBtn: null,
+    confirmCancelBtn: null,
     messageEl: null,
     closeBtn: null,
     continueBtn: null,
     disableBtn: null,
+    disableConfirmOpen: false,
     pauseManager: null,
     pauseActive: false,
     canvasSequenceActive: false,
@@ -372,8 +379,65 @@
     disableBtn.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
+      openDisableConfirm();
+    });
+
+    continueBtn.className = 'btn btnSecondary uiButtonBehavior gameTutorial__continueBtn';
+
+    const confirmWrap = runtime.documentObj.createElement('div');
+    confirmWrap.className = 'gameTutorial__confirm gameTutorial__confirm--hidden';
+    confirmWrap.setAttribute('aria-hidden', 'true');
+
+    const confirmBackdrop = runtime.documentObj.createElement('div');
+    confirmBackdrop.className = 'gameTutorial__confirmBackdrop';
+
+    const confirmPanel = runtime.documentObj.createElement('div');
+    confirmPanel.className = 'levelModal__panel scModal gameTutorial__confirmPanel';
+    confirmPanel.setAttribute('role', 'dialog');
+    confirmPanel.setAttribute('aria-modal', 'true');
+
+    const confirmCloseBtn = createButton('levelModal__close scModal__close gameTutorial__confirmClose uiButtonBehavior', '×');
+    confirmCloseBtn.setAttribute('data-font-floor-ignore', 'true');
+    confirmCloseBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDisableConfirm();
+    });
+
+    const confirmText = runtime.documentObj.createElement('p');
+    confirmText.className = 'gameTutorial__confirmText';
+
+    const confirmActions = runtime.documentObj.createElement('div');
+    confirmActions.className = 'gameTutorial__confirmActions';
+
+    const confirmAcceptBtn = createButton('btn scButton uiButtonBehavior gameTutorial__confirmBtn', '');
+    confirmAcceptBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
       disableTutorial();
     });
+
+    const confirmCancelBtn = createButton('btn scButton uiButtonBehavior gameTutorial__confirmBtn', '');
+    confirmCancelBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDisableConfirm();
+    });
+
+    confirmWrap.addEventListener('keydown', function (event) {
+      if (!event || event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeDisableConfirm();
+    });
+
+    confirmActions.appendChild(confirmAcceptBtn);
+    confirmActions.appendChild(confirmCancelBtn);
+    confirmPanel.appendChild(confirmCloseBtn);
+    confirmPanel.appendChild(confirmText);
+    confirmPanel.appendChild(confirmActions);
+    confirmWrap.appendChild(confirmBackdrop);
+    confirmWrap.appendChild(confirmPanel);
 
     actions.appendChild(continueBtn);
     actions.appendChild(disableBtn);
@@ -382,6 +446,7 @@
     bubble.appendChild(actions);
     root.appendChild(pointer);
     root.appendChild(bubble);
+    root.appendChild(confirmWrap);
     stageCanvas.appendChild(root);
 
     if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
@@ -393,6 +458,12 @@
     runtime.stageEl = stageCanvas;
     runtime.pointerEl = pointer;
     runtime.bubbleEl = bubble;
+    runtime.confirmWrapEl = confirmWrap;
+    runtime.confirmPanelEl = confirmPanel;
+    runtime.confirmTextEl = confirmText;
+    runtime.confirmCloseBtn = confirmCloseBtn;
+    runtime.confirmAcceptBtn = confirmAcceptBtn;
+    runtime.confirmCancelBtn = confirmCancelBtn;
     runtime.messageEl = message;
     runtime.closeBtn = closeBtn;
     runtime.continueBtn = continueBtn;
@@ -410,6 +481,12 @@
     if (!runtime.bubbleEl) return;
     runtime.bubbleEl.classList.toggle('gameTutorial__bubble--hidden', !!hidden);
     runtime.bubbleEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  function setDisableConfirmHidden(hidden) {
+    if (!runtime.confirmWrapEl) return;
+    runtime.confirmWrapEl.classList.toggle('gameTutorial__confirm--hidden', !!hidden);
+    runtime.confirmWrapEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
   }
 
   function isStepBubbleOpen(state) {
@@ -627,6 +704,7 @@
 
     tutorial.steps[activeStepId].bubbleOpen = false;
     if (reason === 'close') tutorial.steps[activeStepId].dismissed = true;
+    closeDisableConfirm({ restoreFocus: false });
     persist();
     syncNow();
   }
@@ -647,6 +725,7 @@
     tutorial.currentStepId = getNextIncompleteStepId(tutorial);
     tutorial.completed = !tutorial.currentStepId;
     runtime.canvasSequenceActive = false;
+    closeDisableConfirm({ restoreFocus: false });
 
     persist();
     if (typeof runtime.updateUi === 'function') {
@@ -659,6 +738,7 @@
     const state = getState();
     if (!state) return;
     const tutorial = normalizeTutorialState(state);
+    closeDisableConfirm({ restoreFocus: false });
     tutorial.disabled = true;
     tutorial.completed = true;
     tutorial.currentStepId = null;
@@ -679,6 +759,25 @@
     syncNow();
   }
 
+  function openDisableConfirm() {
+    const state = getState();
+    if (!state || !isStepBubbleOpen(state) || !runtime.confirmWrapEl) return;
+    runtime.disableConfirmOpen = true;
+    setDisableConfirmHidden(false);
+    if (runtime.confirmAcceptBtn && typeof runtime.confirmAcceptBtn.focus === 'function') {
+      runtime.confirmAcceptBtn.focus();
+    }
+  }
+
+  function closeDisableConfirm(options) {
+    runtime.disableConfirmOpen = false;
+    setDisableConfirmHidden(true);
+    if (options && options.restoreFocus === false) return;
+    if (runtime.disableBtn && typeof runtime.disableBtn.focus === 'function' && isElementVisible(runtime.disableBtn)) {
+      runtime.disableBtn.focus();
+    }
+  }
+
   function syncCopy() {
     if (!runtime.messageEl || !runtime.disableBtn || !runtime.closeBtn || !runtime.continueBtn) return;
     const state = getState();
@@ -690,6 +789,17 @@
     runtime.continueBtn.textContent = translate('tutorialContinue', 'Продолжить');
     runtime.disableBtn.textContent = translate('tutorialDisable', 'Выключить обучение');
     runtime.closeBtn.setAttribute('aria-label', translate('tutorialClose', 'Закрыть обучение'));
+    if (runtime.confirmTextEl && runtime.confirmAcceptBtn && runtime.confirmCancelBtn && runtime.confirmCloseBtn) {
+      const closeLabel = translate('menuClose', 'Закрыть');
+      runtime.confirmTextEl.textContent = translate(
+        'tutorialDisableConfirmText',
+        'Вы действительно хотите закончить обучение и продолжить играть без подсказок?'
+      );
+      runtime.confirmAcceptBtn.textContent = translate('tutorialDisableConfirmAccept', 'Подтвердить');
+      runtime.confirmCancelBtn.textContent = translate('tutorialDisableConfirmCancel', 'Отмена');
+      runtime.confirmCloseBtn.setAttribute('aria-label', closeLabel);
+      runtime.confirmCloseBtn.setAttribute('title', closeLabel);
+    }
   }
 
   function getCanvasPointFromEvent(event) {
@@ -810,14 +920,20 @@
     const shouldHide = !activeStep || !target || shouldSuppressOverlay(state);
 
     if (!runtime.rootEl || shouldHide) {
+      closeDisableConfirm({ restoreFocus: false });
       setOverlayHidden(true);
       setBubbleHidden(true);
       return;
     }
 
+    if (!isStepBubbleOpen(state)) {
+      closeDisableConfirm({ restoreFocus: false });
+    }
+
     setOverlayHidden(false);
     setBubbleHidden(!isStepBubbleOpen(state));
     positionOverlay(target);
+    setDisableConfirmHidden(!runtime.disableConfirmOpen);
   }
 
   function tick() {
