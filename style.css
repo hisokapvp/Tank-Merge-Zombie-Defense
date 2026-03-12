@@ -3179,6 +3179,7 @@ input, select, textarea, button {
   animation:gameTutorialPointerPulse 1.15s ease-in-out infinite;
   filter:drop-shadow(0 0 12px rgba(74,246,38,.55)) drop-shadow(0 2px 6px rgba(0,0,0,.7));
   pointer-events:none;
+  overflow:hidden;
 }
 
 .gameTutorial__pointer::after{
@@ -3196,6 +3197,17 @@ input, select, textarea, button {
   background:linear-gradient(180deg, rgba(180,255,140,.4) 0%, rgba(74,246,38,.15) 50%, transparent 100%);
   clip-path:polygon(50% 100%, 8% 48%, 32% 48%, 32% 0, 68% 0, 68% 48%, 92% 48%);
   pointer-events:none;
+}
+
+.gameTutorial__pointerGrain{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  clip-path:polygon(50% 100%, 8% 48%, 32% 48%, 32% 0, 68% 0, 68% 48%, 92% 48%);
+  pointer-events:none;
+  mix-blend-mode:overlay;
+  animation:grain 6s steps(6) infinite;
 }
 
 .gameTutorial__bubble{
@@ -3249,6 +3261,7 @@ input, select, textarea, button {
 }
 
 .gameTutorial__continueBtn,
+.gameTutorial__skipBtn,
 .gameTutorial__disableBtn{
   white-space:nowrap;
   overflow:hidden;
@@ -3261,10 +3274,12 @@ input, select, textarea, button {
   min-width:148px;
 }
 .gameTutorial__continueBtn:hover:not(:disabled),
+.gameTutorial__skipBtn:hover:not(:disabled),
 .gameTutorial__disableBtn:hover:not(:disabled){
   box-shadow:2px 2px 0 #000;
 }
 .gameTutorial__continueBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after,
+.gameTutorial__skipBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after,
 .gameTutorial__disableBtn.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after{
   transform:none;
   opacity:1;
@@ -3387,6 +3402,7 @@ button[data-tutorial-locked="true"]::after,
   }
 
   .gameTutorial__continueBtn,
+  .gameTutorial__skipBtn,
   .gameTutorial__disableBtn{
     min-width:0;
     width:auto;
@@ -3838,12 +3854,12 @@ button[data-tutorial-locked="true"]::after,
   transform-origin: center;
   display:block;
 }
-/* Adjust internal alignment of labels and rotation icons */
+/* Adjust internal alignment of labels and action icons */
 .hangarSlotGroup text {
   transform-box: fill-box;
   transform-origin: center;
 }
-.hangarRotateBtn text {
+.hangarSlotActionBtn text {
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -3854,7 +3870,7 @@ button[data-tutorial-locked="true"]::after,
   filter:brightness(1.3);
 }
 .hangarSlotPoly--selected{
-  stroke: #fff;
+  stroke: #4af626;
   stroke-width: 4px;
 }
 
@@ -3887,17 +3903,24 @@ button[data-tutorial-locked="true"]::after,
   50%{filter:brightness(1.5) drop-shadow(0 0 8px rgba(255,255,255,.6));}
 }
 
-/* --- Rotate button (shown on hover over slot triangle) --- */
-.hangarRotateBtn{
+/* --- Slot action buttons (rotate CCW/CW, remove) --- */
+.hangarSlotActions{
   opacity:0;
   transition:opacity .15s;
   pointer-events:none;
   transform-box: fill-box;
   transform-origin: center;
 }
-.hangarSlotGroup:hover .hangarRotateBtn{
+.hangarSlotGroup:hover .hangarSlotActions,
+.hangarSlotActions--active{
   opacity:1;
   pointer-events:auto;
+}
+.hangarSlotActionBtn:hover circle{
+  filter:brightness(1.4);
+}
+.hangarSlotActionBtn:hover text{
+  filter:brightness(1.4);
 }
 
 /* --- Active modifiers box --- */
@@ -4029,7 +4052,7 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarChipsGrid{
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap:8px;
   flex: 1 1 auto;
   min-height: 0;
@@ -4071,10 +4094,18 @@ button[data-tutorial-locked="true"]::after,
   height:36px;
 }
 /* Highlight chips that can create a match */
-.hangarChipBtn--canMatch{
+.hangarChipInvItem--canMatch{
   border-color:rgba(74,246,38,.6) !important;
   background:rgba(74,246,38,.12) !important;
   box-shadow:0 0 6px rgba(74,246,38,.35);
+}
+/* Button reset for chipCraftInvItem used as <button> in hangar */
+button.hangarChipInvItem{
+  font:inherit;
+  color:inherit;
+  text-align:center;
+  appearance:none;
+  -webkit-appearance:none;
 }
 .hangarChipBtn__key{
   font-size:9px;

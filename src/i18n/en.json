@@ -218,6 +218,7 @@
   "menuSettings": "Settings",
   "tutorialStarterTankMessage": "Tap the tank and send it into battle!",
   "tutorialContinue": "Continue",
+  "tutorialSkip": "Skip",
   "tutorialDisable": "Turn off tutorial",
   "tutorialClose": "Close tutorial",
   "tutorialDisableConfirmText": "Do you really want to end the tutorial and continue playing without hints?",
@@ -456,6 +457,7 @@
   ,"hangarChipsYellowLocked": "Only 1 yellow chip can be installed"
   ,"hangarChipsActiveX": "Activates outer angle (not adjacent to red chips)"
   ,"hangarChipsSlotLocked": "Slot locked"
+  ,"hangarChipsLevelShort": "Lv."
   ,"plStorageTitle": "Production Storage"
   ,"plBoxSlotFilled": "Box (click to open)"
   ,"plBoxSlotEmpty": "Empty slot"

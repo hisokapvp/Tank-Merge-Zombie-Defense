@@ -349,6 +349,36 @@
     pointer.className = 'gameTutorial__pointer';
     pointer.setAttribute('aria-hidden', 'true');
 
+    /* Grain SVG overlay on pointer */
+    const grainSvgNS = 'http://www.w3.org/2000/svg';
+    const grainSvg = runtime.documentObj.createElementNS(grainSvgNS, 'svg');
+    grainSvg.setAttribute('class', 'gameTutorial__pointerGrain');
+    grainSvg.setAttribute('aria-hidden', 'true');
+    const grainDefs = runtime.documentObj.createElementNS(grainSvgNS, 'defs');
+    const grainFilter = runtime.documentObj.createElementNS(grainSvgNS, 'filter');
+    grainFilter.setAttribute('id', 'tutPointerGrain');
+    const feTurb = runtime.documentObj.createElementNS(grainSvgNS, 'feTurbulence');
+    feTurb.setAttribute('type', 'fractalNoise');
+    feTurb.setAttribute('baseFrequency', '0.75');
+    feTurb.setAttribute('numOctaves', '3');
+    feTurb.setAttribute('stitchTiles', 'stitch');
+    feTurb.setAttribute('result', 'noise');
+    const feCM = runtime.documentObj.createElementNS(grainSvgNS, 'feColorMatrix');
+    feCM.setAttribute('type', 'saturate');
+    feCM.setAttribute('values', '0');
+    feCM.setAttribute('in', 'noise');
+    grainFilter.appendChild(feTurb);
+    grainFilter.appendChild(feCM);
+    grainDefs.appendChild(grainFilter);
+    grainSvg.appendChild(grainDefs);
+    const grainRect = runtime.documentObj.createElementNS(grainSvgNS, 'rect');
+    grainRect.setAttribute('width', '100%');
+    grainRect.setAttribute('height', '100%');
+    grainRect.setAttribute('filter', 'url(#tutPointerGrain)');
+    grainRect.setAttribute('opacity', '0.18');
+    grainSvg.appendChild(grainRect);
+    pointer.appendChild(grainSvg);
+
     const bubble = runtime.documentObj.createElement('div');
     bubble.className = 'gameTutorial__bubble';
     bubble.setAttribute('role', 'dialog');
@@ -380,6 +410,13 @@
       event.preventDefault();
       event.stopPropagation();
       openDisableConfirm();
+    });
+
+    const skipBtn = createButton('btn btnSecondary uiButtonBehavior gameTutorial__skipBtn', '');
+    skipBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      completeCurrentStep('skip');
     });
 
     continueBtn.className = 'btn btnSecondary uiButtonBehavior gameTutorial__continueBtn';
@@ -440,6 +477,7 @@
     confirmWrap.appendChild(confirmPanel);
 
     actions.appendChild(continueBtn);
+    actions.appendChild(skipBtn);
     actions.appendChild(disableBtn);
     bubble.appendChild(closeBtn);
     bubble.appendChild(message);
@@ -467,6 +505,7 @@
     runtime.messageEl = message;
     runtime.closeBtn = closeBtn;
     runtime.continueBtn = continueBtn;
+    runtime.skipBtn = skipBtn;
     runtime.disableBtn = disableBtn;
   }
 
@@ -787,6 +826,7 @@
       'Нажми на танк и отправь его в бой!'
     );
     runtime.continueBtn.textContent = translate('tutorialContinue', 'Продолжить');
+    if (runtime.skipBtn) runtime.skipBtn.textContent = translate('tutorialSkip', 'Пропустить');
     runtime.disableBtn.textContent = translate('tutorialDisable', 'Выключить обучение');
     runtime.closeBtn.setAttribute('aria-label', translate('tutorialClose', 'Закрыть обучение'));
     if (runtime.confirmTextEl && runtime.confirmAcceptBtn && runtime.confirmCancelBtn && runtime.confirmCloseBtn) {

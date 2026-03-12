@@ -502,7 +502,7 @@
    * Rotate an installed chip clockwise (120° per step).
    * This changes which modifiers land on which vertices (A, B, C / innerA, innerB, X).
    */
-  function rotateChip(cell, slotType, slotId) {
+  function rotateChip(cell, slotType, slotId, direction) {
     var chip = null;
     if (slotType === 'red') {
       chip = cell.redSlots[slotId];
@@ -510,7 +510,8 @@
       chip = cell.yellowSlots[slotId];
     }
     if (!chip) return false;
-    chip.rotation = ((chip.rotation || 0) + 1) % 3;
+    var delta = (direction === -1) ? 2 : 1;
+    chip.rotation = ((chip.rotation || 0) + delta) % 3;
     _recalc(cell);
     return true;
   }

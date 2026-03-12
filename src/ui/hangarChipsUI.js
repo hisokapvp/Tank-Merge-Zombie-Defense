@@ -81,6 +81,7 @@
   var _selectedCell = 0;    // index 0..15
   var _selectedSlot = null; // { type, slotId } or null (for chip-install target)
   var _chipFilter = 'all';  // 'all' | 'red' | 'yellow'
+  var _activeSlotActions = null; // { type, slotId } — shows action buttons on slot
   var _initialized = false;
   var _doc = null;
   var _workshopSubTab = 'chipUpgrade';
@@ -448,16 +449,29 @@
           }
         }
 
-        /* Rotate button (visible on hover via CSS) */
-        var rotBtnX = cx;
-        var rotBtnY = cy + 18;
-        var rotDeg = (chipData.rotation || 0) * 120;
-        svg += '<g class="hangarRotateBtn" data-rotate-type="' + def.type + '" data-rotate-slot="' + def.slotId + '" ' +
-          'style="cursor:pointer">' +
-          '<circle cx="' + rotBtnX + '" cy="' + rotBtnY + '" r="11" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
-          '<text x="' + rotBtnX + '" y="' + (rotBtnY + 1) + '" text-anchor="middle" dominant-baseline="central" ' +
-          'fill="#4af626" font-size="14" font-family="sans-serif" style="transform-origin:' + rotBtnX + 'px ' + rotBtnY + 'px;transform:rotate(' + rotDeg + 'deg)">\u21BB</text>' +
+        /* Action buttons: rotate CCW, rotate CW, remove (visible on hover or click via CSS) */
+        var abY = cy;
+        var isActionsActive = _activeSlotActions && _activeSlotActions.type === def.type && _activeSlotActions.slotId === def.slotId;
+        var actionsClass = 'hangarSlotActions' + (isActionsActive ? ' hangarSlotActions--active' : '');
+        svg += '<g class="' + actionsClass + '">';
+        /* rotate CCW */
+        var lx = cx - 24;
+        svg += '<g class="hangarSlotActionBtn" data-action="rotateCCW" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
+          '<circle cx="' + lx + '" cy="' + abY + '" r="10" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
+          '<text x="' + lx + '" y="' + (abY + 1) + '" text-anchor="middle" dominant-baseline="central" fill="#4af626" font-size="13" font-family="sans-serif">\u21BA</text>' +
           '</g>';
+        /* rotate CW */
+        var rx = cx + 24;
+        svg += '<g class="hangarSlotActionBtn" data-action="rotateCW" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
+          '<circle cx="' + rx + '" cy="' + abY + '" r="10" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
+          '<text x="' + rx + '" y="' + (abY + 1) + '" text-anchor="middle" dominant-baseline="central" fill="#4af626" font-size="13" font-family="sans-serif">\u21BB</text>' +
+          '</g>';
+        /* remove chip */
+        svg += '<g class="hangarSlotActionBtn" data-action="remove" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
+          '<circle cx="' + cx + '" cy="' + (abY + 0) + '" r="10" fill="rgba(30,28,24,.85)" stroke="#e53935" stroke-width="1.5" />' +
+          '<text x="' + cx + '" y="' + (abY + 0) + '" text-anchor="middle" dominant-baseline="central" fill="#e53935" font-size="12" font-family="sans-serif">\u2715</text>' +
+          '</g>';
+        svg += '</g>';
       } else if (!locked) {
         /* empty label */
         var ecx = 0, ecy = 0;
@@ -637,12 +651,12 @@
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
       var canMatch = canMatchMap[chip.chipId + '_' + chip.level] || false;
-      var matchClass = canMatch ? ' hangarChipBtn--canMatch' : '';
-      html += '<button class="hangarChipBtn' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button">' +
-        chipSvgComposed(40, 36, borderColor, chip.modIds, 'hangarChipIcon', 2.5) +
-        '<span class="hangarChipBtn__key">' + chip.sourceComboKey + '</span>' +
-        '<span class="hangarChipBtn__lvl">Ур.' + chip.level + '</span>' +
-        (chip.count > 1 ? '<span class="hangarChipBtn__cnt">×' + chip.count + '</span>' : '') +
+      var matchClass = canMatch ? ' hangarChipInvItem--canMatch' : '';
+      var chipName = _getChipDisplayName(chip);
+      html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button">' +
+        chipSvgComposed(40, 36, borderColor, chip.modIds, 'chipCraftInvIcon', 2.5) +
+        '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>' +
+        '<span class="chipCraftInvLevel">' + t('hangarChipsLevelShort', 'Ур.') + ' ' + chip.level + (chip.count > 1 ? ' \u2022 \u00d7' + chip.count : '') + '</span>' +
         '</button>';
     }
     html += '</div></div>';
@@ -1628,6 +1642,7 @@
       /* Remove from inventory */
       removePlayerChipOne(chipId, lvl);
       _selectedSlot = null;
+      _activeSlotActions = null;
       render();
     }
   }
@@ -1640,6 +1655,7 @@
     var cells = ensureCells();
     var cell = cells[_selectedCell];
     if (!cell) return;
+    _activeSlotActions = null;
 
     /* Return chip to inventory before removing from slot */
     var chipData = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
@@ -1668,19 +1684,26 @@
     var tgt = evt.target;
     if (!tgt) return;
 
-    /* rotate button click */
-    var rotateBtn = tgt.closest ? tgt.closest('[data-rotate-type]') : null;
-    if (rotateBtn) {
+    /* slot action buttons (rotate CCW/CW, remove) */
+    var actionBtn = tgt.closest ? tgt.closest('[data-action]') : null;
+    if (actionBtn) {
       evt.stopPropagation();
-      var rotType = rotateBtn.getAttribute('data-rotate-type');
-      var rotSlot = rotateBtn.getAttribute('data-rotate-slot');
-      var h = hc();
-      if (h && typeof h.rotateChip === 'function') {
-        var cells = ensureCells();
-        var cell = cells[_selectedCell];
-        if (cell) {
-          h.rotateChip(cell, rotType, rotSlot);
-          render();
+      var action = actionBtn.getAttribute('data-action');
+      var actType = actionBtn.getAttribute('data-action-type');
+      var actSlot = actionBtn.getAttribute('data-action-slot');
+      if (action === 'remove') {
+        _activeSlotActions = null;
+        removeChipAction(actType, actSlot);
+      } else {
+        var dir = (action === 'rotateCCW') ? -1 : 1;
+        var h = hc();
+        if (h && typeof h.rotateChip === 'function') {
+          var cells = ensureCells();
+          var cell = cells[_selectedCell];
+          if (cell) {
+            h.rotateChip(cell, actType, actSlot, dir);
+            render();
+          }
         }
       }
       return;
@@ -1691,6 +1714,7 @@
     if (cellBtn) {
       _selectedCell = parseInt(cellBtn.getAttribute('data-cell-idx'), 10) || 0;
       _selectedSlot = null;
+      _activeSlotActions = null;
       render();
       return;
     }
@@ -1712,10 +1736,15 @@
         return;
       }
 
-      /* if chip is installed → remove it */
+      /* if chip is installed → toggle action buttons */
       var existingChip = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
       if (existingChip) {
-        removeChipAction(slotType, slotId);
+        if (_activeSlotActions && _activeSlotActions.type === slotType && _activeSlotActions.slotId === slotId) {
+          _activeSlotActions = null;
+        } else {
+          _activeSlotActions = { type: slotType, slotId: slotId };
+        }
+        render();
         return;
       }
 

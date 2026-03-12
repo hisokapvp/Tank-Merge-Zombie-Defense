@@ -218,6 +218,7 @@
   "menuSettings": "Настройки",
   "tutorialStarterTankMessage": "Нажми на танк и отправь его в бой!",
   "tutorialContinue": "Продолжить",
+  "tutorialSkip": "Пропустить",
   "tutorialDisable": "Выключить обучение",
   "tutorialClose": "Закрыть обучение",
   "tutorialDisableConfirmText": "Вы действительно хотите закончить обучение и продолжить играть без подсказок?",
@@ -456,6 +457,7 @@
   ,"hangarChipsYellowLocked": "Можно установить только 1 жёлтый чип"
   ,"hangarChipsActiveX": "Активируется внешний угол (не прилегающий к красным чипам)"
   ,"hangarChipsSlotLocked": "Слот заблокирован"
+  ,"hangarChipsLevelShort": "Ур."
   ,"plStorageTitle": "Производственный склад"
   ,"plBoxSlotFilled": "Коробка (нажмите чтобы открыть)"
   ,"plBoxSlotEmpty": "Пустая ячейка"
