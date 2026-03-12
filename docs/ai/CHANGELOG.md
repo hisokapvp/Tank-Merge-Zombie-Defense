@@ -1,5 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-12
+- **Tutorial runtime: modal-pause, data-driven step config, selective lock overlay (`src/config/tutorialSteps.js`, `src/ui/tutorialRuntime.js`, `src/persistence/initialState.js`, `index.html`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
+  - Первый урок обучения переведён на data-driven config `src/config/tutorialSteps.js`: состояние tutorial теперь использует schema `version: 2`, отдельный `bubbleOpen` per-step и готово к добавлению следующих шагов через конфиг.
+  - Tutorial bubble больше не завершает шаг по `×`: `Продолжить` и `×` только закрывают bubble, pointer остаётся до фактического действия шага, а `Выключить обучение` завершает tutorial целиком.
+  - Tutorial runtime теперь захватывает existing `PauseManager.createPauseManager()` и включает `criticalPause` на время открытого bubble, а CRT/grain overlay включается через `body.tutorial-modal-open` тем же паттерном, что и для других модалок.
+  - Во время активного шага tutorial runtime блокирует нецелевые DOM/canvas interactions: доступен только target starter tank, tutorial controls и permanent exceptions (`Настройки`, `Свернуть`, `Развернуть терминал`), а заблокированные элементы получают lock overlay + tooltip.
+
 ## 2026-03-10
 - **Workshop: disassemble empty overlay + drag-drop fix + confirm modal + reprogram subtab (`src/ui/hangarChipsUI.js`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - `Переработка чипов` получила третью nested-подвкладку `Перепрограммировать`: фрагмент выбирается из инвентаря, целевое свойство берётся из dropdown только по текущему tech-progress, обмен стоит `2` ед. кремниевой пыли и меняет один фрагмент на другой без обхода unlock-цепочек.

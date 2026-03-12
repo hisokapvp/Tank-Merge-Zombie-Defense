@@ -35,6 +35,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '../..');
 const gameJs = fs.readFileSync(path.join(root, 'game.js'), 'utf-8');
 const bootstrapJs = fs.readFileSync(path.join(root, 'src/core/bootstrap.js'), 'utf-8');
+const tutorialStepsJs = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
 const storageJs = fs.readFileSync(path.join(root, 'src/persistence/storage.js'), 'utf-8');
 const garageJs = fs.readFileSync(path.join(root, 'src/mechanics/garage.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
@@ -50,14 +51,20 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
   globalObj.window = globalObj;
   globalObj.Game = {};
 
+  const tutorialStepsCode = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+  const tutorialStepsFn = new Function('window', 'global', tutorialStepsCode);
+  tutorialStepsFn(globalObj, globalObj);
+
   const code = fs.readFileSync(path.join(root, 'src/persistence/initialState.js'), 'utf-8');
   const fn = new Function('window', 'global', code);
   fn(globalObj, globalObj);
 
   const state = globalObj.Game.InitialState.createInitialState({ reason: 'new_game' });
   assertEqual(state.coins, 40, 'new game starts with 40 coins');
+  assertEqual(state.tutorial.version, 2, 'tutorial state uses data-driven schema version 2');
   assert(state.tutorial && state.tutorial.currentStepId === 'starter_tank', 'starter tutorial step exists');
   assert(state.tutorial.steps && state.tutorial.steps.starter_tank && state.tutorial.steps.starter_tank.completed === false, 'starter tutorial step is pending');
+  assert(state.tutorial.steps.starter_tank.bubbleOpen === true, 'starter tutorial bubble starts open');
 });
 
 test('TUT-2: starter tank spawn and pre-retry reset keep the tank in hangar', () => {
@@ -88,16 +95,28 @@ test('TUT-5: garage notifies tutorial runtime when a tank goes on track', () => 
 });
 
 test('TUT-6: tutorial runtime is loaded from index.html', () => {
+  assert(indexHtml.indexOf('src/config/tutorialSteps.js') !== -1, 'tutorial steps config script is loaded');
   assert(indexHtml.indexOf('src/ui/tutorialRuntime.js') !== -1, 'tutorial runtime script is loaded');
 });
 
 test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialStarterTankMessage"') !== -1, 'ru tutorial message exists');
+  assert(ru.indexOf('"tutorialContinue"') !== -1, 'ru continue button exists');
   assert(ru.indexOf('"tutorialDisable"') !== -1, 'ru disable button exists');
+  assert(ru.indexOf('"tutorialLockedTooltip"') !== -1, 'ru lock tooltip exists');
   assert(en.indexOf('"tutorialStarterTankMessage"') !== -1, 'en tutorial message exists');
+  assert(en.indexOf('"tutorialContinue"') !== -1, 'en continue button exists');
   assert(en.indexOf('"tutorialDisable"') !== -1, 'en disable button exists');
+  assert(en.indexOf('"tutorialLockedTooltip"') !== -1, 'en lock tooltip exists');
   assert(fallback.indexOf('tutorialStarterTankMessage') !== -1, 'fallback tutorial message exists');
+  assert(fallback.indexOf('tutorialContinue') !== -1, 'fallback continue button exists');
   assert(fallback.indexOf('tutorialDisable') !== -1, 'fallback disable button exists');
+  assert(fallback.indexOf('tutorialLockedTooltip') !== -1, 'fallback lock tooltip exists');
+});
+
+test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
+  assert(tutorialStepsJs.indexOf("id: 'starter_tank'") !== -1, 'starter_tank step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf('bubbleControls') !== -1, 'tutorial config defines allowed bubble controls');
 });
 
 console.log('\n==============================');

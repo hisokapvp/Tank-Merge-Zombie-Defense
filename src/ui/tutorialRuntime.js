@@ -1,58 +1,135 @@
 (function (global) {
   'use strict';
 
-  const STEP_STARTER_TANK = 'starter_tank';
+  const TUTORIAL_BODY_CLASS = 'tutorial-modal-open';
+  const LOCKED_REASON_KEY = 'tutorialLockedTooltip';
 
   const runtime = {
     documentObj: typeof document !== 'undefined' ? document : null,
     getState: null,
     saveProgress: null,
     updateUi: null,
+    enterCriticalPause: null,
+    exitCriticalPause: null,
     t: null,
     ui: null,
     rootEl: null,
+    canvasEl: null,
+    stageEl: null,
     pointerEl: null,
     bubbleEl: null,
     messageEl: null,
     closeBtn: null,
+    continueBtn: null,
     disableBtn: null,
+    pauseManager: null,
+    pauseActive: false,
+    canvasSequenceActive: false,
+    guardsAttached: false,
+    lockedTargets: [],
+    restoreTooltipCache: new WeakMap(),
+    lastLockKey: '',
     rafId: 0,
     started: false,
     lastStateRef: null,
   };
 
+  function capturePauseManagerInstance(instance) {
+    if (!instance || typeof instance !== 'object') return instance;
+    runtime.pauseManager = instance;
+    return instance;
+  }
+
+  function patchPauseManagerFactory() {
+    const pauseApi = global.Game && global.Game.PauseManager;
+    if (!pauseApi || typeof pauseApi.createPauseManager !== 'function') return;
+    if (pauseApi.createPauseManager.__tutorialPauseCapture === true) return;
+
+    const originalCreatePauseManager = pauseApi.createPauseManager;
+    const wrappedCreatePauseManager = function (options) {
+      return capturePauseManagerInstance(originalCreatePauseManager(options));
+    };
+
+    wrappedCreatePauseManager.__tutorialPauseCapture = true;
+    wrappedCreatePauseManager.__tutorialPauseOriginal = originalCreatePauseManager;
+    pauseApi.createPauseManager = wrappedCreatePauseManager;
+  }
+
+  patchPauseManagerFactory();
+
+  function getTutorialStepsApi() {
+    return global.Game && global.Game.TutorialSteps ? global.Game.TutorialSteps : null;
+  }
+
+  function getStepDefinitions() {
+    const tutorialSteps = getTutorialStepsApi();
+    if (tutorialSteps && typeof tutorialSteps.getAll === 'function') {
+      const definitions = tutorialSteps.getAll();
+      if (Array.isArray(definitions) && definitions.length) return definitions;
+    }
+    return [];
+  }
+
+  function getStepDefinition(stepId) {
+    const tutorialSteps = getTutorialStepsApi();
+    if (tutorialSteps && typeof tutorialSteps.getStep === 'function') {
+      return tutorialSteps.getStep(stepId);
+    }
+    const definitions = getStepDefinitions();
+    for (let i = 0; i < definitions.length; i++) {
+      if (definitions[i] && definitions[i].id === stepId) return definitions[i];
+    }
+    return null;
+  }
+
   function createDefaultStepState() {
+    const tutorialSteps = getTutorialStepsApi();
+    if (tutorialSteps && typeof tutorialSteps.buildStepState === 'function') {
+      return tutorialSteps.buildStepState();
+    }
     return {
       completed: false,
       dismissed: false,
+      bubbleOpen: true,
     };
   }
 
   function createDefaultTutorialState() {
+    const tutorialSteps = getTutorialStepsApi();
+    if (tutorialSteps && typeof tutorialSteps.buildInitialTutorialState === 'function') {
+      return tutorialSteps.buildInitialTutorialState();
+    }
+    const definitions = getStepDefinitions();
     const steps = {};
-    steps[STEP_STARTER_TANK] = createDefaultStepState();
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      steps[definition.id] = createDefaultStepState();
+    }
     return {
-      version: 1,
+      version: 2,
       disabled: false,
       completed: false,
-      currentStepId: STEP_STARTER_TANK,
+      currentStepId: definitions.length ? definitions[0].id : null,
       steps: steps,
     };
   }
 
   function createCompletedTutorialState() {
-    const steps = {};
-    steps[STEP_STARTER_TANK] = {
-      completed: true,
-      dismissed: false,
-    };
-    return {
-      version: 1,
-      disabled: false,
-      completed: true,
-      currentStepId: null,
-      steps: steps,
-    };
+    const tutorial = createDefaultTutorialState();
+    tutorial.completed = true;
+    tutorial.currentStepId = null;
+    const definitions = getStepDefinitions();
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      tutorial.steps[definition.id] = {
+        completed: true,
+        dismissed: false,
+        bubbleOpen: false,
+      };
+    }
+    return tutorial;
   }
 
   function getState() {
@@ -73,6 +150,17 @@
     if (typeof runtime.saveProgress === 'function') {
       try { runtime.saveProgress(); } catch (_) {}
     }
+  }
+
+  function getNextIncompleteStepId(tutorial) {
+    const definitions = getStepDefinitions();
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      const stepState = tutorial.steps[definition.id];
+      if (!stepState || !stepState.completed) return definition.id;
+    }
+    return null;
   }
 
   function hasExistingProgress(state) {
@@ -119,15 +207,24 @@
     }
 
     const raw = state.tutorial;
+    const definitions = getStepDefinitions();
     const steps = {};
-    const starterRaw = raw.steps && typeof raw.steps === 'object' ? raw.steps[STEP_STARTER_TANK] : null;
-    steps[STEP_STARTER_TANK] = {
-      completed: !!(starterRaw && starterRaw.completed),
-      dismissed: !!(starterRaw && starterRaw.dismissed),
-    };
+
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      const rawStep = raw.steps && typeof raw.steps === 'object' ? raw.steps[definition.id] : null;
+      steps[definition.id] = {
+        completed: !!(rawStep && rawStep.completed),
+        dismissed: !!(rawStep && rawStep.dismissed),
+        bubbleOpen: rawStep && typeof rawStep.bubbleOpen === 'boolean'
+          ? rawStep.bubbleOpen
+          : !rawStep || !rawStep.completed,
+      };
+    }
 
     const normalized = {
-      version: Number.isFinite(Number(raw.version)) ? Math.max(1, Math.floor(Number(raw.version))) : 1,
+      version: Number.isFinite(Number(raw.version)) ? Math.max(1, Math.floor(Number(raw.version))) : 2,
       disabled: !!raw.disabled,
       completed: !!raw.completed,
       currentStepId: typeof raw.currentStepId === 'string' ? raw.currentStepId : null,
@@ -137,12 +234,17 @@
     if (normalized.disabled) {
       normalized.completed = true;
       normalized.currentStepId = null;
-      normalized.steps[STEP_STARTER_TANK].completed = true;
-    } else if (normalized.steps[STEP_STARTER_TANK].completed) {
-      normalized.completed = true;
-      normalized.currentStepId = null;
-    } else if (!normalized.currentStepId) {
-      normalized.currentStepId = STEP_STARTER_TANK;
+      const stepIds = Object.keys(normalized.steps);
+      for (let i = 0; i < stepIds.length; i++) {
+        const stepState = normalized.steps[stepIds[i]];
+        if (!stepState) continue;
+        stepState.completed = true;
+        stepState.bubbleOpen = false;
+      }
+    } else {
+      const nextStepId = getNextIncompleteStepId(normalized);
+      normalized.currentStepId = nextStepId;
+      normalized.completed = !nextStepId;
     }
 
     state.tutorial = normalized;
@@ -160,10 +262,18 @@
   function getActiveStepId(state) {
     const tutorial = normalizeTutorialState(state);
     if (tutorial.disabled || tutorial.completed) return null;
-    if (tutorial.currentStepId === STEP_STARTER_TANK && !tutorial.steps[STEP_STARTER_TANK].completed) {
-      return STEP_STARTER_TANK;
-    }
-    return null;
+    return tutorial.currentStepId;
+  }
+
+  function getActiveStepDefinition(state) {
+    const activeStepId = getActiveStepId(state);
+    return activeStepId ? getStepDefinition(activeStepId) : null;
+  }
+
+  function getActiveStepState(state) {
+    const tutorial = normalizeTutorialState(state);
+    const activeStepId = getActiveStepId(state);
+    return activeStepId && tutorial.steps ? tutorial.steps[activeStepId] || null : null;
   }
 
   function findStarterTankCell(state) {
@@ -176,6 +286,14 @@
       if (!Number.isFinite(cell.tank.level) || cell.tank.level === 1) return cell;
     }
     return fallback;
+  }
+
+  function resolveStepTarget(stepDefinition, state) {
+    if (!stepDefinition || !stepDefinition.target || !state) return null;
+    if (stepDefinition.target.kind === 'starter_hangar_tank') {
+      return findStarterTankCell(state);
+    }
+    return null;
   }
 
   function isElementVisible(element) {
@@ -203,15 +321,21 @@
     return button;
   }
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
   function ensureDom() {
     if (runtime.rootEl || !runtime.documentObj) return;
     const stageCanvas = runtime.documentObj.querySelector('.stageCanvas');
     if (!stageCanvas) return;
+    const canvas = runtime.documentObj.getElementById('c');
 
     const root = runtime.documentObj.createElement('div');
     root.id = 'gameTutorialOverlay';
     root.className = 'gameTutorial gameTutorial--hidden';
     root.setAttribute('aria-hidden', 'true');
+    root.setAttribute('data-tutorial-root', 'true');
 
     const pointer = runtime.documentObj.createElement('div');
     pointer.className = 'gameTutorial__pointer';
@@ -220,13 +344,14 @@
     const bubble = runtime.documentObj.createElement('div');
     bubble.className = 'gameTutorial__bubble';
     bubble.setAttribute('role', 'dialog');
-    bubble.setAttribute('aria-modal', 'false');
+    bubble.setAttribute('aria-modal', 'true');
 
-    const closeBtn = createButton('gameTutorial__close uiButtonBehavior', 'x');
+    const closeBtn = createButton('levelModal__close scModal__close gameTutorial__close uiButtonBehavior', '×');
+    closeBtn.setAttribute('data-font-floor-ignore', 'true');
     closeBtn.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
-      completeCurrentStep('dismiss');
+      dismissCurrentBubble('close');
     });
 
     const message = runtime.documentObj.createElement('p');
@@ -235,6 +360,13 @@
     const actions = runtime.documentObj.createElement('div');
     actions.className = 'gameTutorial__actions';
 
+    const continueBtn = createButton('btn btnPrimary uiButtonBehavior gameTutorial__continueBtn', '');
+    continueBtn.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      dismissCurrentBubble('continue');
+    });
+
     const disableBtn = createButton('btn btnSecondary uiButtonBehavior gameTutorial__disableBtn', '');
     disableBtn.addEventListener('click', function (event) {
       event.preventDefault();
@@ -242,6 +374,7 @@
       disableTutorial();
     });
 
+    actions.appendChild(continueBtn);
     actions.appendChild(disableBtn);
     bubble.appendChild(closeBtn);
     bubble.appendChild(message);
@@ -255,27 +388,38 @@
     }
 
     runtime.rootEl = root;
+    runtime.canvasEl = canvas;
+    runtime.stageEl = stageCanvas;
     runtime.pointerEl = pointer;
     runtime.bubbleEl = bubble;
     runtime.messageEl = message;
     runtime.closeBtn = closeBtn;
+    runtime.continueBtn = continueBtn;
     runtime.disableBtn = disableBtn;
-  }
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
   }
 
   function setOverlayHidden(hidden) {
     if (!runtime.rootEl) return;
     runtime.rootEl.classList.toggle('gameTutorial--hidden', !!hidden);
     runtime.rootEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+    if (runtime.pointerEl) runtime.pointerEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  function setBubbleHidden(hidden) {
+    if (!runtime.bubbleEl) return;
+    runtime.bubbleEl.classList.toggle('gameTutorial__bubble--hidden', !!hidden);
+    runtime.bubbleEl.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  function isStepBubbleOpen(state) {
+    const stepState = getActiveStepState(state);
+    return !!(stepState && stepState.bubbleOpen);
   }
 
   function positionOverlay(cell) {
-    if (!runtime.rootEl || !runtime.bubbleEl || !runtime.pointerEl || !runtime.documentObj) return;
-    const canvas = runtime.documentObj.getElementById('c');
-    const stageCanvas = runtime.rootEl.parentElement;
+    if (!runtime.rootEl || !runtime.pointerEl || !runtime.documentObj || !cell) return;
+    const canvas = runtime.canvasEl || runtime.documentObj.getElementById('c');
+    const stageCanvas = runtime.stageEl || runtime.rootEl.parentElement;
     if (!canvas || !stageCanvas) {
       setOverlayHidden(true);
       return;
@@ -293,8 +437,10 @@
     runtime.pointerEl.style.left = Math.round(centerX - 74) + 'px';
     runtime.pointerEl.style.top = Math.round(centerY - 18) + 'px';
 
-    const bubbleWidth = runtime.bubbleEl.offsetWidth || 290;
-    const bubbleHeight = runtime.bubbleEl.offsetHeight || 112;
+    if (!runtime.bubbleEl || runtime.bubbleEl.classList.contains('gameTutorial__bubble--hidden')) return;
+
+    const bubbleWidth = runtime.bubbleEl.offsetWidth || 340;
+    const bubbleHeight = runtime.bubbleEl.offsetHeight || 160;
     let bubbleLeft = centerX + 28;
     let bubbleTop = centerY - bubbleHeight - 18;
 
@@ -308,67 +454,196 @@
     runtime.bubbleEl.style.top = Math.round(bubbleTop) + 'px';
   }
 
-  function getLockTargets() {
+  function getAlwaysAllowedElements() {
     const ui = runtime.ui || {};
-    const targets = [];
-    const push = function (element) {
-      if (!element || targets.indexOf(element) !== -1) return;
-      if (element === ui.settingsBtn) return;
-      targets.push(element);
-    };
-
-    push(ui.buy);
-    push(ui.buyBulk);
-    push(ui.autoMergeBtn);
-    push(ui.supercomputerBtn);
-    push(ui.achievementsBtn);
-    push(ui.dismantleBtn);
-    push(ui.terminalExpandBtn);
-    push(ui.terminalCollapseBtn);
-
-    if (ui.stageAbilitySlots && typeof ui.stageAbilitySlots.querySelectorAll === 'function') {
-      const slots = ui.stageAbilitySlots.querySelectorAll('button');
-      for (let i = 0; i < slots.length; i++) push(slots[i]);
-    }
-
-    return targets;
+    return [ui.settingsBtn, ui.terminalCollapseBtn, ui.terminalExpandBtn];
   }
 
-  function applyUiLock(state) {
-    const shouldLock = !!getActiveStepId(state);
-    const targets = getLockTargets();
-    let unlockedAny = false;
+  function getAllowedUiElementsForStep(state) {
+    const stepDefinition = getActiveStepDefinition(state);
+    const ui = runtime.ui || {};
+    const elements = getAlwaysAllowedElements().slice();
+    const allow = stepDefinition && stepDefinition.allow ? stepDefinition.allow : null;
+    const uiKeys = allow && Array.isArray(allow.uiKeys) ? allow.uiKeys : [];
 
-    for (let i = 0; i < targets.length; i++) {
-      const target = targets[i];
-      if (!target) continue;
-      if (shouldLock) {
-        target.disabled = true;
-        target.setAttribute('aria-disabled', 'true');
-        target.setAttribute('data-tutorial-locked', 'true');
-      } else if (target.getAttribute('data-tutorial-locked') === 'true') {
-        target.disabled = false;
-        target.removeAttribute('aria-disabled');
-        target.removeAttribute('data-tutorial-locked');
-        unlockedAny = true;
+    for (let i = 0; i < uiKeys.length; i++) {
+      const candidate = ui[uiKeys[i]];
+      if (candidate && elements.indexOf(candidate) === -1) {
+        elements.push(candidate);
       }
     }
 
-    if (!shouldLock && unlockedAny && typeof runtime.updateUi === 'function') {
-      try { runtime.updateUi(); } catch (_) {}
+    return elements;
+  }
+
+  function isBubbleControlAllowed(controlName, state) {
+    const stepDefinition = getActiveStepDefinition(state);
+    const allow = stepDefinition && stepDefinition.allow ? stepDefinition.allow : null;
+    const controls = allow && Array.isArray(allow.bubbleControls) ? allow.bubbleControls : [];
+    return controls.indexOf(controlName) !== -1;
+  }
+
+  function isElementInsideTutorial(element) {
+    return !!(runtime.rootEl && element && runtime.rootEl.contains(element));
+  }
+
+  function isElementAlwaysAllowed(element) {
+    const alwaysAllowed = getAlwaysAllowedElements();
+    for (let i = 0; i < alwaysAllowed.length; i++) {
+      const candidate = alwaysAllowed[i];
+      if (!candidate) continue;
+      if (element === candidate) return true;
+      if (candidate.contains && candidate.contains(element)) return true;
     }
+    return false;
+  }
+
+  function isElementAllowedForStep(element, state) {
+    if (!element) return false;
+    if (isElementInsideTutorial(element)) return true;
+
+    const allowedUiElements = getAllowedUiElementsForStep(state);
+    for (let i = 0; i < allowedUiElements.length; i++) {
+      const candidate = allowedUiElements[i];
+      if (!candidate) continue;
+      if (element === candidate) return true;
+      if (candidate.contains && candidate.contains(element)) return true;
+    }
+
+    if (!isStepBubbleOpen(state)) return false;
+
+    if (isBubbleControlAllowed('close', state) && runtime.closeBtn && (element === runtime.closeBtn || runtime.closeBtn.contains(element))) return true;
+    if (isBubbleControlAllowed('continue', state) && runtime.continueBtn && (element === runtime.continueBtn || runtime.continueBtn.contains(element))) return true;
+    if (isBubbleControlAllowed('disable', state) && runtime.disableBtn && (element === runtime.disableBtn || runtime.disableBtn.contains(element))) return true;
+
+    return false;
+  }
+
+  function shouldLockInteractions(state) {
+    if (!getActiveStepId(state)) return false;
+    if (!runtime.stageEl) return false;
+    if (state && state.ui && state.ui.menuOpen) return false;
+    return true;
+  }
+
+  function rememberOriginalTooltip(target) {
+    if (!target || runtime.restoreTooltipCache.has(target)) return;
+    runtime.restoreTooltipCache.set(target, {
+      tooltip: target.hasAttribute('data-ui-tooltip') ? target.getAttribute('data-ui-tooltip') : null,
+      ariaDisabled: target.hasAttribute('aria-disabled') ? target.getAttribute('aria-disabled') : null,
+    });
+  }
+
+  function applyLockToTarget(target, tooltipText) {
+    if (!target) return;
+    rememberOriginalTooltip(target);
+    target.setAttribute('data-tutorial-locked', 'true');
+    target.setAttribute('aria-disabled', 'true');
+    target.setAttribute('data-ui-tooltip', tooltipText);
+  }
+
+  function clearLockFromTarget(target) {
+    if (!target || target.getAttribute('data-tutorial-locked') !== 'true') return;
+    const original = runtime.restoreTooltipCache.get(target) || null;
+    target.removeAttribute('data-tutorial-locked');
+    if (original && original.ariaDisabled !== null) {
+      target.setAttribute('aria-disabled', original.ariaDisabled);
+    } else {
+      target.removeAttribute('aria-disabled');
+    }
+    if (original && original.tooltip !== null) {
+      target.setAttribute('data-ui-tooltip', original.tooltip);
+    } else {
+      target.removeAttribute('data-ui-tooltip');
+    }
+    runtime.restoreTooltipCache.delete(target);
+  }
+
+  function clearAllUiLocks() {
+    for (let i = 0; i < runtime.lockedTargets.length; i++) {
+      clearLockFromTarget(runtime.lockedTargets[i]);
+    }
+    runtime.lockedTargets.length = 0;
+  }
+
+  function applyUiLock(state) {
+    const lockKey = shouldLockInteractions(state)
+      ? [getActiveStepId(state) || '', isStepBubbleOpen(state) ? '1' : '0', state && state.ui && state.ui.menuOpen ? '1' : '0'].join('|')
+      : '';
+    if (lockKey === runtime.lastLockKey) return;
+
+    runtime.lastLockKey = lockKey;
+    clearAllUiLocks();
+    if (!lockKey) return;
+
+    const tooltipText = translate(LOCKED_REASON_KEY, 'Временно заблокировано. Закончите обучения для получения доступа');
+    const targets = runtime.stageEl.querySelectorAll('button, [role="button"]');
+
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      if (!target || isElementAllowedForStep(target, state)) continue;
+      applyLockToTarget(target, tooltipText);
+      runtime.lockedTargets.push(target);
+    }
+  }
+
+  function syncPauseState(state) {
+    const shouldPause = !!(getActiveStepId(state) && isStepBubbleOpen(state));
+    if (shouldPause === runtime.pauseActive) return;
+
+    patchPauseManagerFactory();
+    if (shouldPause) {
+      if (runtime.pauseManager && typeof runtime.pauseManager.enterCriticalPause === 'function') {
+        runtime.pauseManager.enterCriticalPause();
+        runtime.pauseActive = true;
+      } else if (typeof runtime.enterCriticalPause === 'function') {
+        runtime.enterCriticalPause();
+        runtime.pauseActive = true;
+      }
+      return;
+    }
+
+    if (runtime.pauseManager && typeof runtime.pauseManager.exitCriticalPause === 'function') {
+      runtime.pauseManager.exitCriticalPause();
+    } else if (typeof runtime.exitCriticalPause === 'function') {
+      runtime.exitCriticalPause();
+    }
+    runtime.pauseActive = false;
+  }
+
+  function syncBodyState(state) {
+    if (!runtime.documentObj || !runtime.documentObj.body) return;
+    runtime.documentObj.body.classList.toggle(TUTORIAL_BODY_CLASS, !!(getActiveStepId(state) && isStepBubbleOpen(state)));
+  }
+
+  function dismissCurrentBubble(reason) {
+    const state = getState();
+    if (!state) return;
+    const tutorial = normalizeTutorialState(state);
+    const activeStepId = getActiveStepId(state);
+    if (!activeStepId || !tutorial.steps[activeStepId]) return;
+
+    tutorial.steps[activeStepId].bubbleOpen = false;
+    if (reason === 'close') tutorial.steps[activeStepId].dismissed = true;
+    persist();
+    syncNow();
   }
 
   function completeCurrentStep(reason) {
     const state = getState();
     if (!state) return;
     const tutorial = normalizeTutorialState(state);
-    if (tutorial.disabled || tutorial.completed) return;
+    const activeStepId = getActiveStepId(state);
+    if (!activeStepId || tutorial.disabled || tutorial.completed) return;
 
-    tutorial.steps[STEP_STARTER_TANK].completed = true;
-    if (reason === 'dismiss') tutorial.steps[STEP_STARTER_TANK].dismissed = true;
-    tutorial.currentStepId = null;
-    tutorial.completed = true;
+    const stepState = tutorial.steps[activeStepId] || createDefaultStepState();
+    stepState.completed = true;
+    stepState.bubbleOpen = false;
+    if (reason === 'dismiss') stepState.dismissed = true;
+    tutorial.steps[activeStepId] = stepState;
+    tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+    tutorial.completed = !tutorial.currentStepId;
+    runtime.canvasSequenceActive = false;
 
     persist();
     if (typeof runtime.updateUi === 'function') {
@@ -384,7 +659,15 @@
     tutorial.disabled = true;
     tutorial.completed = true;
     tutorial.currentStepId = null;
-    tutorial.steps[STEP_STARTER_TANK].completed = true;
+    runtime.canvasSequenceActive = false;
+
+    const stepIds = Object.keys(tutorial.steps || {});
+    for (let i = 0; i < stepIds.length; i++) {
+      const stepState = tutorial.steps[stepIds[i]];
+      if (!stepState) continue;
+      stepState.completed = true;
+      stepState.bubbleOpen = false;
+    }
 
     persist();
     if (typeof runtime.updateUi === 'function') {
@@ -394,10 +677,116 @@
   }
 
   function syncCopy() {
-    if (!runtime.messageEl || !runtime.disableBtn || !runtime.closeBtn) return;
-    runtime.messageEl.textContent = translate('tutorialStarterTankMessage', 'Нажми на танк и отправь его в бой!');
+    if (!runtime.messageEl || !runtime.disableBtn || !runtime.closeBtn || !runtime.continueBtn) return;
+    const state = getState();
+    const activeStep = getActiveStepDefinition(state);
+    runtime.messageEl.textContent = translate(
+      activeStep && activeStep.messageKey ? activeStep.messageKey : 'tutorialStarterTankMessage',
+      'Нажми на танк и отправь его в бой!'
+    );
+    runtime.continueBtn.textContent = translate('tutorialContinue', 'Продолжить');
     runtime.disableBtn.textContent = translate('tutorialDisable', 'Выключить обучение');
     runtime.closeBtn.setAttribute('aria-label', translate('tutorialClose', 'Закрыть обучение'));
+  }
+
+  function getCanvasPointFromEvent(event) {
+    if (!runtime.canvasEl || !event) return null;
+    const rect = runtime.canvasEl.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+    const clientX = Number(event.clientX);
+    const clientY = Number(event.clientY);
+    if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return null;
+    return {
+      x: (clientX - rect.left) * (runtime.canvasEl.width / rect.width),
+      y: (clientY - rect.top) * (runtime.canvasEl.height / rect.height),
+    };
+  }
+
+  function isPointInsideCell(cell, point) {
+    if (!cell || !point) return false;
+    return point.x >= cell.x
+      && point.x <= cell.x + cell.w
+      && point.y >= cell.y
+      && point.y <= cell.y + cell.h;
+  }
+
+  function shouldHandleCanvasRestriction(state) {
+    return shouldLockInteractions(state);
+  }
+
+  function stopEvent(event) {
+    if (!event) return;
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    if (typeof event.stopImmediatePropagation === 'function') {
+      event.stopImmediatePropagation();
+      return;
+    }
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+  }
+
+  function handleCanvasPointerDown(event) {
+    const state = getState();
+    if (!state || !shouldHandleCanvasRestriction(state)) return;
+    const stepDefinition = getActiveStepDefinition(state);
+    const target = resolveStepTarget(stepDefinition, state);
+    const point = getCanvasPointFromEvent(event);
+    if (!target || !point || !isPointInsideCell(target, point)) {
+      runtime.canvasSequenceActive = false;
+      stopEvent(event);
+      return;
+    }
+    runtime.canvasSequenceActive = true;
+  }
+
+  function handleCanvasPointerMove(event) {
+    const state = getState();
+    if (!state || !shouldHandleCanvasRestriction(state)) return;
+    stopEvent(event);
+  }
+
+  function handleCanvasPointerUp(event) {
+    const state = getState();
+    if (!state || !shouldHandleCanvasRestriction(state)) {
+      runtime.canvasSequenceActive = false;
+      return;
+    }
+    if (!runtime.canvasSequenceActive) {
+      stopEvent(event);
+      return;
+    }
+    runtime.canvasSequenceActive = false;
+  }
+
+  function handleCanvasPointerCancel() {
+    runtime.canvasSequenceActive = false;
+  }
+
+  function handleBlockedDomEvent(event) {
+    const state = getState();
+    if (!state || !shouldLockInteractions(state)) return;
+    const target = event && event.target && event.target.closest
+      ? event.target.closest('[data-tutorial-locked="true"]')
+      : null;
+    if (!target) return;
+    stopEvent(event);
+  }
+
+  function handleBlockedKeydown(event) {
+    if (!event || (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar')) return;
+    handleBlockedDomEvent(event);
+  }
+
+  function attachInteractionGuards() {
+    if (runtime.guardsAttached || !runtime.documentObj || !runtime.canvasEl) return;
+    runtime.guardsAttached = true;
+    runtime.canvasEl.addEventListener('pointerdown', handleCanvasPointerDown, true);
+    runtime.canvasEl.addEventListener('pointermove', handleCanvasPointerMove, true);
+    runtime.canvasEl.addEventListener('pointerup', handleCanvasPointerUp, true);
+    runtime.canvasEl.addEventListener('pointercancel', handleCanvasPointerCancel, true);
+    runtime.canvasEl.addEventListener('pointerleave', handleCanvasPointerCancel, true);
+    runtime.documentObj.addEventListener('pointerdown', handleBlockedDomEvent, true);
+    runtime.documentObj.addEventListener('click', handleBlockedDomEvent, true);
+    runtime.documentObj.addEventListener('keydown', handleBlockedKeydown, true);
   }
 
   function syncNow() {
@@ -406,22 +795,26 @@
 
     migrateTutorialStateIfNeeded(state);
     ensureDom();
+    patchPauseManagerFactory();
+    attachInteractionGuards();
     applyUiLock(state);
     syncCopy();
+    syncPauseState(state);
+    syncBodyState(state);
 
-    if (!runtime.rootEl || getActiveStepId(state) !== STEP_STARTER_TANK || shouldSuppressOverlay(state)) {
-      setOverlayHidden(true);
-      return;
-    }
+    const activeStep = getActiveStepDefinition(state);
+    const target = resolveStepTarget(activeStep, state);
+    const shouldHide = !activeStep || !target || shouldSuppressOverlay(state);
 
-    const cell = findStarterTankCell(state);
-    if (!cell) {
+    if (!runtime.rootEl || shouldHide) {
       setOverlayHidden(true);
+      setBubbleHidden(true);
       return;
     }
 
     setOverlayHidden(false);
-    positionOverlay(cell);
+    setBubbleHidden(!isStepBubbleOpen(state));
+    positionOverlay(target);
   }
 
   function tick() {
@@ -435,8 +828,12 @@
     runtime.getState = typeof opts.getState === 'function' ? opts.getState : runtime.getState;
     runtime.saveProgress = typeof opts.saveProgress === 'function' ? opts.saveProgress : runtime.saveProgress;
     runtime.updateUi = typeof opts.updateUi === 'function' ? opts.updateUi : runtime.updateUi;
+    runtime.enterCriticalPause = typeof opts.enterCriticalPause === 'function' ? opts.enterCriticalPause : runtime.enterCriticalPause;
+    runtime.exitCriticalPause = typeof opts.exitCriticalPause === 'function' ? opts.exitCriticalPause : runtime.exitCriticalPause;
     runtime.t = typeof opts.t === 'function' ? opts.t : runtime.t;
     runtime.ui = opts.ui || runtime.ui;
+
+    patchPauseManagerFactory();
 
     if (runtime.started) {
       syncNow();
@@ -444,6 +841,8 @@
     }
 
     runtime.started = true;
+    ensureDom();
+    attachInteractionGuards();
     syncNow();
     if (typeof global.requestAnimationFrame === 'function') {
       runtime.rafId = global.requestAnimationFrame(tick);
@@ -455,12 +854,13 @@
     if (!nextOnTrack) return;
     if (!opts || opts.cause !== 'user') return;
     const state = getState();
-    if (getActiveStepId(state) !== STEP_STARTER_TANK) return;
+    const stepDefinition = getActiveStepDefinition(state);
+    if (!stepDefinition || !stepDefinition.completion || stepDefinition.completion.kind !== 'tank_on_track') return;
     completeCurrentStep('sent_to_track');
   }
 
   function isUiLocked() {
-    return !!getActiveStepId(getState());
+    return shouldLockInteractions(getState());
   }
 
   const api = {

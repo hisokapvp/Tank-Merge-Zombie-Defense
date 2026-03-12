@@ -2,8 +2,13 @@
   'use strict';
 
   function createInitialTutorialState() {
+    var tutorialSteps = global.Game && global.Game.TutorialSteps;
+    if (tutorialSteps && typeof tutorialSteps.buildInitialTutorialState === 'function') {
+      return tutorialSteps.buildInitialTutorialState();
+    }
+
     return {
-      version: 1,
+      version: 2,
       disabled: false,
       completed: false,
       currentStepId: 'starter_tank',
@@ -11,6 +16,7 @@
         starter_tank: {
           completed: false,
           dismissed: false,
+          bubbleOpen: true,
         },
       },
     };

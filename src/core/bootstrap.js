@@ -832,6 +832,8 @@
         getState: getState,
         saveProgress: opts.saveProgress,
         updateUi: opts.updateUI,
+        enterCriticalPause: opts.enterCriticalPause,
+        exitCriticalPause: opts.exitCriticalPause,
         t: opts.t,
         ui: opts.ui,
       });

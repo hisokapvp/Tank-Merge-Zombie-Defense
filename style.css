@@ -69,6 +69,7 @@ canvas{
 body.menu-open::before,
 body.big-menu-open::before,
 body.scmodal-open::before,
+body.tutorial-modal-open::before,
 body.pl-storage-open::before,
 body.crate-open::before,
 body.merge-popup-open::before,
@@ -3192,12 +3193,20 @@ input, select, textarea, button {
 
 .gameTutorial__bubble{
   position:absolute;
-  width:min(290px, calc(100vw - 32px));
-  padding:14px 16px 14px;
+  width:min(340px, calc(100vw - 32px));
+  padding:56px 18px 18px;
   border:2px solid rgba(74, 246, 38, 0.72);
   background:linear-gradient(180deg, rgba(10, 12, 10, 0.96), rgba(20, 26, 19, 0.96));
   box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
   pointer-events:auto;
+  border-radius:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.gameTutorial__bubble--hidden{
+  display:none;
 }
 
 .gameTutorial__bubble::before{
@@ -3210,38 +3219,60 @@ input, select, textarea, button {
 
 .gameTutorial__close{
   position:absolute;
-  top:8px;
-  right:8px;
-  width:30px;
-  height:30px;
-  padding:0;
-  border:1px solid rgba(74, 246, 38, 0.68);
-  background:rgba(12, 18, 11, 0.95);
-  color:var(--text);
-  font:inherit;
-  font-size:16px;
-  cursor:pointer;
-  box-shadow:2px 2px 0 rgba(0,0,0,.75);
-}
-
-.gameTutorial__close:hover{
-  background:rgba(74, 246, 38, 0.18);
+  top:10px;
+  right:10px;
 }
 
 .gameTutorial__message{
-  margin:0 34px 14px 0;
+  margin:0;
   font-size:15px;
   line-height:1.35;
   color:#ebffe2;
+  text-align:left;
 }
 
 .gameTutorial__actions{
   display:flex;
-  justify-content:flex-start;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  flex-wrap:nowrap;
 }
 
+.gameTutorial__continueBtn,
 .gameTutorial__disableBtn{
-  min-width:180px;
+  min-width:148px;
+  white-space:nowrap;
+}
+
+[data-tutorial-locked="true"]{
+  position:relative;
+  cursor:not-allowed !important;
+}
+
+button[data-tutorial-locked="true"]::before,
+[role="button"][data-tutorial-locked="true"]::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:rgba(0,0,0,.58);
+  pointer-events:none;
+  z-index:2;
+}
+
+button[data-tutorial-locked="true"]::after,
+[role="button"][data-tutorial-locked="true"]::after{
+  content:'🔒';
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  font-size:20px;
+  line-height:1;
+  text-shadow:0 0 10px rgba(0,0,0,.75);
+  pointer-events:none;
+  z-index:3;
 }
 
 @keyframes gameTutorialPointerPulse{
@@ -3255,17 +3286,22 @@ input, select, textarea, button {
 
 @media (max-width: 768px){
   .gameTutorial__bubble{
-    width:min(260px, calc(100vw - 24px));
-    padding:12px 14px 12px;
+    width:min(290px, calc(100vw - 24px));
+    padding:54px 14px 14px;
   }
 
   .gameTutorial__message{
     font-size:14px;
   }
 
+  .gameTutorial__actions{
+    gap:8px;
+  }
+
+  .gameTutorial__continueBtn,
   .gameTutorial__disableBtn{
     min-width:0;
-    width:100%;
+    width:auto;
   }
 }
 .lessonProgressPanel__header{
