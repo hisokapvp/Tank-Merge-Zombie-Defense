@@ -455,6 +455,7 @@
       version: SAVE_VERSION,
       coins: state.coins,
       kills: state.kills,
+      tutorial: state.tutorial || null,
       totalDamageDealtRaw: normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw),
       zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       damagePointsSpent: normalizeDamagePointsSpent(state.damagePointsSpent),

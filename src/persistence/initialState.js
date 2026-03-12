@@ -1,13 +1,28 @@
 (function (global) {
   'use strict';
 
+  function createInitialTutorialState() {
+    return {
+      version: 1,
+      disabled: false,
+      completed: false,
+      currentStepId: 'starter_tank',
+      steps: {
+        starter_tank: {
+          completed: false,
+          dismissed: false,
+        },
+      },
+    };
+  }
+
   function createInitialState(options) {
     var opts = options || {};
     var reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
     var maxLevel = Number.isFinite(opts.maxLevel) ? Math.floor(opts.maxLevel) : 60;
 
     return {
-      coins: 120,
+      coins: 40,
       kills: 0,
       totalDamageDealtRaw: 0,
       zombieWaveAtkMult: 1,
@@ -118,6 +133,7 @@
       selectedHangarCellIndex: null,
       isDismantleMode: false,
       selectedTankIds: [],
+      tutorial: createInitialTutorialState(),
       hangarCells: null,
       playerChips: [],
       productionLine: {

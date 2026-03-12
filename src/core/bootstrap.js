@@ -820,11 +820,21 @@
     if (opts.DebugPanelEnabled && windowObj.Game && windowObj.Game.AdminDamagePoints) windowObj.Game.AdminDamagePoints.init();
 
     if (typeof opts.ensureStarterTanks === 'function') {
-      opts.ensureStarterTanks(getState(), 2);
+      opts.ensureStarterTanks(getState(), 1);
     } else if (getState().cells[0] && getState().cells[1] && !getState().cells.some(function (c) { return c.tank; })) {
-      getState().cells[0].tank = opts.makeTank(1, true);
-      getState().cells[1].tank = opts.makeTank(1, true);
+      getState().cells[0].tank = opts.makeTank(1, false);
       opts.recordTankLevel(1);
+    }
+
+    if (windowObj.Game && windowObj.Game.TutorialRuntime && typeof windowObj.Game.TutorialRuntime.init === 'function') {
+      windowObj.Game.TutorialRuntime.init({
+        documentObj: documentObj,
+        getState: getState,
+        saveProgress: opts.saveProgress,
+        updateUi: opts.updateUI,
+        t: opts.t,
+        ui: opts.ui,
+      });
     }
 
     documentObj.addEventListener('visibilitychange', function () {

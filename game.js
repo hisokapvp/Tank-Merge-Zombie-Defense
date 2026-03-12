@@ -4194,6 +4194,7 @@ function saveProgress(){
       zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
+      tutorial: state.tutorial,
       drones: Array.isArray(state.drones) ? state.drones : [],
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
       playerFragments: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function') ? window.Game.HangarChipsUI.getPlayerFragments() : [],
@@ -4279,6 +4280,9 @@ function restoreFullState(saved){
       ? Math.max(0, Math.floor(saved.achievements.totalMerges))
       : ach.totalMerges;
     ach.popupQueue = [];
+  }
+  if (saved.tutorial && typeof saved.tutorial === 'object') {
+    state.tutorial = cloneJsonSafe(saved.tutorial, state.tutorial || null);
   }
   if (saved.fenceState && typeof saved.fenceState === 'object') {
     state.savedFenceState = {
@@ -4432,6 +4436,7 @@ function applySavedProgress(data){
     state.player.talentsVersion = 0;
   }
   if (Number.isFinite(playerData.damagePoints)) state.player.damagePoints = Math.max(0, Math.floor(playerData.damagePoints));
+  if (playerData.tutorial && typeof playerData.tutorial === 'object') state.tutorial = cloneJsonSafe(playerData.tutorial, state.tutorial || null);
   if (Array.isArray(playerData.cannonUpgradesApplied)) state.player.cannonUpgradesApplied = playerData.cannonUpgradesApplied;
   if (Array.isArray(playerData.dronUpgradesApplied)) state.player.dronUpgradesApplied = playerData.dronUpgradesApplied;
   ensureCannonUpgradesAppliedState();
@@ -7510,7 +7515,7 @@ function initBigMainMenu(){
 function spawnInitialTanksLvl1(targetState, count = 1){
   const stateRef = targetState || state;
   if (!stateRef || !Array.isArray(stateRef.cells) || !stateRef.cells.length) return 0;
-  const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 2;
+  const requested = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 1;
   if (requested <= 0) return 0;
   if (stateRef.cells.some((cell) => cell && cell.tank)) return 0;
 
@@ -7523,7 +7528,7 @@ function spawnInitialTanksLvl1(targetState, count = 1){
     if (Garage && typeof Garage.isCellAvailableForTank === 'function' && !Garage.isCellAvailableForTank(cell, stateRef)) {
       return false;
     }
-    cell.tank = makeTank(1, true);
+    cell.tank = makeTank(1, false);
     spawned += 1;
     return true;
   }
@@ -7599,7 +7604,7 @@ function applyPreRetryRuntimeReset(targetState){
   for (let i = 0; i < targetState.cells.length && seeded < 1; i++) {
     const cell = targetState.cells[i];
     if (!cell || cell.tank) continue;
-    cell.tank = makeTank(1, true);
+    cell.tank = makeTank(1, false);
     seeded += 1;
   }
   if (!targetState.supercomputer || typeof targetState.supercomputer !== 'object') {

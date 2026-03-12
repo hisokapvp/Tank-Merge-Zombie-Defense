@@ -86,6 +86,10 @@
     if (prevOnTrack === next) return false;
 
     tank.onTrack = next;
+    var tutorial = global.Game && global.Game.TutorialRuntime;
+    if (tutorial && typeof tutorial.handleTankOnTrackChanged === 'function') {
+      tutorial.handleTankOnTrackChanged(tank, next, opts || null);
+    }
     if (!shouldPlayTrackSfx(opts)) return true;
     playTrackSfx(next ? 'tankToTrack' : 'tankToHangar');
     return true;

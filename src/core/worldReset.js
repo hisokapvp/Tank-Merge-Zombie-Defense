@@ -42,6 +42,7 @@
         totalPurchased: 0,
         totalMerges: 0,
       }),
+      tutorial: cloneObject(src.tutorial, null),
       upgrades: {
         talentPoints: toSafeInt(player.talentPoints, 0, 0),
         damagePoints: toSafeInt(player.damagePoints, 0, 0),
@@ -92,6 +93,7 @@
       totalPurchased: 0,
       totalMerges: 0,
     });
+    target.tutorial = cloneObject(src.tutorial, target.tutorial || null);
 
     var upgrades = src.upgrades && typeof src.upgrades === 'object' ? src.upgrades : {};
     target.player.talentPoints = toSafeInt(upgrades.talentPoints, 0, 0);

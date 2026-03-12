@@ -3150,6 +3150,124 @@ input, select, textarea, button {
 .lessonProgressPanel.hidden{
   display:none;
 }
+
+.gameTutorial{
+  position:absolute;
+  inset:0;
+  z-index:12;
+  pointer-events:none;
+  opacity:1;
+  visibility:visible;
+  transition:opacity .18s ease, visibility .18s ease;
+}
+
+.gameTutorial--hidden{
+  opacity:0;
+  visibility:hidden;
+}
+
+.gameTutorial__pointer{
+  position:absolute;
+  width:56px;
+  height:56px;
+  border:3px solid rgba(74, 246, 38, 0.95);
+  border-radius:999px;
+  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.2), rgba(74,246,38,.12) 52%, rgba(10,12,10,.92) 100%);
+  box-shadow:0 0 18px rgba(74,246,38,.26), 2px 2px 0 rgba(0,0,0,.8);
+  transform-origin:center;
+  animation:gameTutorialPointerPulse 1.15s ease-in-out infinite;
+}
+
+.gameTutorial__pointer::after{
+  content:'';
+  position:absolute;
+  right:-10px;
+  top:20px;
+  width:0;
+  height:0;
+  border-top:8px solid transparent;
+  border-bottom:8px solid transparent;
+  border-left:14px solid rgba(74, 246, 38, 0.92);
+}
+
+.gameTutorial__bubble{
+  position:absolute;
+  width:min(290px, calc(100vw - 32px));
+  padding:14px 16px 14px;
+  border:2px solid rgba(74, 246, 38, 0.72);
+  background:linear-gradient(180deg, rgba(10, 12, 10, 0.96), rgba(20, 26, 19, 0.96));
+  box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
+  pointer-events:auto;
+}
+
+.gameTutorial__bubble::before{
+  content:'';
+  position:absolute;
+  inset:4px;
+  border:1px solid rgba(74, 246, 38, 0.14);
+  pointer-events:none;
+}
+
+.gameTutorial__close{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:30px;
+  height:30px;
+  padding:0;
+  border:1px solid rgba(74, 246, 38, 0.68);
+  background:rgba(12, 18, 11, 0.95);
+  color:var(--text);
+  font:inherit;
+  font-size:16px;
+  cursor:pointer;
+  box-shadow:2px 2px 0 rgba(0,0,0,.75);
+}
+
+.gameTutorial__close:hover{
+  background:rgba(74, 246, 38, 0.18);
+}
+
+.gameTutorial__message{
+  margin:0 34px 14px 0;
+  font-size:15px;
+  line-height:1.35;
+  color:#ebffe2;
+}
+
+.gameTutorial__actions{
+  display:flex;
+  justify-content:flex-start;
+}
+
+.gameTutorial__disableBtn{
+  min-width:180px;
+}
+
+@keyframes gameTutorialPointerPulse{
+  0%, 100% {
+    transform:translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform:translate3d(18px, -8px, 0) scale(.92);
+  }
+}
+
+@media (max-width: 768px){
+  .gameTutorial__bubble{
+    width:min(260px, calc(100vw - 24px));
+    padding:12px 14px 12px;
+  }
+
+  .gameTutorial__message{
+    font-size:14px;
+  }
+
+  .gameTutorial__disableBtn{
+    min-width:0;
+    width:100%;
+  }
+}
 .lessonProgressPanel__header{
   display:flex;
   align-items:center;
