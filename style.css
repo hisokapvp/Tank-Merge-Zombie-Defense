@@ -3863,8 +3863,15 @@ button[data-tutorial-locked="true"]::after,
   transform-box: fill-box;
   transform-origin: center;
 }
+.hangarSlotKeyLabel{
+  font-weight:700;
+  paint-order:stroke fill;
+  stroke:rgba(0,0,0,.4);
+  stroke-width:3px;
+  letter-spacing:.5px;
+}
 .hangarSlotPoly{
-  transition:fill .12s, stroke .12s;
+  transition:fill .12s, stroke .12s, filter .12s;
 }
 .hangarSlotPoly:hover{
   filter:brightness(1.3);
@@ -3872,6 +3879,7 @@ button[data-tutorial-locked="true"]::after,
 .hangarSlotPoly--selected{
   stroke: #4af626;
   stroke-width: 4px;
+  filter: drop-shadow(0 0 8px rgba(74,246,38,.5));
 }
 
 .hangarSlotPoly--working{
@@ -3921,6 +3929,9 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarSlotActionBtn:hover text{
   filter:brightness(1.4);
+}
+.hangarSlotActionBtn:hover .hangarSlotActionIcon{
+  stroke:#7cff5c;
 }
 
 /* --- Active modifiers box --- */
@@ -4052,7 +4063,8 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarChipsGrid{
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--hangar-chip-card-width, 176px), var(--hangar-chip-card-width, 176px)));
+  justify-content:center;
   gap:8px;
   flex: 1 1 auto;
   min-height: 0;
@@ -4104,8 +4116,27 @@ button.hangarChipInvItem{
   font:inherit;
   color:inherit;
   text-align:center;
+  width:100%;
   appearance:none;
   -webkit-appearance:none;
+}
+/* Slot hint label on chip inventory cards */
+.chipInvSlotHint{
+  position:absolute;
+  top:6px;
+  right:6px;
+  max-width:calc(100% - 12px);
+  font-size:12px;
+  font-weight:700;
+  font-family:monospace;
+  color:#ff9800;
+  background:rgba(0,0,0,.55);
+  border-radius:3px;
+  padding:2px 5px;
+  line-height:1.1;
+  text-align:right;
+  pointer-events:none;
+  z-index:1;
 }
 .hangarChipBtn__key{
   font-size:9px;
@@ -4202,7 +4233,9 @@ button.hangarChipInvItem{
   justify-content:flex-start;
   gap:6px;
   width:100%;
-  min-height:var(--chipLabelCardHeight);
+  height:var(--chipLabelCardHeight, 130px);
+  min-height:var(--chipLabelCardHeight, 130px);
+  max-height:var(--chipLabelCardHeight, 130px);
   padding:8px 8px 6px;
   border:1px solid rgba(255,255,255,.12);
   border-radius:6px;
@@ -4210,6 +4243,8 @@ button.hangarChipInvItem{
   cursor:default;
   position:relative;
   transition:border-color .12s, background .12s;
+  overflow:hidden;
+  box-sizing:border-box;
 }
 .chipUpgradeCard:hover{
   border-color:rgba(125,255,178,.45);
@@ -4222,6 +4257,7 @@ button.hangarChipInvItem{
 .chipUpgradeCard__name{
   width:100%;
   min-height:30px;
+  max-height:36px;
   display:flex;
   flex-wrap:wrap;
   align-items:center;
@@ -4233,11 +4269,11 @@ button.hangarChipInvItem{
   font-family:'Segoe UI', Arial, sans-serif;
   font-weight:700;
   white-space:normal;
-  overflow:visible;
-  text-overflow:clip;
+  overflow:hidden;
+  text-overflow:ellipsis;
   text-align:center;
-  word-break:normal;
-  overflow-wrap:normal;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 .chipUpgradeCard__level{
   font-size:12px;
@@ -5048,6 +5084,12 @@ button.hangarChipInvItem{
   cursor:pointer;
   transition:border-color .12s, background .12s;
 }
+.hangarChipInvItem{
+  width:var(--hangar-chip-card-width, 176px);
+  max-width:71%;
+  min-height:150px;
+  padding:26px 10px 8px;
+}
 .chipCraftInvItem:hover{
   border-color:rgba(74,246,38,.5);
   background:rgba(50,46,40,.8);
@@ -5078,6 +5120,18 @@ button.hangarChipInvItem{
   text-align:center;
   word-break:normal;
   overflow-wrap:normal;
+}
+.hangarChipInvLabel{
+  min-height:38px;
+  padding:0 2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+.hangarChipInvLabel .chipNameToken,
+.hangarChipInvLabel .chipNameJoin{
+  white-space:normal;
 }
 .chipCraftInvLevel{
   font-size:12px;

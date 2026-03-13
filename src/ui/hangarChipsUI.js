@@ -80,12 +80,22 @@
   var _cells = null;        // array[16] of cell states
   var _selectedCell = 0;    // index 0..15
   var _selectedSlot = null; // { type, slotId } or null (for chip-install target)
+  var _visualSelectedSlot = null; // { type, slotId } or null (for visible slot outline)
   var _chipFilter = 'all';  // 'all' | 'red' | 'yellow'
   var _activeSlotActions = null; // { type, slotId } — shows action buttons on slot
   var _initialized = false;
   var _doc = null;
   var _workshopSubTab = 'chipUpgrade';
   var _chipRecycleSubTab = 'dust';
+  var _chipTextMeasureCanvas = null;
+
+  var RED_SLOT_KEYS = ['slot1', 'slot2'];
+  var YELLOW_SLOT_MATCH_MAP = {
+    slot1: { redSlot: 'slot1', innerAKey: 'A', innerBKey: 'C' },
+    slot2: { redSlot: 'slot2', innerAKey: 'A', innerBKey: 'C' },
+    slot3: { redSlot: 'slot1', innerAKey: 'B', innerBKey: 'C' },
+    slot4: { redSlot: 'slot2', innerAKey: 'B', innerBKey: 'C' }
+  };
 
   /* ─── Chip drag-and-drop state (Workshop) ──────────────── */
   var _chipDragging = null; // { chipId, level, startX, startY, x, y, moved, ghostEl, sourceEl }
@@ -116,6 +126,28 @@
   function modShort(modId) {
     var h = hc();
     return h && h.MOD_SHORT ? (h.MOD_SHORT[modId] || String(modId)) : String(modId);
+  }
+
+  function getSlotDisplayLabel(slotType, slotId) {
+    for (var i = 0; i < SLOT_DEFS.length; i++) {
+      if (SLOT_DEFS[i].type === slotType && SLOT_DEFS[i].slotId === slotId) return SLOT_DEFS[i].label;
+    }
+    return '';
+  }
+
+  function clearSlotSelection() {
+    _selectedSlot = null;
+    _visualSelectedSlot = null;
+  }
+
+  function setInstallSlotSelection(slotType, slotId) {
+    _selectedSlot = { type: slotType, slotId: slotId };
+    _visualSelectedSlot = { type: slotType, slotId: slotId };
+  }
+
+  function setVisualSlotSelection(slotType, slotId) {
+    _selectedSlot = null;
+    _visualSelectedSlot = { type: slotType, slotId: slotId };
   }
 
   /* ─── Helpers ──────────────────────────────────────────── */
@@ -321,6 +353,20 @@
       '<polygon points="' + pointListToString(innerPoints) + '" fill="' + centerFill + '" stroke="' + seamStroke + '" stroke-width="1" pointer-events="none" />';
   }
 
+  function buildRotateArrowIcon(cx, cy, direction) {
+    var path;
+    var arrow;
+    if (direction < 0) {
+      path = 'M ' + (cx + 4) + ' ' + (cy - 5) + ' A 7 7 0 1 0 ' + (cx - 5) + ' ' + (cy + 4);
+      arrow = (cx - 7) + ',' + (cy + 1) + ' ' + (cx - 5) + ',' + (cy + 4) + ' ' + (cx - 1) + ',' + (cy + 3);
+    } else {
+      path = 'M ' + (cx - 4) + ' ' + (cy - 5) + ' A 7 7 0 1 1 ' + (cx + 5) + ' ' + (cy + 4);
+      arrow = (cx + 7) + ',' + (cy + 1) + ' ' + (cx + 5) + ',' + (cy + 4) + ' ' + (cx + 1) + ',' + (cy + 3);
+    }
+    return '<path class="hangarSlotActionIcon" d="' + path + '" fill="none" stroke="#4af626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" />' +
+      '<polyline class="hangarSlotActionIcon" points="' + arrow + '" fill="none" stroke="#4af626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" />';
+  }
+
   function renderButterfly() {
     var view = dom.slotView;
     if (!view) return;
@@ -343,7 +389,7 @@
       var yellowMatched = (cell.uiState && cell.uiState.yellowMatchSuccess === true && cell.uiState.activeYellowSlotId === def.slotId);
 
       var locked = !isRed && cell.uiState.yellowLocked && cell.uiState.activeYellowSlotId !== def.slotId;
-      var selected = _selectedSlot && _selectedSlot.type === def.type && _selectedSlot.slotId === def.slotId;
+      var selected = _visualSelectedSlot && _visualSelectedSlot.type === def.type && _visualSelectedSlot.slotId === def.slotId;
       var slotPoints = getGappedPoints(def.pts, GAP_DEFAULT);
       var slotPointsMarkup = pointListToString(slotPoints);
 
@@ -408,16 +454,21 @@
 
       svg += '" />';
 
+      var slotCx = 0, slotCy = 0;
+      for (var si = 0; si < def.pts.length; si++) {
+        slotCx += PT[def.pts[si]][0];
+        slotCy += PT[def.pts[si]][1];
+      }
+      slotCx = Math.round(slotCx / 3);
+      slotCy = Math.round(slotCy / 3);
+      svg += '<text class="hangarSlotKeyLabel" x="' + slotCx + '" y="' + slotCy + '" text-anchor="middle" dominant-baseline="central" ' +
+        'fill="#ff9800" font-size="20" font-family="monospace" pointer-events="none">' + def.label + '</text>';
+
       /* vertex labels inside triangle */
       if (chipData && h) {
         var placement = isRed ? h.normalizeRedPlacementRotated(chipData.modIds, chipData.rotation) : h.normalizeYellowPlacementRotated(chipData.modIds, chipData.rotation);
-        var cx = 0, cy = 0;
-        for (var vi = 0; vi < def.pts.length; vi++) {
-          cx += PT[def.pts[vi]][0];
-          cy += PT[def.pts[vi]][1];
-        }
-        cx = Math.round(cx / 3);
-        cy = Math.round(cy / 3);
+        var cx = slotCx;
+        var cy = slotCy;
 
         if (isRed) {
           /* show A, B, C labels at each vertex */
@@ -458,13 +509,13 @@
         var lx = cx - 24;
         svg += '<g class="hangarSlotActionBtn" data-action="rotateCCW" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
           '<circle cx="' + lx + '" cy="' + abY + '" r="10" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
-          '<text x="' + lx + '" y="' + (abY + 1) + '" text-anchor="middle" dominant-baseline="central" fill="#4af626" font-size="13" font-family="sans-serif">\u21BA</text>' +
+          buildRotateArrowIcon(lx, abY, -1) +
           '</g>';
         /* rotate CW */
         var rx = cx + 24;
         svg += '<g class="hangarSlotActionBtn" data-action="rotateCW" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
           '<circle cx="' + rx + '" cy="' + abY + '" r="10" fill="rgba(30,28,24,.85)" stroke="#4af626" stroke-width="1.5" />' +
-          '<text x="' + rx + '" y="' + (abY + 1) + '" text-anchor="middle" dominant-baseline="central" fill="#4af626" font-size="13" font-family="sans-serif">\u21BB</text>' +
+          buildRotateArrowIcon(rx, abY, 1) +
           '</g>';
         /* remove chip */
         svg += '<g class="hangarSlotActionBtn" data-action="remove" data-action-type="' + def.type + '" data-action-slot="' + def.slotId + '" style="cursor:pointer">' +
@@ -472,17 +523,6 @@
           '<text x="' + cx + '" y="' + (abY + 0) + '" text-anchor="middle" dominant-baseline="central" fill="#e53935" font-size="12" font-family="sans-serif">\u2715</text>' +
           '</g>';
         svg += '</g>';
-      } else if (!locked) {
-        /* empty label */
-        var ecx = 0, ecy = 0;
-        for (var ei = 0; ei < def.pts.length; ei++) {
-          ecx += PT[def.pts[ei]][0];
-          ecy += PT[def.pts[ei]][1];
-        }
-        ecx = Math.round(ecx / 3);
-        ecy = Math.round(ecy / 3);
-        svg += '<text x="' + ecx + '" y="' + ecy + '" text-anchor="middle" dominant-baseline="central" ' +
-          'fill="#666" font-size="12" font-family="monospace" pointer-events="none">' + def.label + '</text>';
       }
       svg += '</g>'; /* close hangarSlotGroup */
     }
@@ -519,48 +559,77 @@
    * Check if installing a chip in any empty slot of the current cell
    * would create (or contribute to) a match.
    */
-  function _wouldChipCreateMatch(cell, chipEntry, h) {
-    if (!cell || !h || !chipEntry) return false;
+  function _getChipMatchTargetLabels(cell, chipEntry, h) {
+    var targets = [];
+    if (!cell || !h || !chipEntry) return targets;
     var chipDef = h.getChipById(h.allChips, chipEntry.chipId);
-    if (!chipDef) return false;
+    if (!chipDef) return targets;
 
     if (chipEntry.chipColor === 'red') {
-      /* Check if the other red slot has a chip and would match */
-      var otherRedSlot = cell.redSlots.slot1 ? 'slot1' : (cell.redSlots.slot2 ? 'slot2' : null);
-      if (!otherRedSlot) return false; /* no red chip installed, can't match */
-      var otherRedChip = cell.redSlots[otherRedSlot];
-      if (!otherRedChip) return false;
-      /* Try all 3 rotations */
-      var otherP = h.normalizeRedPlacementRotated(otherRedChip.modIds, otherRedChip.rotation);
-      for (var rot = 0; rot < 3; rot++) {
-        var testP = h.normalizeRedPlacementRotated(chipEntry.modIds, rot);
-        if (h.checkRedMatch(testP, otherP)) return true;
-      }
-      return false;
-    } else if (chipEntry.chipColor === 'yellow') {
-      /* Check if any yellow slot adjacent to an installed red chip would match */
-      var YELLOW_ADJ = {
-        slot1: { redSlot: 'slot1', innerAKey: 'A', innerBKey: 'C' },
-        slot2: { redSlot: 'slot2', innerAKey: 'A', innerBKey: 'C' },
-        slot3: { redSlot: 'slot1', innerAKey: 'B', innerBKey: 'C' },
-        slot4: { redSlot: 'slot2', innerAKey: 'B', innerBKey: 'C' }
-      };
-      var ySlotKeys = ['slot1', 'slot2', 'slot3', 'slot4'];
-      for (var yi = 0; yi < ySlotKeys.length; yi++) {
-        var yKey = ySlotKeys[yi];
-        if (cell.yellowSlots[yKey]) continue; /* slot occupied */
-        var adj = YELLOW_ADJ[yKey];
-        var adjRed = cell.redSlots[adj.redSlot];
-        if (!adjRed) continue; /* no adjacent red */
-        var rp = h.normalizeRedPlacementRotated(adjRed.modIds, adjRed.rotation);
-        for (var rot2 = 0; rot2 < 3; rot2++) {
-          var yp = h.normalizeYellowPlacementRotated(chipEntry.modIds, rot2);
-          if (yp.innerA === rp[adj.innerAKey] && yp.innerB === rp[adj.innerBKey]) return true;
+      for (var ri = 0; ri < RED_SLOT_KEYS.length; ri++) {
+        var targetRedSlot = RED_SLOT_KEYS[ri];
+        if (cell.redSlots[targetRedSlot]) continue;
+        var otherRedSlot = targetRedSlot === 'slot1' ? 'slot2' : 'slot1';
+        var otherRedChip = cell.redSlots[otherRedSlot];
+        if (!otherRedChip) continue;
+        var otherPlacement = h.normalizeRedPlacementRotated(otherRedChip.modIds, otherRedChip.rotation);
+        for (var redRot = 0; redRot < 3; redRot++) {
+          var testRedPlacement = h.normalizeRedPlacementRotated(chipEntry.modIds, redRot);
+          if (h.checkRedMatch(testRedPlacement, otherPlacement)) {
+            targets.push(getSlotDisplayLabel('red', targetRedSlot));
+            break;
+          }
         }
       }
-      return false;
+      return targets;
     }
-    return false;
+
+    if (chipEntry.chipColor === 'yellow') {
+      if (cell.uiState && cell.uiState.yellowLocked) return targets;
+      var yellowSlots = ['slot1', 'slot2', 'slot3', 'slot4'];
+      for (var yi = 0; yi < yellowSlots.length; yi++) {
+        var targetYellowSlot = yellowSlots[yi];
+        if (cell.yellowSlots[targetYellowSlot]) continue;
+        var adj = YELLOW_SLOT_MATCH_MAP[targetYellowSlot];
+        if (!adj) continue;
+        var adjRedChip = cell.redSlots[adj.redSlot];
+        if (!adjRedChip) continue;
+        var redPlacement = h.normalizeRedPlacementRotated(adjRedChip.modIds, adjRedChip.rotation);
+        for (var yellowRot = 0; yellowRot < 3; yellowRot++) {
+          var yellowPlacement = h.normalizeYellowPlacementRotated(chipEntry.modIds, yellowRot);
+          if (yellowPlacement.innerA === redPlacement[adj.innerAKey] && yellowPlacement.innerB === redPlacement[adj.innerBKey]) {
+            targets.push(getSlotDisplayLabel('yellow', targetYellowSlot));
+            break;
+          }
+        }
+      }
+    }
+
+    return targets;
+  }
+
+  function _wouldChipCreateMatch(cell, chipEntry, h) {
+    return _getChipMatchTargetLabels(cell, chipEntry, h).length > 0;
+  }
+
+  function _measureHangarChipCardWidth(chips) {
+    if (!_chipTextMeasureCanvas && _doc && typeof _doc.createElement === 'function') {
+      _chipTextMeasureCanvas = _doc.createElement('canvas');
+    }
+    var ctx = _chipTextMeasureCanvas && typeof _chipTextMeasureCanvas.getContext === 'function'
+      ? _chipTextMeasureCanvas.getContext('2d')
+      : null;
+    if (!ctx) return 176;
+
+    ctx.font = '700 12px "Segoe UI", Arial, sans-serif';
+    var longest = 0;
+    for (var i = 0; i < chips.length; i++) {
+      var chipName = _getChipDisplayName(chips[i]);
+      if (!chipName) continue;
+      longest = Math.max(longest, ctx.measureText(chipName).width);
+    }
+
+    return Math.max(176, Math.min(320, Math.ceil(longest + 28)));
   }
 
   /* ─── Render: active modifiers summary ─────────────────── */
@@ -634,28 +703,39 @@
       return;
     }
 
-    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
+    var cardWidth = _measureHangarChipCardWidth(chips);
+    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid" style="--hangar-chip-card-width:' + cardWidth + 'px">';
 
     /* Pre-calculate which chips could create matches in the current cell */
     var cells = ensureCells();
     var cell = cells[_selectedCell];
     var canMatchMap = {};
+    var targetSlotMap = {};
     if (cell && h) {
       for (var ci2 = 0; ci2 < chips.length; ci2++) {
         var testChip = chips[ci2];
-        canMatchMap[testChip.chipId + '_' + testChip.level] = _wouldChipCreateMatch(cell, testChip, h);
+        var matchTargets = _getChipMatchTargetLabels(cell, testChip, h);
+        var chipKey = testChip.chipId + '_' + testChip.level;
+        canMatchMap[chipKey] = matchTargets.length > 0;
+        targetSlotMap[chipKey] = matchTargets;
       }
     }
 
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-      var canMatch = canMatchMap[chip.chipId + '_' + chip.level] || false;
+      var chipKey = chip.chipId + '_' + chip.level;
+      var canMatch = canMatchMap[chipKey] || false;
+      var targetSlots = targetSlotMap[chipKey] || [];
       var matchClass = canMatch ? ' hangarChipInvItem--canMatch' : '';
       var chipName = _getChipDisplayName(chip);
+      var slotHintHtml = targetSlots.length
+        ? '<span class="chipInvSlotHint" aria-hidden="true">' + _escapeHtml(targetSlots.join('/')) + '</span>'
+        : '';
       html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button">' +
+        slotHintHtml +
         chipSvgComposed(40, 36, borderColor, chip.modIds, 'chipCraftInvIcon', 2.5) +
-        '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>' +
+        '<span class="chipCraftInvLabel hangarChipInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>' +
         '<span class="chipCraftInvLevel">' + t('hangarChipsLevelShort', 'Ур.') + ' ' + chip.level + (chip.count > 1 ? ' \u2022 \u00d7' + chip.count : '') + '</span>' +
         '</button>';
     }
@@ -1640,6 +1720,7 @@
     var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl, invEntry.modIds);
     if (ok) {
       /* Remove from inventory */
+      _visualSelectedSlot = { type: _selectedSlot.type, slotId: _selectedSlot.slotId };
       removePlayerChipOne(chipId, lvl);
       _selectedSlot = null;
       _activeSlotActions = null;
@@ -1674,7 +1755,7 @@
     }
 
     h.removeChip(cell, slotType, slotId);
-    _selectedSlot = null;
+    setInstallSlotSelection(slotType, slotId);
     render();
   }
 
@@ -1713,7 +1794,7 @@
     var cellBtn = tgt.closest ? tgt.closest('[data-cell-idx]') : null;
     if (cellBtn) {
       _selectedCell = parseInt(cellBtn.getAttribute('data-cell-idx'), 10) || 0;
-      _selectedSlot = null;
+      clearSlotSelection();
       _activeSlotActions = null;
       render();
       return;
@@ -1739,6 +1820,8 @@
       /* if chip is installed → toggle action buttons */
       var existingChip = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
       if (existingChip) {
+        setVisualSlotSelection(slotType, slotId);
+        _chipFilter = slotType;
         if (_activeSlotActions && _activeSlotActions.type === slotType && _activeSlotActions.slotId === slotId) {
           _activeSlotActions = null;
         } else {
@@ -1749,8 +1832,9 @@
       }
 
       /* select slot for installation */
-      _selectedSlot = { type: slotType, slotId: slotId };
+      setInstallSlotSelection(slotType, slotId);
       _chipFilter = slotType === 'red' ? 'red' : 'yellow';
+      _activeSlotActions = null;
       render();
       return;
     }
@@ -1775,7 +1859,8 @@
     var filterBtn = tgt.closest ? tgt.closest('[data-filter]') : null;
     if (filterBtn) {
       _chipFilter = filterBtn.getAttribute('data-filter') || 'all';
-      _selectedSlot = null;
+      clearSlotSelection();
+      _activeSlotActions = null;
       renderChipsList();
       return;
     }
@@ -4015,7 +4100,9 @@
           var ok2 = h2.installChip(cell, slotType, slotId, chipDef, sd.level, invE2.modIds);
           if (ok2) {
             removePlayerChipOne(sd.chipId, sd.level);
+            _visualSelectedSlot = { type: slotType, slotId: slotId };
             _selectedSlot = null;
+            _activeSlotActions = null;
             render();
           }
           return;
