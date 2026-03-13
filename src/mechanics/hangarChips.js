@@ -13,69 +13,69 @@
   /* ── Mod name dictionaries ─────────────────────────────── */
 
   var MOD_NAMES_RU = {
-    1: 'Двойной снаряд',
-    2: 'Двойной цепной заряд',
-    3: 'Двойная матрёшка',
-    4: 'Малый отталкивающий снаряд',
-    5: 'Малый вакуумный снаряд',
-    6: 'Малый комбо-счётчик дула',
+    1: 'Мультивыстрел (I)',
+    2: 'Цепной заряд (I)',
+    3: 'Матрёшка (I)',
+    4: 'Отталкивающий снаряд (I)',
+    5: 'Вакуумный снаряд (I)',
+    6: 'Комбо-счётчик (I)',
     7: 'Аркадный хаос',
-    8: 'Малый ядерный снаряд',
-    9: 'Малый успокаивающий снаряд',
+    8: 'Ядерный снаряд (I)',
+    9: 'Успокаивающий снаряд (I)',
     10: 'Огненная лужа',
     11: 'Ледяная зона',
     12: 'Электроузел',
     13: 'Лазерная метка',
     14: 'Кислотная лужа',
-    15: 'Тройной снаряд',
-    16: 'Шестерной снаряд',
-    17: 'Тройной цепной заряд',
-    18: 'Шестерной цепной заряд',
-    19: 'Тройная матрёшка',
-    20: 'Четверная матрёшка',
-    21: 'Средний отталкивающий снаряд',
-    22: 'Большой отталкивающий снаряд',
-    23: 'Средний вакуумный снаряд',
-    24: 'Большой вакуумный снаряд',
-    25: 'Средний комбо-счётчик дула',
-    26: 'Большой комбо-счётчик дула',
-    27: 'Средний ядерный снаряд',
-    28: 'Большой ядерный снаряд',
-    29: 'Средний успокаивающий снаряд',
-    30: 'Большой успокаивающий снаряд'
+    15: 'Мультивыстрел (II)',
+    16: 'Мультивыстрел (III)',
+    17: 'Цепной заряд (II)',
+    18: 'Цепной заряд (III)',
+    19: 'Матрёшка (II)',
+    20: 'Матрёшка (III)',
+    21: 'Отталкивающий снаряд (II)',
+    22: 'Отталкивающий снаряд (III)',
+    23: 'Вакуумный снаряд (II)',
+    24: 'Вакуумный снаряд (III)',
+    25: 'Комбо-счётчик (II)',
+    26: 'Комбо-счётчик (III)',
+    27: 'Ядерный снаряд (II)',
+    28: 'Ядерный снаряд (III)',
+    29: 'Успокаивающий снаряд (II)',
+    30: 'Успокаивающий снаряд (III)'
   };
 
   var MOD_NAMES_EN = {
-    1: 'Double Shot',
-    2: 'Double Chain Charge',
-    3: 'Double Matryoshka',
-    4: 'Small Repulse Shot',
-    5: 'Small Vacuum Shot',
-    6: 'Small Barrel Combo',
+    1: 'Multishot (I)',
+    2: 'Chain Charge (I)',
+    3: 'Matryoshka (I)',
+    4: 'Knockback Shot (I)',
+    5: 'Vacuum Shot (I)',
+    6: 'Combo Counter (I)',
     7: 'Arcade Chaos',
-    8: 'Small Nuclear Shot',
-    9: 'Small Calming Shot',
+    8: 'Nuclear Shot (I)',
+    9: 'Calming Shot (I)',
     10: 'Fire Pool',
     11: 'Ice Zone',
     12: 'Electro Node',
     13: 'Laser Mark',
     14: 'Acid Pool',
-    15: 'Triple Shot',
-    16: 'Hex Shot',
-    17: 'Triple Chain Charge',
-    18: 'Hex Chain Charge',
-    19: 'Triple Matryoshka',
-    20: 'Quad Matryoshka',
-    21: 'Medium Repulse Shot',
-    22: 'Large Repulse Shot',
-    23: 'Medium Vacuum Shot',
-    24: 'Large Vacuum Shot',
-    25: 'Medium Barrel Combo',
-    26: 'Large Barrel Combo',
-    27: 'Medium Nuclear Shot',
-    28: 'Large Nuclear Shot',
-    29: 'Medium Calming Shot',
-    30: 'Large Calming Shot'
+    15: 'Multishot (II)',
+    16: 'Multishot (III)',
+    17: 'Chain Charge (II)',
+    18: 'Chain Charge (III)',
+    19: 'Matryoshka (II)',
+    20: 'Matryoshka (III)',
+    21: 'Knockback Shot (II)',
+    22: 'Knockback Shot (III)',
+    23: 'Vacuum Shot (II)',
+    24: 'Vacuum Shot (III)',
+    25: 'Combo Counter (II)',
+    26: 'Combo Counter (III)',
+    27: 'Nuclear Shot (II)',
+    28: 'Nuclear Shot (III)',
+    29: 'Calming Shot (II)',
+    30: 'Calming Shot (III)'
   };
 
   /** Short mod abbreviation for compact UI */
@@ -88,6 +88,27 @@
     23: 'Vm', 24: 'VL', 25: 'Cm', 26: 'CL',
     27: 'Nm', 28: 'NL', 29: 'Sm', 30: 'SL'
   };
+
+  var _modNamesCfgRef = null;
+
+  function syncModNameMaps() {
+    var chipEffects = global.Game && global.Game.ChipEffects;
+    var cfg = chipEffects && typeof chipEffects.getChipsCfg === 'function'
+      ? chipEffects.getChipsCfg()
+      : null;
+    if (!cfg || _modNamesCfgRef === cfg || !cfg.modifiers || typeof cfg.modifiers !== 'object') return;
+
+    var modifierIds = Object.keys(cfg.modifiers);
+    for (var i = 0; i < modifierIds.length; i++) {
+      var modifierId = modifierIds[i];
+      var modifier = cfg.modifiers[modifierId];
+      if (!modifier || typeof modifier !== 'object') continue;
+      if (typeof modifier.name === 'string' && modifier.name) MOD_NAMES_RU[modifierId] = modifier.name;
+      if (typeof modifier.nameEn === 'string' && modifier.nameEn) MOD_NAMES_EN[modifierId] = modifier.nameEn;
+    }
+
+    _modNamesCfgRef = cfg;
+  }
 
   /**
    * Technology tree: maps base modId → array of tech-unlockable upgrades.
@@ -758,6 +779,7 @@
 
   global.Game = global.Game || {};
   global.Game.HangarChips = {
+    syncModNameMaps: syncModNameMaps,
     MOD_NAMES_RU: MOD_NAMES_RU,
     MOD_NAMES_EN: MOD_NAMES_EN,
     MOD_SHORT: MOD_SHORT,

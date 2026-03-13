@@ -120,6 +120,7 @@
   function MOD_NAMES() {
     var lang = (global.Game && global.Game.I18n && global.Game.I18n.currentLang) || 'ru';
     var h = hc();
+    if (h && typeof h.syncModNameMaps === 'function') h.syncModNameMaps();
     return lang === 'en' ? (h ? h.MOD_NAMES_EN : {}) : (h ? h.MOD_NAMES_RU : {});
   }
 
@@ -354,17 +355,10 @@
   }
 
   function buildRotateArrowIcon(cx, cy, direction) {
-    var path;
-    var arrow;
-    if (direction < 0) {
-      path = 'M ' + (cx + 4) + ' ' + (cy - 5) + ' A 7 7 0 1 0 ' + (cx - 5) + ' ' + (cy + 4);
-      arrow = (cx - 7) + ',' + (cy + 1) + ' ' + (cx - 5) + ',' + (cy + 4) + ' ' + (cx - 1) + ',' + (cy + 3);
-    } else {
-      path = 'M ' + (cx - 4) + ' ' + (cy - 5) + ' A 7 7 0 1 1 ' + (cx + 5) + ' ' + (cy + 4);
-      arrow = (cx + 7) + ',' + (cy + 1) + ' ' + (cx + 5) + ',' + (cy + 4) + ' ' + (cx + 1) + ',' + (cy + 3);
-    }
-    return '<path class="hangarSlotActionIcon" d="' + path + '" fill="none" stroke="#4af626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" />' +
-      '<polyline class="hangarSlotActionIcon" points="' + arrow + '" fill="none" stroke="#4af626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" />';
+    var points = direction < 0
+      ? (cx + 4) + ',' + (cy - 6) + ' ' + (cx - 5) + ',' + cy + ' ' + (cx + 4) + ',' + (cy + 6)
+      : (cx - 4) + ',' + (cy - 6) + ' ' + (cx + 5) + ',' + cy + ' ' + (cx - 4) + ',' + (cy + 6);
+    return '<polygon class="hangarSlotActionIcon" points="' + points + '" fill="#4af626" pointer-events="none" />';
   }
 
   function renderButterfly() {
@@ -3901,16 +3895,21 @@
           if (!invE) return;
 
           evt.preventDefault();
-          var ghost2 = _doc.createElement('div');
-          ghost2.className = 'chipDragGhost';
-          ghost2.innerHTML = chipBtn.innerHTML;
+          var chipBtnRect = chipBtn.getBoundingClientRect();
+          var ghost2 = chipBtn.cloneNode(true);
+          ghost2.className = chipBtn.className + ' chipDragGhost';
           ghost2.style.position = 'fixed';
           ghost2.style.left = evt.clientX + 'px';
           ghost2.style.top = evt.clientY + 'px';
+          ghost2.style.width = Math.ceil(chipBtnRect.width) + 'px';
+          ghost2.style.minHeight = Math.ceil(chipBtnRect.height) + 'px';
+          ghost2.style.height = Math.ceil(chipBtnRect.height) + 'px';
+          ghost2.style.boxSizing = 'border-box';
           ghost2.style.pointerEvents = 'none';
           ghost2.style.zIndex = '99999';
           ghost2.style.opacity = '0.85';
-          ghost2.style.transform = 'translate(-50%, -50%) scale(1.1)';
+          ghost2.style.transform = 'translate(-50%, -50%)';
+          ghost2.setAttribute('aria-hidden', 'true');
           _doc.body.appendChild(ghost2);
 
           _slotDragging = {
@@ -3957,7 +3956,7 @@
         ghost.style.pointerEvents = 'none';
         ghost.style.zIndex = '99999';
         ghost.style.opacity = '0.85';
-        ghost.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        ghost.style.transform = 'translate(-50%, -50%)';
         ghost.setAttribute('aria-hidden', 'true');
         _doc.body.appendChild(ghost);
 

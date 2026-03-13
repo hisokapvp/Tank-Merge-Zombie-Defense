@@ -4063,12 +4063,14 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarChipsGrid{
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--hangar-chip-card-width, 176px), var(--hangar-chip-card-width, 176px)));
-  justify-content:center;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--hangar-chip-card-width, 176px)), 1fr));
+  justify-content:stretch;
+  align-content:start;
   gap:8px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y:auto;
+  overflow-x:hidden;
   padding:10px;
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
@@ -4233,9 +4235,9 @@ button.hangarChipInvItem{
   justify-content:flex-start;
   gap:6px;
   width:100%;
-  height:var(--chipLabelCardHeight, 130px);
-  min-height:var(--chipLabelCardHeight, 130px);
-  max-height:var(--chipLabelCardHeight, 130px);
+  height:calc(var(--chipLabelCardHeight, 130px) + 20px);
+  min-height:calc(var(--chipLabelCardHeight, 130px) + 20px);
+  max-height:calc(var(--chipLabelCardHeight, 130px) + 20px);
   padding:8px 8px 6px;
   border:1px solid rgba(255,255,255,.12);
   border-radius:6px;
@@ -4257,7 +4259,7 @@ button.hangarChipInvItem{
 .chipUpgradeCard__name{
   width:100%;
   min-height:30px;
-  max-height:36px;
+  max-height:45px;
   display:flex;
   flex-wrap:wrap;
   align-items:center;
@@ -5085,8 +5087,9 @@ button.hangarChipInvItem{
   transition:border-color .12s, background .12s;
 }
 .hangarChipInvItem{
-  width:var(--hangar-chip-card-width, 176px);
-  max-width:71%;
+  width:100%;
+  max-width:none;
+  min-width:0;
   min-height:150px;
   padding:26px 10px 8px;
 }
