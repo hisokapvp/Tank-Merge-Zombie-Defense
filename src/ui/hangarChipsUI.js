@@ -662,21 +662,21 @@
     }
 
     var html = '<div class="hangarChipsListHeader">' +
-      '<span class="hangarChipsAvailLabel">' + t('hangarChipsAvailable', 'Чипы в инвентаре') +
+      '<span class="hangarChipsAvailLabel">' + t('hangarChipsAvailable') +
       ' (' + chips.length + ')</span>' +
       '<div class="hangarChipsFilters">' +
-      '<button class="hangarFilterBtn' + (_chipFilter === 'all' ? ' active' : '') + '" data-filter="all">Все</button>' +
-      '<button class="hangarFilterBtn' + (_chipFilter === 'red' ? ' active' : '') + '" data-filter="red" style="color:#e53935">Красные</button>' +
-      '<button class="hangarFilterBtn' + (_chipFilter === 'yellow' ? ' active' : '') + '" data-filter="yellow" style="color:#fdd835">Жёлтые</button>' +
+      '<button class="hangarFilterBtn' + (_chipFilter === 'all' ? ' active' : '') + '" data-filter="all">' + t('hangarChipsFilterAll') + '</button>' +
+      '<button class="hangarFilterBtn' + (_chipFilter === 'red' ? ' active' : '') + '" data-filter="red" style="color:#e53935">' + t('hangarChipsFilterRed') + '</button>' +
+      '<button class="hangarFilterBtn' + (_chipFilter === 'yellow' ? ' active' : '') + '" data-filter="yellow" style="color:#fdd835">' + t('hangarChipsFilterYellow') + '</button>' +
       '</div></div>';
 
     if (!chips.length) {
-      html += '<div class="chipUpgradeEmptyLabel">' + t('hangarChipsNoChips', 'Нет подходящих чипов в инвентаре') + '</div>';
+      html += '<div class="chipUpgradeEmptyLabel">' + t('hangarChipsNoChips') + '</div>';
       list.innerHTML = html;
       return;
     }
 
-    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
+    html += '<div class="hangarChipsGridWrap hangarAvailableChipsGridWrap"><div class="hangarChipsGrid hangarAvailableChipsGrid">';
 
     /* Pre-calculate which chips could create matches in the current cell */
     var cells = ensureCells();
@@ -708,7 +708,7 @@
         slotHintHtml +
         chipSvgComposed(40, 36, borderColor, chip.modIds, 'chipCraftInvIcon', 2.5) +
         '<span class="chipCraftInvLabel hangarChipInvLabel">' + _renderChipNameHtml(chipName) + '</span>' +
-        '<span class="chipCraftInvLevel">' + t('hangarChipsLevelShort', 'Ур.') + ' ' + chip.level + (chip.count > 1 ? ' \u2022 \u00d7' + chip.count : '') + '</span>' +
+        '<span class="chipCraftInvLevel">' + t('hangarChipsLevelShort') + ' ' + chip.level + (chip.count > 1 ? ' \u2022 \u00d7' + chip.count : '') + '</span>' +
         '</button>';
     }
     html += '</div></div>';
@@ -1080,25 +1080,7 @@
 
   /** Get a short description for a tech mod */
   function _getTechDescription(modId) {
-    var descs = {
-      15: 'Танк стреляет тремя снарядами',
-      16: 'Танк стреляет шестью снарядами',
-      17: 'Цепная молния с 3 перескоками',
-      18: 'Цепная молния с 6 перескоками',
-      19: 'Матрёшка: большой(×3) → средний(×2) → малый(×1)',
-      20: 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)',
-      21: 'Ударная волна: ×0.75 урона, отталкивание 15px',
-      22: 'Ударная волна: ×1 урона, отталкивание 20px',
-      23: 'Вакуум: ×0.75 урона, стягивание 15px',
-      24: 'Вакуум: ×1 урона, стягивание 20px',
-      25: 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном',
-      26: 'Каждый 4-й выстрел: 4 залпа с ×2 уроном',
-      27: 'Раз в 30с: ядерный взрыв ×4, радиус 300px',
-      28: 'Раз в 30с: ядерный взрыв ×5, вся карта',
-      29: 'Заморозка атаки зомби на 0.75с',
-      30: 'Заморозка атаки зомби на 1с'
-    };
-    return descs[modId] || '';
+    return _getModDescription(modId);
   }
 
   /**
@@ -1502,9 +1484,34 @@
       html += '</div>';
     }
 
-    html += '<div class="chipUpgradeTooltip__meta">' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', tooltipLevel) + '</div>';
+    html += '<div class="chipUpgradeTooltip__meta">' + t('workshopChipTooltipLevel').replace('{level}', tooltipLevel) + '</div>';
     if (bonus > 0) {
-      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus').replace('{bonus}', bonus) + '</div>';
+    }
+    return html;
+  }
+
+  function _buildFragmentTooltipHtml(fragmentId, options) {
+    var opts = options || {};
+    if (!Number.isFinite(fragmentId)) return '';
+
+    var html = '<div class="chipUpgradeTooltip__title">' + _escapeHtml(modName(fragmentId)) + '</div>';
+    if (typeof opts.metaKey === 'string' && opts.metaKey) {
+      var metaText = t(opts.metaKey);
+      if (metaText && metaText !== opts.metaKey) {
+        html += '<div class="chipUpgradeTooltip__meta">' + _escapeHtml(metaText) + '</div>';
+      }
+    }
+
+    var description = _getModDescription(fragmentId);
+    if (description) {
+      html += '<div class="chipUpgradeTooltip__mod">';
+      html += '<div class="chipUpgradeTooltip__modDesc">' + _escapeHtml(description) + '</div>';
+      html += '</div>';
+    }
+
+    if (Number.isFinite(opts.count)) {
+      html += '<div class="chipUpgradeTooltip__meta">' + t('workshopChipTooltipCount').replace('{count}', opts.count) + '</div>';
     }
     return html;
   }
@@ -1542,18 +1549,21 @@
     for (var i = 0; i < frags.length; i++) {
       if (frags[i].fragmentId === fragId) { frag = frags[i]; break; }
     }
-    var name = modName(fragId);
-    var desc = _getModDescription(fragId);
     var cnt = Number.isFinite(displayCount) ? displayCount : (frag ? frag.count : 0);
-    var html = '<div class="chipUpgradeTooltip__title">' + name + '</div>';
-    if (desc) html += '<div style="font-size:11px;color:rgba(255,255,255,.7)">' + desc + '</div>';
-    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', cnt) + '</div>';
-    _showGameTooltip(html, item);
+    _showGameTooltip(_buildFragmentTooltipHtml(fragId, { count: cnt }), item);
   }
 
   /* Tooltip for craft preview (result chip) */
   function showCraftResultTooltip(el) {
     if (!el) return;
+    var resultFragmentId = parseInt(el.getAttribute('data-hct-result-frag-id'), 10);
+    if (Number.isFinite(resultFragmentId)) {
+      _showGameTooltip(_buildFragmentTooltipHtml(resultFragmentId, {
+        metaKey: 'chipReprogramResultTooltip'
+      }), el);
+      return;
+    }
+
     var modsAttr = el.getAttribute('data-hct-result-modids') || '';
     var modIds = [];
     if (modsAttr) {
@@ -1568,10 +1578,11 @@
       level: 1,
       sourceComboKey: '',
     };
+    if (!modIds.length) return;
     _showGameTooltip(_buildWholeChipTooltipHtml(previewEntry, {
       modIds: modIds,
       level: 1,
-      displayName: modIds.length ? _getChipDisplayName(previewEntry) : t('chipCraftPreviewLabel', 'Превью чипа')
+      displayName: _getChipDisplayName(previewEntry)
     }), el);
   }
 
@@ -1587,11 +1598,7 @@
   function showCraftSlotFragTooltip(slotEl) {
     var fragId = parseInt(slotEl.getAttribute('data-hct-frag-id'), 10);
     if (!Number.isFinite(fragId)) return;
-    var name = modName(fragId);
-    var desc = _getModDescription(fragId);
-    var html = '<div class="chipUpgradeTooltip__title">' + name + '</div>';
-    if (desc) html += '<div style="font-size:11px;color:rgba(255,255,255,.7)">' + desc + '</div>';
-    _showGameTooltip(html, slotEl);
+    _showGameTooltip(_buildFragmentTooltipHtml(fragId), slotEl);
   }
 
   /* ─── Task 5: Tooltip for installed slot chips ─────────── */
@@ -2380,73 +2387,10 @@
 
   /** Get a description for a mod (fragment or chip mod) */
   function _getModDescription(modId) {
-    var lang = (global.Game && global.Game.I18n && global.Game.I18n.currentLang) === 'en' ? 'en' : 'ru';
-    var descs = lang === 'en'
-      ? {
-        1: 'Fires two projectiles',
-        2: 'Chain lightning with 2 jumps',
-        3: 'Matryoshka: large (×2) -> small (×1)',
-        4: 'Shockwave: ×0.5 damage, 10px knockback',
-        5: 'Vacuum: ×0.5 damage, 50px pull radius',
-        6: 'Every 4th shot: 3 volleys ×1.25',
-        7: 'Random effect on each shot',
-        8: 'Every 30s: nuclear blast ×3, 100px radius',
-        9: 'Freezes zombie attacks for 0.5s',
-        10: 'Leaves a fire puddle',
-        11: 'Leaves an ice slowing zone',
-        12: 'Creates an electric node with periodic damage',
-        13: 'Marks the target; hit deals ×2 damage',
-        14: 'Leaves an acid puddle',
-        15: 'Fires three projectiles',
-        16: 'Fires six projectiles',
-        17: 'Chain lightning with 3 jumps',
-        18: 'Chain lightning with 6 jumps',
-        19: 'Matryoshka: large (×3) -> medium (×2) -> small (×1)',
-        20: 'Matryoshka: huge (×4) -> large (×3) -> medium (×2) -> small (×1)',
-        21: 'Shockwave: ×0.75 damage, 15px knockback',
-        22: 'Shockwave: ×1 damage, 20px knockback',
-        23: 'Vacuum: ×0.75 damage, 15px pull',
-        24: 'Vacuum: ×1 damage, 20px pull',
-        25: 'Every 4th shot: 3 volleys with ×1.5 damage',
-        26: 'Every 4th shot: 4 volleys with ×2 damage',
-        27: 'Every 30s: nuclear blast ×4, 300px radius',
-        28: 'Every 30s: nuclear blast ×5, whole map',
-        29: 'Freezes zombie attacks for 0.75s',
-        30: 'Freezes zombie attacks for 1s'
-      }
-      : {
-        1: 'Танк стреляет двумя снарядами',
-        2: 'Цепная молния с 2 перескоками',
-        3: 'Матрёшка: большой(×2) → малый(×1)',
-        4: 'Отталкивание: ×0.5 урона, 10px',
-        5: 'Вакуум: ×0.5 урона, радиус 50px',
-        6: 'Каждый 4-й выстрел: 3 залпа ×1.25',
-        7: 'Случайный эффект каждый выстрел',
-        8: 'Раз в 30с: ядерный взрыв ×3, радиус 100px',
-        9: 'Заморозка атаки зомби на 0.5с',
-        10: 'Оставляет огненную лужу',
-        11: 'Оставляет ледяную зону замедления',
-        12: 'Создаёт электроузел с периодическим уроном',
-        13: 'Отмечает цель; попадание = ×2 урон',
-        14: 'Оставляет кислотную лужу',
-        15: 'Танк стреляет тремя снарядами',
-        16: 'Танк стреляет шестью снарядами',
-        17: 'Цепная молния с 3 перескоками',
-        18: 'Цепная молния с 6 перескоками',
-        19: 'Матрёшка: большой(×3) → средний(×2) → малый(×1)',
-        20: 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)',
-        21: 'Ударная волна: ×0.75 урона, отталкивание 15px',
-        22: 'Ударная волна: ×1 урона, отталкивание 20px',
-        23: 'Вакуум: ×0.75 урона, стягивание 15px',
-        24: 'Вакуум: ×1 урона, стягивание 20px',
-        25: 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном',
-        26: 'Каждый 4-й выстрел: 4 залпа с ×2 уроном',
-        27: 'Раз в 30с: ядерный взрыв ×4, радиус 300px',
-        28: 'Раз в 30с: ядерный взрыв ×5, вся карта',
-        29: 'Заморозка атаки зомби на 0.75с',
-        30: 'Заморозка атаки зомби на 1с'
-      };
-    return descs[modId] || '';
+    if (!Number.isFinite(modId)) return '';
+    var key = 'chipModifierDesc_' + Math.floor(modId);
+    var description = t(key);
+    return description && description !== key ? description : '';
   }
 
   function _resetDustMode() {
@@ -3325,7 +3269,7 @@
           html += '<div class="chipCraftReprogramColumn">';
           if (reprogramState && reprogramState.targetFragmentId) {
             var targetStroke = (h && h.isSpecialMod(reprogramState.targetFragmentId)) ? '#fdd835' : '#4af626';
-            html += '<div class="chipCraftResultChip chipCraftResultChip--future">';
+            html += '<div class="chipCraftResultChip chipCraftResultChip--future" data-hct-result-frag-id="' + reprogramState.targetFragmentId + '">';
             html += _renderCraftSlotCard(
               _fragmentSvg(reprogramState.targetFragmentId, 50, targetStroke),
               modName(reprogramState.targetFragmentId),

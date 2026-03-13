@@ -1,0 +1,35 @@
+{
+  "atlas": "assets/tutorial_cursor_atlas.svg",
+  "animations": {
+    "click": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "frames": 2,
+      "frameRateFps": 4,
+      "loop": true,
+      "scale": 1
+    },
+    "drag": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "frames": 2,
+      "frameRateFps": 6,
+      "loop": true,
+      "scale": 1
+    },
+    "drop": {
+      "x": 128,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "frames": 2,
+      "frameRateFps": 5,
+      "loop": true,
+      "scale": 1
+    }
+  }
+}

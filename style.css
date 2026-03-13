@@ -2894,6 +2894,9 @@ input, select, textarea, button {
   transform: none !important;
   filter: saturate(0.6);
 }
+.supercomputerHudBtn.uiButtonBehavior[aria-disabled="true"]{
+  transform:var(--supercomputer-btn-transform, translate3d(0,0,0)) !important;
+}
 @media (hover: hover) and (pointer: fine){
   .uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover{
     filter: brightness(1.12);
@@ -3170,7 +3173,7 @@ input, select, textarea, button {
 .gameTutorial__pointer{
   position:absolute;
   width:32px;
-  height:48px;
+  height:32px;
   border:none;
   border-radius:0;
   background:none;
@@ -3181,9 +3184,26 @@ input, select, textarea, button {
   pointer-events:none;
   overflow:hidden;
 }
+.gameTutorial__pointerSprite{
+  position:absolute;
+  inset:0;
+  background-repeat:no-repeat;
+  background-position:0 0;
+  background-size:100% 100%;
+  image-rendering:pixelated;
+  opacity:0;
+  pointer-events:none;
+}
 .gameTutorial__pointer--horizontal{
   animation-name:gameTutorialPointerPulseHorizontal;
   transform-origin:center center;
+}
+.gameTutorial__pointer--spriteReady .gameTutorial__pointerSprite{
+  opacity:1;
+}
+.gameTutorial__pointer--spriteReady::after,
+.gameTutorial__pointer--spriteReady::before{
+  display:none;
 }
 
 .gameTutorial__pointer::after{
@@ -4088,6 +4108,15 @@ button[data-tutorial-locked="true"]::after,
   padding:10px;
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
+}
+.hangarAvailableChipsGridWrap{
+  min-width:0;
+}
+.hangarAvailableChipsGrid{
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+}
+.hangarAvailableChipsGrid .hangarChipInvItem{
+  min-width:0;
 }
 .hangarChipsGrid::-webkit-scrollbar {
   width: 8px; /* Slightly wider for visibility */

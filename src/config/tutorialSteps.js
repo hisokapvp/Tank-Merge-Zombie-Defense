@@ -7,6 +7,7 @@
     {
       id: 'starter_tank',
       messageKey: 'tutorialStarterTankMessage',
+      pointerAnimation: 'click',
       target: {
         kind: 'starter_hangar_tank',
       },
@@ -22,6 +23,7 @@
     {
       id: 'second_tank',
       messageKey: 'tutorialSecondTankMessage',
+      pointerAnimation: 'click',
       activation: {
         kind: 'min_coins',
         value: 50,

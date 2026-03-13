@@ -3,6 +3,18 @@
 
   const TUTORIAL_BODY_CLASS = 'tutorial-modal-open';
   const LOCKED_REASON_KEY = 'tutorialLockedTooltip';
+  const TUTORIAL_CURSOR_CONFIG_PATH = 'assets/tutotialCursore.json';
+
+  function buildDefaultCursorConfig() {
+    return {
+      atlas: 'assets/tutorial_cursor_atlas.svg',
+      animations: {
+        click: { x: 0, y: 0, w: 32, h: 32, frames: 2, frameRateFps: 4, loop: true, scale: 1 },
+        drag: { x: 64, y: 0, w: 32, h: 32, frames: 2, frameRateFps: 6, loop: true, scale: 1 },
+        drop: { x: 128, y: 0, w: 32, h: 32, frames: 2, frameRateFps: 5, loop: true, scale: 1 },
+      },
+    };
+  }
 
   const runtime = {
     documentObj: typeof document !== 'undefined' ? document : null,
@@ -17,6 +29,7 @@
     canvasEl: null,
     stageEl: null,
     pointerEl: null,
+    pointerSpriteEl: null,
     bubbleEl: null,
     confirmWrapEl: null,
     confirmPanelEl: null,
@@ -39,6 +52,11 @@
     rafId: 0,
     started: false,
     lastStateRef: null,
+    cursorConfig: buildDefaultCursorConfig(),
+    cursorConfigLoad: null,
+    cursorAtlasImage: null,
+    cursorAtlasUrl: '',
+    pointerAnimationKey: 'click',
   };
 
   function capturePauseManagerInstance(instance) {
@@ -372,6 +390,116 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function sanitizeCursorAnimation(raw, fallback) {
+    const base = fallback || { x: 0, y: 0, w: 32, h: 32, frames: 1, frameRateFps: 1, loop: true, scale: 1 };
+    const next = raw && typeof raw === 'object' ? raw : {};
+    return {
+      x: Number.isFinite(Number(next.x)) ? Math.max(0, Math.floor(Number(next.x))) : base.x,
+      y: Number.isFinite(Number(next.y)) ? Math.max(0, Math.floor(Number(next.y))) : base.y,
+      w: Number.isFinite(Number(next.w)) ? Math.max(1, Math.floor(Number(next.w))) : base.w,
+      h: Number.isFinite(Number(next.h)) ? Math.max(1, Math.floor(Number(next.h))) : base.h,
+      frames: Number.isFinite(Number(next.frames)) ? Math.max(1, Math.floor(Number(next.frames))) : base.frames,
+      frameRateFps: Number.isFinite(Number(next.frameRateFps)) ? Math.max(1, Number(next.frameRateFps)) : base.frameRateFps,
+      loop: typeof next.loop === 'boolean' ? next.loop : base.loop,
+      scale: Number.isFinite(Number(next.scale)) ? Math.max(0.25, Number(next.scale)) : base.scale,
+    };
+  }
+
+  function sanitizeCursorConfig(raw) {
+    const defaults = buildDefaultCursorConfig();
+    const next = raw && typeof raw === 'object' ? raw : {};
+    const animations = next.animations && typeof next.animations === 'object' ? next.animations : {};
+    return {
+      atlas: typeof next.atlas === 'string' && next.atlas ? next.atlas : defaults.atlas,
+      animations: {
+        click: sanitizeCursorAnimation(animations.click, defaults.animations.click),
+        drag: sanitizeCursorAnimation(animations.drag, defaults.animations.drag),
+        drop: sanitizeCursorAnimation(animations.drop, defaults.animations.drop),
+      },
+    };
+  }
+
+  function ensureCursorAtlasLoaded(url) {
+    if (!url) return Promise.resolve(null);
+    if (runtime.cursorAtlasImage && runtime.cursorAtlasUrl === url) return Promise.resolve(runtime.cursorAtlasImage);
+    return new Promise(function (resolve, reject) {
+      const image = new Image();
+      image.onload = function () {
+        runtime.cursorAtlasImage = image;
+        runtime.cursorAtlasUrl = url;
+        resolve(image);
+      };
+      image.onerror = function () { reject(new Error('tutorial_cursor_atlas_load_failed')); };
+      image.src = url;
+    });
+  }
+
+  function ensureCursorConfigLoaded() {
+    if (runtime.cursorConfigLoad) return runtime.cursorConfigLoad;
+
+    runtime.cursorConfig = sanitizeCursorConfig(runtime.cursorConfig);
+    runtime.cursorConfigLoad = Promise.resolve()
+      .then(function () {
+        if (!global.fetch) return null;
+        return global.fetch(TUTORIAL_CURSOR_CONFIG_PATH, { cache: 'no-store' }).then(function (response) {
+          if (!response.ok) return null;
+          return response.json();
+        });
+      })
+      .then(function (payload) {
+        if (payload && typeof payload === 'object') {
+          runtime.cursorConfig = sanitizeCursorConfig(payload);
+        }
+        return ensureCursorAtlasLoaded(runtime.cursorConfig.atlas).catch(function () { return null; });
+      })
+      .catch(function () {
+        return ensureCursorAtlasLoaded(runtime.cursorConfig.atlas).catch(function () { return null; });
+      });
+
+    return runtime.cursorConfigLoad;
+  }
+
+  function getPointerAnimationKey(stepDefinition) {
+    const animations = runtime.cursorConfig && runtime.cursorConfig.animations ? runtime.cursorConfig.animations : {};
+    const requested = stepDefinition && typeof stepDefinition.pointerAnimation === 'string'
+      ? stepDefinition.pointerAnimation
+      : 'click';
+    return animations[requested] ? requested : 'click';
+  }
+
+  function syncPointerSprite(nowMs) {
+    if (!runtime.pointerEl || !runtime.pointerSpriteEl) return;
+    ensureCursorConfigLoaded();
+
+    const config = runtime.cursorConfig || buildDefaultCursorConfig();
+    const animations = config.animations || {};
+    const animation = animations[runtime.pointerAnimationKey] || animations.click;
+    if (!animation) return;
+
+    const width = Math.max(1, Math.round(animation.w * animation.scale));
+    const height = Math.max(1, Math.round(animation.h * animation.scale));
+    runtime.pointerEl.style.width = width + 'px';
+    runtime.pointerEl.style.height = height + 'px';
+
+    if (!runtime.cursorAtlasImage || !runtime.cursorAtlasUrl) {
+      runtime.pointerEl.classList.remove('gameTutorial__pointer--spriteReady');
+      runtime.pointerSpriteEl.style.backgroundImage = '';
+      return;
+    }
+
+    const fps = Math.max(1, animation.frameRateFps);
+    const frameCount = Math.max(1, animation.frames);
+    const frameDurationMs = 1000 / fps;
+    let frameIndex = frameCount <= 1 ? 0 : Math.floor(nowMs / frameDurationMs);
+    if (animation.loop) frameIndex %= frameCount;
+    else frameIndex = Math.min(frameCount - 1, frameIndex);
+
+    runtime.pointerEl.classList.add('gameTutorial__pointer--spriteReady');
+    runtime.pointerSpriteEl.style.backgroundImage = 'url("' + runtime.cursorAtlasUrl + '")';
+    runtime.pointerSpriteEl.style.backgroundSize = Math.round(runtime.cursorAtlasImage.naturalWidth * animation.scale) + 'px ' + Math.round(runtime.cursorAtlasImage.naturalHeight * animation.scale) + 'px';
+    runtime.pointerSpriteEl.style.backgroundPosition = (-Math.round((animation.x + animation.w * frameIndex) * animation.scale)) + 'px ' + (-Math.round(animation.y * animation.scale)) + 'px';
+  }
+
   function ensureDom() {
     if (runtime.rootEl || !runtime.documentObj) return;
     const stageCanvas = runtime.documentObj.querySelector('.stageCanvas');
@@ -387,6 +515,11 @@
     const pointer = runtime.documentObj.createElement('div');
     pointer.className = 'gameTutorial__pointer';
     pointer.setAttribute('aria-hidden', 'true');
+
+    const pointerSprite = runtime.documentObj.createElement('div');
+    pointerSprite.className = 'gameTutorial__pointerSprite';
+    pointerSprite.setAttribute('aria-hidden', 'true');
+    pointer.appendChild(pointerSprite);
 
     /* Grain SVG overlay on pointer */
     // const grainSvgNS = 'http://www.w3.org/2000/svg';
@@ -534,6 +667,7 @@
     runtime.canvasEl = canvas;
     runtime.stageEl = stageCanvas;
     runtime.pointerEl = pointer;
+    runtime.pointerSpriteEl = pointerSprite;
     runtime.bubbleEl = bubble;
     runtime.confirmWrapEl = confirmWrap;
     runtime.confirmPanelEl = confirmPanel;
@@ -574,6 +708,7 @@
 
   function syncPointerMode(stepDefinition) {
     if (!runtime.pointerEl) return;
+    runtime.pointerAnimationKey = getPointerAnimationKey(stepDefinition);
     runtime.pointerEl.classList.toggle(
       'gameTutorial__pointer--horizontal',
       !!(stepDefinition && stepDefinition.pointerMotion === 'horizontal')
@@ -615,8 +750,10 @@
       centerY = canvasRect.top - stageRect.top + target.y + target.h * 0.5;
     }
 
-    runtime.pointerEl.style.left = Math.round(centerX - 18) + 'px';
-    runtime.pointerEl.style.top = Math.round(centerY - 54) + 'px';
+    const pointerWidth = runtime.pointerEl.offsetWidth || 32;
+    const pointerHeight = runtime.pointerEl.offsetHeight || 32;
+    runtime.pointerEl.style.left = Math.round(centerX - pointerWidth * 0.5) + 'px';
+    runtime.pointerEl.style.top = Math.round(centerY - pointerHeight - 6) + 'px';
 
     if (!runtime.bubbleEl || runtime.bubbleEl.classList.contains('gameTutorial__bubble--hidden')) return;
 
@@ -1009,6 +1146,9 @@
   function syncNow() {
     const state = getState();
     if (!state) return;
+    const nowMs = typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
 
     migrateTutorialStateIfNeeded(state);
     const completionStep = getActiveStepDefinition(state);
@@ -1026,6 +1166,7 @@
 
     const activeStep = getActiveStepDefinition(state);
     syncPointerMode(activeStep);
+    syncPointerSprite(nowMs);
     const target = resolveStepTarget(activeStep, state);
     const shouldHide = !activeStep || !target || shouldSuppressOverlay(state);
 
