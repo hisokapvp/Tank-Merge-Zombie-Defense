@@ -217,6 +217,7 @@
   "dropOnCrateReject": "Место занято",
   "menuSettings": "Настройки",
   "tutorialStarterTankMessage": "Нажми на танк и отправь его в бой!",
+  "tutorialSecondTankMessage": "Создайте ещё один танк",
   "tutorialContinue": "Продолжить",
   "tutorialSkip": "Пропустить",
   "tutorialDisable": "Выключить обучение",
@@ -458,6 +459,9 @@
   ,"hangarChipsActiveX": "Активируется внешний угол (не прилегающий к красным чипам)"
   ,"hangarChipsSlotLocked": "Слот заблокирован"
   ,"hangarChipsLevelShort": "Ур."
+  ,"workshopChipTooltipLevel": "Уровень: {level}"
+  ,"workshopChipTooltipBonus": "Бонус: +{bonus}% к силе атаки"
+  ,"workshopChipTooltipCount": "Количество: {count}"
   ,"plStorageTitle": "Производственный склад"
   ,"plBoxSlotFilled": "Коробка (нажмите чтобы открыть)"
   ,"plBoxSlotEmpty": "Пустая ячейка"

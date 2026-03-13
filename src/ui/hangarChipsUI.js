@@ -87,7 +87,6 @@
   var _doc = null;
   var _workshopSubTab = 'chipUpgrade';
   var _chipRecycleSubTab = 'dust';
-  var _chipTextMeasureCanvas = null;
 
   var RED_SLOT_KEYS = ['slot1', 'slot2'];
   var YELLOW_SLOT_MATCH_MAP = {
@@ -606,26 +605,6 @@
     return _getChipMatchTargetLabels(cell, chipEntry, h).length > 0;
   }
 
-  function _measureHangarChipCardWidth(chips) {
-    if (!_chipTextMeasureCanvas && _doc && typeof _doc.createElement === 'function') {
-      _chipTextMeasureCanvas = _doc.createElement('canvas');
-    }
-    var ctx = _chipTextMeasureCanvas && typeof _chipTextMeasureCanvas.getContext === 'function'
-      ? _chipTextMeasureCanvas.getContext('2d')
-      : null;
-    if (!ctx) return 176;
-
-    ctx.font = '700 12px "Segoe UI", Arial, sans-serif';
-    var longest = 0;
-    for (var i = 0; i < chips.length; i++) {
-      var chipName = _getChipDisplayName(chips[i]);
-      if (!chipName) continue;
-      longest = Math.max(longest, ctx.measureText(chipName).width);
-    }
-
-    return Math.max(176, Math.min(320, Math.ceil(longest + 28)));
-  }
-
   /* ─── Render: active modifiers summary ─────────────────── */
 
   function renderActiveMods() {
@@ -697,8 +676,7 @@
       return;
     }
 
-    var cardWidth = _measureHangarChipCardWidth(chips);
-    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid" style="--hangar-chip-card-width:' + cardWidth + 'px">';
+    html += '<div class="hangarChipsGridWrap"><div class="hangarChipsGrid">';
 
     /* Pre-calculate which chips could create matches in the current cell */
     var cells = ensureCells();
@@ -726,15 +704,16 @@
       var slotHintHtml = targetSlots.length
         ? '<span class="chipInvSlotHint" aria-hidden="true">' + _escapeHtml(targetSlots.join('/')) + '</span>'
         : '';
-      html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button">' +
+      html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" title="">' +
         slotHintHtml +
         chipSvgComposed(40, 36, borderColor, chip.modIds, 'chipCraftInvIcon', 2.5) +
-        '<span class="chipCraftInvLabel hangarChipInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>' +
+        '<span class="chipCraftInvLabel hangarChipInvLabel">' + _renderChipNameHtml(chipName) + '</span>' +
         '<span class="chipCraftInvLevel">' + t('hangarChipsLevelShort', 'Ур.') + ' ' + chip.level + (chip.count > 1 ? ' \u2022 \u00d7' + chip.count : '') + '</span>' +
         '</button>';
     }
     html += '</div></div>';
     list.innerHTML = html;
+    _suppressNativeChipTooltips(list);
   }
 
   /* ─── Render: cell title ───────────────────────────────── */
@@ -1382,7 +1361,7 @@
       var bonusPct = chipLevelBonus(chip.level);
       var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
 
-      html += '<div class="' + cardClass + '" ' + tooltipData + ' data-drag-chip-id="' + chip.chipId + '" data-drag-chip-level="' + chip.level + '">';
+      html += '<div class="' + cardClass + '" ' + tooltipData + ' data-drag-chip-id="' + chip.chipId + '" data-drag-chip-level="' + chip.level + '" title="">';
 
       /* chip icon SVG — composed of 3 sub-triangles */
       html += chipSvgComposed(44, 40, borderColor, chip.modIds, 'chipUpgradeCard__icon', 2.5);
@@ -1394,7 +1373,7 @@
         for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
         chipName = names.join(' + ');
       }
-      html += '<span class="chipUpgradeCard__name" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
+      html += '<span class="chipUpgradeCard__name">' + _renderChipNameHtml(chipName) + '</span>';
 
       /* level label */
       html += '<span class="chipUpgradeCard__level">' + t('workshopChipLevelLabel', 'Ур.') + ' ' + chip.level + '</span>';
@@ -1412,6 +1391,7 @@
       html += '</div>';
     }
     grid.innerHTML = html;
+    _suppressNativeChipTooltips(grid);
   }
 
   /* ─── Chip upgrade tooltip ─────────────────────────────── */
@@ -1423,44 +1403,9 @@
     var level = parseInt(card.getAttribute('data-chip-upgrade-level'), 10);
     if (!Number.isFinite(chipId) || !Number.isFinite(level)) return;
 
-    var chips = ensurePlayerChips();
-    var chip = null;
-    for (var i = 0; i < chips.length; i++) {
-      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
-    }
+    var chip = _findPlayerChipEntry(chipId, level);
     if (!chip) return;
-
-    if (!_chipUpgradeTooltipEl) {
-      _chipUpgradeTooltipEl = _doc.createElement('div');
-      _chipUpgradeTooltipEl.className = 'chipUpgradeTooltip';
-      _doc.body.appendChild(_chipUpgradeTooltipEl);
-    }
-
-    var bonus = chipLevelBonus(chip.level);
-    var h = hc();
-    var chipName = chip.sourceComboKey;
-    if (h && chip.modIds.length) {
-      var names = [];
-      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
-      chipName = names.join(' + ');
-    }
-
-    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
-    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
-    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    if (chip.count > 1) {
-      html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
-    }
-    if (chip.count >= 2) {
-      html += '<div style="margin-top:4px;font-size:11px;color:rgba(74,246,38,.7)">' + t('workshopChipTooltipMergeHint', 'Объединить 2 одинаковых чипа для повышения уровня') + '</div>';
-    }
-
-    _chipUpgradeTooltipEl.innerHTML = html;
-    _chipUpgradeTooltipEl.style.display = 'block';
-
-    var rect = card.getBoundingClientRect();
-    _chipUpgradeTooltipEl.style.left = Math.min(rect.right + 8, global.innerWidth - 240) + 'px';
-    _chipUpgradeTooltipEl.style.top = Math.max(0, rect.top - 10) + 'px';
+    _showGameTooltip(_buildWholeChipTooltipHtml(chip), card);
   }
 
   function hideChipUpgradeTooltip() {
@@ -1480,62 +1425,112 @@
     return _chipUpgradeTooltipEl;
   }
 
+  function _positionTooltipElement(tip, left, top) {
+    if (!tip) return;
+    var margin = 12;
+    var tipWidth = tip.offsetWidth || 280;
+    var tipHeight = tip.offsetHeight || 120;
+    var maxLeft = Math.max(margin, global.innerWidth - tipWidth - margin);
+    var maxTop = Math.max(margin, global.innerHeight - tipHeight - margin);
+    tip.style.left = Math.min(Math.max(margin, left), maxLeft) + 'px';
+    tip.style.top = Math.min(Math.max(margin, top), maxTop) + 'px';
+  }
+
+  function _suppressNativeChipTooltips(root) {
+    if (!root || !root.querySelectorAll) return;
+    var targets = root.querySelectorAll(
+      '.hangarChipInvItem, .hangarChipInvLabel, [data-chip-upgrade-id], .chipUpgradeCard__name, '
+      + '.chipCraftInvItem[data-craft-chip-id], .chipCraftInvItem[data-craft-chip-id] .chipCraftInvLabel, '
+      + '[data-hct-chip-id], [data-hct-chip-id] .chipCraftSlotCard__name, '
+      + '.chipCraftResultChip, .chipCraftResultChip .chipCraftSlotCard__name, '
+      + '[data-accel-chip-id], [data-accel-chip-id] .techAccelChip__label'
+    );
+    for (var i = 0; i < targets.length; i++) {
+      targets[i].setAttribute('title', '');
+    }
+  }
+
   function _showGameTooltip(htmlContent, anchorEl) {
     var tip = _ensureGameTooltip();
     tip.innerHTML = htmlContent;
     tip.style.display = 'block';
     var rect = anchorEl.getBoundingClientRect();
-    tip.style.left = Math.min(rect.right + 8, global.innerWidth - 240) + 'px';
-    tip.style.top = Math.max(0, rect.top - 10) + 'px';
+    _positionTooltipElement(tip, rect.right + 12, rect.top - 8);
+  }
+
+  function _showGameTooltipAtPoint(htmlContent, clientX, clientY, tooltipEl) {
+    var tip = tooltipEl || _ensureGameTooltip();
+    tip.innerHTML = htmlContent;
+    tip.style.display = 'block';
+    _positionTooltipElement(tip, clientX + 12, clientY + 16);
+  }
+
+  function _findPlayerChipEntry(chipId, level) {
+    var chips = ensurePlayerChips();
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === level) return chips[i];
+    }
+    return null;
+  }
+
+  function _buildWholeChipTooltipHtml(chipEntry, options) {
+    var opts = options || {};
+    if (!chipEntry) return '';
+
+    var tooltipLevel = Number.isFinite(opts.level)
+      ? Math.max(1, Math.floor(opts.level))
+      : (Number.isFinite(chipEntry.level) ? Math.max(1, Math.floor(chipEntry.level)) : 1);
+    var modIds = Array.isArray(opts.modIds)
+      ? opts.modIds
+      : (Array.isArray(chipEntry.modIds) ? chipEntry.modIds : []);
+    var tooltipName = opts.displayName || _getChipDisplayName({
+      sourceComboKey: chipEntry.sourceComboKey || '',
+      modIds: modIds,
+    });
+    var bonus = chipLevelBonus(tooltipLevel);
+    var html = '<div class="chipUpgradeTooltip__title">' + _escapeHtml(tooltipName) + '</div>';
+
+    for (var i = 0; i < modIds.length; i++) {
+      var modId = modIds[i];
+      if (!Number.isFinite(modId)) continue;
+      var description = _getModDescription(modId);
+      html += '<div class="chipUpgradeTooltip__mod">';
+      html += '<div class="chipUpgradeTooltip__modName">' + _escapeHtml(modName(modId)) + '</div>';
+      if (description) {
+        html += '<div class="chipUpgradeTooltip__modDesc">' + _escapeHtml(description) + '</div>';
+      }
+      html += '</div>';
+    }
+
+    html += '<div class="chipUpgradeTooltip__meta">' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', tooltipLevel) + '</div>';
+    if (bonus > 0) {
+      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
+    }
+    return html;
   }
 
   function showHangarChipBtnTooltip(btn) {
     var chipId = parseInt(btn.getAttribute('data-chip-id'), 10);
     var level = parseInt(btn.getAttribute('data-chip-level'), 10) || 1;
-    var chips = ensurePlayerChips();
-    var chip = null;
-    for (var i = 0; i < chips.length; i++) {
-      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
-    }
+    var chip = _findPlayerChipEntry(chipId, level);
     if (!chip) return;
-    var h = hc();
-    var chipName = chip.sourceComboKey;
-    if (h && chip.modIds.length) {
-      var names = [];
-      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
-      chipName = names.join(' + ');
-    }
-    var bonus = chipLevelBonus(chip.level);
-    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
-    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
-    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', chip.count) + '</div>';
-    _showGameTooltip(html, btn);
+    _showGameTooltip(_buildWholeChipTooltipHtml(chip), btn);
   }
 
   function showCraftInvChipTooltip(item) {
     var chipId = parseInt(item.getAttribute('data-craft-chip-id'), 10);
     var level = parseInt(item.getAttribute('data-craft-chip-level'), 10) || 1;
-    var displayCount = parseInt(item.getAttribute('data-craft-display-count'), 10);
-    var chips = ensurePlayerChips();
-    var chip = null;
-    for (var i = 0; i < chips.length; i++) {
-      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
-    }
+    var chip = _findPlayerChipEntry(chipId, level);
     if (!chip) return;
-    var h = hc();
-    var chipName = chip.sourceComboKey;
-    if (h && chip.modIds.length) {
-      var names = [];
-      for (var ni = 0; ni < chip.modIds.length; ni++) names.push(modName(chip.modIds[ni]));
-      chipName = names.join(' + ');
-    }
-    var bonus = chipLevelBonus(chip.level);
-    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
-    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
-    html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    html += '<div>' + t('workshopChipTooltipCount', 'Количество: {count}').replace('{count}', Number.isFinite(displayCount) ? displayCount : chip.count) + '</div>';
-    _showGameTooltip(html, item);
+    _showGameTooltip(_buildWholeChipTooltipHtml(chip), item);
+  }
+
+  function showTechAccelChipTooltip(item) {
+    var chipId = parseInt(item.getAttribute('data-accel-chip-id'), 10);
+    var level = parseInt(item.getAttribute('data-accel-chip-level'), 10) || 1;
+    var chip = _findPlayerChipEntry(chipId, level);
+    if (!chip) return;
+    _showGameTooltip(_buildWholeChipTooltipHtml(chip), item);
   }
 
   function showCraftInvFragTooltip(item) {
@@ -1568,41 +1563,25 @@
         if (Number.isFinite(n)) modIds.push(n);
       }
     }
-    var h = hc();
-    var title = t('chipCraftPreviewLabel', 'Превью чипа');
-    if (modIds.length) {
-      var names = [];
-      for (var mi = 0; mi < modIds.length; mi++) names.push(modName(modIds[mi]));
-      title = names.join(' + ');
-    }
-    var html = '<div class="chipUpgradeTooltip__title">' + title + '</div>';
-    _showGameTooltip(html, el);
+    var previewEntry = {
+      modIds: modIds,
+      level: 1,
+      sourceComboKey: '',
+    };
+    _showGameTooltip(_buildWholeChipTooltipHtml(previewEntry, {
+      modIds: modIds,
+      level: 1,
+      displayName: modIds.length ? _getChipDisplayName(previewEntry) : t('chipCraftPreviewLabel', 'Превью чипа')
+    }), el);
   }
 
   function showCraftSlotChipTooltip(slotEl) {
     var chipId = parseInt(slotEl.getAttribute('data-hct-chip-id'), 10);
     var level = parseInt(slotEl.getAttribute('data-hct-chip-level'), 10) || 1;
     if (!Number.isFinite(chipId)) return;
-    var chips = ensurePlayerChips();
-    var chip = null;
-    for (var i = 0; i < chips.length; i++) {
-      if (chips[i].chipId === chipId && chips[i].level === level) { chip = chips[i]; break; }
-    }
-    var h = hc();
-    var chipName = chip ? chip.sourceComboKey : '';
-    var modIds = chip ? chip.modIds : [];
-    if (h && modIds.length) {
-      var names = [];
-      for (var ni = 0; ni < modIds.length; ni++) names.push(modName(modIds[ni]));
-      chipName = names.join(' + ');
-    }
-    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
-    if (chip) {
-      var bonus = chipLevelBonus(chip.level);
-      html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chip.level) + '</div>';
-      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    }
-    _showGameTooltip(html, slotEl);
+    var chip = _findPlayerChipEntry(chipId, level);
+    if (!chip) return;
+    _showGameTooltip(_buildWholeChipTooltipHtml(chip), slotEl);
   }
 
   function showCraftSlotFragTooltip(slotEl) {
@@ -1634,17 +1613,8 @@
     var h = hc();
     if (!h) return;
 
-    /* Find chip in player inventory to get level info */
-    var chips = ensurePlayerChips();
     var chipLevel = chipData.level || 1;
-    var chipName = chipData.sourceComboKey || '';
     var chipModIds = chipData.modIds || [];
-
-    if (h && chipModIds.length) {
-      var names = [];
-      for (var ni = 0; ni < chipModIds.length; ni++) names.push(modName(chipModIds[ni]));
-      chipName = names.join(' + ');
-    }
 
     if (!_slotTooltipEl) {
       _slotTooltipEl = _doc.createElement('div');
@@ -1652,24 +1622,17 @@
       _doc.body.appendChild(_slotTooltipEl);
     }
 
-    var bonus = chipLevelBonus(chipLevel);
-    var colorLabel = slotType === 'red' ? 'Красный' : 'Жёлтый';
-    var html = '<div class="chipUpgradeTooltip__title">' + chipName + '</div>';
-    html += '<div>' + t('workshopChipTooltipLevel', 'Уровень: {level}').replace('{level}', chipLevel) + '</div>';
-    html += '<div style="color:' + (slotType === 'red' ? '#e53935' : '#fdd835') + ';font-size:11px">' + colorLabel + ' слот: ' + slotId + '</div>';
-    if (bonus > 0) {
-      html += '<div class="chipUpgradeTooltip__bonus">' + t('workshopChipTooltipBonus', 'Бонус: +{bonus}% к силе атаки').replace('{bonus}', bonus) + '</div>';
-    } else {
-      html += '<div style="font-size:11px;color:rgba(255,255,255,.4)">' + t('chipTooltipNoBonus', 'Нет бонуса к атаке (нужен ур.2+)') + '</div>';
-    }
-    if (chipData.rotation) {
-      html += '<div style="font-size:10px;color:rgba(255,255,255,.35)">Поворот: ' + (chipData.rotation * 120) + '°</div>';
-    }
-
-    _slotTooltipEl.innerHTML = html;
-    _slotTooltipEl.style.display = 'block';
-    _slotTooltipEl.style.left = Math.min(evt.clientX + 12, global.innerWidth - 260) + 'px';
-    _slotTooltipEl.style.top = Math.max(0, evt.clientY + 16) + 'px';
+    var tooltipChip = {
+      modIds: chipModIds,
+      level: chipLevel,
+      sourceComboKey: chipData.sourceComboKey || ''
+    };
+    _showGameTooltipAtPoint(
+      _buildWholeChipTooltipHtml(tooltipChip, { modIds: chipModIds, level: chipLevel }),
+      evt.clientX,
+      evt.clientY,
+      _slotTooltipEl
+    );
   }
 
   function _hideSlotChipTooltip() {
@@ -2167,10 +2130,10 @@
         var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
         var accelChipName = _getChipDisplayName(chip) + ' • ' + t('workshopChipLevelLabel', 'Ур.') + ' ' + chip.level;
         for (var ci = 0; ci < chip.count; ci++) {
-          html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false">';
+          html += '<div class="techAccelChip" data-accel-chip-id="' + chip.chipId + '" data-accel-chip-level="' + chip.level + '" data-accel-checked="false" title="">';
           html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
           html += chipSvgComposed(40, 36, borderColor, chip.modIds, 'techAccelChip__icon', 2.5);
-          html += '<span class="techAccelChip__label" title="' + _escapeHtml(accelChipName) + '">' + _renderChipNameHtml(accelChipName) + '</span>';
+          html += '<span class="techAccelChip__label">' + _renderChipNameHtml(accelChipName) + '</span>';
           html += '<span class="techAccelChip__meta">+' + accelRates.chip + '%</span>';
           html += '</div>';
         }
@@ -2183,7 +2146,7 @@
             html += '<div class="techAccelChip" data-accel-frag-id="' + frag.fragmentId + '" data-accel-checked="false">';
             html += '<div class="techAccelChip__checkBox"><span class="techAccelChip__check"></span></div>';
             html += _fragmentSvg(frag.fragmentId, 36, fragStroke);
-            html += '<span class="techAccelChip__label" title="' + _escapeHtml(modName(frag.fragmentId)) + '">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
+            html += '<span class="techAccelChip__label">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
             html += '<span class="techAccelChip__meta">+' + accelRates.fragment + '%</span>';
             html += '</div>';
           }
@@ -2218,6 +2181,7 @@
 
     modal.innerHTML = html;
     modal.style.display = 'flex';
+    _suppressNativeChipTooltips(modal);
     _updateAccelPercentage();
   }
 
@@ -2416,38 +2380,72 @@
 
   /** Get a description for a mod (fragment or chip mod) */
   function _getModDescription(modId) {
-    var descs = {
-      1: 'Танк стреляет двумя снарядами',
-      2: 'Цепная молния с 2 перескоками',
-      3: 'Матрёшка: большой(×2) → малый(×1)',
-      4: 'Отталкивание: +0.5× урона, 10px',
-      5: 'Вакуум: +0.5× урона, 50px радиус',
-      6: 'Каждый 4-й выстрел: 3 залпа ×1.25',
-      7: 'Случайный эффект каждый выстрел',
-      8: 'Раз в 30с: ядерный взрыв ×3, 100px',
-      9: 'Заморозка атаки зомби на 0.5с',
-      10: 'Оставляет огненную лужу',
-      11: 'Оставляет ледяную зону замедления',
-      12: 'Создаёт электроузел с периодическим уроном',
-      13: 'Отмечает цель; попадание = ×2 урон',
-      14: 'Оставляет кислотную лужу',
-      15: 'Танк стреляет тремя снарядами',
-      16: 'Танк стреляет шестью снарядами',
-      17: 'Цепная молния с 3 перескоками',
-      18: 'Цепная молния с 6 перескоками',
-      19: 'Матрёшка: большой(×3) → средний(×2) → малый(×1)',
-      20: 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)',
-      21: 'Ударная волна: ×0.75 урона, отталкивание 15px',
-      22: 'Ударная волна: ×1 урона, отталкивание 20px',
-      23: 'Вакуум: ×0.75 урона, стягивание 15px',
-      24: 'Вакуум: ×1 урона, стягивание 20px',
-      25: 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном',
-      26: 'Каждый 4-й выстрел: 4 залпа с ×2 уроном',
-      27: 'Раз в 30с: ядерный взрыв ×4, радиус 300px',
-      28: 'Раз в 30с: ядерный взрыв ×5, вся карта',
-      29: 'Заморозка атаки зомби на 0.75с',
-      30: 'Заморозка атаки зомби на 1с'
-    };
+    var lang = (global.Game && global.Game.I18n && global.Game.I18n.currentLang) === 'en' ? 'en' : 'ru';
+    var descs = lang === 'en'
+      ? {
+        1: 'Fires two projectiles',
+        2: 'Chain lightning with 2 jumps',
+        3: 'Matryoshka: large (×2) -> small (×1)',
+        4: 'Shockwave: ×0.5 damage, 10px knockback',
+        5: 'Vacuum: ×0.5 damage, 50px pull radius',
+        6: 'Every 4th shot: 3 volleys ×1.25',
+        7: 'Random effect on each shot',
+        8: 'Every 30s: nuclear blast ×3, 100px radius',
+        9: 'Freezes zombie attacks for 0.5s',
+        10: 'Leaves a fire puddle',
+        11: 'Leaves an ice slowing zone',
+        12: 'Creates an electric node with periodic damage',
+        13: 'Marks the target; hit deals ×2 damage',
+        14: 'Leaves an acid puddle',
+        15: 'Fires three projectiles',
+        16: 'Fires six projectiles',
+        17: 'Chain lightning with 3 jumps',
+        18: 'Chain lightning with 6 jumps',
+        19: 'Matryoshka: large (×3) -> medium (×2) -> small (×1)',
+        20: 'Matryoshka: huge (×4) -> large (×3) -> medium (×2) -> small (×1)',
+        21: 'Shockwave: ×0.75 damage, 15px knockback',
+        22: 'Shockwave: ×1 damage, 20px knockback',
+        23: 'Vacuum: ×0.75 damage, 15px pull',
+        24: 'Vacuum: ×1 damage, 20px pull',
+        25: 'Every 4th shot: 3 volleys with ×1.5 damage',
+        26: 'Every 4th shot: 4 volleys with ×2 damage',
+        27: 'Every 30s: nuclear blast ×4, 300px radius',
+        28: 'Every 30s: nuclear blast ×5, whole map',
+        29: 'Freezes zombie attacks for 0.75s',
+        30: 'Freezes zombie attacks for 1s'
+      }
+      : {
+        1: 'Танк стреляет двумя снарядами',
+        2: 'Цепная молния с 2 перескоками',
+        3: 'Матрёшка: большой(×2) → малый(×1)',
+        4: 'Отталкивание: ×0.5 урона, 10px',
+        5: 'Вакуум: ×0.5 урона, радиус 50px',
+        6: 'Каждый 4-й выстрел: 3 залпа ×1.25',
+        7: 'Случайный эффект каждый выстрел',
+        8: 'Раз в 30с: ядерный взрыв ×3, радиус 100px',
+        9: 'Заморозка атаки зомби на 0.5с',
+        10: 'Оставляет огненную лужу',
+        11: 'Оставляет ледяную зону замедления',
+        12: 'Создаёт электроузел с периодическим уроном',
+        13: 'Отмечает цель; попадание = ×2 урон',
+        14: 'Оставляет кислотную лужу',
+        15: 'Танк стреляет тремя снарядами',
+        16: 'Танк стреляет шестью снарядами',
+        17: 'Цепная молния с 3 перескоками',
+        18: 'Цепная молния с 6 перескоками',
+        19: 'Матрёшка: большой(×3) → средний(×2) → малый(×1)',
+        20: 'Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)',
+        21: 'Ударная волна: ×0.75 урона, отталкивание 15px',
+        22: 'Ударная волна: ×1 урона, отталкивание 20px',
+        23: 'Вакуум: ×0.75 урона, стягивание 15px',
+        24: 'Вакуум: ×1 урона, стягивание 20px',
+        25: 'Каждый 4-й выстрел: 3 залпа с ×1.5 уроном',
+        26: 'Каждый 4-й выстрел: 4 залпа с ×2 уроном',
+        27: 'Раз в 30с: ядерный взрыв ×4, радиус 300px',
+        28: 'Раз в 30с: ядерный взрыв ×5, вся карта',
+        29: 'Заморозка атаки зомби на 0.75с',
+        30: 'Заморозка атаки зомби на 1с'
+      };
     return descs[modId] || '';
   }
 
@@ -2668,7 +2666,7 @@
     return '<div class="' + cardClass + '">' +
       badgeHtml +
       '<div class="chipCraftSlotCard__iconWrap">' + iconHtml + '</div>' +
-      '<span class="' + labelClass + '" title="' + _escapeHtml(cardLabel) + '">' + _renderChipNameHtml(_truncateCraftCardLabel(cardLabel, opts.maxLabelLength)) + '</span>' +
+      '<span class="' + labelClass + '">' + _renderChipNameHtml(_truncateCraftCardLabel(cardLabel, opts.maxLabelLength)) + '</span>' +
       '</div>';
   }
 
@@ -3037,7 +3035,7 @@
       return '<div class="chipCraftInvItem chipCraftInvItem--fragment' + (extraClass || '') +
         '" data-craft-src="fragment" data-craft-frag-id="' + fragmentId + '" data-craft-display-count="' + displayCount + '"' + disabledAttr + '>' +
         _fragmentSvg(fragmentId, 22, fragStroke) +
-        '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragName) + '">' + _renderChipNameHtml(fragName) + '</span>' +
+        '<span class="chipCraftInvLabel">' + _renderChipNameHtml(fragName) + '</span>' +
         '<span class="chipCraftInvLevel">×' + displayCount + '</span>' +
         '</div>';
     }
@@ -3055,7 +3053,7 @@
         var selectedChipCount = isDisassembleView ? _countSelectedCraftChipCopies(pc.chipId, pc.level) : 0;
         var chipSelectedClass = ((isDustView && dustSel > 0) || selectedChipCount > 0) ? ' chipCraftInvItem--dustSelected' : '';
         html += '<div class="chipCraftInvItem' + chipSelectedClass +
-          '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" data-craft-display-count="' + pc.count + '">';
+          '" data-craft-src="chip" data-craft-chip-id="' + pc.chipId + '" data-craft-chip-level="' + pc.level + '" data-craft-display-count="' + pc.count + '" title="">';
         if (isDustView) {
           html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKey + '" data-dust-type="chip" data-dust-max="' + pc.count + '"' +
             (dustSel > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
@@ -3066,7 +3064,7 @@
           html += '<span class="chipCraftInvStateCount">' + selectedChipCount + '/' + pc.count + '</span>';
         }
         html += chipSvgComposed(40, 36, borderColor, pc.modIds, 'chipCraftInvIcon', 2.5);
-        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(chipName) + '">' + _renderChipNameHtml(chipName) + '</span>';
+        html += '<span class="chipCraftInvLabel">' + _renderChipNameHtml(chipName) + '</span>';
         html += '<span class="chipCraftInvLevel">Ур. ' + pc.level + (pc.count > 1 ? ' • ×' + pc.count : '') + '</span>';
         html += '</div>';
       }
@@ -3089,7 +3087,7 @@
             html += '<label class="chipCraftDustCheck"><input type="checkbox" data-dust-key="' + dustKeyUnit + '" data-dust-type="fragment" data-dust-max="1"' +
               (dustSelUnit > 0 ? ' checked' : '') + '><span class="chipCraftDustCheckmark"></span></label>';
             html += _fragmentSvg(frag.fragmentId, 22, fragDustStroke);
-            html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(fragDustName) + '">' + _renderChipNameHtml(fragDustName) + '</span>';
+            html += '<span class="chipCraftInvLabel">' + _renderChipNameHtml(fragDustName) + '</span>';
             html += '<span class="chipCraftInvLevel">×1</span>';
             html += '</div>';
           }
@@ -3127,7 +3125,7 @@
           }
         }
         html += _fragmentSvg(frag.fragmentId, 22, (h && h.isSpecialMod(frag.fragmentId)) ? '#fdd835' : '#e53935');
-        html += '<span class="chipCraftInvLabel" title="' + _escapeHtml(modName(frag.fragmentId)) + '">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
+        html += '<span class="chipCraftInvLabel">' + _renderChipNameHtml(modName(frag.fragmentId)) + '</span>';
         html += '<span class="chipCraftInvLevel">×' + frag.count + '</span>';
         html += '</div>';
       }
@@ -3175,7 +3173,7 @@
             var slot = _craftSlots[sj];
             if (!slot) continue;
             var slotChipName = _getChipDisplayName(slot);
-            html += '<div class="chipCraftSlot chipCraftSlot--filled" data-craft-slot-idx="' + sj + '" data-hct-chip-id="' + slot.chipId + '" data-hct-chip-level="' + (slot.level || 1) + '">';
+            html += '<div class="chipCraftSlot chipCraftSlot--filled" data-craft-slot-idx="' + sj + '" data-hct-chip-id="' + slot.chipId + '" data-hct-chip-level="' + (slot.level || 1) + '" title="">';
             var sc = slot.chipColor === 'red' ? '#e53935' : '#fdd835';
             html += _renderCraftSlotCard(
               chipSvgComposed(60, 54, sc, slot.modIds, 'chipCraftSlotIcon', 3),
@@ -3255,7 +3253,7 @@
             var resultModIds = assemblePreview.modIds || [];
             var resultModsAttr = resultModIds.join(',');
             var resultColorAttr = assemblePreview.chipColor || '';
-            html += '<div class="chipCraftResultChip chipCraftResultChip--future" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '">';
+            html += '<div class="chipCraftResultChip chipCraftResultChip--future" data-hct-result-modids="' + resultModsAttr + '" data-hct-result-color="' + resultColorAttr + '" title="">';
             var resultChipName = _getChipDisplayName(assemblePreview);
             html += _renderCraftSlotCard(
               chipSvgComposed(60, 54, resultColor, resultModIds, 'chipCraftResultIcon', 3),
@@ -3382,6 +3380,7 @@
     html += '</div>'; // chipCraftLayout
 
     panel.innerHTML = html;
+    _suppressNativeChipTooltips(panel);
 
     /* ── Attach event handlers for craft panel ── */
     _attachCraftPanelEvents(panel);
@@ -3813,8 +3812,11 @@
         var card = tgt.closest('[data-chip-upgrade-id]');
         if (card) { showChipUpgradeTooltip(evt); return; }
         /* Hangar inventory chip buttons (available chips list) */
-        var chipBtn = tgt.closest('.hangarChipBtn[data-chip-id]');
+        var chipBtn = tgt.closest('.hangarChipInvItem[data-chip-id]');
         if (chipBtn) { showHangarChipBtnTooltip(chipBtn); return; }
+        /* Tech acceleration modal whole-chip cards */
+        var accelChip = tgt.closest('[data-accel-chip-id]');
+        if (accelChip) { showTechAccelChipTooltip(accelChip); return; }
         /* Craft panel inventory items */
         var craftItem = tgt.closest('.chipCraftInvItem');
         if (craftItem) {
@@ -3840,8 +3842,7 @@
         if (_slotTooltipEl && _slotTooltipEl.style.display !== 'none') {
           var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
           if (slotPoly) {
-            _slotTooltipEl.style.left = Math.min(evt.clientX + 12, global.innerWidth - 260) + 'px';
-            _slotTooltipEl.style.top = Math.max(0, evt.clientY + 16) + 'px';
+            _positionTooltipElement(_slotTooltipEl, evt.clientX + 12, evt.clientY + 16);
           }
         }
       });
@@ -3852,7 +3853,8 @@
         /* If leaving any known game-tooltip trigger element, hide when not entering another one */
         var leavingTrigger =
           tgt.closest('[data-chip-upgrade-id]') ||
-          tgt.closest('.hangarChipBtn[data-chip-id]') ||
+          tgt.closest('.hangarChipInvItem[data-chip-id]') ||
+          tgt.closest('[data-accel-chip-id]') ||
           tgt.closest('.chipCraftInvItem') ||
           tgt.closest('.chipCraftResultChip') ||
           tgt.closest('[data-hct-chip-id]') ||
@@ -3860,7 +3862,8 @@
         if (leavingTrigger) {
           var staysInTrigger = rel && rel.closest && (
             rel.closest('[data-chip-upgrade-id]') ||
-            rel.closest('.hangarChipBtn[data-chip-id]') ||
+            rel.closest('.hangarChipInvItem[data-chip-id]') ||
+            rel.closest('[data-accel-chip-id]') ||
             rel.closest('.chipCraftInvItem') ||
             rel.closest('.chipCraftResultChip') ||
             rel.closest('[data-hct-chip-id]') ||

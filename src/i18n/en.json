@@ -217,6 +217,7 @@
   "dropOnCrateReject": "Place occupied",
   "menuSettings": "Settings",
   "tutorialStarterTankMessage": "Tap the tank and send it into battle!",
+  "tutorialSecondTankMessage": "Create another tank",
   "tutorialContinue": "Continue",
   "tutorialSkip": "Skip",
   "tutorialDisable": "Turn off tutorial",
@@ -458,6 +459,9 @@
   ,"hangarChipsActiveX": "Activates outer angle (not adjacent to red chips)"
   ,"hangarChipsSlotLocked": "Slot locked"
   ,"hangarChipsLevelShort": "Lv."
+  ,"workshopChipTooltipLevel": "Level: {level}"
+  ,"workshopChipTooltipBonus": "Bonus: +{bonus}% attack power"
+  ,"workshopChipTooltipCount": "Count: {count}"
   ,"plStorageTitle": "Production Storage"
   ,"plBoxSlotFilled": "Box (click to open)"
   ,"plBoxSlotEmpty": "Empty slot"

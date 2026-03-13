@@ -204,6 +204,17 @@
     return false;
   }
 
+  function getPurchasedTankCount(state) {
+    if (!state || !state.buyCounts || typeof state.buyCounts !== 'object') return 0;
+    const keys = Object.keys(state.buyCounts);
+    let total = 0;
+    for (let i = 0; i < keys.length; i++) {
+      const value = Number(state.buyCounts[keys[i]]);
+      if (Number.isFinite(value) && value > 0) total += value;
+    }
+    return total;
+  }
+
   function normalizeTutorialState(state) {
     if (!state || typeof state !== 'object') return createDefaultTutorialState();
     if (!state.tutorial || typeof state.tutorial !== 'object') {
@@ -214,6 +225,18 @@
     }
 
     const raw = state.tutorial;
+    const tutorialSteps = getTutorialStepsApi();
+    const targetVersion = tutorialSteps && Number.isFinite(Number(tutorialSteps.VERSION))
+      ? Math.max(1, Math.floor(Number(tutorialSteps.VERSION)))
+      : 2;
+
+    if (!!raw.completed && !raw.disabled && (!Number.isFinite(Number(raw.version)) || Number(raw.version) < targetVersion)) {
+      const upgradedCompleted = createCompletedTutorialState();
+      upgradedCompleted.version = targetVersion;
+      state.tutorial = upgradedCompleted;
+      return upgradedCompleted;
+    }
+
     const definitions = getStepDefinitions();
     const steps = {};
 
@@ -231,7 +254,7 @@
     }
 
     const normalized = {
-      version: Number.isFinite(Number(raw.version)) ? Math.max(1, Math.floor(Number(raw.version))) : 2,
+      version: targetVersion,
       disabled: !!raw.disabled,
       completed: !!raw.completed,
       currentStepId: typeof raw.currentStepId === 'string' ? raw.currentStepId : null,
@@ -270,6 +293,8 @@
   function getActiveStepId(state) {
     const tutorial = normalizeTutorialState(state);
     if (tutorial.disabled || tutorial.completed) return null;
+    const stepDefinition = tutorial.currentStepId ? getStepDefinition(tutorial.currentStepId) : null;
+    if (!isStepAvailable(stepDefinition, state)) return null;
     return tutorial.currentStepId;
   }
 
@@ -296,10 +321,24 @@
     return fallback;
   }
 
+  function isStepAvailable(stepDefinition, state) {
+    if (!stepDefinition) return false;
+    if (!stepDefinition.activation || !state) return true;
+    if (stepDefinition.activation.kind === 'min_coins') {
+      const requiredCoins = Number(stepDefinition.activation.value);
+      if (!Number.isFinite(requiredCoins)) return true;
+      return Number(state.coins) >= requiredCoins;
+    }
+    return true;
+  }
+
   function resolveStepTarget(stepDefinition, state) {
     if (!stepDefinition || !stepDefinition.target || !state) return null;
     if (stepDefinition.target.kind === 'starter_hangar_tank') {
       return findStarterTankCell(state);
+    }
+    if (stepDefinition.target.kind === 'buy_tank_button') {
+      return runtime.ui && runtime.ui.buy ? runtime.ui.buy : null;
     }
     return null;
   }
@@ -533,23 +572,48 @@
     return !!(stepState && stepState.bubbleOpen);
   }
 
-  function positionOverlay(cell) {
-    if (!runtime.rootEl || !runtime.pointerEl || !runtime.documentObj || !cell) return;
+  function syncPointerMode(stepDefinition) {
+    if (!runtime.pointerEl) return;
+    runtime.pointerEl.classList.toggle(
+      'gameTutorial__pointer--horizontal',
+      !!(stepDefinition && stepDefinition.pointerMotion === 'horizontal')
+    );
+  }
+
+  function positionOverlay(target) {
+    if (!runtime.rootEl || !runtime.pointerEl || !runtime.documentObj || !target) return;
     const canvas = runtime.canvasEl || runtime.documentObj.getElementById('c');
     const stageCanvas = runtime.stageEl || runtime.rootEl.parentElement;
-    if (!canvas || !stageCanvas) {
-      setOverlayHidden(true);
-      return;
-    }
-    if (!Number.isFinite(cell.x) || !Number.isFinite(cell.y) || !Number.isFinite(cell.w) || !Number.isFinite(cell.h)) {
+    if (!stageCanvas) {
       setOverlayHidden(true);
       return;
     }
 
     const stageRect = stageCanvas.getBoundingClientRect();
-    const canvasRect = canvas.getBoundingClientRect();
-    const centerX = canvasRect.left - stageRect.left + cell.x + cell.w * 0.5;
-    const centerY = canvasRect.top - stageRect.top + cell.y + cell.h * 0.5;
+    let centerX = 0;
+    let centerY = 0;
+
+    if (target && typeof target.getBoundingClientRect === 'function') {
+      if (!isElementVisible(target)) {
+        setOverlayHidden(true);
+        return;
+      }
+      const targetRect = target.getBoundingClientRect();
+      if (!targetRect || targetRect.width <= 0 || targetRect.height <= 0) {
+        setOverlayHidden(true);
+        return;
+      }
+      centerX = targetRect.left - stageRect.left + targetRect.width * 0.5;
+      centerY = targetRect.top - stageRect.top + targetRect.height * 0.5;
+    } else {
+      if (!canvas || !Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.w) || !Number.isFinite(target.h)) {
+        setOverlayHidden(true);
+        return;
+      }
+      const canvasRect = canvas.getBoundingClientRect();
+      centerX = canvasRect.left - stageRect.left + target.x + target.w * 0.5;
+      centerY = canvasRect.top - stageRect.top + target.y + target.h * 0.5;
+    }
 
     runtime.pointerEl.style.left = Math.round(centerX - 18) + 'px';
     runtime.pointerEl.style.top = Math.round(centerY - 54) + 'px';
@@ -947,6 +1011,11 @@
     if (!state) return;
 
     migrateTutorialStateIfNeeded(state);
+    const completionStep = getActiveStepDefinition(state);
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'tank_bought' && getPurchasedTankCount(state) > 0) {
+      completeCurrentStep('tank_bought');
+      return;
+    }
     ensureDom();
     patchPauseManagerFactory();
     attachInteractionGuards();
@@ -956,6 +1025,7 @@
     syncBodyState(state);
 
     const activeStep = getActiveStepDefinition(state);
+    syncPointerMode(activeStep);
     const target = resolveStepTarget(activeStep, state);
     const shouldHide = !activeStep || !target || shouldSuppressOverlay(state);
 
@@ -1018,6 +1088,15 @@
     completeCurrentStep('sent_to_track');
   }
 
+  function handleTankPurchased(payload) {
+    const info = payload || null;
+    if (!info || info.cause !== 'user') return;
+    const state = getState();
+    const stepDefinition = getActiveStepDefinition(state);
+    if (!stepDefinition || !stepDefinition.completion || stepDefinition.completion.kind !== 'tank_bought') return;
+    completeCurrentStep('tank_bought');
+  }
+
   function isUiLocked() {
     return shouldLockInteractions(getState());
   }
@@ -1027,6 +1106,7 @@
     syncNow: syncNow,
     isUiLocked: isUiLocked,
     handleTankOnTrackChanged: handleTankOnTrackChanged,
+    handleTankPurchased: handleTankPurchased,
   };
 
   global.Game = global.Game || {};

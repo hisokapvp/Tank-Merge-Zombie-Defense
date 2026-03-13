@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 2;
+  var VERSION = 3;
 
   var STEPS = [
     {
@@ -16,6 +16,26 @@
       },
       allow: {
         uiKeys: ['settingsBtn', 'terminalCollapseBtn', 'terminalExpandBtn'],
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+    },
+    {
+      id: 'second_tank',
+      messageKey: 'tutorialSecondTankMessage',
+      activation: {
+        kind: 'min_coins',
+        value: 50,
+      },
+      target: {
+        kind: 'buy_tank_button',
+      },
+      completion: {
+        kind: 'tank_bought',
+        cause: 'user',
+      },
+      pointerMotion: 'horizontal',
+      allow: {
+        uiKeys: ['buy', 'settingsBtn', 'terminalCollapseBtn', 'terminalExpandBtn'],
         bubbleControls: ['close', 'continue', 'disable'],
       },
     },

@@ -3181,6 +3181,10 @@ input, select, textarea, button {
   pointer-events:none;
   overflow:hidden;
 }
+.gameTutorial__pointer--horizontal{
+  animation-name:gameTutorialPointerPulseHorizontal;
+  transform-origin:center center;
+}
 
 .gameTutorial__pointer::after{
   content:'';
@@ -3384,6 +3388,15 @@ button[data-tutorial-locked="true"]::after,
   }
   50% {
     transform:translateY(10px) scale(.94);
+  }
+}
+
+@keyframes gameTutorialPointerPulseHorizontal{
+  0%, 100% {
+    transform:translateX(0) scale(1);
+  }
+  50% {
+    transform:translateX(-10px) scale(.94);
   }
 }
 
@@ -4063,7 +4076,8 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarChipsGrid{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--hangar-chip-card-width, 176px)), 1fr));
+  --hangar-chip-grid-min:176px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--hangar-chip-grid-min)), 1fr));
   justify-content:stretch;
   align-content:start;
   gap:8px;
@@ -4321,21 +4335,54 @@ button.hangarChipInvItem{
 .chipUpgradeTooltip{
   position:fixed;
   z-index:9999;
-  background:rgba(20,18,16,.96);
-  border:1px solid rgba(74,246,38,.35);
-  border-radius:6px;
-  padding:8px 12px;
+  background:linear-gradient(180deg, rgba(10,12,10,.97) 0%, rgba(20,26,19,.96) 100%);
+  border:1px solid rgba(74,246,38,.38);
+  border-radius:10px;
+  padding:12px 14px;
   font-size:12px;
-  color:rgba(255,255,255,.88);
+  color:rgba(235,255,226,.92);
   pointer-events:none;
-  max-width:220px;
-  box-shadow:0 4px 16px rgba(0,0,0,.5);
-  line-height:1.4;
+  max-width:280px;
+  box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
+  line-height:1.45;
+}
+.chipUpgradeTooltip::before{
+  content:'';
+  position:absolute;
+  inset:4px;
+  border:1px solid rgba(74,246,38,.14);
+  border-radius:7px;
+  pointer-events:none;
 }
 .chipUpgradeTooltip__title{
-  font-weight:bold;
+  position:relative;
+  font-weight:800;
   color:#4af626;
+  margin-bottom:8px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.chipUpgradeTooltip__mod{
+  position:relative;
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid rgba(74,246,38,.12);
+}
+.chipUpgradeTooltip__modName{
+  color:#ffd976;
+  font-weight:700;
   margin-bottom:4px;
+}
+.chipUpgradeTooltip__modDesc{
+  color:rgba(235,255,226,.78);
+  font-size:11px;
+}
+.chipUpgradeTooltip__meta,
+.chipUpgradeTooltip__bonus{
+  position:relative;
+  margin-top:10px;
+  padding-top:8px;
+  border-top:1px solid rgba(74,246,38,.12);
 }
 .chipUpgradeTooltip__bonus{
   color:#fdd835;
@@ -4567,6 +4614,20 @@ button.hangarChipInvItem{
 .chipNameToken,
 .chipNameJoin{
   white-space:nowrap;
+}
+.hangarChipInvLabel,
+.hangarChipInvLabel .chipNameToken,
+.hangarChipInvLabel .chipNameJoin,
+.chipUpgradeCard__name,
+.chipUpgradeCard__name .chipNameToken,
+.chipUpgradeCard__name .chipNameJoin,
+.techAccelChip__label,
+.techAccelChip__label .chipNameToken,
+.techAccelChip__label .chipNameJoin,
+.chipCraftSlotCard__name,
+.chipCraftSlotCard__name .chipNameToken,
+.chipCraftSlotCard__name .chipNameJoin{
+  pointer-events:none;
 }
 
 /* ─── Chip list level / count badges ─── */
