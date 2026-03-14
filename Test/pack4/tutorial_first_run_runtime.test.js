@@ -36,6 +36,8 @@ const root = path.resolve(__dirname, '../..');
 const gameJs = fs.readFileSync(path.join(root, 'game.js'), 'utf-8');
 const bootstrapJs = fs.readFileSync(path.join(root, 'src/core/bootstrap.js'), 'utf-8');
 const tutorialStepsJs = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+const tutorialRuntimeJs = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
+const tutorialCursorConfig = fs.readFileSync(path.join(root, 'assets/tutotialCursore.json'), 'utf-8');
 const storageJs = fs.readFileSync(path.join(root, 'src/persistence/storage.js'), 'utf-8');
 const garageJs = fs.readFileSync(path.join(root, 'src/mechanics/garage.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
@@ -61,7 +63,7 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
 
   const state = globalObj.Game.InitialState.createInitialState({ reason: 'new_game' });
   assertEqual(state.coins, 40, 'new game starts with 40 coins');
-  assertEqual(state.tutorial.version, 2, 'tutorial state uses data-driven schema version 2');
+  assertEqual(state.tutorial.version, 4, 'tutorial state uses data-driven schema version 4');
   assert(state.tutorial && state.tutorial.currentStepId === 'starter_tank', 'starter tutorial step exists');
   assert(state.tutorial.steps && state.tutorial.steps.starter_tank && state.tutorial.steps.starter_tank.completed === false, 'starter tutorial step is pending');
   assert(state.tutorial.steps.starter_tank.bubbleOpen === true, 'starter tutorial bubble starts open');
@@ -117,6 +119,22 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
 test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("id: 'starter_tank'") !== -1, 'starter_tank step lives in tutorial config');
   assert(tutorialStepsJs.indexOf('bubbleControls') !== -1, 'tutorial config defines allowed bubble controls');
+  assert(tutorialStepsJs.indexOf('unlock:') !== -1, 'tutorial config defines progressive unlocks');
+  assert(tutorialStepsJs.indexOf("targetKinds: ['any_hangar_tank']") !== -1, 'starter step unlocks tank interactions cumulatively');
+  assert(tutorialStepsJs.indexOf("uiKeys: ['buy']") !== -1, 'second step unlocks buy button cumulatively');
+});
+
+test('TUT-9: cursor config supports per-step sprite rotation and motion angle overrides', () => {
+  assert(tutorialCursorConfig.indexOf('"steps"') !== -1, 'cursor config contains per-step section');
+  assert(tutorialCursorConfig.indexOf('"spriteRotationDeg"') !== -1, 'cursor config stores sprite rotation');
+  assert(tutorialCursorConfig.indexOf('"motionAngleDeg"') !== -1, 'cursor config stores motion angle');
+  assert(tutorialRuntimeJs.indexOf('runtime.cursorConfig.steps') !== -1, 'runtime reads per-step cursor settings');
+  assert(tutorialRuntimeJs.indexOf("'any_hangar_tank'") !== -1, 'runtime resolves cumulative tank targets');
+});
+
+test('TUT-10: terminal collapse button label is fully renamed', () => {
+  assert(indexHtml.indexOf('aria-label="Свернуть терминал"') !== -1, 'collapse button aria-label renamed');
+  assert(indexHtml.indexOf('data-ui-tooltip="Свернуть терминал"') !== -1, 'collapse button tooltip renamed');
 });
 
 console.log('\n==============================');

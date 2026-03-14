@@ -31,5 +31,15 @@
       "loop": true,
       "scale": 1
     }
+  },
+  "steps": {
+    "starter_tank": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0
+    },
+    "second_tank": {
+      "spriteRotationDeg": 0,
+      "motionAngleDeg": 0
+    }
   }
 }

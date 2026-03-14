@@ -8,7 +8,7 @@
     }
 
     return {
-      version: 2,
+      version: 4,
       disabled: false,
       completed: false,
       currentStepId: 'starter_tank',

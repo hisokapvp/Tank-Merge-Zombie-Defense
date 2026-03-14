@@ -1,10 +1,58 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 3;
+  var VERSION = 4;
+  var DEFAULT_BUBBLE_CONTROLS = ['close', 'continue', 'disable'];
+
+  function cloneStringArray(value) {
+    var result = [];
+    if (!Array.isArray(value)) return result;
+    for (var i = 0; i < value.length; i++) {
+      if (typeof value[i] !== 'string' || !value[i]) continue;
+      if (result.indexOf(value[i]) !== -1) continue;
+      result.push(value[i]);
+    }
+    return result;
+  }
+
+  function clonePlainObject(value) {
+    if (!value || typeof value !== 'object') return null;
+    var copy = {};
+    var keys = Object.keys(value);
+    for (var i = 0; i < keys.length; i++) {
+      copy[keys[i]] = value[keys[i]];
+    }
+    return copy;
+  }
+
+  function createStep(definition) {
+    var def = definition && typeof definition === 'object' ? definition : {};
+    var allow = def.allow && typeof def.allow === 'object' ? def.allow : {};
+    var unlock = def.unlock && typeof def.unlock === 'object' ? def.unlock : {};
+    var bubbleControls = cloneStringArray(allow.bubbleControls);
+    if (!bubbleControls.length) bubbleControls = DEFAULT_BUBBLE_CONTROLS.slice();
+
+    return {
+      id: typeof def.id === 'string' ? def.id : '',
+      messageKey: typeof def.messageKey === 'string' ? def.messageKey : '',
+      pointerAnimation: typeof def.pointerAnimation === 'string' ? def.pointerAnimation : 'click',
+      pointerMotion: typeof def.pointerMotion === 'string' ? def.pointerMotion : '',
+      activation: clonePlainObject(def.activation),
+      target: clonePlainObject(def.target),
+      completion: clonePlainObject(def.completion),
+      allow: {
+        bubbleControls: bubbleControls,
+      },
+      unlock: {
+        uiKeys: cloneStringArray(unlock.uiKeys),
+        selectors: cloneStringArray(unlock.selectors),
+        targetKinds: cloneStringArray(unlock.targetKinds),
+      },
+    };
+  }
 
   var STEPS = [
-    {
+    createStep({
       id: 'starter_tank',
       messageKey: 'tutorialStarterTankMessage',
       pointerAnimation: 'click',
@@ -16,14 +64,17 @@
         cause: 'user',
       },
       allow: {
-        uiKeys: ['settingsBtn', 'terminalCollapseBtn', 'terminalExpandBtn'],
         bubbleControls: ['close', 'continue', 'disable'],
       },
-    },
-    {
+      unlock: {
+        targetKinds: ['any_hangar_tank'],
+      },
+    }),
+    createStep({
       id: 'second_tank',
       messageKey: 'tutorialSecondTankMessage',
       pointerAnimation: 'click',
+      pointerMotion: 'horizontal',
       activation: {
         kind: 'min_coins',
         value: 50,
@@ -35,12 +86,13 @@
         kind: 'tank_bought',
         cause: 'user',
       },
-      pointerMotion: 'horizontal',
       allow: {
-        uiKeys: ['buy', 'settingsBtn', 'terminalCollapseBtn', 'terminalExpandBtn'],
         bubbleControls: ['close', 'continue', 'disable'],
       },
-    },
+      unlock: {
+        uiKeys: ['buy', 'any_hangar_tank'],
+      },
+    }),
   ];
 
   function buildStepState() {
@@ -70,13 +122,17 @@
   }
 
   function getAll() {
-    return STEPS.slice();
+    var result = [];
+    for (var i = 0; i < STEPS.length; i++) {
+      result.push(createStep(STEPS[i]));
+    }
+    return result;
   }
 
   function getStep(stepId) {
     if (typeof stepId !== 'string' || !stepId) return null;
     for (var i = 0; i < STEPS.length; i++) {
-      if (STEPS[i].id === stepId) return STEPS[i];
+      if (STEPS[i].id === stepId) return createStep(STEPS[i]);
     }
     return null;
   }

@@ -635,6 +635,28 @@
 
   /* ─── Render: available chips list ─────────────────────── */
 
+  function _sortAvailableChipsByMatchPriority(chips, canMatchMap) {
+    var prepared = [];
+    for (var i = 0; i < chips.length; i++) {
+      var chip = chips[i];
+      var chipKey = chip.chipId + '_' + chip.level;
+      prepared.push({
+        chip: chip,
+        canMatch: !!(canMatchMap && canMatchMap[chipKey]),
+        order: i,
+      });
+    }
+
+    prepared.sort(function(a, b) {
+      if (a.canMatch !== b.canMatch) return a.canMatch ? -1 : 1;
+      return a.order - b.order;
+    });
+
+    var sorted = [];
+    for (var si = 0; si < prepared.length; si++) sorted.push(prepared[si].chip);
+    return sorted;
+  }
+
   function renderChipsList() {
     var list = dom.chipsList;
     if (!list) return;
@@ -692,6 +714,8 @@
         targetSlotMap[chipKey] = matchTargets;
       }
     }
+
+    chips = _sortAvailableChipsByMatchPriority(chips, canMatchMap);
 
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];

@@ -229,6 +229,15 @@ test('T5-15: workshop reset API and unit fragment dust rendering are present', (
   assert(scJs.indexOf("chipsUi.resetTransientUiState()") !== -1, 'closing hangar overlay resets transient state');
 });
 
+test('T5-16: available hangar chips prioritize match-capable entries and keep stable order inside groups', () => {
+  const uiJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/hangarChipsUI.js'), 'utf-8');
+
+  assert(uiJs.indexOf('function _sortAvailableChipsByMatchPriority(chips, canMatchMap)') !== -1, 'available chips use dedicated match-priority sorter');
+  assert(uiJs.indexOf('if (a.canMatch !== b.canMatch) return a.canMatch ? -1 : 1;') !== -1, 'match-capable chips sort ahead of regular ones');
+  assert(uiJs.indexOf('return a.order - b.order;') !== -1, 'sort keeps stable order inside priority groups');
+  assert(uiJs.indexOf('chips = _sortAvailableChipsByMatchPriority(chips, canMatchMap);') !== -1, 'renderChipsList applies match-priority sorting');
+});
+
 // Summary
 console.log('\n═══════════════════════════');
 console.log('NewGamePopupReset: ' + passCount + ' passed, ' + failCount + ' failed');

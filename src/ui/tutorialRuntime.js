@@ -132,7 +132,7 @@
       steps[definition.id] = createDefaultStepState();
     }
     return {
-      version: 2,
+      version: 4,
       disabled: false,
       completed: false,
       currentStepId: definitions.length ? definitions[0].id : null,
@@ -308,12 +308,21 @@
     if (!hadTutorial) persist();
   }
 
-  function getActiveStepId(state) {
+  function getPendingStepId(state) {
     const tutorial = normalizeTutorialState(state);
     if (tutorial.disabled || tutorial.completed) return null;
-    const stepDefinition = tutorial.currentStepId ? getStepDefinition(tutorial.currentStepId) : null;
+    return tutorial.currentStepId || null;
+  }
+
+  function getPendingStepDefinition(state) {
+    const pendingStepId = getPendingStepId(state);
+    return pendingStepId ? getStepDefinition(pendingStepId) : null;
+  }
+
+  function getActiveStepId(state) {
+    const stepDefinition = getPendingStepDefinition(state);
     if (!isStepAvailable(stepDefinition, state)) return null;
-    return tutorial.currentStepId;
+    return stepDefinition && typeof stepDefinition.id === 'string' ? stepDefinition.id : null;
   }
 
   function getActiveStepDefinition(state) {
@@ -350,13 +359,47 @@
     return true;
   }
 
+  function pushUniqueTarget(list, target) {
+    if (!target) return;
+    if (list.indexOf(target) !== -1) return;
+    list.push(target);
+  }
+
+  function resolveTargetsByKind(kind, state) {
+    const targets = [];
+    if (!kind || !state) return targets;
+
+    if (kind === 'starter_hangar_tank') {
+      pushUniqueTarget(targets, findStarterTankCell(state));
+      return targets;
+    }
+
+    if (kind === 'any_hangar_tank') {
+      if (!Array.isArray(state.cells)) return targets;
+      for (let i = 0; i < state.cells.length; i++) {
+        const cell = state.cells[i];
+        if (!cell || !cell.tank || cell.tank.onTrack) continue;
+        pushUniqueTarget(targets, cell);
+      }
+      return targets;
+    }
+
+    if (kind === 'buy_tank_button') {
+      pushUniqueTarget(targets, runtime.ui && runtime.ui.buy ? runtime.ui.buy : null);
+      return targets;
+    }
+
+    return targets;
+  }
+
   function resolveStepTarget(stepDefinition, state) {
     if (!stepDefinition || !stepDefinition.target || !state) return null;
-    if (stepDefinition.target.kind === 'starter_hangar_tank') {
-      return findStarterTankCell(state);
+    if (typeof stepDefinition.target.kind === 'string') {
+      const targets = resolveTargetsByKind(stepDefinition.target.kind, state);
+      return targets.length ? targets[0] : null;
     }
-    if (stepDefinition.target.kind === 'buy_tank_button') {
-      return runtime.ui && runtime.ui.buy ? runtime.ui.buy : null;
+    if (typeof stepDefinition.target.selector === 'string' && runtime.documentObj) {
+      return runtime.documentObj.querySelector(stepDefinition.target.selector);
     }
     return null;
   }
@@ -405,10 +448,38 @@
     };
   }
 
+  function normalizeRotationDegrees(value, fallback) {
+    const rawValue = Number(value);
+    const baseValue = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+    if (!Number.isFinite(rawValue)) return baseValue;
+    const normalized = rawValue % 360;
+    return normalized < 0 ? normalized + 360 : normalized;
+  }
+
+  function sanitizeCursorStepVisual(raw) {
+    const next = raw && typeof raw === 'object' ? raw : {};
+    return {
+      spriteRotationDeg: normalizeRotationDegrees(next.spriteRotationDeg, 0),
+      motionAngleDeg: normalizeRotationDegrees(next.motionAngleDeg, 90),
+    };
+  }
+
   function sanitizeCursorConfig(raw) {
     const defaults = buildDefaultCursorConfig();
     const next = raw && typeof raw === 'object' ? raw : {};
     const animations = next.animations && typeof next.animations === 'object' ? next.animations : {};
+    const rawSteps = next.steps && typeof next.steps === 'object'
+      ? next.steps
+      : (next.stepOverrides && typeof next.stepOverrides === 'object' ? next.stepOverrides : {});
+    const steps = {};
+    const stepIds = Object.keys(rawSteps);
+
+    for (let i = 0; i < stepIds.length; i++) {
+      const stepId = stepIds[i];
+      if (typeof stepId !== 'string' || !stepId) continue;
+      steps[stepId] = sanitizeCursorStepVisual(rawSteps[stepId]);
+    }
+
     return {
       atlas: typeof next.atlas === 'string' && next.atlas ? next.atlas : defaults.atlas,
       animations: {
@@ -416,6 +487,7 @@
         drag: sanitizeCursorAnimation(animations.drag, defaults.animations.drag),
         drop: sanitizeCursorAnimation(animations.drop, defaults.animations.drop),
       },
+      steps: steps,
     };
   }
 
@@ -709,6 +781,20 @@
   function syncPointerMode(stepDefinition) {
     if (!runtime.pointerEl) return;
     runtime.pointerAnimationKey = getPointerAnimationKey(stepDefinition);
+    const stepId = stepDefinition && typeof stepDefinition.id === 'string' ? stepDefinition.id : '';
+    const stepConfig = runtime.cursorConfig && runtime.cursorConfig.steps && stepId
+      ? runtime.cursorConfig.steps[stepId] || null
+      : null;
+    const motionAngleDeg = stepConfig
+      ? normalizeRotationDegrees(stepConfig.motionAngleDeg, stepDefinition && stepDefinition.pointerMotion === 'horizontal' ? 180 : 90)
+      : (stepDefinition && stepDefinition.pointerMotion === 'horizontal' ? 180 : 90);
+    const spriteRotationDeg = stepConfig
+      ? normalizeRotationDegrees(stepConfig.spriteRotationDeg, 0)
+      : 0;
+    const radians = motionAngleDeg * (Math.PI / 180);
+    runtime.pointerEl.style.setProperty('--tutorial-pointer-rotation', spriteRotationDeg + 'deg');
+    runtime.pointerEl.style.setProperty('--tutorial-pointer-motion-x', String(Math.round(Math.cos(radians) * 1000) / 1000));
+    runtime.pointerEl.style.setProperty('--tutorial-pointer-motion-y', String(Math.round(Math.sin(radians) * 1000) / 1000));
     runtime.pointerEl.classList.toggle(
       'gameTutorial__pointer--horizontal',
       !!(stepDefinition && stepDefinition.pointerMotion === 'horizontal')
@@ -777,21 +863,124 @@
     return [ui.settingsBtn, ui.terminalCollapseBtn, ui.terminalExpandBtn];
   }
 
+  function collectAccessList(source, key) {
+    if (!source || typeof source !== 'object') return [];
+    const list = source[key];
+    const result = [];
+    if (!Array.isArray(list)) return result;
+    for (let i = 0; i < list.length; i++) {
+      if (typeof list[i] !== 'string' || !list[i]) continue;
+      if (result.indexOf(list[i]) !== -1) continue;
+      result.push(list[i]);
+    }
+    return result;
+  }
+
+  function getStepUnlockDefinition(stepDefinition) {
+    const unlock = stepDefinition && stepDefinition.unlock && typeof stepDefinition.unlock === 'object'
+      ? stepDefinition.unlock
+      : null;
+    const legacyAllow = stepDefinition && stepDefinition.allow && typeof stepDefinition.allow === 'object'
+      ? stepDefinition.allow
+      : null;
+    const uiKeys = collectAccessList(unlock, 'uiKeys');
+    const selectors = collectAccessList(unlock, 'selectors');
+    const targetKinds = collectAccessList(unlock, 'targetKinds');
+    const legacyUiKeys = collectAccessList(legacyAllow, 'uiKeys');
+
+    for (let i = 0; i < legacyUiKeys.length; i++) {
+      if (uiKeys.indexOf(legacyUiKeys[i]) === -1) uiKeys.push(legacyUiKeys[i]);
+    }
+
+    return {
+      uiKeys: uiKeys,
+      selectors: selectors,
+      targetKinds: targetKinds,
+    };
+  }
+
+  function resolveSelectorTargets(selectors) {
+    const targets = [];
+    if (!runtime.documentObj || !Array.isArray(selectors)) return targets;
+    for (let i = 0; i < selectors.length; i++) {
+      if (typeof selectors[i] !== 'string' || !selectors[i]) continue;
+      const element = runtime.documentObj.querySelector(selectors[i]);
+      if (element) pushUniqueTarget(targets, element);
+    }
+    return targets;
+  }
+
+  function collectProgressiveAccess(state) {
+    const tutorial = normalizeTutorialState(state);
+    const definitions = getStepDefinitions();
+    const activeStepId = getActiveStepId(state);
+    const access = {
+      uiKeys: [],
+      selectors: [],
+      targets: [],
+    };
+
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      const stepState = tutorial.steps && tutorial.steps[definition.id] ? tutorial.steps[definition.id] : null;
+      const shouldIncludeUnlock = !!(stepState && stepState.completed) || definition.id === activeStepId;
+      if (!shouldIncludeUnlock) continue;
+
+      const unlock = getStepUnlockDefinition(definition);
+      for (let uiIndex = 0; uiIndex < unlock.uiKeys.length; uiIndex++) {
+        if (access.uiKeys.indexOf(unlock.uiKeys[uiIndex]) === -1) access.uiKeys.push(unlock.uiKeys[uiIndex]);
+      }
+      for (let selectorIndex = 0; selectorIndex < unlock.selectors.length; selectorIndex++) {
+        if (access.selectors.indexOf(unlock.selectors[selectorIndex]) === -1) access.selectors.push(unlock.selectors[selectorIndex]);
+      }
+      for (let targetIndex = 0; targetIndex < unlock.targetKinds.length; targetIndex++) {
+        const targets = resolveTargetsByKind(unlock.targetKinds[targetIndex], state);
+        for (let resolvedIndex = 0; resolvedIndex < targets.length; resolvedIndex++) {
+          pushUniqueTarget(access.targets, targets[resolvedIndex]);
+        }
+      }
+    }
+
+    pushUniqueTarget(access.targets, resolveStepTarget(getActiveStepDefinition(state), state));
+    return access;
+  }
+
   function getAllowedUiElementsForStep(state) {
-    const stepDefinition = getActiveStepDefinition(state);
     const ui = runtime.ui || {};
     const elements = getAlwaysAllowedElements().slice();
-    const allow = stepDefinition && stepDefinition.allow ? stepDefinition.allow : null;
-    const uiKeys = allow && Array.isArray(allow.uiKeys) ? allow.uiKeys : [];
+    const access = collectProgressiveAccess(state);
 
-    for (let i = 0; i < uiKeys.length; i++) {
-      const candidate = ui[uiKeys[i]];
-      if (candidate && elements.indexOf(candidate) === -1) {
-        elements.push(candidate);
+    for (let i = 0; i < access.uiKeys.length; i++) {
+      const candidate = ui[access.uiKeys[i]];
+      if (candidate && elements.indexOf(candidate) === -1) elements.push(candidate);
+    }
+
+    const selectorTargets = resolveSelectorTargets(access.selectors);
+    for (let selectorIndex = 0; selectorIndex < selectorTargets.length; selectorIndex++) {
+      if (elements.indexOf(selectorTargets[selectorIndex]) === -1) elements.push(selectorTargets[selectorIndex]);
+    }
+
+    for (let targetIndex = 0; targetIndex < access.targets.length; targetIndex++) {
+      const target = access.targets[targetIndex];
+      if (target && typeof target.getBoundingClientRect === 'function' && elements.indexOf(target) === -1) {
+        elements.push(target);
       }
     }
 
     return elements;
+  }
+
+  function getAllowedCanvasTargets(state) {
+    const access = collectProgressiveAccess(state);
+    const targets = [];
+    for (let i = 0; i < access.targets.length; i++) {
+      const target = access.targets[i];
+      if (!target || typeof target.getBoundingClientRect === 'function') continue;
+      if (!Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.w) || !Number.isFinite(target.h)) continue;
+      pushUniqueTarget(targets, target);
+    }
+    return targets;
   }
 
   function isBubbleControlAllowed(controlName, state) {
@@ -838,7 +1027,7 @@
   }
 
   function shouldLockInteractions(state) {
-    if (!getActiveStepId(state)) return false;
+    if (!getPendingStepId(state)) return false;
     if (!runtime.stageEl) return false;
     if (state && state.ui && state.ui.menuOpen) return false;
     return true;
@@ -886,7 +1075,7 @@
 
   function applyUiLock(state) {
     const lockKey = shouldLockInteractions(state)
-      ? [getActiveStepId(state) || '', isStepBubbleOpen(state) ? '1' : '0', state && state.ui && state.ui.menuOpen ? '1' : '0'].join('|')
+      ? [getPendingStepId(state) || '', getActiveStepId(state) || '', isStepBubbleOpen(state) ? '1' : '0', state && state.ui && state.ui.menuOpen ? '1' : '0'].join('|')
       : '';
     if (lockKey === runtime.lastLockKey) return;
 
@@ -1081,10 +1270,20 @@
   function handleCanvasPointerDown(event) {
     const state = getState();
     if (!state || !shouldHandleCanvasRestriction(state)) return;
-    const stepDefinition = getActiveStepDefinition(state);
-    const target = resolveStepTarget(stepDefinition, state);
     const point = getCanvasPointFromEvent(event);
-    if (!target || !point || !isPointInsideCell(target, point)) {
+    const targets = getAllowedCanvasTargets(state);
+    let isAllowed = false;
+
+    if (point) {
+      for (let i = 0; i < targets.length; i++) {
+        if (isPointInsideCell(targets[i], point)) {
+          isAllowed = true;
+          break;
+        }
+      }
+    }
+
+    if (!point || !isAllowed) {
       runtime.canvasSequenceActive = false;
       stopEvent(event);
       return;

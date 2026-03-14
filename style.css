@@ -3174,6 +3174,9 @@ input, select, textarea, button {
   position:absolute;
   width:32px;
   height:32px;
+  --tutorial-pointer-rotation:0deg;
+  --tutorial-pointer-motion-x:0;
+  --tutorial-pointer-motion-y:1;
   border:none;
   border-radius:0;
   background:none;
@@ -3404,19 +3407,19 @@ button[data-tutorial-locked="true"]::after,
 
 @keyframes gameTutorialPointerPulse{
   0%, 100% {
-    transform:translateY(0) scale(1);
+    transform:translate3d(0, 0, 0) rotate(var(--tutorial-pointer-rotation)) scale(1);
   }
   50% {
-    transform:translateY(10px) scale(.94);
+    transform:translate3d(calc(var(--tutorial-pointer-motion-x) * 10px), calc(var(--tutorial-pointer-motion-y) * 10px), 0) rotate(var(--tutorial-pointer-rotation)) scale(.94);
   }
 }
 
 @keyframes gameTutorialPointerPulseHorizontal{
   0%, 100% {
-    transform:translateX(0) scale(1);
+    transform:translate3d(0, 0, 0) rotate(var(--tutorial-pointer-rotation)) scale(1);
   }
   50% {
-    transform:translateX(-10px) scale(.94);
+    transform:translate3d(calc(var(--tutorial-pointer-motion-x) * 10px), calc(var(--tutorial-pointer-motion-y) * 10px), 0) rotate(var(--tutorial-pointer-rotation)) scale(.94);
   }
 }
 
