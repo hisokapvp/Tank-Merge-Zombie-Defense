@@ -57,6 +57,9 @@
     cursorAtlasImage: null,
     cursorAtlasUrl: '',
     pointerAnimationKey: 'click',
+    activeStepProgressId: '',
+    activeStepPurchasedBaseline: 0,
+    activeStepMergedBaseline: 0,
   };
 
   function capturePauseManagerInstance(instance) {
@@ -233,6 +236,25 @@
     return total;
   }
 
+  function getCompletedTankMergeCount(state) {
+    if (!state || typeof state !== 'object') return 0;
+    if (state.achievements && Number.isFinite(Number(state.achievements.totalMerges))) {
+      return Math.max(0, Math.floor(Number(state.achievements.totalMerges)));
+    }
+    if (state.stats && Number.isFinite(Number(state.stats.tanksMergedCount))) {
+      return Math.max(0, Math.floor(Number(state.stats.tanksMergedCount)));
+    }
+    return 0;
+  }
+
+  function syncStepProgressBaseline(state) {
+    const activeStepId = getActiveStepId(state) || '';
+    if (runtime.activeStepProgressId === activeStepId) return;
+    runtime.activeStepProgressId = activeStepId;
+    runtime.activeStepPurchasedBaseline = getPurchasedTankCount(state);
+    runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
+  }
+
   function normalizeTutorialState(state) {
     if (!state || typeof state !== 'object') return createDefaultTutorialState();
     if (!state.tutorial || typeof state.tutorial !== 'object') {
@@ -348,6 +370,45 @@
     return fallback;
   }
 
+  function getHangarTankCount(state) {
+    if (!state || !Array.isArray(state.cells)) return 0;
+    let count = 0;
+    for (let i = 0; i < state.cells.length; i++) {
+      const cell = state.cells[i];
+      if (!cell || !cell.tank || cell.tank.onTrack) continue;
+      count += 1;
+    }
+    return count;
+  }
+
+  function isHangarTankReadyForInteraction(tank) {
+    if (!tank || tank.onTrack) return false;
+    return !Number.isFinite(tank.stampStartSec);
+  }
+
+  function findMergeableHangarPair(state) {
+    if (!state || !Array.isArray(state.cells)) return null;
+    for (let leftIndex = 0; leftIndex < state.cells.length; leftIndex++) {
+      const leftCell = state.cells[leftIndex];
+      const leftTank = leftCell && leftCell.tank;
+      if (!leftCell || !leftTank || !isHangarTankReadyForInteraction(leftTank)) continue;
+      const leftLevel = Number(leftTank.level);
+      if (!Number.isFinite(leftLevel) || leftLevel < 1) continue;
+
+      for (let rightIndex = leftIndex + 1; rightIndex < state.cells.length; rightIndex++) {
+        const rightCell = state.cells[rightIndex];
+        const rightTank = rightCell && rightCell.tank;
+        if (!rightCell || !rightTank || !isHangarTankReadyForInteraction(rightTank)) continue;
+        if (Number(rightTank.level) !== leftLevel) continue;
+        return {
+          source: leftCell,
+          target: rightCell,
+        };
+      }
+    }
+    return null;
+  }
+
   function isStepAvailable(stepDefinition, state) {
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
@@ -355,6 +416,20 @@
       const requiredCoins = Number(stepDefinition.activation.value);
       if (!Number.isFinite(requiredCoins)) return true;
       return Number(state.coins) >= requiredCoins;
+    }
+    if (stepDefinition.activation.kind === 'min_hangar_tanks') {
+      const requiredCount = Number(stepDefinition.activation.value);
+      if (!Number.isFinite(requiredCount)) return true;
+      return getHangarTankCount(state) >= requiredCount;
+    }
+    if (stepDefinition.activation.kind === 'mergeable_hangar_pair') {
+      const requiredCount = Number(
+        Number.isFinite(Number(stepDefinition.activation.minHangarTanks))
+          ? stepDefinition.activation.minHangarTanks
+          : stepDefinition.activation.value
+      );
+      if (Number.isFinite(requiredCount) && getHangarTankCount(state) < requiredCount) return false;
+      return !!findMergeableHangarPair(state);
     }
     return true;
   }
@@ -384,6 +459,36 @@
       return targets;
     }
 
+    if (kind === 'any_track_tank') {
+      if (!Array.isArray(state.cells)) return targets;
+      for (let i = 0; i < state.cells.length; i++) {
+        const cell = state.cells[i];
+        if (!cell || !cell.tank || cell.tank.onTrack !== true) continue;
+        pushUniqueTarget(targets, cell);
+      }
+      return targets;
+    }
+
+    if (kind === 'mergeable_hangar_pair') {
+      const pair = findMergeableHangarPair(state);
+      if (!pair) return targets;
+      pushUniqueTarget(targets, pair.source);
+      pushUniqueTarget(targets, pair.target);
+      return targets;
+    }
+
+    if (kind === 'mergeable_hangar_tank_source') {
+      const pair = findMergeableHangarPair(state);
+      if (pair && pair.source) pushUniqueTarget(targets, pair.source);
+      return targets;
+    }
+
+    if (kind === 'mergeable_hangar_tank_target') {
+      const pair = findMergeableHangarPair(state);
+      if (pair && pair.target) pushUniqueTarget(targets, pair.target);
+      return targets;
+    }
+
     if (kind === 'buy_tank_button') {
       pushUniqueTarget(targets, runtime.ui && runtime.ui.buy ? runtime.ui.buy : null);
       return targets;
@@ -392,16 +497,26 @@
     return targets;
   }
 
-  function resolveStepTarget(stepDefinition, state) {
-    if (!stepDefinition || !stepDefinition.target || !state) return null;
-    if (typeof stepDefinition.target.kind === 'string') {
-      const targets = resolveTargetsByKind(stepDefinition.target.kind, state);
+  function resolveTargetBySpec(targetSpec, state) {
+    if (!targetSpec || !state) return null;
+    if (typeof targetSpec.kind === 'string') {
+      const targets = resolveTargetsByKind(targetSpec.kind, state);
       return targets.length ? targets[0] : null;
     }
-    if (typeof stepDefinition.target.selector === 'string' && runtime.documentObj) {
-      return runtime.documentObj.querySelector(stepDefinition.target.selector);
+    if (typeof targetSpec.selector === 'string' && runtime.documentObj) {
+      return runtime.documentObj.querySelector(targetSpec.selector);
     }
     return null;
+  }
+
+  function resolveStepTarget(stepDefinition, state) {
+    if (!stepDefinition || !state) return null;
+    return resolveTargetBySpec(stepDefinition.target, state);
+  }
+
+  function resolveStepSecondaryTarget(stepDefinition, state) {
+    if (!stepDefinition || !state) return null;
+    return resolveTargetBySpec(stepDefinition.secondaryTarget, state);
   }
 
   function isElementVisible(element) {
@@ -456,11 +571,20 @@
     return normalized < 0 ? normalized + 360 : normalized;
   }
 
+  function sanitizeCursorOffset(raw) {
+    const next = raw && typeof raw === 'object' ? raw : {};
+    return {
+      x: Number.isFinite(Number(next.x)) ? Number(next.x) : 0,
+      y: Number.isFinite(Number(next.y)) ? Number(next.y) : 0,
+    };
+  }
+
   function sanitizeCursorStepVisual(raw) {
     const next = raw && typeof raw === 'object' ? raw : {};
     return {
       spriteRotationDeg: normalizeRotationDegrees(next.spriteRotationDeg, 0),
       motionAngleDeg: normalizeRotationDegrees(next.motionAngleDeg, 90),
+      offset: sanitizeCursorOffset(next.offset),
     };
   }
 
@@ -778,16 +902,26 @@
     return !!(stepState && stepState.bubbleOpen);
   }
 
-  function syncPointerMode(stepDefinition) {
-    if (!runtime.pointerEl) return;
-    runtime.pointerAnimationKey = getPointerAnimationKey(stepDefinition);
+  function getStepCursorVisualConfig(stepDefinition) {
     const stepId = stepDefinition && typeof stepDefinition.id === 'string' ? stepDefinition.id : '';
-    const stepConfig = runtime.cursorConfig && runtime.cursorConfig.steps && stepId
-      ? runtime.cursorConfig.steps[stepId] || null
-      : null;
-    const motionAngleDeg = stepConfig
-      ? normalizeRotationDegrees(stepConfig.motionAngleDeg, stepDefinition && stepDefinition.pointerMotion === 'horizontal' ? 180 : 90)
+    if (!stepId || !runtime.cursorConfig || !runtime.cursorConfig.steps) return null;
+    return runtime.cursorConfig.steps[stepId] || null;
+  }
+
+  function syncPointerMode(stepDefinition, pointerLayout) {
+    if (!runtime.pointerEl) return;
+    const animations = runtime.cursorConfig && runtime.cursorConfig.animations ? runtime.cursorConfig.animations : {};
+    const requestedAnimationKey = pointerLayout && typeof pointerLayout.animationKey === 'string'
+      ? pointerLayout.animationKey
+      : getPointerAnimationKey(stepDefinition);
+    runtime.pointerAnimationKey = animations[requestedAnimationKey] ? requestedAnimationKey : 'click';
+    const stepConfig = getStepCursorVisualConfig(stepDefinition);
+    const fallbackMotionAngleDeg = pointerLayout && Number.isFinite(Number(pointerLayout.motionAngleDeg))
+      ? Number(pointerLayout.motionAngleDeg)
       : (stepDefinition && stepDefinition.pointerMotion === 'horizontal' ? 180 : 90);
+    const motionAngleDeg = stepConfig
+      ? normalizeRotationDegrees(stepConfig.motionAngleDeg, fallbackMotionAngleDeg)
+      : normalizeRotationDegrees(fallbackMotionAngleDeg, fallbackMotionAngleDeg);
     const spriteRotationDeg = stepConfig
       ? normalizeRotationDegrees(stepConfig.spriteRotationDeg, 0)
       : 0;
@@ -797,13 +931,102 @@
     runtime.pointerEl.style.setProperty('--tutorial-pointer-motion-y', String(Math.round(Math.sin(radians) * 1000) / 1000));
     runtime.pointerEl.classList.toggle(
       'gameTutorial__pointer--horizontal',
-      !!(stepDefinition && stepDefinition.pointerMotion === 'horizontal')
+      !!((pointerLayout && pointerLayout.isPathMotion) || (stepDefinition && stepDefinition.pointerMotion === 'horizontal'))
     );
   }
 
-  function positionOverlay(target) {
-    if (!runtime.rootEl || !runtime.pointerEl || !runtime.documentObj || !target) return;
+  function resolveTargetCenter(target, stageRect, canvas) {
+    if (!target || !stageRect) return null;
+    if (target && typeof target.getBoundingClientRect === 'function') {
+      if (!isElementVisible(target)) return null;
+      const targetRect = target.getBoundingClientRect();
+      if (!targetRect || targetRect.width <= 0 || targetRect.height <= 0) return null;
+      return {
+        x: targetRect.left - stageRect.left + targetRect.width * 0.5,
+        y: targetRect.top - stageRect.top + targetRect.height * 0.5,
+      };
+    }
+    if (!canvas || !Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.w) || !Number.isFinite(target.h)) {
+      return null;
+    }
+    const canvasRect = canvas.getBoundingClientRect();
+    return {
+      x: canvasRect.left - stageRect.left + target.x + target.w * 0.5,
+      y: canvasRect.top - stageRect.top + target.y + target.h * 0.5,
+    };
+  }
+
+  function resolvePointerLayout(stepDefinition, state, nowMs) {
+    if (!stepDefinition || !state || !runtime.documentObj || !runtime.rootEl) return null;
     const canvas = runtime.canvasEl || runtime.documentObj.getElementById('c');
+    const stageCanvas = runtime.stageEl || runtime.rootEl.parentElement;
+    if (!stageCanvas) return null;
+
+    const stageRect = stageCanvas.getBoundingClientRect();
+    const primaryTarget = resolveStepTarget(stepDefinition, state);
+    const primaryCenter = resolveTargetCenter(primaryTarget, stageRect, canvas);
+    if (!primaryCenter) return null;
+
+    const stepConfig = getStepCursorVisualConfig(stepDefinition);
+    const offsetX = stepConfig && stepConfig.offset ? Number(stepConfig.offset.x) || 0 : 0;
+    const offsetY = stepConfig && stepConfig.offset ? Number(stepConfig.offset.y) || 0 : 0;
+    let pointerCenterX = primaryCenter.x;
+    let pointerCenterY = primaryCenter.y;
+    let bubbleAnchorX = primaryCenter.x;
+    let bubbleAnchorY = primaryCenter.y;
+    let animationKey = null;
+    let motionAngleDeg = null;
+    let isPathMotion = false;
+
+    const secondaryTarget = resolveStepSecondaryTarget(stepDefinition, state);
+    const secondaryCenter = secondaryTarget ? resolveTargetCenter(secondaryTarget, stageRect, canvas) : null;
+    const pointerPath = stepDefinition.pointerPath && typeof stepDefinition.pointerPath === 'object'
+      ? stepDefinition.pointerPath
+      : null;
+
+    if (secondaryCenter && pointerPath) {
+      const leadInMs = Number.isFinite(Number(pointerPath.leadInMs)) ? Math.max(0, Number(pointerPath.leadInMs)) : 220;
+      const dragMs = Number.isFinite(Number(pointerPath.dragMs)) ? Math.max(240, Number(pointerPath.dragMs)) : 1080;
+      const dropHoldMs = Number.isFinite(Number(pointerPath.dropHoldMs)) ? Math.max(160, Number(pointerPath.dropHoldMs)) : 320;
+      const cycleMs = Math.max(leadInMs + dragMs + dropHoldMs, 1);
+      const cycleProgressMs = nowMs % cycleMs;
+      bubbleAnchorX = secondaryCenter.x;
+      bubbleAnchorY = secondaryCenter.y;
+      isPathMotion = true;
+
+      if (cycleProgressMs < leadInMs) {
+        animationKey = 'click';
+      } else if (cycleProgressMs < leadInMs + dragMs) {
+        const travelProgress = (cycleProgressMs - leadInMs) / dragMs;
+        pointerCenterX = primaryCenter.x + (secondaryCenter.x - primaryCenter.x) * travelProgress;
+        pointerCenterY = primaryCenter.y + (secondaryCenter.y - primaryCenter.y) * travelProgress;
+        animationKey = 'drag';
+      } else {
+        pointerCenterX = secondaryCenter.x;
+        pointerCenterY = secondaryCenter.y;
+        animationKey = 'drop';
+      }
+
+      const deltaX = secondaryCenter.x - primaryCenter.x;
+      const deltaY = secondaryCenter.y - primaryCenter.y;
+      if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+        motionAngleDeg = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+      }
+    }
+
+    return {
+      pointerCenterX: pointerCenterX + offsetX,
+      pointerCenterY: pointerCenterY + offsetY,
+      bubbleAnchorX: bubbleAnchorX,
+      bubbleAnchorY: bubbleAnchorY,
+      animationKey: animationKey,
+      motionAngleDeg: motionAngleDeg,
+      isPathMotion: isPathMotion,
+    };
+  }
+
+  function positionOverlay(pointerLayout) {
+    if (!runtime.rootEl || !runtime.pointerEl || !runtime.documentObj || !pointerLayout) return;
     const stageCanvas = runtime.stageEl || runtime.rootEl.parentElement;
     if (!stageCanvas) {
       setOverlayHidden(true);
@@ -811,30 +1034,8 @@
     }
 
     const stageRect = stageCanvas.getBoundingClientRect();
-    let centerX = 0;
-    let centerY = 0;
-
-    if (target && typeof target.getBoundingClientRect === 'function') {
-      if (!isElementVisible(target)) {
-        setOverlayHidden(true);
-        return;
-      }
-      const targetRect = target.getBoundingClientRect();
-      if (!targetRect || targetRect.width <= 0 || targetRect.height <= 0) {
-        setOverlayHidden(true);
-        return;
-      }
-      centerX = targetRect.left - stageRect.left + targetRect.width * 0.5;
-      centerY = targetRect.top - stageRect.top + targetRect.height * 0.5;
-    } else {
-      if (!canvas || !Number.isFinite(target.x) || !Number.isFinite(target.y) || !Number.isFinite(target.w) || !Number.isFinite(target.h)) {
-        setOverlayHidden(true);
-        return;
-      }
-      const canvasRect = canvas.getBoundingClientRect();
-      centerX = canvasRect.left - stageRect.left + target.x + target.w * 0.5;
-      centerY = canvasRect.top - stageRect.top + target.y + target.h * 0.5;
-    }
+    const centerX = pointerLayout.pointerCenterX;
+    const centerY = pointerLayout.pointerCenterY;
 
     const pointerWidth = runtime.pointerEl.offsetWidth || 32;
     const pointerHeight = runtime.pointerEl.offsetHeight || 32;
@@ -845,8 +1046,8 @@
 
     const bubbleWidth = runtime.bubbleEl.offsetWidth || 340;
     const bubbleHeight = runtime.bubbleEl.offsetHeight || 160;
-    let bubbleLeft = centerX + 28;
-    let bubbleTop = centerY - bubbleHeight - 18;
+  let bubbleLeft = pointerLayout.bubbleAnchorX + 28;
+  let bubbleTop = pointerLayout.bubbleAnchorY - bubbleHeight - 18;
 
     if (bubbleLeft + bubbleWidth > stageRect.width - 12) bubbleLeft = centerX - bubbleWidth - 28;
     if (bubbleTop < 12) bubbleTop = centerY + 20;
@@ -1350,9 +1551,14 @@
       : Date.now();
 
     migrateTutorialStateIfNeeded(state);
+    syncStepProgressBaseline(state);
     const completionStep = getActiveStepDefinition(state);
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'tank_bought' && getPurchasedTankCount(state) > 0) {
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'tank_bought' && getPurchasedTankCount(state) > runtime.activeStepPurchasedBaseline) {
       completeCurrentStep('tank_bought');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'tank_merged' && getCompletedTankMergeCount(state) > runtime.activeStepMergedBaseline) {
+      completeCurrentStep('tank_merged');
       return;
     }
     ensureDom();
@@ -1364,10 +1570,10 @@
     syncBodyState(state);
 
     const activeStep = getActiveStepDefinition(state);
-    syncPointerMode(activeStep);
+    const pointerLayout = resolvePointerLayout(activeStep, state, nowMs);
+    syncPointerMode(activeStep, pointerLayout);
     syncPointerSprite(nowMs);
-    const target = resolveStepTarget(activeStep, state);
-    const shouldHide = !activeStep || !target || shouldSuppressOverlay(state);
+    const shouldHide = !activeStep || !pointerLayout || shouldSuppressOverlay(state);
 
     if (!runtime.rootEl || shouldHide) {
       closeDisableConfirm({ restoreFocus: false });
@@ -1382,7 +1588,7 @@
 
     setOverlayHidden(false);
     setBubbleHidden(!isStepBubbleOpen(state));
-    positionOverlay(target);
+    positionOverlay(pointerLayout);
     setDisableConfirmHidden(!runtime.disableConfirmOpen);
   }
 

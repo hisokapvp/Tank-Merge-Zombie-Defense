@@ -38,6 +38,7 @@ const bootstrapJs = fs.readFileSync(path.join(root, 'src/core/bootstrap.js'), 'u
 const tutorialStepsJs = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
 const tutorialRuntimeJs = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
 const tutorialCursorConfig = fs.readFileSync(path.join(root, 'assets/tutotialCursore.json'), 'utf-8');
+const hangarChipsUiJs = fs.readFileSync(path.join(root, 'src/ui/hangarChipsUI.js'), 'utf-8');
 const storageJs = fs.readFileSync(path.join(root, 'src/persistence/storage.js'), 'utf-8');
 const garageJs = fs.readFileSync(path.join(root, 'src/mechanics/garage.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
@@ -63,10 +64,11 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
 
   const state = globalObj.Game.InitialState.createInitialState({ reason: 'new_game' });
   assertEqual(state.coins, 40, 'new game starts with 40 coins');
-  assertEqual(state.tutorial.version, 4, 'tutorial state uses data-driven schema version 4');
+  assertEqual(state.tutorial.version, 5, 'tutorial state uses data-driven schema version 5');
   assert(state.tutorial && state.tutorial.currentStepId === 'starter_tank', 'starter tutorial step exists');
   assert(state.tutorial.steps && state.tutorial.steps.starter_tank && state.tutorial.steps.starter_tank.completed === false, 'starter tutorial step is pending');
   assert(state.tutorial.steps.starter_tank.bubbleOpen === true, 'starter tutorial bubble starts open');
+  assert(state.tutorial.steps.merge_tank && state.tutorial.steps.merge_tank.completed === false, 'merge tutorial step is present and pending');
 });
 
 test('TUT-2: starter tank spawn and pre-retry reset keep the tank in hangar', () => {
@@ -103,36 +105,61 @@ test('TUT-6: tutorial runtime is loaded from index.html', () => {
 
 test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialStarterTankMessage"') !== -1, 'ru tutorial message exists');
+  assert(ru.indexOf('"tutorialMergeTankMessage"') !== -1, 'ru merge tutorial message exists');
   assert(ru.indexOf('"tutorialContinue"') !== -1, 'ru continue button exists');
   assert(ru.indexOf('"tutorialDisable"') !== -1, 'ru disable button exists');
   assert(ru.indexOf('"tutorialLockedTooltip"') !== -1, 'ru lock tooltip exists');
+  assert(ru.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'ru workshop empty merge string exists');
   assert(en.indexOf('"tutorialStarterTankMessage"') !== -1, 'en tutorial message exists');
+  assert(en.indexOf('"tutorialMergeTankMessage"') !== -1, 'en merge tutorial message exists');
   assert(en.indexOf('"tutorialContinue"') !== -1, 'en continue button exists');
   assert(en.indexOf('"tutorialDisable"') !== -1, 'en disable button exists');
   assert(en.indexOf('"tutorialLockedTooltip"') !== -1, 'en lock tooltip exists');
+  assert(en.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'en workshop empty merge string exists');
   assert(fallback.indexOf('tutorialStarterTankMessage') !== -1, 'fallback tutorial message exists');
+  assert(fallback.indexOf('tutorialMergeTankMessage') !== -1, 'fallback merge tutorial message exists');
   assert(fallback.indexOf('tutorialContinue') !== -1, 'fallback continue button exists');
   assert(fallback.indexOf('tutorialDisable') !== -1, 'fallback disable button exists');
   assert(fallback.indexOf('tutorialLockedTooltip') !== -1, 'fallback lock tooltip exists');
+  assert(fallback.indexOf('workshopChipUpgradeEmpty') !== -1, 'fallback workshop empty merge string exists');
 });
 
 test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("id: 'starter_tank'") !== -1, 'starter_tank step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("id: 'merge_tank'") !== -1, 'merge_tank step lives in tutorial config');
   assert(tutorialStepsJs.indexOf('bubbleControls') !== -1, 'tutorial config defines allowed bubble controls');
   assert(tutorialStepsJs.indexOf('unlock:') !== -1, 'tutorial config defines progressive unlocks');
-  assert(tutorialStepsJs.indexOf("targetKinds: ['any_hangar_tank']") !== -1, 'starter step unlocks tank interactions cumulatively');
+  assert(tutorialStepsJs.indexOf("targetKinds: ['any_hangar_tank', 'any_track_tank']") !== -1, 'starter step unlocks hangar and track interactions cumulatively');
   assert(tutorialStepsJs.indexOf("uiKeys: ['buy']") !== -1, 'second step unlocks buy button cumulatively');
+  assert(tutorialStepsJs.indexOf("kind: 'mergeable_hangar_pair'") !== -1, 'merge step activates only for a real mergeable pair');
+  assert(tutorialStepsJs.indexOf('secondaryTarget:') !== -1, 'merge step defines a secondary drag target');
+  assert(tutorialStepsJs.indexOf('pointerPath:') !== -1, 'merge step defines drag-drop pointer path');
 });
 
-test('TUT-9: cursor config supports per-step sprite rotation and motion angle overrides', () => {
+test('TUT-9: cursor config supports per-step sprite rotation, motion angle and optional offsets', () => {
   assert(tutorialCursorConfig.indexOf('"steps"') !== -1, 'cursor config contains per-step section');
   assert(tutorialCursorConfig.indexOf('"spriteRotationDeg"') !== -1, 'cursor config stores sprite rotation');
   assert(tutorialCursorConfig.indexOf('"motionAngleDeg"') !== -1, 'cursor config stores motion angle');
+  assert(tutorialCursorConfig.indexOf('"offset"') !== -1, 'cursor config stores optional pointer offsets');
   assert(tutorialRuntimeJs.indexOf('runtime.cursorConfig.steps') !== -1, 'runtime reads per-step cursor settings');
+  assert(tutorialRuntimeJs.indexOf('offset: sanitizeCursorOffset(next.offset)') !== -1, 'runtime sanitizes missing offset values to defaults');
+  assert(tutorialRuntimeJs.indexOf('pointerCenterX: pointerCenterX + offsetX') !== -1, 'runtime applies X offset to pointer layout');
+  assert(tutorialRuntimeJs.indexOf('pointerCenterY: pointerCenterY + offsetY') !== -1, 'runtime applies Y offset to pointer layout');
   assert(tutorialRuntimeJs.indexOf("'any_hangar_tank'") !== -1, 'runtime resolves cumulative tank targets');
 });
 
-test('TUT-10: terminal collapse button label is fully renamed', () => {
+test('TUT-10: merge tutorial completion waits for merge after step activation', () => {
+  assert(tutorialRuntimeJs.indexOf('activeStepMergedBaseline') !== -1, 'runtime tracks merge baseline for active step');
+  assert(tutorialRuntimeJs.indexOf('getCompletedTankMergeCount(state) > runtime.activeStepMergedBaseline') !== -1, 'merge step completes only after merge count increases during active step');
+});
+
+test('TUT-11: chip upgrade tab keeps only mergeable chips and removes large vertex dots', () => {
+  assert(hangarChipsUiJs.indexOf('var mergeableChips = chips.filter(function (chip) {') !== -1, 'chip upgrade grid filters inventory to mergeable chips only');
+  assert(hangarChipsUiJs.indexOf("t('workshopChipUpgradeEmpty'") !== -1, 'chip upgrade grid renders empty-state message when no pair exists');
+  assert(hangarChipsUiJs.indexOf('Math.max(w, h) >= 54 ? 0 :') !== -1, 'large chip icons suppress vertex dots');
+});
+
+test('TUT-12: terminal collapse button label is fully renamed', () => {
   assert(indexHtml.indexOf('aria-label="Свернуть терминал"') !== -1, 'collapse button aria-label renamed');
   assert(indexHtml.indexOf('data-ui-tooltip="Свернуть терминал"') !== -1, 'collapse button tooltip renamed');
 });

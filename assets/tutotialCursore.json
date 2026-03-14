@@ -35,11 +35,18 @@
   "steps": {
     "starter_tank": {
       "spriteRotationDeg": 90,
-      "motionAngleDeg": 0
+      "motionAngleDeg": 0,
+      "offset": { "x": -50, "y": 10 }
     },
     "second_tank": {
       "spriteRotationDeg": 0,
-      "motionAngleDeg": 0
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 0 }
+    },
+    "merge_tank": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 0 }
     }
   }
 }

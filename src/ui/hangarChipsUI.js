@@ -200,11 +200,13 @@
     svg += '<polygon points="' + ax + ',' + ay + ' ' + bx + ',' + by + ' ' + cx2 + ',' + cy2 + '" fill="none" stroke="' + borderColor + '" stroke-width="' + sw + '"/>';
 
     /* Vertex dots */
-    var dotR = Math.max(2.5, Math.min(4, w / 10));
-    var vx = [[ax, ay + 4], [bx - 4, by - 3], [cx2 + 4, cy2 - 3]];
-    for (var vi = 0; vi < 3 && modIds && vi < modIds.length; vi++) {
-      var mc = (hc2 && hc2.isSpecialMod(modIds[vi])) ? '#fdd835' : '#e53935';
-      svg += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="' + dotR + '" fill="' + mc + '" />';
+    var dotR = Math.max(w, h) >= 54 ? 0 : Math.max(0.9, Math.min(1.25, w / 44));
+    if (dotR > 0) {
+      var vx = [[ax, ay + 2], [bx - 2, by - 1.5], [cx2 + 2, cy2 - 1.5]];
+      for (var vi = 0; vi < 3 && modIds && vi < modIds.length; vi++) {
+        var mc = (hc2 && hc2.isSpecialMod(modIds[vi])) ? '#fdd835' : '#e53935';
+        svg += '<circle cx="' + vx[vi][0] + '" cy="' + vx[vi][1] + '" r="' + dotR + '" fill="' + mc + '" />';
+      }
     }
 
     svg += '</svg>';
@@ -1250,6 +1252,36 @@
     _playerChips = Array.isArray(chips) ? chips : [];
   }
 
+  function getChipEntryCount(entry) {
+    var raw = Number(entry && entry.count);
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 1;
+  }
+
+  function getChipMergePairKey(chipId, level) {
+    return String(chipId) + '|' + String(level);
+  }
+
+  function buildChipMergePairCounts(chips) {
+    var entries = Array.isArray(chips) ? chips : [];
+    var counts = {};
+    for (var i = 0; i < entries.length; i++) {
+      var chip = entries[i];
+      if (!chip || !Number.isFinite(chip.chipId) || !Number.isFinite(chip.level)) continue;
+      var key = getChipMergePairKey(chip.chipId, chip.level);
+      counts[key] = (counts[key] || 0) + getChipEntryCount(chip);
+    }
+    return counts;
+  }
+
+  function getChipMergePairCount(pairCounts, chipId, level) {
+    if (!pairCounts || typeof pairCounts !== 'object') return 0;
+    return pairCounts[getChipMergePairKey(chipId, level)] || 0;
+  }
+
+  function canChipEntryMerge(chip, pairCounts) {
+    return !!chip && getChipMergePairCount(pairCounts, chip.chipId, chip.level) >= 2;
+  }
+
   /** Add a chip to player's inventory. Each chip is a separate entry (no stacking). */
   function addPlayerChip(chipDef, level) {
     var chips = ensurePlayerChips();
@@ -1289,20 +1321,29 @@
       Returns the new level or -1 on failure. */
   function mergeChips(chipId, level) {
     var chips = ensurePlayerChips();
-    /* Find two separate entries with same chipId+level */
-    var idx1 = -1, idx2 = -1;
+    var matchCount = 0;
+    var entry = null;
     for (var i = 0; i < chips.length; i++) {
       if (chips[i].chipId === chipId && chips[i].level === level) {
-        if (idx1 === -1) { idx1 = i; }
-        else { idx2 = i; break; }
+        if (!entry) entry = chips[i];
+        matchCount += getChipEntryCount(chips[i]);
+        if (matchCount >= 2) break;
       }
     }
-    if (idx1 === -1 || idx2 === -1) return -1;
-    var entry = chips[idx1];
+    if (!entry || matchCount < 2) return -1;
     var newLevel = level + 1;
-    /* Remove both entries (higher index first to preserve lower) */
-    chips.splice(idx2, 1);
-    chips.splice(idx1, 1);
+
+    var remainingToConsume = 2;
+    for (var ri = chips.length - 1; ri >= 0 && remainingToConsume > 0; ri--) {
+      if (chips[ri].chipId !== chipId || chips[ri].level !== level) continue;
+      var copiesInEntry = getChipEntryCount(chips[ri]);
+      var take = Math.min(copiesInEntry, remainingToConsume);
+      if (take <= 0) continue;
+      remainingToConsume -= take;
+      if (copiesInEntry === take) chips.splice(ri, 1);
+      else chips[ri].count = copiesInEntry - take;
+    }
+
     /* add merged chip */
     var h = hc();
     var chipDef = h ? h.getChipById(h.allChips, chipId) : null;
@@ -1339,14 +1380,18 @@
     if (!grid) return;
     var chips = ensurePlayerChips();
     var h = hc();
+    var pairCounts = buildChipMergePairCounts(chips);
+    var mergeableChips = chips.filter(function (chip) {
+      return canChipEntryMerge(chip, pairCounts);
+    });
 
-    if (!chips.length) {
-      grid.innerHTML = '<div class="chipUpgradeEmptyLabel">' + t('workshopChipUpgradeEmpty', 'У вас пока нет чипов') + '</div>';
+    if (!mergeableChips.length) {
+      grid.innerHTML = '<div class="chipUpgradeEmptyLabel">' + t('workshopChipUpgradeEmpty', 'У Вас пока нет двух одинаковых чипов, для того чтобы сделать улучшение') + '</div>';
       return;
     }
 
     /* sort: by chipColor (red first), then by chipId, then by level */
-    var sorted = chips.slice().sort(function(a, b) {
+    var sorted = mergeableChips.slice().sort(function(a, b) {
       if (a.chipColor !== b.chipColor) return a.chipColor === 'red' ? -1 : 1;
       if (a.chipId !== b.chipId) return a.chipId - b.chipId;
       return a.level - b.level;
@@ -1356,15 +1401,8 @@
     for (var i = 0; i < sorted.length; i++) {
       var chip = sorted[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
-      /* Check if another entry with same chipId+level exists (for merge) */
-      var canMerge = false;
-      for (var cm = 0; cm < sorted.length; cm++) {
-        if (cm !== i && sorted[cm].chipId === chip.chipId && sorted[cm].level === chip.level) {
-          canMerge = true; break;
-        }
-      }
+      var canMerge = canChipEntryMerge(chip, pairCounts);
       var cardClass = 'chipUpgradeCard' + (canMerge ? ' chipUpgradeCard--canMerge' : '');
-      var bonusPct = chipLevelBonus(chip.level);
       var tooltipData = 'data-chip-upgrade-id="' + chip.chipId + '" data-chip-upgrade-level="' + chip.level + '"';
 
       html += '<div class="' + cardClass + '" ' + tooltipData + ' data-drag-chip-id="' + chip.chipId + '" data-drag-chip-level="' + chip.level + '" title="">';
@@ -3904,12 +3942,8 @@
 
         /* Only allow dragging chips that have a matching entry for merge */
         var chips = ensurePlayerChips();
-        var matchCount = 0;
-        for (var mi = 0; mi < chips.length; mi++) {
-          if (chips[mi].chipId === chipId && chips[mi].level === level) matchCount++;
-          if (matchCount >= 2) break;
-        }
-        if (matchCount < 2) return;
+        var pairCounts = buildChipMergePairCounts(chips);
+        if (getChipMergePairCount(pairCounts, chipId, level) < 2) return;
 
         evt.preventDefault();
 

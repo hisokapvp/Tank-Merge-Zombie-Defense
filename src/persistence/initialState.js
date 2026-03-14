@@ -8,12 +8,22 @@
     }
 
     return {
-      version: 4,
+      version: 5,
       disabled: false,
       completed: false,
       currentStepId: 'starter_tank',
       steps: {
         starter_tank: {
+          completed: false,
+          dismissed: false,
+          bubbleOpen: true,
+        },
+        second_tank: {
+          completed: false,
+          dismissed: false,
+          bubbleOpen: true,
+        },
+        merge_tank: {
           completed: false,
           dismissed: false,
           bubbleOpen: true,

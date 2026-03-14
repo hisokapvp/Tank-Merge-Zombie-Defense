@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 4;
+  var VERSION = 5;
   var DEFAULT_BUBBLE_CONTROLS = ['close', 'continue', 'disable'];
 
   function cloneStringArray(value) {
@@ -39,6 +39,8 @@
       pointerMotion: typeof def.pointerMotion === 'string' ? def.pointerMotion : '',
       activation: clonePlainObject(def.activation),
       target: clonePlainObject(def.target),
+      secondaryTarget: clonePlainObject(def.secondaryTarget),
+      pointerPath: clonePlainObject(def.pointerPath),
       completion: clonePlainObject(def.completion),
       allow: {
         bubbleControls: bubbleControls,
@@ -67,7 +69,7 @@
         bubbleControls: ['close', 'continue', 'disable'],
       },
       unlock: {
-        targetKinds: ['any_hangar_tank'],
+        targetKinds: ['any_hangar_tank', 'any_track_tank'],
       },
     }),
     createStep({
@@ -90,7 +92,38 @@
         bubbleControls: ['close', 'continue', 'disable'],
       },
       unlock: {
-        uiKeys: ['buy', 'any_hangar_tank'],
+        uiKeys: ['buy'],
+        targetKinds: ['any_track_tank'],
+      },
+    }),
+    createStep({
+      id: 'merge_tank',
+      messageKey: 'tutorialMergeTankMessage',
+      pointerAnimation: 'drag',
+      activation: {
+        kind: 'mergeable_hangar_pair',
+        minHangarTanks: 3,
+      },
+      target: {
+        kind: 'mergeable_hangar_tank_source',
+      },
+      secondaryTarget: {
+        kind: 'mergeable_hangar_tank_target',
+      },
+      pointerPath: {
+        leadInMs: 220,
+        dragMs: 1080,
+        dropHoldMs: 320,
+      },
+      completion: {
+        kind: 'tank_merged',
+        cause: 'user',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        targetKinds: ['mergeable_hangar_pair'],
       },
     }),
   ];

@@ -218,6 +218,7 @@
   "menuSettings": "Settings",
   "tutorialStarterTankMessage": "Tap the tank and send it into battle!",
   "tutorialSecondTankMessage": "Create another tank",
+  "tutorialMergeTankMessage": "Drag one tank onto the matching tank to merge them and unlock a new tank level",
   "tutorialContinue": "Continue",
   "tutorialSkip": "Skip",
   "tutorialDisable": "Turn off tutorial",
@@ -463,6 +464,7 @@
   ,"hangarChipsFilterRed": "Red"
   ,"hangarChipsFilterYellow": "Yellow"
   ,"hangarChipsNoChips": "No suitable chips in inventory"
+  ,"workshopChipUpgradeEmpty": "You do not have two identical chips yet to perform an upgrade"
   ,"workshopChipTooltipLevel": "Level: {level}"
   ,"workshopChipTooltipBonus": "Bonus: +{bonus}% attack power"
   ,"workshopChipTooltipCount": "Count: {count}"
