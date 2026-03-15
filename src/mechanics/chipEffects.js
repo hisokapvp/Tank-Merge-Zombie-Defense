@@ -61,9 +61,144 @@
     large: 80     // mod 30 — Large Calming
   };
 
-  function loadChipsCfg(cfg) { _chipsCfg = cfg; }
+  /* ────────── chip atlas image cache ────────── */
+  var _chipAtlasImages = {};
+
+  function loadChipsCfg(cfg) {
+    _chipsCfg = cfg;
+    _chipSpriteCache = {};
+    _chipSfxRegistered = {};
+    _preloadChipAtlasImages(cfg);
+  }
+
+  function _preloadChipAtlasImages(cfg) {
+    if (!cfg || !cfg.modifiers || typeof cfg.modifiers !== 'object') return;
+    var srcs = {};
+    var keys = Object.keys(cfg.modifiers);
+    for (var i = 0; i < keys.length; i++) {
+      var mod = cfg.modifiers[keys[i]];
+      if (mod && mod.bulletSprite && typeof mod.bulletSprite.src === 'string' && mod.bulletSprite.src) {
+        srcs[mod.bulletSprite.src] = true;
+      }
+      if (mod && mod.impactSprite && typeof mod.impactSprite.src === 'string' && mod.impactSprite.src) {
+        srcs[mod.impactSprite.src] = true;
+      }
+    }
+    var srcList = Object.keys(srcs);
+    for (var j = 0; j < srcList.length; j++) {
+      if (_chipAtlasImages[srcList[j]]) continue;
+      var img = new Image();
+      img.src = 'assets/' + srcList[j];
+      _chipAtlasImages[srcList[j]] = img;
+    }
+  }
+
+  function getChipAtlasImage(src) {
+    if (!src) return null;
+    var img = _chipAtlasImages[src];
+    return img && img.complete && img.naturalWidth > 0 ? img : null;
+  }
+
   function getChipsCfg() { return _chipsCfg; }
   function getModCfg(modId) { return _chipsCfg && _chipsCfg.modifiers ? _chipsCfg.modifiers[String(modId)] : null; }
+
+  /* ────────── per-modifier sprite / sfx helpers ────────── */
+  var _chipSpriteCache = {};
+  var _chipSfxRegistered = {};
+
+  function _normalizeCustomSprite(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (!raw.src || typeof raw.src !== 'string') return null;
+    var frame = raw.frame;
+    if (!frame || typeof frame !== 'object') return null;
+    var x = Number(frame.x); var y = Number(frame.y);
+    var w = Number(frame.w); var h = Number(frame.h);
+    if (!Number.isFinite(w) || w <= 0 || !Number.isFinite(h) || h <= 0) return null;
+    if (!Number.isFinite(x)) x = 0;
+    if (!Number.isFinite(y)) y = 0;
+    var frames = Number.isFinite(raw.frames) ? Math.max(1, Math.floor(raw.frames)) : 1;
+    var fps = Number.isFinite(raw.frameRateFps) ? Math.max(0.01, raw.frameRateFps) : 12;
+    var anchor = raw.anchor && typeof raw.anchor === 'object'
+      ? { x: Number.isFinite(raw.anchor.x) ? raw.anchor.x : 0.5, y: Number.isFinite(raw.anchor.y) ? raw.anchor.y : 0.5 }
+      : { x: 0.5, y: 0.5 };
+    var scale = Number.isFinite(raw.scale) ? Math.max(0.01, raw.scale) : 1;
+    return { src: raw.src, frame: { x: x, y: y, w: w, h: h }, frames: frames, frameRateFps: fps, anchor: anchor, scale: scale };
+  }
+
+  function getModBulletSprite(modId) {
+    var key = 'b' + modId;
+    if (key in _chipSpriteCache) return _chipSpriteCache[key];
+    var cfg = getModCfg(modId);
+    var result = cfg ? _normalizeCustomSprite(cfg.bulletSprite) : null;
+    _chipSpriteCache[key] = result;
+    return result;
+  }
+
+  function getModImpactSprite(modId) {
+    var key = 'i' + modId;
+    if (key in _chipSpriteCache) return _chipSpriteCache[key];
+    var cfg = getModCfg(modId);
+    var result = cfg ? _normalizeCustomSprite(cfg.impactSprite) : null;
+    _chipSpriteCache[key] = result;
+    return result;
+  }
+
+  function getModSfxConfig(modId) {
+    var cfg = getModCfg(modId);
+    if (!cfg || !cfg.sfx || typeof cfg.sfx !== 'object') return null;
+    return cfg.sfx;
+  }
+
+  function resolveChipSfxKey(modId, sfxKind) {
+    var sfxCfg = getModSfxConfig(modId);
+    if (!sfxCfg) return null;
+    var value = sfxCfg[sfxKind];
+    if (!value) return null;
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value) && value.length > 0) {
+      var dynKey = '_chip_' + modId + '_' + sfxKind;
+      if (!_chipSfxRegistered[dynKey]) {
+        var sfxController = global.Game && global.Game.SfxPoolRuntime;
+        if (sfxController && typeof sfxController.setSfxSources === 'function') {
+          sfxController.setSfxSources(dynKey, value);
+        }
+        _chipSfxRegistered[dynKey] = true;
+      }
+      return dynKey;
+    }
+    return null;
+  }
+
+  function resolveChipShotSfx(activeModIds) {
+    if (!activeModIds || !activeModIds.length) return null;
+    for (var i = 0; i < activeModIds.length; i++) {
+      var key = resolveChipSfxKey(activeModIds[i], 'shoot');
+      if (key) return key;
+    }
+    return null;
+  }
+
+  function resolveChipImpactSfx(activeModIds) {
+    if (!activeModIds || !activeModIds.length) return null;
+    for (var i = 0; i < activeModIds.length; i++) {
+      var key = resolveChipSfxKey(activeModIds[i], 'impact');
+      if (key) return key;
+    }
+    return null;
+  }
+
+  function buildChipBulletCfgOverride(activeModIds) {
+    if (!activeModIds || !activeModIds.length) return null;
+    var bulletSprite = null;
+    var impactSprite = null;
+    for (var i = 0; i < activeModIds.length; i++) {
+      if (!bulletSprite) bulletSprite = getModBulletSprite(activeModIds[i]);
+      if (!impactSprite) impactSprite = getModImpactSprite(activeModIds[i]);
+      if (bulletSprite && impactSprite) break;
+    }
+    if (!bulletSprite && !impactSprite) return null;
+    return { bulletSprite: bulletSprite, impactSprite: impactSprite };
+  }
 
   /* ────────── per-cell combo counter (mod 6) ────────── */
   var _comboCounters = {};       // cellIndex → shotCount
@@ -1159,6 +1294,14 @@
     reset: reset,
     getElectroNodes: getElectroNodes,
     getLaserMarks: getLaserMarks,
+    getModBulletSprite: getModBulletSprite,
+    getModImpactSprite: getModImpactSprite,
+    getModSfxConfig: getModSfxConfig,
+    resolveChipSfxKey: resolveChipSfxKey,
+    resolveChipShotSfx: resolveChipShotSfx,
+    resolveChipImpactSfx: resolveChipImpactSfx,
+    buildChipBulletCfgOverride: buildChipBulletCfgOverride,
+    getChipAtlasImage: getChipAtlasImage,
     GROUP_A_MODS: GROUP_A_MODS,
     /** Configurable min distance for Double Shot second-target selection */
     get DOUBLE_SHOT_MIN_TARGET_DISTANCE() { return DOUBLE_SHOT_MIN_TARGET_DISTANCE; },

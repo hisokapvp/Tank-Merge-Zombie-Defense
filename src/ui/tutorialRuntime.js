@@ -386,19 +386,24 @@
     return !Number.isFinite(tank.stampStartSec);
   }
 
+  function isTankReadyForMergeCheck(tank) {
+    if (!tank) return false;
+    return !Number.isFinite(tank.stampStartSec);
+  }
+
   function findMergeableHangarPair(state) {
     if (!state || !Array.isArray(state.cells)) return null;
     for (let leftIndex = 0; leftIndex < state.cells.length; leftIndex++) {
       const leftCell = state.cells[leftIndex];
       const leftTank = leftCell && leftCell.tank;
-      if (!leftCell || !leftTank || !isHangarTankReadyForInteraction(leftTank)) continue;
+      if (!leftCell || !leftTank || !isTankReadyForMergeCheck(leftTank)) continue;
       const leftLevel = Number(leftTank.level);
       if (!Number.isFinite(leftLevel) || leftLevel < 1) continue;
 
       for (let rightIndex = leftIndex + 1; rightIndex < state.cells.length; rightIndex++) {
         const rightCell = state.cells[rightIndex];
         const rightTank = rightCell && rightCell.tank;
-        if (!rightCell || !rightTank || !isHangarTankReadyForInteraction(rightTank)) continue;
+        if (!rightCell || !rightTank || !isTankReadyForMergeCheck(rightTank)) continue;
         if (Number(rightTank.level) !== leftLevel) continue;
         return {
           source: leftCell,
@@ -1383,6 +1388,7 @@
     const tutorial = normalizeTutorialState(state);
     closeDisableConfirm({ restoreFocus: false });
     tutorial.disabled = true;
+    try { global.localStorage.setItem('tutorialGlobalDisabled', '1'); } catch (_) {}
     tutorial.completed = true;
     tutorial.currentStepId = null;
     runtime.canvasSequenceActive = false;
@@ -1566,6 +1572,28 @@
     migrateTutorialStateIfNeeded(state);
     syncStepProgressBaseline(state);
     const completionStep = getActiveStepDefinition(state);
+    // Auto-complete steps whose objectives are already met by game state
+    if (completionStep && completionStep.completion) {
+      if (completionStep.completion.kind === 'tank_on_track') {
+        let hasTrack = false;
+        if (Array.isArray(state.cells)) {
+          for (let ai = 0; ai < state.cells.length; ai++) {
+            const ac = state.cells[ai];
+            if (ac && ac.tank && ac.tank.onTrack) { hasTrack = true; break; }
+          }
+        }
+        if (hasTrack) { completeCurrentStep('tank_on_track_auto'); return; }
+      }
+      if (completionStep.completion.kind === 'tank_bought') {
+        let tankTotal = 0;
+        if (Array.isArray(state.cells)) {
+          for (let ai = 0; ai < state.cells.length; ai++) {
+            if (state.cells[ai] && state.cells[ai].tank) tankTotal++;
+          }
+        }
+        if (tankTotal >= 2) { completeCurrentStep('tank_bought_auto'); return; }
+      }
+    }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'tank_bought' && getPurchasedTankCount(state) > runtime.activeStepPurchasedBaseline) {
       completeCurrentStep('tank_bought');
       return;
@@ -1658,6 +1686,7 @@
     if (!state) return;
     const tutorial = normalizeTutorialState(state);
     tutorial.disabled = false;
+    try { global.localStorage.removeItem('tutorialGlobalDisabled'); } catch (_) {}
     tutorial.completed = false;
     const definitions = getStepDefinitions();
     for (let i = 0; i < definitions.length; i++) {

@@ -6471,10 +6471,20 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   for (let ti = 0; ti < N; ti++) allTargets.push(burstTargets[ti % burstTargets.length]);
   for (let ti = 0; ti < N * chipExtraProj; ti++) allTargets.push(chipExtraTargetList[ti % chipExtraTargetList.length]);
 
-  const bulletCfg = stats && stats.bulletCfg ? stats.bulletCfg : null;
-  if (!bulletCfg) {
+  const bulletCfgBase = stats && stats.bulletCfg ? stats.bulletCfg : null;
+  if (!bulletCfgBase) {
     console.warn('[Combat] Bullet config is missing for tank level', tank.level, '(id=' + (stats?.bulletId || 'bullet_base') + ', level=' + (stats?.bulletLevel || 1) + '). Shot skipped.');
     return;
+  }
+  // Apply chip modifier sprite overrides (bulletSprite / impactSprite from chips.json)
+  let bulletCfg = bulletCfgBase;
+  if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function' && typeof ChipFx.getActiveModIds === 'function') {
+    const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(ChipFx.getActiveModIds(cellIndex));
+    if (chipBulletOverride) {
+      bulletCfg = { bulletSprite: bulletCfgBase.bulletSprite, impactSprite: bulletCfgBase.impactSprite };
+      if (chipBulletOverride.bulletSprite) bulletCfg.bulletSprite = chipBulletOverride.bulletSprite;
+      if (chipBulletOverride.impactSprite) bulletCfg.impactSprite = chipBulletOverride.impactSprite;
+    }
   }
 
   if (isTalentsV2Ready()) {
@@ -6566,7 +6576,14 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
     const burstAlpha = Math.min(0.85, 0.55 * (0.9 + 0.1 * effectIntensity));
     burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
-    const shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
+    // Use chip-specific shoot SFX if configured, otherwise fallback to power-tier clip
+    let shootClip = null;
+    if (ChipFx && typeof ChipFx.resolveChipShotSfx === 'function' && typeof ChipFx.getActiveModIds === 'function') {
+      shootClip = ChipFx.resolveChipShotSfx(ChipFx.getActiveModIds(cellIndex));
+    }
+    if (!shootClip) {
+      shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
+    }
     playSfx(shootClip);
   }
 }
@@ -6807,6 +6824,11 @@ function impactAt(x,y,b,opts){
         spawnProjectile,
         impacts: state.impacts,
       });
+    }
+    // Play chip-specific impact SFX if configured
+    if (ChipFxI && typeof ChipFxI.resolveChipImpactSfx === 'function') {
+      const chipImpactSfx = ChipFxI.resolveChipImpactSfx(b.chipShotMods);
+      if (chipImpactSfx) playSfx(chipImpactSfx);
     }
   }
 }
@@ -7932,6 +7954,10 @@ function resetGameState(options){
     ? cloneJsonSafe(state.drones, [])
     : [];
   const wasCollapsed = state.debug?.collapsed;
+  let wasTutorialDisabled = !!(state && state.tutorial && state.tutorial.disabled);
+  if (!wasTutorialDisabled) {
+    try { wasTutorialDisabled = localStorage.getItem('tutorialGlobalDisabled') === '1'; } catch (_) {}
+  }
   stopTrackLoopSfxImmediate();
   silenceAllTanksTrackSfx(reason === 'reset' ? 'reset' : 'restore');
   closeCriticalModal();
@@ -7941,6 +7967,11 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  if (wasTutorialDisabled && state.tutorial) {
+    state.tutorial.disabled = true;
+    state.tutorial.completed = true;
+    state.tutorial.currentStepId = null;
+  }
   if (reason !== 'new_game' && preservedDrones.length) {
     if (DronesApi && typeof DronesApi.restoreSavedDrones === 'function') {
       DronesApi.restoreSavedDrones(state, preservedDrones);
@@ -11307,7 +11338,11 @@ function drawProjectiles(){
   for (const b of state.projectiles){
     if (b.isTankAttackingZombie === true) continue;
     const bulletSprite = b.bulletCfg && b.bulletCfg.bulletSprite ? b.bulletCfg.bulletSprite : null;
-    if (BulletSprites && BulletSprites.ready && BulletSprites.atlasImg && bulletSprite) {
+    const ChipFxB = window.Game && window.Game.ChipEffects;
+    const bulletAtlasImg = bulletSprite && bulletSprite.src && ChipFxB && typeof ChipFxB.getChipAtlasImage === 'function'
+      ? (ChipFxB.getChipAtlasImage(bulletSprite.src) || (BulletSprites && BulletSprites.atlasImg))
+      : (BulletSprites && BulletSprites.atlasImg);
+    if (bulletAtlasImg && bulletSprite) {
       const frames = Math.max(1, Number.isFinite(bulletSprite.frames) ? Math.floor(bulletSprite.frames) : 1);
       const fps = Math.max(0.01, Number(bulletSprite.frameRateFps || bulletSprite.animSpeed || 12));
       const frameIndex = Math.floor((b.animTime || 0) * fps) % frames;
@@ -11322,7 +11357,7 @@ function drawProjectiles(){
       ctx.translate(b.x, b.y);
       ctx.rotate(Number.isFinite(b.rotation) ? b.rotation : 0);
       ctx.drawImage(
-        BulletSprites.atlasImg,
+        bulletAtlasImg,
         sx,
         sy,
         sw,
@@ -11367,7 +11402,11 @@ function drawImpacts(){
     }
 
     const impactSprite = fx.bulletCfg && fx.bulletCfg.impactSprite ? fx.bulletCfg.impactSprite : null;
-    if (BulletSprites && BulletSprites.ready && BulletSprites.atlasImg && impactSprite) {
+    const ChipFxI = window.Game && window.Game.ChipEffects;
+    const impactAtlasImg = impactSprite && impactSprite.src && ChipFxI && typeof ChipFxI.getChipAtlasImage === 'function'
+      ? (ChipFxI.getChipAtlasImage(impactSprite.src) || (BulletSprites && BulletSprites.atlasImg))
+      : (BulletSprites && BulletSprites.atlasImg);
+    if (impactAtlasImg && impactSprite) {
       const elapsed = Math.max(0, (fx.max || 0) - (fx.life || 0));
       const frames = Math.max(1, Number.isFinite(impactSprite.frames) ? Math.floor(impactSprite.frames) : 1);
       const fps = Math.max(0.01, Number(impactSprite.frameRateFps || impactSprite.animSpeed || 12));
@@ -11381,7 +11420,7 @@ function drawImpacts(){
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, t));
       ctx.drawImage(
-        BulletSprites.atlasImg,
+        impactAtlasImg,
         sx,
         sy,
         sw,

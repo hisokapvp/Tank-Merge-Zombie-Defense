@@ -1228,7 +1228,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl22": {
@@ -1292,7 +1292,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl23": {
@@ -1356,7 +1356,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl24": {
@@ -1420,7 +1420,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl25": {
@@ -1484,7 +1484,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl26": {
@@ -1548,7 +1548,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl27": {
@@ -1612,7 +1612,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl28": {
@@ -1676,7 +1676,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl29": {
@@ -1740,7 +1740,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl30": {
@@ -1804,7 +1804,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
 
@@ -1869,7 +1869,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl32": {
@@ -1933,7 +1933,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl33": {
@@ -1997,7 +1997,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl34": {
@@ -2061,7 +2061,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl35": {
@@ -2125,7 +2125,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl36": {
@@ -2189,7 +2189,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl37": {
@@ -2253,7 +2253,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl38": {
@@ -2317,7 +2317,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl39": {
@@ -2381,7 +2381,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
   "tank_lvl40": {
@@ -2445,7 +2445,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 2
+    "bulletLevel": 1
   },
 
 
@@ -2510,7 +2510,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl42": {
@@ -2574,7 +2574,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl43": {
@@ -2638,7 +2638,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl44": {
@@ -2702,7 +2702,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl45": {
@@ -2766,7 +2766,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl46": {
@@ -2830,7 +2830,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl47": {
@@ -2894,7 +2894,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl48": {
@@ -2958,7 +2958,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl49": {
@@ -3022,7 +3022,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl50": {
@@ -3086,7 +3086,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
 
@@ -3151,7 +3151,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl52": {
@@ -3215,7 +3215,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl53": {
@@ -3279,7 +3279,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl54": {
@@ -3343,7 +3343,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl55": {
@@ -3407,7 +3407,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl56": {
@@ -3471,7 +3471,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl57": {
@@ -3535,7 +3535,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl58": {
@@ -3599,7 +3599,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl59": {
@@ -3663,7 +3663,7 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   },
 
   "tank_lvl60": {
@@ -3727,6 +3727,6 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 3
+    "bulletLevel": 1
   }
 }
