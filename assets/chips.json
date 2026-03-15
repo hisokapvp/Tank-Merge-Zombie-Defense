@@ -1,5 +1,5 @@
 {
-  "_comment": "Chip modifier sprite/sound configuration. Each key = modId (1–14).",
+  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides.",
   "atlas": "chip_effects_atlas.png",
   "modifiers": {
     "1": {
@@ -20,6 +20,21 @@
         "frames": 4,
         "animSpeed": 12,
         "scale": 1.0
+      },
+      "bulletSprite": {
+        "src": "chip_effects_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.5
       },
       "effect": null,
       "sfx": {

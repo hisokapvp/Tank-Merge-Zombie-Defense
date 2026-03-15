@@ -1731,7 +1731,6 @@ function setAutoPauseEnabled(enabled){
 function syncTutorialToggleUI() {
   const tutDisabled = !!(state && state.tutorial && state.tutorial.disabled);
   if (ui.menuTutorialToggle) ui.menuTutorialToggle.checked = !tutDisabled;
-  if (ui.bigMenuRootTutorial) ui.bigMenuRootTutorial.checked = !tutDisabled;
 }
 
 function syncVolumeUIFromSettings(){
@@ -3354,6 +3353,16 @@ function performTankPurchaseOnce(){
   recordTankLevel(level);
   state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
   bumpBuyPrice(level);
+  const TutorialRuntime = window.Game && window.Game.TutorialRuntime;
+  if (TutorialRuntime && typeof TutorialRuntime.handleTankPurchased === 'function') {
+    TutorialRuntime.handleTankPurchased({
+      cause: 'user',
+      level: level,
+      cost: cost,
+      cellIndex: empty.i,
+      tank: empty.tank,
+    });
+  }
   if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
     window.Game.SupercomputerBuildTankFx.start(getTankPrintDurationSec());
   }
