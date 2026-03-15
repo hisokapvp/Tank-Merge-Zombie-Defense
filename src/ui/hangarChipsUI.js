@@ -2559,7 +2559,9 @@
     }
     var totalEl = el('chipCraftDustTotal');
     if (totalEl) {
+      var hasSelection = Object.keys(_dustSelected).length > 0;
       totalEl.textContent = t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', _calcDustTotal());
+      totalEl.style.display = hasSelection ? '' : 'none';
     }
     var item = cb.closest('.chipCraftInvItem');
     if (item) {
@@ -3153,7 +3155,8 @@
       html += '<button class="btn scButton chipCraftDustConfirmBtn" id="chipCraftDustConfirm" type="button">' + t('chipCraftDustConfirm', 'Подтвердить') + '</button>';
       html += '<button class="btn scButton chipCraftDustCancelBtn" id="chipCraftDustCancel" type="button">' + t('chipCraftDustCancel', 'Отменить') + '</button>';
       var dustTotal = _calcDustTotal();
-      html += '<span class="chipCraftDustTotal" id="chipCraftDustTotal">' +
+      var dustTotalVisible = Object.keys(_dustSelected).length > 0;
+      html += '<span class="chipCraftDustTotal" id="chipCraftDustTotal"' + (dustTotalVisible ? '' : ' style="display:none"') + '>' +
         t('chipCraftDustResult', 'Получите кремниевой пыли: {amount}').replace('{amount}', dustTotal) + '</span>';
       html += '</div>';
       html += '</div>'; // chipCraftBottomBar

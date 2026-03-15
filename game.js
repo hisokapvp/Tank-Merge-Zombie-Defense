@@ -80,9 +80,11 @@ const ui = {
   menuSfx: document.getElementById('menuSfx'),
   menuMusic: document.getElementById('menuMusic'),
   menuAutoPause: document.getElementById('menuAutoPause'),
+  menuTutorialToggle: document.getElementById('menuTutorialToggle'),
   menuSfxValue: document.getElementById('menuSfxValue'),
   menuMusicValue: document.getElementById('menuMusicValue'),
   bigMenuAutoPause: document.getElementById('bigMenuAutoPause'),
+  bigMenuRootTutorial: document.getElementById('bigMenuRootTutorial'),
   crateModal: document.getElementById('crateModal'),
   crateClose: document.getElementById('crateClose'),
   crateGet: document.getElementById('crateGet'),
@@ -1726,6 +1728,12 @@ function setAutoPauseEnabled(enabled){
   return settings.autoPauseOnInactive;
 }
 
+function syncTutorialToggleUI() {
+  const tutDisabled = !!(state && state.tutorial && state.tutorial.disabled);
+  if (ui.menuTutorialToggle) ui.menuTutorialToggle.checked = !tutDisabled;
+  if (ui.bigMenuRootTutorial) ui.bigMenuRootTutorial.checked = !tutDisabled;
+}
+
 function syncVolumeUIFromSettings(){
   const sfxPercent = getVolume('sfx', 'percent');
   const musicPercent = getVolume('music', 'percent');
@@ -1742,6 +1750,7 @@ function syncVolumeUIFromSettings(){
   if (ui.menuAutoPause) ui.menuAutoPause.checked = isAutoPauseEnabledSetting();
   if (ui.bigMenuAutoPause) ui.bigMenuAutoPause.checked = isAutoPauseEnabledSetting();
   if (ui.bigMenuRootAutoPause) ui.bigMenuRootAutoPause.checked = isAutoPauseEnabledSetting();
+  syncTutorialToggleUI();
 }
 
 function updateMenuVolumes(){

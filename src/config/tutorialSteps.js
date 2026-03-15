@@ -102,7 +102,6 @@
       pointerAnimation: 'drag',
       activation: {
         kind: 'mergeable_hangar_pair',
-        minHangarTanks: 3,
       },
       target: {
         kind: 'mergeable_hangar_tank_source',

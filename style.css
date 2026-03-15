@@ -4423,8 +4423,16 @@ button.hangarChipInvItem{
   text-align:center;
   font-size:14px;
   color:rgba(255,255,255,.35);
-  padding:40px 0;
+  padding:40px 16px;
   width:100%;
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  word-wrap:break-word;
+  overflow-wrap:break-word;
+  min-height:120px;
+  box-sizing:border-box;
 }
 
 /* ─── Tech Unlock Panel ─── */

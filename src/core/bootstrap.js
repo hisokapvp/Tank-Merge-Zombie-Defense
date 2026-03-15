@@ -692,6 +692,17 @@
       opts.saveSettings();
     });
 
+    opts.ui.menuTutorialToggle && opts.ui.menuTutorialToggle.addEventListener('change', function (e) {
+      var checked = !!(e && e.target && e.target.checked);
+      var TutorialRuntime = global.Game && global.Game.TutorialRuntime;
+      if (!TutorialRuntime) return;
+      if (checked) {
+        if (typeof TutorialRuntime.enableTutorial === 'function') TutorialRuntime.enableTutorial();
+      } else {
+        if (typeof TutorialRuntime.disableTutorial === 'function') TutorialRuntime.disableTutorial();
+      }
+    });
+
     opts.ui.supercomputerBtn && opts.ui.supercomputerBtn.addEventListener('click', function () {
       if (typeof opts.openSupercomputerMenu === 'function') return opts.openSupercomputerMenu();
       return opts.openTalents();

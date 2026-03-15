@@ -680,6 +680,18 @@
           deps.saveSettings();
         });
       }
+      if (ui.bigMenuRootTutorial) {
+        ui.bigMenuRootTutorial.addEventListener('change', function (e) {
+          var checked = !!(e && e.target && e.target.checked);
+          var TutorialRuntime = global.Game && global.Game.TutorialRuntime;
+          if (!TutorialRuntime) return;
+          if (checked) {
+            if (typeof TutorialRuntime.enableTutorial === 'function') TutorialRuntime.enableTutorial();
+          } else {
+            if (typeof TutorialRuntime.disableTutorial === 'function') TutorialRuntime.disableTutorial();
+          }
+        });
+      }
       if (ui.bigMenuLangRu) ui.bigMenuLangRu.addEventListener('click', function () { return applyBigMenuLanguage('ru'); });
       if (ui.bigMenuLangEn) ui.bigMenuLangEn.addEventListener('click', function () { return applyBigMenuLanguage('en'); });
       if (ui.creditsModalClose) {

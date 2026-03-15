@@ -186,7 +186,7 @@
       const definition = definitions[i];
       if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
       const stepState = tutorial.steps[definition.id];
-      if (!stepState || !stepState.completed) return definition.id;
+      if (!stepState || (!stepState.completed && !stepState.dismissed)) return definition.id;
     }
     return null;
   }
@@ -409,6 +409,20 @@
     return null;
   }
 
+  function findMergeablePairAnywhere(state) {
+    if (!state || !Array.isArray(state.cells)) return false;
+    const levelCounts = {};
+    for (let i = 0; i < state.cells.length; i++) {
+      const cell = state.cells[i];
+      if (!cell || !cell.tank) continue;
+      const level = Number(cell.tank.level);
+      if (!Number.isFinite(level) || level < 1) continue;
+      if (levelCounts[level]) return true;
+      levelCounts[level] = true;
+    }
+    return false;
+  }
+
   function isStepAvailable(stepDefinition, state) {
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
@@ -423,13 +437,7 @@
       return getHangarTankCount(state) >= requiredCount;
     }
     if (stepDefinition.activation.kind === 'mergeable_hangar_pair') {
-      const requiredCount = Number(
-        Number.isFinite(Number(stepDefinition.activation.minHangarTanks))
-          ? stepDefinition.activation.minHangarTanks
-          : stepDefinition.activation.value
-      );
-      if (Number.isFinite(requiredCount) && getHangarTankCount(state) < requiredCount) return false;
-      return !!findMergeableHangarPair(state);
+      return findMergeablePairAnywhere(state);
     }
     return true;
   }
@@ -1333,7 +1341,12 @@
     if (!tutorial || !tutorial.steps || !tutorial.steps[activeStepId]) return;
 
     tutorial.steps[activeStepId].bubbleOpen = false;
-    if (reason === 'close') tutorial.steps[activeStepId].dismissed = true;
+    if (reason === 'close') {
+      tutorial.steps[activeStepId].dismissed = true;
+      tutorial.steps[activeStepId].completed = true;
+      tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+      tutorial.completed = !tutorial.currentStepId;
+    }
     closeDisableConfirm({ restoreFocus: false });
     persist();
     syncNow();
@@ -1563,8 +1576,6 @@
     }
     ensureDom();
     patchPauseManagerFactory();
-    attachInteractionGuards();
-    applyUiLock(state);
     syncCopy();
     syncPauseState(state);
     syncBodyState(state);
@@ -1617,7 +1628,6 @@
 
     runtime.started = true;
     ensureDom();
-    attachInteractionGuards();
     syncNow();
     if (typeof global.requestAnimationFrame === 'function') {
       runtime.rafId = global.requestAnimationFrame(tick);
@@ -1643,14 +1653,37 @@
     completeCurrentStep('tank_bought');
   }
 
+  function enableTutorial() {
+    const state = getState();
+    if (!state) return;
+    const tutorial = normalizeTutorialState(state);
+    tutorial.disabled = false;
+    tutorial.completed = false;
+    const definitions = getStepDefinitions();
+    for (let i = 0; i < definitions.length; i++) {
+      const def = definitions[i];
+      if (!def || !def.id) continue;
+      if (!tutorial.steps[def.id]) tutorial.steps[def.id] = createDefaultStepState();
+    }
+    tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+    tutorial.completed = !tutorial.currentStepId;
+    persist();
+    if (typeof runtime.updateUi === 'function') {
+      try { runtime.updateUi(); } catch (_) {}
+    }
+    syncNow();
+  }
+
   function isUiLocked() {
-    return shouldLockInteractions(getState());
+    return false;
   }
 
   const api = {
     init: init,
     syncNow: syncNow,
     isUiLocked: isUiLocked,
+    enableTutorial: enableTutorial,
+    disableTutorial: disableTutorial,
     handleTankOnTrackChanged: handleTankOnTrackChanged,
     handleTankPurchased: handleTankPurchased,
   };
