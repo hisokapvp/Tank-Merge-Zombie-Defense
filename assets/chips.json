@@ -61,6 +61,21 @@
         "animSpeed": 14,
         "scale": 1.0
       },
+      "bulletSprite": {
+        "src": "chip_effects_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "impact_fire.png",
+        "frame": { "x": 0, "y": 0, "w": 90, "h": 90 },
+        "frames": 6,
+        "frameRateFps": 6,
+        "scale": 1
+      },
       "effect": {
         "sprite": "chain_bolt",
         "frameWidth": 64,
@@ -292,6 +307,21 @@
         "frames": 5,
         "animSpeed": 12,
         "scale": 1.0
+      },
+      "bulletSprite": {
+        "src": "chip_effects_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "impact_fire.png",
+        "frame": { "x": 0, "y": 0, "w": 90, "h": 90 },
+        "frames": 6,
+        "frameRateFps": 6,
+        "scale": 1
       },
       "effect": {
         "sprite": "aura_calm",
