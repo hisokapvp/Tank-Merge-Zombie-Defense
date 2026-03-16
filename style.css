@@ -4794,11 +4794,20 @@ button.hangarChipInvItem{
   max-width:480px;
   padding:28px 28px 24px;
 }
+.techModal__dialog--help{
+  max-width:620px;
+  padding:60px 72px 28px 28px;
+  text-align:left;
+}
 .techModal__title{
   font-size:16px;
   font-weight:bold;
   color:#4af626;
   margin-bottom:8px;
+}
+.techModal__title--help{
+  margin-bottom:6px;
+  padding-right:8px;
 }
 .techModal__title--warn{
   color:#fdd835;
@@ -4807,6 +4816,10 @@ button.hangarChipInvItem{
   font-size:12px;
   color:rgba(255,255,255,.6);
   margin-bottom:8px;
+}
+.techModal__subtitle--help{
+  margin-bottom:14px;
+  color:rgba(255,255,255,.72);
 }
 .techModal__rateLine{
   font-size:12px;
@@ -4823,6 +4836,28 @@ button.hangarChipInvItem{
 .techModal__text--compact{
   margin-bottom:16px;
 }
+.techModal__text--help{
+  margin-bottom:22px;
+}
+.techModal__paragraph{
+  margin:0 0 14px;
+}
+.techModal__paragraph:last-child{
+  margin-bottom:0;
+}
+.techModal__list{
+  margin:0 0 14px 18px;
+  padding:0;
+}
+.techModal__list:last-child{
+  margin-bottom:0;
+}
+.techModal__listItem{
+  margin:0 0 8px;
+}
+.techModal__listItem:last-child{
+  margin-bottom:0;
+}
 .techModal__close{
   position:absolute !important;
   top:14px;
@@ -4833,6 +4868,7 @@ button.hangarChipInvItem{
   display:grid;
   place-items:center;
   text-align:center;
+  z-index:1;
 }
 #talentOverlay .modalClose::before,
 .techModal__close.modalClose.scModal__close::before{

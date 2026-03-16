@@ -85,6 +85,7 @@
   var _activeSlotActions = null; // { type, slotId } — shows action buttons on slot
   var _initialized = false;
   var _doc = null;
+  var _activeHangarTab = 'cells';
   var _workshopSubTab = 'chipUpgrade';
   var _chipRecycleSubTab = 'dust';
 
@@ -109,6 +110,33 @@
       if (v && v !== key) return v;
     }
     return fallback || key;
+  }
+
+  function getHangarHelpSectionTitle(tabId) {
+    if (tabId === 'techUnlock') return t('hangarChipsTabTechUnlock', 'Открытие технологий');
+    if (tabId === 'workshop') return t('hangarChipsTabWorkshop', 'Мастерская');
+    return t('hangarChipsTabCells', 'Улучшение ячеек');
+  }
+
+  function getHangarHelpText(tabId) {
+    if (tabId === 'techUnlock') {
+      return t('techUnlockHelpText', 'В этом разделе Вы можете усовершенствовать любой модификатор чипа. После изучения новой технологии будут усовершенствованы все чипы - текущие фрагменты чипов, целые чипы и / или фрагменты чипов и целые чипы, которые будут получены после изучения новой технологии.');
+    }
+    if (tabId === 'workshop') {
+      return t('hangarWorkshopHelpText', 'В этом разделе Вы можете объединять, собирать и перерабатывать чипы ангара.\n\nВо подразделах мастерской объединяйте одинаковые чипы для усиления, собирайте новые чипы из фрагментов и перерабатывайте лишние ресурсы в полезные материалы для развития ангара.');
+    }
+    return t('hangarCellsHelpText', 'В этом разделе Вы можете усиливать ячейки танков за счёт добавления разных чипов в слоты. Для того чтобы два чипа начали работать в связке, нужно чтобы у них совпали модификаторы на прилегающих сторонах.\nЕсли у Вас в инвентаре будут чипы, которые могут работать в связке, то они выделятся зеленым цветом.\n\nЧипы в красных слотах в связке работают по следующему принципу:\n- первый модификатор срабатывает когда танк совершает выстрел;\n- второй модификатор срабатывает когда снаряд взрывается.\n\nЧип в желтом слоте в связке работает по следующему принципу:\n- модификатор всегда срабатывает на последних взрывах снаряда / снарядов;\n- срабатывает "свободный" модификатор, который не участвует в связке. Это либо "Огненная лужа", либо  "Ледяная зона", либо "Электроузел", либо "Лазерная метка", либо "Кислотная лужа" в зависимости от того, какой у Вас чип.');
+  }
+
+  function getActiveHangarHelpConfig() {
+    var tabId = _activeHangarTab || 'cells';
+    var sectionTitle = getHangarHelpSectionTitle(tabId);
+    return {
+      tabId: tabId,
+      sectionTitle: sectionTitle,
+      tooltipLabel: t('techUnlockHelpTitle', 'Справка') + ': ' + sectionTitle,
+      text: getHangarHelpText(tabId)
+    };
   }
 
   function modName(modId) {
@@ -764,9 +792,10 @@
   function syncTechUnlockHelpButtonCopy() {
     var helpBtn = el('modsHangarHelpBtn');
     if (!helpBtn) return;
-    var label = t('techUnlockHelpButton', 'Справка');
+    var label = getActiveHangarHelpConfig().tooltipLabel;
     helpBtn.setAttribute('aria-label', label);
-    helpBtn.setAttribute('title', label);
+    helpBtn.setAttribute('data-ui-tooltip', label);
+    helpBtn.removeAttribute('title');
   }
 
   /* ─── Tab switching ────────────────────────────────────── */
@@ -784,6 +813,9 @@
     var isCells = tabId === 'cells';
     var isWorkshop = tabId === 'workshop';
     var isTech = tabId === 'techUnlock';
+
+    _activeHangarTab = isWorkshop ? 'workshop' : (isTech ? 'techUnlock' : 'cells');
+    syncTechUnlockHelpButtonCopy();
 
     if (wasWorkshop && !isWorkshop) resetTransientUiState();
 
@@ -2190,11 +2222,13 @@
 
   function _showTechUnlockHelpModal() {
     var modal = _ensureTechModal();
+    var helpConfig = getActiveHangarHelpConfig();
     var closeLabel = t('menuClose', 'Закрыть');
-    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="techUnlockHelpTitle">' +
-      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + _escapeHtml(closeLabel) + '" title="' + _escapeHtml(closeLabel) + '"></button>' +
-      '<div class="techModal__title" id="techUnlockHelpTitle">' + _escapeHtml(t('techUnlockHelpTitle', 'Справка')) + '</div>' +
-      '<div class="techModal__text">' + _escapeHtml(t('techUnlockHelpText', 'В этом разделе Вы можете усовершенствовать любой модификатор чипа. После изучения новой технологии будут усовершенствованы все чипы - текущие фрагменты чипов, целые чипы и / или фрагменты чипов и целые чипы, которые будут получены после изучения новой технологии.')) + '</div>' +
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="techUnlockHelpTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + _escapeHtml(closeLabel) + '"></button>' +
+      '<div class="techModal__title techModal__title--help" id="techUnlockHelpTitle">' + _escapeHtml(t('techUnlockHelpTitle', 'Справка')) + '</div>' +
+      '<div class="techModal__subtitle techModal__subtitle--help">' + _escapeHtml(helpConfig.sectionTitle) + '</div>' +
+      '<div class="techModal__text techModal__text--help">' + _renderHelpTextHtml(helpConfig.text) + '</div>' +
       '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + _escapeHtml(t('techUnlockHelpClose', 'Закрыть')) + '</button>' +
       '</div>' +
@@ -2640,6 +2674,51 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function _renderHelpTextHtml(text) {
+    var rawText = typeof text === 'string' ? text.replace(/\r\n?/g, '\n') : '';
+    if (!rawText) return '';
+    var lines = rawText.split('\n');
+    var html = '';
+    var paragraph = [];
+    var listItems = [];
+
+    function flushParagraph() {
+      if (!paragraph.length) return;
+      html += '<p class="techModal__paragraph">' + _escapeHtml(paragraph.join(' ')) + '</p>';
+      paragraph = [];
+    }
+
+    function flushList() {
+      if (!listItems.length) return;
+      html += '<ul class="techModal__list">';
+      for (var i = 0; i < listItems.length; i++) {
+        html += '<li class="techModal__listItem">' + _escapeHtml(listItems[i]) + '</li>';
+      }
+      html += '</ul>';
+      listItems = [];
+    }
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      var line = lines[lineIndex].trim();
+      if (!line) {
+        flushParagraph();
+        flushList();
+        continue;
+      }
+      if (line.indexOf('- ') === 0) {
+        flushParagraph();
+        listItems.push(line.slice(2).trim());
+        continue;
+      }
+      flushList();
+      paragraph.push(line);
+    }
+
+    flushParagraph();
+    flushList();
+    return html;
   }
 
   function _renderChipNameHtml(label) {

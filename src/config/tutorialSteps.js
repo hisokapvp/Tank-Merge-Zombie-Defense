@@ -132,6 +132,7 @@
       completed: false,
       dismissed: false,
       bubbleOpen: true,
+      bubbleShown: false,
     };
   }
 

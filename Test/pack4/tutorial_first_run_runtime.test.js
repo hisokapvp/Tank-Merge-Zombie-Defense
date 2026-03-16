@@ -107,6 +107,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialStarterTankMessage"') !== -1, 'ru tutorial message exists');
   assert(ru.indexOf('"tutorialMergeTankMessage"') !== -1, 'ru merge tutorial message exists');
   assert(ru.indexOf('"techUnlockHelpTitle"') !== -1, 'ru hangar tech help title exists');
+  assert(ru.indexOf('"hangarCellsHelpText"') !== -1, 'ru cells help text exists');
+  assert(ru.indexOf('"hangarWorkshopHelpText"') !== -1, 'ru workshop help text exists');
   assert(ru.indexOf('"tutorialContinue"') !== -1, 'ru continue button exists');
   assert(ru.indexOf('"tutorialDisable"') !== -1, 'ru disable button exists');
   assert(ru.indexOf('"tutorialLockedTooltip"') !== -1, 'ru lock tooltip exists');
@@ -114,6 +116,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(en.indexOf('"tutorialStarterTankMessage"') !== -1, 'en tutorial message exists');
   assert(en.indexOf('"tutorialMergeTankMessage"') !== -1, 'en merge tutorial message exists');
   assert(en.indexOf('"techUnlockHelpTitle"') !== -1, 'en hangar tech help title exists');
+  assert(en.indexOf('"hangarCellsHelpText"') !== -1, 'en cells help text exists');
+  assert(en.indexOf('"hangarWorkshopHelpText"') !== -1, 'en workshop help text exists');
   assert(en.indexOf('"tutorialContinue"') !== -1, 'en continue button exists');
   assert(en.indexOf('"tutorialDisable"') !== -1, 'en disable button exists');
   assert(en.indexOf('"tutorialLockedTooltip"') !== -1, 'en lock tooltip exists');
@@ -121,6 +125,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(fallback.indexOf('tutorialStarterTankMessage') !== -1, 'fallback tutorial message exists');
   assert(fallback.indexOf('tutorialMergeTankMessage') !== -1, 'fallback merge tutorial message exists');
   assert(fallback.indexOf('techUnlockHelpTitle') !== -1, 'fallback hangar tech help title exists');
+  assert(fallback.indexOf('hangarCellsHelpText') !== -1, 'fallback cells help text exists');
+  assert(fallback.indexOf('hangarWorkshopHelpText') !== -1, 'fallback workshop help text exists');
   assert(fallback.indexOf('tutorialContinue') !== -1, 'fallback continue button exists');
   assert(fallback.indexOf('tutorialDisable') !== -1, 'fallback disable button exists');
   assert(fallback.indexOf('tutorialLockedTooltip') !== -1, 'fallback lock tooltip exists');
@@ -159,11 +165,137 @@ test('TUT-10: merge tutorial completion waits for merge after step activation', 
   assert(tutorialRuntimeJs.indexOf('getCompletedTankMergeCount(state) > runtime.activeStepMergedBaseline') !== -1, 'merge step completes only after merge count increases during active step');
 });
 
+test('TUT-10A: tutorial bubble is one-shot per cycle and restart resets the cycle', () => {
+  assert(tutorialStepsJs.indexOf('bubbleShown: false') !== -1, 'tutorial step state tracks one-shot bubble display');
+  assert(tutorialRuntimeJs.indexOf('bubbleShown = true;') !== -1, 'tutorial runtime stores shown-bubble fact');
+  assert(tutorialRuntimeJs.indexOf('closeShownPendingBubble') !== -1, 'shown bubbles are auto-closed instead of reopening after suppression');
+  assert(tutorialRuntimeJs.indexOf('tutorial.steps[activeStepId].completed = true;') === -1, 'closing a bubble no longer completes the step');
+  assert(tutorialRuntimeJs.indexOf('state.tutorial = createDefaultTutorialState();') !== -1, 'enabling tutorial restarts the tutorial cycle');
+});
+
+test('TUT-10B: pending tutorial steps still complete after the key action makes them inactive', () => {
+  const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
+  const stepsSource = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+
+  const secondTankGlobal = { window: null, Game: {}, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} } };
+  secondTankGlobal.window = secondTankGlobal;
+  new Function('window', 'global', stepsSource)(secondTankGlobal, secondTankGlobal);
+  new Function('window', 'global', runtimeSource)(secondTankGlobal, secondTankGlobal);
+
+  const secondTankState = {
+    coins: 50,
+    ui: { menuOpen: false },
+    cells: [{ i: 0, x: 0, y: 0, w: 64, h: 64, tank: { level: 1, onTrack: false } }],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    tutorial: {
+      version: 5,
+      disabled: false,
+      completed: false,
+      currentStepId: 'second_tank',
+      steps: {
+        starter_tank: { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true },
+        second_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: true },
+        merge_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: false }
+      }
+    }
+  };
+
+  secondTankGlobal.Game.TutorialRuntime.init({
+    documentObj: null,
+    getState: function () { return secondTankState; },
+    saveProgress: function () {},
+    updateUi: function () {}
+  });
+
+  secondTankState.coins = 0;
+  secondTankState.buyCounts = { lvl1: 1 };
+  secondTankGlobal.Game.TutorialRuntime.syncNow();
+  assertEqual(secondTankState.tutorial.steps.second_tank.completed, true, 'second_tank completes from pending state even after coins drop below activation');
+
+  const mergeGlobal = { window: null, Game: {}, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} } };
+  mergeGlobal.window = mergeGlobal;
+  new Function('window', 'global', stepsSource)(mergeGlobal, mergeGlobal);
+  new Function('window', 'global', runtimeSource)(mergeGlobal, mergeGlobal);
+
+  const mergeState = {
+    coins: 0,
+    ui: { menuOpen: false },
+    cells: [{ i: 0, x: 0, y: 0, w: 64, h: 64, tank: { level: 2, onTrack: false } }],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    tutorial: {
+      version: 5,
+      disabled: false,
+      completed: false,
+      currentStepId: 'merge_tank',
+      steps: {
+        starter_tank: { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true },
+        second_tank: { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true },
+        merge_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: true }
+      }
+    }
+  };
+
+  mergeGlobal.Game.TutorialRuntime.init({
+    documentObj: null,
+    getState: function () { return mergeState; },
+    saveProgress: function () {},
+    updateUi: function () {}
+  });
+
+  mergeState.achievements.totalMerges = 1;
+  mergeGlobal.Game.TutorialRuntime.syncNow();
+  assertEqual(mergeState.tutorial.steps.merge_tank.completed, true, 'merge_tank completes from pending state even after the merge pair disappears');
+});
+
+test('TUT-10C: a shown bubble auto-closes when the tutorial overlay is suppressed', () => {
+  const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
+  const stepsSource = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+  const globalObj = { window: null, Game: {}, localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} } };
+  globalObj.window = globalObj;
+  new Function('window', 'global', stepsSource)(globalObj, globalObj);
+  new Function('window', 'global', runtimeSource)(globalObj, globalObj);
+
+  const state = {
+    coins: 40,
+    ui: { menuOpen: true },
+    cells: [{ i: 0, x: 0, y: 0, w: 64, h: 64, tank: { level: 1, onTrack: false } }],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    tutorial: {
+      version: 5,
+      disabled: false,
+      completed: false,
+      currentStepId: 'starter_tank',
+      steps: {
+        starter_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: true },
+        second_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: false },
+        merge_tank: { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: false }
+      }
+    }
+  };
+
+  globalObj.Game.TutorialRuntime.init({
+    documentObj: null,
+    getState: function () { return state; },
+    saveProgress: function () {},
+    updateUi: function () {}
+  });
+
+  assertEqual(state.tutorial.steps.starter_tank.bubbleOpen, false, 'shown bubble closes when overlay is suppressed instead of reopening later');
+});
+
 test('TUT-13: hangar tech help button and modal hooks are wired into the overlay', () => {
   assert(indexHtml.indexOf('id="modsHangarHelpBtn"') !== -1, 'hangar overlay includes a dedicated help button');
   assert(indexHtml.indexOf('data-tech-help-open="true"') !== -1, 'hangar help button exposes the expected action attribute');
   assert(hangarChipsUiJs.indexOf('syncTechUnlockHelpButtonCopy') !== -1, 'hangar UI syncs help button caption through i18n');
   assert(hangarChipsUiJs.indexOf('_showTechUnlockHelpModal') !== -1, 'hangar UI implements the help modal opener');
+  assert(hangarChipsUiJs.indexOf('getActiveHangarHelpConfig') !== -1, 'hangar help modal resolves copy from the active tab');
+  assert(hangarChipsUiJs.indexOf("if (tabId === 'workshop')") !== -1, 'hangar help keeps dedicated workshop copy instead of reusing tech unlock text');
+  assert(hangarChipsUiJs.indexOf("helpBtn.setAttribute('data-ui-tooltip', label);") !== -1, 'hangar help button uses the unified game tooltip');
+  assert(hangarChipsUiJs.indexOf("helpBtn.setAttribute('title', label);") === -1, 'hangar help button no longer uses a native title tooltip');
+  assert(hangarChipsUiJs.indexOf('techModal__dialog--help') !== -1, 'hangar help modal uses dedicated help layout styling');
 });
 
 test('TUT-11: chip upgrade tab keeps only mergeable chips and removes large vertex dots', () => {

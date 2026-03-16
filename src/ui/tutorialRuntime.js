@@ -155,6 +155,7 @@
         completed: true,
         dismissed: false,
         bubbleOpen: false,
+        bubbleShown: true,
       };
     }
     return tutorial;
@@ -186,7 +187,7 @@
       const definition = definitions[i];
       if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
       const stepState = tutorial.steps[definition.id];
-      if (!stepState || (!stepState.completed && !stepState.dismissed)) return definition.id;
+      if (!stepState || !stepState.completed) return definition.id;
     }
     return null;
   }
@@ -201,7 +202,7 @@
       const definition = definitions[i];
       if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
       const stepState = normalizedTutorial.steps[definition.id];
-      if (stepState && (stepState.completed || stepState.dismissed)) continue;
+      if (stepState && stepState.completed) continue;
       if (!firstIncomplete) firstIncomplete = definition.id;
       if (isStepAvailable(definition, state)) latestAvailable = definition.id;
     }
@@ -266,9 +267,9 @@
   }
 
   function syncStepProgressBaseline(state) {
-    const activeStepId = getActiveStepId(state) || '';
-    if (runtime.activeStepProgressId === activeStepId) return;
-    runtime.activeStepProgressId = activeStepId;
+    const pendingStepId = getPendingStepId(state) || '';
+    if (runtime.activeStepProgressId === pendingStepId) return;
+    runtime.activeStepProgressId = pendingStepId;
     runtime.activeStepPurchasedBaseline = getPurchasedTankCount(state);
     runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
   }
@@ -302,12 +303,14 @@
       const definition = definitions[i];
       if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
       const rawStep = raw.steps && typeof raw.steps === 'object' ? raw.steps[definition.id] : null;
+      const bubbleShown = !!(rawStep && rawStep.bubbleShown);
       steps[definition.id] = {
         completed: !!(rawStep && rawStep.completed),
         dismissed: !!(rawStep && rawStep.dismissed),
+        bubbleShown: bubbleShown,
         bubbleOpen: rawStep && typeof rawStep.bubbleOpen === 'boolean'
           ? rawStep.bubbleOpen
-          : !rawStep || !rawStep.completed,
+          : (!bubbleShown && !(rawStep && rawStep.completed) && !(rawStep && rawStep.dismissed)),
       };
     }
 
@@ -357,6 +360,12 @@
   function getPendingStepDefinition(state) {
     const pendingStepId = getPendingStepId(state);
     return pendingStepId ? getStepDefinition(pendingStepId) : null;
+  }
+
+  function getPendingStepState(state) {
+    const pendingStepId = getPendingStepId(state);
+    const tutorial = normalizeTutorialState(state);
+    return pendingStepId && tutorial.steps ? tutorial.steps[pendingStepId] || null : null;
   }
 
   function getActiveStepId(state) {
@@ -1375,20 +1384,28 @@
     runtime.documentObj.body.classList.toggle(TUTORIAL_BODY_CLASS, !!(getActiveStepId(state) && isStepBubbleOpen(state)));
   }
 
+  function closeShownPendingBubble(state) {
+    if (!state) return false;
+    const stepState = getPendingStepState(state);
+    if (!stepState || !stepState.bubbleOpen || !stepState.bubbleShown) return false;
+    stepState.bubbleOpen = false;
+    closeDisableConfirm({ restoreFocus: false });
+    persist();
+    return true;
+  }
+
   function dismissCurrentBubble(reason) {
     const state = getState();
     if (!state) return;
-    const activeStepId = getActiveStepId(state);
-    if (!activeStepId) return;
+    const stepId = getActiveStepId(state) || getPendingStepId(state);
+    if (!stepId) return;
     const tutorial = state.tutorial;
-    if (!tutorial || !tutorial.steps || !tutorial.steps[activeStepId]) return;
+    if (!tutorial || !tutorial.steps || !tutorial.steps[stepId]) return;
 
-    tutorial.steps[activeStepId].bubbleOpen = false;
-    if (reason === 'close') {
-      tutorial.steps[activeStepId].dismissed = true;
-      tutorial.steps[activeStepId].completed = true;
-      tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
-      tutorial.completed = !tutorial.currentStepId;
+    tutorial.steps[stepId].bubbleOpen = false;
+    tutorial.steps[stepId].bubbleShown = true;
+    if (reason === 'close' || reason === 'continue') {
+      tutorial.steps[stepId].dismissed = true;
     }
     closeDisableConfirm({ restoreFocus: false });
     persist();
@@ -1398,16 +1415,17 @@
   function completeCurrentStep(reason) {
     const state = getState();
     if (!state) return;
-    const activeStepId = getActiveStepId(state);
-    if (!activeStepId) return;
+    const stepId = getActiveStepId(state) || getPendingStepId(state);
+    if (!stepId) return;
     const tutorial = state.tutorial;
     if (!tutorial || tutorial.disabled || tutorial.completed) return;
 
-    const stepState = tutorial.steps[activeStepId] || createDefaultStepState();
+    const stepState = tutorial.steps[stepId] || createDefaultStepState();
     stepState.completed = true;
     stepState.bubbleOpen = false;
+    stepState.bubbleShown = true;
     if (reason === 'dismiss') stepState.dismissed = true;
-    tutorial.steps[activeStepId] = stepState;
+    tutorial.steps[stepId] = stepState;
     tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
     tutorial.completed = !tutorial.currentStepId;
     runtime.canvasSequenceActive = false;
@@ -1437,6 +1455,7 @@
       if (!stepState) continue;
       stepState.completed = true;
       stepState.bubbleOpen = false;
+      stepState.bubbleShown = true;
     }
 
     persist();
@@ -1465,10 +1484,21 @@
     }
   }
 
+  function rememberBubblePresentation(state) {
+    if (!state) return;
+    const tutorial = normalizeTutorialState(state);
+    const activeStepId = getActiveStepId(state);
+    if (!activeStepId || !tutorial || !tutorial.steps) return;
+    const stepState = tutorial.steps[activeStepId];
+    if (!stepState || stepState.completed || !stepState.bubbleOpen || stepState.bubbleShown) return;
+    stepState.bubbleShown = true;
+    persist();
+  }
+
   function syncCopy() {
     if (!runtime.messageEl || !runtime.disableBtn || !runtime.closeBtn || !runtime.continueBtn) return;
     const state = getState();
-    const activeStep = getActiveStepDefinition(state);
+    const activeStep = getPendingStepDefinition(state) || getActiveStepDefinition(state);
     runtime.messageEl.textContent = translate(
       activeStep && activeStep.messageKey ? activeStep.messageKey : 'tutorialStarterTankMessage',
       'Нажми на танк и отправь его в бой!'
@@ -1609,7 +1639,7 @@
 
     migrateTutorialStateIfNeeded(state);
     syncStepProgressBaseline(state);
-    const completionStep = getActiveStepDefinition(state);
+    const completionStep = getPendingStepDefinition(state);
     // Auto-complete steps whose objectives are already met by game state
     if (completionStep && completionStep.completion) {
       if (completionStep.completion.kind === 'tank_on_track') {
@@ -1642,15 +1672,18 @@
     }
     ensureDom();
     patchPauseManagerFactory();
-    syncCopy();
-    syncPauseState(state);
-    syncBodyState(state);
 
     const activeStep = getActiveStepDefinition(state);
     const pointerLayout = resolvePointerLayout(activeStep, state, nowMs);
+    const shouldHide = !activeStep || !pointerLayout || shouldSuppressOverlay(state);
+
+    if (shouldHide) closeShownPendingBubble(state);
+
+    syncCopy();
+    syncPauseState(state);
+    syncBodyState(state);
     syncPointerMode(activeStep, pointerLayout);
     syncPointerSprite(nowMs);
-    const shouldHide = !activeStep || !pointerLayout || shouldSuppressOverlay(state);
 
     if (!runtime.rootEl || shouldHide) {
       closeDisableConfirm({ restoreFocus: false });
@@ -1665,6 +1698,7 @@
 
     setOverlayHidden(false);
     setBubbleHidden(!isStepBubbleOpen(state));
+    if (isStepBubbleOpen(state)) rememberBubblePresentation(state);
     positionOverlay(pointerLayout);
     setDisableConfirmHidden(!runtime.disableConfirmOpen);
   }
@@ -1705,7 +1739,7 @@
     if (!nextOnTrack) return;
     if (!opts || opts.cause !== 'user') return;
     const state = getState();
-    const stepDefinition = getActiveStepDefinition(state);
+    const stepDefinition = getPendingStepDefinition(state);
     if (!stepDefinition || !stepDefinition.completion || stepDefinition.completion.kind !== 'tank_on_track') return;
     completeCurrentStep('sent_to_track');
   }
@@ -1714,7 +1748,7 @@
     const info = payload || null;
     if (!info || info.cause !== 'user') return;
     const state = getState();
-    const stepDefinition = getActiveStepDefinition(state);
+    const stepDefinition = getPendingStepDefinition(state);
     if (!stepDefinition || !stepDefinition.completion || stepDefinition.completion.kind !== 'tank_bought') return;
     completeCurrentStep('tank_bought');
   }
@@ -1722,18 +1756,15 @@
   function enableTutorial() {
     const state = getState();
     if (!state) return;
-    const tutorial = normalizeTutorialState(state);
-    tutorial.disabled = false;
+    state.tutorial = createDefaultTutorialState();
+    const tutorial = state.tutorial;
     try { global.localStorage.removeItem('tutorialGlobalDisabled'); } catch (_) {}
-    tutorial.completed = false;
-    const definitions = getStepDefinitions();
-    for (let i = 0; i < definitions.length; i++) {
-      const def = definitions[i];
-      if (!def || !def.id) continue;
-      if (!tutorial.steps[def.id]) tutorial.steps[def.id] = createDefaultStepState();
-    }
-    tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
-    tutorial.completed = !tutorial.currentStepId;
+    tutorial.disabled = false;
+    runtime.canvasSequenceActive = false;
+    runtime.activeStepProgressId = '';
+    runtime.activeStepPurchasedBaseline = 0;
+    runtime.activeStepMergedBaseline = 0;
+    closeDisableConfirm({ restoreFocus: false });
     persist();
     if (typeof runtime.updateUi === 'function') {
       try { runtime.updateUi(); } catch (_) {}

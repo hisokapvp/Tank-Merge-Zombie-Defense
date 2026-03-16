@@ -521,6 +521,8 @@
   ,"techUnlockHelpButton": "Hangar technology help"
   ,"techUnlockHelpTitle": "Help"
   ,"techUnlockHelpText": "In this section you can upgrade any chip modifier. After studying a new technology, all chips will be upgraded: your current chip fragments, whole chips, and chip fragments and whole chips that you obtain after studying the new technology."
+  ,"hangarCellsHelpText": "In this section you can strengthen tank cells by placing different chips into the slots. For two chips to start working as a linked pair, the modifiers on their touching sides must match.\nIf your inventory contains chips that can work in a link, they will be highlighted in green.\n\nChips in red linked slots work by the following rules:\n- the first modifier triggers when the tank fires;\n- the second modifier triggers when the projectile explodes.\n\nA chip in the yellow linked slot works by the following rules:\n- the modifier always triggers on the last explosion or explosions of the projectile;\n- the \"free\" modifier that is not part of the link also triggers. Depending on your chip, this is either \"Fire Puddle\", \"Ice Zone\", \"Electro Node\", \"Laser Mark\", or \"Acid Puddle\"."
+  ,"hangarWorkshopHelpText": "In this section you can combine, assemble, and recycle hangar chips.\n\nIn the workshop subtabs, merge identical chips to strengthen them, assemble new chips from fragments, and recycle spare resources into useful materials for hangar progression."
   ,"techUnlockHelpClose": "Close"
   ,"techAccelTitle": "Accelerate unlock"
   ,"techAccelSubtitle": "Choose resources to speed up the unlock."
