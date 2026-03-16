@@ -62,6 +62,7 @@
     activeStepMergedBaseline: 0,
     activeStepTalentRankBaseline: 0,
     activeStepCannonUpgradeBaseline: 0,
+    activeStepProductionBoxCountBaseline: 0,
   };
 
   function capturePauseManagerInstance(instance) {
@@ -320,6 +321,28 @@
     return isElementVisible(weaponsPanel);
   }
 
+  function isProductionStorageOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('productionLineStorageModal');
+    return isElementVisible(overlay);
+  }
+
+  function getProductionStorageTarget() {
+    const productionLineRender = global.Game && global.Game.ProductionLineRender;
+    if (!productionLineRender || typeof productionLineRender.getStorageBounds !== 'function') return null;
+    const bounds = productionLineRender.getStorageBounds();
+    if (!bounds) return null;
+    if (!Number.isFinite(bounds.x) || !Number.isFinite(bounds.y) || !Number.isFinite(bounds.w) || !Number.isFinite(bounds.h)) {
+      return null;
+    }
+    return bounds;
+  }
+
+  function getFirstProductionStorageBoxTarget() {
+    if (!runtime.documentObj || typeof runtime.documentObj.querySelector !== 'function') return null;
+    return runtime.documentObj.querySelector('#plStorageGrid .plStorage__cell--filled');
+  }
+
   function getSupercomputerLevel(state) {
     if (!state || typeof state !== 'object') return 0;
     if (state.supercomputer && Number.isFinite(Number(state.supercomputer.computerLevel))) {
@@ -358,6 +381,11 @@
     return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
   }
 
+  function getProductionStorageBoxCount(state) {
+    if (!state || !state.productionLine || !Array.isArray(state.productionLine.storage)) return 0;
+    return state.productionLine.storage.length;
+  }
+
   function wasStepBubbleShown(state, stepId) {
     if (!state || !stepId) return false;
     const tutorial = state.tutorial && typeof state.tutorial === 'object' ? state.tutorial : null;
@@ -375,6 +403,7 @@
     runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
     runtime.activeStepTalentRankBaseline = 0;
     runtime.activeStepCannonUpgradeBaseline = 0;
+    runtime.activeStepProductionBoxCountBaseline = getProductionStorageBoxCount(state);
 
     const stepDefinition = pendingStepId ? getStepDefinition(pendingStepId) : null;
     if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'talent_rank_applied') {
@@ -605,6 +634,9 @@
     if (Number.isFinite(Number(activation.minDamagePoints))) {
       if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
     }
+    if (Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
+      if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
+    }
     if (stepDefinition.activation.kind === 'min_coins') {
       const requiredCoins = Number(stepDefinition.activation.value);
       if (!Number.isFinite(requiredCoins)) return true;
@@ -637,6 +669,12 @@
     }
     if (stepDefinition.activation.kind === 'supercomputer_tank_wall_weapons_open') {
       return isSupercomputerTankWallWeaponsOpen();
+    }
+    if (stepDefinition.activation.kind === 'production_line_box_available') {
+      return getProductionStorageBoxCount(state) > 0;
+    }
+    if (stepDefinition.activation.kind === 'production_storage_open') {
+      return isProductionStorageOpen();
     }
     return true;
   }
@@ -698,6 +736,16 @@
 
     if (kind === 'buy_tank_button') {
       pushUniqueTarget(targets, runtime.ui && runtime.ui.buy ? runtime.ui.buy : null);
+      return targets;
+    }
+
+    if (kind === 'production_storage_hotspot') {
+      pushUniqueTarget(targets, getProductionStorageTarget());
+      return targets;
+    }
+
+    if (kind === 'production_storage_first_box') {
+      pushUniqueTarget(targets, getFirstProductionStorageBoxTarget());
       return targets;
     }
 
@@ -1830,6 +1878,10 @@
       completeCurrentStep('supercomputer_tank_wall_open');
       return;
     }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'production_storage_open' && completionAvailable && isProductionStorageOpen()) {
+      completeCurrentStep('production_storage_open');
+      return;
+    }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'talent_rank_applied') {
       const talentId = completionStep.completion.talentId;
       if (completionAvailable && talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
@@ -1841,6 +1893,12 @@
       const level = completionStep.completion.level;
       if (completionAvailable && getAppliedCannonUpgradeLevel(state, level) > runtime.activeStepCannonUpgradeBaseline) {
         completeCurrentStep('cannon_upgrade_applied');
+        return;
+      }
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'production_box_opened') {
+      if (getProductionStorageBoxCount(state) < runtime.activeStepProductionBoxCountBaseline) {
+        completeCurrentStep('production_box_opened');
         return;
       }
     }
@@ -1940,6 +1998,7 @@
     runtime.activeStepMergedBaseline = 0;
     runtime.activeStepTalentRankBaseline = 0;
     runtime.activeStepCannonUpgradeBaseline = 0;
+    runtime.activeStepProductionBoxCountBaseline = 0;
     closeDisableConfirm({ restoreFocus: false });
     persist();
     if (typeof runtime.updateUi === 'function') {

@@ -10,6 +10,7 @@
   let _t           = function (k) { return k; };
   let _a11yOpen    = null;
   let _a11yClose   = null;
+  let _onPauseLockChange = null;
   let _toastFn     = null;  // optional toast callback
 
   // ─── Init (call once after DOM ready) ──────────────────────
@@ -18,6 +19,7 @@
     _t         = typeof opts.t === 'function'         ? opts.t         : _t;
     _a11yOpen  = typeof opts.a11yOpen === 'function'  ? opts.a11yOpen  : null;
     _a11yClose = typeof opts.a11yClose === 'function' ? opts.a11yClose : null;
+    _onPauseLockChange = typeof opts.onPauseLockChange === 'function' ? opts.onPauseLockChange : null;
     _toastFn   = typeof opts.toast === 'function'     ? opts.toast     : null;
     _onOpenBox = typeof opts.onOpenBox === 'function' ? opts.onOpenBox : null;
 
@@ -43,6 +45,7 @@
   // ─── Open / close modal ────────────────────────────────────
   function open(state) {
     if (!_modalEl || !state || !state.productionLine) return;
+    const wasOpen = _isOpen;
     _isOpen = true;
     _pendingIdx = -1;
     _hideConfirm();
@@ -52,16 +55,19 @@
     _modalEl.setAttribute('aria-hidden', 'false');
     const initialFocus = document.getElementById('plStorageClose') || _modalEl.querySelector('.plStorage__panel') || _gridEl;
     if (_a11yOpen) _a11yOpen(_modalEl, { initialFocus: initialFocus });
+    if (!wasOpen && _onPauseLockChange) _onPauseLockChange(true);
   }
 
   function close() {
     if (!_modalEl) return;
+    const wasOpen = _isOpen;
     _isOpen = false;
     _pendingIdx = -1;
     if (document.body) document.body.classList.remove('pl-storage-open');
     _modalEl.classList.add('hidden');
     _modalEl.setAttribute('aria-hidden', 'true');
     if (_a11yClose) _a11yClose(_modalEl);
+    if (wasOpen && _onPauseLockChange) _onPauseLockChange(false);
   }
 
   function isOpen() { return _isOpen; }
@@ -79,6 +85,7 @@
       const cell = document.createElement('button');
       cell.className = 'plStorage__cell';
       cell.type = 'button';
+      cell.setAttribute('data-box-index', String(i));
 
       if (i < pl.storage.length) {
         cell.classList.add('plStorage__cell--filled');

@@ -38,6 +38,7 @@
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
 ## Фокус документации на 2026-03-09
+- Tutorial runtime выбирает first available incomplete tutorial step: нельзя перескакивать на более поздний доступный шаг, пока ранний незавершённый шаг ещё валиден по цепочке. Для этой темы читать `docs/ai/SYSTEMS/ui.md` и `src/ui/tutorialRuntime.js`.
 - `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в рабочий red `one_big_chip` уровня 1 с валидным `chipId`, отсортированным `sourceComboKey` и 3 уникальными base `modIds` (`1..9`).
 - Модалка ускорения технологий использует `_getTechAccelRates()`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; кремниевая пыль встроена в тот же accel-grid и делит общий cap `95%`.

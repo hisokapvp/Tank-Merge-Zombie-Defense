@@ -226,6 +226,8 @@
   "tutorialSupercomputerDamageOpenMenuMessage": "Откройте меню Суперкомпьютера",
   "tutorialSupercomputerOpenTankWallMessage": "Перейдите в раздел \"Модификации орудий и стен\"",
   "tutorialSupercomputerApplyWeaponDamageMessage": "Выберите орудие, которое хотите улучшить. Используя кнопки \"+\" и \"-\" вложите нужное количество очков урона. Нажмите кнопку \"Улучшить\" для применения улучшений.",
+  "tutorialProductionStorageOpenMessage": "Откройте производственный склад",
+  "tutorialProductionStorageOpenBoxMessage": "Нажмите на коробку, чтобы открыть её",
   "tutorialContinue": "Продолжить",
   "tutorialSkip": "Пропустить",
   "tutorialDisable": "Выключить обучение",

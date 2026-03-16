@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 7;
+  var VERSION = 8;
   var DEFAULT_BUBBLE_CONTROLS = ['close', 'continue', 'disable'];
 
   function cloneStringArray(value) {
@@ -265,6 +265,49 @@
           '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="minus"]',
           '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="apply"]'
         ],
+      },
+    }),
+    createStep({
+      id: 'production_storage_open_first_box',
+      messageKey: 'tutorialProductionStorageOpenMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'production_line_box_available',
+        minUnopenedProductionBoxes: 1,
+      },
+      target: {
+        kind: 'production_storage_hotspot',
+      },
+      completion: {
+        kind: 'production_storage_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        targetKinds: ['production_storage_hotspot'],
+      },
+    }),
+    createStep({
+      id: 'production_storage_open_box',
+      messageKey: 'tutorialProductionStorageOpenBoxMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'production_storage_open',
+        requiresStepBubbleShown: 'production_storage_open_first_box',
+        minUnopenedProductionBoxes: 1,
+      },
+      target: {
+        kind: 'production_storage_first_box',
+      },
+      completion: {
+        kind: 'production_box_opened',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        targetKinds: ['production_storage_first_box'],
       },
     }),
   ];

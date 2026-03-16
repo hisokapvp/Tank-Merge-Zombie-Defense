@@ -62,6 +62,7 @@
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L9339-L9398)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
+- Нужен Talents v2 redraw/update orchestration → `updateTalentUIV2()` делегирует orchestration в `src/ui/talentOverlayUi.js`, а `game.js` оставляет bootstrap/fallback helpers для node/edge render.
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
 - Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [performTankPurchaseOnce()](../../game.js#L3289-L3307), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L11374-L11382)
 
@@ -70,6 +71,7 @@
 - `draw()` не мутирует gameplay-state; render side-effects выносятся в step/runtime-модули.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
+- Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
 
 ## Ключевые блоки файла
 | Блок | Строки | Назначение |

@@ -225,6 +225,8 @@
   "tutorialSupercomputerDamageOpenMenuMessage": "Open the Supercomputer menu",
   "tutorialSupercomputerOpenTankWallMessage": "Go to the \"Weapon and Wall Modifications\" section",
   "tutorialSupercomputerApplyWeaponDamageMessage": "Choose the weapon you want to upgrade. Use the \"+\" and \"-\" buttons to invest the required amount of damage points. Press \"Upgrade\" to apply the upgrade.",
+  "tutorialProductionStorageOpenMessage": "Open the Production Storage",
+  "tutorialProductionStorageOpenBoxMessage": "Tap the box to open it",
   "tutorialContinue": "Continue",
   "tutorialSkip": "Skip",
   "tutorialDisable": "Turn off tutorial",

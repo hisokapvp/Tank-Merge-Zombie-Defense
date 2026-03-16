@@ -7,6 +7,8 @@
 - Логика UI: `src/ui/*`
 - Runtime floor для шрифта/Canvas текста: `src/ui/fontFloor.js`
 - UI склада коробок production line: `src/ui/productionLineUI.js`
+- Tutorial runtime ordering / overlay: `src/ui/tutorialRuntime.js`
+- Talents v2 redraw/update orchestration: `src/ui/talentOverlayUi.js`
 - Большие карты: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`
 - Big menu runtime: `src/ui/bigMenuRuntime.js`
 - Инициализация: `src/core/bootstrap.js`
@@ -28,6 +30,8 @@
 	- Базовые SVG-связи дерева (`.talentEdge`) должны быть визуально заметны даже до первой покупки таланта.
 	- Unlock-gating рядов в V2: row1..row6 открываются только при spent `5/10/15/20/25/30` в текущей ветке + минимум `1` rank в таланте из предыдущего ряда (row0 доступен сразу).
 	- V2 nodes не должны пересоздаваться каждый UI-tick: ререндер дерева допускается только при изменении signature (ranks/freePoints/canBuy/lang), иначе это провоцирует hover-SFX spam и потерю click-событий.
+- Tutorial runtime обязан выбирать first available incomplete tutorial step, а не последний доступный шаг: это критично для цепочек суперкомпьютера и production storage, иначе поздние уроки воруют completion у ранних.
+- `src/ui/talentOverlayUi.js` — canonical orchestration layer для Talents v2 redraw/update: модуль обновляет summary, ветки, SVG-связи и active slots, а `game.js` оставляет bootstrap/fallback glue.
 
 ## Интеграция
 - Big menu функции (`setBigMenuOpen`, `openBigMenuLoadView`, `renderBigMenuTexts`, `startFromBigMenu`, `initBigMainMenu`) в `game.js` делегируются в `Game.BigMenuRuntime` через `ensureBigMenuRuntimeController()`.
@@ -49,6 +53,8 @@
 - Разметка `#productionLineStorageModal` использует header `plStorage__header`: левый spacer `44px`, центрированный `#plStorageTitle`, правый `#plStorageClose` со skin `scModal__close`. Это canonical layout склада; не возвращать plain-title + absolute-close схему: [index.html](../../../index.html#L214-L224), [style.css](../../../style.css#L5156-L5180).
 - Заголовок склада переименован в `Производственный склад`; ключ `plStorageTitle` должен обновляться синхронно в `ru/en/fallback`: [index.html](../../../index.html#L217-L220), [src/i18n/ru.json](../../../src/i18n/ru.json#L429-L433), [src/i18n/en.json](../../../src/i18n/en.json#L429-L433), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L272-L275), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L572-L575).
 - `Game.ProductionLineUI.open()` / `.close()` переключают `body.pl-storage-open`; этот class участвует в общем CRT/grain overlay `body::before`, поэтому склад визуально остаётся в одной семье с SC-модалками: [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L44-L61), [style.css](../../../style.css#L40-L68).
+- `Game.ProductionLineUI.open()` / `.close()` обязаны также прокидывать `onPauseLockChange(true/false)` в общий `PauseManager` через `game.js -> setMenuPauseSource('productionStorage', ...)`, чтобы склад паузил симуляцию тем же контрактом, что и supercomputer modal.
+- Второй шаг tutorial для склада должен таргетить первый фактически заполненный слот через runtime-резолвер в `src/ui/tutorialRuntime.js`, а не через жёсткую привязку к визуальному индексу.
 - Сетка ячеек склада центрируется внутри панели (`width:min(100%, 420px)`, `justify-items:center`), чтобы справа не оставалось «пустого хвоста» относительно кнопки закрытия и заголовка: [style.css](../../../style.css#L5175-L5180).
 - Не возвращать storage modal к plain `levelModal__close`: `scModal__close` — это тот же 44×44 close-pattern с крупным крестом, только в green SC-skin; hover/active/focus у него должны совпадать с supercomputer/talent tree close controls: [style.css](../../../style.css#L1340-L1426), [style.css](../../../style.css#L1863-L1957).
 

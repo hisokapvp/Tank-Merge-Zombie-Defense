@@ -13,6 +13,7 @@
 - SVG-связи обновляются при `updateTalentUI` и на `window.resize`.
 - Базовые SVG-связи (`.talentEdge`) должны быть видимы сразу после `New game` (до первой покупки).
 - При `openTalents`/`closeTalents` и изменении видимого layout (включая сценарии `New`/`Load`) кэш геометрии связей должен инвалидироваться с пересчётом, чтобы линии не исчезали.
+- Orchestration слоя redraw/update для overlay вынесена в `src/ui/talentOverlayUi.js`: модуль отвечает за summary, branch counters, node redraw, edge redraw и active slots, а `game.js` оставляет bootstrap/fallback helpers (`renderTalentNodesV2`, `drawTalentEdgesV2`, wiring к API).
 
 ## 1) UI reasons (disabled buy)
 

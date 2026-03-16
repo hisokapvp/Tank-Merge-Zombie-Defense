@@ -534,6 +534,17 @@
       && py >= _storageBounds.y && py <= _storageBounds.y + _storageBounds.h;
   }
 
+  function getStorageBounds() {
+    if (!_layoutReady) return null;
+    refreshBounds();
+    return {
+      x: _storageBounds.x,
+      y: _storageBounds.y,
+      w: _storageBounds.w,
+      h: _storageBounds.h,
+    };
+  }
+
   // ─── Public API ────────────────────────────────────────────
   global.Game = global.Game || {};
   global.Game.ProductionLineRender = {
@@ -544,6 +555,7 @@
     clearHover: clearHover,
     draw: draw,
     hitTestStorage: hitTestStorage,
+    getStorageBounds: getStorageBounds,
     setSpriteSource: setSpriteSource,
     setConveyorAtlas: setConveyorAtlas,
     setBoxAtlas: setBoxAtlas,

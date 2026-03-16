@@ -1170,6 +1170,7 @@ let lastPauseReasons = { menuOpen: false, tabInactive: false };
 let menuPauseLocks = {
   settings: !!(state && state.ui && state.ui.menuOpen),
   supercomputer: false,
+  productionStorage: false,
   critical: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
 };
@@ -1316,7 +1317,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.productionStorage || menuPauseLocks.critical || menuPauseLocks.bigMenu);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -4041,6 +4042,17 @@ function activateTimedBoost(boostId, secondsTotal){
 const TALENT_OPEN_ANIM_MS = 180;
 let talentCloseRequestHandler = null;
 
+function getTalentOverlayUiApi(){
+  return window.Game && window.Game.TalentOverlayUi ? window.Game.TalentOverlayUi : null;
+}
+
+function invalidateTalentOverlayLayoutCache(){
+  const talentOverlayUi = getTalentOverlayUiApi();
+  if (talentOverlayUi && typeof talentOverlayUi.invalidateLayoutCache === 'function') {
+    talentOverlayUi.invalidateLayoutCache();
+  }
+}
+
 function requestCloseTalents(){
   if (typeof talentCloseRequestHandler === 'function') {
     talentCloseRequestHandler();
@@ -4072,9 +4084,9 @@ function openTalents(options){
       requestAnimationFrame(() => {
         modal.style.transform = 'scale(1)';
         modal.style.opacity = '1';
+        invalidateTalentOverlayLayoutCache();
         updateTalentUI();
         if (isTalentsV2Ready()) {
-          TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
           requestAnimationFrame(() => {
             if (state.ui.talentsOpen) updateTalentUI();
           });
@@ -4086,7 +4098,7 @@ function openTalents(options){
 
 function closeTalents(){
   state.ui.talentsOpen = false;
-  TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
+  invalidateTalentOverlayLayoutCache();
   const overlay = document.getElementById('talentOverlay');
   if (overlay){
     const modal = overlay.querySelector('.modal');
@@ -7492,6 +7504,7 @@ function stopAndResetSessionToBigMenu(){
 
   setMenuPauseSource('settings', false);
   setMenuPauseSource('supercomputer', false);
+  setMenuPauseSource('productionStorage', false);
   exitCriticalPause();
   closeBigMenuPanels();
   closeSupercomputerMenu();
@@ -7502,6 +7515,9 @@ function stopAndResetSessionToBigMenu(){
   closeDismantleModal();
   closeAchievementsModal();
   closeCriticalModal();
+  if (window.Game && window.Game.ProductionLineUI && typeof window.Game.ProductionLineUI.close === 'function') {
+    window.Game.ProductionLineUI.close();
+  }
   if (window.Game && window.Game.MergePopup && typeof window.Game.MergePopup.close === 'function') {
     window.Game.MergePopup.close();
   }
@@ -8418,7 +8434,8 @@ function ensureTalentUI(){
 
       let resizeTimeoutV2 = null;
       const redrawEdgesV2 = () => {
-        TALENTS_V2_BRANCH_IDS.forEach((branchId) => drawTalentEdgesV2(overlayV2, branchId));
+        invalidateTalentOverlayLayoutCache();
+        if (state.ui.talentsOpen) updateTalentUI();
       };
       window.addEventListener('resize', () => {
         clearTimeout(resizeTimeoutV2);
@@ -8496,7 +8513,8 @@ function ensureTalentUI(){
 
     let resizeTimeoutV2 = null;
     const redrawEdgesV2 = () => {
-      TALENTS_V2_BRANCH_IDS.forEach((branchId) => drawTalentEdgesV2(overlayV2, branchId));
+      invalidateTalentOverlayLayoutCache();
+      if (state.ui.talentsOpen) updateTalentUI();
     };
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeoutV2);
@@ -8612,12 +8630,6 @@ function getTalentNodeLayoutV2(localIdx, node){
     parents: [],
   };
 }
-
-const TALENT_UI_V2_RENDER_CACHE = {
-  signature: '',
-  lang: '',
-  edgesLayoutKey: '',
-};
 
 function isTalentLayoutVisibleV2(overlay){
   if (!overlay || overlay.classList.contains('hidden')) return false;
@@ -8873,74 +8885,33 @@ function updateTalentAbilitySlotsV2(container){
 function updateTalentUIV2(overlay){
   const api = getTalentsV2Api();
   if (!api || !overlay) return;
-  syncPlayerTalentsV2FromApi();
-  const freePoints = typeof api.getFreePoints === 'function' ? Math.max(0, Math.floor(api.getFreePoints())) : 0;
-  const pendingCost = typeof api.getPendingCost === 'function' ? Math.max(0, Math.floor(api.getPendingCost())) : 0;
-  const pendingRanks = typeof api.getPendingRanks === 'function' ? api.getPendingRanks() : {};
-  const summary = overlay.querySelector('#talentSummary');
-  if (summary) {
-    summary.textContent = `${t('talentPoints')}: ${freePoints} • ${t('talentPending')}: ${pendingCost}`;
-  }
-
-  TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
-    const titleEl = overlay.querySelector(`.talentBranch[data-branch-id="${branchId}"] .talentBranchTitle`);
-    if (titleEl) titleEl.textContent = getTalentV2BranchLabelById(branchId);
-    const pointsEl = overlay.querySelector(`#branchPointsV2-${branchId}`);
-    if (pointsEl && typeof api.getBranchSpent === 'function') {
-      const branchApplied = Math.max(0, Math.floor(api.getBranchSpent(branchId)));
-      const nodes = getTalentBranchNodesV2(branchId);
-      const branchPending = nodes.reduce((sum, node) => sum + Math.max(0, Math.floor(pendingRanks[node.id] || 0)), 0);
-      pointsEl.textContent = branchPending > 0 ? `${branchApplied}+${branchPending}` : `${branchApplied}`;
-    }
-
-    const resetBtn = overlay.querySelector(`.talentBranchReset[data-branch-id="${branchId}"]`);
-    if (resetBtn) {
-      resetBtn.textContent = t('talentReset');
-      const nodes = getTalentBranchNodesV2(branchId);
-      const hasPending = nodes.some((node) => Math.max(0, Math.floor(pendingRanks[node.id] || 0)) > 0);
-      resetBtn.disabled = !hasPending;
-    }
-  });
-
-  const currentLang = getTalentsV2CurrentLang();
-  const renderSignature = buildTalentsV2RenderSignature(api);
-  const signatureChanged = TALENT_UI_V2_RENDER_CACHE.signature !== renderSignature || TALENT_UI_V2_RENDER_CACHE.lang !== currentLang;
-  if (signatureChanged) {
-    TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
-      renderTalentNodesV2(overlay, branchId);
+  const talentOverlayUi = getTalentOverlayUiApi();
+  if (talentOverlayUi && typeof talentOverlayUi.update === 'function') {
+    talentOverlayUi.update({
+      overlay,
+      api,
+      branchIds: TALENTS_V2_BRANCH_IDS,
+      translate: t,
+      syncPlayerTalents: syncPlayerTalentsV2FromApi,
+      getBranchLabel: getTalentV2BranchLabelById,
+      getBranchNodes: getTalentBranchNodesV2,
+      renderBranchNodes: renderTalentNodesV2,
+      drawBranchEdges: drawTalentEdgesV2,
+      updateAbilitySlots: updateTalentAbilitySlotsV2,
+      isLayoutVisible: isTalentLayoutVisibleV2,
+      buildLayoutKey: buildTalentsV2LayoutKey,
+      buildRenderSignature: buildTalentsV2RenderSignature,
+      getCurrentLang: getTalentsV2CurrentLang,
     });
-    TALENT_UI_V2_RENDER_CACHE.signature = renderSignature;
-    TALENT_UI_V2_RENDER_CACHE.lang = currentLang;
-    TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
+    return;
   }
 
-  if (!isTalentLayoutVisibleV2(overlay)) {
-    TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = '';
-  } else {
-    const layoutKey = buildTalentsV2LayoutKey(overlay);
-    if (layoutKey && (signatureChanged || TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey !== layoutKey)) {
-      let renderedAll = true;
-      TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
-        renderedAll = drawTalentEdgesV2(overlay, branchId) && renderedAll;
-      });
-      TALENT_UI_V2_RENDER_CACHE.edgesLayoutKey = renderedAll ? layoutKey : '';
-    }
-  }
-
+  syncPlayerTalentsV2FromApi();
+  TALENTS_V2_BRANCH_IDS.forEach((branchId) => {
+    renderTalentNodesV2(overlay, branchId);
+    drawTalentEdgesV2(overlay, branchId);
+  });
   updateTalentAbilitySlotsV2(overlay);
-
-  const applyBtn = overlay.querySelector('#talentApply');
-  if (applyBtn) {
-    applyBtn.disabled = pendingCost <= 0 || pendingCost > freePoints;
-  }
-
-  const resetAllBtn = overlay.querySelector('#talentResetAll');
-  if (resetAllBtn) {
-    const ranks = api.getRanks ? api.getRanks() : {};
-    const hasApplied = Object.keys(ranks).some((id) => (ranks[id] || 0) > 0);
-    const hasPending = Object.keys(pendingRanks).some((id) => (pendingRanks[id] || 0) > 0);
-    resetAllBtn.disabled = !(hasApplied || hasPending);
-  }
 }
 
 function updateTalentUI(){
@@ -9465,7 +9436,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },
@@ -9483,7 +9454,7 @@ window.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
   if (menuPauseLocks.settings) {
     setMenuOpen(false);
-  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
     setMenuOpen(true);
   }
 });
@@ -12272,6 +12243,9 @@ initBigMainMenu();
       t: t,
       a11yOpen: a11yOpen,
       a11yClose: a11yClose,
+      onPauseLockChange: function (open) {
+        setMenuPauseSource('productionStorage', !!open);
+      },
       toast: function (msg) {
         if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
           window.Game.Toast.show(msg);

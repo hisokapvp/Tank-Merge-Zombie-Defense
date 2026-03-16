@@ -45,12 +45,19 @@ const garageJs = fs.readFileSync(path.join(root, 'src/mechanics/garage.js'), 'ut
 const supercomputerMenuJs = fs.readFileSync(path.join(root, 'src/ui/supercomputerMenu.js'), 'utf-8');
 const talentOverlayDomJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayDom.js'), 'utf-8');
 const talentOverlayRendererJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayRenderer.js'), 'utf-8');
+const talentOverlayUiJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayUi.js'), 'utf-8');
+const productionLineUiJs = fs.readFileSync(path.join(root, 'src/ui/productionLineUI.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
 const ru = fs.readFileSync(path.join(root, 'src/i18n/ru.json'), 'utf-8');
 const en = fs.readFileSync(path.join(root, 'src/i18n/en.json'), 'utf-8');
 const fallback = fs.readFileSync(path.join(root, 'src/i18n/fallbackStrings.js'), 'utf-8');
 const styleCss = fs.readFileSync(path.join(root, 'style.css'), 'utf-8');
 const worldResetJs = fs.readFileSync(path.join(root, 'src/core/worldReset.js'), 'utf-8');
+const projectMapMd = fs.readFileSync(path.join(root, 'docs/ai/PROJECT_MAP.md'), 'utf-8');
+const aiIndexMd = fs.readFileSync(path.join(root, 'docs/ai/INDEX.md'), 'utf-8');
+const uiSystemMd = fs.readFileSync(path.join(root, 'docs/ai/SYSTEMS/ui.md'), 'utf-8');
+const gameJsMapMd = fs.readFileSync(path.join(root, 'docs/ai/GAME_JS_MAP.md'), 'utf-8');
+const uiTalentsV2Md = fs.readFileSync(path.join(root, 'docs/ui_talents_v2.md'), 'utf-8');
 
 console.log('\n-- Pack 4: First-run tutorial runtime --');
 
@@ -69,7 +76,7 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
 
   const state = globalObj.Game.InitialState.createInitialState({ reason: 'new_game' });
   assertEqual(state.coins, 40, 'new game starts with 40 coins');
-  assertEqual(state.tutorial.version, 7, 'tutorial state uses data-driven schema version 7');
+  assertEqual(state.tutorial.version, 8, 'tutorial state uses data-driven schema version 8');
   assert(state.tutorial && state.tutorial.currentStepId === 'starter_tank', 'starter tutorial step exists');
   assert(state.tutorial.steps && state.tutorial.steps.starter_tank && state.tutorial.steps.starter_tank.completed === false, 'starter tutorial step is pending');
   assert(state.tutorial.steps.starter_tank.bubbleOpen === true, 'starter tutorial bubble starts open');
@@ -117,6 +124,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialSupercomputerDamageOpenMenuMessage"') !== -1, 'ru damage tutorial menu message exists');
   assert(ru.indexOf('"tutorialSupercomputerOpenTankWallMessage"') !== -1, 'ru damage tutorial tank-wall message exists');
   assert(ru.indexOf('"tutorialSupercomputerApplyWeaponDamageMessage"') !== -1, 'ru damage tutorial apply message exists');
+  assert(ru.indexOf('"tutorialProductionStorageOpenMessage"') !== -1, 'ru production storage tutorial open message exists');
+  assert(ru.indexOf('"tutorialProductionStorageOpenBoxMessage"') !== -1, 'ru production storage tutorial box message exists');
   assert(ru.indexOf('"techUnlockHelpTitle"') !== -1, 'ru hangar tech help title exists');
   assert(ru.indexOf('"hangarCellsHelpText"') !== -1, 'ru cells help text exists');
   assert(ru.indexOf('"hangarWorkshopHelpText"') !== -1, 'ru workshop help text exists');
@@ -134,6 +143,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(en.indexOf('"tutorialSupercomputerDamageOpenMenuMessage"') !== -1, 'en damage tutorial menu message exists');
   assert(en.indexOf('"tutorialSupercomputerOpenTankWallMessage"') !== -1, 'en damage tutorial tank-wall message exists');
   assert(en.indexOf('"tutorialSupercomputerApplyWeaponDamageMessage"') !== -1, 'en damage tutorial apply message exists');
+  assert(en.indexOf('"tutorialProductionStorageOpenMessage"') !== -1, 'en production storage tutorial open message exists');
+  assert(en.indexOf('"tutorialProductionStorageOpenBoxMessage"') !== -1, 'en production storage tutorial box message exists');
   assert(en.indexOf('"techUnlockHelpTitle"') !== -1, 'en hangar tech help title exists');
   assert(en.indexOf('"hangarCellsHelpText"') !== -1, 'en cells help text exists');
   assert(en.indexOf('"hangarWorkshopHelpText"') !== -1, 'en workshop help text exists');
@@ -151,6 +162,8 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(fallback.indexOf('tutorialSupercomputerDamageOpenMenuMessage') !== -1, 'fallback damage tutorial menu message exists');
   assert(fallback.indexOf('tutorialSupercomputerOpenTankWallMessage') !== -1, 'fallback damage tutorial tank-wall message exists');
   assert(fallback.indexOf('tutorialSupercomputerApplyWeaponDamageMessage') !== -1, 'fallback damage tutorial apply message exists');
+  assert(fallback.indexOf('tutorialProductionStorageOpenMessage') !== -1, 'fallback production storage tutorial open message exists');
+  assert(fallback.indexOf('tutorialProductionStorageOpenBoxMessage') !== -1, 'fallback production storage tutorial box message exists');
   assert(fallback.indexOf('techUnlockHelpTitle') !== -1, 'fallback hangar tech help title exists');
   assert(fallback.indexOf('hangarCellsHelpText') !== -1, 'fallback cells help text exists');
   assert(fallback.indexOf('hangarWorkshopHelpText') !== -1, 'fallback workshop help text exists');
@@ -194,6 +207,11 @@ test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("selector: '#supercomputerOpenTankWallMods'") !== -1, 'damage tutorial points to the tank-wall tile');
   assert(tutorialStepsJs.indexOf('#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]') !== -1, 'damage tutorial points to the first gun level plus button');
   assert(tutorialStepsJs.indexOf("kind: 'cannon_upgrade_applied'") !== -1, 'damage tutorial completes on an applied gun upgrade');
+  assert(tutorialStepsJs.indexOf("id: 'production_storage_open_first_box'") !== -1, 'production storage open step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("id: 'production_storage_open_box'") !== -1, 'production storage box step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("kind: 'production_storage_first_box'") !== -1, 'production storage tutorial targets the first filled slot');
+  assert(tutorialStepsJs.indexOf("kind: 'production_line_box_available'") !== -1, 'production storage tutorial activates only when unopened boxes exist');
+  assert(tutorialStepsJs.indexOf("kind: 'production_box_opened'") !== -1, 'production storage tutorial completes when the player opens a box');
 });
 
 test('TUT-8A: supercomputer tutorial reward dismissal is wired through level flow into tutorial runtime', () => {
@@ -255,16 +273,29 @@ test('TUT-8B: supercomputer tutorial and help UI target the live menu and talent
   assert(tutorialRuntimeJs.indexOf('flags.supercomputerLevelRewardDismissed = true;') !== -1, 'tutorial runtime stores dismissal flag');
   assert(gameJs.indexOf('TalentOverlayDomApi') !== -1, 'game.js delegates talents overlay DOM creation to the canonical src module when available');
   assert(gameJs.indexOf('TalentOverlayRendererApi') !== -1, 'game.js delegates talent node rendering to the canonical src module when available');
+  assert(gameJs.indexOf('function getTalentOverlayUiApi()') !== -1, 'game.js resolves the extracted talent overlay UI module');
+  assert(gameJs.indexOf('talentOverlayUi.update({') !== -1, 'game.js delegates talent overlay redraw/update orchestration to the extracted UI module');
   assert(talentOverlayDomJs.indexOf("global.Game.TalentOverlayDom") !== -1, 'talent overlay DOM renderer is exposed as a canonical src module');
   assert(talentOverlayRendererJs.indexOf("global.Game.TalentOverlayRenderer") !== -1, 'talent node renderer is exposed as a canonical src module');
+  assert(talentOverlayUiJs.indexOf("global.Game.TalentOverlayUi") !== -1, 'talent overlay UI orchestration module is exposed as a canonical src module');
   assert(talentOverlayRendererJs.indexOf("button.dataset.talentId = node.id;") !== -1, 'canonical talent node renderer preserves the tutorial data-talent-id contract');
   assert(talentOverlayDomJs.indexOf("id: 'talentOverlay'") !== -1, 'talent overlay DOM module preserves the overlay id contract');
   assert(talentOverlayDomJs.indexOf("id: 'talentApply'") !== -1, 'talent overlay DOM module preserves the apply button id contract');
   assert(indexHtml.indexOf('id="modsTankWallHelpBtn"') !== -1, 'tank and wall help button exists in supercomputer overlay');
   assert(indexHtml.indexOf('src/ui/talentOverlayDom.js') !== -1, 'talent overlay DOM module is loaded from index.html');
   assert(indexHtml.indexOf('src/ui/talentOverlayRenderer.js') !== -1, 'talent node renderer module is loaded from index.html');
+  assert(indexHtml.indexOf('src/ui/talentOverlayUi.js') !== -1, 'talent overlay UI orchestration module is loaded from index.html');
   assert(supercomputerMenuJs.indexOf('supercomputerTalentsHelpBtn') !== -1, 'talent tree help button is injected into the talents overlay');
   assert(supercomputerMenuJs.indexOf('supercomputerTankWallHelpText') !== -1, 'tank and wall help button opens the requested help copy');
+});
+
+test('TUT-8L: production storage modal pause hook is wired through game bootstrap and tutorial targets the first filled slot', () => {
+  assert(productionLineUiJs.indexOf('_onPauseLockChange') !== -1, 'production storage UI keeps a dedicated pause-lock callback');
+  assert(productionLineUiJs.indexOf('if (!wasOpen && _onPauseLockChange) _onPauseLockChange(true);') !== -1, 'production storage UI enables pause lock on open');
+  assert(productionLineUiJs.indexOf('if (wasOpen && _onPauseLockChange) _onPauseLockChange(false);') !== -1, 'production storage UI releases pause lock on close');
+  assert(gameJs.indexOf("setMenuPauseSource('productionStorage', !!open);") !== -1, 'game bootstrap maps production storage open state into pause manager');
+  assert(tutorialRuntimeJs.indexOf('function getFirstProductionStorageBoxTarget()') !== -1, 'tutorial runtime resolves the first filled production storage slot dynamically');
+  assert(tutorialRuntimeJs.indexOf("'#plStorageGrid .plStorage__cell--filled'") !== -1, 'tutorial runtime queries the first filled production storage slot from the DOM');
 });
 
 function makeVisibleElement(id) {
@@ -473,9 +504,18 @@ test('TUT-9: cursor config supports per-step sprite rotation, motion angle and o
 
 test('TUT-10: merge tutorial completion waits for merge after step activation', () => {
   assert(tutorialRuntimeJs.indexOf('function getPreferredPendingStepId(state, tutorial)') !== -1, 'runtime dynamically selects the next available pending step');
+  assert(tutorialRuntimeJs.indexOf('return firstAvailable || firstIncomplete;') !== -1, 'runtime keeps the first available incomplete step instead of skipping ahead to later lessons');
   assert(tutorialRuntimeJs.indexOf('findMergeableTutorialPair') !== -1, 'runtime resolves merge tutorial targets from actual player state');
   assert(tutorialRuntimeJs.indexOf('activeStepMergedBaseline') !== -1, 'runtime tracks merge baseline for active step');
   assert(tutorialRuntimeJs.indexOf('getCompletedTankMergeCount(state) > runtime.activeStepMergedBaseline') !== -1, 'merge step completes only after merge count increases during active step');
+});
+
+test('TUT-10J: docs and AI maps document the first-available tutorial step rule and extracted talents UI orchestration', () => {
+  assert(projectMapMd.indexOf('first available incomplete tutorial step') !== -1, 'project map records the first-available tutorial step invariant');
+  assert(aiIndexMd.indexOf('first available incomplete tutorial step') !== -1, 'AI index points readers to the first-available tutorial step rule');
+  assert(uiSystemMd.indexOf('first available incomplete tutorial step') !== -1, 'UI system doc records the tutorial runtime ordering rule');
+  assert(gameJsMapMd.indexOf('src/ui/talentOverlayUi.js') !== -1, 'game.js map records the extracted talents overlay UI module');
+  assert(uiTalentsV2Md.indexOf('src/ui/talentOverlayUi.js') !== -1, 'talents v2 UI doc records the extracted redraw/update orchestration module');
 });
 
 test('TUT-10G: tutorial keeps the earliest available supercomputer lesson ahead of later damage lessons', () => {
