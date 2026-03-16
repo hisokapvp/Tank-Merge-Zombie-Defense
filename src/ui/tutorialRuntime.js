@@ -61,6 +61,7 @@
     activeStepPurchasedBaseline: 0,
     activeStepMergedBaseline: 0,
     activeStepTalentRankBaseline: 0,
+    activeStepCannonUpgradeBaseline: 0,
   };
 
   function capturePauseManagerInstance(instance) {
@@ -197,7 +198,7 @@
     const normalizedTutorial = tutorial || normalizeTutorialState(state);
     const definitions = getStepDefinitions();
     let firstIncomplete = null;
-    let latestAvailable = null;
+    let firstAvailable = null;
 
     for (let i = 0; i < definitions.length; i++) {
       const definition = definitions[i];
@@ -205,10 +206,10 @@
       const stepState = normalizedTutorial.steps[definition.id];
       if (stepState && stepState.completed) continue;
       if (!firstIncomplete) firstIncomplete = definition.id;
-      if (isStepAvailable(definition, state)) latestAvailable = definition.id;
+      if (!firstAvailable && isStepAvailable(definition, state)) firstAvailable = definition.id;
     }
 
-    return latestAvailable || firstIncomplete;
+    return firstAvailable || firstIncomplete;
   }
 
   function hasExistingProgress(state) {
@@ -303,6 +304,69 @@
     return isElementVisible(overlay);
   }
 
+  function isSupercomputerTankWallOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('modsTankWallOverlay');
+    return isElementVisible(overlay);
+  }
+
+  function isSupercomputerTankWallWeaponsOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('modsTankWallOverlay');
+    const weaponsPanel = runtime.documentObj.getElementById('modsTankWallPanelGuns');
+    if (!isElementVisible(overlay) || !weaponsPanel) return false;
+    if (weaponsPanel.hidden) return false;
+    if (weaponsPanel.getAttribute && weaponsPanel.getAttribute('aria-hidden') === 'true') return false;
+    return isElementVisible(weaponsPanel);
+  }
+
+  function getSupercomputerLevel(state) {
+    if (!state || typeof state !== 'object') return 0;
+    if (state.supercomputer && Number.isFinite(Number(state.supercomputer.computerLevel))) {
+      return Math.max(0, Math.floor(Number(state.supercomputer.computerLevel)));
+    }
+    if (state.player && Number.isFinite(Number(state.player.level))) {
+      return Math.max(0, Math.floor(Number(state.player.level)));
+    }
+    return 0;
+  }
+
+  function getAvailableTalentPoints(state) {
+    if (!state || !state.player || typeof state.player !== 'object') return 0;
+    if (state.player.talentsV2 && Number.isFinite(Number(state.player.talentsV2.freePoints))) {
+      return Math.max(0, Math.floor(Number(state.player.talentsV2.freePoints)));
+    }
+    if (Number.isFinite(Number(state.player.freeTalentPointsV2))) {
+      return Math.max(0, Math.floor(Number(state.player.freeTalentPointsV2)));
+    }
+    if (Number.isFinite(Number(state.player.talentPoints))) {
+      return Math.max(0, Math.floor(Number(state.player.talentPoints)));
+    }
+    return 0;
+  }
+
+  function getAvailableDamagePoints(state) {
+    if (!state || !state.player || typeof state.player !== 'object') return 0;
+    const value = Number(state.player.damagePoints);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function getAppliedCannonUpgradeLevel(state, level) {
+    if (!state || !state.player || !Array.isArray(state.player.cannonUpgradesApplied)) return 0;
+    const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
+    const value = Number(state.player.cannonUpgradesApplied[index]);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function wasStepBubbleShown(state, stepId) {
+    if (!state || !stepId) return false;
+    const tutorial = state.tutorial && typeof state.tutorial === 'object' ? state.tutorial : null;
+    const stepState = tutorial && tutorial.steps && typeof tutorial.steps === 'object'
+      ? tutorial.steps[stepId]
+      : null;
+    return !!(stepState && stepState.bubbleShown);
+  }
+
   function syncStepProgressBaseline(state) {
     const pendingStepId = getPendingStepId(state) || '';
     if (runtime.activeStepProgressId === pendingStepId) return;
@@ -310,10 +374,14 @@
     runtime.activeStepPurchasedBaseline = getPurchasedTankCount(state);
     runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
     runtime.activeStepTalentRankBaseline = 0;
+    runtime.activeStepCannonUpgradeBaseline = 0;
 
     const stepDefinition = pendingStepId ? getStepDefinition(pendingStepId) : null;
     if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'talent_rank_applied') {
       runtime.activeStepTalentRankBaseline = getAppliedTalentRank(state, stepDefinition.completion.talentId);
+    }
+    if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'cannon_upgrade_applied') {
+      runtime.activeStepCannonUpgradeBaseline = getAppliedCannonUpgradeLevel(state, stepDefinition.completion.level);
     }
   }
 
@@ -524,6 +592,19 @@
   function isStepAvailable(stepDefinition, state) {
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
+    const activation = stepDefinition.activation;
+    if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
+      if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
+    }
+    if (Number.isFinite(Number(activation.minSupercomputerLevel))) {
+      if (getSupercomputerLevel(state) < Math.max(0, Math.floor(Number(activation.minSupercomputerLevel)))) return false;
+    }
+    if (Number.isFinite(Number(activation.minFreeTalentPoints))) {
+      if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
+    }
+    if (Number.isFinite(Number(activation.minDamagePoints))) {
+      if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
+    }
     if (stepDefinition.activation.kind === 'min_coins') {
       const requiredCoins = Number(stepDefinition.activation.value);
       if (!Number.isFinite(requiredCoins)) return true;
@@ -537,6 +618,11 @@
     if (stepDefinition.activation.kind === 'mergeable_hangar_pair') {
       return findMergeablePairAnywhere(state);
     }
+    if (stepDefinition.activation.kind === 'min_damage_points') {
+      const requiredDamagePoints = Number(stepDefinition.activation.value);
+      if (!Number.isFinite(requiredDamagePoints)) return true;
+      return getAvailableDamagePoints(state) >= Math.max(0, Math.floor(requiredDamagePoints));
+    }
     if (stepDefinition.activation.kind === 'supercomputer_level_reward_dismissed') {
       return isSupercomputerLevelRewardDismissed(state);
     }
@@ -545,6 +631,12 @@
     }
     if (stepDefinition.activation.kind === 'supercomputer_talents_open') {
       return isSupercomputerTalentsOpen();
+    }
+    if (stepDefinition.activation.kind === 'supercomputer_tank_wall_open') {
+      return isSupercomputerTankWallOpen();
+    }
+    if (stepDefinition.activation.kind === 'supercomputer_tank_wall_weapons_open') {
+      return isSupercomputerTankWallWeaponsOpen();
     }
     return true;
   }
@@ -1725,18 +1817,30 @@
       completeCurrentStep('tank_merged');
       return;
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_root_open' && isSupercomputerRootOpen()) {
+    const completionAvailable = completionStep ? isStepAvailable(completionStep, state) : false;
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_root_open' && completionAvailable && isSupercomputerRootOpen()) {
       completeCurrentStep('supercomputer_root_open');
       return;
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_talents_open' && isSupercomputerTalentsOpen()) {
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_talents_open' && completionAvailable && isSupercomputerTalentsOpen()) {
       completeCurrentStep('supercomputer_talents_open');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_tank_wall_open' && completionAvailable && isSupercomputerTankWallOpen()) {
+      completeCurrentStep('supercomputer_tank_wall_open');
       return;
     }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'talent_rank_applied') {
       const talentId = completionStep.completion.talentId;
-      if (talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
+      if (completionAvailable && talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
         completeCurrentStep('talent_rank_applied');
+        return;
+      }
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'cannon_upgrade_applied') {
+      const level = completionStep.completion.level;
+      if (completionAvailable && getAppliedCannonUpgradeLevel(state, level) > runtime.activeStepCannonUpgradeBaseline) {
+        completeCurrentStep('cannon_upgrade_applied');
         return;
       }
     }
@@ -1835,6 +1939,7 @@
     runtime.activeStepPurchasedBaseline = 0;
     runtime.activeStepMergedBaseline = 0;
     runtime.activeStepTalentRankBaseline = 0;
+    runtime.activeStepCannonUpgradeBaseline = 0;
     closeDisableConfirm({ restoreFocus: false });
     persist();
     if (typeof runtime.updateUi === 'function') {

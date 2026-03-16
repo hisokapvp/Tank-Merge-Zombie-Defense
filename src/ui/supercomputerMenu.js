@@ -122,9 +122,9 @@
       if (key === 'techUnlockHelpTitle') return 'Help';
       if (key === 'techUnlockHelpClose') return 'Close';
       if (key === 'supercomputerTalentsHelpButton') return 'Upgrade tree help';
-      if (key === 'supercomputerTalentsHelpText') return 'Use upgrade points to improve the supercomputer and increase your combat, defense, and economy potential.';
+      if (key === 'supercomputerTalentsHelpText') return 'In this section, using upgrade points, you can improve the Supercomputer and increase your combat, defense, and economy potential';
       if (key === 'supercomputerTankWallHelpButton') return 'Tank and wall mods help';
-      if (key === 'supercomputerTankWallHelpText') return 'Use damage points to improve the stats of guns, drones, and walls.';
+      if (key === 'supercomputerTankWallHelpText') return 'In this section you can upgrade tank guns, drones, and defensive walls, improving their stats. Upgrades are applied immediately and affect all upgraded elements. Upgrade bonuses only apply within the upgraded level of tanks, drones, or walls.';
       if (key === 'modsTankWallTitle') return 'Tank and Wall Mods';
       if (key === 'talentTreeTitle') return 'Upgrade Tree';
       return 'Damage points: ' + (vars && vars.count != null ? vars.count : 0);

@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 6;
+  var VERSION = 7;
   var DEFAULT_BUBBLE_CONTROLS = ['close', 'continue', 'disable'];
 
   function cloneStringArray(value) {
@@ -131,6 +131,8 @@
       pointerAnimation: 'click',
       activation: {
         kind: 'supercomputer_level_reward_dismissed',
+        minSupercomputerLevel: 1,
+        minFreeTalentPoints: 1,
       },
       target: {
         selector: '#supercomputerBtn',
@@ -151,6 +153,9 @@
       pointerAnimation: 'click',
       activation: {
         kind: 'supercomputer_root_open',
+        requiresStepBubbleShown: 'supercomputer_open_menu',
+        minSupercomputerLevel: 1,
+        minFreeTalentPoints: 1,
       },
       target: {
         selector: '#supercomputerOpenTalents',
@@ -171,6 +176,9 @@
       pointerAnimation: 'click',
       activation: {
         kind: 'supercomputer_talents_open',
+        requiresStepBubbleShown: 'supercomputer_open_talent_tree',
+        minSupercomputerLevel: 1,
+        minFreeTalentPoints: 1,
       },
       target: {
         selector: '#talentOverlay .talentNode[data-talent-id="off_caliber"]',
@@ -186,6 +194,76 @@
         selectors: [
           '#talentOverlay .talentNode[data-talent-id="off_caliber"]',
           '#talentOverlay #talentApply'
+        ],
+      },
+    }),
+    createStep({
+      id: 'supercomputer_damage_open_menu',
+      messageKey: 'tutorialSupercomputerDamageOpenMenuMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'min_damage_points',
+        value: 2,
+      },
+      target: {
+        selector: '#supercomputerBtn',
+      },
+      completion: {
+        kind: 'supercomputer_root_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerBtn'],
+      },
+    }),
+    createStep({
+      id: 'supercomputer_damage_open_tank_wall_mods',
+      messageKey: 'tutorialSupercomputerOpenTankWallMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_root_open',
+        requiresStepBubbleShown: 'supercomputer_damage_open_menu',
+        minDamagePoints: 2,
+      },
+      target: {
+        selector: '#supercomputerOpenTankWallMods',
+      },
+      completion: {
+        kind: 'supercomputer_tank_wall_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerOpenTankWallMods'],
+      },
+    }),
+    createStep({
+      id: 'supercomputer_damage_apply_level1_weapon_upgrade',
+      messageKey: 'tutorialSupercomputerApplyWeaponDamageMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_tank_wall_weapons_open',
+        requiresStepBubbleShown: 'supercomputer_damage_open_tank_wall_mods',
+        minDamagePoints: 2,
+      },
+      target: {
+        selector: '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]',
+      },
+      completion: {
+        kind: 'cannon_upgrade_applied',
+        level: 1,
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: [
+          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]',
+          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="minus"]',
+          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="apply"]'
         ],
       },
     }),

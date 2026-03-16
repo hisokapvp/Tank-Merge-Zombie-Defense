@@ -8395,6 +8395,38 @@ function updateProgressUI(){
 function ensureTalentUI(){
   if (document.getElementById('talentOverlay')) return;
   if (isTalentsV2Ready()) {
+    const TalentOverlayDomApi = window.Game && window.Game.TalentOverlayDom;
+    if (TalentOverlayDomApi && typeof TalentOverlayDomApi.ensure === 'function') {
+      const overlayV2 = TalentOverlayDomApi.ensure({
+        documentObj: document,
+        translate: t,
+        branchIds: TALENTS_V2_BRANCH_IDS,
+        getBranchLabel: getTalentV2BranchLabelById,
+        onRequestClose: requestCloseTalents,
+        onApply: () => applyTalentSelections(),
+        onResetAll: () => {
+          resetAllTalents();
+          updateUI();
+        },
+        onUseActiveAbility: (branch) => {
+          useActiveAbility(branch);
+        },
+        onResetBranch: (branchId) => {
+          resetTalentPendingV2(branchId);
+        },
+      });
+
+      let resizeTimeoutV2 = null;
+      const redrawEdgesV2 = () => {
+        TALENTS_V2_BRANCH_IDS.forEach((branchId) => drawTalentEdgesV2(overlayV2, branchId));
+      };
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeoutV2);
+        resizeTimeoutV2 = setTimeout(redrawEdgesV2, 100);
+      });
+      return;
+    }
+
     const overlayV2 = document.createElement('div');
     overlayV2.id = 'talentOverlay';
     overlayV2.className = 'overlay hidden';
@@ -8651,91 +8683,82 @@ function buildTalentsV2RenderSignature(api){
   return parts.join('|');
 }
 
+function getTalentNodeDescriptionV2(node, rank){
+  let descText = t(node.ui?.descKey || node.id);
+  try {
+    if (node && node.ui && node.ui.descKey) {
+      const vars = {};
+      let currentPct = 0;
+      if (Array.isArray(node.effects) && node.effects.length > 0) {
+        for (let i = 0; i < node.effects.length; i++) {
+          const eff = node.effects[i];
+          if (eff && typeof eff.perRank === 'number') {
+            currentPct = Math.round(eff.perRank * 100 * rank);
+            vars.current = currentPct;
+            break;
+          }
+        }
+      }
+      descText = t(node.ui.descKey, vars);
+      try {
+        descText = ('' + descText).replaceAll('{current}', String(currentPct));
+      } catch (_) {}
+    }
+  } catch (_) {}
+  return descText;
+}
+
 function renderTalentNodesV2(overlay, branchId){
   const api = getTalentsV2Api();
   if (!api) return;
-  const grid = overlay.querySelector(`#talentGridV2-${branchId}`);
-  if (!grid) return;
   const ranks = typeof api.getRanks === 'function' ? api.getRanks() : {};
   const pendingRanks = typeof api.getPendingRanks === 'function' ? api.getPendingRanks() : {};
   const nodes = getTalentBranchNodesV2(branchId);
-  grid.innerHTML = '';
-  const maxRowsFromLayout = TALENT_LAYOUT.reduce((max, item) => Math.max(max, Number(item.row) || 0), 0) + 1;
-  const maxRowsFromTree = nodes.reduce((max, item) => Math.max(max, Number(item.tier) || 1), 1);
-  grid.style.setProperty('--rows', String(Math.max(1, maxRowsFromLayout, maxRowsFromTree)));
-
-  nodes.forEach((node, idx) => {
-    const layout = getTalentNodeLayoutV2(idx, node);
-    const appliedRank = Math.max(0, Math.floor(ranks[node.id] || 0));
-    const pendingRank = Math.max(0, Math.floor(pendingRanks[node.id] || 0));
-    const rank = appliedRank + pendingRank;
-    const can = typeof api.canBuy === 'function' ? api.canBuy(node.id, { includePending: true }) : { ok: false, reason: 'unknown' };
-    const tooltipReason = can.ok ? '' : resolveTalentCantBuyReasonText(can);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'talentNode';
-    button.dataset.talentId = node.id;
-    button.dataset.branchId = branchId;
-    button.dataset.talentLocal = String(idx);
-    button.dataset.row = String(Math.max(0, layout.row || 0));
-    button.style.setProperty('--row', String(Math.max(0, layout.row || 0)));
-    button.style.setProperty('--slot', String(Math.max(0, layout.slot || 0)));
-    button.classList.toggle('applied', appliedRank > 0);
-    button.classList.toggle('pending', pendingRank > 0);
-    button.classList.toggle('maxed', rank >= Math.max(1, node.maxRank || 1));
-    button.classList.toggle('locked', !can.ok && rank <= 0);
-    let descText = t(node.ui?.descKey || node.id);
-    try {
-      if (node && node.ui && node.ui.descKey) {
-        const vars = {};
-        let currentPct = 0;
-        if (Array.isArray(node.effects) && node.effects.length > 0) {
-          for (let i = 0; i < node.effects.length; i++) {
-            const eff = node.effects[i];
-            if (eff && typeof eff.perRank === 'number') {
-              currentPct = Math.round(eff.perRank * 100 * rank);
-              vars.current = currentPct;
-              break;
-            }
+  const TalentOverlayRendererApi = window.Game && window.Game.TalentOverlayRenderer;
+  if (TalentOverlayRendererApi && typeof TalentOverlayRendererApi.renderBranchNodes === 'function') {
+    TalentOverlayRendererApi.renderBranchNodes({
+      documentObj: document,
+      overlay,
+      branchId,
+      nodes,
+      ranks,
+      pendingRanks,
+      translate: t,
+      getNodeLayout: getTalentNodeLayoutV2,
+      getBuyState: (nodeId) => (typeof api.canBuy === 'function'
+        ? api.canBuy(nodeId, { includePending: true })
+        : { ok: false, reason: 'unknown' }),
+      getTooltipReason: resolveTalentCantBuyReasonText,
+      getNodeName: (node) => t(node.ui?.nameKey || node.id),
+      getNodeDescription: getTalentNodeDescriptionV2,
+      onNodeClick: (nodeId) => {
+        const check = typeof api.canBuy === 'function' ? api.canBuy(nodeId, { includePending: true }) : { ok: false, reason: 'unknown' };
+        if (!check.ok) {
+          if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+            window.Game.Toast.show(resolveTalentCantBuyReasonText(check), 1800);
           }
+          return;
         }
-        descText = t(node.ui.descKey, vars);
-        // Fallback: if translation didn't replace placeholder, force-replace it here
-        try {
-          descText = ('' + descText).replaceAll('{current}', String(currentPct));
-        } catch (_) {}
-      }
-    } catch (e) {}
-    const titleText = `${t(node.ui?.nameKey || node.id)}\n${descText}${tooltipReason ? `\n${tooltipReason}` : ''}`;
-    button.setAttribute('data-ui-tooltip', titleText);
-    button.removeAttribute('title');
-    button.innerHTML = `
-      <span class="talentNodeIcon" aria-hidden="true">${node.ui && node.ui.icon ? `<img src="assets/ui/icons/talents/${node.ui.icon}.png" alt="" loading="lazy">` : `<span class="talentNodeGlyph">◆</span>`}</span>
-      <span class="talentNodeRank">${rank}/${Math.max(1, node.maxRank || 1)}</span>
-    `;
-    button.addEventListener('click', () => {
-      const check = typeof api.canBuy === 'function' ? api.canBuy(node.id, { includePending: true }) : { ok: false, reason: 'unknown' };
-      if (!check.ok) {
-        if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-          window.Game.Toast.show(resolveTalentCantBuyReasonText(check), 1800);
+        const bought = typeof api.queueRank === 'function'
+          ? api.queueRank(nodeId)
+          : (typeof api.buyRank === 'function' ? api.buyRank(nodeId) : { ok: false });
+        if (!bought.ok) {
+          if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+            window.Game.Toast.show(resolveTalentCantBuyReasonText(bought), 1800);
+          }
+          return;
         }
-        return;
-      }
-      const bought = typeof api.queueRank === 'function'
-        ? api.queueRank(node.id)
-        : (typeof api.buyRank === 'function' ? api.buyRank(node.id) : { ok: false });
-      if (!bought.ok) {
-        if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-          window.Game.Toast.show(resolveTalentCantBuyReasonText(bought), 1800);
-        }
-        return;
-      }
-      syncPlayerTalentsV2FromApi();
-      updateTalentUI();
-      updateUI();
+        syncPlayerTalentsV2FromApi();
+        updateTalentUI();
+        updateUI();
+      },
     });
-    grid.appendChild(button);
-  });
+    return;
+  }
+
+  const grid = overlay.querySelector(`#talentGridV2-${branchId}`);
+  if (!grid) return;
+  grid.innerHTML = '';
 }
 
 function drawTalentEdgesV2(overlay, branchId){
