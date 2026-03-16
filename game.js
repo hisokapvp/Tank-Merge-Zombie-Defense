@@ -6940,6 +6940,7 @@ function addDecal(d){
     dps: d.dps || 0,
     slowFactor: d.slowFactor || 0,
     chipModId: d.chipModId || 0,
+    effectSprite: d.effectSprite || null,
     color: d.color || 'rgba(125,255,178,.14)',
   });
 }
@@ -11544,15 +11545,85 @@ function drawCrate(){
   ctx.restore();
 }
 
+function drawChipEffectSprite(sprite, x, y, elapsedSec, alpha){
+  if (!sprite || !sprite.src) return false;
+  const ChipFx = window.Game && window.Game.ChipEffects;
+  if (!ChipFx || typeof ChipFx.getChipAtlasImage !== 'function') return false;
+  const atlasImg = ChipFx.getChipAtlasImage(sprite.src);
+  if (!atlasImg || !sprite.frame) return false;
+  const frames = Math.max(1, Number.isFinite(sprite.frames) ? Math.floor(sprite.frames) : 1);
+  const fps = Math.max(0.01, Number(sprite.frameRateFps || sprite.animSpeed || 12));
+  let frameIndex = Math.floor(Math.max(0, elapsedSec) * fps);
+  if (sprite.loop !== false) frameIndex = frames > 1 ? frameIndex % frames : 0;
+  else frameIndex = Math.min(frames - 1, frameIndex);
+  const sw = sprite.frame.w;
+  const sh = sprite.frame.h;
+  const sx = (Number.isFinite(sprite.frame.x) ? sprite.frame.x : 0) + frameIndex * sw;
+  const sy = Number.isFinite(sprite.frame.y) ? sprite.frame.y : 0;
+  const anchor = sprite.anchor || { x: 0.5, y: 0.5 };
+  const scale = Number.isFinite(sprite.scale) ? Math.max(0.05, sprite.scale) : 1;
+  ctx.save();
+  ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.drawImage(
+    atlasImg,
+    sx,
+    sy,
+    sw,
+    sh,
+    x - sw * scale * anchor.x,
+    y - sh * scale * anchor.y,
+    sw * scale,
+    sh * scale
+  );
+  ctx.restore();
+  return true;
+}
+
 function drawDecals(){
+
   for (const d of state.decals){
     const t = d.life / d.max;
+    const elapsed = Math.max(0, (d.max || 0) - (d.life || 0));
     ctx.save();
     ctx.globalAlpha = 0.8 * t;
     ctx.fillStyle = d.color;
     ctx.beginPath();
     ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
     ctx.fill();
+    ctx.restore();
+    drawChipEffectSprite(d.effectSprite, d.x, d.y, elapsed, 0.9 * t);
+  }
+
+  const ChipFx = window.Game && window.Game.ChipEffects;
+  const electroNodes = ChipFx && typeof ChipFx.getElectroNodes === 'function' ? ChipFx.getElectroNodes() : [];
+  const laserMarks = ChipFx && typeof ChipFx.getLaserMarks === 'function' ? ChipFx.getLaserMarks() : [];
+
+  for (const node of electroNodes){
+    const maxLife = Number.isFinite(node.maxLife) ? node.maxLife : node.life;
+    const t = maxLife > 0 ? node.life / maxLife : 1;
+    const elapsed = Math.max(0, maxLife - node.life);
+    if (drawChipEffectSprite(node.effectSprite, node.x, node.y, elapsed, 0.95 * t)) continue;
+    ctx.save();
+    ctx.globalAlpha = 0.8 * t;
+    ctx.fillStyle = node.color || 'rgba(236,204,104,.3)';
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  for (const mark of laserMarks){
+    const maxLife = Number.isFinite(mark.maxLife) ? mark.maxLife : mark.life;
+    const t = maxLife > 0 ? mark.life / maxLife : 1;
+    const elapsed = Math.max(0, maxLife - mark.life);
+    if (drawChipEffectSprite(mark.effectSprite, mark.x, mark.y, elapsed, 0.95 * t)) continue;
+    ctx.save();
+    ctx.globalAlpha = 0.85 * t;
+    ctx.strokeStyle = mark.color || 'rgba(255,71,87,.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(mark.x, mark.y, mark.r || 18, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 }

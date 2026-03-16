@@ -83,6 +83,9 @@
       if (mod && mod.impactSprite && typeof mod.impactSprite.src === 'string' && mod.impactSprite.src) {
         srcs[mod.impactSprite.src] = true;
       }
+      if (mod && mod.effectSprite && typeof mod.effectSprite.src === 'string' && mod.effectSprite.src) {
+        srcs[mod.effectSprite.src] = true;
+      }
     }
     var srcList = Object.keys(srcs);
     for (var j = 0; j < srcList.length; j++) {
@@ -122,7 +125,15 @@
       ? { x: Number.isFinite(raw.anchor.x) ? raw.anchor.x : 0.5, y: Number.isFinite(raw.anchor.y) ? raw.anchor.y : 0.5 }
       : { x: 0.5, y: 0.5 };
     var scale = Number.isFinite(raw.scale) ? Math.max(0.01, raw.scale) : 1;
-    return { src: raw.src, frame: { x: x, y: y, w: w, h: h }, frames: frames, frameRateFps: fps, anchor: anchor, scale: scale };
+    return {
+      src: raw.src,
+      frame: { x: x, y: y, w: w, h: h },
+      frames: frames,
+      frameRateFps: fps,
+      anchor: anchor,
+      scale: scale,
+      loop: raw.loop !== false
+    };
   }
 
   function getModBulletSprite(modId) {
@@ -139,6 +150,15 @@
     if (key in _chipSpriteCache) return _chipSpriteCache[key];
     var cfg = getModCfg(modId);
     var result = cfg ? _normalizeCustomSprite(cfg.impactSprite) : null;
+    _chipSpriteCache[key] = result;
+    return result;
+  }
+
+  function getModEffectSprite(modId) {
+    var key = 'e' + modId;
+    if (key in _chipSpriteCache) return _chipSpriteCache[key];
+    var cfg = getModCfg(modId);
+    var result = cfg ? _normalizeCustomSprite(cfg.effectSprite) : null;
     _chipSpriteCache[key] = result;
     return result;
   }
@@ -844,6 +864,7 @@
         life: eff ? eff.poolLife : 4.0,
         dps: b.dmg * (eff ? eff.poolDpsMul : 0.30),
         color: eff ? eff.color : 'rgba(255,99,72,0.25)',
+        effectSprite: getModEffectSprite(10),
         chipModId: 10
       });
     }
@@ -859,6 +880,7 @@
         dps: 0,
         slowFactor: iceEff ? iceEff.slowFactor : 0.35,
         color: iceEff ? iceEff.color : 'rgba(112,161,255,0.2)',
+        effectSprite: getModEffectSprite(11),
         chipModId: 11
       });
     }
@@ -870,10 +892,13 @@
       _electroNodes.push({
         x: x, y: y,
         life: elEff ? elEff.nodeLife : 5.0,
+        maxLife: elEff ? elEff.nodeLife : 5.0,
         interval: elEff ? elEff.nodeInterval : 0.8,
         range: elEff ? elEff.nodeRange : 60,
         dmg: b.dmg * (elEff ? elEff.nodeDmgMul : 0.35),
         timer: 0,
+        color: elEff ? elEff.color : 'rgba(236,204,104,0.3)',
+        effectSprite: getModEffectSprite(12),
         chipModId: 12
       });
     }
@@ -885,9 +910,12 @@
       _laserMarks.push({
         x: x, y: y,
         life: laEff ? laEff.markLife : 3.0,
+        maxLife: laEff ? laEff.markLife : 3.0,
         damageMul: laEff ? laEff.damageMul : 2.0,
         aoeMul: laEff ? laEff.aoeMul : 2.0,
         r: 18,
+        color: laEff ? laEff.color : 'rgba(255,71,87,0.35)',
+        effectSprite: getModEffectSprite(13),
         chipModId: 13
       });
     }
@@ -903,6 +931,7 @@
         dps: b.dmg * (acidEff ? acidEff.poolDpsMul : 0.15),
         slowFactor: acidEff ? acidEff.slowFactor : 0.15,
         color: acidEff ? acidEff.color : 'rgba(184,255,59,0.2)',
+        effectSprite: getModEffectSprite(14),
         chipModId: 14
       });
     }
@@ -1296,6 +1325,7 @@
     getLaserMarks: getLaserMarks,
     getModBulletSprite: getModBulletSprite,
     getModImpactSprite: getModImpactSprite,
+    getModEffectSprite: getModEffectSprite,
     getModSfxConfig: getModSfxConfig,
     resolveChipSfxKey: resolveChipSfxKey,
     resolveChipShotSfx: resolveChipShotSfx,

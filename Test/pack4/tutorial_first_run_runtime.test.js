@@ -106,18 +106,21 @@ test('TUT-6: tutorial runtime is loaded from index.html', () => {
 test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialStarterTankMessage"') !== -1, 'ru tutorial message exists');
   assert(ru.indexOf('"tutorialMergeTankMessage"') !== -1, 'ru merge tutorial message exists');
+  assert(ru.indexOf('"techUnlockHelpTitle"') !== -1, 'ru hangar tech help title exists');
   assert(ru.indexOf('"tutorialContinue"') !== -1, 'ru continue button exists');
   assert(ru.indexOf('"tutorialDisable"') !== -1, 'ru disable button exists');
   assert(ru.indexOf('"tutorialLockedTooltip"') !== -1, 'ru lock tooltip exists');
   assert(ru.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'ru workshop empty merge string exists');
   assert(en.indexOf('"tutorialStarterTankMessage"') !== -1, 'en tutorial message exists');
   assert(en.indexOf('"tutorialMergeTankMessage"') !== -1, 'en merge tutorial message exists');
+  assert(en.indexOf('"techUnlockHelpTitle"') !== -1, 'en hangar tech help title exists');
   assert(en.indexOf('"tutorialContinue"') !== -1, 'en continue button exists');
   assert(en.indexOf('"tutorialDisable"') !== -1, 'en disable button exists');
   assert(en.indexOf('"tutorialLockedTooltip"') !== -1, 'en lock tooltip exists');
   assert(en.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'en workshop empty merge string exists');
   assert(fallback.indexOf('tutorialStarterTankMessage') !== -1, 'fallback tutorial message exists');
   assert(fallback.indexOf('tutorialMergeTankMessage') !== -1, 'fallback merge tutorial message exists');
+  assert(fallback.indexOf('techUnlockHelpTitle') !== -1, 'fallback hangar tech help title exists');
   assert(fallback.indexOf('tutorialContinue') !== -1, 'fallback continue button exists');
   assert(fallback.indexOf('tutorialDisable') !== -1, 'fallback disable button exists');
   assert(fallback.indexOf('tutorialLockedTooltip') !== -1, 'fallback lock tooltip exists');
@@ -132,6 +135,7 @@ test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("targetKinds: ['any_hangar_tank', 'any_track_tank']") !== -1, 'starter step unlocks hangar and track interactions cumulatively');
   assert(tutorialStepsJs.indexOf("uiKeys: ['buy']") !== -1, 'second step unlocks buy button cumulatively');
   assert(tutorialStepsJs.indexOf("kind: 'mergeable_hangar_pair'") !== -1, 'merge step activates only for a real mergeable pair');
+  assert(tutorialStepsJs.indexOf("targetKinds: ['mergeable_hangar_pair', 'any_hangar_tank', 'any_track_tank']") !== -1, 'merge step unlocks once any relevant tank state exists while still targeting a real mergeable pair');
   assert(tutorialStepsJs.indexOf('secondaryTarget:') !== -1, 'merge step defines a secondary drag target');
   assert(tutorialStepsJs.indexOf('pointerPath:') !== -1, 'merge step defines drag-drop pointer path');
 });
@@ -149,8 +153,17 @@ test('TUT-9: cursor config supports per-step sprite rotation, motion angle and o
 });
 
 test('TUT-10: merge tutorial completion waits for merge after step activation', () => {
+  assert(tutorialRuntimeJs.indexOf('function getPreferredPendingStepId(state, tutorial)') !== -1, 'runtime dynamically selects the next available pending step');
+  assert(tutorialRuntimeJs.indexOf('findMergeableTutorialPair') !== -1, 'runtime resolves merge tutorial targets from actual player state');
   assert(tutorialRuntimeJs.indexOf('activeStepMergedBaseline') !== -1, 'runtime tracks merge baseline for active step');
   assert(tutorialRuntimeJs.indexOf('getCompletedTankMergeCount(state) > runtime.activeStepMergedBaseline') !== -1, 'merge step completes only after merge count increases during active step');
+});
+
+test('TUT-13: hangar tech help button and modal hooks are wired into the overlay', () => {
+  assert(indexHtml.indexOf('id="modsHangarHelpBtn"') !== -1, 'hangar overlay includes a dedicated help button');
+  assert(indexHtml.indexOf('data-tech-help-open="true"') !== -1, 'hangar help button exposes the expected action attribute');
+  assert(hangarChipsUiJs.indexOf('syncTechUnlockHelpButtonCopy') !== -1, 'hangar UI syncs help button caption through i18n');
+  assert(hangarChipsUiJs.indexOf('_showTechUnlockHelpModal') !== -1, 'hangar UI implements the help modal opener');
 });
 
 test('TUT-11: chip upgrade tab keeps only mergeable chips and removes large vertex dots', () => {

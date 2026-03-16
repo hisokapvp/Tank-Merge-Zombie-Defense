@@ -122,7 +122,7 @@
         bubbleControls: ['close', 'continue', 'disable'],
       },
       unlock: {
-        targetKinds: ['mergeable_hangar_pair'],
+        targetKinds: ['mergeable_hangar_pair', 'any_hangar_tank', 'any_track_tank'],
       },
     }),
   ];

@@ -753,11 +753,20 @@
   /* ─── Full render ──────────────────────────────────────── */
 
   function render() {
+    syncTechUnlockHelpButtonCopy();
     renderGrid();
     renderCellTitle();
     renderButterfly();
     renderActiveMods();
     renderChipsList();
+  }
+
+  function syncTechUnlockHelpButtonCopy() {
+    var helpBtn = el('modsHangarHelpBtn');
+    if (!helpBtn) return;
+    var label = t('techUnlockHelpButton', 'Справка');
+    helpBtn.setAttribute('aria-label', label);
+    helpBtn.setAttribute('title', label);
   }
 
   /* ─── Tab switching ────────────────────────────────────── */
@@ -1905,6 +1914,12 @@
       return;
     }
 
+    var techHelpBtn = tgt.closest ? tgt.closest('[data-tech-help-open]') : null;
+    if (techHelpBtn) {
+      _showTechUnlockHelpModal();
+      return;
+    }
+
     /* workshop sub-tab buttons */
     if (tgt.id === 'workshopTabChipUpgrade' || tgt.closest && tgt.closest('#workshopTabChipUpgrade')) {
       switchWorkshopSubTab('chipUpgrade');
@@ -2170,6 +2185,20 @@
       '</div>' +
       '</div>';
     modal.innerHTML = html;
+    modal.style.display = 'flex';
+  }
+
+  function _showTechUnlockHelpModal() {
+    var modal = _ensureTechModal();
+    var closeLabel = t('menuClose', 'Закрыть');
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="techUnlockHelpTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + _escapeHtml(closeLabel) + '" title="' + _escapeHtml(closeLabel) + '"></button>' +
+      '<div class="techModal__title" id="techUnlockHelpTitle">' + _escapeHtml(t('techUnlockHelpTitle', 'Справка')) + '</div>' +
+      '<div class="techModal__text">' + _escapeHtml(t('techUnlockHelpText', 'В этом разделе Вы можете усовершенствовать любой модификатор чипа. После изучения новой технологии будут усовершенствованы все чипы - текущие фрагменты чипов, целые чипы и / или фрагменты чипов и целые чипы, которые будут получены после изучения новой технологии.')) + '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + _escapeHtml(t('techUnlockHelpClose', 'Закрыть')) + '</button>' +
+      '</div>' +
+      '</div>';
     modal.style.display = 'flex';
   }
 

@@ -191,6 +191,24 @@
     return null;
   }
 
+  function getPreferredPendingStepId(state, tutorial) {
+    const normalizedTutorial = tutorial || normalizeTutorialState(state);
+    const definitions = getStepDefinitions();
+    let firstIncomplete = null;
+    let latestAvailable = null;
+
+    for (let i = 0; i < definitions.length; i++) {
+      const definition = definitions[i];
+      if (!definition || typeof definition.id !== 'string' || !definition.id) continue;
+      const stepState = normalizedTutorial.steps[definition.id];
+      if (stepState && (stepState.completed || stepState.dismissed)) continue;
+      if (!firstIncomplete) firstIncomplete = definition.id;
+      if (isStepAvailable(definition, state)) latestAvailable = definition.id;
+    }
+
+    return latestAvailable || firstIncomplete;
+  }
+
   function hasExistingProgress(state) {
     if (!state || typeof state !== 'object') return false;
     if (Number.isFinite(state.kills) && state.kills > 0) return true;
@@ -312,7 +330,7 @@
         stepState.bubbleOpen = false;
       }
     } else {
-      const nextStepId = getNextIncompleteStepId(normalized);
+      const nextStepId = getPreferredPendingStepId(state, normalized);
       normalized.currentStepId = nextStepId;
       normalized.completed = !nextStepId;
     }
@@ -333,7 +351,7 @@
   function getPendingStepId(state) {
     const tutorial = normalizeTutorialState(state);
     if (tutorial.disabled || tutorial.completed) return null;
-    return tutorial.currentStepId || null;
+    return getPreferredPendingStepId(state, tutorial);
   }
 
   function getPendingStepDefinition(state) {
@@ -414,18 +432,38 @@
     return null;
   }
 
-  function findMergeablePairAnywhere(state) {
-    if (!state || !Array.isArray(state.cells)) return false;
-    const levelCounts = {};
-    for (let i = 0; i < state.cells.length; i++) {
-      const cell = state.cells[i];
-      if (!cell || !cell.tank) continue;
-      const level = Number(cell.tank.level);
-      if (!Number.isFinite(level) || level < 1) continue;
-      if (levelCounts[level]) return true;
-      levelCounts[level] = true;
+  function findMergeablePairAnywhereDetailed(state) {
+    if (!state || !Array.isArray(state.cells)) return null;
+    let fallbackPair = null;
+    for (let leftIndex = 0; leftIndex < state.cells.length; leftIndex++) {
+      const leftCell = state.cells[leftIndex];
+      const leftTank = leftCell && leftCell.tank;
+      if (!leftCell || !leftTank || !isTankReadyForMergeCheck(leftTank)) continue;
+      const leftLevel = Number(leftTank.level);
+      if (!Number.isFinite(leftLevel) || leftLevel < 1) continue;
+
+      for (let rightIndex = leftIndex + 1; rightIndex < state.cells.length; rightIndex++) {
+        const rightCell = state.cells[rightIndex];
+        const rightTank = rightCell && rightCell.tank;
+        if (!rightCell || !rightTank || !isTankReadyForMergeCheck(rightTank)) continue;
+        if (Number(rightTank.level) !== leftLevel) continue;
+        const pair = {
+          source: leftCell,
+          target: rightCell,
+        };
+        if (!leftTank.onTrack && !rightTank.onTrack) return pair;
+        if (!fallbackPair) fallbackPair = pair;
+      }
     }
-    return false;
+    return fallbackPair;
+  }
+
+  function findMergeableTutorialPair(state) {
+    return findMergeableHangarPair(state) || findMergeablePairAnywhereDetailed(state);
+  }
+
+  function findMergeablePairAnywhere(state) {
+    return !!findMergeablePairAnywhereDetailed(state);
   }
 
   function isStepAvailable(stepDefinition, state) {
@@ -483,7 +521,7 @@
     }
 
     if (kind === 'mergeable_hangar_pair') {
-      const pair = findMergeableHangarPair(state);
+      const pair = findMergeableTutorialPair(state);
       if (!pair) return targets;
       pushUniqueTarget(targets, pair.source);
       pushUniqueTarget(targets, pair.target);
@@ -491,13 +529,13 @@
     }
 
     if (kind === 'mergeable_hangar_tank_source') {
-      const pair = findMergeableHangarPair(state);
+      const pair = findMergeableTutorialPair(state);
       if (pair && pair.source) pushUniqueTarget(targets, pair.source);
       return targets;
     }
 
     if (kind === 'mergeable_hangar_tank_target') {
-      const pair = findMergeableHangarPair(state);
+      const pair = findMergeableTutorialPair(state);
       if (pair && pair.target) pushUniqueTarget(targets, pair.target);
       return targets;
     }
@@ -1349,7 +1387,7 @@
     if (reason === 'close') {
       tutorial.steps[activeStepId].dismissed = true;
       tutorial.steps[activeStepId].completed = true;
-      tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+      tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
       tutorial.completed = !tutorial.currentStepId;
     }
     closeDisableConfirm({ restoreFocus: false });
@@ -1370,7 +1408,7 @@
     stepState.bubbleOpen = false;
     if (reason === 'dismiss') stepState.dismissed = true;
     tutorial.steps[activeStepId] = stepState;
-    tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+    tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
     tutorial.completed = !tutorial.currentStepId;
     runtime.canvasSequenceActive = false;
     closeDisableConfirm({ restoreFocus: false });
@@ -1694,7 +1732,7 @@
       if (!def || !def.id) continue;
       if (!tutorial.steps[def.id]) tutorial.steps[def.id] = createDefaultStepState();
     }
-    tutorial.currentStepId = getNextIncompleteStepId(tutorial);
+    tutorial.currentStepId = getPreferredPendingStepId(state, tutorial);
     tutorial.completed = !tutorial.currentStepId;
     persist();
     if (typeof runtime.updateUi === 'function') {

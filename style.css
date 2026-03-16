@@ -3719,6 +3719,23 @@ button[data-tutorial-locked="true"]::after,
   width:min(1050px, 96vw) !important;
   max-height: 98vh;
 }
+.hangarChipsHelpBtn{
+  position:absolute;
+  top:18px;
+  right:70px;
+  width:34px;
+  min-width:34px;
+  height:34px;
+  padding:0 !important;
+  display:grid;
+  place-items:center;
+  border-radius:999px !important;
+  font-size:18px !important;
+  line-height:1;
+}
+.hangarChipsHelpBtn:hover:not(:disabled){
+  background:rgba(74,246,38,.18) !important;
+}
 #modsHangarOverlay .scModal__body{
   overflow: hidden;
   display: flex;
