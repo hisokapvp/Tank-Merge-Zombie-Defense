@@ -60,6 +60,7 @@
     activeStepProgressId: '',
     activeStepPurchasedBaseline: 0,
     activeStepMergedBaseline: 0,
+    activeStepTalentRankBaseline: 0,
   };
 
   function capturePauseManagerInstance(instance) {
@@ -266,12 +267,54 @@
     return 0;
   }
 
+  function getAppliedTalentRank(state, talentId) {
+    if (!state || !talentId || !state.player || !state.player.talentsV2 || typeof state.player.talentsV2 !== 'object') return 0;
+    const ranksById = state.player.talentsV2.ranksById;
+    if (!ranksById || typeof ranksById !== 'object') return 0;
+    const rank = Number(ranksById[talentId]);
+    return Number.isFinite(rank) && rank > 0 ? Math.floor(rank) : 0;
+  }
+
+  function getTutorialFlags(tutorial) {
+    if (!tutorial || typeof tutorial !== 'object') return { supercomputerLevelRewardDismissed: false };
+    if (!tutorial.flags || typeof tutorial.flags !== 'object') tutorial.flags = {};
+    if (typeof tutorial.flags.supercomputerLevelRewardDismissed !== 'boolean') {
+      tutorial.flags.supercomputerLevelRewardDismissed = false;
+    }
+    return tutorial.flags;
+  }
+
+  function isSupercomputerLevelRewardDismissed(state) {
+    if (!state || typeof state !== 'object') return false;
+    const tutorial = state.tutorial && typeof state.tutorial === 'object' ? state.tutorial : null;
+    const flags = getTutorialFlags(tutorial);
+    return !!flags.supercomputerLevelRewardDismissed;
+  }
+
+  function isSupercomputerRootOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('supercomputerMenuOverlay');
+    return isElementVisible(overlay);
+  }
+
+  function isSupercomputerTalentsOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('talentOverlay');
+    return isElementVisible(overlay);
+  }
+
   function syncStepProgressBaseline(state) {
     const pendingStepId = getPendingStepId(state) || '';
     if (runtime.activeStepProgressId === pendingStepId) return;
     runtime.activeStepProgressId = pendingStepId;
     runtime.activeStepPurchasedBaseline = getPurchasedTankCount(state);
     runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
+    runtime.activeStepTalentRankBaseline = 0;
+
+    const stepDefinition = pendingStepId ? getStepDefinition(pendingStepId) : null;
+    if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'talent_rank_applied') {
+      runtime.activeStepTalentRankBaseline = getAppliedTalentRank(state, stepDefinition.completion.talentId);
+    }
   }
 
   function normalizeTutorialState(state) {
@@ -319,6 +362,9 @@
       disabled: !!raw.disabled,
       completed: !!raw.completed,
       currentStepId: typeof raw.currentStepId === 'string' ? raw.currentStepId : null,
+      flags: {
+        supercomputerLevelRewardDismissed: !!(raw.flags && raw.flags.supercomputerLevelRewardDismissed),
+      },
       steps: steps,
     };
 
@@ -490,6 +536,15 @@
     }
     if (stepDefinition.activation.kind === 'mergeable_hangar_pair') {
       return findMergeablePairAnywhere(state);
+    }
+    if (stepDefinition.activation.kind === 'supercomputer_level_reward_dismissed') {
+      return isSupercomputerLevelRewardDismissed(state);
+    }
+    if (stepDefinition.activation.kind === 'supercomputer_root_open') {
+      return isSupercomputerRootOpen();
+    }
+    if (stepDefinition.activation.kind === 'supercomputer_talents_open') {
+      return isSupercomputerTalentsOpen();
     }
     return true;
   }
@@ -1670,6 +1725,21 @@
       completeCurrentStep('tank_merged');
       return;
     }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_root_open' && isSupercomputerRootOpen()) {
+      completeCurrentStep('supercomputer_root_open');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_talents_open' && isSupercomputerTalentsOpen()) {
+      completeCurrentStep('supercomputer_talents_open');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'talent_rank_applied') {
+      const talentId = completionStep.completion.talentId;
+      if (talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
+        completeCurrentStep('talent_rank_applied');
+        return;
+      }
+    }
     ensureDom();
     patchPauseManagerFactory();
 
@@ -1764,6 +1834,7 @@
     runtime.activeStepProgressId = '';
     runtime.activeStepPurchasedBaseline = 0;
     runtime.activeStepMergedBaseline = 0;
+    runtime.activeStepTalentRankBaseline = 0;
     closeDisableConfirm({ restoreFocus: false });
     persist();
     if (typeof runtime.updateUi === 'function') {
@@ -1776,6 +1847,18 @@
     return false;
   }
 
+  function handleSupercomputerLevelRewardDismissed(level) {
+    if (!Number.isFinite(Number(level)) || Number(level) < 1) return;
+    const state = getState();
+    if (!state) return;
+    const tutorial = normalizeTutorialState(state);
+    const flags = getTutorialFlags(tutorial);
+    if (flags.supercomputerLevelRewardDismissed) return;
+    flags.supercomputerLevelRewardDismissed = true;
+    persist();
+    syncNow();
+  }
+
   const api = {
     init: init,
     syncNow: syncNow,
@@ -1784,6 +1867,7 @@
     disableTutorial: disableTutorial,
     handleTankOnTrackChanged: handleTankOnTrackChanged,
     handleTankPurchased: handleTankPurchased,
+    handleSupercomputerLevelRewardDismissed: handleSupercomputerLevelRewardDismissed,
   };
 
   global.Game = global.Game || {};

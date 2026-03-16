@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = 5;
+  var VERSION = 6;
   var DEFAULT_BUBBLE_CONTROLS = ['close', 'continue', 'disable'];
 
   function cloneStringArray(value) {
@@ -125,6 +125,70 @@
         targetKinds: ['mergeable_hangar_pair', 'any_hangar_tank', 'any_track_tank'],
       },
     }),
+    createStep({
+      id: 'supercomputer_open_menu',
+      messageKey: 'tutorialSupercomputerOpenMenuMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_level_reward_dismissed',
+      },
+      target: {
+        selector: '#supercomputerBtn',
+      },
+      completion: {
+        kind: 'supercomputer_root_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerBtn'],
+      },
+    }),
+    createStep({
+      id: 'supercomputer_open_talent_tree',
+      messageKey: 'tutorialSupercomputerOpenTreeMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_root_open',
+      },
+      target: {
+        selector: '#supercomputerOpenTalents',
+      },
+      completion: {
+        kind: 'supercomputer_talents_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerOpenTalents'],
+      },
+    }),
+    createStep({
+      id: 'supercomputer_apply_caliber',
+      messageKey: 'tutorialSupercomputerApplyCaliberMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_talents_open',
+      },
+      target: {
+        selector: '#talentOverlay .talentNode[data-talent-id="off_caliber"]',
+      },
+      completion: {
+        kind: 'talent_rank_applied',
+        talentId: 'off_caliber',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: [
+          '#talentOverlay .talentNode[data-talent-id="off_caliber"]',
+          '#talentOverlay #talentApply'
+        ],
+      },
+    }),
   ];
 
   function buildStepState() {
@@ -150,6 +214,9 @@
       disabled: false,
       completed: false,
       currentStepId: STEPS.length ? STEPS[0].id : null,
+      flags: {
+        supercomputerLevelRewardDismissed: false,
+      },
       steps: buildStepsState(),
     };
   }

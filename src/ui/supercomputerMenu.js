@@ -90,6 +90,7 @@
     var getAppliedFenceUpgradeLevel = typeof opts.getAppliedFenceUpgradeLevel === 'function' ? opts.getAppliedFenceUpgradeLevel : function () { return 0; };
     var applyFenceUpgrade = typeof opts.applyFenceUpgrade === 'function' ? opts.applyFenceUpgrade : function () { return { ok: false }; };
     var upgradeFence = typeof opts.upgradeFence === 'function' ? opts.upgradeFence : function () { return false; };
+    var techHelpModalEl = null;
     var translate = typeof opts.translate === 'function' ? opts.translate : function (_, vars) {
       var key = _ || '';
       if (key === 'modsGunsColType') return 'Cannon';
@@ -118,6 +119,14 @@
       if (key === 'modsWallsUpgradeCost') return 'Upgrade (' + (vars && vars.cost != null ? vars.cost : 0) + ')';
       if (key === 'modsWallsUpgradeMax') return 'Max level';
       if (key === 'modsWallsUpgrade') return 'Upgrade';
+      if (key === 'techUnlockHelpTitle') return 'Help';
+      if (key === 'techUnlockHelpClose') return 'Close';
+      if (key === 'supercomputerTalentsHelpButton') return 'Upgrade tree help';
+      if (key === 'supercomputerTalentsHelpText') return 'Use upgrade points to improve the supercomputer and increase your combat, defense, and economy potential.';
+      if (key === 'supercomputerTankWallHelpButton') return 'Tank and wall mods help';
+      if (key === 'supercomputerTankWallHelpText') return 'Use damage points to improve the stats of guns, drones, and walls.';
+      if (key === 'modsTankWallTitle') return 'Tank and Wall Mods';
+      if (key === 'talentTreeTitle') return 'Upgrade Tree';
       return 'Damage points: ' + (vars && vars.count != null ? vars.count : 0);
     };
 
@@ -201,6 +210,81 @@
         closeBtn.classList.add('scModal__close');
         closeBtn.setAttribute('data-font-floor-ignore', 'true');
       }
+      var helpBtn = talentOverlay.querySelector('#supercomputerTalentsHelpBtn');
+      if (!helpBtn) {
+        helpBtn = documentObj.createElement('button');
+        helpBtn.id = 'supercomputerTalentsHelpBtn';
+        helpBtn.type = 'button';
+        helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn';
+        helpBtn.textContent = '?';
+        helpBtn.setAttribute('data-font-floor-ignore', 'true');
+        helpBtn.addEventListener('click', function (evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          showTechHelpModal({
+            sectionTitleKey: 'talentTreeTitle',
+            textKey: 'supercomputerTalentsHelpText',
+          });
+        });
+        panel.appendChild(helpBtn);
+        if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
+          global.Game.ButtonBehavior.decorateTree(helpBtn);
+        }
+      }
+      syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
+    }
+
+    function ensureTechHelpModal() {
+      if (techHelpModalEl) return techHelpModalEl;
+      techHelpModalEl = documentObj.createElement('div');
+      techHelpModalEl.className = 'techModal__backdrop';
+      techHelpModalEl.style.display = 'none';
+      techHelpModalEl.setAttribute('aria-hidden', 'true');
+      techHelpModalEl.addEventListener('click', function (evt) {
+        var closeTarget = evt && evt.target && evt.target.closest ? evt.target.closest('[data-sc-help-close]') : null;
+        if (closeTarget || evt.target === techHelpModalEl) hideTechHelpModal();
+      });
+      documentObj.body.appendChild(techHelpModalEl);
+      return techHelpModalEl;
+    }
+
+    function hideTechHelpModal() {
+      if (!techHelpModalEl) return;
+      techHelpModalEl.style.display = 'none';
+      techHelpModalEl.setAttribute('aria-hidden', 'true');
+      techHelpModalEl.innerHTML = '';
+    }
+
+    function syncHelpButtonCopy(button, labelKey) {
+      if (!button) return;
+      var label = translate(labelKey, translate('techUnlockHelpTitle', 'Help'));
+      button.setAttribute('aria-label', label);
+      button.setAttribute('data-ui-tooltip', label);
+      button.removeAttribute('title');
+    }
+
+    function showTechHelpModal(config) {
+      var modal = ensureTechHelpModal();
+      var closeLabel = translate('techUnlockHelpClose', 'Close');
+      var title = translate('techUnlockHelpTitle', 'Help');
+      var sectionTitle = translate(config.sectionTitleKey, title);
+      var text = translate(config.textKey, '');
+      modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="supercomputerHelpTitle">'
+        + '<button class="modalClose scModal__close techModal__close uiButtonBehavior" data-sc-help-close="true" type="button" aria-label="' + closeLabel + '"></button>'
+        + '<div class="techModal__title techModal__title--help" id="supercomputerHelpTitle">' + title + '</div>'
+        + '<div class="techModal__subtitle techModal__subtitle--help">' + sectionTitle + '</div>'
+        + '<div class="techModal__text techModal__text--help"></div>'
+        + '<div class="techModal__btns"><button class="btn scButton uiButtonBehavior techModal__noBtn" data-sc-help-close="true" type="button">' + closeLabel + '</button></div>'
+        + '</div>';
+      var textEl = modal.querySelector('.techModal__text--help');
+      if (textEl) textEl.textContent = text;
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
+        global.Game.ButtonBehavior.decorateTree(modal);
+      }
+      var closeBtn = modal.querySelector('[data-sc-help-close="true"]');
+      if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
     }
 
     function setTankWallTab(nextTab, options) {
@@ -1361,6 +1445,7 @@
     }
 
     function showTankWallMods() {
+      syncHelpButtonCopy(documentObj.getElementById('modsTankWallHelpBtn'), 'supercomputerTankWallHelpButton');
       setTankWallTab('weapons');
       ensurePendingLevelsSize();
       ensurePendingDronLevelsSize();
@@ -1437,6 +1522,14 @@
 
     documentObj.getElementById('modsTankWallClose')?.addEventListener('click', backFromChild);
     documentObj.getElementById('modsTankWallBack')?.addEventListener('click', backFromChild);
+    documentObj.getElementById('modsTankWallHelpBtn')?.addEventListener('click', function (evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      showTechHelpModal({
+        sectionTitleKey: 'modsTankWallTitle',
+        textKey: 'supercomputerTankWallHelpText',
+      });
+    });
     tankWallTabButtons.weapons?.addEventListener('click', function () { setTankWallTab('weapons', { focusButton: true }); });
     tankWallTabButtons.drones?.addEventListener('click', function () { setTankWallTab('drones', { focusButton: true }); });
     tankWallTabButtons.walls?.addEventListener('click', function () { setTankWallTab('walls', { focusButton: true }); });

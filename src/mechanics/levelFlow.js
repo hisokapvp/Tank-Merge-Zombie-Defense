@@ -22,6 +22,12 @@
     var onTalentPointsGained = typeof opts.onTalentPointsGained === 'function' ? opts.onTalentPointsGained : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
 
+    function notifyTutorialLevelRewardDismissed(level) {
+      if (!windowObj || !windowObj.Game || !windowObj.Game.TutorialRuntime) return;
+      if (typeof windowObj.Game.TutorialRuntime.handleSupercomputerLevelRewardDismissed !== 'function') return;
+      windowObj.Game.TutorialRuntime.handleSupercomputerLevelRewardDismissed(level);
+    }
+
     function getDefaultXpToNext(level) {
       return Number.isFinite(level) && level <= 0 ? 50 : 500;
     }
@@ -71,12 +77,11 @@
     }
 
     function openLevelModal() {
-      var ignoreClose = function () {};
       if (UIModals && typeof UIModals.openLevelModal === 'function') {
         UIModals.openLevelModal({
           ui: ui,
           a11yOpen: a11yOpen,
-          onClose: ignoreClose,
+          onClose: closeLevelModal,
           updateLevelModal: updateLevelModal,
         });
       } else {
@@ -85,12 +90,16 @@
         if (docObj && docObj.body) docObj.body.classList.add('levelmodal-open');
         ui.levelModal.classList.remove('hidden');
         ui.levelModal.setAttribute('aria-hidden', 'false');
-        if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: ignoreClose });
+        if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
         updateLevelModal();
       }
     }
 
     function closeLevelModal() {
+      var reward = state && state.ui ? state.ui.levelReward : null;
+      var dismissedLevel = reward && Number.isFinite(Number(reward.level))
+        ? Math.max(0, Math.floor(Number(reward.level)))
+        : 0;
       if (UIModals && typeof UIModals.closeLevelModal === 'function') {
         UIModals.closeLevelModal({ ui: ui, a11yClose: a11yClose });
       } else {
@@ -106,6 +115,7 @@
         state.ui.levelRewardTimer = 0;
       }
       state.ui.levelReward = null;
+      if (dismissedLevel > 0) notifyTutorialLevelRewardDismissed(dismissedLevel);
     }
 
     function queueLevelReward(level, points, gold) {

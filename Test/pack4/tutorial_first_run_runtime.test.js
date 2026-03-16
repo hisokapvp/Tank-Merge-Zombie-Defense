@@ -39,12 +39,15 @@ const tutorialStepsJs = fs.readFileSync(path.join(root, 'src/config/tutorialStep
 const tutorialRuntimeJs = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
 const tutorialCursorConfig = fs.readFileSync(path.join(root, 'assets/tutotialCursore.json'), 'utf-8');
 const hangarChipsUiJs = fs.readFileSync(path.join(root, 'src/ui/hangarChipsUI.js'), 'utf-8');
+const levelFlowJs = fs.readFileSync(path.join(root, 'src/mechanics/levelFlow.js'), 'utf-8');
 const storageJs = fs.readFileSync(path.join(root, 'src/persistence/storage.js'), 'utf-8');
 const garageJs = fs.readFileSync(path.join(root, 'src/mechanics/garage.js'), 'utf-8');
+const supercomputerMenuJs = fs.readFileSync(path.join(root, 'src/ui/supercomputerMenu.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
 const ru = fs.readFileSync(path.join(root, 'src/i18n/ru.json'), 'utf-8');
 const en = fs.readFileSync(path.join(root, 'src/i18n/en.json'), 'utf-8');
 const fallback = fs.readFileSync(path.join(root, 'src/i18n/fallbackStrings.js'), 'utf-8');
+const styleCss = fs.readFileSync(path.join(root, 'style.css'), 'utf-8');
 const worldResetJs = fs.readFileSync(path.join(root, 'src/core/worldReset.js'), 'utf-8');
 
 console.log('\n-- Pack 4: First-run tutorial runtime --');
@@ -64,7 +67,7 @@ test('TUT-1: createInitialState starts with 40 coins and starter_tank tutorial s
 
   const state = globalObj.Game.InitialState.createInitialState({ reason: 'new_game' });
   assertEqual(state.coins, 40, 'new game starts with 40 coins');
-  assertEqual(state.tutorial.version, 5, 'tutorial state uses data-driven schema version 5');
+  assertEqual(state.tutorial.version, 6, 'tutorial state uses data-driven schema version 6');
   assert(state.tutorial && state.tutorial.currentStepId === 'starter_tank', 'starter tutorial step exists');
   assert(state.tutorial.steps && state.tutorial.steps.starter_tank && state.tutorial.steps.starter_tank.completed === false, 'starter tutorial step is pending');
   assert(state.tutorial.steps.starter_tank.bubbleOpen === true, 'starter tutorial bubble starts open');
@@ -106,27 +109,42 @@ test('TUT-6: tutorial runtime is loaded from index.html', () => {
 test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
   assert(ru.indexOf('"tutorialStarterTankMessage"') !== -1, 'ru tutorial message exists');
   assert(ru.indexOf('"tutorialMergeTankMessage"') !== -1, 'ru merge tutorial message exists');
+  assert(ru.indexOf('"tutorialSupercomputerOpenMenuMessage"') !== -1, 'ru supercomputer menu tutorial message exists');
+  assert(ru.indexOf('"tutorialSupercomputerOpenTreeMessage"') !== -1, 'ru supercomputer tree tutorial message exists');
+  assert(ru.indexOf('"tutorialSupercomputerApplyCaliberMessage"') !== -1, 'ru supercomputer caliber tutorial message exists');
   assert(ru.indexOf('"techUnlockHelpTitle"') !== -1, 'ru hangar tech help title exists');
   assert(ru.indexOf('"hangarCellsHelpText"') !== -1, 'ru cells help text exists');
   assert(ru.indexOf('"hangarWorkshopHelpText"') !== -1, 'ru workshop help text exists');
+  assert(ru.indexOf('"supercomputerTalentsHelpText"') !== -1, 'ru supercomputer talents help exists');
+  assert(ru.indexOf('"supercomputerTankWallHelpText"') !== -1, 'ru supercomputer tank-wall help exists');
   assert(ru.indexOf('"tutorialContinue"') !== -1, 'ru continue button exists');
   assert(ru.indexOf('"tutorialDisable"') !== -1, 'ru disable button exists');
   assert(ru.indexOf('"tutorialLockedTooltip"') !== -1, 'ru lock tooltip exists');
   assert(ru.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'ru workshop empty merge string exists');
   assert(en.indexOf('"tutorialStarterTankMessage"') !== -1, 'en tutorial message exists');
   assert(en.indexOf('"tutorialMergeTankMessage"') !== -1, 'en merge tutorial message exists');
+  assert(en.indexOf('"tutorialSupercomputerOpenMenuMessage"') !== -1, 'en supercomputer menu tutorial message exists');
+  assert(en.indexOf('"tutorialSupercomputerOpenTreeMessage"') !== -1, 'en supercomputer tree tutorial message exists');
+  assert(en.indexOf('"tutorialSupercomputerApplyCaliberMessage"') !== -1, 'en supercomputer caliber tutorial message exists');
   assert(en.indexOf('"techUnlockHelpTitle"') !== -1, 'en hangar tech help title exists');
   assert(en.indexOf('"hangarCellsHelpText"') !== -1, 'en cells help text exists');
   assert(en.indexOf('"hangarWorkshopHelpText"') !== -1, 'en workshop help text exists');
+  assert(en.indexOf('"supercomputerTalentsHelpText"') !== -1, 'en supercomputer talents help exists');
+  assert(en.indexOf('"supercomputerTankWallHelpText"') !== -1, 'en supercomputer tank-wall help exists');
   assert(en.indexOf('"tutorialContinue"') !== -1, 'en continue button exists');
   assert(en.indexOf('"tutorialDisable"') !== -1, 'en disable button exists');
   assert(en.indexOf('"tutorialLockedTooltip"') !== -1, 'en lock tooltip exists');
   assert(en.indexOf('"workshopChipUpgradeEmpty"') !== -1, 'en workshop empty merge string exists');
   assert(fallback.indexOf('tutorialStarterTankMessage') !== -1, 'fallback tutorial message exists');
   assert(fallback.indexOf('tutorialMergeTankMessage') !== -1, 'fallback merge tutorial message exists');
+  assert(fallback.indexOf('tutorialSupercomputerOpenMenuMessage') !== -1, 'fallback supercomputer menu tutorial message exists');
+  assert(fallback.indexOf('tutorialSupercomputerOpenTreeMessage') !== -1, 'fallback supercomputer tree tutorial message exists');
+  assert(fallback.indexOf('tutorialSupercomputerApplyCaliberMessage') !== -1, 'fallback supercomputer caliber tutorial message exists');
   assert(fallback.indexOf('techUnlockHelpTitle') !== -1, 'fallback hangar tech help title exists');
   assert(fallback.indexOf('hangarCellsHelpText') !== -1, 'fallback cells help text exists');
   assert(fallback.indexOf('hangarWorkshopHelpText') !== -1, 'fallback workshop help text exists');
+  assert(fallback.indexOf('supercomputerTalentsHelpText') !== -1, 'fallback supercomputer talents help exists');
+  assert(fallback.indexOf('supercomputerTankWallHelpText') !== -1, 'fallback supercomputer tank-wall help exists');
   assert(fallback.indexOf('tutorialContinue') !== -1, 'fallback continue button exists');
   assert(fallback.indexOf('tutorialDisable') !== -1, 'fallback disable button exists');
   assert(fallback.indexOf('tutorialLockedTooltip') !== -1, 'fallback lock tooltip exists');
@@ -136,14 +154,93 @@ test('TUT-7: tutorial strings exist in ru/en/fallback', () => {
 test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("id: 'starter_tank'") !== -1, 'starter_tank step lives in tutorial config');
   assert(tutorialStepsJs.indexOf("id: 'merge_tank'") !== -1, 'merge_tank step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("id: 'supercomputer_open_menu'") !== -1, 'supercomputer open menu step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("id: 'supercomputer_open_talent_tree'") !== -1, 'supercomputer open tree step lives in tutorial config');
+  assert(tutorialStepsJs.indexOf("id: 'supercomputer_apply_caliber'") !== -1, 'supercomputer apply caliber step lives in tutorial config');
   assert(tutorialStepsJs.indexOf('bubbleControls') !== -1, 'tutorial config defines allowed bubble controls');
   assert(tutorialStepsJs.indexOf('unlock:') !== -1, 'tutorial config defines progressive unlocks');
+  assert(tutorialStepsJs.indexOf('supercomputerLevelRewardDismissed: false') !== -1, 'tutorial state seeds supercomputer level-dismiss flag');
   assert(tutorialStepsJs.indexOf("targetKinds: ['any_hangar_tank', 'any_track_tank']") !== -1, 'starter step unlocks hangar and track interactions cumulatively');
   assert(tutorialStepsJs.indexOf("uiKeys: ['buy']") !== -1, 'second step unlocks buy button cumulatively');
   assert(tutorialStepsJs.indexOf("kind: 'mergeable_hangar_pair'") !== -1, 'merge step activates only for a real mergeable pair');
   assert(tutorialStepsJs.indexOf("targetKinds: ['mergeable_hangar_pair', 'any_hangar_tank', 'any_track_tank']") !== -1, 'merge step unlocks once any relevant tank state exists while still targeting a real mergeable pair');
   assert(tutorialStepsJs.indexOf('secondaryTarget:') !== -1, 'merge step defines a secondary drag target');
   assert(tutorialStepsJs.indexOf('pointerPath:') !== -1, 'merge step defines drag-drop pointer path');
+  assert(tutorialStepsJs.indexOf('selector: \"#supercomputerBtn\"') === -1, 'supercomputer target selector stays in single-quote project style');
+  assert(tutorialStepsJs.indexOf("selector: '#supercomputerBtn'") !== -1, 'supercomputer menu step points to HUD button');
+  assert(tutorialStepsJs.indexOf("selector: '#supercomputerOpenTalents'") !== -1, 'supercomputer tree step points to the tree tile');
+  assert(tutorialStepsJs.indexOf('#talentOverlay .talentNode[data-talent-id="off_caliber"]') !== -1, 'caliber step targets the caliber talent node');
+  assert(tutorialStepsJs.indexOf("talentId: 'off_caliber'") !== -1, 'caliber step completes on apply for the caliber talent');
+});
+
+test('TUT-8A: supercomputer tutorial reward dismissal is wired through level flow into tutorial runtime', () => {
+  const globalObj = {
+    window: null,
+    Game: {},
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    clearTimeout,
+    setTimeout,
+  };
+  globalObj.window = globalObj;
+
+  new Function('window', 'global', tutorialStepsJs)(globalObj, globalObj);
+  new Function('window', 'global', tutorialRuntimeJs)(globalObj, globalObj);
+  new Function('window', 'global', levelFlowJs)(globalObj, globalObj);
+
+  const tutorialState = globalObj.Game.TutorialSteps.buildInitialTutorialState();
+  tutorialState.steps.starter_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.second_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.merge_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_open_menu = { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: false };
+  tutorialState.currentStepId = 'supercomputer_open_menu';
+
+  const state = {
+    ui: { menuOpen: false, levelReward: { level: 1, points: 1, gold: 0 }, levelRewardTimer: 0 },
+    cells: [],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    player: { talentsV2: { ranksById: {} } },
+    tutorial: tutorialState,
+  };
+
+  globalObj.Game.TutorialRuntime.init({
+    documentObj: null,
+    getState: function () { return state; },
+    saveProgress: function () {},
+    updateUi: function () {},
+  });
+
+  const flow = globalObj.Game.LevelFlow.createLevelFlow({
+    state: state,
+    ui: { levelModal: {} },
+    windowObj: globalObj,
+    UIModals: { closeLevelModal: function () {} },
+    saveProgress: function () {},
+    updateUI: function () {},
+  });
+
+  flow.closeLevelModal();
+
+  assertEqual(state.tutorial.flags.supercomputerLevelRewardDismissed, true, 'closing the level reward marks the tutorial trigger flag');
+  assertEqual(state.tutorial.steps.supercomputer_open_menu.completed, false, 'dismissal unlocks the step but does not auto-complete it');
+  assertEqual(state.tutorial.currentStepId, 'supercomputer_open_menu', 'supercomputer tutorial becomes the next pending step after dismissal');
+});
+
+test('TUT-8B: supercomputer tutorial and help UI target the live menu and talent DOM contracts', () => {
+  assert(levelFlowJs.indexOf('notifyTutorialLevelRewardDismissed(dismissedLevel)') !== -1, 'level flow forwards reward dismissal to tutorial runtime');
+  assert(tutorialRuntimeJs.indexOf('handleSupercomputerLevelRewardDismissed') !== -1, 'tutorial runtime exposes supercomputer dismissal handler');
+  assert(tutorialRuntimeJs.indexOf('flags.supercomputerLevelRewardDismissed = true;') !== -1, 'tutorial runtime stores dismissal flag');
+  assert(gameJs.indexOf("button.dataset.talentId = node.id;") !== -1, 'talent nodes expose data-talent-id contract for tutorial targeting');
+  assert(indexHtml.indexOf('id="modsTankWallHelpBtn"') !== -1, 'tank and wall help button exists in supercomputer overlay');
+  assert(supercomputerMenuJs.indexOf('supercomputerTalentsHelpBtn') !== -1, 'talent tree help button is injected into the talents overlay');
+  assert(supercomputerMenuJs.indexOf('supercomputerTankWallHelpText') !== -1, 'tank and wall help button opens the requested help copy');
+});
+
+test('TUT-8C: talent overlay close button and help button share the supercomputer modal spacing pattern', () => {
+  assert(styleCss.indexOf('.hangarChipsHelpBtn{') !== -1, 'shared question-button style exists');
+  assert(styleCss.indexOf('padding-right:calc(var(--uiModalPad) + 56px);') !== -1, 'talent modal header reserves close-button space while keeping SC edge spacing');
+  assert(styleCss.indexOf('#talentOverlay .modalClose{') !== -1, 'talent overlay has dedicated close-button positioning rule');
+  assert(styleCss.indexOf('top:10px;') !== -1 && styleCss.indexOf('right:10px;') !== -1, 'close-button spacing matches the supercomputer modal edge offsets');
 });
 
 test('TUT-9: cursor config supports per-step sprite rotation, motion angle and optional offsets', () => {
