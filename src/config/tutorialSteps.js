@@ -253,17 +253,25 @@
         selector: '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]',
       },
       completion: {
-        kind: 'cannon_upgrade_applied',
-        level: 1,
+        kind: 'supercomputer_damage_upgrade_applied',
       },
       allow: {
         bubbleControls: ['close', 'continue', 'disable'],
       },
       unlock: {
         selectors: [
-          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]',
-          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="minus"]',
-          '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="apply"]'
+          '#modsTankWallTabGuns',
+          '#modsTankWallTabDrones',
+          '#modsTankWallTabWalls',
+          '#modsTankWallOverlay [data-guns-action="plus"]',
+          '#modsTankWallOverlay [data-guns-action="minus"]',
+          '#modsTankWallOverlay [data-guns-action="apply"]',
+          '#modsTankWallOverlay [data-dron-action="plus"]',
+          '#modsTankWallOverlay [data-dron-action="minus"]',
+          '#modsTankWallOverlay [data-dron-action="apply"]',
+          '#modsTankWallOverlay [data-walls-action="plus"]',
+          '#modsTankWallOverlay [data-walls-action="minus"]',
+          '#modsTankWallOverlay [data-walls-action="apply"]'
         ],
       },
     }),

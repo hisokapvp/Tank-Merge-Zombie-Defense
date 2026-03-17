@@ -6,13 +6,14 @@
   function setOverlayOpen(overlay, open, a11yOpen, a11yClose, options) {
     if (!overlay) return;
     var nextOpen = !!open;
+    var wasOpen = !overlay.classList.contains('hidden') && overlay.getAttribute('aria-hidden') !== 'true';
     overlay.classList.toggle('hidden', !nextOpen);
     overlay.setAttribute('aria-hidden', (!nextOpen).toString());
     if (nextOpen) {
-      if (typeof a11yOpen === 'function') a11yOpen(overlay, options || {});
+      if (!wasOpen && typeof a11yOpen === 'function') a11yOpen(overlay, options || {});
       return;
     }
-    if (typeof a11yClose === 'function') a11yClose(overlay);
+    if (wasOpen && typeof a11yClose === 'function') a11yClose(overlay);
   }
 
   function createController(options) {
@@ -23,6 +24,9 @@
     var rootOverlay = documentObj.getElementById('supercomputerMenuOverlay');
     var hangarOverlay = documentObj.getElementById('modsHangarOverlay');
     var tankWallOverlay = documentObj.getElementById('modsTankWallOverlay');
+    var rootPanel = rootOverlay ? rootOverlay.querySelector('.levelModal__panel.scModal') : null;
+    var rootView = documentObj.getElementById('supercomputerMenuRootView');
+    var talentsView = documentObj.getElementById('supercomputerTalentsView');
 
     if (!rootOverlay || !hangarOverlay || !tankWallOverlay) return null;
 
@@ -232,6 +236,21 @@
         }
       }
       syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
+    }
+
+    function setRootViewMode(nextMode) {
+      var isTalentsView = nextMode === 'talents';
+      if (rootView) {
+        rootView.classList.toggle('hidden', isTalentsView);
+        rootView.setAttribute('aria-hidden', isTalentsView ? 'true' : 'false');
+      }
+      if (talentsView) {
+        talentsView.classList.toggle('hidden', !isTalentsView);
+        talentsView.setAttribute('aria-hidden', isTalentsView ? 'false' : 'true');
+      }
+      if (rootPanel) {
+        rootPanel.classList.toggle('scModal--talentsView', isTalentsView);
+      }
     }
 
     function ensureTechHelpModal() {
@@ -1417,6 +1436,7 @@
       }
       stopGunsIconTicker();
       if (state.view === 'talents' && closeTalents) closeTalents();
+      setRootViewMode('root');
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(rootOverlay, true, a11yOpen, a11yClose, {
@@ -1468,11 +1488,23 @@
 
     function showTalents() {
       if (!openTalents) return;
-      setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
+      setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
+      setOverlayOpen(tankWallOverlay, false, a11yOpen, a11yClose);
+      setOverlayOpen(rootOverlay, true, a11yOpen, a11yClose, {
+        initialFocus: documentObj.getElementById('supercomputerMenuClose'),
+        onClose: closeAll,
+      });
+      setRootViewMode('talents');
       state.view = 'talents';
-      openTalents({ onClose: backFromChild });
+      openTalents({ onClose: backFromChild, embedded: true, skipSupercomputerRouting: true });
       applySharedTalentModalClass();
       setBodyScrollLock(true);
+      onPauseLockChange(true);
+    }
+
+    function openTalentsView() {
+      if (!state.isOpen) openRoot();
+      showTalents();
     }
 
     function backFromChild() {
@@ -1492,6 +1524,7 @@
         if (chipsUi && typeof chipsUi.resetTransientUiState === 'function') chipsUi.resetTransientUiState();
       }
       if (state.view === 'talents' && closeTalents) closeTalents();
+      setRootViewMode('root');
       stopGunsIconTicker();
       setOverlayOpen(rootOverlay, false, a11yOpen, a11yClose);
       setOverlayOpen(hangarOverlay, false, a11yOpen, a11yClose);
@@ -1544,6 +1577,7 @@
 
     return {
       openRoot: openRoot,
+      openTalentsView: openTalentsView,
       closeAll: closeAll,
       isOpen: function () { return !!state.isOpen; },
       getView: function () { return state.view; },

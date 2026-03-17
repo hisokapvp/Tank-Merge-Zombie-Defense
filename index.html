@@ -248,19 +248,24 @@
             <button class="levelModal__close scModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Варианты технологий</div>
             <div class="scModal__body">
-              <div class="levelModal__actions scRootTiles">
-                <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
-                  <span class="scRootTile__icon" aria-hidden="true"></span>
-                  <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
-                </button>
-                <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
-                  <span class="scRootTile__icon" aria-hidden="true"></span>
-                  <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
-                </button>
-                <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
-                  <span class="scRootTile__icon" aria-hidden="true"></span>
-                  <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Варианты технологий</span>
-                </button>
+              <div id="supercomputerMenuRootView" class="supercomputerMenuView">
+                <div class="levelModal__actions scRootTiles">
+                  <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
+                  </button>
+                  <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
+                  </button>
+                  <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Варианты технологий</span>
+                  </button>
+                </div>
+              </div>
+              <div id="supercomputerTalentsView" class="supercomputerMenuView hidden" aria-hidden="true">
+                <div id="supercomputerTalentsMount" class="supercomputerTalentsMount"></div>
               </div>
             </div>
           </div>

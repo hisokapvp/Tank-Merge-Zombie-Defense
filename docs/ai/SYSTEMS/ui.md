@@ -7,7 +7,7 @@
 - Логика UI: `src/ui/*`
 - Runtime floor для шрифта/Canvas текста: `src/ui/fontFloor.js`
 - UI склада коробок production line: `src/ui/productionLineUI.js`
-- Tutorial runtime ordering / overlay: `src/ui/tutorialRuntime.js`
+- Tutorial runtime ordering / overlay: `docs/ai/SYSTEMS/tutorial-runtime.md`
 - Talents v2 redraw/update orchestration: `src/ui/talentOverlayUi.js`
 - Большие карты: `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`
 - Big menu runtime: `src/ui/bigMenuRuntime.js`
@@ -30,7 +30,7 @@
 	- Базовые SVG-связи дерева (`.talentEdge`) должны быть визуально заметны даже до первой покупки таланта.
 	- Unlock-gating рядов в V2: row1..row6 открываются только при spent `5/10/15/20/25/30` в текущей ветке + минимум `1` rank в таланте из предыдущего ряда (row0 доступен сразу).
 	- V2 nodes не должны пересоздаваться каждый UI-tick: ререндер дерева допускается только при изменении signature (ranks/freePoints/canBuy/lang), иначе это провоцирует hover-SFX spam и потерю click-событий.
-- Tutorial runtime обязан выбирать first available incomplete tutorial step, а не последний доступный шаг: это критично для цепочек суперкомпьютера и production storage, иначе поздние уроки воруют completion у ранних.
+- Tutorial runtime вынесен в отдельную карту `docs/ai/SYSTEMS/tutorial-runtime.md`; canonical ordering rule остаётся прежним: pending step выбирается как first available incomplete tutorial step. Здесь держим только краткие UI-ссылки, а ordering/activation/completion/pause не дублируем как основной источник.
 - `src/ui/talentOverlayUi.js` — canonical orchestration layer для Talents v2 redraw/update: модуль обновляет summary, ветки, SVG-связи и active slots, а `game.js` оставляет bootstrap/fallback glue.
 
 ## Интеграция

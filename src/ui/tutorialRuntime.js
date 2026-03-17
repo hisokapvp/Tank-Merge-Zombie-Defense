@@ -61,7 +61,6 @@
     activeStepPurchasedBaseline: 0,
     activeStepMergedBaseline: 0,
     activeStepTalentRankBaseline: 0,
-    activeStepCannonUpgradeBaseline: 0,
     activeStepProductionBoxCountBaseline: 0,
   };
 
@@ -200,6 +199,17 @@
     const definitions = getStepDefinitions();
     let firstIncomplete = null;
     let firstAvailable = null;
+
+    const currentStepId = normalizedTutorial && typeof normalizedTutorial.currentStepId === 'string'
+      ? normalizedTutorial.currentStepId
+      : '';
+    if (currentStepId && normalizedTutorial && normalizedTutorial.steps) {
+      const currentStepState = normalizedTutorial.steps[currentStepId];
+      const currentStepDefinition = getStepDefinition(currentStepId);
+      if (currentStepDefinition && currentStepState && !currentStepState.completed && isStepCompletionEligible(currentStepDefinition, state)) {
+        return currentStepId;
+      }
+    }
 
     for (let i = 0; i < definitions.length; i++) {
       const definition = definitions[i];
@@ -381,6 +391,34 @@
     return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
   }
 
+  function getAppliedDronUpgradeLevel(state, level) {
+    if (!state || !state.player || !Array.isArray(state.player.dronUpgradesApplied)) return 0;
+    const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
+    const value = Number(state.player.dronUpgradesApplied[index]);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function getAppliedFenceUpgradeLevel(state, level) {
+    if (!state || !state.player || !Array.isArray(state.player.fenceUpgradesApplied)) return 0;
+    const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
+    const value = Number(state.player.fenceUpgradesApplied[index]);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function getAppliedDamageUpgradeTotal(state) {
+    if (!state || !state.player) return 0;
+    const arrays = [state.player.cannonUpgradesApplied, state.player.dronUpgradesApplied, state.player.fenceUpgradesApplied];
+    let total = 0;
+    for (let arrayIndex = 0; arrayIndex < arrays.length; arrayIndex++) {
+      const list = Array.isArray(arrays[arrayIndex]) ? arrays[arrayIndex] : [];
+      for (let itemIndex = 0; itemIndex < list.length; itemIndex++) {
+        const value = Number(list[itemIndex]);
+        if (Number.isFinite(value) && value > 0) total += Math.floor(value);
+      }
+    }
+    return total;
+  }
+
   function getProductionStorageBoxCount(state) {
     if (!state || !state.productionLine || !Array.isArray(state.productionLine.storage)) return 0;
     return state.productionLine.storage.length;
@@ -402,15 +440,11 @@
     runtime.activeStepPurchasedBaseline = getPurchasedTankCount(state);
     runtime.activeStepMergedBaseline = getCompletedTankMergeCount(state);
     runtime.activeStepTalentRankBaseline = 0;
-    runtime.activeStepCannonUpgradeBaseline = 0;
     runtime.activeStepProductionBoxCountBaseline = getProductionStorageBoxCount(state);
 
     const stepDefinition = pendingStepId ? getStepDefinition(pendingStepId) : null;
     if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'talent_rank_applied') {
       runtime.activeStepTalentRankBaseline = getAppliedTalentRank(state, stepDefinition.completion.talentId);
-    }
-    if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'cannon_upgrade_applied') {
-      runtime.activeStepCannonUpgradeBaseline = getAppliedCannonUpgradeLevel(state, stepDefinition.completion.level);
     }
   }
 
@@ -677,6 +711,35 @@
       return isProductionStorageOpen();
     }
     return true;
+  }
+
+  function isStepCompletionEligible(stepDefinition, state) {
+    if (!stepDefinition) return false;
+    if (!stepDefinition.activation || !state) return true;
+    const activation = stepDefinition.activation;
+    if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
+      if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
+    }
+    if (Number.isFinite(Number(activation.minSupercomputerLevel))) {
+      if (getSupercomputerLevel(state) < Math.max(0, Math.floor(Number(activation.minSupercomputerLevel)))) return false;
+    }
+    if (Number.isFinite(Number(activation.minFreeTalentPoints))) {
+      if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
+    }
+    if (Number.isFinite(Number(activation.minDamagePoints))) {
+      if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
+    }
+    if (Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
+      if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
+    }
+    if (activation.kind === 'supercomputer_root_open'
+      || activation.kind === 'supercomputer_talents_open'
+      || activation.kind === 'supercomputer_tank_wall_open'
+      || activation.kind === 'supercomputer_tank_wall_weapons_open'
+      || activation.kind === 'production_storage_open') {
+      return true;
+    }
+    return isStepAvailable(stepDefinition, state);
   }
 
   function pushUniqueTarget(list, target) {
@@ -1360,8 +1423,11 @@
     if (!runtime.documentObj || !Array.isArray(selectors)) return targets;
     for (let i = 0; i < selectors.length; i++) {
       if (typeof selectors[i] !== 'string' || !selectors[i]) continue;
-      const element = runtime.documentObj.querySelector(selectors[i]);
-      if (element) pushUniqueTarget(targets, element);
+      const elements = runtime.documentObj.querySelectorAll(selectors[i]);
+      if (!elements || !elements.length) continue;
+      for (let elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+        pushUniqueTarget(targets, elements[elementIndex]);
+      }
     }
     return targets;
   }
@@ -1865,34 +1931,33 @@
       completeCurrentStep('tank_merged');
       return;
     }
-    const completionAvailable = completionStep ? isStepAvailable(completionStep, state) : false;
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_root_open' && completionAvailable && isSupercomputerRootOpen()) {
+    const completionEligible = completionStep ? isStepCompletionEligible(completionStep, state) : false;
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_root_open' && completionEligible && isSupercomputerRootOpen()) {
       completeCurrentStep('supercomputer_root_open');
       return;
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_talents_open' && completionAvailable && isSupercomputerTalentsOpen()) {
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_talents_open' && completionEligible && isSupercomputerTalentsOpen()) {
       completeCurrentStep('supercomputer_talents_open');
       return;
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_tank_wall_open' && completionAvailable && isSupercomputerTankWallOpen()) {
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_tank_wall_open' && completionEligible && isSupercomputerTankWallOpen()) {
       completeCurrentStep('supercomputer_tank_wall_open');
       return;
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'production_storage_open' && completionAvailable && isProductionStorageOpen()) {
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'production_storage_open' && completionEligible && isProductionStorageOpen()) {
       completeCurrentStep('production_storage_open');
       return;
     }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'talent_rank_applied') {
       const talentId = completionStep.completion.talentId;
-      if (completionAvailable && talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
+      if (completionEligible && talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
         completeCurrentStep('talent_rank_applied');
         return;
       }
     }
-    if (completionStep && completionStep.completion && completionStep.completion.kind === 'cannon_upgrade_applied') {
-      const level = completionStep.completion.level;
-      if (completionAvailable && getAppliedCannonUpgradeLevel(state, level) > runtime.activeStepCannonUpgradeBaseline) {
-        completeCurrentStep('cannon_upgrade_applied');
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_damage_upgrade_applied') {
+      if (completionEligible && getAppliedDamageUpgradeTotal(state) > 0) {
+        completeCurrentStep('supercomputer_damage_upgrade_applied');
         return;
       }
     }
@@ -1997,7 +2062,6 @@
     runtime.activeStepPurchasedBaseline = 0;
     runtime.activeStepMergedBaseline = 0;
     runtime.activeStepTalentRankBaseline = 0;
-    runtime.activeStepCannonUpgradeBaseline = 0;
     runtime.activeStepProductionBoxCountBaseline = 0;
     closeDisableConfirm({ restoreFocus: false });
     persist();

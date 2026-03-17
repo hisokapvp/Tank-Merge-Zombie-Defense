@@ -1170,6 +1170,7 @@ let lastPauseReasons = { menuOpen: false, tabInactive: false };
 let menuPauseLocks = {
   settings: !!(state && state.ui && state.ui.menuOpen),
   supercomputer: false,
+  achievements: false,
   productionStorage: false,
   critical: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
@@ -4063,6 +4064,13 @@ function requestCloseTalents(){
 
 function openTalents(options){
   const opts = options || {};
+  if (!opts.embedded && !opts.skipSupercomputerRouting) {
+    const controller = getSupercomputerMenuController();
+    if (controller && typeof controller.openTalentsView === 'function') {
+      controller.openTalentsView();
+      return;
+    }
+  }
   talentCloseRequestHandler = typeof opts.onClose === 'function' ? opts.onClose : closeTalents;
   state.ui.talentsOpen = true;
   ensureTalentUI();
@@ -4071,10 +4079,15 @@ function openTalents(options){
   if (!overlay) return;
   const modal = overlay.querySelector('.modal');
   overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
   const initialFocus = isTalentsV2Ready()
     ? (overlay.querySelector('#talentResetAll') || overlay.querySelector('.modalClose'))
     : overlay.querySelector('#talentApply');
-  a11yOpen(overlay, { initialFocus, onClose: talentCloseRequestHandler });
+  if (!opts.embedded) {
+    a11yOpen(overlay, { initialFocus, onClose: talentCloseRequestHandler });
+  } else if (initialFocus && typeof initialFocus.focus === 'function') {
+    requestAnimationFrame(() => initialFocus.focus());
+  }
   if (modal){
     modal.style.transform = 'scale(0.92)';
     modal.style.opacity = '0';
@@ -4108,7 +4121,10 @@ function closeTalents(){
       modal.style.opacity = '';
     }
     overlay.classList.add('hidden');
-    a11yClose(overlay);
+    overlay.setAttribute('aria-hidden', 'true');
+    if (!(overlay.parentElement && overlay.parentElement.id === 'supercomputerTalentsMount')) {
+      a11yClose(overlay);
+    }
   }
   talentCloseRequestHandler = null;
 }
@@ -8202,7 +8218,6 @@ function openDismantleModal(){
     updateDismantleButton();
     return;
   }
-  const selected = (state.selectedTankIds || []).filter(id => state.cells.some(c => c.tank?.id === id));
   if (selected.length === 0){
     state.isDismantleMode = false;
     state.selectedTankIds = [];
@@ -8211,7 +8226,6 @@ function openDismantleModal(){
   }
   fillDismantleConfirmModal(selected);
   ui.dismantleModal.classList.remove('hidden');
-  ui.dismantleModal.setAttribute('aria-hidden', 'false');
   a11yOpen(ui.dismantleModal, { initialFocus: ui.dismantleYes, onClose: closeDismantleModal });
 }
 
@@ -8352,6 +8366,7 @@ function openAchievementsModal(){
   const controller = ensureAchievementsModalController();
   if (controller && typeof controller.collapseAll === 'function') controller.collapseAll();
   renderAchievementsList();
+  setMenuPauseSource('achievements', true);
   ui.achievementsModal.classList.remove('hidden');
   ui.achievementsModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('achievements-open');
@@ -8360,6 +8375,7 @@ function openAchievementsModal(){
 
 function closeAchievementsModal(){
   if (!ui.achievementsModal) return;
+  setMenuPauseSource('achievements', false);
   ui.achievementsModal.classList.add('hidden');
   ui.achievementsModal.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('achievements-open');
@@ -8415,6 +8431,7 @@ function ensureTalentUI(){
     if (TalentOverlayDomApi && typeof TalentOverlayDomApi.ensure === 'function') {
       const overlayV2 = TalentOverlayDomApi.ensure({
         documentObj: document,
+        mountEl: document.getElementById('supercomputerTalentsMount') || document.body,
         translate: t,
         branchIds: TALENTS_V2_BRANCH_IDS,
         getBranchLabel: getTalentV2BranchLabelById,
@@ -9073,10 +9090,13 @@ function claimCrateReward(){
 }
 
 function getSupercomputerMenuController(){
-  if (supercomputerMenuController || !SupercomputerMenuApi || typeof SupercomputerMenuApi.createController !== 'function') {
+  const currentSupercomputerMenuApi = window.Game && window.Game.SupercomputerMenu
+    ? window.Game.SupercomputerMenu
+    : SupercomputerMenuApi;
+  if (supercomputerMenuController || !currentSupercomputerMenuApi || typeof currentSupercomputerMenuApi.createController !== 'function') {
     return supercomputerMenuController;
   }
-  supercomputerMenuController = SupercomputerMenuApi.createController({
+  supercomputerMenuController = currentSupercomputerMenuApi.createController({
     documentObj: document,
     a11yOpen,
     a11yClose,

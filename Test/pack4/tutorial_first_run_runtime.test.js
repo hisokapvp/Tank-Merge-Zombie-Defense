@@ -56,6 +56,7 @@ const worldResetJs = fs.readFileSync(path.join(root, 'src/core/worldReset.js'), 
 const projectMapMd = fs.readFileSync(path.join(root, 'docs/ai/PROJECT_MAP.md'), 'utf-8');
 const aiIndexMd = fs.readFileSync(path.join(root, 'docs/ai/INDEX.md'), 'utf-8');
 const uiSystemMd = fs.readFileSync(path.join(root, 'docs/ai/SYSTEMS/ui.md'), 'utf-8');
+const tutorialRuntimeMd = fs.readFileSync(path.join(root, 'docs/ai/SYSTEMS/tutorial-runtime.md'), 'utf-8');
 const gameJsMapMd = fs.readFileSync(path.join(root, 'docs/ai/GAME_JS_MAP.md'), 'utf-8');
 const uiTalentsV2Md = fs.readFileSync(path.join(root, 'docs/ui_talents_v2.md'), 'utf-8');
 
@@ -206,7 +207,9 @@ test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("talentId: 'off_caliber'") !== -1, 'caliber step completes on apply for the caliber talent');
   assert(tutorialStepsJs.indexOf("selector: '#supercomputerOpenTankWallMods'") !== -1, 'damage tutorial points to the tank-wall tile');
   assert(tutorialStepsJs.indexOf('#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]') !== -1, 'damage tutorial points to the first gun level plus button');
-  assert(tutorialStepsJs.indexOf("kind: 'cannon_upgrade_applied'") !== -1, 'damage tutorial completes on an applied gun upgrade');
+  assert(tutorialStepsJs.indexOf("kind: 'supercomputer_damage_upgrade_applied'") !== -1, 'damage tutorial completes on any applied weapons/drones/walls upgrade');
+  assert(tutorialStepsJs.indexOf('#modsTankWallOverlay [data-dron-action="apply"]') !== -1, 'damage tutorial unlocks drone apply controls too');
+  assert(tutorialStepsJs.indexOf('#modsTankWallOverlay [data-walls-action="apply"]') !== -1, 'damage tutorial unlocks wall apply controls too');
   assert(tutorialStepsJs.indexOf("id: 'production_storage_open_first_box'") !== -1, 'production storage open step lives in tutorial config');
   assert(tutorialStepsJs.indexOf("id: 'production_storage_open_box'") !== -1, 'production storage box step lives in tutorial config');
   assert(tutorialStepsJs.indexOf("kind: 'production_storage_first_box'") !== -1, 'production storage tutorial targets the first filled slot');
@@ -275,18 +278,43 @@ test('TUT-8B: supercomputer tutorial and help UI target the live menu and talent
   assert(gameJs.indexOf('TalentOverlayRendererApi') !== -1, 'game.js delegates talent node rendering to the canonical src module when available');
   assert(gameJs.indexOf('function getTalentOverlayUiApi()') !== -1, 'game.js resolves the extracted talent overlay UI module');
   assert(gameJs.indexOf('talentOverlayUi.update({') !== -1, 'game.js delegates talent overlay redraw/update orchestration to the extracted UI module');
+  assert(gameJs.indexOf('window.Game && window.Game.SupercomputerMenu') !== -1, 'game.js resolves the live SupercomputerMenu API instead of a stale cached fallback');
   assert(talentOverlayDomJs.indexOf("global.Game.TalentOverlayDom") !== -1, 'talent overlay DOM renderer is exposed as a canonical src module');
   assert(talentOverlayRendererJs.indexOf("global.Game.TalentOverlayRenderer") !== -1, 'talent node renderer is exposed as a canonical src module');
   assert(talentOverlayUiJs.indexOf("global.Game.TalentOverlayUi") !== -1, 'talent overlay UI orchestration module is exposed as a canonical src module');
   assert(talentOverlayRendererJs.indexOf("button.dataset.talentId = node.id;") !== -1, 'canonical talent node renderer preserves the tutorial data-talent-id contract');
   assert(talentOverlayDomJs.indexOf("id: 'talentOverlay'") !== -1, 'talent overlay DOM module preserves the overlay id contract');
   assert(talentOverlayDomJs.indexOf("id: 'talentApply'") !== -1, 'talent overlay DOM module preserves the apply button id contract');
+  assert(talentOverlayDomJs.indexOf('mountEl') !== -1, 'talent overlay DOM module supports mounting into the supercomputer view');
   assert(indexHtml.indexOf('id="modsTankWallHelpBtn"') !== -1, 'tank and wall help button exists in supercomputer overlay');
+  assert(indexHtml.indexOf('id="supercomputerTalentsMount"') !== -1, 'supercomputer overlay provides a dedicated talents mount container');
   assert(indexHtml.indexOf('src/ui/talentOverlayDom.js') !== -1, 'talent overlay DOM module is loaded from index.html');
   assert(indexHtml.indexOf('src/ui/talentOverlayRenderer.js') !== -1, 'talent node renderer module is loaded from index.html');
   assert(indexHtml.indexOf('src/ui/talentOverlayUi.js') !== -1, 'talent overlay UI orchestration module is loaded from index.html');
   assert(supercomputerMenuJs.indexOf('supercomputerTalentsHelpBtn') !== -1, 'talent tree help button is injected into the talents overlay');
+  assert(supercomputerMenuJs.indexOf('openTalentsView') !== -1, 'supercomputer controller exposes an internal talents view entrypoint');
+  assert(supercomputerMenuJs.indexOf("if (!wasOpen && typeof a11yOpen === 'function') a11yOpen(overlay, options || {});") !== -1, 'supercomputer controller does not re-open the already active root dialog when switching to talents view');
   assert(supercomputerMenuJs.indexOf('supercomputerTankWallHelpText') !== -1, 'tank and wall help button opens the requested help copy');
+});
+
+test('TUT-8C: achievements modal uses the same pause-manager contract as other blocking modals', () => {
+  assert(gameJs.indexOf("achievements: false") !== -1, 'achievements pause source is registered in menu pause locks');
+  assert(gameJs.indexOf("setMenuPauseSource('achievements', true);") !== -1, 'achievements modal enables pause on open');
+  assert(gameJs.indexOf("setMenuPauseSource('achievements', false);") !== -1, 'achievements modal releases pause on close');
+});
+
+test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
+  assert(aiIndexMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'AI index links to dedicated tutorial runtime map');
+  assert(uiSystemMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'UI system doc links to dedicated tutorial runtime map');
+  assert(tutorialRuntimeMd.indexOf('getPreferredPendingStepId') !== -1, 'tutorial runtime map documents first-available step selection');
+  assert(tutorialRuntimeMd.indexOf('supercomputer_damage_apply_level1_weapon_upgrade') !== -1, 'tutorial runtime map documents the supercomputer damage lesson invariant');
+});
+
+test('TUT-8E: tutorial bubble CSS wraps long text and keeps controls visible on small screens', () => {
+  assert(styleCss.indexOf('width:clamp(332px, 34vw, 460px);') !== -1, 'tutorial bubble uses a fixed-width desktop shell');
+  assert(styleCss.indexOf('overflow-wrap:break-word;') !== -1, 'tutorial message wraps long text by words');
+  assert(styleCss.indexOf('flex-wrap:wrap;') !== -1, 'tutorial actions can wrap instead of clipping');
+  assert(styleCss.indexOf('min-width:100%;') !== -1, 'tutorial actions stack to full width on narrow viewports');
 });
 
 test('TUT-8L: production storage modal pause hook is wired through game bootstrap and tutorial targets the first filled slot', () => {
@@ -313,9 +341,62 @@ function makeVisibilityOnlyDocument(elementsById) {
   return {
     body: { classList: { contains() { return false; }, toggle() {} } },
     querySelector() { return null; },
+    querySelectorAll() { return []; },
     getElementById(id) { return elementsById[id] || null; },
   };
 }
+
+test('TUT-10C: supercomputer navigation step completes when the target child view opens even after the root view hides', () => {
+  const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
+  const stepsSource = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+
+  const globalObj = {
+    window: null,
+    Game: {},
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    getComputedStyle() { return { display: 'block', visibility: 'visible' }; },
+  };
+  globalObj.window = globalObj;
+
+  new Function('window', 'global', stepsSource)(globalObj, globalObj);
+  new Function('window', 'global', runtimeSource)(globalObj, globalObj);
+
+  const tutorialState = globalObj.Game.TutorialSteps.buildInitialTutorialState();
+  tutorialState.steps.starter_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.second_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.merge_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_open_menu = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_open_talent_tree = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_apply_caliber = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_damage_open_menu = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_damage_open_tank_wall_mods = { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: true };
+  tutorialState.currentStepId = 'supercomputer_damage_open_tank_wall_mods';
+
+  const rootOverlay = makeVisibleElement('supercomputerMenuOverlay');
+  rootOverlay.hidden = true;
+  const state = {
+    ui: { menuOpen: false },
+    cells: [],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    player: { damagePoints: 2, talentsV2: { ranksById: {} } },
+    tutorial: tutorialState,
+  };
+
+  globalObj.Game.TutorialRuntime.init({
+    documentObj: makeVisibilityOnlyDocument({
+      supercomputerMenuOverlay: rootOverlay,
+      modsTankWallOverlay: makeVisibleElement('modsTankWallOverlay'),
+      modsTankWallPanelGuns: makeVisibleElement('modsTankWallPanelGuns'),
+    }),
+    getState: function () { return state; },
+    saveProgress: function () {},
+    updateUi: function () {},
+  });
+
+  globalObj.Game.TutorialRuntime.syncNow();
+  assertEqual(state.tutorial.steps.supercomputer_damage_open_tank_wall_mods.completed, true, 'tank-wall navigation step completes once the child view opens');
+});
 
 test('TUT-10D: supercomputer UI-step completions require their gated availability', () => {
   const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
@@ -368,7 +449,7 @@ test('TUT-10D: supercomputer UI-step completions require their gated availabilit
   assertEqual(state.tutorial.steps.supercomputer_apply_caliber.completed, true, 'caliber step completes once its gating step bubble was shown and the talent is applied');
 });
 
-test('TUT-10E: damage tutorial completion requires the mods-step bubble and keeps the level-1 gun contract', () => {
+test('TUT-10E: damage tutorial completion requires the mods-step bubble and accepts any applied damage upgrade family', () => {
   const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
   const stepsSource = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
 
@@ -403,6 +484,8 @@ test('TUT-10E: damage tutorial completion requires the mods-step bubble and keep
     player: {
       damagePoints: 2,
       cannonUpgradesApplied: [0],
+      dronUpgradesApplied: [0],
+      fenceUpgradesApplied: [0],
       talentsV2: { ranksById: {} },
     },
     tutorial: tutorialState,
@@ -424,7 +507,63 @@ test('TUT-10E: damage tutorial completion requires the mods-step bubble and keep
 
   state.tutorial.steps.supercomputer_damage_open_tank_wall_mods.bubbleShown = true;
   globalObj.Game.TutorialRuntime.syncNow();
-  assertEqual(state.tutorial.steps.supercomputer_damage_apply_level1_weapon_upgrade.completed, true, 'damage apply step completes after a level-1 gun upgrade once the mods step bubble was shown');
+  assertEqual(state.tutorial.steps.supercomputer_damage_apply_level1_weapon_upgrade.completed, true, 'damage apply step completes after an applied damage upgrade once the mods step bubble was shown');
+});
+
+test('TUT-10E2: damage tutorial also completes from drone and wall applied upgrades', () => {
+  const runtimeSource = fs.readFileSync(path.join(root, 'src/ui/tutorialRuntime.js'), 'utf-8');
+  const stepsSource = fs.readFileSync(path.join(root, 'src/config/tutorialSteps.js'), 'utf-8');
+
+  const globalObj = {
+    window: null,
+    Game: {},
+    localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
+    getComputedStyle() { return { display: 'block', visibility: 'visible' }; },
+  };
+  globalObj.window = globalObj;
+
+  new Function('window', 'global', stepsSource)(globalObj, globalObj);
+  new Function('window', 'global', runtimeSource)(globalObj, globalObj);
+
+  const tutorialState = globalObj.Game.TutorialSteps.buildInitialTutorialState();
+  tutorialState.steps.starter_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.second_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.merge_tank = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_open_menu = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_open_talent_tree = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_apply_caliber = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_damage_open_menu = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_damage_open_tank_wall_mods = { completed: true, dismissed: false, bubbleOpen: false, bubbleShown: true };
+  tutorialState.steps.supercomputer_damage_apply_level1_weapon_upgrade = { completed: false, dismissed: false, bubbleOpen: true, bubbleShown: false };
+  tutorialState.currentStepId = 'supercomputer_damage_apply_level1_weapon_upgrade';
+
+  const state = {
+    ui: { menuOpen: false },
+    cells: [],
+    buyCounts: {},
+    achievements: { totalMerges: 0 },
+    player: {
+      damagePoints: 2,
+      cannonUpgradesApplied: [0],
+      dronUpgradesApplied: [1],
+      fenceUpgradesApplied: [0],
+      talentsV2: { ranksById: {} },
+    },
+    tutorial: tutorialState,
+  };
+
+  globalObj.Game.TutorialRuntime.init({
+    documentObj: makeVisibilityOnlyDocument({
+      modsTankWallOverlay: makeVisibleElement('modsTankWallOverlay'),
+      modsTankWallPanelGuns: makeVisibleElement('modsTankWallPanelGuns'),
+    }),
+    getState: function () { return state; },
+    saveProgress: function () {},
+    updateUi: function () {},
+  });
+
+  globalObj.Game.TutorialRuntime.syncNow();
+  assertEqual(state.tutorial.steps.supercomputer_damage_apply_level1_weapon_upgrade.completed, true, 'damage apply step completes from an already-applied drone or wall upgrade too');
 });
 
 test('TUT-10F: talent overlay DOM module renders the stable tutorial target ids', () => {

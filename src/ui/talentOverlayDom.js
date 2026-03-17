@@ -30,9 +30,15 @@
     const opts = options || {};
     const documentObj = opts.documentObj || (typeof document !== 'undefined' ? document : null);
     if (!documentObj || !documentObj.body || typeof documentObj.createElement !== 'function') return null;
+    const mountEl = opts.mountEl && typeof opts.mountEl.appendChild === 'function'
+      ? opts.mountEl
+      : documentObj.body;
 
     const existing = documentObj.getElementById('talentOverlay');
-    if (existing) return existing;
+    if (existing) {
+      if (existing.parentNode !== mountEl) mountEl.appendChild(existing);
+      return existing;
+    }
 
     const translate = typeof opts.translate === 'function'
       ? opts.translate
@@ -191,7 +197,7 @@
       branchesWrap.appendChild(column);
     }
 
-    documentObj.body.appendChild(overlay);
+    mountEl.appendChild(overlay);
     return overlay;
   }
 
