@@ -67,13 +67,13 @@
     });
     overlay.appendChild(modal);
 
-    const header = createElement(documentObj, 'div', { className: 'modalHeader' });
+    const header = createElement(documentObj, 'div', { className: 'modalHeader talentOverlayHeader' });
     const title = createElement(documentObj, 'div', {
       className: 'modalTitle',
       textContent: translate('talentTreeTitle', 'Upgrade Tree'),
     });
     const closeBtn = createElement(documentObj, 'button', {
-      className: 'modalClose',
+      className: 'modalClose talentOverlayClose',
       type: 'button',
       textContent: '✕',
       attributes: {

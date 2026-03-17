@@ -454,6 +454,9 @@
         }
       }
       var workingClass = isWorking ? ' hangarSlotPoly--working' : '';
+        var tutorialSlotAttr = (def.type === 'red' && def.slotId === 'slot1')
+          ? ' data-tutorial-hangar-first-red-slot="true"'
+          : '';
 
       // Add individual animation delays to make shake effect individual for each element
       var animationDelay = (d * 0.05) + 's';
@@ -484,7 +487,7 @@
       svg += buildSlotDecoration(slotPoints, isRed, locked, !!chipData);
       svg += '<polygon class="hangarSlotPoly' + selectedClass + workingClass + '" points="' + slotPointsMarkup + '" ' +
         'fill="' + fillColor + '" stroke="' + strokeColor + '" stroke-width="' + strokeW + '" ' +
-        'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '" ' +
+        'data-slot-type="' + def.type + '" data-slot-id="' + def.slotId + '"' + tutorialSlotAttr + ' ' +
         'style="cursor:' + (locked ? 'not-allowed' : 'pointer');
 
       if (isWorking) {
@@ -763,6 +766,14 @@
 
     chips = _sortAvailableChipsByMatchPriority(chips, canMatchMap);
 
+    var tutorialFirstRedChipKey = '';
+    for (var tutorialChipIndex = 0; tutorialChipIndex < chips.length; tutorialChipIndex++) {
+      if (chips[tutorialChipIndex] && chips[tutorialChipIndex].chipColor === 'red') {
+        tutorialFirstRedChipKey = chips[tutorialChipIndex].chipId + '_' + chips[tutorialChipIndex].level;
+        break;
+      }
+    }
+
     for (var i = 0; i < chips.length; i++) {
       var chip = chips[i];
       var borderColor = chip.chipColor === 'red' ? '#e53935' : '#fdd835';
@@ -771,10 +782,13 @@
       var targetSlots = targetSlotMap[chipKey] || [];
       var matchClass = canMatch ? ' hangarChipInvItem--canMatch' : '';
       var chipName = _getChipDisplayName(chip);
+      var tutorialAttr = tutorialFirstRedChipKey && tutorialFirstRedChipKey === chipKey
+        ? ' data-tutorial-hangar-first-red-chip="true"'
+        : '';
       var slotHintHtml = targetSlots.length
         ? '<span class="chipInvSlotHint" aria-hidden="true">' + _escapeHtml(targetSlots.join('/')) + '</span>'
         : '';
-      html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '" type="button" title="">' +
+      html += '<button class="chipCraftInvItem hangarChipInvItem' + matchClass + '" data-chip-id="' + chip.chipId + '" data-chip-level="' + chip.level + '"' + tutorialAttr + ' type="button" title="">' +
         slotHintHtml +
         chipSvgComposed(40, 36, borderColor, chip.modIds, 'chipCraftInvIcon', 2.5) +
         '<span class="chipCraftInvLabel hangarChipInvLabel">' + _renderChipNameHtml(chipName) + '</span>' +
@@ -1174,7 +1188,6 @@
   function feedChipsForTech(modId, amount) {
     var h = hc();
     if (!h) return { ok: false, error: 'no_module' };
-    if (h.isTechUnlocked(modId)) return { ok: false, error: 'already_unlocked' };
     if (!h.canUnlockTech(modId)) return { ok: false, error: 'prerequisite' };
 
     var cost = h.getTechCost(modId);
@@ -4338,6 +4351,22 @@
     render();
   }
 
+  function getActiveHangarTab() {
+    return _activeHangarTab;
+  }
+
+  function getSelectedCellIndex() {
+    return _selectedCell;
+  }
+
+  function getTutorialFirstRedChipElement() {
+    return _doc ? _doc.querySelector('#modsHangarOverlay [data-tutorial-hangar-first-red-chip="true"]') : null;
+  }
+
+  function getTutorialFirstRedSlotElement() {
+    return _doc ? _doc.querySelector('#modsHangarOverlay [data-tutorial-hangar-first-red-slot="true"]') : null;
+  }
+
   /* ─── Debug helpers (exposed for debug panel) ──────────── */
 
   function debugInstallChipById(cellIdx, slotType, slotId, chipId) {
@@ -4407,6 +4436,10 @@
     render: render,
     getCells: getCells,
     setCells: setCells,
+    getActiveHangarTab: getActiveHangarTab,
+    getSelectedCellIndex: getSelectedCellIndex,
+    getTutorialFirstRedChipElement: getTutorialFirstRedChipElement,
+    getTutorialFirstRedSlotElement: getTutorialFirstRedSlotElement,
     switchHangarTab: switchHangarTab,
     switchWorkshopSubTab: switchWorkshopSubTab,
     getPlayerChips: getPlayerChips,

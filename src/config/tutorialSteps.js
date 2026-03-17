@@ -205,6 +205,7 @@
       activation: {
         kind: 'min_damage_points',
         value: 2,
+        pendingGreyDamageValue: 20000,
         includePendingGreyDamage: true,
       },
       target: {
@@ -228,6 +229,7 @@
         kind: 'supercomputer_root_open',
         requiresStepBubbleShown: 'supercomputer_damage_open_menu',
         minDamagePoints: 2,
+        minPendingGreyDamage: 20000,
         includePendingGreyDamage: true,
       },
       target: {
@@ -319,6 +321,76 @@
       },
       unlock: {
         targetKinds: ['production_storage_first_box'],
+      },
+    }),
+    createStep({
+      id: 'first_whole_chip_open_supercomputer',
+      messageKey: 'tutorialFirstWholeChipOpenSupercomputerMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'first_whole_chip_supercomputer_entry',
+      },
+      target: {
+        selector: '#supercomputerBtn',
+      },
+      completion: {
+        kind: 'supercomputer_root_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerBtn'],
+      },
+    }),
+    createStep({
+      id: 'first_whole_chip_open_hangar_mods',
+      messageKey: 'tutorialFirstWholeChipOpenHangarModsMessage',
+      pointerAnimation: 'click',
+      activation: {
+        kind: 'supercomputer_root_open',
+        requiresStepBubbleShown: 'first_whole_chip_open_supercomputer',
+      },
+      target: {
+        selector: '#supercomputerOpenHangarMods',
+      },
+      completion: {
+        kind: 'hangar_mods_cells_open',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        selectors: ['#supercomputerOpenHangarMods'],
+      },
+    }),
+    createStep({
+      id: 'first_whole_chip_install_first_red_slot',
+      messageKey: 'tutorialFirstWholeChipInstallFirstRedSlotMessage',
+      pointerAnimation: 'drag',
+      activation: {
+        kind: 'hangar_first_red_slot_install_ready',
+        requiresStepBubbleShown: 'first_whole_chip_open_hangar_mods',
+      },
+      target: {
+        kind: 'hangar_first_red_chip_source',
+      },
+      secondaryTarget: {
+        kind: 'hangar_first_red_slot',
+      },
+      pointerPath: {
+        leadInMs: 220,
+        dragMs: 1080,
+        dropHoldMs: 320,
+      },
+      completion: {
+        kind: 'hangar_first_red_slot_filled',
+      },
+      allow: {
+        bubbleControls: ['close', 'continue', 'disable'],
+      },
+      unlock: {
+        targetKinds: ['hangar_first_red_chip_source', 'hangar_first_red_slot'],
       },
     }),
   ];

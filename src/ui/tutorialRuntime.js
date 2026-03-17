@@ -344,6 +344,12 @@
     return isElementVisible(weaponsPanel);
   }
 
+  function isSupercomputerHangarModsOpen() {
+    if (!runtime.documentObj) return false;
+    const overlay = runtime.documentObj.getElementById('modsHangarOverlay');
+    return isElementVisible(overlay);
+  }
+
   function isProductionStorageOpen() {
     if (!runtime.documentObj) return false;
     const overlay = runtime.documentObj.getElementById('productionLineStorageModal');
@@ -407,10 +413,93 @@
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
-  function getTutorialDamageProgress(state, activation) {
-    const readyDamagePoints = getAvailableDamagePoints(state);
-    if (!activation || activation.includePendingGreyDamage !== true) return readyDamagePoints;
-    return readyDamagePoints + getPendingGreyDamage(state);
+  function hasWholePlayerChip(state) {
+    return !!(state && Array.isArray(state.playerChips) && state.playerChips.length > 0);
+  }
+
+  function getHangarChipsUiApi() {
+    return global.Game && global.Game.HangarChipsUI ? global.Game.HangarChipsUI : null;
+  }
+
+  function isHangarCellsTabOpen() {
+    if (!isSupercomputerHangarModsOpen()) return false;
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi || typeof hangarUi.getActiveHangarTab !== 'function') return false;
+    return hangarUi.getActiveHangarTab() === 'cells';
+  }
+
+  function isHangarTutorialModalBlocking() {
+    if (!runtime.documentObj || !isSupercomputerHangarModsOpen()) return false;
+    const nodes = runtime.documentObj.querySelectorAll('#modsHangarOverlay .techModal__backdrop[aria-hidden="false"]');
+    for (let index = 0; index < nodes.length; index++) {
+      if (isElementVisible(nodes[index])) return true;
+    }
+    return false;
+  }
+
+  function getSelectedHangarCellState() {
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi || typeof hangarUi.getCells !== 'function') return null;
+    const cells = hangarUi.getCells();
+    if (!Array.isArray(cells) || !cells.length) return null;
+    const selectedIndex = hangarUi && typeof hangarUi.getSelectedCellIndex === 'function'
+      ? Math.max(0, Math.floor(Number(hangarUi.getSelectedCellIndex()) || 0))
+      : 0;
+    return cells[selectedIndex] || null;
+  }
+
+  function isHangarFirstRedSlotFilled() {
+    const cell = getSelectedHangarCellState();
+    return !!(cell && cell.redSlots && cell.redSlots.slot1);
+  }
+
+  function getHangarFirstRedChipTarget() {
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi || typeof hangarUi.getTutorialFirstRedChipElement !== 'function') return null;
+    const element = hangarUi.getTutorialFirstRedChipElement();
+    return isElementVisible(element) ? element : null;
+  }
+
+  function getHangarFirstRedSlotTarget() {
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi || typeof hangarUi.getTutorialFirstRedSlotElement !== 'function') return null;
+    const element = hangarUi.getTutorialFirstRedSlotElement();
+    return isElementVisible(element) ? element : null;
+  }
+
+  function isHangarFirstRedSlotInstallReady() {
+    if (!isHangarCellsTabOpen() || isHangarTutorialModalBlocking()) return false;
+    if (isHangarFirstRedSlotFilled()) return false;
+    return !!getHangarFirstRedChipTarget() && !!getHangarFirstRedSlotTarget();
+  }
+
+  function isDamageGateSatisfied(state, activation, readyValue, pendingGreyValue) {
+    const minReadyDamage = getTutorialDamageThreshold(readyValue);
+    const minPendingGreyDamage = getTutorialDamageThreshold(pendingGreyValue);
+    if (minReadyDamage === null && minPendingGreyDamage === null) return true;
+    if (minReadyDamage !== null && getAvailableDamagePoints(state) >= minReadyDamage) return true;
+    if (activation && activation.includePendingGreyDamage === true && minPendingGreyDamage !== null) {
+      return getPendingGreyDamage(state) >= minPendingGreyDamage;
+    }
+    return false;
+  }
+
+  function isActivationDamagePrerequisiteSatisfied(state, activation) {
+    return isDamageGateSatisfied(
+      state,
+      activation,
+      activation ? activation.minDamagePoints : null,
+      activation ? activation.minPendingGreyDamage : null
+    );
+  }
+
+  function isMinDamageActivationSatisfied(state, activation) {
+    return isDamageGateSatisfied(
+      state,
+      activation,
+      activation ? activation.value : null,
+      activation ? activation.pendingGreyDamageValue : null
+    );
   }
 
   function getTutorialDamageThreshold(value) {
@@ -703,7 +792,6 @@
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
     const activation = stepDefinition.activation;
-    const minDamageThreshold = getTutorialDamageThreshold(activation.minDamagePoints);
     if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
       if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
     }
@@ -713,9 +801,7 @@
     if (Number.isFinite(Number(activation.minFreeTalentPoints))) {
       if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
     }
-    if (minDamageThreshold !== null) {
-      if (getTutorialDamageProgress(state, activation) < minDamageThreshold) return false;
-    }
+    if (!isActivationDamagePrerequisiteSatisfied(state, activation)) return false;
     if (Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
     }
@@ -733,9 +819,13 @@
       return findMergeablePairAnywhere(state);
     }
     if (stepDefinition.activation.kind === 'min_damage_points') {
-      const requiredDamagePoints = getTutorialDamageThreshold(stepDefinition.activation.value);
-      if (requiredDamagePoints === null) return true;
-      return getTutorialDamageProgress(state, activation) >= requiredDamagePoints;
+      return isMinDamageActivationSatisfied(state, activation);
+    }
+    if (stepDefinition.activation.kind === 'first_whole_chip_supercomputer_entry') {
+      return hasWholePlayerChip(state) && !isGameplayBlockingModalOpen();
+    }
+    if (stepDefinition.activation.kind === 'hangar_first_red_slot_install_ready') {
+      return isHangarFirstRedSlotInstallReady();
     }
     if (stepDefinition.activation.kind === 'supercomputer_level_reward_dismissed') {
       return isSupercomputerLevelRewardDismissed(state);
@@ -766,7 +856,6 @@
     if (!stepDefinition.activation || !state) return true;
     const activation = stepDefinition.activation;
     const preservePendingCompletion = shouldPreservePendingCompletion(stepDefinition);
-    const minDamageThreshold = getTutorialDamageThreshold(activation.minDamagePoints);
     if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
       if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
     }
@@ -776,11 +865,15 @@
     if (!preservePendingCompletion && Number.isFinite(Number(activation.minFreeTalentPoints))) {
       if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
     }
-    if (!preservePendingCompletion && minDamageThreshold !== null) {
-      if (getTutorialDamageProgress(state, activation) < minDamageThreshold) return false;
-    }
+    if (!preservePendingCompletion && !isActivationDamagePrerequisiteSatisfied(state, activation)) return false;
     if (!preservePendingCompletion && Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
+    }
+    if (activation.kind === 'first_whole_chip_supercomputer_entry') {
+      return hasWholePlayerChip(state);
+    }
+    if (activation.kind === 'hangar_first_red_slot_install_ready') {
+      return isHangarCellsTabOpen() && !isHangarTutorialModalBlocking() && !!getHangarFirstRedSlotTarget();
     }
     if (activation.kind === 'supercomputer_root_open'
       || activation.kind === 'supercomputer_talents_open'
@@ -862,6 +955,16 @@
       return targets;
     }
 
+    if (kind === 'hangar_first_red_chip_source') {
+      pushUniqueTarget(targets, getHangarFirstRedChipTarget());
+      return targets;
+    }
+
+    if (kind === 'hangar_first_red_slot') {
+      pushUniqueTarget(targets, getHangarFirstRedSlotTarget());
+      return targets;
+    }
+
     return targets;
   }
 
@@ -894,6 +997,18 @@
     if (typeof global.getComputedStyle !== 'function') return true;
     const style = global.getComputedStyle(element);
     return !!style && style.display !== 'none' && style.visibility !== 'hidden';
+  }
+
+  function isGameplayBlockingModalOpen() {
+    if (!runtime.documentObj) return false;
+    if (runtime.documentObj.body && runtime.documentObj.body.classList.contains('big-menu-open')) return true;
+    const modalNodes = runtime.documentObj.querySelectorAll(
+      '#bigMenuOverlay, .levelModal:not(.hidden), .mergePopupModal:not(.hidden), .plStorage:not(.hidden), .techModal__backdrop[aria-hidden="false"]'
+    );
+    for (let index = 0; index < modalNodes.length; index++) {
+      if (isElementVisible(modalNodes[index])) return true;
+    }
+    return false;
   }
 
   function shouldSuppressOverlay(state) {
@@ -1996,6 +2111,14 @@
     }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'supercomputer_tank_wall_open' && completionEligible && isSupercomputerTankWallOpen()) {
       completeCurrentStep('supercomputer_tank_wall_open');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'hangar_mods_cells_open' && completionEligible && isHangarCellsTabOpen()) {
+      completeCurrentStep('hangar_mods_cells_open');
+      return;
+    }
+    if (completionStep && completionStep.completion && completionStep.completion.kind === 'hangar_first_red_slot_filled' && completionEligible && isHangarFirstRedSlotFilled()) {
+      completeCurrentStep('hangar_first_red_slot_filled');
       return;
     }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'production_storage_open' && completionEligible && isProductionStorageOpen()) {

@@ -2320,9 +2320,27 @@ input, select, textarea, button {
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView{
   padding-top:0;
 }
+#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellClose,
+#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellHelp{
+  display:none;
+  z-index:2;
+}
+#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellClose{
+  position:absolute;
+  top:10px;
+  right:10px;
+  left:auto;
+  bottom:auto;
+}
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > #supercomputerMenuTitle,
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > #supercomputerMenuClose{
   display:none;
+}
+#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .supercomputerTalentsShellClose{
+  display:flex;
+}
+#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .supercomputerTalentsShellHelp{
+  display:grid;
 }
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .scModal__body{
   padding:0;
@@ -2368,7 +2386,13 @@ input, select, textarea, button {
   display:none;
 }
 #supercomputerTalentsMount > #talentOverlay .modalHeader{
-  padding:14px calc(var(--uiModalPad) + 104px) 10px var(--uiModalPad);
+  padding-top:14px;
+  padding-right:calc(var(--uiModalPad) + 56px);
+  padding-bottom:10px;
+  padding-left:var(--uiModalPad);
+}
+#supercomputerTalentsMount > #talentOverlay .modalHeader > .talentOverlayClose{
+  display:none;
 }
 #supercomputerTalentsMount > #talentOverlay .talentTreeBody{
   padding-top:0;

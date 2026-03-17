@@ -108,6 +108,16 @@ test('TMC-5: hangar tech modal exposes dedicated help entry point', () => {
   assert(hangarChipsUiJs.indexOf('_showTechUnlockHelpModal') !== -1, 'hangar UI exposes dedicated help modal handler');
 });
 
+test('TMC-6: hangar tutorial target markers stay on slot render path only', () => {
+  assert(hangarChipsUiJs.indexOf("var tutorialSlotAttr = (def.type === 'red' && def.slotId === 'slot1')") !== -1, 'first red slot tutorial marker is derived from rendered slot definition');
+  assert(hangarChipsUiJs.indexOf("'data-slot-type=\"' + def.type + '\" data-slot-id=\"' + def.slotId + '\"' + tutorialSlotAttr + ' '") !== -1, 'rendered slot polygon includes tutorial marker attribute');
+
+  const feedStart = hangarChipsUiJs.indexOf('function feedChipsForTech');
+  const feedEnd = hangarChipsUiJs.indexOf('function _sortChipsByLevelThenCount');
+  const feedSection = feedStart !== -1 && feedEnd !== -1 ? hangarChipsUiJs.slice(feedStart, feedEnd) : '';
+  assert(feedSection.indexOf('data-tutorial-hangar-first-red-slot') === -1, 'feedChipsForTech does not contain leaked tutorial slot marker code');
+});
+
 console.log('\n==============================');
 console.log('TutorialMenuAndChipVisuals: ' + passCount + ' passed, ' + failCount + ' failed');
 if (failures.length) {

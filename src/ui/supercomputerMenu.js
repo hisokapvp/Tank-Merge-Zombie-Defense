@@ -209,18 +209,22 @@
       var panel = talentOverlay.querySelector('.modal');
       if (!panel) return;
       panel.classList.add('scModal');
-      var closeBtn = talentOverlay.querySelector('.modalClose');
+      var closeBtn = documentObj.querySelector('#supercomputerMenuOverlay .supercomputerTalentsShellClose')
+        || talentOverlay.querySelector('.talentOverlayClose')
+        || talentOverlay.querySelector('.modalClose');
       if (closeBtn) {
         closeBtn.classList.add('levelModal__close');
         closeBtn.classList.add('scModal__close');
+        closeBtn.classList.add('supercomputerTalentsShellClose');
         closeBtn.setAttribute('data-font-floor-ignore', 'true');
+        if (rootPanel && closeBtn.parentNode !== rootPanel) rootPanel.appendChild(closeBtn);
       }
-      var helpBtn = talentOverlay.querySelector('#supercomputerTalentsHelpBtn');
+      var helpBtn = documentObj.getElementById('supercomputerTalentsHelpBtn');
       if (!helpBtn) {
         helpBtn = documentObj.createElement('button');
         helpBtn.id = 'supercomputerTalentsHelpBtn';
         helpBtn.type = 'button';
-        helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn';
+        helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn supercomputerTalentsShellHelp';
         helpBtn.textContent = '?';
         helpBtn.setAttribute('data-font-floor-ignore', 'true');
         helpBtn.addEventListener('click', function (evt) {
@@ -231,12 +235,15 @@
             textKey: 'supercomputerTalentsHelpText',
           });
         });
-        panel.appendChild(helpBtn);
+        if (rootPanel) rootPanel.appendChild(helpBtn);
+        else panel.appendChild(helpBtn);
         if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
           global.Game.ButtonBehavior.decorateTree(helpBtn);
         }
+      } else if (rootPanel && helpBtn.parentNode !== rootPanel) {
+        rootPanel.appendChild(helpBtn);
       }
-      helpBtn.classList.add('btn', 'scButton', 'uiButtonBehavior', 'hangarChipsHelpBtn');
+      helpBtn.classList.add('btn', 'scButton', 'uiButtonBehavior', 'hangarChipsHelpBtn', 'supercomputerTalentsShellHelp');
       syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
     }
 
