@@ -1965,12 +1965,20 @@ input, select, textarea, button {
 }
 #talentOverlay .modalHeader{
   position:static;
+  min-height:100px;
   padding-right:calc(var(--uiModalPad) + 56px);
+}
+#talentOverlay .modalTitle{
+  padding-right:52px;
 }
 #talentOverlay .modalClose{
   position:absolute;
   top:10px;
   right:10px;
+}
+#talentOverlay .hangarChipsHelpBtn{
+  top:15px;
+  right:70px;
 }
 #talentOverlay .modalClose::before,
 #talentOverlay .modalClose::after,
@@ -3331,10 +3339,33 @@ input, select, textarea, button {
   pointer-events:none;
 }
 
-.gameTutorial__close{
+.gameTutorial__close,
+.gameTutorial__disableBtn{
   position:absolute;
   top:10px;
+}
+
+.gameTutorial__close{
   right:10px;
+}
+
+.gameTutorial__disableBtn{
+  right:70px;
+  top:12px;
+  width:40px;
+  min-width:45px;
+  max-width:45px;
+  height:40px;
+  padding:0 !important;
+  display:grid;
+  place-items:center;
+  border-radius:999px !important;
+  font-size:18px !important;
+  line-height:1;
+  color:#ffe7e7 !important;
+  background:linear-gradient(180deg, rgba(104,18,28,.96) 0%, rgba(58,10,16,.98) 100%) !important;
+  border:2px solid rgba(255,96,114,.92) !important;
+  box-shadow:0 0 14px rgba(255,72,96,.22), 2px 2px 0 #000 !important;
 }
 
 .gameTutorial__message{
@@ -3362,7 +3393,7 @@ input, select, textarea, button {
 .gameTutorial__disableBtn{
   white-space:nowrap;
   overflow:hidden;
-  width:auto;
+  /* width:auto; */
   min-width:fit-content;
   max-width:100%;
   pointer-events:auto;
@@ -3382,9 +3413,21 @@ input, select, textarea, button {
   transform:none;
   opacity:1;
 }
-.gameTutorial__close{
+.gameTutorial__close,
+.gameTutorial__disableBtn{
   pointer-events:auto;
   z-index:3;
+}
+
+.gameTutorial__disableBtn:hover:not(:disabled),
+.gameTutorial__disableBtn:focus-visible{
+  background:linear-gradient(180deg, rgba(164,28,43,.98) 0%, rgba(97,16,27,.98) 100%) !important;
+  border-color:#ff9aa8 !important;
+  box-shadow:0 0 18px rgba(255,72,96,.38), 2px 2px 0 #000 !important;
+}
+
+.gameTutorial__disableBtn:active{
+  box-shadow:1px 1px 0 #000 !important;
 }
 
 .gameTutorial__confirm{
@@ -3509,11 +3552,16 @@ button[data-tutorial-locked="true"]::after,
   }
 
   .gameTutorial__continueBtn,
-  .gameTutorial__skipBtn,
-  .gameTutorial__disableBtn{
+  .gameTutorial__skipBtn{
     min-width:100%;
     width:100%;
     overflow:hidden;
+  }
+
+  .gameTutorial__disableBtn{
+    min-width:34px;
+    width:34px;
+    max-width:34px;
   }
 
   .gameTutorial__confirmPanel{

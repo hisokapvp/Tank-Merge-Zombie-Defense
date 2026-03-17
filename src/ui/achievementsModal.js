@@ -25,6 +25,20 @@
       return line;
     }
 
+    function getAchievementDescription(def, target) {
+      if (!def || typeof def !== 'object') return '';
+      if (typeof def.descKey === 'string' && def.descKey) {
+        return translate(def.descKey, '');
+      }
+      if (def.progressType === 'merges') {
+        return translate('achievementDescriptionMergeTanks', { target: target });
+      }
+      if (def.progressType === 'purchases') {
+        return translate('achievementDescriptionCreateTanks', { target: target });
+      }
+      return '';
+    }
+
     function applyExpandedState() {
       var rows = listEl.querySelectorAll('.achievementRow[data-achievement-id]');
       var hasOpenRow = false;
@@ -124,9 +138,9 @@
         descRow.id = descId;
         descRow.setAttribute('aria-hidden', 'true');
 
-        var status = done ? translate('achievementStatusDone') : translate('achievementStatusTodo');
+        var description = getAchievementDescription(def, target);
+        if (description) descRow.appendChild(createMetaLine(description));
         descRow.appendChild(createMetaLine(translate('achievementProgress', { value: progress, target: target })));
-        descRow.appendChild(createMetaLine(status));
         descRow.appendChild(createMetaLine(translate('achievementReward', { reward: translate(def.rewardKey) })));
 
         row.appendChild(headerRow);

@@ -186,6 +186,7 @@
       completion: {
         kind: 'talent_rank_applied',
         talentId: 'off_caliber',
+        acceptAnyTalent: true,
       },
       allow: {
         bubbleControls: ['close', 'continue', 'disable'],

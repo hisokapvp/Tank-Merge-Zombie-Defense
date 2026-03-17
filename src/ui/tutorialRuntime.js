@@ -287,6 +287,19 @@
     return Number.isFinite(rank) && rank > 0 ? Math.floor(rank) : 0;
   }
 
+  function getAppliedTalentRankTotal(state) {
+    if (!state || !state.player || !state.player.talentsV2 || typeof state.player.talentsV2 !== 'object') return 0;
+    const ranksById = state.player.talentsV2.ranksById;
+    if (!ranksById || typeof ranksById !== 'object') return 0;
+    const talentIds = Object.keys(ranksById);
+    let total = 0;
+    for (let i = 0; i < talentIds.length; i++) {
+      const rank = Number(ranksById[talentIds[i]]);
+      if (Number.isFinite(rank) && rank > 0) total += Math.floor(rank);
+    }
+    return total;
+  }
+
   function getTutorialFlags(tutorial) {
     if (!tutorial || typeof tutorial !== 'object') return { supercomputerLevelRewardDismissed: false };
     if (!tutorial.flags || typeof tutorial.flags !== 'object') tutorial.flags = {};
@@ -444,8 +457,20 @@
 
     const stepDefinition = pendingStepId ? getStepDefinition(pendingStepId) : null;
     if (stepDefinition && stepDefinition.completion && stepDefinition.completion.kind === 'talent_rank_applied') {
-      runtime.activeStepTalentRankBaseline = getAppliedTalentRank(state, stepDefinition.completion.talentId);
+      const talentId = stepDefinition.completion.talentId;
+      const acceptAnyTalent = stepDefinition.completion.acceptAnyTalent === true;
+      runtime.activeStepTalentRankBaseline = (!talentId || acceptAnyTalent)
+        ? getAppliedTalentRankTotal(state)
+        : getAppliedTalentRank(state, talentId);
     }
+  }
+
+  function shouldPreservePendingCompletion(stepDefinition) {
+    const completion = stepDefinition && stepDefinition.completion ? stepDefinition.completion : null;
+    const kind = completion && typeof completion.kind === 'string' ? completion.kind : '';
+    return kind === 'talent_rank_applied'
+      || kind === 'supercomputer_damage_upgrade_applied'
+      || kind === 'production_box_opened';
   }
 
   function normalizeTutorialState(state) {
@@ -717,19 +742,20 @@
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
     const activation = stepDefinition.activation;
+    const preservePendingCompletion = shouldPreservePendingCompletion(stepDefinition);
     if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
       if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
     }
     if (Number.isFinite(Number(activation.minSupercomputerLevel))) {
       if (getSupercomputerLevel(state) < Math.max(0, Math.floor(Number(activation.minSupercomputerLevel)))) return false;
     }
-    if (Number.isFinite(Number(activation.minFreeTalentPoints))) {
+    if (!preservePendingCompletion && Number.isFinite(Number(activation.minFreeTalentPoints))) {
       if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
     }
-    if (Number.isFinite(Number(activation.minDamagePoints))) {
+    if (!preservePendingCompletion && Number.isFinite(Number(activation.minDamagePoints))) {
       if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
     }
-    if (Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
+    if (!preservePendingCompletion && Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
     }
     if (activation.kind === 'supercomputer_root_open'
@@ -1091,7 +1117,8 @@
       dismissCurrentBubble('continue');
     });
 
-    const disableBtn = createButton('btn btnSecondary uiButtonBehavior gameTutorial__disableBtn', '');
+    const disableBtn = createButton('btn uiButtonBehavior gameTutorial__disableBtn', '');
+    disableBtn.setAttribute('data-font-floor-ignore', 'true');
     disableBtn.addEventListener('click', function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -1164,7 +1191,7 @@
 
     actions.appendChild(continueBtn);
     actions.appendChild(skipBtn);
-    actions.appendChild(disableBtn);
+    bubble.appendChild(disableBtn);
     bubble.appendChild(closeBtn);
     bubble.appendChild(message);
     bubble.appendChild(actions);
@@ -1766,7 +1793,10 @@
     );
     runtime.continueBtn.textContent = translate('tutorialContinue', 'Продолжить');
     if (runtime.skipBtn) runtime.skipBtn.textContent = translate('tutorialSkip', 'Пропустить');
-    runtime.disableBtn.textContent = translate('tutorialDisable', 'Выключить обучение');
+    const disableLabel = translate('tutorialDisable', 'Выключить обучение');
+    runtime.disableBtn.textContent = '\u23FB';
+    runtime.disableBtn.setAttribute('aria-label', disableLabel);
+    runtime.disableBtn.setAttribute('data-ui-tooltip', disableLabel);
     runtime.closeBtn.setAttribute('aria-label', translate('tutorialClose', 'Закрыть обучение'));
     if (runtime.confirmTextEl && runtime.confirmAcceptBtn && runtime.confirmCancelBtn && runtime.confirmCloseBtn) {
       const closeLabel = translate('menuClose', 'Закрыть');
@@ -1950,7 +1980,11 @@
     }
     if (completionStep && completionStep.completion && completionStep.completion.kind === 'talent_rank_applied') {
       const talentId = completionStep.completion.talentId;
-      if (completionEligible && talentId && getAppliedTalentRank(state, talentId) > runtime.activeStepTalentRankBaseline) {
+      const acceptAnyTalent = completionStep.completion.acceptAnyTalent === true;
+      const appliedRank = (!talentId || acceptAnyTalent)
+        ? getAppliedTalentRankTotal(state)
+        : getAppliedTalentRank(state, talentId);
+      if (completionEligible && appliedRank > runtime.activeStepTalentRankBaseline) {
         completeCurrentStep('talent_rank_applied');
         return;
       }

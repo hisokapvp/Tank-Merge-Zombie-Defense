@@ -1318,7 +1318,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.productionStorage || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.critical || menuPauseLocks.bigMenu);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -9497,7 +9497,6 @@ function draw(){
   }
   drawBoard();
   drawOrbitingTanks();
-  drawCrate();
   renderZombiesAndCorpses();
   renderFenceHpBars();
   if (isTalentsV2Ready()) {
@@ -9524,6 +9523,7 @@ function draw(){
   }
   renderProjectilesAndEffects();
   drawDrones();
+  drawCrate();
   drawWeather();
   drawAttackModeEveningDim();
   drawLevelUpVfx();

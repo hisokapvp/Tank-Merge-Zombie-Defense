@@ -47,6 +47,8 @@ const talentOverlayDomJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlay
 const talentOverlayRendererJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayRenderer.js'), 'utf-8');
 const talentOverlayUiJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayUi.js'), 'utf-8');
 const productionLineUiJs = fs.readFileSync(path.join(root, 'src/ui/productionLineUI.js'), 'utf-8');
+const achievementsJs = fs.readFileSync(path.join(root, 'src/mechanics/achievements.js'), 'utf-8');
+const achievementsModalJs = fs.readFileSync(path.join(root, 'src/ui/achievementsModal.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
 const ru = fs.readFileSync(path.join(root, 'src/i18n/ru.json'), 'utf-8');
 const en = fs.readFileSync(path.join(root, 'src/i18n/en.json'), 'utf-8');
@@ -217,6 +219,13 @@ test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf("kind: 'production_box_opened'") !== -1, 'production storage tutorial completes when the player opens a box');
 });
 
+test('TUT-8F: caliber lesson accepts any talent purchase and pending completion survives resource spend', () => {
+  assert(tutorialStepsJs.indexOf('acceptAnyTalent: true') !== -1, 'caliber lesson explicitly accepts any applied talent rank');
+  assert(tutorialRuntimeJs.indexOf('getAppliedTalentRankTotal') !== -1, 'tutorial runtime can measure total applied talent ranks');
+  assert(tutorialRuntimeJs.indexOf("kind === 'production_box_opened'") !== -1, 'tutorial runtime preserves pending completion for production box opening');
+  assert(tutorialRuntimeJs.indexOf('preservePendingCompletion') !== -1, 'completion eligibility preserves action-based lessons after spending the gated resource');
+});
+
 test('TUT-8A: supercomputer tutorial reward dismissal is wired through level flow into tutorial runtime', () => {
   const globalObj = {
     window: null,
@@ -301,6 +310,28 @@ test('TUT-8C: achievements modal uses the same pause-manager contract as other b
   assert(gameJs.indexOf("achievements: false") !== -1, 'achievements pause source is registered in menu pause locks');
   assert(gameJs.indexOf("setMenuPauseSource('achievements', true);") !== -1, 'achievements modal enables pause on open');
   assert(gameJs.indexOf("setMenuPauseSource('achievements', false);") !== -1, 'achievements modal releases pause on close');
+});
+
+test('TUT-8K: achievements modal hides locked-status copy and shows threshold-based creator-engineer descriptions', () => {
+  assert(achievementsJs.indexOf('target: 200') !== -1, 'creator novice threshold is defined in achievements runtime');
+  assert(achievementsJs.indexOf('target: 800') !== -1, 'creator pro threshold is defined in achievements runtime');
+  assert(achievementsJs.indexOf('target: 1600') !== -1, 'creator expert threshold is defined in achievements runtime');
+  assert(achievementsJs.indexOf('target: 500') !== -1, 'engineer pro threshold is defined in achievements runtime');
+  assert(achievementsModalJs.indexOf("achievementStatusTodo") === -1, 'achievements modal no longer renders the locked status line');
+  assert(achievementsModalJs.indexOf("achievementDescriptionCreateTanks") !== -1, 'achievements modal uses the creator threshold description template');
+  assert(achievementsModalJs.indexOf("achievementDescriptionMergeTanks") !== -1, 'achievements modal uses the engineer threshold description template');
+  assert(ru.indexOf('"achievementCreatorNoviceDesc": "Создайте 200 танков"') !== -1, 'ru creator novice description matches runtime threshold');
+  assert(ru.indexOf('"achievementCreatorProDesc": "Создайте 800 танков"') !== -1, 'ru creator pro description matches runtime threshold');
+  assert(ru.indexOf('"achievementCreatorExpertDesc": "Создайте 1600 танков"') !== -1, 'ru creator expert description matches runtime threshold');
+  assert(ru.indexOf('"achievementEngineerNoviceDesc": "Объедините 200 танков"') !== -1, 'ru engineer novice description matches runtime threshold');
+  assert(ru.indexOf('"achievementEngineerProDesc": "Объедините 500 танков"') !== -1, 'ru engineer pro description matches runtime threshold');
+  assert(ru.indexOf('"achievementEngineerExpertDesc": "Объедините 1000 танков"') !== -1, 'ru engineer expert description matches runtime threshold');
+  assert(en.indexOf('"achievementCreatorNoviceDesc": "Create 200 tanks"') !== -1, 'en creator novice description matches runtime threshold');
+  assert(en.indexOf('"achievementCreatorProDesc": "Create 800 tanks"') !== -1, 'en creator pro description matches runtime threshold');
+  assert(en.indexOf('"achievementCreatorExpertDesc": "Create 1600 tanks"') !== -1, 'en creator expert description matches runtime threshold');
+  assert(en.indexOf('"achievementEngineerNoviceDesc": "Merge 200 tanks"') !== -1, 'en engineer novice description matches runtime threshold');
+  assert(en.indexOf('"achievementEngineerProDesc": "Merge 500 tanks"') !== -1, 'en engineer pro description matches runtime threshold');
+  assert(en.indexOf('"achievementEngineerExpertDesc": "Merge 1000 tanks"') !== -1, 'en engineer expert description matches runtime threshold');
 });
 
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
