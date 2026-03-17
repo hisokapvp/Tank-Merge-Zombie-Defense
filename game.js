@@ -9868,11 +9868,17 @@ function drawSupercomputerSpriteClip(sc, config, anim, elapsedSec){
 }
 
 function drawSupercomputerHpBar(sc, config){
+  const hasVisibleDamage = Number.isFinite(sc && sc.hp)
+    && Number.isFinite(sc && sc.maxHp)
+    && sc.maxHp > 0
+    && sc.hp < sc.maxHp;
+  if (!hasVisibleDamage) return;
   const hpBarCfg = config && config.hpBar ? config.hpBar : config;
   const visual = SupercomputerApi && typeof SupercomputerApi.resolveHpBarVisual === 'function'
     ? SupercomputerApi.resolveHpBarVisual(config || { hpBar: hpBarCfg || null }, sc, nowSec())
     : null;
-  const ratio = visual ? visual.ratio : (Math.max(0, Math.min(1, (Number(sc.hp) || 0) / Math.max(1, Number(sc.maxHp) || 1))));
+  const ratio = visual ? visual.ratio : Math.max(0, Math.min(1, Number(sc.hp) / Math.max(1, Number(sc.maxHp))));
+  if (visual && visual.visible === false) return;
   const barW = (visual ? visual.width : (Number.isFinite(hpBarCfg && hpBarCfg.width) ? hpBarCfg.width : 92)) * balScale;
   const barH = (visual ? visual.height : (Number.isFinite(hpBarCfg && hpBarCfg.height) ? hpBarCfg.height : 8)) * balScale;
   const offsetY = (visual ? visual.offsetY : (Number.isFinite(hpBarCfg && hpBarCfg.offsetY) ? hpBarCfg.offsetY : -56)) * balScale;

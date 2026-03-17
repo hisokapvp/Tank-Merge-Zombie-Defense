@@ -211,6 +211,7 @@
       panel.classList.add('scModal');
       var closeBtn = talentOverlay.querySelector('.modalClose');
       if (closeBtn) {
+        closeBtn.classList.add('levelModal__close');
         closeBtn.classList.add('scModal__close');
         closeBtn.setAttribute('data-font-floor-ignore', 'true');
       }
@@ -235,6 +236,7 @@
           global.Game.ButtonBehavior.decorateTree(helpBtn);
         }
       }
+      helpBtn.classList.add('btn', 'scButton', 'uiButtonBehavior', 'hangarChipsHelpBtn');
       syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
     }
 

@@ -5,7 +5,7 @@
     {
       id: 'creator_novice',
       titleKey: 'achievementCreatorNovice',
-      rewardKey: 'achievementRewardBuy2',
+      rewardKey: 'achievementRewardCreate2',
       target: 200,
       progressType: 'purchases',
       rewardMode: 'buy2',
@@ -13,7 +13,7 @@
     {
       id: 'creator_pro',
       titleKey: 'achievementCreatorPro',
-      rewardKey: 'achievementRewardBuy5',
+      rewardKey: 'achievementRewardCreate5',
       target: 800,
       progressType: 'purchases',
       rewardMode: 'buy5',
@@ -21,7 +21,7 @@
     {
       id: 'creator_expert',
       titleKey: 'achievementCreatorExpert',
-      rewardKey: 'achievementRewardBuyMax',
+      rewardKey: 'achievementRewardCreateMax',
       target: 1600,
       progressType: 'purchases',
       rewardMode: 'buyMax',

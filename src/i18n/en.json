@@ -152,17 +152,20 @@
   "achievementEngineerNoviceDesc": "Merge 200 tanks",
   "achievementEngineerProDesc": "Merge 500 tanks",
   "achievementEngineerExpertDesc": "Merge 1000 tanks",
+  "achievementRewardCreate2": "Ability to create 2 tanks at once.",
+  "achievementRewardCreate5": "Ability to create up to 5 tanks at once.",
+  "achievementRewardCreateMax": "Ability to create the maximum number of tanks at once.",
   "achievementRewardBuy2": "Ability to create 2 tanks at once.",
   "achievementRewardBuy5": "Ability to create up to 5 tanks at once.",
   "achievementRewardBuyMax": "Ability to create the maximum number of tanks at once.",
   "achievementRewardAutoMergeBasic": "Ability to semi-automatically merge 2 tanks.",
   "achievementRewardAutoMergeAdvanced": "Ability to semi-automatically merge up to 10 tanks.",
   "achievementRewardAutoMergeExpert": "Ability to semi-automatically merge all available tanks.",
-  "buyBulk2": "Buy 2 tanks",
-  "buyBulk5": "Buy 5 tanks",
-  "buyBulkMax": "Buy max tanks",
-  "buyBulkDynamic": "Buy {count} tanks",
-  "buyBulkBuy": "Buy {count} {tankWord}",
+  "buyBulk2": "Create 2 tanks",
+  "buyBulk5": "Create 5 tanks",
+  "buyBulkMax": "Create max tanks",
+  "buyBulkDynamic": "Create {count} tanks",
+  "buyBulkBuy": "Create {count} {tankWord}",
   "tankWord1": "tank",
   "tankWord2_4": "tanks",
   "tankWord5": "tanks",
@@ -530,13 +533,18 @@
   ,"techUnlockAccelNoResources": "No resources to accelerate"
   ,"techUnlockHelpButton": "Hangar technology help"
   ,"techUnlockHelpTitle": "Help"
-  ,"techUnlockHelpText": "In this section you can upgrade any chip modifier. After studying a new technology, all chips will be upgraded: your current chip fragments, whole chips, and chip fragments and whole chips that you obtain after studying the new technology."
+  ,"techUnlockHelpText": "In this section you can improve any chip modifier. After studying a new technology, all chips will be improved:\n- chip fragments that are in the inventory\n- whole chips that are in the inventory or inserted into slots\n- chip fragments that will be obtained after studying the technology\n- whole chips that will be obtained after studying the technology."
   ,"supercomputerTalentsHelpButton": "Upgrade tree help"
   ,"supercomputerTalentsHelpText": "In this section, using upgrade points, you can improve the Supercomputer and increase your combat, defense, and economy potential."
   ,"supercomputerTankWallHelpButton": "Tank and wall mods help"
   ,"supercomputerTankWallHelpText": "In this section you can upgrade tank guns, drones, and defensive walls, improving their stats. Upgrades are applied immediately and affect all upgraded elements. Upgrade bonuses only apply within the upgraded level of tanks, drones, or walls."
   ,"hangarCellsHelpText": "In this section you can strengthen tank cells by placing different chips into the slots. For two chips to start working as a linked pair, the modifiers on their touching sides must match.\nIf your inventory contains chips that can work in a link, they will be highlighted in green.\n\nChips in red linked slots work by the following rules:\n- the first modifier triggers when the tank fires;\n- the second modifier triggers when the projectile explodes.\n\nA chip in the yellow linked slot works by the following rules:\n- the modifier always triggers on the last explosion or explosions of the projectile;\n- the \"free\" modifier that is not part of the link also triggers. Depending on your chip, this is either \"Fire Puddle\", \"Ice Zone\", \"Electro Node\", \"Laser Mark\", or \"Acid Puddle\"."
   ,"hangarWorkshopHelpText": "In this section you can combine, assemble, and recycle hangar chips.\n\nIn the workshop subtabs, merge identical chips to strengthen them, assemble new chips from fragments, and recycle spare resources into useful materials for hangar progression."
+  ,"hangarWorkshopHelpChipUpgradeText": "In this section you can increase chip levels by merging two identical chips. Each chip level increase gives a bonus to the tank's attack power."
+  ,"hangarWorkshopHelpChipCraftText": "In this section you can create whole chips from fragments. If chip creation fails, one random chip fragment will be lost. Use the reagent \"Silicon Dust\" to increase the chance of creating a whole chip and avoid losing a fragment."
+  ,"hangarWorkshopHelpChipRecycleDisassembleText": "In this section you can break down large chips into fragments. When a large chip is broken down into fragments, you receive 3 chip fragments it was made of."
+  ,"hangarWorkshopHelpChipRecycleDustText": "In this section you can create the reagent \"Silicon Dust\" by recycling whole chips or chip fragments."
+  ,"hangarWorkshopHelpChipRecycleReprogramText": "In this section you can change the current modifier of a chip fragment to any other one through reprogramming. Having \"Silicon Dust\" as a reagent is required."
   ,"techUnlockHelpClose": "Close"
   ,"techAccelTitle": "Accelerate unlock"
   ,"techAccelSubtitle": "Choose resources to speed up the unlock."

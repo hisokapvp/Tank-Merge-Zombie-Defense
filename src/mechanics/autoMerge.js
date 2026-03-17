@@ -156,12 +156,12 @@
     var label = '';
 
     if (tier === 'merge2') {
-      label = t('autoMerge2', 'Соединить 2 танка');
+      label = t('autoMerge2', 'Объединить 2 танка');
     } else if (tier === 'mergeX') {
       var dynamicCount = Math.max(2, Math.min(10, pairs.length * 2));
-      label = t('autoMergeDynamicShort', 'Соединить {count}', { count: dynamicCount });
+      label = t('autoMergeDynamicShort', 'Объединить {count}', { count: dynamicCount });
     } else {
-      label = t('autoMergeAll', 'Соединить все танки');
+      label = t('autoMergeAll', 'Объединить все танки');
     }
 
     return {

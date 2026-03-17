@@ -397,6 +397,28 @@
     return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
   }
 
+  function getPendingGreyDamage(state) {
+    if (!state || typeof state !== 'object') return 0;
+    const talentsApi = global.Game && global.Game.TalentsV2 ? global.Game.TalentsV2 : null;
+    const runRt = talentsApi && talentsApi._runRt && talentsApi._runRt.eco
+      ? talentsApi._runRt.eco
+      : null;
+    const value = Number(runRt && runRt.greyDamage);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function getTutorialDamageProgress(state, activation) {
+    const readyDamagePoints = getAvailableDamagePoints(state);
+    if (!activation || activation.includePendingGreyDamage !== true) return readyDamagePoints;
+    return readyDamagePoints + getPendingGreyDamage(state);
+  }
+
+  function getTutorialDamageThreshold(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    return Math.max(0, Math.floor(numericValue));
+  }
+
   function getAppliedCannonUpgradeLevel(state, level) {
     if (!state || !state.player || !Array.isArray(state.player.cannonUpgradesApplied)) return 0;
     const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
@@ -681,6 +703,7 @@
     if (!stepDefinition) return false;
     if (!stepDefinition.activation || !state) return true;
     const activation = stepDefinition.activation;
+    const minDamageThreshold = getTutorialDamageThreshold(activation.minDamagePoints);
     if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
       if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
     }
@@ -690,8 +713,8 @@
     if (Number.isFinite(Number(activation.minFreeTalentPoints))) {
       if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
     }
-    if (Number.isFinite(Number(activation.minDamagePoints))) {
-      if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
+    if (minDamageThreshold !== null) {
+      if (getTutorialDamageProgress(state, activation) < minDamageThreshold) return false;
     }
     if (Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
@@ -710,9 +733,9 @@
       return findMergeablePairAnywhere(state);
     }
     if (stepDefinition.activation.kind === 'min_damage_points') {
-      const requiredDamagePoints = Number(stepDefinition.activation.value);
-      if (!Number.isFinite(requiredDamagePoints)) return true;
-      return getAvailableDamagePoints(state) >= Math.max(0, Math.floor(requiredDamagePoints));
+      const requiredDamagePoints = getTutorialDamageThreshold(stepDefinition.activation.value);
+      if (requiredDamagePoints === null) return true;
+      return getTutorialDamageProgress(state, activation) >= requiredDamagePoints;
     }
     if (stepDefinition.activation.kind === 'supercomputer_level_reward_dismissed') {
       return isSupercomputerLevelRewardDismissed(state);
@@ -743,6 +766,7 @@
     if (!stepDefinition.activation || !state) return true;
     const activation = stepDefinition.activation;
     const preservePendingCompletion = shouldPreservePendingCompletion(stepDefinition);
+    const minDamageThreshold = getTutorialDamageThreshold(activation.minDamagePoints);
     if (typeof activation.requiresStepBubbleShown === 'string' && activation.requiresStepBubbleShown) {
       if (!wasStepBubbleShown(state, activation.requiresStepBubbleShown)) return false;
     }
@@ -752,8 +776,8 @@
     if (!preservePendingCompletion && Number.isFinite(Number(activation.minFreeTalentPoints))) {
       if (getAvailableTalentPoints(state) < Math.max(0, Math.floor(Number(activation.minFreeTalentPoints)))) return false;
     }
-    if (!preservePendingCompletion && Number.isFinite(Number(activation.minDamagePoints))) {
-      if (getAvailableDamagePoints(state) < Math.max(0, Math.floor(Number(activation.minDamagePoints)))) return false;
+    if (!preservePendingCompletion && minDamageThreshold !== null) {
+      if (getTutorialDamageProgress(state, activation) < minDamageThreshold) return false;
     }
     if (!preservePendingCompletion && Number.isFinite(Number(activation.minUnopenedProductionBoxes))) {
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;

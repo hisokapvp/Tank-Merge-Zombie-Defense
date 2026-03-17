@@ -205,6 +205,7 @@
       activation: {
         kind: 'min_damage_points',
         value: 2,
+        includePendingGreyDamage: true,
       },
       target: {
         selector: '#supercomputerBtn',
@@ -227,6 +228,7 @@
         kind: 'supercomputer_root_open',
         requiresStepBubbleShown: 'supercomputer_damage_open_menu',
         minDamagePoints: 2,
+        includePendingGreyDamage: true,
       },
       target: {
         selector: '#supercomputerOpenTankWallMods',

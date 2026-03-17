@@ -177,6 +177,10 @@
 
   function resolveHpBarVisual(config, sc, timeSec) {
     var ratio = resolveHpRatio(sc);
+    var hasVisibleDamage = Number.isFinite(sc && sc.hp)
+      && Number.isFinite(sc && sc.maxHp)
+      && sc.maxHp > 0
+      && sc.hp < sc.maxHp;
     var phases = resolveHpBarPhases(config);
     var activePhase = phases[phases.length - 1];
     for (var i = 0; i < phases.length; i++) {
@@ -188,6 +192,7 @@
 
     var hpBarCfg = config && config.hpBar ? config.hpBar : {};
     return {
+      visible: hasVisibleDamage,
       ratio: ratio,
       width: toPositiveNumber(hpBarCfg.width, 92),
       height: toPositiveNumber(hpBarCfg.height, 8),
