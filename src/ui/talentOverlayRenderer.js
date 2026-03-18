@@ -1,6 +1,79 @@
 (function (global) {
   'use strict';
 
+  function drawBranchEdges(options) {
+    var opts = options || {};
+    var overlay = opts.overlay || null;
+    var branchId = typeof opts.branchId === 'string' ? opts.branchId : '';
+    var documentObj = opts.documentObj || (typeof document !== 'undefined' ? document : null);
+    if (!overlay || !branchId || !documentObj || typeof documentObj.createElementNS !== 'function') return false;
+
+    var svg = typeof overlay.querySelector === 'function'
+      ? overlay.querySelector('#talentSvgV2-' + branchId)
+      : null;
+    var grid = typeof overlay.querySelector === 'function'
+      ? overlay.querySelector('#talentGridV2-' + branchId)
+      : null;
+    if (!svg || !grid) return false;
+
+    svg.innerHTML = '';
+    var gridRect = typeof grid.getBoundingClientRect === 'function' ? grid.getBoundingClientRect() : null;
+    if (!gridRect || gridRect.width <= 0 || gridRect.height <= 0) return false;
+
+    svg.setAttribute('width', gridRect.width);
+    svg.setAttribute('height', gridRect.height);
+    svg.setAttribute('viewBox', '0 0 ' + gridRect.width + ' ' + gridRect.height);
+    svg.setAttribute('preserveAspectRatio', 'none');
+
+    var nodes = Array.isArray(opts.nodes) ? opts.nodes : [];
+    var ranks = opts.ranks && typeof opts.ranks === 'object' ? opts.ranks : {};
+    var getNodeLayout = typeof opts.getNodeLayout === 'function'
+      ? opts.getNodeLayout
+      : function (index) { return { row: 0, slot: index, parents: [] }; };
+
+    for (var localIdx = 0; localIdx < nodes.length; localIdx++) {
+      var node = nodes[localIdx];
+      if (!node || !node.id) continue;
+      var layout = getNodeLayout(localIdx, node) || {};
+      var parents = Array.isArray(layout.parents) ? layout.parents : [];
+      if (!parents.length) continue;
+
+      var toBtn = grid.querySelector('[data-branch-id="' + branchId + '"][data-talent-local="' + localIdx + '"]');
+      if (!toBtn || typeof toBtn.getBoundingClientRect !== 'function') continue;
+
+      var toRect = toBtn.getBoundingClientRect();
+      var toX = toRect.left + toRect.width / 2 - gridRect.left;
+      var toY = toRect.top - gridRect.top;
+      var childActive = Math.max(0, Math.floor(ranks[node.id] || 0)) > 0;
+
+      for (var parentIndex = 0; parentIndex < parents.length; parentIndex++) {
+        var parentLocalIdx = parents[parentIndex];
+        var parentNode = nodes[parentLocalIdx];
+        if (!parentNode) continue;
+
+        var fromBtn = grid.querySelector('[data-branch-id="' + branchId + '"][data-talent-local="' + parentLocalIdx + '"]');
+        if (!fromBtn || typeof fromBtn.getBoundingClientRect !== 'function') continue;
+
+        var fromRect = fromBtn.getBoundingClientRect();
+        var fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
+        var fromY = fromRect.bottom - gridRect.top;
+        var parentActive = Math.max(0, Math.floor(ranks[parentNode.id] || 0)) > 0;
+        var gapY = Math.max(0, toY - fromY);
+        var elbowY = fromY + Math.max(6, Math.min(24, gapY * 0.5 + 4));
+        if (elbowY >= toY) elbowY = fromY + gapY * 0.5;
+
+        var path = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M ' + fromX + ' ' + fromY + ' L ' + fromX + ' ' + elbowY + ' L ' + toX + ' ' + elbowY + ' L ' + toX + ' ' + toY);
+        path.classList.add('talentEdge');
+        if (parentActive && childActive) path.classList.add('talentEdgeActive');
+        else if (parentActive) path.classList.add('talentEdgeReady');
+        svg.appendChild(path);
+      }
+    }
+
+    return true;
+  }
+
   function renderBranchNodes(options) {
     var opts = options || {};
     var overlay = opts.overlay || null;
@@ -99,6 +172,7 @@
 
   global.Game = global.Game || {};
   global.Game.TalentOverlayRenderer = {
+    drawBranchEdges: drawBranchEdges,
     renderBranchNodes: renderBranchNodes,
   };
 })(typeof window !== 'undefined' ? window : this);

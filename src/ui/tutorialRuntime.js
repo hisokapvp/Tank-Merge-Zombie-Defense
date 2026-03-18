@@ -228,7 +228,7 @@
     if (Number.isFinite(state.kills) && state.kills > 0) return true;
     if (Number.isFinite(state.totalDamageDealtRaw) && state.totalDamageDealtRaw > 0) return true;
     if (Number.isFinite(state.maxTankLevelAchieved) && state.maxTankLevelAchieved > 1) return true;
-    if (Array.isArray(state.playerChips) && state.playerChips.length > 0) return true;
+    if (hasAnyPlayerOwnedChip(state)) return true;
     if (Array.isArray(state.drones) && state.drones.length > 0) return true;
     if (state.productionLine && typeof state.productionLine === 'object') {
       if (Number.isFinite(state.productionLine.boxesProduced) && state.productionLine.boxesProduced > 0) return true;
@@ -413,8 +413,82 @@
     return Number.isFinite(value) && value > 0 ? value : 0;
   }
 
+  function hasWholeChipInventoryEntries(entries) {
+    if (!Array.isArray(entries) || !entries.length) return false;
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index];
+      if (!entry || typeof entry !== 'object') continue;
+      const rawCount = Number(entry.count);
+      if (Number.isFinite(rawCount)) {
+        if (rawCount > 0) return true;
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function hasInstalledChipEntries(cells) {
+    if (!Array.isArray(cells) || !cells.length) return false;
+    for (let cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+      const cell = cells[cellIndex];
+      if (!cell || typeof cell !== 'object') continue;
+      const redSlots = cell.redSlots && typeof cell.redSlots === 'object' ? cell.redSlots : null;
+      const yellowSlots = cell.yellowSlots && typeof cell.yellowSlots === 'object' ? cell.yellowSlots : null;
+      if (redSlots && (redSlots.slot1 || redSlots.slot2)) return true;
+      if (yellowSlots && (yellowSlots.slot1 || yellowSlots.slot2 || yellowSlots.slot3 || yellowSlots.slot4)) return true;
+    }
+    return false;
+  }
+
   function hasWholePlayerChip(state) {
-    return !!(state && Array.isArray(state.playerChips) && state.playerChips.length > 0);
+    if (state && hasWholeChipInventoryEntries(state.playerChips)) return true;
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi) return false;
+    if (typeof hangarUi.hasPlayerOwnedWholeChip === 'function') {
+      try {
+        return hangarUi.hasPlayerOwnedWholeChip() === true;
+      } catch (_) {
+        return false;
+      }
+    }
+    if (typeof hangarUi.getPlayerChips === 'function') {
+      try {
+        return hasWholeChipInventoryEntries(hangarUi.getPlayerChips());
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function hasAnyPlayerOwnedChip(state) {
+    if (state && hasWholeChipInventoryEntries(state.playerChips)) return true;
+    if (state && hasWholeChipInventoryEntries(state.playerFragments)) return true;
+    if (state && hasInstalledChipEntries(state.hangarCells)) return true;
+
+    const hangarUi = getHangarChipsUiApi();
+    if (!hangarUi) return false;
+
+    if (typeof hangarUi.getPlayerChips === 'function') {
+      try {
+        if (hasWholeChipInventoryEntries(hangarUi.getPlayerChips())) return true;
+      } catch (_) {}
+    }
+
+    if (typeof hangarUi.getPlayerFragments === 'function') {
+      try {
+        if (hasWholeChipInventoryEntries(hangarUi.getPlayerFragments())) return true;
+      } catch (_) {}
+    }
+
+    if (typeof hangarUi.getCells === 'function') {
+      try {
+        if (hasInstalledChipEntries(hangarUi.getCells())) return true;
+      } catch (_) {}
+    }
+
+    return false;
   }
 
   function getHangarChipsUiApi() {
@@ -822,7 +896,7 @@
       return isMinDamageActivationSatisfied(state, activation);
     }
     if (stepDefinition.activation.kind === 'first_whole_chip_supercomputer_entry') {
-      return hasWholePlayerChip(state) && !isGameplayBlockingModalOpen();
+      return hasAnyPlayerOwnedChip(state) && !isGameplayBlockingModalOpen();
     }
     if (stepDefinition.activation.kind === 'hangar_first_red_slot_install_ready') {
       return isHangarFirstRedSlotInstallReady();
@@ -870,7 +944,7 @@
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
     }
     if (activation.kind === 'first_whole_chip_supercomputer_entry') {
-      return hasWholePlayerChip(state);
+      return hasAnyPlayerOwnedChip(state);
     }
     if (activation.kind === 'hangar_first_red_slot_install_ready') {
       return isHangarCellsTabOpen() && !isHangarTutorialModalBlocking() && !!getHangarFirstRedSlotTarget();

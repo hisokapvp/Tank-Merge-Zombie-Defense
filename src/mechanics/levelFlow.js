@@ -1,6 +1,9 @@
 (function (global) {
   'use strict';
 
+  var DAMAGE_PROGRESS_PER_POINT = 10000;
+  var SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD = 5;
+
   function createLevelFlow(options) {
     var opts = options || {};
     var state = opts.state;
@@ -60,14 +63,49 @@
       state.player.eventShown60 = !!computer.eventShown60;
     }
 
+    function normalizeDamageProgress(value) {
+      return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    }
+
+    function normalizeDamagePoints(value) {
+      return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    }
+
+    function getCurrentDamagePointTotal() {
+      if (Number.isFinite(state.totalDamageDealtRaw)) {
+        return Math.floor(normalizeDamageProgress(state.totalDamageDealtRaw) / DAMAGE_PROGRESS_PER_POINT);
+      }
+      return normalizeDamagePoints(state.damagePointsSpent)
+        + (state.player ? normalizeDamagePoints(state.player.damagePoints) : 0);
+    }
+
+    function grantDamagePointReward(points) {
+      var rewardPoints = normalizeDamagePoints(points);
+      var spentPoints = normalizeDamagePoints(state.damagePointsSpent);
+      var remainder = normalizeDamageProgress(state.totalDamageDealtRaw) % DAMAGE_PROGRESS_PER_POINT;
+      var totalDamagePoints = getCurrentDamagePointTotal();
+      if (!rewardPoints) return 0;
+      totalDamagePoints += rewardPoints;
+      state.totalDamageDealtRaw = totalDamagePoints * DAMAGE_PROGRESS_PER_POINT + remainder;
+      if (state.player) {
+        state.player.damagePoints = Math.max(0, totalDamagePoints - spentPoints);
+      }
+      return rewardPoints;
+    }
+
     function updateLevelModal() {
       var reward = state.ui.levelReward;
       if (!reward || !ui.levelModal) return;
       if (ui.levelTitle) ui.levelTitle.textContent = t('levelModalTitle', { level: reward.level });
       if (ui.levelTalent) {
-        ui.levelTalent.textContent = t('levelModalTalent', {
-          points: reward.points,
-        });
+        ui.levelTalent.textContent = reward.damagePoints > 0
+          ? t('levelModalTalentWithDamage', {
+              points: reward.points,
+              damagePoints: reward.damagePoints,
+            })
+          : t('levelModalTalent', {
+              points: reward.points,
+            });
       }
       var fmt = windowObj && windowObj.Game && windowObj.Game.NumberFormat
         ? windowObj.Game.NumberFormat.formatCompactRu
@@ -118,15 +156,21 @@
       if (dismissedLevel > 0) notifyTutorialLevelRewardDismissed(dismissedLevel);
     }
 
-    function queueLevelReward(level, points, gold) {
-      if (!points && !gold) return;
+    function queueLevelReward(level, points, gold, damagePoints) {
+      if (!points && !gold && !damagePoints) return;
       var reward = state.ui.levelReward;
       if (reward) {
         reward.level = Math.max(reward.level, level);
         reward.points += points;
         reward.gold += gold;
+        reward.damagePoints = (reward.damagePoints || 0) + (damagePoints || 0);
       } else {
-        state.ui.levelReward = { level: level, points: points, gold: gold };
+        state.ui.levelReward = {
+          level: level,
+          points: points,
+          gold: gold,
+          damagePoints: damagePoints || 0,
+        };
       }
       openLevelModal();
     }
@@ -165,6 +209,7 @@
       var leveled = false;
       var gainedLevels = 0;
       var rewardGold = 0;
+      var rewardDamagePoints = 0;
       var previousMaxHp = Number.isFinite(p.maxHp) ? p.maxHp : 1;
 
       while (p.computerLevel < p.maxLevel) {
@@ -176,6 +221,9 @@
         leveled = true;
         gainedLevels += 1;
         rewardGold += levelGoldReward(p.computerLevel);
+        if (p.computerLevel === 2) {
+          rewardDamagePoints += SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD;
+        }
       }
 
       p.xpToNext = xpNeededForLevel(p.computerLevel);
@@ -191,6 +239,7 @@
         }
         if (onTalentPointsGained) onTalentPointsGained(gainedLevels);
         state.coins += rewardGold;
+        rewardDamagePoints = grantDamagePointReward(rewardDamagePoints);
         if (onComputerLevelChanged) {
           onComputerLevelChanged({
             computer: p,
@@ -200,7 +249,7 @@
         refreshTanksPowerTier();
         triggerLevelUpVfx(p.computerLevel);
         checkPowerMomentEvents(p.computerLevel);
-        queueLevelReward(p.computerLevel, gainedLevels, rewardGold);
+        queueLevelReward(p.computerLevel, gainedLevels, rewardGold, rewardDamagePoints);
         saveProgress();
         updateUI();
       }

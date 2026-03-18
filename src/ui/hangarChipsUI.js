@@ -2203,6 +2203,14 @@
     return total;
   }
 
+  function hasPlayerOwnedWholeChip() {
+    var chips = ensurePlayerChips();
+    for (var i = 0; i < chips.length; i++) {
+      if (getChipEntryCount(chips[i]) > 0) return true;
+    }
+    return false;
+  }
+
   function _hasTechAccelerationResources() {
     return _sumEntryCounts(ensurePlayerChips(), 'count') > 0
       || _sumEntryCounts(ensurePlayerFragments(), 'count') > 0
@@ -4443,6 +4451,7 @@
     switchHangarTab: switchHangarTab,
     switchWorkshopSubTab: switchWorkshopSubTab,
     getPlayerChips: getPlayerChips,
+    hasPlayerOwnedWholeChip: hasPlayerOwnedWholeChip,
     setPlayerChips: setPlayerChips,
     addPlayerChip: addPlayerChip,
     removePlayerChipOne: removePlayerChipOne,

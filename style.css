@@ -2075,28 +2075,34 @@ input, select, textarea, button {
 .talentTreeContainer{
   position:relative;
   width:100%;
-  min-height:320px;
+  min-height:clamp(360px, 48vh, 460px);
 }
 .talentTreeSvg{
   position:absolute;
   inset:0;
   width:100%;
   height:100%;
+  overflow:visible;
   pointer-events:none;
   z-index:0;
 }
 .talentEdge{
-  stroke:rgba(74, 246, 38, 0.4);
-  stroke-width:2;
+  fill:none;
+  stroke:rgba(74, 246, 38, 0.62);
+  stroke-width:3;
   stroke-linecap:round;
+  stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+  opacity:.95;
+  filter:drop-shadow(0 0 3px rgba(74, 246, 38, 0.16));
 }
 .talentEdge.talentEdgeReady{
-  stroke:rgba(74, 246, 38, 0.7);
+  stroke:rgba(124, 255, 104, 0.82);
 }
 .talentEdge.talentEdgeActive{
-  stroke:#4af626;
-  stroke-width:3;
-  filter: drop-shadow(0 0 5px rgba(74, 246, 38, 0.8));
+  stroke:#8aff73;
+  stroke-width:4;
+  filter:drop-shadow(0 0 6px rgba(74, 246, 38, 0.48));
 }
 
 /* Tree grid: 3 columns, dynamic rows */
@@ -2397,6 +2403,9 @@ input, select, textarea, button {
 #supercomputerTalentsMount > #talentOverlay .talentTreeBody{
   padding-top:0;
 }
+#supercomputerTalentsMount > #talentOverlay .talentTreeContainer{
+  min-height:clamp(420px, 58vh, 520px);
+}
 #modsHangarOverlay .scModal__body{
   overflow:visible;
   border:1px solid rgba(255,255,255,.12);
@@ -2667,6 +2676,11 @@ input, select, textarea, button {
   background-repeat:no-repeat;
   background-position:center;
 }
+.stageUi .stageAbilitySlots .talentAbilitySlot,
+.stageUi .stageAbilitySlots .talentAbilitySlot.talentAbilitySlot_v2{
+  background-size:64% 64%;
+  transition:background-color .12s ease, border-color .12s ease, box-shadow .12s ease, filter .12s ease;
+}
 #stageActive0,
 .talentAbilitySlot_attack{
   background-image:url(assets/ui/icons/talents/activeOff.png);
@@ -2684,7 +2698,7 @@ input, select, textarea, button {
 }
 .stageAbilitySlots .talentAbilitySlot.talentAbilitySlot_v2{
   background-image:var(--talentAbilityIcon) !important;
-  background-size:68% 68%;
+  background-size:64% 64%;
 }
 .stageAbilitySlots .talentAbilitySlot.talentAbilityLocked{
   background-color:rgba(60,55,50,.9);
@@ -2737,6 +2751,14 @@ input, select, textarea, button {
 .stageAbilitySlots .talentAbilitySlot:hover,
 .stageAbilitySlots .talentAbilitySlot.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover{
   transform:none;
+}
+.stageUi .stageAbilitySlots .talentAbilitySlot:hover:not(:disabled),
+.stageUi .stageAbilitySlots .talentAbilitySlot.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover,
+.stageUi .stageAbilitySlots .talentAbilitySlot:active:not(:disabled),
+.stageUi .stageAbilitySlots .talentAbilitySlot.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):active,
+.stageUi .stageAbilitySlots .talentAbilitySlot.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]).is-pressed{
+  transform:none !important;
+  background-size:64% 64% !important;
 }
 .stageAbilitySlots .talentAbilitySlot:hover::after,
 .stageAbilitySlots .talentAbilitySlot.uiButtonBehavior:not(:disabled):not([aria-disabled="true"]):hover::after{

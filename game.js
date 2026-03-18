@@ -8794,6 +8794,17 @@ function drawTalentEdgesV2(overlay, branchId){
   const api = getTalentsV2Api();
   if (!api || !overlay) return false;
   if (!isTalentLayoutVisibleV2(overlay)) return false;
+  const TalentOverlayRendererApi = window.Game && window.Game.TalentOverlayRenderer;
+  if (TalentOverlayRendererApi && typeof TalentOverlayRendererApi.drawBranchEdges === 'function') {
+    return TalentOverlayRendererApi.drawBranchEdges({
+      documentObj: document,
+      overlay,
+      branchId,
+      nodes: getTalentBranchNodesV2(branchId),
+      ranks: typeof api.getRanks === 'function' ? api.getRanks() : {},
+      getNodeLayout: getTalentNodeLayoutV2,
+    });
+  }
   const svg = overlay.querySelector(`#talentSvgV2-${branchId}`);
   const grid = overlay.querySelector(`#talentGridV2-${branchId}`);
   if (!svg || !grid) return false;
@@ -8828,16 +8839,16 @@ function drawTalentEdgesV2(overlay, branchId){
       const fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
       const fromY = fromRect.bottom - gridRect.top;
       const parentActive = Math.max(0, Math.floor(ranks[parentNode.id] || 0)) > 0;
+      const gapY = Math.max(0, toY - fromY);
+      let elbowY = fromY + Math.max(6, Math.min(24, gapY * 0.5 + 4));
+      if (elbowY >= toY) elbowY = fromY + gapY * 0.5;
 
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', fromX);
-      line.setAttribute('y1', fromY);
-      line.setAttribute('x2', toX);
-      line.setAttribute('y2', toY);
-      line.classList.add('talentEdge');
-      if (parentActive && childActive) line.classList.add('talentEdgeActive');
-      else if (parentActive) line.classList.add('talentEdgeReady');
-      svg.appendChild(line);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${fromX} ${fromY} L ${fromX} ${elbowY} L ${toX} ${elbowY} L ${toX} ${toY}`);
+      path.classList.add('talentEdge');
+      if (parentActive && childActive) path.classList.add('talentEdgeActive');
+      else if (parentActive) path.classList.add('talentEdgeReady');
+      svg.appendChild(path);
     });
   });
   return true;
