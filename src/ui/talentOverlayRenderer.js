@@ -23,7 +23,6 @@
     svg.setAttribute('width', gridRect.width);
     svg.setAttribute('height', gridRect.height);
     svg.setAttribute('viewBox', '0 0 ' + gridRect.width + ' ' + gridRect.height);
-    svg.setAttribute('preserveAspectRatio', 'none');
 
     var nodes = Array.isArray(opts.nodes) ? opts.nodes : [];
     var ranks = opts.ranks && typeof opts.ranks === 'object' ? opts.ranks : {};

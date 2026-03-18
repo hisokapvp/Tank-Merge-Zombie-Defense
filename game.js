@@ -221,7 +221,9 @@ function normalizeStoredUntilSec(value){
   if (!Number.isFinite(value)) return 0;
   var safe = Number(value);
   if (safe <= 0) return 0;
-  return safe > 1e11 ? (safe / 1000) : safe;
+  if (safe > 1e11) return safe / 1000;
+  if (safe > 1e6) return 0;
+  return safe;
 }
 
 function normalizeActiveEffectsTimestamps(){
@@ -3996,7 +3998,7 @@ function useActiveAbility(branch){
     updateUI();
     return;
   }
-  const nowSecValue = nowMs / 1000;
+  const nowSecValue = nowSec();
   let untilSec = 0;
   const branchId = getTalentV2BranchIdByIndex(branch);
   const stateAfterUse = typeof api.getActiveState === 'function'
@@ -4009,7 +4011,8 @@ function useActiveAbility(branch){
   if (durationSec > 0) {
     untilSec = nowSecValue + durationSec;
   } else if (Number.isFinite(result.untilMs) && result.untilMs > 0) {
-    untilSec = result.untilMs > 1e11 ? (result.untilMs / 1000) : result.untilMs;
+    const remainMs = result.untilMs - nowMs;
+    untilSec = remainMs > 0 ? nowSecValue + (remainMs / 1000) : 0;
   }
   if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
     if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
