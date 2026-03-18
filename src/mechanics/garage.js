@@ -13,6 +13,9 @@
     if (!cell) return false;
     if (cell.tank) return false;
     if (state.crate && state.crate.cellIndex === cell.i) return false;
+    // Underground hangar cell is not available for tank placement
+    var _UH = global.Game && global.Game.UndergroundHangar;
+    if (_UH && cell.i === _UH.CELL_INDEX) return false;
     return true;
   }
 

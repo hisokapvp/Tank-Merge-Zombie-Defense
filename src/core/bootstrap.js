@@ -903,6 +903,13 @@
     if (opts.BonusBoxSprites && typeof opts.BonusBoxSprites.load === 'function') {
       await opts.BonusBoxSprites.load().catch(function () {});
     }
+    // Underground Hangar sprites
+    {
+      const _UH = windowObj.Game && windowObj.Game.UndergroundHangar;
+      if (_UH && typeof _UH.load === 'function') {
+        await _UH.load().catch(function () {});
+      }
+    }
     if (opts.SupercomputerSprites && typeof opts.SupercomputerSprites.load === 'function') {
       await opts.SupercomputerSprites.load().catch(function () {});
       if (typeof opts.onSupercomputerConfigLoaded === 'function') opts.onSupercomputerConfigLoaded();

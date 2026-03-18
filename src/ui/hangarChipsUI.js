@@ -292,12 +292,24 @@
 
   /* ─── Render: 4×4 cell grid ────────────────────────────── */
 
+  /* Index of the cell reserved for the Underground Hangar button */
+  var UNDERGROUND_HANGAR_CELL = 15;
+
   function renderGrid() {
     var grid = dom.grid;
     if (!grid) return;
     var cells = ensureCells();
     var html = '';
     for (var i = 0; i < 16; i++) {
+      /* Cell 16 (index 15) is the Underground Hangar — locked, no chip slots */
+      if (i === UNDERGROUND_HANGAR_CELL) {
+        html += '<button class="hangarGridCell hangarGridCell--locked" data-cell-idx="' + i + '" type="button" disabled aria-disabled="true">' +
+          '<span class="hangarGridCell__lockOverlay"></span>' +
+          '<span class="hangarGridCell__lockIcon">🔒</span>' +
+          '</button>';
+        continue;
+      }
+
       var c = cells[i] || {};
       var sel = i === _selectedCell ? ' hangarGridCell--selected' : '';
 
@@ -1889,7 +1901,9 @@
     /* grid cell click */
     var cellBtn = tgt.closest ? tgt.closest('[data-cell-idx]') : null;
     if (cellBtn) {
-      _selectedCell = parseInt(cellBtn.getAttribute('data-cell-idx'), 10) || 0;
+      var cellIdx = parseInt(cellBtn.getAttribute('data-cell-idx'), 10) || 0;
+      if (cellIdx === UNDERGROUND_HANGAR_CELL) return; /* locked cell — ignore */
+      _selectedCell = cellIdx;
       clearSlotSelection();
       _activeSlotActions = null;
       render();

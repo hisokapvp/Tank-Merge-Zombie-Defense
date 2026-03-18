@@ -562,4 +562,11 @@
   ,"techAccelLimitBadge": "Limit"
   ,"techAccelSelectedSummary": "Selected acceleration: {pct}% • total after apply: {total}% • remaining to cap: {left}%"
   ,"techAccelDustMeta": "+{pct}% per 1 unit"
+  ,"ughModalTitle": "Underground Hangar"
+  ,"ughMainHangarTitle": "Main Hangar"
+  ,"ughUndergroundTitle": "Underground Hangar (Storage)"
+  ,"ughBuyTank": "Build tank lvl.{level}"
+  ,"ughBuyBulk": "Build x{n}"
+  ,"ughAutoMerge": "Merge tanks"
+  ,"ughDismantle": "Dismantle tank"
 }

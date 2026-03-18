@@ -490,7 +490,8 @@ function createInitialState(options){
           wasCritical: false,
           preRetrySaveFailed: false,
         },
-        selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [] };
+        selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [],
+        undergroundHangar: { cells: [] } };
   if (reason === 'new_game') {
     if (!initialState.player || typeof initialState.player !== 'object') {
       initialState.player = { talentPoints: 0, talentsV2: { ranksById: {}, freePoints: 0 }, freeTalentPointsV2: 0 };
@@ -1174,6 +1175,7 @@ let menuPauseLocks = {
   supercomputer: false,
   achievements: false,
   productionStorage: false,
+  undergroundHangar: false,
   critical: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
 };
@@ -1320,7 +1322,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.critical || menuPauseLocks.bigMenu);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -4428,6 +4430,16 @@ function restoreFullState(saved){
   }
   // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
   if (Array.isArray(state.zombies)) state.zombies.length = 0;
+  // Restore underground hangar state
+  if (saved.undergroundHangar && typeof saved.undergroundHangar === 'object') {
+    state.undergroundHangar = saved.undergroundHangar;
+  }
+  {
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (_UH && typeof _UH.ensureStateShape === 'function') _UH.ensureStateShape(state);
+    // Clear tank from underground hangar cell (cell 15 is reserved for the button)
+    if (_UH && state.cells[_UH.CELL_INDEX]) state.cells[_UH.CELL_INDEX].tank = null;
+  }
   resetCriticalEntryRuntimeFlags();
 }
 
@@ -5807,6 +5819,7 @@ function isBlockingModalOpen(){
     'achievementsModal',
     'achievementPopup',
     'productionLineStorageModal',
+    'undergroundHangarOverlay',
   ];
   for (let i = 0; i < ids.length; i++) {
     const el = document.getElementById(ids[i]);
@@ -9260,8 +9273,23 @@ canvas.addEventListener('pointerdown', (e)=>{
     }
     return;
   }
+  // Underground hangar cell click → open modal
+  {
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (_UH && typeof _UH.hitTest === 'function' && state.cells[_UH.CELL_INDEX]) {
+      if (_UH.hitTest(p.x, p.y, state.cells[_UH.CELL_INDEX])) {
+        _UH.handleClick(function () {
+          const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
+          if (_UGHUI && typeof _UGHUI.open === 'function') {
+            _UGHUI.open(state);
+          }
+        });
+        return;
+      }
+    }
+  }
   const c = cellAt(p.x, p.y);
-  if (state.isDismantleMode){
+  if (state.isDismantleMode) {
     if (c && c.tank && hitDismantleCheckbox(c, p.x, p.y)){
       toggleDismantleSelection(c.tank.id);
       return;
@@ -9318,6 +9346,17 @@ canvas.addEventListener('pointermove', (e)=>{
       fenceRepairCost: getFenceRepairCostCoins(),
     });
     if (dronMove && dronMove.handled) return;
+  }
+  // Underground hangar hover tracking
+  {
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (_UH && typeof _UH.hitTest === 'function' && state.cells[_UH.CELL_INDEX]) {
+      if (_UH.hitTest(p.x, p.y, state.cells[_UH.CELL_INDEX])) {
+        _UH.handlePointerEnter();
+      } else {
+        _UH.handlePointerLeave();
+      }
+    }
   }
   if (!state.dragging) return;
   const dx = p.x - state.dragging.startX;
@@ -9378,6 +9417,11 @@ canvas.addEventListener('pointerup', (e)=>{
     }
     state.selectedHangarCellIndex = from.i;
   } else if (target){
+    // Block drop onto underground hangar cell
+    const _UH_drop = window.Game && window.Game.UndergroundHangar;
+    if (_UH_drop && target.i === _UH_drop.CELL_INDEX) {
+      // Do nothing — can't drop onto underground hangar cell
+    } else {
     const targetHasBox = state.crate && state.crate.cellIndex === target.i;
     if (targetHasBox){
       popText(target.x + target.w/2, target.y + target.h/2, t('dropOnCrateReject'), '#ffaa44');
@@ -9388,6 +9432,7 @@ canvas.addEventListener('pointerup', (e)=>{
         from.tank = null;
       }
       state.selectedHangarCellIndex = target.i;
+    }
     }
   }
   state.dragging = null;
@@ -9470,7 +9515,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },
@@ -9486,9 +9531,15 @@ if (DebugPanelEnabled) {
 
 window.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
+  // Close underground hangar modal on Escape
+  const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
+  if (_UGHUI && typeof _UGHUI.isOpen === 'function' && _UGHUI.isOpen()) {
+    if (typeof _UGHUI.close === 'function') _UGHUI.close();
+    return;
+  }
   if (menuPauseLocks.settings) {
     setMenuOpen(false);
-  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
     setMenuOpen(true);
   }
 });
@@ -10768,6 +10819,13 @@ function drawBoard(){
   drawFence(br);
 
   for (const c of state.cells){
+    // Underground hangar cell: delegate drawing to UndergroundHangar module
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (_UH && c.i === _UH.CELL_INDEX) {
+      if (typeof _UH.draw === 'function') _UH.draw(ctx, c);
+      continue;
+    }
+
     const hovered = state.dragging && cellAt(state.dragging.x, state.dragging.y)?.i === c.i;
 
     rr(ctx, c.x, c.y, c.w, c.h, 10);
@@ -12016,6 +12074,12 @@ function loop(now){
 
   syncFenceTierWithMaxTankLevel(state);
 
+  // Underground Hangar button animation (runs regardless of pause)
+  {
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (_UH && typeof _UH.stepAnimation === 'function') _UH.stepAnimation(dt);
+  }
+
   updateUI();
   draw();
 
@@ -12299,6 +12363,43 @@ initBigMainMenu();
         return result;
       },
     });
+  }
+}
+
+// ── Underground Hangar UI init ──
+{
+  const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
+  if (_UGHUI && typeof _UGHUI.init === 'function') {
+    _UGHUI.init({
+      setPaused: function (paused) {
+        setMenuPauseSource('undergroundHangar', !!paused);
+      },
+      updateUI: function () { updateUI(); },
+      getBuyLevel: function () { return buyTankLevel(); },
+      getBuyCost: function (level) {
+        return typeof buyTankCost === 'function' ? buyTankCost(level) : 0;
+      },
+      getBulkMode: function () {
+        const ach = state && state.achievements && state.achievements.unlocked;
+        if (ach && ach.buy5) return 'buy5';
+        if (ach && ach.buy2) return 'buy2';
+        return 'none';
+      },
+      hasAutoMerge: function () {
+        const ach = state && state.achievements && state.achievements.unlocked;
+        return !!(ach && ach.autoMerge);
+      },
+      onBuy: function () { tryBuyTank(); },
+      onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk(); },
+      onAutoMerge: function () { if (typeof runAutoMergeClick === 'function') runAutoMergeClick(); },
+      onDismantle: function () {
+        state.isDismantleMode = !state.isDismantleMode;
+        updateDismantleButton();
+      },
+    });
+    // Ensure state shape on init
+    const _UH2 = window.Game && window.Game.UndergroundHangar;
+    if (_UH2 && typeof _UH2.ensureStateShape === 'function') _UH2.ensureStateShape(state);
   }
 }
 

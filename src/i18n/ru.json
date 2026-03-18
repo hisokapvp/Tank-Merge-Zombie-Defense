@@ -562,4 +562,11 @@
   ,"techAccelLimitBadge": "Лимит"
   ,"techAccelSelectedSummary": "Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%"
   ,"techAccelDustMeta": "+{pct}% за 1 ед."
+  ,"ughModalTitle": "Подземный ангар"
+  ,"ughMainHangarTitle": "Верхний ангар"
+  ,"ughUndergroundTitle": "Подземный ангар (склад)"
+  ,"ughBuyTank": "Создать танк ур.{level}"
+  ,"ughBuyBulk": "Создать x{n}"
+  ,"ughAutoMerge": "Объединить танки"
+  ,"ughDismantle": "Разобрать танк"
 }
