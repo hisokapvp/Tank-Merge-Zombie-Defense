@@ -237,8 +237,29 @@
     }
     const ugh = stateRef.undergroundHangar;
     if (!Array.isArray(ugh.cells)) ugh.cells = [];
+    const DronesApi = global.Game && global.Game.Drones;
+    for (let index = 0; index < 16; index++) {
+      const existing = ugh.cells[index];
+      if (!existing || typeof existing !== 'object') {
+        ugh.cells[index] = { i: index, tank: null, drone: null };
+        continue;
+      }
+      existing.i = index;
+      if (!Object.prototype.hasOwnProperty.call(existing, 'tank')) existing.tank = null;
+      if (!Object.prototype.hasOwnProperty.call(existing, 'drone')) existing.drone = null;
+      if (existing.drone && DronesApi && typeof DronesApi.sanitizeDrone === 'function') {
+        existing.drone = DronesApi.sanitizeDrone(stateRef, existing.drone, existing.drone.level || 1);
+        existing.drone.mode = DronesApi.MODE_STANDBY || 'standby';
+        existing.drone.substate = DronesApi.SUBSTATE_RETURN_TO_BASE || 'repair_patrol';
+        existing.drone.targetSegmentId = null;
+        existing.drone.reservedSegmentId = null;
+        existing.drone.repair = null;
+        existing.drone.slotIndex = null;
+      }
+      if (existing.tank && existing.drone) existing.drone = null;
+    }
     while (ugh.cells.length < 16) {
-      ugh.cells.push({ i: ugh.cells.length, tank: null });
+      ugh.cells.push({ i: ugh.cells.length, tank: null, drone: null });
     }
   }
 

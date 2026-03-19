@@ -4065,7 +4065,7 @@ body.ugh-open::before{
 }
 .ughPanel{
   position:relative;
-  width:min(96vw, 820px);
+  width:min(96vw, 980px);
   max-height:92vh;
   overflow-y:auto;
   background:#0d100d;
@@ -4095,19 +4095,31 @@ body.ugh-open::before{
   letter-spacing:1px;
   margin-bottom:10px;
 }
+.ughDroneClusterLabel{
+  margin:2px 0 10px;
+  font-size:11px;
+  color:rgba(255,255,255,.52);
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
 .ughGrid{
   display:grid;
-  grid-template-columns:repeat(4, 52px);
-  gap:6px;
+  gap:8px;
   justify-content:center;
+}
+.ughGrid--main{
+  grid-template-columns:repeat(4, 64px);
+}
+.ughGrid--underground{
+  grid-template-columns:repeat(4, 64px);
 }
 .ughCell{
   position:relative;
-  width:52px;
-  height:52px;
+  width:64px;
+  height:64px;
   border:1.5px solid rgba(255,255,255,.18);
-  border-radius:4px;
-  background:rgba(60,55,50,.55);
+  border-radius:8px;
+  background:linear-gradient(180deg, rgba(26,33,32,.92), rgba(14,18,20,.9));
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -4116,40 +4128,99 @@ body.ugh-open::before{
   font-size:10px;
   color:rgba(255,255,255,.4);
   cursor:default;
-  transition:border-color .15s;
+  transition:border-color .15s, box-shadow .15s, transform .15s;
+  overflow:hidden;
 }
 .ughCell--occupied{
   border-color:rgba(74,246,38,.35);
-  background:rgba(74,246,38,.06);
+  background:linear-gradient(180deg, rgba(25,48,28,.94), rgba(15,26,18,.92));
 }
 .ughCell--empty{
   border-color:rgba(255,255,255,.1);
 }
 .ughCell__idx{
+  position:absolute;
+  top:6px;
+  left:7px;
+  z-index:2;
   font-size:9px;
-  opacity:.5;
+  opacity:.62;
 }
-.ughCell__tank{
-  font-size:11px;
-  color:#eaf1ff;
-  font-weight:bold;
+.ughCell__surface,
+.ughDroneCell__surface{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+}
+.ughCell__spriteCanvas,
+.ughDroneCell__spriteCanvas{
+  display:block;
+  width:100%;
+  height:100%;
+  image-rendering:pixelated;
+}
+.ughCell__levelBadge,
+.ughDroneCell__levelBadge{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  z-index:2;
+  padding:2px 5px;
+  border-radius:999px;
+  background:rgba(9,13,12,.86);
+  border:1px solid rgba(255,255,255,.16);
+  color:#f0f6ff;
+  font-size:9px;
+  font-weight:700;
+  line-height:1;
+}
+.ughCell__emptyMark,
+.ughDroneCell__emptyMark{
+  width:10px;
+  height:10px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:50%;
+  opacity:.5;
 }
 /* --- Layout: content left, buttons right --- */
 .ughLayout{
   display:flex;
   gap:18px;
-  align-items:flex-start;
+  align-items:stretch;
 }
 .ughContent{
   flex:1 1 auto;
   min-width:0;
 }
+.ughMainCluster{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:center;
+}
+.ughMainCluster__row{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+}
+.ughDroneRail{
+  display:flex;
+  gap:8px;
+}
+.ughDroneRail--left,
+.ughDroneRail--right{
+  flex-direction:column;
+}
 .ughSidebar{
   display:flex;
   flex-direction:column;
-  gap:8px;
   flex:0 0 auto;
-  padding-top:4px;
+  justify-content:center;
+  min-width:220px;
+  padding-top:0;
 }
 .ughActions{
   display:flex;
@@ -4166,20 +4237,13 @@ body.ugh-open::before{
   color:#ff8a65;
 }
 /* --- Drone cells --- */
-.ughDroneGrid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill, 34px);
-  gap:4px;
-  justify-content:center;
-  margin-top:8px;
-}
 .ughDroneCell{
   position:relative;
-  width:34px;
-  height:34px;
+  width:44px;
+  height:44px;
   border:1.5px solid rgba(255,255,255,.14);
-  border-radius:3px;
-  background:rgba(60,55,50,.45);
+  border-radius:8px;
+  background:linear-gradient(180deg, rgba(24,30,36,.92), rgba(11,15,20,.9));
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -4188,10 +4252,12 @@ body.ugh-open::before{
   font-size:9px;
   color:rgba(255,255,255,.4);
   cursor:default;
+  transition:border-color .15s, box-shadow .15s, transform .15s;
+  overflow:hidden;
 }
 .ughDroneCell--occupied{
   border-color:rgba(74,246,38,.3);
-  background:rgba(74,246,38,.05);
+  background:linear-gradient(180deg, rgba(18,44,32,.94), rgba(11,22,18,.92));
 }
 .ughCell--selected{
   border-color:#4af626 !important;
@@ -4203,17 +4269,63 @@ body.ugh-open::before{
   box-shadow:0 0 6px rgba(74,246,38,.3);
   cursor:pointer;
 }
+.ughCell--canMove,
+.ughDroneCell--canMove{
+  border-color:rgba(95,192,255,.7);
+  box-shadow:0 0 0 1px rgba(95,192,255,.35) inset;
+  cursor:pointer;
+}
+.ughCell--canMerge,
+.ughDroneCell--canMerge{
+  border-color:rgba(255,208,112,.82);
+  box-shadow:0 0 0 1px rgba(255,208,112,.34) inset;
+  cursor:pointer;
+}
 .ughCell--occupied,.ughDroneCell--occupied{
   cursor:pointer;
 }
 .ughDroneCell__idx{
+  position:absolute;
+  top:4px;
+  left:5px;
+  z-index:2;
   font-size:8px;
-  opacity:.5;
+  opacity:.62;
 }
-.ughDroneCell__level{
-  font-size:10px;
-  color:#eaf1ff;
-  font-weight:bold;
+
+@media (max-width: 900px){
+  .ughLayout{
+    flex-direction:column;
+  }
+  .ughSidebar{
+    width:100%;
+  }
+  .ughActions__btn{
+    width:100%;
+    white-space:normal;
+  }
+}
+
+@media (max-width: 720px){
+  .ughMainCluster__row{
+    gap:8px;
+  }
+  .ughGrid--main,
+  .ughGrid--underground{
+    grid-template-columns:repeat(4, 56px);
+    gap:6px;
+  }
+  .ughCell{
+    width:56px;
+    height:56px;
+  }
+  .ughDroneRail{
+    gap:6px;
+  }
+  .ughDroneCell{
+    width:38px;
+    height:38px;
+  }
 }
 
 /* --- Detail panel (right side) --- */

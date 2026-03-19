@@ -1912,6 +1912,12 @@ var DronSprites = spriteLoaders && spriteLoaders.DronSprites ? spriteLoaders.Dro
   pickFrame() { return null; },
 };
 
+if (typeof window !== 'undefined') {
+  window.DronSprites = DronSprites;
+  window.Game = window.Game || {};
+  window.Game.DronSprites = DronSprites;
+}
+
 const BonusBoxSprites = spriteLoaders && spriteLoaders.BonusBoxSprites ? spriteLoaders.BonusBoxSprites : {
   ready: false,
   error: 'SpriteLoaders module is unavailable',
@@ -3281,7 +3287,13 @@ function debugSetTotalMerges(rawValue){
 
 function calculateAffordableBuyCount(limit){
   const Garage = window.Game && window.Game.Garage;
-  const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  let freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ughCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells) ? state.undergroundHangar.cells : [];
+  for (let i = 0; i < ughCells.length; i++) {
+    if (_isUndergroundCellEmpty(ughCells[i])) freeSlots += 1;
+  }
   const maxAttempts = Math.max(0, Math.floor(Number(limit) || 0));
   if (freeSlots <= 0 || maxAttempts <= 0) return { count: 0, totalCost: 0 };
 
@@ -3306,7 +3318,13 @@ function calculateAffordableBuyCount(limit){
 
 function getBulkBuyPlanByMode(mode){
   const Garage = window.Game && window.Game.Garage;
-  const freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  let freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ughCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells) ? state.undergroundHangar.cells : [];
+  for (let i = 0; i < ughCells.length; i++) {
+    if (_isUndergroundCellEmpty(ughCells[i])) freeSlots += 1;
+  }
   const resolvedMode = mode === 'buy2' || mode === 'buy5' || mode === 'buyMax' ? mode : 'none';
   if (resolvedMode === 'none') {
     return {
@@ -3360,7 +3378,7 @@ function performTankPurchaseOnce(){
     const ughCells = state.undergroundHangar && state.undergroundHangar.cells;
     if (ughCells) {
       for (let ui = 0; ui < ughCells.length; ui++) {
-        if (ughCells[ui] && !ughCells[ui].tank) { undergroundIdx = ui; break; }
+        if (_isUndergroundCellEmpty(ughCells[ui])) { undergroundIdx = ui; break; }
       }
     }
     if (undergroundIdx == null) return false; // both hangars full
@@ -3601,6 +3619,142 @@ function _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx){
   srcCell.tank = null;
   processAchievementProgress('merges', 1);
   recordTankLevel(lvl);
+  return true;
+}
+
+function _getUndergroundCell(idx){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ugh = state.undergroundHangar;
+  return ugh && Array.isArray(ugh.cells) ? (ugh.cells[idx] || null) : null;
+}
+
+function _isUndergroundCellEmpty(cell){
+  return !!cell && !cell.tank && !cell.drone;
+}
+
+function _findDroneStateIndexBySlotIndex(slotIdx){
+  if (!Array.isArray(state.drones)) return -1;
+  for (let i = 0; i < state.drones.length; i++) {
+    const drone = state.drones[i];
+    if (!drone) continue;
+    if (drone.slotIndex === slotIdx) return i;
+  }
+  return -1;
+}
+
+function _clearStoredDroneRepairState(drone){
+  if (!drone) return;
+  if (state.fence && state.fence.repairClaims && typeof state.fence.repairClaims === 'object') {
+    const claimKeys = Object.keys(state.fence.repairClaims);
+    for (let i = 0; i < claimKeys.length; i++) {
+      const claimKey = claimKeys[i];
+      if (state.fence.repairClaims[claimKey] === drone.id) delete state.fence.repairClaims[claimKey];
+    }
+  }
+  if (Array.isArray(state.fenceSegments)) {
+    for (let i = 0; i < state.fenceSegments.length; i++) {
+      const segment = state.fenceSegments[i];
+      if (segment && segment.reservedByDroneId === drone.id) segment.reservedByDroneId = null;
+    }
+  }
+  if (DronesApi && typeof DronesApi.sanitizeDrone === 'function') {
+    const sanitized = DronesApi.sanitizeDrone(state, drone, drone.level || 1);
+    Object.keys(drone).forEach((key) => { delete drone[key]; });
+    Object.assign(drone, sanitized);
+  }
+  drone.mode = DronesApi && DronesApi.MODE_STANDBY ? DronesApi.MODE_STANDBY : 'standby';
+  drone.substate = DronesApi && DronesApi.SUBSTATE_RETURN_TO_BASE ? DronesApi.SUBSTATE_RETURN_TO_BASE : 'repair_patrol';
+  drone.targetSegmentId = null;
+  drone.reservedSegmentId = null;
+  drone.repair = null;
+  drone.slotIndex = null;
+}
+
+function _moveTankBetweenHangars(srcType, srcIdx, tgtType, tgtIdx){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const Garage = window.Game && window.Game.Garage;
+  const ugh = state.undergroundHangar;
+  if (!ugh || !ugh.cells) return false;
+  const srcCell = srcType === 'main' ? state.cells[srcIdx] : ugh.cells[srcIdx];
+  const tgtCell = tgtType === 'main' ? state.cells[tgtIdx] : ugh.cells[tgtIdx];
+  if (!srcCell || !tgtCell || !srcCell.tank) return false;
+  if (tgtType === 'underground' && !_isUndergroundCellEmpty(tgtCell)) return false;
+  if (tgtType === 'main' && tgtCell.tank) return false;
+  if (tgtType === 'main' && state.crate && state.crate.cellIndex === tgtIdx) return false;
+
+  const tank = srcCell.tank;
+  srcCell.tank = null;
+  if (tgtType === 'underground' && Garage && typeof Garage.setTankOnTrack === 'function' && tank && tank.onTrack) {
+    Garage.setTankOnTrack(tank, false, { cause: 'user', playSfx: false });
+  } else if (tgtType === 'underground' && tank) {
+    tank.onTrack = false;
+  }
+  tgtCell.tank = tank;
+
+  if (tgtType === 'main') {
+    state.selectedHangarCellIndex = tgtIdx;
+  } else if (state.selectedHangarCellIndex === srcIdx) {
+    state.selectedHangarCellIndex = null;
+  }
+  return true;
+}
+
+function _getDroneBySlotIndex(slotIdx){
+  if (!Array.isArray(state.drones)) return null;
+  for (let i = 0; i < state.drones.length; i++) {
+    const drone = state.drones[i];
+    if (!drone) continue;
+    if (drone.slotIndex === slotIdx) return drone;
+  }
+  return null;
+}
+
+function _moveDroneSlot(srcIdx, tgtIdx){
+  if (!Array.isArray(state.drones) || srcIdx === tgtIdx) return false;
+  if (DronesApi && typeof DronesApi.isSlotIndexValid === 'function') {
+    if (!DronesApi.isSlotIndexValid(srcIdx) || !DronesApi.isSlotIndexValid(tgtIdx)) return false;
+  }
+  const sourceDrone = _getDroneBySlotIndex(srcIdx);
+  if (!sourceDrone || _getDroneBySlotIndex(tgtIdx)) return false;
+  sourceDrone.slotIndex = tgtIdx;
+  return true;
+}
+
+function _moveDroneToUnderground(srcIdx, tgtIdx){
+  const droneIndex = _findDroneStateIndexBySlotIndex(srcIdx);
+  const targetCell = _getUndergroundCell(tgtIdx);
+  if (droneIndex < 0 || !targetCell || !_isUndergroundCellEmpty(targetCell)) return false;
+  const drone = state.drones[droneIndex];
+  if (!drone) return false;
+  _clearStoredDroneRepairState(drone);
+  state.drones.splice(droneIndex, 1);
+  targetCell.drone = drone;
+  return true;
+}
+
+function _moveDroneFromUnderground(srcIdx, tgtIdx){
+  const sourceCell = _getUndergroundCell(srcIdx);
+  if (!sourceCell || !sourceCell.drone) return false;
+  if (DronesApi && typeof DronesApi.isSlotIndexValid === 'function' && !DronesApi.isSlotIndexValid(tgtIdx)) return false;
+  if (_getDroneBySlotIndex(tgtIdx)) return false;
+  const drone = sourceCell.drone;
+  sourceCell.drone = null;
+  if (!Array.isArray(state.drones)) state.drones = [];
+  drone.slotIndex = tgtIdx;
+  drone.mode = DronesApi && DronesApi.MODE_STANDBY ? DronesApi.MODE_STANDBY : 'standby';
+  drone.substate = DronesApi && DronesApi.SUBSTATE_RETURN_TO_BASE ? DronesApi.SUBSTATE_RETURN_TO_BASE : 'repair_patrol';
+  state.drones.push(drone);
+  return true;
+}
+
+function _moveStoredDroneBetweenUndergroundCells(srcIdx, tgtIdx){
+  const srcCell = _getUndergroundCell(srcIdx);
+  const tgtCell = _getUndergroundCell(tgtIdx);
+  if (!srcCell || !tgtCell || !srcCell.drone || !_isUndergroundCellEmpty(tgtCell)) return false;
+  tgtCell.drone = srcCell.drone;
+  srcCell.drone = null;
   return true;
 }
 
@@ -12443,14 +12597,14 @@ initBigMainMenu();
         return typeof buyTankCost === 'function' ? buyTankCost(level) : 0;
       },
       getBulkMode: function () {
-        const ach = state && state.achievements && state.achievements.unlocked;
-        if (ach && ach.buy5) return 'buy5';
-        if (ach && ach.buy2) return 'buy2';
-        return 'none';
+        return buyBulkMode();
       },
-      hasAutoMerge: function () {
-        const ach = state && state.achievements && state.achievements.unlocked;
-        return !!(ach && ach.autoMerge);
+      getBulkBuyPlan: function () {
+        return getBulkBuyPlanByMode(buyBulkMode());
+      },
+      getAutoMergeButtonModel: function () {
+        if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function') return null;
+        return AutoMergeApi.getAutoMergeButtonModel(state);
       },
       onBuy: function () { tryBuyTank(); },
       onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk(); },
@@ -12483,6 +12637,25 @@ initBigMainMenu();
           const maxLevel = Number.isFinite(dronConfig && dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
           if (tgtDrone.level >= maxLevel) return false;
           return DronesApi.mergeDroneSlots(state, srcDrone, tgtDrone, dronConfig);
+        }
+        return false;
+      },
+      onMove: function (srcType, srcIdx, tgtType, tgtIdx) {
+        if (srcType === 'drone' && tgtType === 'drone') {
+          return _moveDroneSlot(srcIdx, tgtIdx);
+        }
+        if (srcType === 'drone' && tgtType === 'underground') {
+          return _moveDroneToUnderground(srcIdx, tgtIdx);
+        }
+        if (srcType === 'underground' && tgtType === 'drone') {
+          return _moveDroneFromUnderground(srcIdx, tgtIdx);
+        }
+        if (srcType === 'underground' && tgtType === 'underground') {
+          const srcCell = _getUndergroundCell(srcIdx);
+          if (srcCell && srcCell.drone) return _moveStoredDroneBetweenUndergroundCells(srcIdx, tgtIdx);
+        }
+        if ((srcType === 'main' || srcType === 'underground') && (tgtType === 'main' || tgtType === 'underground')) {
+          return _moveTankBetweenHangars(srcType, srcIdx, tgtType, tgtIdx);
         }
         return false;
       },

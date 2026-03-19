@@ -58,6 +58,13 @@
 - Сетка ячеек склада центрируется внутри панели (`width:min(100%, 420px)`, `justify-items:center`), чтобы справа не оставалось «пустого хвоста» относительно кнопки закрытия и заголовка: [style.css](../../../style.css#L5175-L5180).
 - Не возвращать storage modal к plain `levelModal__close`: `scModal__close` — это тот же 44×44 close-pattern с крупным крестом, только в green SC-skin; hover/active/focus у него должны совпадать с supercomputer/talent tree close controls: [style.css](../../../style.css#L1340-L1426), [style.css](../../../style.css#L1863-L1957).
 
+## Underground hangar modal
+- Modal contract lives in [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js), runtime state shaping in [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js), move/buy wiring in [game.js](../../../game.js), and layout/states in [style.css](../../../style.css).
+- Подземный ангар рендерит спрайты и для танков, и для дронов: underground storage cells теперь поддерживают mixed state (`tank` или `drone`), а UI рисует tank/drone canvas в зависимости от фактической сущности в ячейке.
+- Дроновые слоты в модалке всегда видимы, даже если пусты; canonical раскладка повторяет игровое поле: `3` сверху, `3` слева, `3` справа. UI должен читать дронов по `slotIndex`, а не по позиции в массиве `_stateRef.drones`.
+- Перенос поддерживается двусторонне: танки можно двигать между `main` и `underground`, дроны — между `drone` slots и `underground`; пустая underground-ячейка считается свободной только если в ней нет ни `tank`, ни `drone`.
+- Правая колонка действий в модалке центрируется по вертикали; canonical bulk-buy и auto-merge кнопки показываются только через runtime-модели unlock/visibility из [game.js](../../../game.js), а не через локальные ad-hoc флаги UI.
+
 ## Мастерская (Workshop) — под-вкладки в модификациях ангара
 - Расположение: `#modsHangarOverlay` → три основные вкладки: «Улучшение ячеек» (`hangarTabCells`), «Мастерская» (`hangarTabWorkshop`), «Открытие технологий» (`hangarTabTechUnlock`).
 - Под-вкладки Мастерской: «Улучшение чипов» (`workshopTabChipUpgrade`, панель `workshopPanelChipUpgrade`), «Создание чипов» (`workshopTabChipCraft`, панель `workshopPanelChipCraft`) и «Переработка чипов» (`workshopTabChipRecycle`, панель `workshopPanelChipRecycle`): [index.html](../../../index.html#L286-L301).
