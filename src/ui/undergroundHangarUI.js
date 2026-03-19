@@ -9,6 +9,7 @@
   let _isOpen = false;
   let _stateRef = null;
   let _callbacks = null;
+  let _selected = null; // { type: 'main'|'underground'|'drone', index: number }
 
   function t(key, fallback) {
     if (global.Game && global.Game.I18n && typeof global.Game.I18n.t === 'function') {
@@ -66,6 +67,7 @@
     _overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ugh-open');
     _isOpen = true;
+    _selected = null;
 
     render();
   }
@@ -105,6 +107,9 @@
 
     let html = '';
 
+    html += '<div class="ughLayout">';
+    html += '<div class="ughContent">';
+
     // ── Section: Main Hangar (верхний уровень) ──
     html += '<div class="ughSection">';
     html += '<div class="ughSection__title">' + _escHtml(t('ughMainHangarTitle', 'Верхний ангар')) + '</div>';
@@ -116,7 +121,8 @@
       const cell = mainCells[i];
       const hasTank = !!(cell && cell.tank);
       const tankLabel = hasTank ? ('Ур.' + cell.tank.level) : '';
-      const cls = 'ughCell' + (hasTank ? ' ughCell--occupied' : ' ughCell--empty');
+      const isSelected = _selected && _selected.type === 'main' && _selected.index === i;
+      const cls = 'ughCell' + (hasTank ? ' ughCell--occupied' : ' ughCell--empty') + (isSelected ? ' ughCell--selected' : '');
       html += '<div class="' + cls + '" data-ugh-main-cell="' + i + '">';
       html += '<span class="ughCell__idx">' + (i + 1) + '</span>';
       if (hasTank) {
@@ -124,8 +130,30 @@
       }
       html += '</div>';
     }
-    html += '</div>';
-    html += '</div>';
+    html += '</div>'; // close ughGrid--main
+
+    // ── Drone sub-section ──
+    const drones = _stateRef.drones || [];
+    html += '<div class="ughSection__title" style="margin-top:10px;font-size:clamp(9px,1.4vw,11px)">'
+      + _escHtml(t('ughDronesTitle', 'Дроны')) + '</div>';
+    html += '<div class="ughDroneGrid">';
+    for (let i = 0; i < drones.length; i++) {
+      const d = drones[i];
+      const occupied = !!(d && d.level);
+      const isSelD = _selected && _selected.type === 'drone' && _selected.index === i;
+      const cls = 'ughDroneCell' + (occupied ? ' ughDroneCell--occupied' : '') + (isSelD ? ' ughDroneCell--selected' : '');
+      html += '<div class="' + cls + '" data-ugh-drone="' + i + '">';
+      html += '<span class="ughDroneCell__idx">D' + (i + 1) + '</span>';
+      if (occupied) {
+        html += '<span class="ughDroneCell__level">Ур.' + d.level + '</span>';
+      }
+      html += '</div>';
+    }
+    if (drones.length === 0) {
+      html += '<span style="font-size:10px;color:rgba(255,255,255,.3)">—</span>';
+    }
+    html += '</div>'; // close ughDroneGrid
+    html += '</div>'; // close ughSection (main hangar)
 
     // ── Section: Underground Hangar (подземный уровень) ──
     html += '<div class="ughSection">';
@@ -137,7 +165,8 @@
       const uc = ughCells[i];
       const hasTank = !!(uc && uc.tank);
       const tankLabel = hasTank ? ('Ур.' + uc.tank.level) : '';
-      const cls = 'ughCell' + (hasTank ? ' ughCell--occupied' : ' ughCell--empty');
+      const isSelU = _selected && _selected.type === 'underground' && _selected.index === i;
+      const cls = 'ughCell' + (hasTank ? ' ughCell--occupied' : ' ughCell--empty') + (isSelU ? ' ughCell--selected' : '');
       html += '<div class="' + cls + '" data-ugh-cell="' + i + '">';
       html += '<span class="ughCell__idx">' + (i + 1) + '</span>';
       if (hasTank) {
@@ -146,9 +175,12 @@
       html += '</div>';
     }
     html += '</div>';
-    html += '</div>';
+    html += '</div>'; // close ughSection (underground)
 
-    // ── Actions ──
+    html += '</div>'; // close ughContent
+
+    // ── Sidebar with actions ──
+    html += '<div class="ughSidebar">';
     html += '<div class="ughActions">';
 
     // Buy tank button
@@ -180,7 +212,9 @@
       + _escHtml(t('ughDismantle', 'Разобрать танк'))
       + '</button>';
 
-    html += '</div>';
+    html += '</div>'; // close ughActions
+    html += '</div>'; // close ughSidebar
+    html += '</div>'; // close ughLayout
 
     body.innerHTML = html;
   }
@@ -216,14 +250,104 @@
       }
     }
 
-    // Click on underground cell (for selection / drag source)
+    // Click on main hangar cell
+    const mainCell = tgt.closest ? tgt.closest('[data-ugh-main-cell]') : null;
+    if (mainCell) {
+      const idx = parseInt(mainCell.getAttribute('data-ugh-main-cell'), 10);
+      if (Number.isFinite(idx)) _handleCellSelect('main', idx);
+      return;
+    }
+
+    // Click on underground cell
     const ughCell = tgt.closest ? tgt.closest('[data-ugh-cell]') : null;
     if (ughCell) {
       const idx = parseInt(ughCell.getAttribute('data-ugh-cell'), 10);
-      if (Number.isFinite(idx)) {
-        // Future: implement cell selection / drag-merge
-      }
+      if (Number.isFinite(idx)) _handleCellSelect('underground', idx);
+      return;
     }
+
+    // Click on drone cell
+    const droneCell = tgt.closest ? tgt.closest('[data-ugh-drone]') : null;
+    if (droneCell) {
+      const idx = parseInt(droneCell.getAttribute('data-ugh-drone'), 10);
+      if (Number.isFinite(idx)) _handleCellSelect('drone', idx);
+      return;
+    }
+  }
+
+  // ─── Selection & merge logic ───
+
+  function _handleCellSelect(type, index) {
+    const entity = _getEntityAt(type, index);
+
+    // Nothing selected yet — select if occupied
+    if (!_selected) {
+      if (entity) _selected = { type: type, index: index };
+      render();
+      return;
+    }
+
+    // Clicked the same cell — deselect
+    if (_selected.type === type && _selected.index === index) {
+      _selected = null;
+      render();
+      return;
+    }
+
+    const sourceEntity = _getEntityAt(_selected.type, _selected.index);
+    if (!sourceEntity || !entity) {
+      // Source gone or target empty — reselect or deselect
+      _selected = entity ? { type: type, index: index } : null;
+      render();
+      return;
+    }
+
+    // Can't merge tank with drone
+    const srcIsDrone = _selected.type === 'drone';
+    const tgtIsDrone = type === 'drone';
+    if (srcIsDrone !== tgtIsDrone) {
+      _selected = { type: type, index: index };
+      render();
+      return;
+    }
+
+    // Different levels — reselect
+    if (sourceEntity.level !== entity.level) {
+      _selected = { type: type, index: index };
+      render();
+      return;
+    }
+
+    // Same level, same entity kind — merge!
+    const merged = _tryMerge(_selected.type, _selected.index, type, index);
+    _selected = null;
+    if (merged && _callbacks && typeof _callbacks.updateUI === 'function') _callbacks.updateUI();
+    render();
+  }
+
+  function _getEntityAt(type, index) {
+    if (!_stateRef) return null;
+    if (type === 'main') {
+      const cell = (_stateRef.cells || [])[index];
+      return cell && cell.tank ? cell.tank : null;
+    }
+    if (type === 'underground') {
+      const ugh = _stateRef.undergroundHangar || {};
+      const cell = (ugh.cells || [])[index];
+      return cell && cell.tank ? cell.tank : null;
+    }
+    if (type === 'drone') {
+      const d = (_stateRef.drones || [])[index];
+      return (d && d.level) ? d : null;
+    }
+    return null;
+  }
+
+  function _tryMerge(srcType, srcIdx, tgtType, tgtIdx) {
+    if (_callbacks && typeof _callbacks.onMerge === 'function') {
+      return _callbacks.onMerge(srcType, srcIdx, tgtType, tgtIdx);
+    }
+    return false;
   }
 
   // ─── Helpers ───

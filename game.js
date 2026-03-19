@@ -3350,29 +3350,55 @@ function performTankPurchaseOnce(){
   const cost = buyTankCost(level);
   const Garage = window.Game && window.Game.Garage;
   const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c=>!c.tank)?.i ?? null);
-  if (freeIdx == null || state.coins < cost) return false;
-  const empty = state.cells[freeIdx];
-  if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return false;
 
-  state.coins -= cost;
-  empty.tank = makeTank(level, false);
-  recordTankLevel(level);
-  state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
-  bumpBuyPrice(level);
-  const TutorialRuntime = window.Game && window.Game.TutorialRuntime;
-  if (TutorialRuntime && typeof TutorialRuntime.handleTankPurchased === 'function') {
-    TutorialRuntime.handleTankPurchased({
-      cause: 'user',
-      level: level,
-      cost: cost,
-      cellIndex: empty.i,
-      tank: empty.tank,
-    });
+  // Fallback to underground hangar when main hangar is full
+  let useUnderground = false;
+  let undergroundIdx = null;
+  if (freeIdx == null) {
+    const UH = window.Game && window.Game.UndergroundHangar;
+    if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+    const ughCells = state.undergroundHangar && state.undergroundHangar.cells;
+    if (ughCells) {
+      for (let ui = 0; ui < ughCells.length; ui++) {
+        if (ughCells[ui] && !ughCells[ui].tank) { undergroundIdx = ui; break; }
+      }
+    }
+    if (undergroundIdx == null) return false; // both hangars full
+    useUnderground = true;
   }
-  if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
-    window.Game.SupercomputerBuildTankFx.start(getTankPrintDurationSec());
+
+  if (state.coins < cost) return false;
+
+  if (!useUnderground) {
+    const empty = state.cells[freeIdx];
+    if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return false;
+    state.coins -= cost;
+    empty.tank = makeTank(level, false);
+    recordTankLevel(level);
+    state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
+    bumpBuyPrice(level);
+    const TutorialRuntime = window.Game && window.Game.TutorialRuntime;
+    if (TutorialRuntime && typeof TutorialRuntime.handleTankPurchased === 'function') {
+      TutorialRuntime.handleTankPurchased({
+        cause: 'user',
+        level: level,
+        cost: cost,
+        cellIndex: empty.i,
+        tank: empty.tank,
+      });
+    }
+    if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
+      window.Game.SupercomputerBuildTankFx.start(getTankPrintDurationSec());
+    }
+    popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
+  } else {
+    state.coins -= cost;
+    state.undergroundHangar.cells[undergroundIdx].tank = makeTank(level, false);
+    recordTankLevel(level);
+    state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
+    bumpBuyPrice(level);
   }
-  popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
+
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level });
   return true;
@@ -3538,6 +3564,43 @@ function performMerge(fromIdx, toIdx, opts){
   });
 
   popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
+  return true;
+}
+
+function _performUndergroundMerge(fromIdx, toIdx){
+  if (fromIdx === toIdx) return false;
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ugh = state.undergroundHangar;
+  if (!ugh || !ugh.cells) return false;
+  const a = ugh.cells[fromIdx];
+  const b = ugh.cells[toIdx];
+  if (!a || !b || !a.tank || !b.tank) return false;
+  if (a.tank.level !== b.tank.level) return false;
+  if (a.tank.level >= MAX_TANK_LEVEL) return false;
+  const lvl = a.tank.level + 1;
+  b.tank = makeTank(lvl, false);
+  a.tank = null;
+  processAchievementProgress('merges', 1);
+  recordTankLevel(lvl);
+  return true;
+}
+
+function _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ugh = state.undergroundHangar;
+  if (!ugh || !ugh.cells) return false;
+  const srcCell = srcType === 'main' ? state.cells[srcIdx] : ugh.cells[srcIdx];
+  const tgtCell = tgtType === 'main' ? state.cells[tgtIdx] : ugh.cells[tgtIdx];
+  if (!srcCell || !tgtCell || !srcCell.tank || !tgtCell.tank) return false;
+  if (srcCell.tank.level !== tgtCell.tank.level) return false;
+  if (srcCell.tank.level >= MAX_TANK_LEVEL) return false;
+  const lvl = srcCell.tank.level + 1;
+  tgtCell.tank = makeTank(lvl, false);
+  srcCell.tank = null;
+  processAchievementProgress('merges', 1);
+  recordTankLevel(lvl);
   return true;
 }
 
@@ -12395,6 +12458,33 @@ initBigMainMenu();
       onDismantle: function () {
         state.isDismantleMode = !state.isDismantleMode;
         updateDismantleButton();
+      },
+      onMerge: function (srcType, srcIdx, tgtType, tgtIdx) {
+        // Tank merge: main ↔ main
+        if (srcType === 'main' && tgtType === 'main') {
+          return performMerge(srcIdx, tgtIdx, { placeResult: 'original' });
+        }
+        // Tank merge: underground ↔ underground
+        if (srcType === 'underground' && tgtType === 'underground') {
+          return _performUndergroundMerge(srcIdx, tgtIdx);
+        }
+        // Tank merge: cross-hangar (main ↔ underground)
+        if ((srcType === 'main' && tgtType === 'underground') || (srcType === 'underground' && tgtType === 'main')) {
+          return _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx);
+        }
+        // Drone merge
+        if (srcType === 'drone' && tgtType === 'drone') {
+          if (!DronesApi || typeof DronesApi.mergeDroneSlots !== 'function') return false;
+          const srcDrone = state.drones[srcIdx];
+          const tgtDrone = state.drones[tgtIdx];
+          if (!srcDrone || !tgtDrone) return false;
+          if (srcDrone.level !== tgtDrone.level) return false;
+          const dronConfig = getDronRuntimeConfig();
+          const maxLevel = Number.isFinite(dronConfig && dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
+          if (tgtDrone.level >= maxLevel) return false;
+          return DronesApi.mergeDroneSlots(state, srcDrone, tgtDrone, dronConfig);
+        }
+        return false;
       },
     });
     // Ensure state shape on init

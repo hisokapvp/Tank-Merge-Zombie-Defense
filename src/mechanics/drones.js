@@ -1283,5 +1283,6 @@
     handlePointerDown: handlePointerDown,
     handlePointerMove: handlePointerMove,
     handlePointerUp: handlePointerUp,
+    mergeDroneSlots: mergeDroneSlots,
   };
 })(typeof window !== 'undefined' ? window : this);

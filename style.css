@@ -4134,21 +4134,86 @@ body.ugh-open::before{
   color:#eaf1ff;
   font-weight:bold;
 }
+/* --- Layout: content left, buttons right --- */
+.ughLayout{
+  display:flex;
+  gap:18px;
+  align-items:flex-start;
+}
+.ughContent{
+  flex:1 1 auto;
+  min-width:0;
+}
+.ughSidebar{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:0 0 auto;
+  padding-top:4px;
+}
 .ughActions{
   display:flex;
-  flex-wrap:wrap;
+  flex-direction:column;
   gap:8px;
-  justify-content:center;
-  padding-top:12px;
-  border-top:1px solid rgba(255,255,255,.08);
 }
 .ughActions__btn{
   font-size:12px;
   padding:8px 16px;
+  white-space:nowrap;
 }
 .ughActions__btn--danger{
   border-color:rgba(255,100,60,.6);
   color:#ff8a65;
+}
+/* --- Drone cells --- */
+.ughDroneGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, 34px);
+  gap:4px;
+  justify-content:center;
+  margin-top:8px;
+}
+.ughDroneCell{
+  position:relative;
+  width:34px;
+  height:34px;
+  border:1.5px solid rgba(255,255,255,.14);
+  border-radius:3px;
+  background:rgba(60,55,50,.45);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-family:monospace;
+  font-size:9px;
+  color:rgba(255,255,255,.4);
+  cursor:default;
+}
+.ughDroneCell--occupied{
+  border-color:rgba(74,246,38,.3);
+  background:rgba(74,246,38,.05);
+}
+.ughCell--selected{
+  border-color:#4af626 !important;
+  box-shadow:0 0 8px rgba(74,246,38,.4);
+  cursor:pointer;
+}
+.ughDroneCell--selected{
+  border-color:#4af626 !important;
+  box-shadow:0 0 6px rgba(74,246,38,.3);
+  cursor:pointer;
+}
+.ughCell--occupied,.ughDroneCell--occupied{
+  cursor:pointer;
+}
+.ughDroneCell__idx{
+  font-size:8px;
+  opacity:.5;
+}
+.ughDroneCell__level{
+  font-size:10px;
+  color:#eaf1ff;
+  font-weight:bold;
 }
 
 /* --- Detail panel (right side) --- */
