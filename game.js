@@ -3758,6 +3758,62 @@ function _moveStoredDroneBetweenUndergroundCells(srcIdx, tgtIdx){
   return true;
 }
 
+function _resolveDroneLocation(type, idx){
+  if (type === 'drone') {
+    const drone = _getDroneBySlotIndex(idx);
+    return drone ? { type: 'drone', index: idx, drone: drone } : null;
+  }
+  if (type === 'underground') {
+    const cell = _getUndergroundCell(idx);
+    if (cell && cell.drone) return { type: 'underground', index: idx, cell: cell, drone: cell.drone };
+  }
+  return null;
+}
+
+function _removeDroneFromLocation(location){
+  if (!location || !location.drone) return false;
+  if (location.type === 'underground') {
+    const cell = location.cell || _getUndergroundCell(location.index);
+    if (!cell || !cell.drone) return false;
+    if (cell.drone !== location.drone && cell.drone.id !== location.drone.id) return false;
+    cell.drone = null;
+    return true;
+  }
+  if (!Array.isArray(state.drones)) return false;
+  const droneId = typeof location.drone.id === 'string' ? location.drone.id : null;
+  for (let i = 0; i < state.drones.length; i++) {
+    const candidate = state.drones[i];
+    if (!candidate) continue;
+    if (candidate === location.drone || (droneId && candidate.id === droneId)) {
+      state.drones.splice(i, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function _mergeDroneLocations(srcType, srcIdx, tgtType, tgtIdx){
+  const source = _resolveDroneLocation(srcType, srcIdx);
+  const target = _resolveDroneLocation(tgtType, tgtIdx);
+  if (!source || !target) return false;
+  if (!source.drone || !target.drone || source.drone === target.drone) return false;
+  if (source.drone.level !== target.drone.level) return false;
+
+  const dronConfig = getDronRuntimeConfig();
+  const maxLevel = Number.isFinite(dronConfig && dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
+  if (target.drone.level >= maxLevel) return false;
+
+  if (source.type === 'drone' && target.type === 'drone' && DronesApi && typeof DronesApi.mergeDroneSlots === 'function') {
+    return DronesApi.mergeDroneSlots(state, source.drone, target.drone, dronConfig);
+  }
+
+  const targetSlotIndex = target.type === 'drone' ? target.index : null;
+  _clearStoredDroneRepairState(target.drone);
+  target.drone.level = Math.max(1, Math.min(maxLevel, Math.floor(target.drone.level) + 1));
+  target.drone.slotIndex = targetSlotIndex;
+  return _removeDroneFromLocation(source);
+}
+
 function findTankCellIndex(tankRef){
   if (!tankRef || !Array.isArray(state.cells)) return null;
   const id = typeof tankRef.id === 'string' ? tankRef.id : null;
@@ -3780,6 +3836,150 @@ function mergeAutoPair(leftTank, rightTank){
   if (!fromCell || !toCell || !fromCell.tank || !toCell.tank) return false;
   if (fromCell.tank.level !== toCell.tank.level) return false;
   return performMerge(fromIdx, toIdx, { placeResult: 'hangar' });
+}
+
+function getUndergroundHangarAutoMergeTier(){
+  if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeTier !== 'function') return 'hidden';
+  return AutoMergeApi.getAutoMergeTier(state);
+}
+
+function getUndergroundHangarAutoMergeMaxPairs(tier){
+  if (tier === 'merge2') return 1;
+  if (tier === 'mergeX') return 5;
+  if (tier === 'mergeAll') return Infinity;
+  return 0;
+}
+
+function collectUndergroundHangarAutoMergePairs(maxPairs){
+  const resolvedMaxPairs = maxPairs === Infinity ? Infinity : Math.max(0, Math.floor(Number(maxPairs) || 0));
+  if (resolvedMaxPairs === 0) return [];
+
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+
+  const buckets = Object.create(null);
+  const levels = [];
+  const mainCells = Array.isArray(state.cells) ? state.cells : [];
+  const undergroundCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)
+    ? state.undergroundHangar.cells
+    : [];
+
+  function pushCandidate(level, type, index, tank){
+    if (!Number.isFinite(level) || !tank || isTankPrinting(tank)) return;
+    const normalizedLevel = Math.max(1, Math.floor(level));
+    if (!buckets[normalizedLevel]) {
+      buckets[normalizedLevel] = [];
+      levels.push(normalizedLevel);
+    }
+    buckets[normalizedLevel].push({ type: type, index: index, tank: tank });
+  }
+
+  for (let i = 0; i < mainCells.length; i++) {
+    const cell = mainCells[i];
+    if (!cell || !cell.tank) continue;
+    pushCandidate(cell.tank.level, 'main', i, cell.tank);
+  }
+
+  for (let i = 0; i < undergroundCells.length; i++) {
+    const cell = undergroundCells[i];
+    if (!cell || !cell.tank) continue;
+    pushCandidate(cell.tank.level, 'underground', i, cell.tank);
+  }
+
+  levels.sort(function (left, right) { return left - right; });
+  const pairs = [];
+  for (let li = 0; li < levels.length; li++) {
+    const list = buckets[levels[li]];
+    list.sort(function (left, right) {
+      if (left.type !== right.type) return left.type === 'main' ? -1 : 1;
+      return left.index - right.index;
+    });
+    for (let i = 0; i + 1 < list.length; i += 2) {
+      pairs.push([list[i], list[i + 1]]);
+      if (resolvedMaxPairs !== Infinity && pairs.length >= resolvedMaxPairs) return pairs;
+    }
+  }
+  return pairs;
+}
+
+function getUndergroundHangarAutoMergeButtonModel(){
+  const tier = getUndergroundHangarAutoMergeTier();
+  if (!tier || tier === 'hidden') {
+    return {
+      visible: false,
+      enabled: false,
+      label: '',
+      cooldownMs: AUTO_MERGE_COOLDOWN_MS,
+    };
+  }
+
+  const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
+  const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
+  const enabled = !isAutoMergeBusy && pairs.length >= 1;
+  let label = '';
+  if (tier === 'merge2') {
+    label = t('autoMerge2');
+  } else if (tier === 'mergeX') {
+    const dynamicCount = Math.max(2, Math.min(10, pairs.length * 2));
+    label = t('autoMergeDynamicShort', { count: dynamicCount });
+  } else {
+    label = t('autoMergeAll');
+  }
+
+  return {
+    visible: true,
+    enabled: enabled,
+    label: label,
+    cooldownMs: AUTO_MERGE_COOLDOWN_MS,
+  };
+}
+
+function mergeUndergroundHangarAutoPair(left, right){
+  if (!left || !right || !left.tank || !right.tank) return false;
+  if (left.type === 'main' && right.type === 'main') {
+    return performMerge(left.index, right.index, { placeResult: 'original' });
+  }
+  if (left.type === 'underground' && right.type === 'underground') {
+    return _performUndergroundMerge(left.index, right.index);
+  }
+  return _performCrossHangarMerge(left.type, left.index, right.type, right.index);
+}
+
+function runUndergroundHangarAutoMergeClick(){
+  const model = getUndergroundHangarAutoMergeButtonModel();
+  if (!model || !model.visible || !model.enabled || isAutoMergeBusy) return;
+
+  const tier = getUndergroundHangarAutoMergeTier();
+  const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
+  if (!maxPairs && maxPairs !== Infinity) return;
+
+  const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
+  if (!pairs.length) return;
+
+  isAutoMergeBusy = true;
+  updateUI();
+
+  try {
+    for (let i = 0; i < pairs.length; i++) {
+      const pair = pairs[i];
+      if (!pair || !pair[0] || !pair[1]) continue;
+      mergeUndergroundHangarAutoPair(pair[0], pair[1]);
+    }
+  } finally {
+    if (autoMergeBusyTimeout != null) {
+      window.clearTimeout(autoMergeBusyTimeout);
+      autoMergeBusyTimeout = null;
+    }
+    const cooldown = Number.isFinite(model.cooldownMs)
+      ? Math.max(200, Math.min(400, Math.floor(model.cooldownMs)))
+      : AUTO_MERGE_COOLDOWN_MS;
+    autoMergeBusyTimeout = window.setTimeout(() => {
+      isAutoMergeBusy = false;
+      autoMergeBusyTimeout = null;
+      updateUI();
+    }, cooldown);
+    updateUI();
+  }
 }
 
 if (AutoMergeApi && typeof AutoMergeApi.setMergePairExecutor === 'function') {
@@ -12603,17 +12803,30 @@ initBigMainMenu();
         return getBulkBuyPlanByMode(buyBulkMode());
       },
       getAutoMergeButtonModel: function () {
-        if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function') return null;
-        return AutoMergeApi.getAutoMergeButtonModel(state);
+        return getUndergroundHangarAutoMergeButtonModel();
       },
       onBuy: function () { tryBuyTank(); },
       onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk(); },
-      onAutoMerge: function () { if (typeof runAutoMergeClick === 'function') runAutoMergeClick(); },
+      onAutoMerge: function () {
+        if (typeof runUndergroundHangarAutoMergeClick === 'function') runUndergroundHangarAutoMergeClick();
+      },
       onDismantle: function () {
         state.isDismantleMode = !state.isDismantleMode;
         updateDismantleButton();
       },
       onMerge: function (srcType, srcIdx, tgtType, tgtIdx) {
+        const srcUndergroundCell = srcType === 'underground' ? _getUndergroundCell(srcIdx) : null;
+        const tgtUndergroundCell = tgtType === 'underground' ? _getUndergroundCell(tgtIdx) : null;
+        const srcIsDrone = srcType === 'drone' || !!(srcUndergroundCell && srcUndergroundCell.drone && !srcUndergroundCell.tank);
+        const tgtIsDrone = tgtType === 'drone' || !!(tgtUndergroundCell && tgtUndergroundCell.drone && !tgtUndergroundCell.tank);
+
+        if (srcIsDrone || tgtIsDrone) {
+          if ((srcType === 'drone' || srcType === 'underground') && (tgtType === 'drone' || tgtType === 'underground')) {
+            return _mergeDroneLocations(srcType, srcIdx, tgtType, tgtIdx);
+          }
+          return false;
+        }
+
         // Tank merge: main ↔ main
         if (srcType === 'main' && tgtType === 'main') {
           return performMerge(srcIdx, tgtIdx, { placeResult: 'original' });
@@ -12625,18 +12838,6 @@ initBigMainMenu();
         // Tank merge: cross-hangar (main ↔ underground)
         if ((srcType === 'main' && tgtType === 'underground') || (srcType === 'underground' && tgtType === 'main')) {
           return _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx);
-        }
-        // Drone merge
-        if (srcType === 'drone' && tgtType === 'drone') {
-          if (!DronesApi || typeof DronesApi.mergeDroneSlots !== 'function') return false;
-          const srcDrone = state.drones[srcIdx];
-          const tgtDrone = state.drones[tgtIdx];
-          if (!srcDrone || !tgtDrone) return false;
-          if (srcDrone.level !== tgtDrone.level) return false;
-          const dronConfig = getDronRuntimeConfig();
-          const maxLevel = Number.isFinite(dronConfig && dronConfig.maxLevel) ? Math.max(1, Math.floor(dronConfig.maxLevel)) : 10;
-          if (tgtDrone.level >= maxLevel) return false;
-          return DronesApi.mergeDroneSlots(state, srcDrone, tgtDrone, dronConfig);
         }
         return false;
       },

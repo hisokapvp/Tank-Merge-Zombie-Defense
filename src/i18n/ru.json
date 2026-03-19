@@ -564,7 +564,7 @@
   ,"techAccelDustMeta": "+{pct}% за 1 ед."
   ,"ughModalTitle": "Подземный ангар"
   ,"ughMainHangarTitle": "Верхний ангар"
-  ,"ughUndergroundTitle": "Подземный ангар (склад)"
+  ,"ughUndergroundTitle": "Подземный ангар"
   ,"ughBuyTank": "Создать танк ур.{level}"
   ,"ughBuyBulk": "Создать x{n}"
   ,"ughAutoMerge": "Объединить танки"

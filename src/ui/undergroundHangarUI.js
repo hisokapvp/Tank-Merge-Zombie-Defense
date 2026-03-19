@@ -81,7 +81,8 @@
       return (srcType === 'main' || srcType === 'underground')
         && (tgtType === 'main' || tgtType === 'underground');
     }
-    return srcType === 'drone' && tgtType === 'drone';
+    return (srcType === 'drone' || srcType === 'underground')
+      && (tgtType === 'drone' || tgtType === 'underground');
   }
 
   function getSelectionAffordance(type, index, entity, kindOverride) {
@@ -390,7 +391,6 @@
     // ── Section: Main Hangar (верхний уровень) ──
     html += '<div class="ughSection">';
     html += '<div class="ughSection__title">' + _escHtml(t('ughMainHangarTitle', 'Верхний ангар')) + '</div>';
-    html += '<div class="ughDroneClusterLabel">' + _escHtml(t('ughDronesTitle', 'Дроны')) + '</div>';
     html += '<div class="ughMainCluster">';
     html += renderDroneRail(DRONE_TOP_SLOT_INDICES, 'ughDroneRail--top');
     html += '<div class="ughMainCluster__row">';
@@ -411,7 +411,7 @@
 
     // ── Section: Underground Hangar (подземный уровень) ──
     html += '<div class="ughSection">';
-    html += '<div class="ughSection__title">' + _escHtml(t('ughUndergroundTitle', 'Подземный ангар (склад)')) + '</div>';
+    html += '<div class="ughSection__title">' + _escHtml(t('ughUndergroundTitle', 'Подземный ангар')) + '</div>';
     html += '<div class="ughGrid ughGrid--underground">';
     const ughState = _stateRef.undergroundHangar || {};
     const ughCells = ughState.cells || [];

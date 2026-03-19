@@ -564,7 +564,7 @@
   ,"techAccelDustMeta": "+{pct}% per 1 unit"
   ,"ughModalTitle": "Underground Hangar"
   ,"ughMainHangarTitle": "Main Hangar"
-  ,"ughUndergroundTitle": "Underground Hangar (Storage)"
+  ,"ughUndergroundTitle": "Underground Hangar"
   ,"ughBuyTank": "Build tank lvl.{level}"
   ,"ughBuyBulk": "Build x{n}"
   ,"ughAutoMerge": "Merge tanks"

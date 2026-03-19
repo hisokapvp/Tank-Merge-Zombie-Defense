@@ -24,6 +24,7 @@
 - `.techModal__btns` находится **вне** `.techModal__footer` в DOM-дереве, поэтому `gap` footer-flex-контейнера на него не действует. Отступ между `techModal__selectionInfo` и кнопками задаётся исключительно `margin-top` на `.techModal__btns`. `techAccelGridWrap` имеет `overflow-x:hidden` — горизонтальный скролл запрещён.
 - `chipCraftBottomBar` (включая `chipCraftDustResource`) рендерится **только** когда `isDustView === true`. В вкладках `Создание чипов` и `Разобрать` этот блок полностью отсутствует. Инвентарная сетка в non-dust видах принудительно ограничена одним столбцом через `.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid { grid-template-columns:1fr }`.
 - `techAccelChip__label`, `chipCraftInvLabel`, `chipCraftSlotCard__name` и `chipCraftResultLabel` должны переносить полные названия только по ` + `; размер карточек задаётся общими vars `--chipLabelCardWidth/Height`: [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915).
+- Underground hangar modal держит отдельный visual contract: `.ughPanel > .levelModal__title` центрирует заголовок внутри panel shell, `.ughDroneClusterLabel` скрыт и не должен возвращаться в DOM как видимый заголовок, `.ughCell__emptyMark/.ughDroneCell__emptyMark` выключены без изменения размеров ячеек, а `.ughCell__levelBadge/.ughDroneCell__levelBadge` — это plain text у нижней кромки по центру, без pill-background: [style.css](../../style.css#L4079-L4183), [style.css](../../style.css#L4326-L4328).
 - `chipCraftSlot` / `chipCraftSlotRow--withResult` обязаны оставлять headroom для внешнего `chipCraftSlotRemove`, чтобы крестик во вкладке `Разобрать` не клиппился и совпадал по позиции с future-preview эталоном: [style.css](../../style.css#L4480-L4652), [style.css](../../style.css#L4887-L4904).
 - Craft slots и future-preview используют квадратный карточный shell `chipCraftSlotCard`, визуально согласованный с inventory-карточками: [style.css](../../style.css#L4520-L4652).
 - «Будущий» чип получает dashed-рамку на `.chipCraftResultChip--future`, placeholder — на `.chipCraftSlot--resultSlot`, а не через перекраску SVG: [style.css](../../style.css#L4887-L4904).
@@ -49,6 +50,7 @@
 - [style.css](../../style.css#L2061-L2124) — `.scModal__body` и scroll/pressed behavior.
 - [style.css](../../style.css#L2395-L2406) — fallback icons `activeOff/activeDef/activeEco` для stage HUD.
 - [style.css](../../style.css#L3749-L3756) — nested recycle subtabs.
+- [style.css](../../style.css#L4079-L4183) — underground hangar modal title/empty-state/level-badge contract.
 - [style.css](../../style.css#L4222-L4315) — tech accel summary row, bordered grid wrapper, limit badges и dust controls.
 - [style.css](../../style.css#L4410-L4652) — craft inventory / slot-card labels / `chipCraftSlotRemove`.
 - [style.css](../../style.css#L4471-L4474) — single-column dust layout.

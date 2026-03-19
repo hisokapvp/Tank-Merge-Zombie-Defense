@@ -4075,14 +4075,16 @@ body.ugh-open::before{
   padding:22px 28px 28px;
   z-index:1;
 }
-.ughPanel__title{
+.ughPanel__title,
+.ughPanel > .levelModal__title{
+  display:block;
   font-family:'Press Start 2P','Courier New',monospace;
   font-size:clamp(14px, 2.5vw, 18px);
   color:#4af626;
   text-transform:uppercase;
   letter-spacing:2px;
   text-align:center;
-  margin-bottom:18px;
+  margin:0 44px 24px;
 }
 .ughSection{
   margin-bottom:18px;
@@ -4096,11 +4098,7 @@ body.ugh-open::before{
   margin-bottom:10px;
 }
 .ughDroneClusterLabel{
-  margin:2px 0 10px;
-  font-size:11px;
-  color:rgba(255,255,255,.52);
-  letter-spacing:.12em;
-  text-transform:uppercase;
+  display:none;
 }
 .ughGrid{
   display:grid;
@@ -4164,25 +4162,24 @@ body.ugh-open::before{
 .ughCell__levelBadge,
 .ughDroneCell__levelBadge{
   position:absolute;
-  right:6px;
-  bottom:6px;
+  left:50%;
+  bottom:4px;
   z-index:2;
-  padding:2px 5px;
-  border-radius:999px;
-  background:rgba(9,13,12,.86);
-  border:1px solid rgba(255,255,255,.16);
+  transform:translateX(-50%);
+  padding:0;
+  border:none;
+  background:none;
   color:#f0f6ff;
-  font-size:9px;
+  font-size:10px;
   font-weight:700;
   line-height:1;
+  letter-spacing:.04em;
+  text-shadow:0 0 4px rgba(0,0,0,.95), 0 0 8px rgba(0,0,0,.75);
+  pointer-events:none;
 }
 .ughCell__emptyMark,
 .ughDroneCell__emptyMark{
-  width:10px;
-  height:10px;
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:50%;
-  opacity:.5;
+  display:none;
 }
 /* --- Layout: content left, buttons right --- */
 .ughLayout{
@@ -4325,6 +4322,9 @@ body.ugh-open::before{
   .ughDroneCell{
     width:38px;
     height:38px;
+  }
+  .ughPanel > .levelModal__title{
+    margin:0 38px 22px;
   }
 }
 
