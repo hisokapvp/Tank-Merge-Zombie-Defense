@@ -26,6 +26,7 @@
   "save.autoRetryName": "Pre-retry save",
   "ui.toast.noSaves": "No saves",
   "ui.toast.unavailable": "Unavailable",
+  "ughAutoMergeUnavailableDetailed": "No tanks are available for merging, or they have not been created yet.",
   "menuExit": "Exit",
   "common.back": "Back",
   "menuBack": "Back",
@@ -165,7 +166,7 @@
   "buyBulk5": "Create 5 tanks",
   "buyBulkMax": "Create max tanks",
   "buyBulkDynamic": "Create {count} tanks",
-  "buyBulkBuy": "Create {count} {tankWord}",
+  "buyBulkBuy": "Create {count} {tankWord} - {cost}$",
   "tankWord1": "tank",
   "tankWord2_4": "tanks",
   "tankWord5": "tanks",
@@ -211,7 +212,7 @@
   "statusOff": "OFF",
   "zombieShort": "Z",
   "tankShort": "T",
-  "dismantleBtn": "Dismantle tank",
+  "dismantleBtn": "Tank dismantling",
   "dismantleBtnConfirm": "Confirm dismantle",
   "dismantleConfirm": "Do you really want to dismantle tank level {level}?",
   "dismantleConfirmMulti": "Do you really want to dismantle the selected tanks?",
@@ -568,6 +569,7 @@
   ,"ughBuyTank": "Create level {level} tank - {cost}$"
   ,"ughBuyBulk": "Build x{n}"
   ,"ughAutoMerge": "Merge tanks"
+  ,"ughTransferToUpper": "Move upward"
   ,"ughHelpButton": "Underground hangar help"
   ,"ughHelpText": "In this section, you can store and merge tanks and / or drones if you run out of free slots in the main hangar."
   ,"ughDismantle": "Dismantle tank"

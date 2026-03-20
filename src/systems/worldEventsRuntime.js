@@ -362,6 +362,7 @@
           worldEventsState.waveNumber = Math.max(0, Math.floor(worldEventsState.waveNumber || 0)) + 1;
           if (worldEventsState.waveNumber > attackCfg.safeWaves) {
             state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
+             state.zombieWaveHpMult = Math.max(0, Number.isFinite(state.zombieWaveHpMult) ? state.zombieWaveHpMult : 1) * 1.05;
           }
         }
 

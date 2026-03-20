@@ -21,3 +21,4 @@
 - Idle-wave фаза не заменяет full attack mode: runtime должен возвращать `suppressed`, пока идёт основной attack эпизод, и только после него возобновлять цикл `between -> attack -> wander`.
 - В partial reset (`restartSimulationPartial`) после restore обязательно переводить `attackMode` runtime в off/default: сброс таймеров, weather/evening runtime флагов, `aliveMultCurrent`/ramp и накопленных wave-эффектов.
 - После такого сброса `targetAlive` должен рассчитываться от дефолта `assets/zombies.json` без наследования предыдущего attack-mode множителя.
+- Runtime safe-wave scaling теперь держит два независимых накопителя: `zombieWaveAttackMul` и `zombieWaveHpMult`. Каждый новый full-wave повышает и урон, и HP зомби на `+5%`; HP-множитель применяется только к новым спавнам, без ретро-лечения уже созданных зомби, и тоже обязан сбрасываться при partial reset / restore.

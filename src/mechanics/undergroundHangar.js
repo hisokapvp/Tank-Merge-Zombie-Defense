@@ -40,7 +40,7 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
 
-      const atlasPath = 'assets/' + (data.atlas || 'underground_hangar_atlas.png');
+      const atlasPath = 'assets/' + (data.atlas || 'slot_warehouse_atlas.png');
       const SL = global.Game && global.Game.SpriteLoaders;
       const loadImage = SL && typeof SL.loadImage === 'function'
         ? SL.loadImage
@@ -134,12 +134,14 @@
     // Fallback drawing when atlas is not loaded
     if (!_ready || !_atlasImg || !_config) {
       drawFallback(ctx, cell);
+      drawTankCountBadge(ctx, cell, arguments[2]);
       return;
     }
 
     const anim = _anims[_animState] || _anims.idle;
     if (!anim) {
       drawFallback(ctx, cell);
+      drawTankCountBadge(ctx, cell, arguments[2]);
       return;
     }
 
@@ -154,6 +156,32 @@
     const dy = cell.y + cell.h * _config.anchor.y - dh * _config.anchor.y;
 
     ctx.drawImage(_atlasImg, sx, sy, anim.w, anim.h, dx, dy, dw, dh);
+    drawTankCountBadge(ctx, cell, arguments[2]);
+  }
+
+  function drawTankCountBadge(ctx, cell, tankCount) {
+    const count = Math.max(0, Math.floor(Number(tankCount) || 0));
+    if (!cell || count <= 0) return;
+
+    const radius = Math.max(10, Math.floor(Math.min(cell.w, cell.h) * 0.18));
+    const cx = cell.x + cell.w - radius - 6;
+    const cy = cell.y + cell.h - radius - 6;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 140, 90, 0.96)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(41, 18, 8, 0.9)';
+    ctx.stroke();
+
+    ctx.fillStyle = '#fdf8ef';
+    ctx.font = 'bold ' + Math.max(12, Math.floor(radius * 1.2)) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(count), cx, cy + 1);
+    ctx.restore();
   }
 
   function drawFallback(ctx, cell) {

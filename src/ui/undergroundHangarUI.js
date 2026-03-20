@@ -25,6 +25,13 @@
 
   function el(id) { return document.getElementById(id); }
 
+  function showToast(message) {
+    const text = typeof message === 'string' ? message.trim() : '';
+    if (!text) return;
+    const toastApi = global.Game && global.Game.Toast;
+    if (toastApi && typeof toastApi.show === 'function') toastApi.show(text, 1800);
+  }
+
   function getSharedHelpApi() {
     const api = global.Game && global.Game.SupercomputerMenu;
     return api || null;
@@ -168,7 +175,6 @@
     const affordance = getSelectionAffordance(type, index, entity, 'tank');
     const cls = buildCellClass('ughCell', selected, occupied, affordance);
     let html = '<div class="' + cls + '" data-ugh-' + (type === 'main' ? 'main-cell' : 'cell') + '="' + index + '">';
-    html += '<span class="ughCell__idx">' + _escHtml(label) + '</span>';
     html += '<div class="ughCell__surface">';
     if (occupied) {
       html += '<canvas class="ughCell__spriteCanvas" data-ugh-sprite="tank" data-ugh-level="' + entity.level + '" width="84" height="84"></canvas>';
@@ -189,7 +195,6 @@
     const affordance = getSelectionAffordance('underground', index, entity, kind);
     const cls = buildCellClass('ughCell', selected, occupied, affordance);
     let html = '<div class="' + cls + '" data-ugh-cell="' + index + '">';
-    html += '<span class="ughCell__idx">' + _escHtml(label) + '</span>';
     html += '<div class="ughCell__surface">';
     if (occupied && kind === 'tank') {
       html += '<canvas class="ughCell__spriteCanvas" data-ugh-sprite="tank" data-ugh-level="' + entity.level + '" width="84" height="84"></canvas>';
@@ -212,7 +217,6 @@
     const affordance = getSelectionAffordance('drone', slotIndex, drone, 'drone');
     const cls = buildCellClass('ughDroneCell', selected, occupied, affordance);
     let html = '<div class="' + cls + '" data-ugh-drone="' + slotIndex + '">';
-    html += '<span class="ughDroneCell__idx">D' + String(slotIndex + 1) + '</span>';
     html += '<div class="ughDroneCell__surface">';
     if (occupied) {
       html += '<canvas class="ughDroneCell__spriteCanvas" data-ugh-sprite="drone" data-ugh-drone-slot="' + slotIndex + '" width="56" height="56"></canvas>';
@@ -486,6 +490,19 @@
     html += '<div class="ughSidebar">';
     html += '<div class="ughActions">';
 
+    const transferModel = _callbacks && typeof _callbacks.getTransferAllButtonModel === 'function'
+      ? _callbacks.getTransferAllButtonModel()
+      : { visible: true, enabled: false, movableCount: 0 };
+    const transferLabel = t('ughTransferToUpper', 'Перенести наверх');
+    if (!transferModel || transferModel.visible !== false) {
+      html += '<button class="btn scButton ughActions__transferBtn" data-ugh-action="transferAll" type="button"'
+        + (transferModel && transferModel.enabled ? '' : ' disabled')
+        + ' aria-label="' + _escHtml(transferLabel) + '">'
+        + '<span class="ughActions__transferIcon" aria-hidden="true">&#8593;</span>'
+        + '<span class="ughActions__transferLabel">' + _escHtml(transferLabel) + '</span>'
+        + '</button>';
+    }
+
     // Buy tank button
     const buyLevel = _callbacks && typeof _callbacks.getBuyLevel === 'function' ? _callbacks.getBuyLevel() : 1;
     const buyCost = _callbacks && typeof _callbacks.getBuyCost === 'function' ? _callbacks.getBuyCost(buyLevel) : 0;
@@ -512,8 +529,15 @@
       ? _callbacks.getAutoMergeButtonModel()
       : null;
     if (autoMergeModel && autoMergeModel.visible) {
-      html += '<button class="btn scButton ughActions__btn" data-ugh-action="autoMerge" type="button"'
-        + (autoMergeModel.enabled ? '' : ' disabled') + '>'
+      const autoMergeButtonClass = autoMergeModel.enabled
+        ? 'btn scButton ughActions__btn'
+        : 'btn scButton ughActions__btn ughActions__btn--inactive';
+      const disabledFeedbackText = !autoMergeModel.enabled
+        ? (autoMergeModel.disabledFeedbackText || t('ughAutoMergeUnavailableDetailed', 'Нет доступных танков для объединения, либо они ещё не создались.'))
+        : '';
+      html += '<button class="' + autoMergeButtonClass + '" data-ugh-action="autoMerge" type="button"'
+        + (autoMergeModel.enabled ? '' : ' data-ugh-disabled-message="' + _escHtml(disabledFeedbackText) + '" data-ui-tooltip="' + _escHtml(disabledFeedbackText) + '" title=""')
+        + '>'
         + _escHtml(autoMergeModel.label || t('ughAutoMerge', 'Объединить танки'))
         + '</button>';
     }
@@ -535,6 +559,18 @@
     const actionBtn = tgt.closest ? tgt.closest('[data-ugh-action]') : null;
     if (actionBtn) {
       const action = actionBtn.getAttribute('data-ugh-action');
+      const disabledMessage = actionBtn.getAttribute('data-ugh-disabled-message');
+      if (disabledMessage) {
+        showToast(disabledMessage);
+        return;
+      }
+      if (action === 'transferAll') {
+        if (_callbacks && typeof _callbacks.onTransferAllToUpperHangar === 'function') {
+          _callbacks.onTransferAllToUpperHangar();
+        }
+        render();
+        return;
+      }
       if (action === 'buy') {
         if (_callbacks && typeof _callbacks.onBuy === 'function') _callbacks.onBuy();
         render();

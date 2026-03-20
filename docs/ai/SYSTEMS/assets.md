@@ -67,6 +67,11 @@
 	- если atlas части совпадает с root atlas, loader переиспользует уже загруженное изображение без отдельной копии: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L914-L928);
 	- root `hpBar` остаётся частью data-contract, но рисуется отдельным финальным overlay в `game.js`, а не вместе с root sprite.
 
+## `assets/underground_hangar.json` (canvas shell кнопки ангара)
+- Конфиг кнопки/ячейки подземного ангара теперь опирается на существующий atlas `slot_warehouse_atlas.png`, а не на отсутствующий `underground_hangar_atlas.png`: [assets/underground_hangar.json](../../../assets/underground_hangar.json#L1-L12), [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57).
+- Runtime loader в [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57) держит тот же fallback atlas `slot_warehouse_atlas.png`, поэтому отсутствие поля `atlas` в JSON больше не возвращает 404 на несуществующий файл.
+- `animations.{idle,hover_start,hover_end,click,close}` для этой кнопки читаются как обычный sprite-sheet contract, но фактический badge количества техники дорисовывается поверх atlas уже в runtime, а не хранится в JSON: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L132-L182).
+
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.
 - Формат строки (backward compatible):

@@ -461,7 +461,7 @@ function createInitialState(options){
   const reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
   const initialState = InitialStateApi && InitialStateApi.createInitialState
     ? InitialStateApi.createInitialState({ maxLevel: MAX_TANK_LEVEL, reason })
-    : { coins: 120, kills: 0, totalDamageDealtRaw: 0, zombieWaveAtkMult: 1,
+    : { coins: 120, kills: 0, totalDamageDealtRaw: 0, zombieWaveAtkMult: 1, zombieWaveHpMult: 1,
         damagePointsSpent: 0, fenceLevel: 1, cells: [], boardRect: {x:0,y:0,w:0,h:0},
         zombies: [], projectiles: [], impacts: [], decals: [], particles: [],
         damageNumbers: [], drones: [], decors: [], wallDecors: [],
@@ -515,6 +515,8 @@ function createInitialState(options){
       ? Math.max(1, Math.floor(initialState.fenceLevel))
       : 1;
   }
+  initialState.zombieWaveAtkMult = normalizeZombieWaveMultiplier(initialState.zombieWaveAtkMult);
+  initialState.zombieWaveHpMult = normalizeZombieWaveMultiplier(initialState.zombieWaveHpMult);
   return initialState;
 }
 
@@ -531,6 +533,11 @@ function normalizeTotalDamageDealtRaw(value){
 function normalizeDamagePointsSpent(value){
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.floor(value));
+}
+
+function normalizeZombieWaveMultiplier(value){
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(0, value);
 }
 
 function ensureDamageProgressState(){
@@ -1060,10 +1067,22 @@ function getTankWordKey(count){
   return n === 1 ? 'tankWord1' : 'tankWord5';
 }
 
-function bulkBuyLabel(count){
+function formatUiCurrency(value){
+  const safeValue = Math.max(0, Math.round(Number(value) || 0));
+  const formatter = window.Game && window.Game.NumberFormat && typeof window.Game.NumberFormat.formatCompactRu === 'function'
+    ? window.Game.NumberFormat.formatCompactRu
+    : function (num) { return String(Math.round(num)); };
+  return formatter(safeValue);
+}
+
+function bulkBuyLabel(count, totalCost){
   const safeCount = Math.max(0, Math.floor(Number(count) || 0));
   const word = t(getTankWordKey(safeCount));
-  return t('buyBulkBuy', { count: safeCount, tankWord: word });
+  return t('buyBulkBuy', {
+    count: safeCount,
+    tankWord: word,
+    cost: formatUiCurrency(totalCost),
+  });
 }
 
 function getUndergroundHangarBulkBuyButtonModel(){
@@ -1082,7 +1101,8 @@ function getUndergroundHangarBulkBuyButtonModel(){
     visible: true,
     enabled: !!plan.enabled,
     count: count,
-    label: bulkBuyLabel(count),
+    totalCost: Math.max(0, Math.round(Number(plan.totalCost) || 0)),
+    label: plan.label || bulkBuyLabel(count, plan.totalCost),
   };
 }
 
@@ -2101,6 +2121,7 @@ function resetZombieAndAttackModeToDefaultAfterRestore(){
   BAL.zombieCountTarget = defaultTargetAlive;
 
   state.zombieWaveAtkMult = 1;
+  state.zombieWaveHpMult = 1;
   if (!state.activeEffects || typeof state.activeEffects !== 'object') {
     state.activeEffects = { attackUntil: 0, speedUntil: 0, economyUntil: 0 };
   } else {
@@ -3306,14 +3327,7 @@ function debugSetTotalMerges(rawValue){
 }
 
 function calculateAffordableBuyCount(limit){
-  const Garage = window.Game && window.Game.Garage;
-  let freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
-  const UH = window.Game && window.Game.UndergroundHangar;
-  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
-  const ughCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells) ? state.undergroundHangar.cells : [];
-  for (let i = 0; i < ughCells.length; i++) {
-    if (_isUndergroundCellEmpty(ughCells[i])) freeSlots += 1;
-  }
+  const freeSlots = getAvailableTankSlotCount();
   const maxAttempts = Math.max(0, Math.floor(Number(limit) || 0));
   if (freeSlots <= 0 || maxAttempts <= 0) return { count: 0, totalCost: 0 };
 
@@ -3337,14 +3351,7 @@ function calculateAffordableBuyCount(limit){
 }
 
 function getBulkBuyPlanByMode(mode){
-  const Garage = window.Game && window.Game.Garage;
-  let freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
-  const UH = window.Game && window.Game.UndergroundHangar;
-  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
-  const ughCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells) ? state.undergroundHangar.cells : [];
-  for (let i = 0; i < ughCells.length; i++) {
-    if (_isUndergroundCellEmpty(ughCells[i])) freeSlots += 1;
-  }
+  const freeSlots = getAvailableTankSlotCount();
   const resolvedMode = mode === 'buy2' || mode === 'buy5' || mode === 'buyMax' ? mode : 'none';
   if (resolvedMode === 'none') {
     return {
@@ -3355,6 +3362,8 @@ function getBulkBuyPlanByMode(mode){
       x: 0,
       xDisplay: 2,
       count: 0,
+      totalCost: 0,
+      label: '',
       disabled: true,
       enabled: false,
       visible: false,
@@ -3369,6 +3378,7 @@ function getBulkBuyPlanByMode(mode){
   const x = Math.min(maxByTier, freeSlots, maxAffordableByCoins);
   const xDisplay = Math.max(2, x);
   const disabled = x < 2;
+  const totalCost = Math.max(0, Math.round(Number(affordable.totalCost) || 0));
   return {
     mode: resolvedMode,
     freeSlots: freeSlots,
@@ -3377,13 +3387,17 @@ function getBulkBuyPlanByMode(mode){
     x: x,
     xDisplay: xDisplay,
     count: x,
+    totalCost: totalCost,
+    label: bulkBuyLabel(x, totalCost),
     disabled: disabled,
     enabled: !disabled,
     visible: true,
   };
 }
 
-function performTankPurchaseOnce(){
+function performTankPurchaseOnce(opts){
+  const options = opts && typeof opts === 'object' ? opts : null;
+  const instant = !!(options && options.instant);
   const level = buyTankLevel();
   const cost = buyTankCost(level);
   const Garage = window.Game && window.Game.Garage;
@@ -3411,7 +3425,7 @@ function performTankPurchaseOnce(){
     const empty = state.cells[freeIdx];
     if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return false;
     state.coins -= cost;
-    empty.tank = makeTank(level, false);
+    empty.tank = makeTank(level, false, instant ? { enableStamp: false } : null);
     recordTankLevel(level);
     state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
     bumpBuyPrice(level);
@@ -3425,13 +3439,13 @@ function performTankPurchaseOnce(){
         tank: empty.tank,
       });
     }
-    if (window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
+    if (!instant && window.Game && window.Game.SupercomputerBuildTankFx && typeof window.Game.SupercomputerBuildTankFx.start === 'function') {
       window.Game.SupercomputerBuildTankFx.start(getTankPrintDurationSec());
     }
     popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
   } else {
     state.coins -= cost;
-    state.undergroundHangar.cells[undergroundIdx].tank = makeTank(level, false);
+    state.undergroundHangar.cells[undergroundIdx].tank = makeTank(level, false, instant ? { enableStamp: false } : null);
     recordTankLevel(level);
     state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
     bumpBuyPrice(level);
@@ -3442,8 +3456,8 @@ function performTankPurchaseOnce(){
   return true;
 }
 
-function tryBuyTank(){
-  const bought = performTankPurchaseOnce();
+function tryBuyTank(opts){
+  const bought = performTankPurchaseOnce(opts);
   if (bought) processAchievementProgress('purchases', 1);
 }
 
@@ -3452,7 +3466,7 @@ function buyBulkMode(){
   return 'none';
 }
 
-function tryBuyBulk(){
+function tryBuyBulk(opts){
   const mode = buyBulkMode();
   if (mode === 'none') return;
   const plan = getBulkBuyPlanByMode(mode);
@@ -3460,7 +3474,7 @@ function tryBuyBulk(){
   const countToBuy = plan.x;
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
-    if (!performTankPurchaseOnce()) return;
+    if (!performTankPurchaseOnce(opts)) return;
     purchased += 1;
   }
   if (purchased === countToBuy) processAchievementProgress('purchases', purchased);
@@ -3651,6 +3665,161 @@ function _getUndergroundCell(idx){
 
 function _isUndergroundCellEmpty(cell){
   return !!cell && !cell.tank && !cell.drone;
+}
+
+function getUndergroundHangarReservedMainCellIndex(){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  const cellIndex = Number(UH && UH.CELL_INDEX);
+  return Number.isFinite(cellIndex) ? Math.max(0, Math.floor(cellIndex)) : 15;
+}
+
+function _findFreeMainHangarCellIndex(){
+  const reservedCellIndex = getUndergroundHangarReservedMainCellIndex();
+  const cells = Array.isArray(state.cells) ? state.cells : [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (!cell) continue;
+    const cellIndex = Number.isFinite(cell.i) ? cell.i : i;
+    if (i === reservedCellIndex || cellIndex === reservedCellIndex) continue;
+    if (cell.tank) continue;
+    if (state.crate && state.crate.cellIndex === cellIndex) continue;
+    return i;
+  }
+  return null;
+}
+
+function _countFreeMainHangarCells(){
+  let freeCount = 0;
+  const reservedCellIndex = getUndergroundHangarReservedMainCellIndex();
+  const cells = Array.isArray(state.cells) ? state.cells : [];
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (!cell) continue;
+    const cellIndex = Number.isFinite(cell.i) ? cell.i : i;
+    if (i === reservedCellIndex || cellIndex === reservedCellIndex) continue;
+    if (cell.tank) continue;
+    if (state.crate && state.crate.cellIndex === cellIndex) continue;
+    freeCount += 1;
+  }
+  return freeCount;
+}
+
+function _findFreeDroneSlotIndex(){
+  const slotCount = DronesApi && Number.isFinite(DronesApi.DRONE_SLOT_COUNT)
+    ? Math.max(0, Math.floor(DronesApi.DRONE_SLOT_COUNT))
+    : 9;
+  for (let slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+    if (DronesApi && typeof DronesApi.isSlotIndexValid === 'function' && !DronesApi.isSlotIndexValid(slotIndex)) {
+      continue;
+    }
+    if (!_getDroneBySlotIndex(slotIndex)) return slotIndex;
+  }
+  return null;
+}
+
+function _countFreeDroneSlots(){
+  const slotCount = DronesApi && Number.isFinite(DronesApi.DRONE_SLOT_COUNT)
+    ? Math.max(0, Math.floor(DronesApi.DRONE_SLOT_COUNT))
+    : 9;
+  let freeCount = 0;
+  for (let slotIndex = 0; slotIndex < slotCount; slotIndex++) {
+    if (DronesApi && typeof DronesApi.isSlotIndexValid === 'function' && !DronesApi.isSlotIndexValid(slotIndex)) {
+      continue;
+    }
+    if (!_getDroneBySlotIndex(slotIndex)) freeCount += 1;
+  }
+  return freeCount;
+}
+
+function getUndergroundHangarTransferAllButtonModel(){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+
+  const undergroundCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)
+    ? state.undergroundHangar.cells
+    : [];
+  let freeMainCells = _countFreeMainHangarCells();
+  let freeDroneSlots = _countFreeDroneSlots();
+  let movableCount = 0;
+
+  for (let i = 0; i < undergroundCells.length; i++) {
+    const cell = undergroundCells[i];
+    if (!cell) continue;
+    if (cell.tank) {
+      if (freeMainCells <= 0) continue;
+      freeMainCells -= 1;
+      movableCount += 1;
+      continue;
+    }
+    if (cell.drone) {
+      if (freeDroneSlots <= 0) continue;
+      freeDroneSlots -= 1;
+      movableCount += 1;
+    }
+  }
+
+  return {
+    visible: true,
+    enabled: movableCount > 0,
+    movableCount: movableCount,
+  };
+}
+
+function runUndergroundHangarTransferAllToUpperHangar(){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+
+  const undergroundCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)
+    ? state.undergroundHangar.cells
+    : [];
+  let movedCount = 0;
+
+  for (let i = 0; i < undergroundCells.length; i++) {
+    const cell = undergroundCells[i];
+    if (!cell) continue;
+    if (cell.tank) {
+      const targetMainIndex = _findFreeMainHangarCellIndex();
+      if (targetMainIndex == null) continue;
+      if (_moveTankBetweenHangars('underground', i, 'main', targetMainIndex)) movedCount += 1;
+      continue;
+    }
+    if (cell.drone) {
+      const targetDroneIndex = _findFreeDroneSlotIndex();
+      if (targetDroneIndex == null) continue;
+      if (_moveDroneFromUnderground(i, targetDroneIndex)) movedCount += 1;
+    }
+  }
+
+  if (movedCount > 0) updateUI();
+  return movedCount;
+}
+
+function getAvailableTankSlotCount(){
+  const Garage = window.Game && window.Game.Garage;
+  let freeSlots = Garage && Garage.countFreeCells ? Garage.countFreeCells(state) : state.cells.filter(c => !c.tank).length;
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ughCells = state.undergroundHangar && Array.isArray(state.undergroundHangar.cells) ? state.undergroundHangar.cells : [];
+  for (let i = 0; i < ughCells.length; i++) {
+    if (_isUndergroundCellEmpty(ughCells[i])) freeSlots += 1;
+  }
+  return freeSlots;
+}
+
+function hasAvailableTankSlot(){
+  return getAvailableTankSlotCount() > 0;
+}
+
+function getUndergroundHangarStoredTankCount(){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ugh = state.undergroundHangar;
+  const cells = ugh && Array.isArray(ugh.cells) ? ugh.cells : [];
+  let count = 0;
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] && cells[i].tank) count += 1;
+  }
+  return count;
 }
 
 function _findDroneStateIndexBySlotIndex(slotIdx){
@@ -3929,7 +4098,7 @@ function getUndergroundHangarAutoMergeButtonModel(){
       visible: false,
       enabled: false,
       label: '',
-      cooldownMs: AUTO_MERGE_COOLDOWN_MS,
+      cooldownMs: 0,
     };
   }
 
@@ -3938,13 +4107,12 @@ function getUndergroundHangarAutoMergeButtonModel(){
   const pairCount = pairs.length;
   const enabled = pairCount >= 1;
   let label = '';
-  if (tier === 'merge2') {
-    label = t('autoMerge2');
-  } else if (tier === 'mergeX') {
-    const dynamicCount = Math.max(2, Math.min(10, pairCount * 2));
-    label = t('autoMergeDynamicShort', { count: dynamicCount });
-  } else {
+  if (enabled) {
+    label = t('autoMergeDynamicShort', { count: Math.max(2, pairCount * 2) });
+  } else if (tier === 'mergeAll') {
     label = t('autoMergeAll');
+  } else {
+    label = t('autoMergeDynamicShort', { count: Math.max(2, maxPairs * 2) });
   }
 
   return {
@@ -3952,7 +4120,8 @@ function getUndergroundHangarAutoMergeButtonModel(){
     enabled: enabled,
     label: label,
     pairCount: pairCount,
-    cooldownMs: AUTO_MERGE_COOLDOWN_MS,
+    cooldownMs: 0,
+    disabledFeedbackText: t('ughAutoMergeUnavailableDetailed', 'Нет доступных танков для объединения, либо они ещё не создались.'),
   };
 }
 
@@ -3972,9 +4141,9 @@ function runUndergroundHangarAutoMergeClick(){
   if (!model || !model.visible || !model.enabled) return;
 
   const tier = getUndergroundHangarAutoMergeTier();
-  const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
-  if (!maxPairs && maxPairs !== Infinity) return;
+  if (!tier || tier === 'hidden') return;
 
+  const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
   const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
   if (!pairs.length) return;
 
@@ -4664,7 +4833,8 @@ function saveProgress(){
       buyPrices: state.buyPrices,
       achievements: state.achievements,
       totalDamageDealtRaw: ensureDamageProgressState(),
-      zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
+      zombieWaveAtkMult: normalizeZombieWaveMultiplier(state.zombieWaveAtkMult),
+      zombieWaveHpMult: normalizeZombieWaveMultiplier(state.zombieWaveHpMult),
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
       tutorial: state.tutorial,
@@ -4699,7 +4869,8 @@ function restoreFullState(saved){
   state.coins = saved.coins != null ? saved.coins : state.coins;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
-  state.zombieWaveAtkMult = Number.isFinite(saved.zombieWaveAtkMult) ? Math.max(0, saved.zombieWaveAtkMult) : 1;
+  state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(saved.zombieWaveAtkMult);
+  state.zombieWaveHpMult = normalizeZombieWaveMultiplier(saved.zombieWaveHpMult);
   state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
   ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
@@ -4963,7 +5134,8 @@ function applySavedProgress(data){
     ? Math.max(1, Math.floor(state.fenceLevel))
     : 1;
   syncFenceTierWithMaxTankLevel(state, { force: true });
-  state.zombieWaveAtkMult = Number.isFinite(data.zombieWaveAtkMult) ? Math.max(0, data.zombieWaveAtkMult) : 1;
+  state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(data.zombieWaveAtkMult);
+  state.zombieWaveHpMult = normalizeZombieWaveMultiplier(data.zombieWaveHpMult);
   /* Restore player chips for Workshop/Chip Upgrade */
   if (Array.isArray(data.playerChips)) {
     state.playerChips = data.playerChips;
@@ -5217,6 +5389,7 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const levelHpMul = zombieHpMultiplier(level);
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
   const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
+  const zombieMaxHp = baseHp * (t?.hpMul ?? 1.0) * getZombieWaveHpMult();
   // Zombies no longer orbit; omegaBase is 0 (they approach the fence directly)
   const baseOmega = 0;
   const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
@@ -5240,8 +5413,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     omegaBase: baseOmega * (t?.omegaMul ?? 1.0),
     omega: baseOmega * (t?.omegaMul ?? 1.0),
     joinSpeed,
-    hp: baseHp * (t?.hpMul ?? 1.0),
-    maxHp: baseHp * (t?.hpMul ?? 1.0),
+    hp: zombieMaxHp,
+    maxHp: zombieMaxHp,
     rewardMul: (t?.rewardMul ?? 1.0),
     anim: Math.random() * (t?.frames ?? 1),
     walkAnimFrame: Math.random() * (t?.frames ?? 1),
@@ -6216,8 +6389,11 @@ function getZombieAttackDamage(z){
 }
 
 function getZombieWaveAtkMult(){
-  const value = Number.isFinite(state && state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1;
-  return Math.max(0, value);
+  return normalizeZombieWaveMultiplier(state && state.zombieWaveAtkMult);
+}
+
+function getZombieWaveHpMult(){
+  return normalizeZombieWaveMultiplier(state && state.zombieWaveHpMult);
 }
 
 function getZombieFinalAttackDamage(z, damageMul){
@@ -8088,6 +8264,7 @@ function applyPreRetryRuntimeReset(targetState){
   targetState.coins = 120;
   targetState.kills = 0;
   targetState.zombieWaveAtkMult = 1;
+  targetState.zombieWaveHpMult = 1;
   targetState.fenceLevel = 1;
   targetState.zombies = [];
   targetState.projectiles = [];
@@ -8547,8 +8724,7 @@ function updateUI(){
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
   ui.buyCost.textContent = fmt(cost);
 
-  const Garage = window.Game && window.Game.Garage;
-  const hasFree = Garage ? Garage.hasFreeCell(state) : state.cells.some(c=>!c.tank);
+  const hasFree = hasAvailableTankSlot();
   ui.buy.disabled = state.coins < cost || !hasFree;
 
   if (ui.buyBulk) {
@@ -8561,7 +8737,7 @@ function updateUI(){
     } else {
       ui.buyBulk.classList.remove('hidden');
       ui.buyBulk.style.display = '';
-      ui.buyBulk.textContent = bulkBuyLabel(plan.xDisplay);
+      ui.buyBulk.textContent = plan.label || bulkBuyLabel(plan.count, plan.totalCost);
       ui.buyBulk.disabled = plan.disabled;
     }
   }
@@ -11229,6 +11405,7 @@ function drawSlotActivityOverlay(targetCtx, x, y, w, h, r, timeSec){
 
 function drawBoard(){
   const br = state.boardRect;
+  const undergroundTankCount = getUndergroundHangarStoredTankCount();
   ctx.save();
 
   ctx.fillStyle = 'rgba(8,12,22,.66)';
@@ -11244,7 +11421,7 @@ function drawBoard(){
     // Underground hangar cell: delegate drawing to UndergroundHangar module
     const _UH = window.Game && window.Game.UndergroundHangar;
     if (_UH && c.i === _UH.CELL_INDEX) {
-      if (typeof _UH.draw === 'function') _UH.draw(ctx, c);
+      if (typeof _UH.draw === 'function') _UH.draw(ctx, c, undergroundTankCount);
       continue;
     }
 
@@ -12574,7 +12751,8 @@ function initDebugPanel(){
         ? Math.max(0, worldEventsState.attackEndAt - now)
         : 0,
       idleWavePhase: getZombieIdleWavePhase(),
-      zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
+      zombieWaveAtkMult: normalizeZombieWaveMultiplier(state.zombieWaveAtkMult),
+      zombieWaveHpMult: normalizeZombieWaveMultiplier(state.zombieWaveHpMult),
       zombiesAlive: Array.isArray(state.zombies)
         ? state.zombies.filter(function (z) { return z && z.state !== 'dying'; }).length
         : 0,
@@ -12810,11 +12988,19 @@ initBigMainMenu();
       getBulkBuyButtonModel: function () {
         return getUndergroundHangarBulkBuyButtonModel();
       },
+      getTransferAllButtonModel: function () {
+        return getUndergroundHangarTransferAllButtonModel();
+      },
       getAutoMergeButtonModel: function () {
         return getUndergroundHangarAutoMergeButtonModel();
       },
-      onBuy: function () { tryBuyTank(); },
-      onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk(); },
+      onBuy: function () { tryBuyTank({ instant: true }); },
+      onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk({ instant: true }); },
+      onTransferAllToUpperHangar: function () {
+        if (typeof runUndergroundHangarTransferAllToUpperHangar === 'function') {
+          runUndergroundHangarTransferAllToUpperHangar();
+        }
+      },
       onAutoMerge: function () {
         if (typeof runUndergroundHangarAutoMergeClick === 'function') runUndergroundHangarAutoMergeClick();
       },

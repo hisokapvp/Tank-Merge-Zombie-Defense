@@ -27,6 +27,7 @@
   "save.autoRetryName": "Сейв перед повтором",
   "ui.toast.noSaves": "Нет сохранений",
   "ui.toast.unavailable": "Недоступно",
+  "ughAutoMergeUnavailableDetailed": "Нет доступных танков для объединения, либо они ещё не создались.",
   "menuExit": "Выход",
   "common.back": "Назад",
   "menuBack": "Назад",
@@ -167,7 +168,7 @@
   "buyBulk5": "Создать 5 танков",
   "buyBulkMax": "Создать максимум танков",
   "buyBulkDynamic": "Создать {count} танков",
-  "buyBulkBuy": "Создать {count} {tankWord}",
+  "buyBulkBuy": "Создать {count} {tankWord} - {cost}$",
   "tankWord1": "танк",
   "tankWord2_4": "танка",
   "tankWord5": "танков",
@@ -213,7 +214,7 @@
   "statusOff": "OFF",
   "zombieShort": "З",
   "tankShort": "Т",
-  "dismantleBtn": "Разобрать танк",
+  "dismantleBtn": "Разбор танков",
   "dismantleBtnConfirm": "Подтвердить разбор",
   "dismantleConfirm": "Вы действительно хотите разобрать танк {level} уровня?",
   "dismantleConfirmMulti": "Вы действительно хотите разбить выбранные танки?",
@@ -568,6 +569,7 @@
   ,"ughBuyTank": "Создать танк {level} уровня - {cost}$"
   ,"ughBuyBulk": "Создать x{n}"
   ,"ughAutoMerge": "Объединить танки"
+  ,"ughTransferToUpper": "Перенести наверх"
   ,"ughHelpButton": "Справка по подземному ангару"
   ,"ughHelpText": "В этом разделе Вы можете хранить и объединять танки и / или дроны, если закончились свободные ячеки в основном ангаре."
   ,"ughDismantle": "Разобрать танк"

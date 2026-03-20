@@ -1,6 +1,54 @@
 (function (global) {
   'use strict';
 
+  function toFixedNumber(value) {
+    var numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00';
+  }
+
+  function buildEdgePath(fromX, fromY, toX, toY, options) {
+    var opts = options || {};
+    var deltaX = toX - fromX;
+    var gapY = Math.max(0, toY - fromY);
+    var emphasis = Number.isFinite(opts.emphasis) ? Math.max(0.9, opts.emphasis) : 1;
+    var waveBoost = Number.isFinite(opts.waveBoost) ? Math.max(0, opts.waveBoost) : 0;
+    var direction = deltaX === 0 ? 1 : (deltaX > 0 ? 1 : -1);
+    var bend = Math.max(18, Math.min(62, (Math.abs(deltaX) * 0.4 + gapY * 0.19) * emphasis + 8 + waveBoost));
+    var control1X = fromX + direction * Math.max(6, bend * 0.22);
+    var control1Y = fromY + Math.max(14, Math.min(42, gapY * (0.34 + emphasis * 0.06) + 10 + waveBoost * 0.22));
+    var control2X = toX - direction * Math.max(10, bend * 0.96);
+    var control2Y = toY - Math.max(14, Math.min(38, gapY * (0.27 + emphasis * 0.05) + 8 + waveBoost * 0.16));
+
+    if (Math.abs(deltaX) < 8) {
+      control1X = fromX + direction * Math.max(4, bend * 0.16);
+      control2X = toX - direction * Math.max(4, bend * 0.16);
+    }
+
+    return 'M ' + fromX + ' ' + fromY
+      + ' C ' + control1X + ' ' + control1Y
+      + ', ' + control2X + ' ' + control2Y
+      + ', ' + toX + ' ' + toY;
+  }
+
+  function applyEdgeMotion(path, branchId, parentLocalIdx, childLocalIdx, fromX, toX, motionScale) {
+    if (!path || !path.style || typeof path.style.setProperty !== 'function') return;
+    var scale = Number.isFinite(motionScale) ? Math.max(0.7, motionScale) : 1;
+    var seed = (parentLocalIdx + 1) * 29 + (childLocalIdx + 1) * 17;
+    var biasX = ((seed % 3) - 1) * 1.02;
+    if (biasX === 0) biasX = toX >= fromX ? 1.08 : -1.08;
+    var biasY = -0.56 - ((seed % 4) * 0.11);
+    biasX *= scale;
+    biasY *= scale;
+    path.style.setProperty('--talent-edge-flow-duration', toFixedNumber(1.92 + (seed % 5) * 0.16) + 's');
+    path.style.setProperty('--talent-edge-wobble-duration', toFixedNumber(1.24 + (seed % 4) * 0.15) + 's');
+    path.style.setProperty('--talent-edge-phase', toFixedNumber(-0.18 * (seed % 6)) + 's');
+    path.style.setProperty('--talent-edge-jitter-x', toFixedNumber(biasX) + 'px');
+    path.style.setProperty('--talent-edge-jitter-y', toFixedNumber(biasY) + 'px');
+    path.style.setProperty('--talent-edge-jitter-x-neg', toFixedNumber(biasX * -0.72) + 'px');
+    path.style.setProperty('--talent-edge-jitter-y-neg', toFixedNumber(Math.abs(biasY) * 0.52) + 'px');
+    if (branchId) path.dataset.branchId = branchId;
+  }
+
   function drawBranchEdges(options) {
     var opts = options || {};
     var overlay = opts.overlay || null;
@@ -57,15 +105,28 @@
         var fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
         var fromY = fromRect.bottom - gridRect.top;
         var parentActive = Math.max(0, Math.floor(ranks[parentNode.id] || 0)) > 0;
-        var gapY = Math.max(0, toY - fromY);
-        var elbowY = fromY + Math.max(6, Math.min(24, gapY * 0.5 + 4));
-        if (elbowY >= toY) elbowY = fromY + gapY * 0.5;
+        var relationState = parentActive && childActive ? 'active' : (parentActive ? 'ready' : 'base');
+        var emphasis = relationState === 'active' ? 1.46 : (relationState === 'ready' ? 1.2 : 1.02);
+        var waveBoost = relationState === 'active' ? 10 : (relationState === 'ready' ? 6 : 0);
+        var pathData = buildEdgePath(fromX, fromY, toX, toY, { emphasis: emphasis, waveBoost: waveBoost });
+
+        var aura = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
+        aura.setAttribute('d', pathData);
+        aura.classList.add('talentEdgeAura');
+        if (relationState === 'active') aura.classList.add('talentEdgeAuraActive');
+        else if (relationState === 'ready') aura.classList.add('talentEdgeAuraReady');
+        svg.appendChild(aura);
 
         var path = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', 'M ' + fromX + ' ' + fromY + ' L ' + fromX + ' ' + elbowY + ' L ' + toX + ' ' + elbowY + ' L ' + toX + ' ' + toY);
+        path.setAttribute('d', pathData);
         path.classList.add('talentEdge');
-        if (parentActive && childActive) path.classList.add('talentEdgeActive');
-        else if (parentActive) path.classList.add('talentEdgeReady');
+        if (relationState === 'active') {
+          path.classList.add('talentEdgeActive');
+          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 1.16);
+        } else if (relationState === 'ready') {
+          path.classList.add('talentEdgeReady');
+          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 0.94);
+        }
         svg.appendChild(path);
       }
     }

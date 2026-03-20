@@ -3,10 +3,16 @@
 
   function createElement(documentObj, tagName, options) {
     const opts = options || {};
-    const element = documentObj.createElement(tagName);
+    const namespace = typeof opts.namespace === 'string' ? opts.namespace : '';
+    const element = namespace
+      ? documentObj.createElementNS(namespace, tagName)
+      : documentObj.createElement(tagName);
     if (opts.id) element.id = opts.id;
-    if (opts.className) element.className = opts.className;
-    if (opts.type) element.type = opts.type;
+    if (opts.className) {
+      if (namespace) element.setAttribute('class', opts.className);
+      else element.className = opts.className;
+    }
+    if (opts.type && !namespace) element.type = opts.type;
     if (opts.textContent != null) element.textContent = opts.textContent;
     if (opts.attributes && typeof opts.attributes === 'object') {
       const keys = Object.keys(opts.attributes);
@@ -167,8 +173,12 @@
 
       const treeContainer = createElement(documentObj, 'div', { className: 'talentTreeContainer' });
       const treeSvg = createElement(documentObj, 'svg', {
+        namespace: 'http://www.w3.org/2000/svg',
         className: 'talentTreeSvg',
         id: 'talentSvgV2-' + branchId,
+        attributes: {
+          'aria-hidden': 'true',
+        },
       });
       const treeGrid = createElement(documentObj, 'div', {
         className: 'talentTreeGrid',
