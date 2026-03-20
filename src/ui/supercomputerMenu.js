@@ -2,6 +2,73 @@
   'use strict';
 
   var WEAPON_ICON_ROT_DEG = -90;
+  var sharedHelpModalEl = null;
+
+  function fallbackHelpTranslate(_key, fallback) {
+    return typeof fallback === 'string' ? fallback : '';
+  }
+
+  function ensureSharedHelpModal(documentObj) {
+    if (!documentObj || !documentObj.body) return null;
+    if (sharedHelpModalEl && sharedHelpModalEl.ownerDocument === documentObj && sharedHelpModalEl.isConnected) {
+      return sharedHelpModalEl;
+    }
+    sharedHelpModalEl = documentObj.createElement('div');
+    sharedHelpModalEl.className = 'techModal__backdrop';
+    sharedHelpModalEl.style.display = 'none';
+    sharedHelpModalEl.setAttribute('aria-hidden', 'true');
+    sharedHelpModalEl.addEventListener('click', function (evt) {
+      var closeTarget = evt && evt.target && evt.target.closest ? evt.target.closest('[data-sc-help-close]') : null;
+      if (closeTarget || evt.target === sharedHelpModalEl) hideSharedHelpModal();
+    });
+    documentObj.body.appendChild(sharedHelpModalEl);
+    return sharedHelpModalEl;
+  }
+
+  function hideSharedHelpModal() {
+    if (!sharedHelpModalEl) return;
+    sharedHelpModalEl.style.display = 'none';
+    sharedHelpModalEl.setAttribute('aria-hidden', 'true');
+    sharedHelpModalEl.innerHTML = '';
+  }
+
+  function syncSharedHelpButtonCopy(button, labelKey, translateFn) {
+    if (!button) return;
+    var translate = typeof translateFn === 'function' ? translateFn : fallbackHelpTranslate;
+    var label = translate(labelKey, translate('techUnlockHelpTitle', 'Help'));
+    button.setAttribute('aria-label', label);
+    button.setAttribute('data-ui-tooltip', label);
+    button.removeAttribute('title');
+  }
+
+  function showSharedHelpModal(config) {
+    var cfg = config || {};
+    var documentObj = cfg.documentObj || (typeof document !== 'undefined' ? document : null);
+    if (!documentObj) return;
+    var translate = typeof cfg.translate === 'function' ? cfg.translate : fallbackHelpTranslate;
+    var modal = ensureSharedHelpModal(documentObj);
+    if (!modal) return;
+    var closeLabel = translate('techUnlockHelpClose', 'Close');
+    var title = translate(cfg.titleKey || 'techUnlockHelpTitle', 'Help');
+    var sectionTitle = translate(cfg.sectionTitleKey || cfg.titleKey || 'techUnlockHelpTitle', title);
+    var text = translate(cfg.textKey, '');
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="supercomputerHelpTitle">'
+      + '<button class="modalClose scModal__close techModal__close uiButtonBehavior" data-sc-help-close="true" type="button" aria-label="' + closeLabel + '"></button>'
+      + '<div class="techModal__title techModal__title--help" id="supercomputerHelpTitle">' + title + '</div>'
+      + '<div class="techModal__subtitle techModal__subtitle--help">' + sectionTitle + '</div>'
+      + '<div class="techModal__text techModal__text--help"></div>'
+      + '<div class="techModal__btns"><button class="btn scButton uiButtonBehavior techModal__noBtn" data-sc-help-close="true" type="button">' + closeLabel + '</button></div>'
+      + '</div>';
+    var textEl = modal.querySelector('.techModal__text--help');
+    if (textEl) textEl.textContent = text;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
+      global.Game.ButtonBehavior.decorateTree(modal);
+    }
+    var closeBtn = modal.querySelector('[data-sc-help-close="true"]');
+    if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
+  }
 
   function setOverlayOpen(overlay, open, a11yOpen, a11yClose, options) {
     if (!overlay) return;
@@ -94,7 +161,6 @@
     var getAppliedFenceUpgradeLevel = typeof opts.getAppliedFenceUpgradeLevel === 'function' ? opts.getAppliedFenceUpgradeLevel : function () { return 0; };
     var applyFenceUpgrade = typeof opts.applyFenceUpgrade === 'function' ? opts.applyFenceUpgrade : function () { return { ok: false }; };
     var upgradeFence = typeof opts.upgradeFence === 'function' ? opts.upgradeFence : function () { return false; };
-    var techHelpModalEl = null;
     var translate = typeof opts.translate === 'function' ? opts.translate : function (_, vars) {
       var key = _ || '';
       if (key === 'modsGunsColType') return 'Cannon';
@@ -262,57 +328,19 @@
       }
     }
 
-    function ensureTechHelpModal() {
-      if (techHelpModalEl) return techHelpModalEl;
-      techHelpModalEl = documentObj.createElement('div');
-      techHelpModalEl.className = 'techModal__backdrop';
-      techHelpModalEl.style.display = 'none';
-      techHelpModalEl.setAttribute('aria-hidden', 'true');
-      techHelpModalEl.addEventListener('click', function (evt) {
-        var closeTarget = evt && evt.target && evt.target.closest ? evt.target.closest('[data-sc-help-close]') : null;
-        if (closeTarget || evt.target === techHelpModalEl) hideTechHelpModal();
-      });
-      documentObj.body.appendChild(techHelpModalEl);
-      return techHelpModalEl;
-    }
-
-    function hideTechHelpModal() {
-      if (!techHelpModalEl) return;
-      techHelpModalEl.style.display = 'none';
-      techHelpModalEl.setAttribute('aria-hidden', 'true');
-      techHelpModalEl.innerHTML = '';
-    }
-
     function syncHelpButtonCopy(button, labelKey) {
-      if (!button) return;
-      var label = translate(labelKey, translate('techUnlockHelpTitle', 'Help'));
-      button.setAttribute('aria-label', label);
-      button.setAttribute('data-ui-tooltip', label);
-      button.removeAttribute('title');
+      syncSharedHelpButtonCopy(button, labelKey, translate);
     }
 
     function showTechHelpModal(config) {
-      var modal = ensureTechHelpModal();
-      var closeLabel = translate('techUnlockHelpClose', 'Close');
-      var title = translate('techUnlockHelpTitle', 'Help');
-      var sectionTitle = translate(config.sectionTitleKey, title);
-      var text = translate(config.textKey, '');
-      modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="supercomputerHelpTitle">'
-        + '<button class="modalClose scModal__close techModal__close uiButtonBehavior" data-sc-help-close="true" type="button" aria-label="' + closeLabel + '"></button>'
-        + '<div class="techModal__title techModal__title--help" id="supercomputerHelpTitle">' + title + '</div>'
-        + '<div class="techModal__subtitle techModal__subtitle--help">' + sectionTitle + '</div>'
-        + '<div class="techModal__text techModal__text--help"></div>'
-        + '<div class="techModal__btns"><button class="btn scButton uiButtonBehavior techModal__noBtn" data-sc-help-close="true" type="button">' + closeLabel + '</button></div>'
-        + '</div>';
-      var textEl = modal.querySelector('.techModal__text--help');
-      if (textEl) textEl.textContent = text;
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden', 'false');
-      if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
-        global.Game.ButtonBehavior.decorateTree(modal);
-      }
-      var closeBtn = modal.querySelector('[data-sc-help-close="true"]');
-      if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
+      if (!config) return;
+      showSharedHelpModal({
+        documentObj: documentObj,
+        translate: translate,
+        titleKey: config.titleKey,
+        sectionTitleKey: config.sectionTitleKey,
+        textKey: config.textKey,
+      });
     }
 
     function setTankWallTab(nextTab, options) {
@@ -1612,5 +1640,8 @@
   global.Game = global.Game || {};
   global.Game.SupercomputerMenu = {
     createController: createController,
+    showSharedHelpModal: showSharedHelpModal,
+    hideSharedHelpModal: hideSharedHelpModal,
+    syncHelpButtonCopy: syncSharedHelpButtonCopy,
   };
 })(typeof window !== 'undefined' ? window : this);

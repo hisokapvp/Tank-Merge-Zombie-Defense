@@ -9,6 +9,7 @@
   let _isOpen = false;
   let _stateRef = null;
   let _callbacks = null;
+  let _helpBtn = null;
   let _selected = null; // { type: 'main'|'underground'|'drone', index: number }
   const MAIN_TYPES = { main: true, underground: true };
   const DRONE_TOP_SLOT_INDICES = [0, 1, 2];
@@ -23,6 +24,60 @@
   }
 
   function el(id) { return document.getElementById(id); }
+
+  function getSharedHelpApi() {
+    const api = global.Game && global.Game.SupercomputerMenu;
+    return api || null;
+  }
+
+  function syncHelpButtonCopy() {
+    if (!_helpBtn) return;
+    const sharedHelpApi = getSharedHelpApi();
+    if (sharedHelpApi && typeof sharedHelpApi.syncHelpButtonCopy === 'function') {
+      sharedHelpApi.syncHelpButtonCopy(_helpBtn, 'ughHelpButton', t);
+      return;
+    }
+    const label = t('ughHelpButton', 'Справка по подземному ангару');
+    _helpBtn.setAttribute('aria-label', label);
+    _helpBtn.setAttribute('data-ui-tooltip', label);
+    _helpBtn.removeAttribute('title');
+  }
+
+  function openHelpModal() {
+    const sharedHelpApi = getSharedHelpApi();
+    if (!sharedHelpApi || typeof sharedHelpApi.showSharedHelpModal !== 'function') return;
+    sharedHelpApi.showSharedHelpModal({
+      translate: t,
+      sectionTitleKey: 'ughModalTitle',
+      textKey: 'ughHelpText',
+    });
+  }
+
+  function ensureHelpButton() {
+    if (!_overlay) return null;
+    const panel = _overlay.querySelector('.ughPanel');
+    if (!panel) return null;
+    if (!_helpBtn) {
+      _helpBtn = document.createElement('button');
+      _helpBtn.type = 'button';
+      _helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn ughHelpBtn';
+      _helpBtn.textContent = '?';
+      _helpBtn.setAttribute('data-font-floor-ignore', 'true');
+      _helpBtn.addEventListener('click', function (evt) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        openHelpModal();
+      });
+      panel.appendChild(_helpBtn);
+      if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
+        global.Game.ButtonBehavior.decorateTree(_helpBtn);
+      }
+    } else if (_helpBtn.parentNode !== panel) {
+      panel.appendChild(_helpBtn);
+    }
+    syncHelpButtonCopy();
+    return _helpBtn;
+  }
 
   function levelLabel(level) {
     return _escHtml(String(t('levelShort', 'Lv'))) + String(level);
@@ -304,6 +359,7 @@
     _callbacks = opts || {};
     _overlay = el('undergroundHangarOverlay');
     if (!_overlay) return;
+    ensureHelpButton();
 
     // Close button
     const closeBtn = el('undergroundHangarClose');
@@ -346,6 +402,7 @@
     document.body.classList.add('ugh-open');
     _isOpen = true;
     _selected = null;
+    ensureHelpButton();
 
     render();
   }
@@ -382,6 +439,7 @@
     if (!_isOpen || !_stateRef) return;
     const body = el('undergroundHangarBody');
     if (!body) return;
+    syncHelpButtonCopy();
 
     let html = '';
 
@@ -431,16 +489,21 @@
     // Buy tank button
     const buyLevel = _callbacks && typeof _callbacks.getBuyLevel === 'function' ? _callbacks.getBuyLevel() : 1;
     const buyCost = _callbacks && typeof _callbacks.getBuyCost === 'function' ? _callbacks.getBuyCost(buyLevel) : 0;
+    const buyLabel = t('ughBuyTank', 'Создать танк {level} уровня - {cost}$')
+      .replace('{level}', String(buyLevel))
+      .replace('{cost}', String(buyCost));
     html += '<button class="btn scButton ughActions__btn" data-ugh-action="buy" type="button">'
-      + _escHtml(t('ughBuyTank', 'Создать танк ур.{level}').replace('{level}', buyLevel))
-      + ' (' + buyCost + ' 🪙)</button>';
+      + _escHtml(buyLabel)
+      + '</button>';
 
     // Bulk buy (if unlocked via achievements)
-    const bulkPlan = _callbacks && typeof _callbacks.getBulkBuyPlan === 'function' ? _callbacks.getBulkBuyPlan() : null;
-    if (bulkPlan && bulkPlan.visible) {
+    const bulkModel = _callbacks && typeof _callbacks.getBulkBuyButtonModel === 'function'
+      ? _callbacks.getBulkBuyButtonModel()
+      : (_callbacks && typeof _callbacks.getBulkBuyPlan === 'function' ? _callbacks.getBulkBuyPlan() : null);
+    if (bulkModel && bulkModel.visible) {
       html += '<button class="btn scButton ughActions__btn" data-ugh-action="buyBulk" type="button"'
-        + (bulkPlan.enabled ? '' : ' disabled') + '>'
-        + _escHtml(t('ughBuyBulk', 'Создать x{n}').replace('{n}', String(bulkPlan.xDisplay || bulkPlan.count || 2)))
+        + (bulkModel.enabled ? '' : ' disabled') + '>'
+        + _escHtml(bulkModel.label || t('ughBuyBulk', 'Создать {count} танков').replace('{count}', String(bulkModel.count || 0)))
         + '</button>';
     }
 
@@ -454,11 +517,6 @@
         + _escHtml(autoMergeModel.label || t('ughAutoMerge', 'Объединить танки'))
         + '</button>';
     }
-
-    // Dismantle
-    html += '<button class="btn scButton ughActions__btn ughActions__btn--danger" data-ugh-action="dismantle" type="button">'
-      + _escHtml(t('ughDismantle', 'Разобрать танк'))
-      + '</button>';
 
     html += '</div>'; // close ughActions
     html += '</div>'; // close ughSidebar
@@ -489,11 +547,6 @@
       }
       if (action === 'autoMerge') {
         if (_callbacks && typeof _callbacks.onAutoMerge === 'function') _callbacks.onAutoMerge();
-        render();
-        return;
-      }
-      if (action === 'dismantle') {
-        if (_callbacks && typeof _callbacks.onDismantle === 'function') _callbacks.onDismantle();
         render();
         return;
       }

@@ -173,7 +173,7 @@
   "tankWord5": "танков",
   "autoMerge2": "Объединить 2 танка",
   "autoMerge4": "Объединить 4 танка",
-  "autoMergeDynamicShort": "Объединить {count}",
+  "autoMergeDynamicShort": "Объединить {count} танков",
   "autoMerge2Short": "Объединить 2",
   "autoMerge4Short": "Объединить 4",
   "autoMergeAll": "Объединить все танки",
@@ -565,9 +565,11 @@
   ,"ughModalTitle": "Подземный ангар"
   ,"ughMainHangarTitle": "Верхний ангар"
   ,"ughUndergroundTitle": "Подземный ангар"
-  ,"ughBuyTank": "Создать танк ур.{level}"
+  ,"ughBuyTank": "Создать танк {level} уровня - {cost}$"
   ,"ughBuyBulk": "Создать x{n}"
   ,"ughAutoMerge": "Объединить танки"
+  ,"ughHelpButton": "Справка по подземному ангару"
+  ,"ughHelpText": "В этом разделе Вы можете хранить и объединять танки и / или дроны, если закончились свободные ячеки в основном ангаре."
   ,"ughDismantle": "Разобрать танк"
   ,"ughDronesTitle": "Дроны"
 }

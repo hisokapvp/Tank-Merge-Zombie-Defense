@@ -171,7 +171,7 @@
   "tankWord5": "tanks",
   "autoMerge2": "Merge 2 tanks",
   "autoMerge4": "Merge 4 tanks",
-  "autoMergeDynamicShort": "Merge {count}",
+  "autoMergeDynamicShort": "Merge {count} tanks",
   "autoMerge2Short": "Merge 2",
   "autoMerge4Short": "Merge 4",
   "autoMergeAll": "Merge all tanks",
@@ -565,9 +565,11 @@
   ,"ughModalTitle": "Underground Hangar"
   ,"ughMainHangarTitle": "Main Hangar"
   ,"ughUndergroundTitle": "Underground Hangar"
-  ,"ughBuyTank": "Build tank lvl.{level}"
+  ,"ughBuyTank": "Create level {level} tank - {cost}$"
   ,"ughBuyBulk": "Build x{n}"
   ,"ughAutoMerge": "Merge tanks"
+  ,"ughHelpButton": "Underground hangar help"
+  ,"ughHelpText": "In this section, you can store and merge tanks and / or drones if you run out of free slots in the main hangar."
   ,"ughDismantle": "Dismantle tank"
   ,"ughDronesTitle": "Drones"
 }

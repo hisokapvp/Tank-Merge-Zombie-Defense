@@ -6,7 +6,10 @@
 ## Что это
 `src/ui/supercomputerMenu.js` — контроллер трёх связанных overlay: root supercomputer menu, hangar mods и tank/wall mods. Здесь живут scroll-lock, root tiles, таблицы апгрейдов оружия/дронов/стен и маршрутизация между дочерними окнами.
 
+С начала файла также живёт shared help-shell API для SC-family overlays: общий `techModal__dialog--help` теперь открывается не только из talents/tank-wall flow, но и переиспользуется underground hangar modal через `Game.SupercomputerMenu.showSharedHelpModal()` и `syncHelpButtonCopy()`.
+
 ## Быстрый старт для агента
+- Shared help modal / help-button copy sync → [showSharedHelpModal()](../../src/ui/supercomputerMenu.js#L44-L68), [syncSharedHelpButtonCopy()](../../src/ui/supercomputerMenu.js#L31-L39), export в [global.Game.SupercomputerMenu](../../src/ui/supercomputerMenu.js#L1641-L1646).
 - Root-плитки и общая геометрия → [openRoot()](../../src/ui/supercomputerMenu.js#L1327-L1348), [normalizeRootTilesSize()](../../src/ui/supercomputerMenu.js#L633-L650).
 - Таблица оружий → [renderGunsPanel()](../../src/ui/supercomputerMenu.js#L765-L866).
 - Таблица стен → [renderWallsPanel()](../../src/ui/supercomputerMenu.js#L1181-L1321).
@@ -14,6 +17,7 @@
 
 ## Инварианты этого модуля ⚠️
 - Scroll-lock модалок суперкомпьютера централизован в `setBodyScrollLock()`: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L169-L173), [style.css](../../style.css#L1195-L1204).
+- Shared help modal shell (`showSharedHelpModal` / `hideSharedHelpModal` / `syncSharedHelpButtonCopy`) — это public SC-family contract, а не локальная утилита talents-only: его переиспользуют talents shell, tank-wall help и underground hangar help, поэтому нельзя разносить copy/DOM shell по разным модалкам. См. [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L4-L68), export в [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1641-L1646).
 - `applySharedTalentModalClass()` обязан навешивать на `talentOverlay` не только `.scModal`, но и `scModal__close` + `data-font-floor-ignore="true"` на `.modalClose`, чтобы крестик дерева улучшений был визуально и по hit-area идентичен supercomputer modal: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L193-L203), [style.css](../../style.css#L1828-L1920).
 - Pending upgrade state (`pendingUpgradesByLevel`, `pendingDronUpgradesByLevel`, `pendingFenceUpgradesByLevel`) живёт только пока открыт контроллер: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L124-L167), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1327-L1408).
 - Размер root tiles и icon scale приходят из `LayoutTuning` в CSS variables: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L175-L191), [style.css](../../style.css#L1528-L1574).
@@ -24,6 +28,7 @@
 | Функция / блок | Строки | Назначение |
 |---|---|---|
 | `setOverlayOpen()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L6-L16) | Унифицированное open/close поведение overlay |
+| `ensureSharedHelpModal()`, `showSharedHelpModal()`, `syncSharedHelpButtonCopy()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L9-L68) | Общий SC-style help dialog и tooltip/a11y copy для talents / tank-wall / underground hangar |
 | `createController()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L18-L168) | Сборка зависимостей, DOM refs, локального state |
 | `setBodyScrollLock()`, `applyLayoutTuningVars()`, `applySharedTalentModalClass()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L169-L203) | Body-lock, CSS vars, shared modal class и talent close-skin |
 

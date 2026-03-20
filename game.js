@@ -1066,6 +1066,26 @@ function bulkBuyLabel(count){
   return t('buyBulkBuy', { count: safeCount, tankWord: word });
 }
 
+function getUndergroundHangarBulkBuyButtonModel(){
+  const plan = getBulkBuyPlanByMode(buyBulkMode());
+  if (!plan || !plan.visible) {
+    return {
+      visible: false,
+      enabled: false,
+      count: 0,
+      label: '',
+    };
+  }
+
+  const count = Math.max(0, Math.floor(Number(plan.count) || 0));
+  return {
+    visible: true,
+    enabled: !!plan.enabled,
+    count: count,
+    label: bulkBuyLabel(count),
+  };
+}
+
 function setLanguage(lang){
   const i18n = getI18n();
   if (i18n && typeof i18n.setLanguage === 'function') {
@@ -3915,12 +3935,13 @@ function getUndergroundHangarAutoMergeButtonModel(){
 
   const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
   const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
-  const enabled = !isAutoMergeBusy && pairs.length >= 1;
+  const pairCount = pairs.length;
+  const enabled = pairCount >= 1;
   let label = '';
   if (tier === 'merge2') {
     label = t('autoMerge2');
   } else if (tier === 'mergeX') {
-    const dynamicCount = Math.max(2, Math.min(10, pairs.length * 2));
+    const dynamicCount = Math.max(2, Math.min(10, pairCount * 2));
     label = t('autoMergeDynamicShort', { count: dynamicCount });
   } else {
     label = t('autoMergeAll');
@@ -3930,6 +3951,7 @@ function getUndergroundHangarAutoMergeButtonModel(){
     visible: true,
     enabled: enabled,
     label: label,
+    pairCount: pairCount,
     cooldownMs: AUTO_MERGE_COOLDOWN_MS,
   };
 }
@@ -3947,7 +3969,7 @@ function mergeUndergroundHangarAutoPair(left, right){
 
 function runUndergroundHangarAutoMergeClick(){
   const model = getUndergroundHangarAutoMergeButtonModel();
-  if (!model || !model.visible || !model.enabled || isAutoMergeBusy) return;
+  if (!model || !model.visible || !model.enabled) return;
 
   const tier = getUndergroundHangarAutoMergeTier();
   const maxPairs = getUndergroundHangarAutoMergeMaxPairs(tier);
@@ -3956,30 +3978,13 @@ function runUndergroundHangarAutoMergeClick(){
   const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
   if (!pairs.length) return;
 
-  isAutoMergeBusy = true;
-  updateUI();
-
-  try {
-    for (let i = 0; i < pairs.length; i++) {
-      const pair = pairs[i];
-      if (!pair || !pair[0] || !pair[1]) continue;
-      mergeUndergroundHangarAutoPair(pair[0], pair[1]);
-    }
-  } finally {
-    if (autoMergeBusyTimeout != null) {
-      window.clearTimeout(autoMergeBusyTimeout);
-      autoMergeBusyTimeout = null;
-    }
-    const cooldown = Number.isFinite(model.cooldownMs)
-      ? Math.max(200, Math.min(400, Math.floor(model.cooldownMs)))
-      : AUTO_MERGE_COOLDOWN_MS;
-    autoMergeBusyTimeout = window.setTimeout(() => {
-      isAutoMergeBusy = false;
-      autoMergeBusyTimeout = null;
-      updateUI();
-    }, cooldown);
-    updateUI();
+  for (let i = 0; i < pairs.length; i++) {
+    const pair = pairs[i];
+    if (!pair || !pair[0] || !pair[1]) continue;
+    mergeUndergroundHangarAutoPair(pair[0], pair[1]);
   }
+
+  updateUI();
 }
 
 if (AutoMergeApi && typeof AutoMergeApi.setMergePairExecutor === 'function') {
@@ -12802,6 +12807,9 @@ initBigMainMenu();
       getBulkBuyPlan: function () {
         return getBulkBuyPlanByMode(buyBulkMode());
       },
+      getBulkBuyButtonModel: function () {
+        return getUndergroundHangarBulkBuyButtonModel();
+      },
       getAutoMergeButtonModel: function () {
         return getUndergroundHangarAutoMergeButtonModel();
       },
@@ -12809,10 +12817,6 @@ initBigMainMenu();
       onBuyBulk: function () { if (typeof tryBuyBulk === 'function') tryBuyBulk(); },
       onAutoMerge: function () {
         if (typeof runUndergroundHangarAutoMergeClick === 'function') runUndergroundHangarAutoMergeClick();
-      },
-      onDismantle: function () {
-        state.isDismantleMode = !state.isDismantleMode;
-        updateDismantleButton();
       },
       onMerge: function (srcType, srcIdx, tgtType, tgtIdx) {
         const srcUndergroundCell = srcType === 'underground' ? _getUndergroundCell(srcIdx) : null;
