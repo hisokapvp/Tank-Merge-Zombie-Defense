@@ -9,11 +9,15 @@
   - `talentBranchTitle`
   - счетчиком потраченных очков ветки (`getBranchSpent(branchId)`)
   - контейнером дерева (`.talentTreeGrid`) и SVG-слоем связей (`.talentTreeSvg`).
+- Контейнер дерева держит icon-shell через `--talent-node-icon-size: 40px`, а вертикальный шаг рядов намеренно ужат до `--talent-row-gap: clamp(14px, 2.8vh, 18px)`: [style.css](../style.css#L2076-L2084), [style.css](../style.css#L2181-L2191).
 - Геометрия узлов берётся из `Game.TalentsV2.getTalentsByBranch(branchId)` → `node.layout` (`row`, `slot`, `parents`); при отсутствии layout используется fallback на legacy-layout `3-3-3-3-2-2-1`.
+- Якорь каждой SVG-связи считается от центра `.talentNodeIcon` к центру `.talentNodeIcon`, а не от внешнего button-shell: [src/ui/talentOverlayRenderer.js](../src/ui/talentOverlayRenderer.js#L9-L21), [style.css](../style.css#L2227-L2241).
 - SVG-связи обновляются при `updateTalentUI` и на `window.resize`.
-- Базовые SVG-связи (`.talentEdge`) должны быть видимы сразу после `New game` (до первой покупки).
+- Базовые SVG-связи (`.talentEdge`) должны быть видимы сразу после `New game` (до первой покупки) и оставаться явно серыми по умолчанию: [style.css](../style.css#L2076-L2108).
+- Зелёный glow/pulse разрешён только для outgoing edges от талантов с ненулевым applied rank: `drawBranchEdges()` помечает такие связи как `ready` или `active`, а `base` остаётся серой без ауры. Для `active` больше не используется travelling dash/particle flow; анимация сведена к pulse + jitter как эффекту тока/энергии: [src/ui/talentOverlayRenderer.js](../src/ui/talentOverlayRenderer.js#L91-L151), [style.css](../style.css#L2134-L2168).
 - При `openTalents`/`closeTalents` и изменении видимого layout (включая сценарии `New`/`Load`) кэш геометрии связей должен инвалидироваться с пересчётом, чтобы линии не исчезали.
 - Orchestration слоя redraw/update для overlay вынесена в `src/ui/talentOverlayUi.js`: модуль отвечает за summary, branch counters, node redraw, edge redraw и active slots, а `game.js` оставляет bootstrap/fallback helpers (`renderTalentNodesV2`, `drawTalentEdgesV2`, wiring к API).
+- Состояние `applied` остаётся только зелёным, а `maxed` добавляет отдельный orange overlay именно на внутренний icon-shell через `.talentNode.maxed .talentNodeIcon::after`: [style.css](../style.css#L2275-L2307), [style.css](../style.css#L2325-L2350).
 
 ## 1) UI reasons (disabled buy)
 

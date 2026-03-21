@@ -447,6 +447,11 @@
 
     let html = '';
 
+    const transferModel = _callbacks && typeof _callbacks.getTransferAllButtonModel === 'function'
+      ? _callbacks.getTransferAllButtonModel()
+      : { visible: true, enabled: false, movableCount: 0 };
+    const transferLabel = t('ughTransferToUpper', 'Перенести наверх');
+
     html += '<div class="ughLayout">';
     html += '<div class="ughContent">';
 
@@ -471,6 +476,18 @@
     html += '</div>'; // close ughMainCluster
     html += '</div>'; // close ughSection (main hangar)
 
+    if (!transferModel || transferModel.visible !== false) {
+      html += '<div class="ughTransferLane">';
+      html += '<button class="btn scButton ughActions__transferBtn" data-ugh-action="transferAll" type="button"'
+        + (transferModel && transferModel.enabled ? '' : ' disabled')
+        + ' aria-label="' + _escHtml(transferLabel) + '"'
+        + ' title="' + _escHtml(transferLabel) + '"'
+        + ' data-ui-tooltip="' + _escHtml(transferLabel) + '">'
+        + '<span class="ughActions__transferIcon" aria-hidden="true">&#8593;</span>'
+        + '</button>';
+      html += '</div>';
+    }
+
     // ── Section: Underground Hangar (подземный уровень) ──
     html += '<div class="ughSection">';
     html += '<div class="ughSection__title">' + _escHtml(t('ughUndergroundTitle', 'Подземный ангар')) + '</div>';
@@ -489,19 +506,6 @@
     // ── Sidebar with actions ──
     html += '<div class="ughSidebar">';
     html += '<div class="ughActions">';
-
-    const transferModel = _callbacks && typeof _callbacks.getTransferAllButtonModel === 'function'
-      ? _callbacks.getTransferAllButtonModel()
-      : { visible: true, enabled: false, movableCount: 0 };
-    const transferLabel = t('ughTransferToUpper', 'Перенести наверх');
-    if (!transferModel || transferModel.visible !== false) {
-      html += '<button class="btn scButton ughActions__transferBtn" data-ugh-action="transferAll" type="button"'
-        + (transferModel && transferModel.enabled ? '' : ' disabled')
-        + ' aria-label="' + _escHtml(transferLabel) + '">'
-        + '<span class="ughActions__transferIcon" aria-hidden="true">&#8593;</span>'
-        + '<span class="ughActions__transferLabel">' + _escHtml(transferLabel) + '</span>'
-        + '</button>';
-    }
 
     // Buy tank button
     const buyLevel = _callbacks && typeof _callbacks.getBuyLevel === 'function' ? _callbacks.getBuyLevel() : 1;

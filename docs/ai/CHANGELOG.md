@@ -1,5 +1,17 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-21
+- **Документация: post-merge update для talents overlay (`src/ui/talentOverlayRenderer.js`, `style.css`)**
+  - Обновлены `docs/ui_talents_v2.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: базовые связи дерева теперь явно серые и заметны до покупки; зелёный glow/pulse остаётся только на outgoing edges от прокачанных талантов; anchor линий считается от центра `.talentNodeIcon` к центру `.talentNodeIcon`.
+  - Зафиксированы: `active` edge больше не использует travelling dash/particle flow и вместо этого анимируется через pulse + jitter как энергия/ток; вертикальные отступы рядов внутри колонок уменьшены; `maxed`-талант получает orange overlay именно на icon-shell, а partial applied state остаётся только зелёным.
+
+## 2026-03-20
+- **Документация: update после правок underground hangar transfer CTA и talent overlay visuals (`src/ui/undergroundHangarUI.js`, `style.css`)**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: `transferAll` больше не сидит в правой колонке underground hangar и рендерится как отдельная centered lane между верхним и подземным блоками; CTA осталась icon-only `44×44`, сохраняет `aria-label/title/data-ui-tooltip` и зелёную стрелку `#4af626`.
+  - Зафиксированы: talent overlay держит icon-shell `40×40`, applied-node получает явный внешний border и matching inner highlight `#4af626`, а tree edges используют более тонкий bright-green pulse/dash контракт без добавления лишнего scrollbar.
+
 ## 2026-03-12
 - **Tutorial runtime: modal-pause, data-driven step config, selective lock overlay (`src/config/tutorialSteps.js`, `src/ui/tutorialRuntime.js`, `src/persistence/initialState.js`, `index.html`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
   - Первый урок обучения переведён на data-driven config `src/config/tutorialSteps.js`: состояние tutorial теперь использует schema `version: 2`, отдельный `bubbleOpen` per-step и готово к добавлению следующих шагов через конфиг.

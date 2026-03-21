@@ -6,6 +6,21 @@
     return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00';
   }
 
+  function getNodeAnchorPoint(button, gridRect) {
+    if (!button || !gridRect || typeof button.getBoundingClientRect !== 'function') return null;
+    var anchor = typeof button.querySelector === 'function'
+      ? button.querySelector('.talentNodeIcon')
+      : null;
+    var rect = anchor && typeof anchor.getBoundingClientRect === 'function'
+      ? anchor.getBoundingClientRect()
+      : button.getBoundingClientRect();
+    if (!rect) return null;
+    return {
+      x: rect.left + rect.width / 2 - gridRect.left,
+      y: rect.top + rect.height / 2 - gridRect.top,
+    };
+  }
+
   function buildEdgePath(fromX, fromY, toX, toY, options) {
     var opts = options || {};
     var deltaX = toX - fromX;
@@ -78,6 +93,14 @@
       ? opts.getNodeLayout
       : function (index) { return { row: 0, slot: index, parents: [] }; };
 
+    var nodeButtons = [];
+    var nodeAnchors = [];
+    for (var buttonIndex = 0; buttonIndex < nodes.length; buttonIndex++) {
+      var button = grid.querySelector('[data-branch-id="' + branchId + '"][data-talent-local="' + buttonIndex + '"]');
+      nodeButtons[buttonIndex] = button || null;
+      nodeAnchors[buttonIndex] = getNodeAnchorPoint(button, gridRect);
+    }
+
     for (var localIdx = 0; localIdx < nodes.length; localIdx++) {
       var node = nodes[localIdx];
       if (!node || !node.id) continue;
@@ -85,12 +108,11 @@
       var parents = Array.isArray(layout.parents) ? layout.parents : [];
       if (!parents.length) continue;
 
-      var toBtn = grid.querySelector('[data-branch-id="' + branchId + '"][data-talent-local="' + localIdx + '"]');
-      if (!toBtn || typeof toBtn.getBoundingClientRect !== 'function') continue;
+      var toAnchor = nodeAnchors[localIdx];
+      if (!toAnchor) continue;
 
-      var toRect = toBtn.getBoundingClientRect();
-      var toX = toRect.left + toRect.width / 2 - gridRect.left;
-      var toY = toRect.top - gridRect.top;
+      var toX = toAnchor.x;
+      var toY = toAnchor.y;
       var childActive = Math.max(0, Math.floor(ranks[node.id] || 0)) > 0;
 
       for (var parentIndex = 0; parentIndex < parents.length; parentIndex++) {
@@ -98,24 +120,25 @@
         var parentNode = nodes[parentLocalIdx];
         if (!parentNode) continue;
 
-        var fromBtn = grid.querySelector('[data-branch-id="' + branchId + '"][data-talent-local="' + parentLocalIdx + '"]');
-        if (!fromBtn || typeof fromBtn.getBoundingClientRect !== 'function') continue;
+        var fromAnchor = nodeAnchors[parentLocalIdx];
+        if (!fromAnchor) continue;
 
-        var fromRect = fromBtn.getBoundingClientRect();
-        var fromX = fromRect.left + fromRect.width / 2 - gridRect.left;
-        var fromY = fromRect.bottom - gridRect.top;
+        var fromX = fromAnchor.x;
+        var fromY = fromAnchor.y;
         var parentActive = Math.max(0, Math.floor(ranks[parentNode.id] || 0)) > 0;
         var relationState = parentActive && childActive ? 'active' : (parentActive ? 'ready' : 'base');
         var emphasis = relationState === 'active' ? 1.46 : (relationState === 'ready' ? 1.2 : 1.02);
         var waveBoost = relationState === 'active' ? 10 : (relationState === 'ready' ? 6 : 0);
         var pathData = buildEdgePath(fromX, fromY, toX, toY, { emphasis: emphasis, waveBoost: waveBoost });
 
-        var aura = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
-        aura.setAttribute('d', pathData);
-        aura.classList.add('talentEdgeAura');
-        if (relationState === 'active') aura.classList.add('talentEdgeAuraActive');
-        else if (relationState === 'ready') aura.classList.add('talentEdgeAuraReady');
-        svg.appendChild(aura);
+        if (relationState !== 'base') {
+          var aura = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
+          aura.setAttribute('d', pathData);
+          aura.classList.add('talentEdgeAura');
+          if (relationState === 'active') aura.classList.add('talentEdgeAuraActive');
+          else if (relationState === 'ready') aura.classList.add('talentEdgeAuraReady');
+          svg.appendChild(aura);
+        }
 
         var path = documentObj.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathData);
