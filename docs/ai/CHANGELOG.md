@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-22
+- **Документация: shared post-merge update для escape/menu priority, talents overlay и production storage UI (`game.js`, `index.html`, `src/ui/supercomputerMenu.js`, `src/ui/productionLineUI.js`, `src/ui/talentOverlayRenderer.js`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+  - Зафиксированы: глобальный Escape-routing теперь уважает higher-priority menu locks и не togglит small menu поверх `supercomputer/achievements/productionStorage/undergroundHangar/critical/bigMenu`; underground hangar остаётся первым close-target по Escape.
+  - Зафиксированы: talents overlay использует straight center-to-center SVG edges, locked nodes читаются через neutral overlay вместо общего dimming, а applied/maxed contract остаётся зелёный shell + orange icon-overlay только для `maxed`.
+  - Зафиксированы: production storage header теперь включает left help CTA, help modal переиспользует общий SC accordion shell, drag работает через body-level preview `.plStorage__dragPreview`, empty cells остаются без placeholder glyph, filled cells держат plain-text level badge, а `index.html` использует единый cache-bust `?v=20260322-ui-postmerge` для синхронизированных static assets.
+
 - **Документация: update после post-merge правки reset talents modal fallback-shell (`index.html`)**
   - Обновлён `docs/ai/SYSTEMS/ui.md`.
   - Зафиксированы: fallback DOM `#resetTalentsModal` теперь обязан совпадать с paid confirm contract (`500$`, primary CTA `Да`), canonical upgrade-path живёт в `src/ui/modals.js` и инжектит/синхронизирует `Да/Нет/X`, а `index.html` держит cache-busting query `?v=20260322-reset-talents-modal`, чтобы браузер не оставался на устаревшем runtime.

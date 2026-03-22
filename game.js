@@ -7991,6 +7991,21 @@ function isBigMenuOpen(){
   return !!ensureBigMenuRuntimeController()?.isBigMenuOpen();
 }
 
+function hasHigherPriorityEscapeLock(){
+  return !!(menuPauseLocks.supercomputer
+    || menuPauseLocks.achievements
+    || menuPauseLocks.productionStorage
+    || menuPauseLocks.undergroundHangar
+    || menuPauseLocks.critical
+    || menuPauseLocks.bigMenu);
+}
+
+function isSmallMenuOverlayOpen(){
+  if (!ui.menuOverlay || !ui.menuOverlay.classList) return !!menuPauseLocks.settings;
+  return !ui.menuOverlay.classList.contains('hidden')
+    && ui.menuOverlay.getAttribute('aria-hidden') !== 'true';
+}
+
 function setSessionStartGate(nextValue){
   sessionStartGate = nextValue === 'unlocked' ? 'unlocked' : 'locked';
   updateMenuState();
@@ -10291,17 +10306,25 @@ if (DebugPanelEnabled) {
 
 window.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
+  if (e.defaultPrevented) return;
+  const escapedFromSmallMenu = !!(ui.menuOverlay
+    && e.target
+    && typeof ui.menuOverlay.contains === 'function'
+    && ui.menuOverlay.contains(e.target));
   // Close underground hangar modal on Escape
   const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
   if (_UGHUI && typeof _UGHUI.isOpen === 'function' && _UGHUI.isOpen()) {
     if (typeof _UGHUI.close === 'function') _UGHUI.close();
     return;
   }
-  if (menuPauseLocks.settings) {
-    setMenuOpen(false);
-  } else if (!menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
-    setMenuOpen(true);
+  const higherPriorityLockOpen = hasHigherPriorityEscapeLock();
+  if (menuPauseLocks.settings || isSmallMenuOverlayOpen()) {
+    if (!higherPriorityLockOpen) setMenuOpen(false);
+    return;
   }
+  if (escapedFromSmallMenu) return;
+  if (higherPriorityLockOpen) return;
+  setMenuOpen(true);
 });
 
 

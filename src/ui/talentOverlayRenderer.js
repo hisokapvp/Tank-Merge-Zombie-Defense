@@ -35,27 +35,11 @@
   }
 
   function buildEdgePath(fromX, fromY, toX, toY, options) {
-    var opts = options || {};
-    var deltaX = toX - fromX;
-    var gapY = Math.max(0, toY - fromY);
-    var emphasis = Number.isFinite(opts.emphasis) ? Math.max(0.9, opts.emphasis) : 1;
-    var waveBoost = Number.isFinite(opts.waveBoost) ? Math.max(0, opts.waveBoost) : 0;
-    var direction = deltaX === 0 ? 1 : (deltaX > 0 ? 1 : -1);
-    var bend = Math.max(18, Math.min(62, (Math.abs(deltaX) * 0.4 + gapY * 0.19) * emphasis + 8 + waveBoost));
-    var control1X = fromX + direction * Math.max(6, bend * 0.22);
-    var control1Y = fromY + Math.max(14, Math.min(42, gapY * (0.34 + emphasis * 0.06) + 10 + waveBoost * 0.22));
-    var control2X = toX - direction * Math.max(10, bend * 0.96);
-    var control2Y = toY - Math.max(14, Math.min(38, gapY * (0.27 + emphasis * 0.05) + 8 + waveBoost * 0.16));
-
-    if (Math.abs(deltaX) < 8) {
-      control1X = fromX + direction * Math.max(4, bend * 0.16);
-      control2X = toX - direction * Math.max(4, bend * 0.16);
-    }
-
-    return 'M ' + fromX + ' ' + fromY
-      + ' C ' + control1X + ' ' + control1Y
-      + ', ' + control2X + ' ' + control2Y
-      + ', ' + toX + ' ' + toY;
+    var startX = Number.isFinite(fromX) ? fromX : 0;
+    var startY = Number.isFinite(fromY) ? fromY : 0;
+    var endX = Number.isFinite(toX) ? toX : 0;
+    var endY = Number.isFinite(toY) ? toY : 0;
+    return 'M ' + startX + ' ' + startY + ' L ' + endX + ' ' + endY;
   }
 
   function applyEdgeMotion(path, branchId, parentLocalIdx, childLocalIdx, fromX, toX, motionScale) {

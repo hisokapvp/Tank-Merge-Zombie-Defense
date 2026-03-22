@@ -8,6 +8,116 @@
     return typeof fallback === 'string' ? fallback : '';
   }
 
+  function getHelpLines(text) {
+    if (typeof text !== 'string' || !text) return [];
+    return text
+      .split(/\r?\n/)
+      .map(function (line) { return line.trim(); })
+      .filter(function (line) { return !!line; });
+  }
+
+  function appendHelpParagraphs(container, text) {
+    if (!container || typeof text !== 'string' || !text) return;
+    text
+      .split(/\n{2,}/)
+      .map(function (part) { return part.trim(); })
+      .filter(function (part) { return !!part; })
+      .forEach(function (part) {
+        var paragraph = container.ownerDocument.createElement('p');
+        paragraph.className = 'techModal__paragraph';
+        paragraph.textContent = part;
+        container.appendChild(paragraph);
+      });
+  }
+
+  function appendHelpSectionContent(container, text) {
+    if (!container) return;
+    var lines = getHelpLines(text);
+    if (!lines.length) return;
+    if (lines.length === 1) {
+      appendHelpParagraphs(container, lines[0]);
+      return;
+    }
+    var list = container.ownerDocument.createElement('ul');
+    list.className = 'techModal__list techModal__list--help';
+    lines.forEach(function (line) {
+      var item = container.ownerDocument.createElement('li');
+      item.className = 'techModal__listItem techModal__listItem--help';
+      item.textContent = line;
+      list.appendChild(item);
+    });
+    container.appendChild(list);
+  }
+
+  function toggleSharedHelpSection(button) {
+    if (!button || !button.ownerDocument) return;
+    var expanded = button.getAttribute('aria-expanded') === 'true';
+    var panelId = button.getAttribute('aria-controls');
+    var panel = panelId ? button.ownerDocument.getElementById(panelId) : null;
+    var nextExpanded = !expanded;
+    button.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+    button.classList.toggle('is-expanded', nextExpanded);
+    if (panel) {
+      panel.hidden = !nextExpanded;
+      panel.setAttribute('aria-hidden', nextExpanded ? 'false' : 'true');
+    }
+    var marker = button.querySelector('.techModal__accordionMarker');
+    if (marker) marker.textContent = nextExpanded ? '−' : '+';
+  }
+
+  function populateSharedHelpContent(container, cfg, translate) {
+    if (!container) return;
+    var introText = translate(cfg.introKey || cfg.textKey, '');
+    appendHelpParagraphs(container, introText);
+
+    var sections = Array.isArray(cfg.sections) ? cfg.sections : [];
+    if (!sections.length) return;
+
+    var accordion = container.ownerDocument.createElement('div');
+    accordion.className = 'techModal__accordion';
+    sections.forEach(function (section, index) {
+      var sectionTitle = translate(section.titleKey, section.title || '');
+      var sectionText = translate(section.textKey, section.text || '');
+      if (!sectionTitle && !sectionText) return;
+
+      var sectionEl = container.ownerDocument.createElement('section');
+      sectionEl.className = 'techModal__accordionSection';
+
+      var button = container.ownerDocument.createElement('button');
+      var panelId = 'supercomputerHelpSection' + index;
+      button.type = 'button';
+      button.className = 'techModal__accordionToggle uiButtonBehavior';
+      button.setAttribute('data-sc-help-toggle', 'true');
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-controls', panelId);
+
+      var titleSpan = container.ownerDocument.createElement('span');
+      titleSpan.className = 'techModal__accordionTitle';
+      titleSpan.textContent = sectionTitle;
+
+      var markerSpan = container.ownerDocument.createElement('span');
+      markerSpan.className = 'techModal__accordionMarker';
+      markerSpan.setAttribute('aria-hidden', 'true');
+      markerSpan.textContent = '+';
+
+      button.appendChild(titleSpan);
+      button.appendChild(markerSpan);
+
+      var panel = container.ownerDocument.createElement('div');
+      panel.id = panelId;
+      panel.className = 'techModal__accordionPanel';
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+      appendHelpSectionContent(panel, sectionText);
+
+      sectionEl.appendChild(button);
+      sectionEl.appendChild(panel);
+      accordion.appendChild(sectionEl);
+    });
+
+    if (accordion.childElementCount) container.appendChild(accordion);
+  }
+
   function ensureSharedHelpModal(documentObj) {
     if (!documentObj || !documentObj.body) return null;
     if (sharedHelpModalEl && sharedHelpModalEl.ownerDocument === documentObj && sharedHelpModalEl.isConnected) {
@@ -18,6 +128,11 @@
     sharedHelpModalEl.style.display = 'none';
     sharedHelpModalEl.setAttribute('aria-hidden', 'true');
     sharedHelpModalEl.addEventListener('click', function (evt) {
+      var toggleTarget = evt && evt.target && evt.target.closest ? evt.target.closest('[data-sc-help-toggle]') : null;
+      if (toggleTarget) {
+        toggleSharedHelpSection(toggleTarget);
+        return;
+      }
       var closeTarget = evt && evt.target && evt.target.closest ? evt.target.closest('[data-sc-help-close]') : null;
       if (closeTarget || evt.target === sharedHelpModalEl) hideSharedHelpModal();
     });
@@ -51,7 +166,6 @@
     var closeLabel = translate('techUnlockHelpClose', 'Close');
     var title = translate(cfg.titleKey || 'techUnlockHelpTitle', 'Help');
     var sectionTitle = translate(cfg.sectionTitleKey || cfg.titleKey || 'techUnlockHelpTitle', title);
-    var text = translate(cfg.textKey, '');
     modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="supercomputerHelpTitle">'
       + '<button class="modalClose scModal__close techModal__close uiButtonBehavior" data-sc-help-close="true" type="button" aria-label="' + closeLabel + '"></button>'
       + '<div class="techModal__title techModal__title--help" id="supercomputerHelpTitle">' + title + '</div>'
@@ -60,7 +174,7 @@
       + '<div class="techModal__btns"><button class="btn scButton uiButtonBehavior techModal__noBtn" data-sc-help-close="true" type="button">' + closeLabel + '</button></div>'
       + '</div>';
     var textEl = modal.querySelector('.techModal__text--help');
-    if (textEl) textEl.textContent = text;
+    if (textEl) populateSharedHelpContent(textEl, cfg, translate);
     modal.style.display = 'flex';
     modal.setAttribute('aria-hidden', 'false');
     if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {

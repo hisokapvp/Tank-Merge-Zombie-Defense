@@ -14,6 +14,7 @@
   let _toastFn     = null;  // optional toast callback
   let _stateRef    = null;
   let _dragState   = null;
+  let _dragPreviewEl = null;
   let _suppressClicksUntil = 0;
   const DRAG_THRESHOLD_PX = 6;
 
@@ -31,15 +32,16 @@
     _gridEl    = document.getElementById('plStorageGrid');
     _confirmEl = document.getElementById('plConfirmOverlay');
 
-    // Close button
     const closeBtn = document.getElementById('plStorageClose');
     if (closeBtn) closeBtn.addEventListener('click', close);
 
-    // Backdrop close
+    const helpBtn = document.getElementById('plStorageHelp');
+    if (helpBtn) helpBtn.addEventListener('click', _openHelpModal);
+    _syncHelpButtonCopy();
+
     const backdrop = _modalEl && _modalEl.querySelector('.plStorage__backdrop');
     if (backdrop) backdrop.addEventListener('click', close);
 
-    // Confirm buttons
     const yesBtn = document.getElementById('plConfirmYes');
     const noBtn  = document.getElementById('plConfirmNo');
     if (yesBtn) yesBtn.addEventListener('click', _confirmOpen);
@@ -79,6 +81,41 @@
 
   function isOpen() { return _isOpen; }
 
+  function _translate(key, fallback) {
+    const value = _t(key);
+    if (typeof value === 'string' && value && value !== key) return value;
+    return typeof fallback === 'string' ? fallback : (typeof value === 'string' ? value : '');
+  }
+
+  function _getSharedHelpApi() {
+    return global.Game && global.Game.SupercomputerMenu ? global.Game.SupercomputerMenu : null;
+  }
+
+  function _syncHelpButtonCopy() {
+    const helpBtn = document.getElementById('plStorageHelp');
+    if (!helpBtn) return;
+    const label = _translate('plStorageHelpButton', _translate('techUnlockHelpTitle', 'Help'));
+    helpBtn.setAttribute('aria-label', label);
+    helpBtn.setAttribute('data-ui-tooltip', label);
+    helpBtn.removeAttribute('title');
+  }
+
+  function _openHelpModal() {
+    const sharedHelpApi = _getSharedHelpApi();
+    if (!sharedHelpApi || typeof sharedHelpApi.showSharedHelpModal !== 'function') return;
+    sharedHelpApi.showSharedHelpModal({
+      translate: _translate,
+      sectionTitleKey: 'plStorageTitle',
+      introKey: 'plStorageHelpIntro',
+      sections: [
+        { titleKey: 'plStorageHelpLevel1Title', textKey: 'plStorageHelpLevel1Items' },
+        { titleKey: 'plStorageHelpLevel2Title', textKey: 'plStorageHelpLevel2Items' },
+        { titleKey: 'plStorageHelpLevel3Title', textKey: 'plStorageHelpLevel3Items' },
+        { titleKey: 'plStorageHelpLevel4Title', textKey: 'plStorageHelpLevel4Items' },
+      ],
+    });
+  }
+
   function _getBoxLevel(box) {
     const maxLevel = (global.Game && global.Game.ProductionLine && global.Game.ProductionLine.MAX_BOX_LEVEL) || 4;
     if (!box || !Number.isFinite(box.level)) return 1;
@@ -110,8 +147,38 @@
     }
   }
 
+  function _removeDragPreview() {
+    if (_dragPreviewEl && _dragPreviewEl.parentNode) {
+      _dragPreviewEl.parentNode.removeChild(_dragPreviewEl);
+    }
+    _dragPreviewEl = null;
+  }
+
+  function _ensureDragPreview() {
+    if (_dragPreviewEl || !_dragState || !_dragState.sourceEl || !document.body) return;
+    const previewEl = _dragState.sourceEl.cloneNode(true);
+    previewEl.classList.add('plStorage__dragPreview');
+    previewEl.classList.remove('plStorage__cell--dragging', 'plStorage__cell--mergeTarget');
+    previewEl.classList.remove('uiButtonBehavior', 'is-pressed', 'is-hovered', 'is-focused');
+    previewEl.disabled = true;
+    previewEl.tabIndex = -1;
+    previewEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(previewEl);
+    _dragPreviewEl = previewEl;
+  }
+
+  function _updateDragPreview(clientX, clientY) {
+    if (!_dragState || !_dragState.moved) return;
+    _ensureDragPreview();
+    if (!_dragPreviewEl) return;
+    const previewX = Math.round(clientX + 18);
+    const previewY = Math.round(clientY + 14);
+    _dragPreviewEl.style.setProperty('transform', 'translate3d(' + previewX + 'px, ' + previewY + 'px, 0) scale(1.06)', 'important');
+  }
+
   function _teardownDrag() {
     _clearDragAffordances();
+    _removeDragPreview();
     document.removeEventListener('pointermove', _handlePointerMove);
     document.removeEventListener('pointerup', _handlePointerUp);
     document.removeEventListener('pointercancel', _handlePointerCancel);
@@ -162,6 +229,7 @@
     const dy = evt.clientY - _dragState.startY;
     if (!_dragState.moved && (dx * dx + dy * dy) < (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) return;
     _dragState.moved = true;
+    _updateDragPreview(evt.clientX, evt.clientY);
     _updateDragTarget(evt.clientX, evt.clientY);
   }
 
@@ -170,6 +238,7 @@
     const dragState = _dragState;
     if (dragState.moved) {
       _suppressClicksUntil = Date.now() + 180;
+      _updateDragPreview(evt.clientX, evt.clientY);
       _updateDragTarget(evt.clientX, evt.clientY);
       const api = global.Game && global.Game.ProductionLine;
       if (api && typeof api.mergeBoxes === 'function' && dragState.targetIndex >= 0 && _stateRef) {
@@ -228,7 +297,7 @@
         cell.classList.add('plStorage__cell--empty');
         cell.setAttribute('aria-label', _t('plBoxSlotEmpty'));
         cell.disabled = true;
-        cell.textContent = '—';
+        cell.textContent = '';
       }
       _gridEl.appendChild(cell);
     }
@@ -281,6 +350,7 @@
   // ─── Re-translate (language change) ────────────────────────
   function setTranslator(tFn) {
     if (typeof tFn === 'function') _t = tFn;
+    _syncHelpButtonCopy();
   }
 
   // ─── Public API ────────────────────────────────────────────
