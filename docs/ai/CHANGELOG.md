@@ -1,5 +1,10 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-22
+- **Документация: update после post-merge правки reset talents modal fallback-shell (`index.html`)**
+  - Обновлён `docs/ai/SYSTEMS/ui.md`.
+  - Зафиксированы: fallback DOM `#resetTalentsModal` теперь обязан совпадать с paid confirm contract (`500$`, primary CTA `Да`), canonical upgrade-path живёт в `src/ui/modals.js` и инжектит/синхронизирует `Да/Нет/X`, а `index.html` держит cache-busting query `?v=20260322-reset-talents-modal`, чтобы браузер не оставался на устаревшем runtime.
+
 ## 2026-03-21
 - **Документация: post-merge update для talents overlay (`src/ui/talentOverlayRenderer.js`, `style.css`)**
   - Обновлены `docs/ui_talents_v2.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`.

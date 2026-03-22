@@ -1075,6 +1075,67 @@ function formatUiCurrency(value){
   return formatter(safeValue);
 }
 
+function formatTalentResetCooldown(ms){
+  const totalSec = Math.max(0, Math.ceil((Number(ms) || 0) / 1000));
+  const hours = Math.floor(totalSec / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function getTalentResetState(){
+  const api = getTalentsV2Api();
+  const fallback = {
+    price: 0,
+    cooldownEndsAtMs: 0,
+    cooldownRemainingMs: 0,
+    cooldownActive: false,
+    hasApplied: false,
+    canAfford: false,
+  };
+  if (!api || typeof api.getRespecState !== 'function') return fallback;
+  const result = api.getRespecState({ nowMs: Date.now() }) || fallback;
+  const price = Number.isFinite(result.price) ? Math.max(0, result.price) : 0;
+  const cooldownRemainingMs = Number.isFinite(result.cooldownRemainingMs) ? Math.max(0, result.cooldownRemainingMs) : 0;
+  return {
+    price,
+    cooldownEndsAtMs: Number.isFinite(result.cooldownEndsAtMs) ? Math.max(0, result.cooldownEndsAtMs) : 0,
+    cooldownRemainingMs,
+    cooldownActive: cooldownRemainingMs > 0,
+    hasApplied: !!result.hasApplied,
+    canAfford: state.coins >= price,
+  };
+}
+
+function buildTalentResetButtonModel(){
+  const resetState = getTalentResetState();
+  if (resetState.cooldownActive) {
+    return {
+      text: t('talentResetCooldownLabel', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }),
+      disabled: true,
+      tooltip: t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }),
+    };
+  }
+  return {
+    text: t('talentResetAll'),
+    disabled: !resetState.hasApplied,
+    tooltip: '',
+  };
+}
+
+function buildTalentRuntimeEffectsContext(){
+  const tanks = [];
+  for (let i = 0; i < state.cells.length; i++) {
+    const tank = state.cells[i] && state.cells[i].tank;
+    if (tank) tanks.push(tank);
+  }
+  return {
+    tanks,
+    zombies: Array.isArray(state.zombies) ? state.zombies : [],
+    fenceSegments: Array.isArray(state.fenceSegments) ? state.fenceSegments : [],
+  };
+}
+
 function bulkBuyLabel(count, totalCost){
   const safeCount = Math.max(0, Math.floor(Number(count) || 0));
   const word = t(getTankWordKey(safeCount));
@@ -1817,10 +1878,11 @@ function applyTranslations(){
     const title = overlay.querySelector('.modalTitle');
     if (title) title.textContent = t('talentTreeTitle');
     const resetBtn = overlay.querySelector('#talentResetAll');
-    if (resetBtn) resetBtn.textContent = t('talentResetAll');
+    if (resetBtn) resetBtn.textContent = buildTalentResetButtonModel().text;
     const applyBtn = overlay.querySelector('#talentApply');
     if (applyBtn) applyBtn.textContent = t('talentApply');
   }
+  refreshResetTalentsModalState();
   if (ui.langRu && ui.langEn){
     const lang = getCurrentLang();
     ui.langRu.classList.toggle('active', lang === 'ru');
@@ -4532,12 +4594,70 @@ function resetAllTalents(){
   if (!isTalentsV2Ready()) return;
   const api = getTalentsV2Api();
   if (!api) return;
-  if (typeof api.resetPending === 'function') api.resetPending();
-  if (typeof api.respec === 'function') api.respec();
-  clearTalentRuntimeEffectsV2();
+  const runtimeContext = buildTalentRuntimeEffectsContext();
+  const result = typeof api.tryRespec === 'function'
+    ? api.tryRespec({
+        coins: state.coins,
+        spendCoins: (price) => {
+          if (state.coins < price) return false;
+          state.coins -= price;
+          return true;
+        },
+        nowMs: Date.now(),
+        tanks: runtimeContext.tanks,
+        zombies: runtimeContext.zombies,
+        fenceSegments: runtimeContext.fenceSegments,
+      })
+    : (typeof api.respec === 'function' ? api.respec(runtimeContext) : { ok: false, reason: 'unknown' });
+  if (!result || !result.ok) {
+    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      if (result && result.reason === 'cooldown') {
+        window.Game.Toast.show(t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(result.cooldownRemainingMs) }), 1800);
+      } else if (result && result.reason === 'no_coins') {
+        window.Game.Toast.show(t('talentResetNoCoins'), 1800);
+      }
+    }
+    updateTalentUI();
+    updateUI();
+    return;
+  }
   syncPlayerTalentsV2FromApi();
-  saveProgress();
   updateTalentUI();
+  updateUI();
+}
+
+function requestResetAllTalents(){
+  if (!isTalentsV2Ready()) return;
+  const resetState = getTalentResetState();
+  if (!resetState.hasApplied) return;
+  if (resetState.cooldownActive) {
+    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      window.Game.Toast.show(t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }), 1800);
+    }
+    return;
+  }
+  openResetTalentsModal();
+}
+
+function refreshResetTalentsModalState(){
+  const modal = document.getElementById('resetTalentsModal');
+  if (!modal || modal.classList.contains('hidden') || !isTalentsV2Ready()) return;
+  const resetState = getTalentResetState();
+  const textEl = document.getElementById('resetTalentsModalText');
+  const confirmBtn = document.getElementById('resetTalentsModalWatch');
+  const cancelBtn = document.getElementById('resetTalentsModalCancel');
+  if (textEl) textEl.textContent = t('talentResetModalText', { cost: formatUiCurrency(resetState.price) });
+  if (confirmBtn) {
+    confirmBtn.textContent = t('talentResetModalWatchBtn');
+    confirmBtn.disabled = !resetState.canAfford;
+    confirmBtn.removeAttribute('title');
+    if (!resetState.canAfford) {
+      confirmBtn.setAttribute('data-ui-tooltip', t('talentResetNoCoins'));
+    } else {
+      confirmBtn.removeAttribute('data-ui-tooltip');
+    }
+  }
+  if (cancelBtn) cancelBtn.textContent = t('dismantleNo');
 }
 
 function applyTalentSelections(){
@@ -4755,6 +4875,12 @@ async function initTalentsV2Runtime(){
       const nextTalents = nextPayload && nextPayload.talentsV2 && typeof nextPayload.talentsV2 === 'object'
         ? nextPayload.talentsV2
         : { ranksById: {}, freePoints: 0 };
+      const nextRespec = nextTalents.respec && typeof nextTalents.respec === 'object'
+        ? {
+            resetCount: Number.isFinite(nextTalents.respec.resetCount) ? Math.max(0, Math.floor(nextTalents.respec.resetCount)) : 0,
+            cooldownEndsAtMs: Number.isFinite(nextTalents.respec.cooldownEndsAtMs) ? Math.max(0, nextTalents.respec.cooldownEndsAtMs) : 0,
+          }
+        : { resetCount: 0, cooldownEndsAtMs: 0 };
       state.player.talentsVersion = Number.isFinite(nextPayload && nextPayload.talentsVersion)
         ? Math.max(2, Math.floor(nextPayload.talentsVersion))
         : 2;
@@ -4765,6 +4891,7 @@ async function initTalentsV2Runtime(){
         freePoints: Number.isFinite(nextTalents.freePoints)
           ? Math.max(0, Math.floor(nextTalents.freePoints))
           : 0,
+        respec: nextRespec,
       };
       state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
       state.player.modsDirty = true;
@@ -4785,6 +4912,7 @@ async function initTalentsV2Runtime(){
     state.player.talentsV2 = {
       ranksById: {},
       freePoints: 0,
+      respec: { resetCount: 0, cooldownEndsAtMs: 0 },
     };
   }
   state.player.talentsV2.ranksById = typeof talentsV2Api.getRanks === 'function'
@@ -4793,6 +4921,13 @@ async function initTalentsV2Runtime(){
   state.player.talentsV2.freePoints = typeof talentsV2Api.getFreePoints === 'function'
     ? Math.max(0, Math.floor(talentsV2Api.getFreePoints()))
     : Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0));
+  if (typeof talentsV2Api.getRespecState === 'function') {
+    const resetState = talentsV2Api.getRespecState({ nowMs: Date.now() }) || {};
+    state.player.talentsV2.respec = {
+      resetCount: Number.isFinite(resetState.resetCount) ? Math.max(0, Math.floor(resetState.resetCount)) : 0,
+      cooldownEndsAtMs: Number.isFinite(resetState.cooldownEndsAtMs) ? Math.max(0, resetState.cooldownEndsAtMs) : 0,
+    };
+  }
   if (!Number.isFinite(state.player.talentsVersion)) state.player.talentsVersion = 2;
   state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
 
@@ -4820,8 +4955,14 @@ function saveProgress(){
         ? {
             ranksById: p.talentsV2.ranksById && typeof p.talentsV2.ranksById === 'object' ? { ...p.talentsV2.ranksById } : {},
             freePoints: Number.isFinite(p.talentsV2.freePoints) ? Math.max(0, Math.floor(p.talentsV2.freePoints)) : 0,
+            respec: p.talentsV2.respec && typeof p.talentsV2.respec === 'object'
+              ? {
+                  resetCount: Number.isFinite(p.talentsV2.respec.resetCount) ? Math.max(0, Math.floor(p.talentsV2.respec.resetCount)) : 0,
+                  cooldownEndsAtMs: Number.isFinite(p.talentsV2.respec.cooldownEndsAtMs) ? Math.max(0, p.talentsV2.respec.cooldownEndsAtMs) : 0,
+                }
+              : { resetCount: 0, cooldownEndsAtMs: 0 },
           }
-        : { ranksById: {}, freePoints: 0 },
+        : { ranksById: {}, freePoints: 0, respec: { resetCount: 0, cooldownEndsAtMs: 0 } },
       freeTalentPointsV2: Number.isFinite(p.freeTalentPointsV2) ? Math.max(0, Math.floor(p.freeTalentPointsV2)) : 0,
       cannonUpgradesApplied: ensureCannonUpgradesAppliedState(),
       dronUpgradesApplied: ensureDronUpgradesAppliedState(),
@@ -5071,9 +5212,15 @@ function applySavedProgress(data){
       freePoints: Number.isFinite(playerData.talentsV2.freePoints)
         ? Math.max(0, Math.floor(playerData.talentsV2.freePoints))
         : 0,
+      respec: playerData.talentsV2.respec && typeof playerData.talentsV2.respec === 'object'
+        ? {
+            resetCount: Number.isFinite(playerData.talentsV2.respec.resetCount) ? Math.max(0, Math.floor(playerData.talentsV2.respec.resetCount)) : 0,
+            cooldownEndsAtMs: Number.isFinite(playerData.talentsV2.respec.cooldownEndsAtMs) ? Math.max(0, playerData.talentsV2.respec.cooldownEndsAtMs) : 0,
+          }
+        : { resetCount: 0, cooldownEndsAtMs: 0 },
     };
   } else if (!state.player.talentsV2 || typeof state.player.talentsV2 !== 'object') {
-    state.player.talentsV2 = { ranksById: {}, freePoints: 0 };
+    state.player.talentsV2 = { ranksById: {}, freePoints: 0, respec: { resetCount: 0, cooldownEndsAtMs: 0 } };
   }
   if (Number.isFinite(playerData.freeTalentPointsV2)) {
     state.player.freeTalentPointsV2 = Math.max(0, Math.floor(playerData.freeTalentPointsV2));
@@ -8748,6 +8895,7 @@ function updateUI(){
 
   updateProgressUI();
   updateTalentUI();
+  refreshResetTalentsModalState();
   updateStageAbilitySlots();
   updateDismantleButton();
   updateSupercomputerHudButtonPosition();
@@ -9052,8 +9200,7 @@ function ensureTalentUI(){
         onRequestClose: requestCloseTalents,
         onApply: () => applyTalentSelections(),
         onResetAll: () => {
-          resetAllTalents();
-          updateUI();
+          requestResetAllTalents();
         },
         onUseActiveAbility: (branch) => {
           useActiveAbility(branch);
@@ -9109,8 +9256,7 @@ function ensureTalentUI(){
     overlayV2.querySelector('.modalClose')?.addEventListener('click', () => requestCloseTalents());
     overlayV2.querySelector('#talentApply')?.addEventListener('click', () => applyTalentSelections());
     overlayV2.querySelector('#talentResetAll')?.addEventListener('click', () => {
-      resetAllTalents();
-      updateUI();
+      requestResetAllTalents();
     });
     overlayV2.querySelectorAll('.talentAbilitySlot').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -9159,12 +9305,19 @@ function syncPlayerTalentsV2FromApi(){
   const api = getTalentsV2Api();
   if (!api || !state.player) return;
   if (!state.player.talentsV2 || typeof state.player.talentsV2 !== 'object') {
-    state.player.talentsV2 = { ranksById: {}, freePoints: 0 };
+    state.player.talentsV2 = { ranksById: {}, freePoints: 0, respec: { resetCount: 0, cooldownEndsAtMs: 0 } };
   }
   if (typeof api.getRanks === 'function') state.player.talentsV2.ranksById = api.getRanks();
   if (typeof api.getFreePoints === 'function') {
     state.player.talentsV2.freePoints = Math.max(0, Math.floor(api.getFreePoints()));
     state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
+  }
+  if (typeof api.getRespecState === 'function') {
+    const resetState = api.getRespecState({ nowMs: Date.now() }) || {};
+    state.player.talentsV2.respec = {
+      resetCount: Number.isFinite(resetState.resetCount) ? Math.max(0, Math.floor(resetState.resetCount)) : 0,
+      cooldownEndsAtMs: Number.isFinite(resetState.cooldownEndsAtMs) ? Math.max(0, resetState.cooldownEndsAtMs) : 0,
+    };
   }
 }
 
@@ -9180,6 +9333,9 @@ function postRestoreSync(){
         freePoints: state.player && state.player.talentsV2 && Number.isFinite(state.player.talentsV2.freePoints)
           ? state.player.talentsV2.freePoints
           : (state.player ? state.player.freeTalentPointsV2 : 0),
+        respec: state.player && state.player.talentsV2 && state.player.talentsV2.respec
+          ? state.player.talentsV2.respec
+          : null,
       });
     } else {
       if (api && typeof api.setRanks === 'function') {
@@ -9222,16 +9378,7 @@ function resetTalentPendingV2(branchId){
 function clearTalentRuntimeEffectsV2(){
   const api = getTalentsV2Api();
   if (!api || typeof api.clearRuntimeEffects !== 'function') return;
-  const tanks = [];
-  for (let i = 0; i < state.cells.length; i++) {
-    const tank = state.cells[i] && state.cells[i].tank;
-    if (tank) tanks.push(tank);
-  }
-  api.clearRuntimeEffects({
-    tanks,
-    zombies: Array.isArray(state.zombies) ? state.zombies : [],
-    fenceSegments: Array.isArray(state.fenceSegments) ? state.fenceSegments : [],
-  });
+  api.clearRuntimeEffects(buildTalentRuntimeEffectsContext());
 }
 
 function getTalentBranchNodesV2(branchId){
@@ -9540,6 +9687,7 @@ function updateTalentUIV2(overlay){
       renderBranchNodes: renderTalentNodesV2,
       drawBranchEdges: drawTalentEdgesV2,
       updateAbilitySlots: updateTalentAbilitySlotsV2,
+      getResetAllState: buildTalentResetButtonModel,
       isLayoutVisible: isTalentLayoutVisibleV2,
       buildLayoutKey: buildTalentsV2LayoutKey,
       buildRenderSignature: buildTalentsV2RenderSignature,
@@ -9595,19 +9743,32 @@ function renderCrateIcon(level){
 }
 
 function openResetTalentsModal(){
+  const resetState = getTalentResetState();
+  if (!resetState.hasApplied || resetState.cooldownActive) return;
+  const cost = formatUiCurrency(resetState.price);
   if (UIModals && typeof UIModals.openResetTalentsModal === 'function') {
-    UIModals.openResetTalentsModal({ t, a11yOpen, onClose: closeResetTalentsModal });
+    UIModals.openResetTalentsModal({
+      t,
+      a11yOpen,
+      onClose: closeResetTalentsModal,
+      cost,
+      confirmDisabled: !resetState.canAfford,
+      confirmTooltip: resetState.canAfford ? '' : t('talentResetNoCoins'),
+      cancelLabel: t('dismantleNo'),
+      confirmLabel: t('talentResetModalWatchBtn'),
+    });
     return;
   }
   const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   const textEl = document.getElementById('resetTalentsModalText');
   const watchEl = document.getElementById('resetTalentsModalWatch');
-  if (textEl) textEl.textContent = t('talentResetModalText');
+  if (textEl) textEl.textContent = t('talentResetModalText', { cost });
   if (watchEl) watchEl.textContent = t('talentResetModalWatchBtn');
+  if (watchEl) watchEl.disabled = !resetState.canAfford;
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
-  a11yOpen(modal, { initialFocus: watchEl, onClose: closeResetTalentsModal });
+  a11yOpen(modal, { initialFocus: watchEl && !watchEl.disabled ? watchEl : document.getElementById('resetTalentsModalClose'), onClose: closeResetTalentsModal });
 }
 function closeResetTalentsModal(){
   if (UIModals && typeof UIModals.closeResetTalentsModal === 'function') {
@@ -10075,16 +10236,17 @@ ui.achievementPopup?.addEventListener('click', (e) => {
   if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
 });
 document.getElementById('resetTalentsModalClose')?.addEventListener('click', () => closeResetTalentsModal());
-document.getElementById('resetTalentsModalWatch')?.addEventListener('click', () => {
-  closeResetTalentsModal();
-  setTimeout(() => {
-    resetAllTalents();
-    updateTalentUI();
-    updateUI();
-  }, 100);
-});
 document.getElementById('resetTalentsModal')?.addEventListener('click', (e) => {
   if (e.target?.dataset?.resetTalentsClose === 'true') closeResetTalentsModal();
+  if (e.target?.id === 'resetTalentsModalCancel') closeResetTalentsModal();
+  if (e.target?.id === 'resetTalentsModalWatch') {
+    closeResetTalentsModal();
+    setTimeout(() => {
+      resetAllTalents();
+      updateTalentUI();
+      updateUI();
+    }, 100);
+  }
 });
 [0, 1, 2].forEach(branch => {
   document.getElementById(`stageActive${branch}`)?.addEventListener('click', () => useActiveAbility(branch));

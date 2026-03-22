@@ -32,6 +32,9 @@
     var updateAbilitySlots = typeof opts.updateAbilitySlots === 'function'
       ? opts.updateAbilitySlots
       : function () {};
+    var getResetAllState = typeof opts.getResetAllState === 'function'
+      ? opts.getResetAllState
+      : null;
     var isLayoutVisible = typeof opts.isLayoutVisible === 'function'
       ? opts.isLayoutVisible
       : function () { return false; };
@@ -141,7 +144,23 @@
           break;
         }
       }
-      resetAllBtn.disabled = !(hasApplied || hasAnyPending);
+      var resetAllState = getResetAllState ? getResetAllState({ hasApplied: hasApplied, hasPending: hasAnyPending }) : null;
+      if (resetAllState) {
+        resetAllBtn.textContent = resetAllState.text || translate('talentResetAll');
+        resetAllBtn.disabled = !!resetAllState.disabled;
+        if (resetAllState.tooltip) {
+          resetAllBtn.setAttribute('data-ui-tooltip', resetAllState.tooltip);
+          resetAllBtn.removeAttribute('title');
+        } else {
+          resetAllBtn.removeAttribute('data-ui-tooltip');
+          resetAllBtn.removeAttribute('title');
+        }
+      } else {
+        resetAllBtn.textContent = translate('talentResetAll');
+        resetAllBtn.disabled = !(hasApplied || hasAnyPending);
+        resetAllBtn.removeAttribute('data-ui-tooltip');
+        resetAllBtn.removeAttribute('title');
+      }
     }
 
     return true;

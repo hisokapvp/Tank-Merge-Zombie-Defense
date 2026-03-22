@@ -12,6 +12,10 @@
   let _a11yClose   = null;
   let _onPauseLockChange = null;
   let _toastFn     = null;  // optional toast callback
+  let _stateRef    = null;
+  let _dragState   = null;
+  let _suppressClicksUntil = 0;
+  const DRAG_THRESHOLD_PX = 6;
 
   // ─── Init (call once after DOM ready) ──────────────────────
   function init(options) {
@@ -47,6 +51,7 @@
     if (!_modalEl || !state || !state.productionLine) return;
     const wasOpen = _isOpen;
     _isOpen = true;
+    _stateRef = state;
     _pendingIdx = -1;
     _hideConfirm();
     _renderGrid(state.productionLine);
@@ -61,7 +66,9 @@
   function close() {
     if (!_modalEl) return;
     const wasOpen = _isOpen;
+    _teardownDrag();
     _isOpen = false;
+    _stateRef = null;
     _pendingIdx = -1;
     if (document.body) document.body.classList.remove('pl-storage-open');
     _modalEl.classList.add('hidden');
@@ -71,6 +78,115 @@
   }
 
   function isOpen() { return _isOpen; }
+
+  function _getBoxLevel(box) {
+    const maxLevel = (global.Game && global.Game.ProductionLine && global.Game.ProductionLine.MAX_BOX_LEVEL) || 4;
+    if (!box || !Number.isFinite(box.level)) return 1;
+    return Math.max(1, Math.min(maxLevel, Math.floor(box.level)));
+  }
+
+  function _shouldSuppressClick() {
+    return Date.now() < _suppressClicksUntil;
+  }
+
+  function _findCellAtPoint(clientX, clientY) {
+    if (typeof document.elementFromPoint !== 'function') return null;
+    const element = document.elementFromPoint(clientX, clientY);
+    if (!element || typeof element.closest !== 'function') return null;
+    return element.closest('.plStorage__cell[data-box-index]');
+  }
+
+  function _getCellIndex(cell) {
+    if (!cell || !cell.hasAttribute('data-box-index')) return -1;
+    const value = Number(cell.getAttribute('data-box-index'));
+    return Number.isFinite(value) ? Math.floor(value) : -1;
+  }
+
+  function _clearDragAffordances() {
+    if (!_gridEl) return;
+    const activeCells = _gridEl.querySelectorAll('.plStorage__cell--dragging, .plStorage__cell--mergeTarget');
+    for (let index = 0; index < activeCells.length; index++) {
+      activeCells[index].classList.remove('plStorage__cell--dragging', 'plStorage__cell--mergeTarget');
+    }
+  }
+
+  function _teardownDrag() {
+    _clearDragAffordances();
+    document.removeEventListener('pointermove', _handlePointerMove);
+    document.removeEventListener('pointerup', _handlePointerUp);
+    document.removeEventListener('pointercancel', _handlePointerCancel);
+    _dragState = null;
+  }
+
+  function _canMergeDragTarget(sourceIndex, targetIndex) {
+    const api = global.Game && global.Game.ProductionLine;
+    if (!api || typeof api.canMergeBoxes !== 'function' || !_stateRef) return false;
+    return !!api.canMergeBoxes(_stateRef, sourceIndex, targetIndex);
+  }
+
+  function _updateDragTarget(clientX, clientY) {
+    if (!_dragState) return;
+    _clearDragAffordances();
+    if (_dragState.sourceEl) _dragState.sourceEl.classList.add('plStorage__cell--dragging');
+    const targetCell = _findCellAtPoint(clientX, clientY);
+    const targetIndex = _getCellIndex(targetCell);
+    if (_canMergeDragTarget(_dragState.sourceIndex, targetIndex)) {
+      _dragState.targetIndex = targetIndex;
+      if (targetCell) targetCell.classList.add('plStorage__cell--mergeTarget');
+      return;
+    }
+    _dragState.targetIndex = -1;
+  }
+
+  function _startDrag(evt, boxIndex) {
+    if (!_stateRef || !_stateRef.productionLine) return;
+    if (evt.button != null && evt.button !== 0) return;
+    _teardownDrag();
+    _dragState = {
+      pointerId: evt.pointerId,
+      sourceIndex: boxIndex,
+      startX: evt.clientX,
+      startY: evt.clientY,
+      moved: false,
+      sourceEl: evt.currentTarget,
+      targetIndex: -1,
+    };
+    document.addEventListener('pointermove', _handlePointerMove);
+    document.addEventListener('pointerup', _handlePointerUp);
+    document.addEventListener('pointercancel', _handlePointerCancel);
+  }
+
+  function _handlePointerMove(evt) {
+    if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    const dx = evt.clientX - _dragState.startX;
+    const dy = evt.clientY - _dragState.startY;
+    if (!_dragState.moved && (dx * dx + dy * dy) < (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) return;
+    _dragState.moved = true;
+    _updateDragTarget(evt.clientX, evt.clientY);
+  }
+
+  function _handlePointerUp(evt) {
+    if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    const dragState = _dragState;
+    if (dragState.moved) {
+      _suppressClicksUntil = Date.now() + 180;
+      _updateDragTarget(evt.clientX, evt.clientY);
+      const api = global.Game && global.Game.ProductionLine;
+      if (api && typeof api.mergeBoxes === 'function' && dragState.targetIndex >= 0 && _stateRef) {
+        const merged = api.mergeBoxes(_stateRef, dragState.sourceIndex, dragState.targetIndex);
+        if (merged) {
+          _hideConfirm();
+          _renderGrid(_stateRef.productionLine);
+        }
+      }
+    }
+    _teardownDrag();
+  }
+
+  function _handlePointerCancel(evt) {
+    if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    _teardownDrag();
+  }
 
   // ─── Render grid ───────────────────────────────────────────
   function _renderGrid(pl) {
@@ -88,11 +204,26 @@
       cell.setAttribute('data-box-index', String(i));
 
       if (i < pl.storage.length) {
+        const box = pl.storage[i] || null;
+        const boxLevel = _getBoxLevel(box);
         cell.classList.add('plStorage__cell--filled');
+        cell.classList.add('plStorage__cell--level' + boxLevel);
+        cell.setAttribute('data-box-level', String(boxLevel));
         cell.setAttribute('aria-label', _t('plBoxSlotFilled'));
-        cell.textContent = '📦';
+        const icon = document.createElement('span');
+        icon.className = 'plStorage__cellIcon';
+        icon.textContent = '📦';
+        const badge = document.createElement('span');
+        badge.className = 'plStorage__levelBadge';
+        badge.textContent = (_t('levelShort') || 'Lv') + ' ' + boxLevel;
+        cell.appendChild(icon);
+        cell.appendChild(badge);
         const idx = i;
-        cell.addEventListener('click', function () { _showConfirm(idx); });
+        cell.addEventListener('click', function () {
+          if (_shouldSuppressClick()) return;
+          _showConfirm(idx);
+        });
+        cell.addEventListener('pointerdown', function (evt) { _startDrag(evt, idx); });
       } else {
         cell.classList.add('plStorage__cell--empty');
         cell.setAttribute('aria-label', _t('plBoxSlotEmpty'));

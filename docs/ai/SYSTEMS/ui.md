@@ -1,6 +1,6 @@
 ﻿# Система: UI
 
-> Обновлено: 2026-03-21.
+> Обновлено: 2026-03-22.
 
 ## Где править
 - Разметка: `index.html`
@@ -51,6 +51,11 @@
 - Второй pseudo-element у close-кнопок отключён (`::after { content:none; }`), hover/active возвращают только лёгкое движение кнопки/glyph без изменения hit-area 44×44: [style.css](../../../style.css#L3183-L3255) _(строки приблизительные, проверить после 2026-03-10)_ .
 - Level up, achievements list и achievement popup теперь явно используют `scModal__close`, то есть тот же SC-skin, что и supercomputer modal: [index.html](../../../index.html#L163-L166), [index.html](../../../index.html#L195-L206).
 - `fontFloor` обязан пропускать все эти close-селекторы и `chipCraftSlotRemove`, иначе ломаются крестик, hit-area и визуальная унификация модалок/lesson popup/craft preview: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L5-L11), [style.css](../../../style.css#L4698-L4751).
+
+## Reset talents modal
+- Fallback shell `#resetTalentsModal` в [index.html](../../../index.html#L391-L397) обязан уже совпадать с runtime-контрактом платного сброса талантов: заголовок говорит про списание `500$`, а primary CTA по умолчанию подписан `Да`; старый video/ad wording больше не считается допустимым fallback'ом.
+- Каноническая логика живёт в [src/ui/modals.js](../../../src/ui/modals.js#L20-L89): `ensureResetTalentsModalControls()` реиспользует существующий confirm-button из HTML, переносит его в `menuInlineActions`, а при отсутствии инжектит secondary cancel-кнопку `resetTalentsModalCancel` с copy `Нет`; `openResetTalentsModal()` затем переопределяет текст/label через i18n и даёт фокус confirm/cancel-контролу.
+- [index.html](../../../index.html#L598) держит cache-busting query для `src/ui/modals.js` (`?v=20260322-reset-talents-modal`), чтобы браузер не поднимал устаревший runtime без актуального shell-upgrade для `Да/Нет/X`.
 
 ## Production line storage modal
 - Разметка `#productionLineStorageModal` использует header `plStorage__header`: левый spacer `44px`, центрированный `#plStorageTitle`, правый `#plStorageClose` со skin `scModal__close`. Это canonical layout склада; не возвращать plain-title + absolute-close схему: [index.html](../../../index.html#L214-L224), [style.css](../../../style.css#L5156-L5180).

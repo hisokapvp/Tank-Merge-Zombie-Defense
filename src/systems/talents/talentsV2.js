@@ -17,6 +17,10 @@
     dump: 'talents_debug_dump',
   };
   var DEFAULT_MAX_CATCHUP_STEPS = 120;
+  var RESPEC_PRICE_BASE = 500;
+  var RESPEC_PRICE_MULTIPLIER = 10;
+  var RESPEC_PRICE_CAP = 4.99e16;
+  var RESPEC_COOLDOWN_MS = 120 * 60 * 1000;
   var LEGACY_BRANCH_LAYOUT = [
     { row: 0, slot: 0, parents: [] },
     { row: 0, slot: 1, parents: [] },
@@ -329,6 +333,10 @@
     ranksById: {},
     pendingById: {},
     freePoints: 0,
+    respec: {
+      resetCount: 0,
+      cooldownEndsAtMs: 0,
+    },
     modsCache: null,
     modsDirty: true,
     loadSaveFn: null,
@@ -399,6 +407,21 @@
       out[key] = source[key];
     }
     return out;
+  }
+
+  function sanitizeRespecState(source) {
+    var payload = asObject(source) || {};
+    var resetCount = Math.max(0, toInt(payload.resetCount, 0));
+    var cooldownEndsAtMs = Math.max(0, toNumber(payload.cooldownEndsAtMs, 0));
+    if (!isFiniteNumber(cooldownEndsAtMs)) cooldownEndsAtMs = 0;
+    return {
+      resetCount: resetCount,
+      cooldownEndsAtMs: cooldownEndsAtMs,
+    };
+  }
+
+  function cloneRespecState(source) {
+    return sanitizeRespecState(source);
   }
 
   function issue(level, code, message, details) {
@@ -1295,12 +1318,16 @@
     var ranksById = payload && payload.ranksById && typeof payload.ranksById === 'object'
       ? payload.ranksById
       : {};
+    var respec = payload && payload.respec && typeof payload.respec === 'object'
+      ? payload.respec
+      : null;
 
     return {
       talentsVersion: isFiniteNumber(root.talentsVersion) ? toInt(root.talentsVersion, 0) :
         (player && isFiniteNumber(player.talentsVersion) ? toInt(player.talentsVersion, 0) : 0),
       ranksById: ranksById,
       freePoints: freePoints,
+      respec: sanitizeRespecState(respec),
     };
   }
 
@@ -1310,6 +1337,7 @@
       talentsV2: {
         ranksById: cloneRanks(runtime.ranksById),
         freePoints: runtime.freePoints,
+        respec: cloneRespecState(runtime.respec),
       },
       freeTalentPointsV2: runtime.freePoints,
       savedAtMs: runtime.nowMsFn(),
@@ -1340,6 +1368,7 @@
     runtime.ranksById = sanitizeRanks(parsed.ranksById);
     runtime.pendingById = {};
     runtime.freePoints = Math.max(0, toInt(parsed.freePoints, 0));
+    runtime.respec = sanitizeRespecState(parsed.respec);
     runtime.modsDirty = true;
     runtime.modsCache = null;
     runtime.runRt = createRunRuntime();
@@ -1642,9 +1671,81 @@
     var source = payload && typeof payload === 'object' ? payload : {};
     runtime.ranksById = sanitizeRanks(source.ranksById || {});
     runtime.freePoints = Math.max(0, toInt(source.freePoints, 0));
+    runtime.respec = sanitizeRespecState(source.respec);
     runtime.pendingById = {};
     runtime.modsDirty = true;
     runtime.modsCache = null;
+  }
+
+  function hasAppliedRanks() {
+    var ids = Object.keys(runtime.ranksById || {});
+    for (var i = 0; i < ids.length; i++) {
+      if (Math.max(0, toInt(runtime.ranksById[ids[i]], 0)) > 0) return true;
+    }
+    return false;
+  }
+
+  function getRespecPriceByCount(resetCount) {
+    var safeCount = Math.max(0, toInt(resetCount, 0));
+    var price = RESPEC_PRICE_BASE * Math.pow(RESPEC_PRICE_MULTIPLIER, safeCount);
+    if (!isFiniteNumber(price)) return RESPEC_PRICE_CAP;
+    return Math.min(RESPEC_PRICE_CAP, price);
+  }
+
+  function getRespecState(options) {
+    var opts = options || {};
+    var nowMs = isFiniteNumber(opts.nowMs) ? Math.max(0, opts.nowMs) : runtime.nowMsFn();
+    var respec = sanitizeRespecState(runtime.respec);
+    var cooldownRemainingMs = Math.max(0, respec.cooldownEndsAtMs - nowMs);
+    return {
+      resetCount: respec.resetCount,
+      price: getRespecPriceByCount(respec.resetCount),
+      priceCap: RESPEC_PRICE_CAP,
+      cooldownEndsAtMs: respec.cooldownEndsAtMs,
+      cooldownDurationMs: RESPEC_COOLDOWN_MS,
+      cooldownRemainingMs: cooldownRemainingMs,
+      cooldownActive: cooldownRemainingMs > 0,
+      hasApplied: hasAppliedRanks(),
+    };
+  }
+
+  function canRespec(options) {
+    var opts = options || {};
+    var state = getRespecState(opts);
+    if (!state.hasApplied) {
+      return {
+        ok: false,
+        reason: 'no_applied',
+        price: state.price,
+        cooldownEndsAtMs: state.cooldownEndsAtMs,
+        cooldownRemainingMs: state.cooldownRemainingMs,
+      };
+    }
+    if (state.cooldownActive) {
+      return {
+        ok: false,
+        reason: 'cooldown',
+        price: state.price,
+        cooldownEndsAtMs: state.cooldownEndsAtMs,
+        cooldownRemainingMs: state.cooldownRemainingMs,
+      };
+    }
+    var coins = toNumber(opts.coins, NaN);
+    if (isFiniteNumber(coins) && coins < state.price) {
+      return {
+        ok: false,
+        reason: 'no_coins',
+        price: state.price,
+        cooldownEndsAtMs: 0,
+        cooldownRemainingMs: 0,
+      };
+    }
+    return {
+      ok: true,
+      price: state.price,
+      cooldownEndsAtMs: state.cooldownEndsAtMs,
+      cooldownRemainingMs: state.cooldownRemainingMs,
+    };
   }
 
   function getTalentUi(talentId) {
@@ -2013,7 +2114,7 @@
     return { ok: true };
   }
 
-  function respec() {
+  function executeRespec(payload) {
     runtime.pendingById = {};
     var ids = Object.keys(runtime.talentsById || {});
     var refundPoints = 0;
@@ -2028,13 +2129,56 @@
 
     runtime.freePoints += refundPoints;
     markModsDirty();
-    clearRuntimeEffects();
-    persistSave();
+    clearRuntimeEffects(payload);
 
     return {
       ok: true,
       refunded: refundPoints,
       freePoints: runtime.freePoints,
+    };
+  }
+
+  function respec(payload) {
+    var result = executeRespec(payload);
+    persistSave();
+
+    return result;
+  }
+
+  function tryRespec(options) {
+    var opts = options || {};
+    var check = canRespec({ nowMs: opts.nowMs, coins: opts.coins });
+    if (!check.ok) return check;
+
+    if (typeof opts.spendCoins === 'function') {
+      if (opts.spendCoins(check.price) !== true) {
+        return {
+          ok: false,
+          reason: 'no_coins',
+          price: check.price,
+          cooldownEndsAtMs: 0,
+          cooldownRemainingMs: 0,
+        };
+      }
+    }
+
+    var nowMs = isFiniteNumber(opts.nowMs) ? Math.max(0, opts.nowMs) : runtime.nowMsFn();
+    var result = executeRespec(opts);
+    runtime.respec = {
+      resetCount: Math.max(0, toInt(runtime.respec && runtime.respec.resetCount, 0)) + 1,
+      cooldownEndsAtMs: nowMs + RESPEC_COOLDOWN_MS,
+    };
+    persistSave();
+
+    return {
+      ok: true,
+      refunded: result.refunded,
+      freePoints: result.freePoints,
+      spentCoins: check.price,
+      resetCount: runtime.respec.resetCount,
+      cooldownEndsAtMs: runtime.respec.cooldownEndsAtMs,
+      cooldownDurationMs: RESPEC_COOLDOWN_MS,
+      nextPrice: getRespecPriceByCount(runtime.respec.resetCount),
     };
   }
 
@@ -3787,6 +3931,7 @@
     getFreePoints: getFreePoints,
     getAvailableFreePoints: getAvailableFreePoints,
     getPendingCost: getPendingCost,
+    getRespecState: getRespecState,
     setFreePoints: setFreePoints,
     syncFromSave: syncFromSave,
     getMods: getMods,
@@ -3796,12 +3941,14 @@
     getUnlockedTier: getUnlockedTier,
     getActiveState: getActiveState,
     canBuy: canBuy,
+    canRespec: canRespec,
     queueRank: queueRank,
     resetPending: resetPending,
     applyPending: applyPending,
     buyRank: buyRank,
     refundAll: refundAll,
     respec: respec,
+    tryRespec: tryRespec,
     validate: validate,
     computeModsFromTalents: computeModsFromTalents,
     MIGRATE_V1_TO_V2: MIGRATE_V1_TO_V2,

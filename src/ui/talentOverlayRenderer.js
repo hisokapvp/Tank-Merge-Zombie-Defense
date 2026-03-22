@@ -6,6 +6,19 @@
     return Number.isFinite(numeric) ? numeric.toFixed(2) : '0.00';
   }
 
+  function hashEdgeSeed(branchId, parentLocalIdx, childLocalIdx) {
+    var text = String(branchId || '');
+    var hash = 2166136261;
+    for (var i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    }
+    hash ^= (parentLocalIdx + 1) * 131;
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+    hash ^= (childLocalIdx + 1) * 197;
+    return Math.abs(hash >>> 0);
+  }
+
   function getNodeAnchorPoint(button, gridRect) {
     if (!button || !gridRect || typeof button.getBoundingClientRect !== 'function') return null;
     var anchor = typeof button.querySelector === 'function'
@@ -48,15 +61,25 @@
   function applyEdgeMotion(path, branchId, parentLocalIdx, childLocalIdx, fromX, toX, motionScale) {
     if (!path || !path.style || typeof path.style.setProperty !== 'function') return;
     var scale = Number.isFinite(motionScale) ? Math.max(0.7, motionScale) : 1;
-    var seed = (parentLocalIdx + 1) * 29 + (childLocalIdx + 1) * 17;
+    var seed = hashEdgeSeed(branchId, parentLocalIdx, childLocalIdx);
     var biasX = ((seed % 3) - 1) * 1.02;
     if (biasX === 0) biasX = toX >= fromX ? 1.08 : -1.08;
     var biasY = -0.56 - ((seed % 4) * 0.11);
+    var activeMotion = scale >= 1;
+    var waveDuration = activeMotion
+      ? (0.74 + (seed % 7) * 0.05)
+      : (1.48 + (seed % 7) * 0.11);
+    var wobbleDuration = activeMotion
+      ? (0.26 + (seed % 5) * 0.03)
+      : (0.34 + (seed % 5) * 0.04);
+    var auraDuration = waveDuration * (activeMotion ? 1.08 : 1.22);
+    var phaseOffset = -0.09 * ((seed % 13) + ((seed >>> 4) % 5) * 0.35);
     biasX *= scale;
     biasY *= scale;
-    path.style.setProperty('--talent-edge-flow-duration', toFixedNumber(1.92 + (seed % 5) * 0.16) + 's');
-    path.style.setProperty('--talent-edge-wobble-duration', toFixedNumber(1.24 + (seed % 4) * 0.15) + 's');
-    path.style.setProperty('--talent-edge-phase', toFixedNumber(-0.18 * (seed % 6)) + 's');
+    path.style.setProperty('--talent-edge-flow-duration', toFixedNumber(waveDuration) + 's');
+    path.style.setProperty('--talent-edge-wobble-duration', toFixedNumber(wobbleDuration) + 's');
+    path.style.setProperty('--talent-edge-aura-duration', toFixedNumber(auraDuration) + 's');
+    path.style.setProperty('--talent-edge-phase', toFixedNumber(phaseOffset) + 's');
     path.style.setProperty('--talent-edge-jitter-x', toFixedNumber(biasX) + 'px');
     path.style.setProperty('--talent-edge-jitter-y', toFixedNumber(biasY) + 'px');
     path.style.setProperty('--talent-edge-jitter-x-neg', toFixedNumber(biasX * -0.72) + 'px');

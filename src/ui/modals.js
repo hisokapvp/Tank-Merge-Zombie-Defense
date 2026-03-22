@@ -17,15 +17,71 @@
     if (typeof a11yClose === 'function') a11yClose(modal);
   }
 
+  function ensureResetTalentsModalControls(t) {
+    var translate = typeof t === 'function' ? t : function (key) { return key; };
+    var modal = document.getElementById('resetTalentsModal');
+    if (!modal) return null;
+    var textEl = document.getElementById('resetTalentsModalText');
+    var contentWrap = modal.querySelector('.levelModal__contentWrap');
+    var confirmBtn = document.getElementById('resetTalentsModalWatch');
+    if (!contentWrap || !confirmBtn) {
+      return {
+        modal: modal,
+        textEl: textEl,
+        confirmBtn: confirmBtn,
+        cancelBtn: document.getElementById('resetTalentsModalCancel'),
+      };
+    }
+
+    var actions = document.getElementById('resetTalentsModalActions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.id = 'resetTalentsModalActions';
+      actions.className = 'menuInlineActions';
+      contentWrap.appendChild(actions);
+    }
+    if (confirmBtn.parentNode !== actions) actions.appendChild(confirmBtn);
+
+    var cancelBtn = document.getElementById('resetTalentsModalCancel');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'resetTalentsModalCancel';
+      cancelBtn.className = 'btn btnSecondary';
+      cancelBtn.type = 'button';
+      actions.appendChild(cancelBtn);
+    }
+
+    confirmBtn.textContent = translate('talentResetModalWatchBtn');
+    cancelBtn.textContent = translate('dismantleNo');
+
+    return {
+      modal: modal,
+      textEl: textEl,
+      confirmBtn: confirmBtn,
+      cancelBtn: cancelBtn,
+    };
+  }
+
   function openResetTalentsModal(options) {
     var opts = options || {};
     var t = opts.t || function (k) { return k; };
-    var modal = document.getElementById('resetTalentsModal');
-    var textEl = document.getElementById('resetTalentsModalText');
-    var watchEl = document.getElementById('resetTalentsModalWatch');
-    if (textEl) textEl.textContent = t('talentResetModalText');
-    if (watchEl) watchEl.textContent = t('talentResetModalWatchBtn');
-    showModal(modal, opts.a11yOpen, watchEl, opts.onClose);
+    var controls = ensureResetTalentsModalControls(t);
+    if (!controls || !controls.modal) return;
+    if (controls.textEl) controls.textEl.textContent = t('talentResetModalText', { cost: opts.cost || '0' });
+    if (controls.confirmBtn) {
+      controls.confirmBtn.textContent = opts.confirmLabel || t('talentResetModalWatchBtn');
+      controls.confirmBtn.disabled = !!opts.confirmDisabled;
+      controls.confirmBtn.removeAttribute('title');
+      if (opts.confirmTooltip) controls.confirmBtn.setAttribute('data-ui-tooltip', opts.confirmTooltip);
+      else controls.confirmBtn.removeAttribute('data-ui-tooltip');
+    }
+    if (controls.cancelBtn) controls.cancelBtn.textContent = opts.cancelLabel || t('dismantleNo');
+    showModal(
+      controls.modal,
+      opts.a11yOpen,
+      controls.confirmBtn && !controls.confirmBtn.disabled ? controls.confirmBtn : controls.cancelBtn,
+      opts.onClose
+    );
   }
 
   function closeResetTalentsModal(options) {
