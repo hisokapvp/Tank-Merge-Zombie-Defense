@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="style.css?v=20260322-ui-postmerge" />
+  <link rel="stylesheet" href="style.css?v=20260322-branch2-talent-reset-cooldown" />
 </head>
 <body>
   <main class="layout">
@@ -225,9 +225,11 @@
           <div class="plStorage__backdrop"></div>
           <div class="plStorage__panel" role="dialog" aria-modal="true" aria-labelledby="plStorageTitle" tabindex="-1">
             <div class="plStorage__header">
-              <button class="btn scButton uiButtonBehavior plStorage__headerHelp" id="plStorageHelp" type="button" aria-label="Help" data-font-floor-ignore="true">?</button>
               <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Производственный склад</div>
-              <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+              <div class="plStorage__headerActions">
+                <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn plStorage__headerHelp" id="plStorageHelp" type="button" aria-label="Help" data-font-floor-ignore="true">?</button>
+                <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+              </div>
             </div>
             <div class="plStorage__grid" id="plStorageGrid"></div>
             <div class="plStorage__confirm hidden" id="plConfirmOverlay">
@@ -391,10 +393,27 @@
   <div class="levelModal levelModal_onTop hidden" id="resetTalentsModal" aria-hidden="true">
     <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
     <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="resetTalentsModalText" tabindex="-1">
-      <button class="levelModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
+      <button class="levelModal__close scModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
       <div class="levelModal__contentWrap">
           <div class="levelModal__title" id="resetTalentsModalText">Для сброса улучшений требуется 500$, Вы уверены что хотите сбросить улучшения?</div>
           <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Да</button>
+      </div>
+    </div>
+  </div>
+  <div class="levelModal levelModal_onTop hidden" id="talentResetCooldownModal" aria-hidden="true">
+    <div class="levelModal__backdrop" data-talent-reset-cooldown-close="true"></div>
+    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="talentResetCooldownModalTitle" tabindex="-1">
+      <button class="levelModal__close scModal__close" id="talentResetCooldownModalClose" type="button" aria-label="Закрыть">×</button>
+      <div class="levelModal__contentWrap">
+        <div class="levelModal__title" id="talentResetCooldownModalTitle">Сбросить улучшения</div>
+        <div class="levelModal__line talentResetCooldownModal__text" id="talentResetCooldownModalText">Следующий сброс возможен через 00:00:00; дождитесь окончания сброса</div>
+        <div class="menuInlineActions" id="talentResetCooldownModalActions">
+          <button id="talentResetCooldownModalDismiss" class="btn btnSecondary" type="button">Закрыть</button>
+          <button id="talentResetCooldownModalRefresh" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
+            <span class="talentResetCooldownAdBtn__label">Обновить моментально</span>
+            <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -584,7 +603,7 @@
   <script src="src/experiments/experiments.js"></script>
   <script src="src/perf/mobileMode.js"></script>
   <script src="src/i18n/index.js"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260322-ui-postmerge"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260322-branch2-talent-reset-cooldown"></script>
   <script src="src/ui/adminFlags.js"></script>
   <script src="src/ui/adminDamagePoints.js"></script>
   <script src="src/ui/analyticsPanel.js"></script>
@@ -595,10 +614,10 @@
   <script src="src/mechanics/hangarChips.js"></script>
   <script src="src/mechanics/chipEffects.js"></script>
   <script src="src/ui/hangarChipsUI.js"></script>
-  <script src="src/ui/modals.js?v=20260322-reset-talents-modal"></script>
+  <script src="src/ui/modals.js?v=20260322-branch2-talent-reset-cooldown"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/talentOverlayDom.js"></script>
-  <script src="src/ui/talentOverlayRenderer.js?v=20260322-ui-postmerge"></script>
+  <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>
   <script src="src/ui/talentOverlayUi.js"></script>
   <script src="src/ui/supercomputerMenu.js?v=20260322-ui-postmerge"></script>
   <script src="src/ui/productionLineUI.js?v=20260322-ui-postmerge"></script>
@@ -626,6 +645,6 @@
   <script src="src/ui/undergroundHangarUI.js"></script>
   <script src="src/mechanics/corpseDespawn.js"></script>
   <script src="src/ui/supercomputerBuildTankFx.js"></script>
-  <script src="game.js?v=20260322-ui-postmerge"></script>
+  <script src="game.js?v=20260322-branch2-talent-reset-cooldown"></script>
 </body>
 </html>

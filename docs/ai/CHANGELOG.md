@@ -1,5 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-23
+- **Документация: shared post-merge update для talent reset cooldown modal, storage header right-actions и усиленного wobble talent edges (`game.js`, `index.html`, `style.css`, `src/ui/modals.js`, `src/ui/talentOverlayRenderer.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ui_talents_v2.md`.
+  - Зафиксированы: footer-кнопка `Сбросить улучшения` больше не меняет label на cooldown; при active cooldown открывается отдельная `#talentResetCooldownModal` с timer-text, dismiss-кнопкой, ad-style refresh-stub CTA и синхронными i18n-ключами в `ru/en/fallback`.
+  - Зафиксированы: `#resetTalentsModal` и cooldown modal используют общий symmetric padding contract и green `scModal__close`, а `src/ui/modals.js` остаётся canonical shell-upgrade точкой для `Да/Нет/X` и focus routing.
+  - Зафиксированы: header production storage теперь собирает help + close в правый wrapper `.plStorage__headerActions`, title получает больший top padding, а talent-tree `ready/active` edges используют более заметный wobble/shake через per-edge `--talent-edge-wobble-duration`.
+
 ## 2026-03-22
 - **Документация: shared post-merge update для escape/menu priority, talents overlay и production storage UI (`game.js`, `index.html`, `src/ui/supercomputerMenu.js`, `src/ui/productionLineUI.js`, `src/ui/talentOverlayRenderer.js`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.

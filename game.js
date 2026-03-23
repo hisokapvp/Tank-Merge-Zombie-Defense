@@ -1083,6 +1083,8 @@ function formatTalentResetCooldown(ms){
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+let talentResetCooldownModalTimerId = 0;
+
 function getTalentResetState(){
   const api = getTalentsV2Api();
   const fallback = {
@@ -1107,19 +1109,16 @@ function getTalentResetState(){
   };
 }
 
-function buildTalentResetButtonModel(){
+function buildTalentResetButtonModel(options){
+  const opts = options && typeof options === 'object' ? options : null;
   const resetState = getTalentResetState();
-  if (resetState.cooldownActive) {
-    return {
-      text: t('talentResetCooldownLabel', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }),
-      disabled: true,
-      tooltip: t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }),
-    };
-  }
+  const hasApplied = opts && typeof opts.hasApplied === 'boolean' ? opts.hasApplied : resetState.hasApplied;
   return {
     text: t('talentResetAll'),
-    disabled: !resetState.hasApplied,
-    tooltip: '',
+    disabled: !hasApplied,
+    tooltip: hasApplied && resetState.cooldownActive
+      ? t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) })
+      : '',
   };
 }
 
@@ -1883,6 +1882,7 @@ function applyTranslations(){
     if (applyBtn) applyBtn.textContent = t('talentApply');
   }
   refreshResetTalentsModalState();
+  refreshTalentResetCooldownModalState();
   if (ui.langRu && ui.langEn){
     const lang = getCurrentLang();
     ui.langRu.classList.toggle('active', lang === 'ru');
@@ -4610,10 +4610,10 @@ function resetAllTalents(){
       })
     : (typeof api.respec === 'function' ? api.respec(runtimeContext) : { ok: false, reason: 'unknown' });
   if (!result || !result.ok) {
-    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-      if (result && result.reason === 'cooldown') {
-        window.Game.Toast.show(t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(result.cooldownRemainingMs) }), 1800);
-      } else if (result && result.reason === 'no_coins') {
+    if (result && result.reason === 'cooldown') {
+      openTalentResetCooldownModal(result.cooldownRemainingMs);
+    } else if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+      if (result && result.reason === 'no_coins') {
         window.Game.Toast.show(t('talentResetNoCoins'), 1800);
       }
     }
@@ -4631,12 +4631,65 @@ function requestResetAllTalents(){
   const resetState = getTalentResetState();
   if (!resetState.hasApplied) return;
   if (resetState.cooldownActive) {
-    if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-      window.Game.Toast.show(t('talentResetCooldownBlocked', { time: formatTalentResetCooldown(resetState.cooldownRemainingMs) }), 1800);
-    }
+    openTalentResetCooldownModal(resetState.cooldownRemainingMs);
     return;
   }
   openResetTalentsModal();
+}
+
+function clearTalentResetCooldownModalTimer(){
+  if (!talentResetCooldownModalTimerId) return;
+  clearTimeout(talentResetCooldownModalTimerId);
+  talentResetCooldownModalTimerId = 0;
+}
+
+function scheduleTalentResetCooldownModalRefresh(){
+  clearTalentResetCooldownModalTimer();
+  const modal = document.getElementById('talentResetCooldownModal');
+  if (!modal || modal.classList.contains('hidden')) return;
+  talentResetCooldownModalTimerId = setTimeout(() => {
+    talentResetCooldownModalTimerId = 0;
+    refreshTalentResetCooldownModalState();
+  }, 250);
+}
+
+function refreshTalentResetCooldownModalState(){
+  const modal = document.getElementById('talentResetCooldownModal');
+  if (!modal || modal.classList.contains('hidden')) {
+    clearTalentResetCooldownModalTimer();
+    return;
+  }
+  const resetState = getTalentResetState();
+  if (!resetState.cooldownActive) {
+    closeTalentResetCooldownModal();
+    return;
+  }
+  const timeLabel = formatTalentResetCooldown(resetState.cooldownRemainingMs);
+  const titleEl = document.getElementById('talentResetCooldownModalTitle');
+  const textEl = document.getElementById('talentResetCooldownModalText');
+  const closeBtn = document.getElementById('talentResetCooldownModalClose');
+  const dismissBtn = document.getElementById('talentResetCooldownModalDismiss');
+  const refreshBtn = document.getElementById('talentResetCooldownModalRefresh');
+  const refreshLabelEl = refreshBtn ? refreshBtn.querySelector('.talentResetCooldownAdBtn__label') : null;
+
+  if (titleEl) titleEl.textContent = t('talentResetAll');
+  if (textEl) textEl.textContent = t('talentResetCooldownModalText', { time: timeLabel });
+  if (closeBtn) closeBtn.setAttribute('aria-label', t('menuClose'));
+  if (dismissBtn) dismissBtn.textContent = t('menuClose');
+  if (refreshLabelEl) refreshLabelEl.textContent = t('talentResetCooldownRefreshNow');
+  else if (refreshBtn) refreshBtn.textContent = t('talentResetCooldownRefreshNow');
+  if (refreshBtn) {
+    refreshBtn.removeAttribute('title');
+    refreshBtn.setAttribute('data-ui-tooltip', t('talentResetCooldownRefreshStub'));
+  }
+
+  scheduleTalentResetCooldownModalRefresh();
+}
+
+function handleTalentResetCooldownRefreshNow(){
+  if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+    window.Game.Toast.show(t('talentResetCooldownRefreshStub'), 2200);
+  }
 }
 
 function refreshResetTalentsModalState(){
@@ -4644,9 +4697,11 @@ function refreshResetTalentsModalState(){
   if (!modal || modal.classList.contains('hidden') || !isTalentsV2Ready()) return;
   const resetState = getTalentResetState();
   const textEl = document.getElementById('resetTalentsModalText');
+  const closeBtn = document.getElementById('resetTalentsModalClose');
   const confirmBtn = document.getElementById('resetTalentsModalWatch');
   const cancelBtn = document.getElementById('resetTalentsModalCancel');
   if (textEl) textEl.textContent = t('talentResetModalText', { cost: formatUiCurrency(resetState.price) });
+  if (closeBtn) closeBtn.setAttribute('aria-label', t('menuClose'));
   if (confirmBtn) {
     confirmBtn.textContent = t('talentResetModalWatchBtn');
     confirmBtn.disabled = !resetState.canAfford;
@@ -8911,6 +8966,7 @@ function updateUI(){
   updateProgressUI();
   updateTalentUI();
   refreshResetTalentsModalState();
+  refreshTalentResetCooldownModalState();
   updateStageAbilitySlots();
   updateDismantleButton();
   updateSupercomputerHudButtonPosition();
@@ -9769,6 +9825,7 @@ function openResetTalentsModal(){
       cost,
       confirmDisabled: !resetState.canAfford,
       confirmTooltip: resetState.canAfford ? '' : t('talentResetNoCoins'),
+      closeAriaLabel: t('menuClose'),
       cancelLabel: t('dismantleNo'),
       confirmLabel: t('talentResetModalWatchBtn'),
     });
@@ -9777,14 +9834,62 @@ function openResetTalentsModal(){
   const modal = document.getElementById('resetTalentsModal');
   if (!modal) return;
   const textEl = document.getElementById('resetTalentsModalText');
+  const closeEl = document.getElementById('resetTalentsModalClose');
   const watchEl = document.getElementById('resetTalentsModalWatch');
   if (textEl) textEl.textContent = t('talentResetModalText', { cost });
+  if (closeEl) closeEl.setAttribute('aria-label', t('menuClose'));
   if (watchEl) watchEl.textContent = t('talentResetModalWatchBtn');
   if (watchEl) watchEl.disabled = !resetState.canAfford;
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
   a11yOpen(modal, { initialFocus: watchEl && !watchEl.disabled ? watchEl : document.getElementById('resetTalentsModalClose'), onClose: closeResetTalentsModal });
 }
+
+function openTalentResetCooldownModal(cooldownRemainingMs){
+  const resetState = getTalentResetState();
+  const remainingMs = Number.isFinite(cooldownRemainingMs)
+    ? Math.max(0, cooldownRemainingMs)
+    : Math.max(0, resetState.cooldownRemainingMs);
+  if (remainingMs <= 0) return;
+  const timeLabel = formatTalentResetCooldown(remainingMs);
+  if (UIModals && typeof UIModals.openTalentResetCooldownModal === 'function') {
+    UIModals.openTalentResetCooldownModal({
+      t,
+      a11yOpen,
+      onClose: closeTalentResetCooldownModal,
+      titleLabel: t('talentResetAll'),
+      text: t('talentResetCooldownModalText', { time: timeLabel }),
+      time: timeLabel,
+      dismissLabel: t('menuClose'),
+      closeAriaLabel: t('menuClose'),
+      refreshLabel: t('talentResetCooldownRefreshNow'),
+      refreshTooltip: t('talentResetCooldownRefreshStub'),
+    });
+    refreshTalentResetCooldownModalState();
+    return;
+  }
+  const modal = document.getElementById('talentResetCooldownModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  refreshTalentResetCooldownModalState();
+  const dismissBtn = document.getElementById('talentResetCooldownModalDismiss');
+  a11yOpen(modal, { initialFocus: dismissBtn || document.getElementById('talentResetCooldownModalClose'), onClose: closeTalentResetCooldownModal });
+}
+
+function closeTalentResetCooldownModal(){
+  clearTalentResetCooldownModalTimer();
+  if (UIModals && typeof UIModals.closeTalentResetCooldownModal === 'function') {
+    UIModals.closeTalentResetCooldownModal({ a11yClose });
+    return;
+  }
+  const modal = document.getElementById('talentResetCooldownModal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+  a11yClose(modal);
+}
+
 function closeResetTalentsModal(){
   if (UIModals && typeof UIModals.closeResetTalentsModal === 'function') {
     UIModals.closeResetTalentsModal({ a11yClose });
@@ -10262,6 +10367,12 @@ document.getElementById('resetTalentsModal')?.addEventListener('click', (e) => {
       updateUI();
     }, 100);
   }
+});
+document.getElementById('talentResetCooldownModalClose')?.addEventListener('click', () => closeTalentResetCooldownModal());
+document.getElementById('talentResetCooldownModalDismiss')?.addEventListener('click', () => closeTalentResetCooldownModal());
+document.getElementById('talentResetCooldownModalRefresh')?.addEventListener('click', () => handleTalentResetCooldownRefreshNow());
+document.getElementById('talentResetCooldownModal')?.addEventListener('click', (e) => {
+  if (e.target?.dataset?.talentResetCooldownClose === 'true') closeTalentResetCooldownModal();
 });
 [0, 1, 2].forEach(branch => {
   document.getElementById(`stageActive${branch}`)?.addEventListener('click', () => useActiveAbility(branch));

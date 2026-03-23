@@ -44,12 +44,12 @@
 
   function applyEdgeMotion(path, branchId, parentLocalIdx, childLocalIdx, fromX, toX, motionScale) {
     if (!path || !path.style || typeof path.style.setProperty !== 'function') return;
-    var scale = Number.isFinite(motionScale) ? Math.max(0.7, motionScale) : 1;
+    var scale = Number.isFinite(motionScale) ? Math.max(0.82, motionScale) : 1;
     var seed = hashEdgeSeed(branchId, parentLocalIdx, childLocalIdx);
-    var biasX = ((seed % 3) - 1) * 1.02;
-    if (biasX === 0) biasX = toX >= fromX ? 1.08 : -1.08;
-    var biasY = -0.56 - ((seed % 4) * 0.11);
-    var activeMotion = scale >= 1;
+    var biasX = ((seed % 3) - 1) * 1.58;
+    if (biasX === 0) biasX = toX >= fromX ? 1.86 : -1.86;
+    var biasY = -0.98 - ((seed % 4) * 0.18);
+    var activeMotion = scale > 1.1;
     var waveDuration = activeMotion
       ? (0.74 + (seed % 7) * 0.05)
       : (1.48 + (seed % 7) * 0.11);
@@ -152,10 +152,10 @@
         path.classList.add('talentEdge');
         if (relationState === 'active') {
           path.classList.add('talentEdgeActive');
-          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 1.16);
+          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 1.34);
         } else if (relationState === 'ready') {
           path.classList.add('talentEdgeReady');
-          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 0.94);
+          applyEdgeMotion(path, branchId, parentLocalIdx, localIdx, fromX, toX, 1.02);
         }
         svg.appendChild(path);
       }

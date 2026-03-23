@@ -23,11 +23,13 @@
     if (!modal) return null;
     var textEl = document.getElementById('resetTalentsModalText');
     var contentWrap = modal.querySelector('.levelModal__contentWrap');
+    var closeBtn = document.getElementById('resetTalentsModalClose');
     var confirmBtn = document.getElementById('resetTalentsModalWatch');
     if (!contentWrap || !confirmBtn) {
       return {
         modal: modal,
         textEl: textEl,
+        closeBtn: closeBtn,
         confirmBtn: confirmBtn,
         cancelBtn: document.getElementById('resetTalentsModalCancel'),
       };
@@ -57,6 +59,7 @@
     return {
       modal: modal,
       textEl: textEl,
+      closeBtn: closeBtn,
       confirmBtn: confirmBtn,
       cancelBtn: cancelBtn,
     };
@@ -68,6 +71,7 @@
     var controls = ensureResetTalentsModalControls(t);
     if (!controls || !controls.modal) return;
     if (controls.textEl) controls.textEl.textContent = t('talentResetModalText', { cost: opts.cost || '0' });
+    if (controls.closeBtn) controls.closeBtn.setAttribute('aria-label', opts.closeAriaLabel || t('menuClose'));
     if (controls.confirmBtn) {
       controls.confirmBtn.textContent = opts.confirmLabel || t('talentResetModalWatchBtn');
       controls.confirmBtn.disabled = !!opts.confirmDisabled;
@@ -87,6 +91,44 @@
   function closeResetTalentsModal(options) {
     var opts = options || {};
     hideModal(document.getElementById('resetTalentsModal'), opts.a11yClose);
+  }
+
+  function openTalentResetCooldownModal(options) {
+    var opts = options || {};
+    var t = opts.t || function (k) { return k; };
+    var modal = document.getElementById('talentResetCooldownModal');
+    if (!modal) return;
+
+    var titleEl = document.getElementById('talentResetCooldownModalTitle');
+    var textEl = document.getElementById('talentResetCooldownModalText');
+    var closeBtn = document.getElementById('talentResetCooldownModalClose');
+    var dismissBtn = document.getElementById('talentResetCooldownModalDismiss');
+    var refreshBtn = document.getElementById('talentResetCooldownModalRefresh');
+    var refreshLabelEl = refreshBtn ? refreshBtn.querySelector('.talentResetCooldownAdBtn__label') : null;
+
+    if (titleEl) titleEl.textContent = opts.titleLabel || t('talentResetAll');
+    if (textEl) textEl.textContent = opts.text || t('talentResetCooldownModalText', { time: opts.time || '00:00:00' });
+    if (closeBtn) closeBtn.setAttribute('aria-label', opts.closeAriaLabel || t('menuClose'));
+    if (dismissBtn) dismissBtn.textContent = opts.dismissLabel || t('menuClose');
+    if (refreshLabelEl) refreshLabelEl.textContent = opts.refreshLabel || t('talentResetCooldownRefreshNow');
+    else if (refreshBtn) refreshBtn.textContent = opts.refreshLabel || t('talentResetCooldownRefreshNow');
+    if (refreshBtn) {
+      refreshBtn.removeAttribute('title');
+      if (opts.refreshTooltip) refreshBtn.setAttribute('data-ui-tooltip', opts.refreshTooltip);
+      else refreshBtn.removeAttribute('data-ui-tooltip');
+    }
+
+    showModal(
+      modal,
+      opts.a11yOpen,
+      dismissBtn || refreshBtn || closeBtn,
+      opts.onClose
+    );
+  }
+
+  function closeTalentResetCooldownModal(options) {
+    var opts = options || {};
+    hideModal(document.getElementById('talentResetCooldownModal'), opts.a11yClose);
   }
 
   function openCrateModal(options) {
@@ -279,6 +321,8 @@
     openDismantleModal: openDismantleModal,
     openResetTalentsModal: openResetTalentsModal,
     closeResetTalentsModal: closeResetTalentsModal,
+    openTalentResetCooldownModal: openTalentResetCooldownModal,
+    closeTalentResetCooldownModal: closeTalentResetCooldownModal,
     openCrateModal: openCrateModal,
     closeCrateModal: closeCrateModal,
     closeDismantleModal: closeDismantleModal,
