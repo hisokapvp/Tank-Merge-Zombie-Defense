@@ -410,9 +410,12 @@
         decorSeed: state.mapSeeds.decorSeed,
       };
     }
+    var achievements = state.achievements && typeof state.achievements === 'object' ? state.achievements : {};
     var stats = {
-      tanksMergedCount: normalizeSafeCounter(state.stats && state.stats.tanksMergedCount),
-      tanksBoughtCount: normalizeSafeCounter(state.stats && state.stats.tanksBoughtCount),
+      tanksMergedCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksMergedCount) ? state.stats.tanksMergedCount : achievements.totalMerges),
+      tanksBoughtCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksBoughtCount) ? state.stats.tanksBoughtCount : achievements.totalPurchased),
+      manualFenceRepairsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.manualFenceRepairsCount) ? state.stats.manualFenceRepairsCount : achievements.totalManualFenceRepairs),
+      modifierTechUnlocksCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.modifierTechUnlocksCount) ? state.stats.modifierTechUnlocksCount : achievements.totalModifierTechUnlocks),
     };
     var drones = [];
     if (Array.isArray(state.drones)) {

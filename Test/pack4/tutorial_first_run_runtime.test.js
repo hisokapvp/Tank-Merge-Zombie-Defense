@@ -334,6 +334,159 @@ test('TUT-8K: achievements modal hides locked-status copy and shows threshold-ba
   assert(en.indexOf('"achievementEngineerExpertDesc": "Merge 1000 tanks"') !== -1, 'en engineer expert description matches runtime threshold');
 });
 
+test('TUT-8M: fence mechanic achievements define manual-repair thresholds, rewards, and synced copy', () => {
+  assert(achievementsJs.indexOf("id: 'fence_mechanic_1'") !== -1, 'fence mechanic I definition exists');
+  assert(achievementsJs.indexOf("id: 'fence_mechanic_2'") !== -1, 'fence mechanic II definition exists');
+  assert(achievementsJs.indexOf("id: 'fence_mechanic_3'") !== -1, 'fence mechanic III definition exists');
+  assert(achievementsJs.indexOf("progressType: 'manualFenceRepairs'") !== -1, 'manual fence repair progress type is defined');
+  assert(achievementsJs.indexOf('target: 50') !== -1, 'fence mechanic II threshold is defined');
+  assert(achievementsJs.indexOf('target: 200') !== -1, 'fence mechanic III threshold is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'fenceMechanicCoins75'") !== -1, 'fence mechanic I reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'fenceMechanicDust5'") !== -1, 'fence mechanic II reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'fenceMechanicFragment1'") !== -1, 'fence mechanic III reward mode is defined');
+  assert(ru.indexOf('"achievementFenceMechanic1": "Механик ограды I"') !== -1, 'ru fence mechanic I title exists');
+  assert(ru.indexOf('"achievementFenceMechanic2Desc": "Выполните 50 успешных ручных ремонтов ограды"') !== -1, 'ru fence mechanic II description exists');
+  assert(ru.indexOf('"achievementRewardFenceMechanicFragment1": "1 случайный фрагмент чипа"') !== -1, 'ru fence mechanic III reward exists');
+  assert(en.indexOf('"achievementFenceMechanic1": "Fence Mechanic I"') !== -1, 'en fence mechanic I title exists');
+  assert(en.indexOf('"achievementFenceMechanic3Desc": "Complete 200 successful manual fence repairs"') !== -1, 'en fence mechanic III description exists');
+  assert(en.indexOf('"achievementRewardFenceMechanicDust5": "5 silicon dust"') !== -1, 'en fence mechanic II reward exists');
+  assert(fallback.indexOf("achievementFenceMechanic1: 'Механик ограды I'") !== -1, 'fallback ru fence mechanic I title exists');
+  assert(fallback.indexOf("achievementFenceMechanic3Desc: 'Complete 200 successful manual fence repairs'") !== -1, 'fallback en fence mechanic III description exists');
+  assert(fallback.indexOf("achievementRewardFenceMechanicCoins75: '75$'") !== -1, 'fallback achievement reward string exists');
+});
+
+test('TUT-8N: manual fence repair progress runtime unlocks the 1/50/200 tiers and seeds safe reward state', () => {
+  const globalObj = { window: null, Game: {} };
+  globalObj.window = globalObj;
+  new Function('window', 'global', achievementsJs)(globalObj, globalObj);
+
+  const api = globalObj.Game.Achievements;
+  const state = {
+    achievements: { unlocked: {}, popupQueue: [] },
+    stats: {},
+  };
+
+  api.ensureState(state);
+  assertEqual(state.achievements.totalManualFenceRepairs, 0, 'manual repair counter starts from zero');
+  assert(state.achievements.rewarded && typeof state.achievements.rewarded === 'object', 'rewarded map is initialized for one-shot rewards');
+
+  let unlocked = api.addProgress(state, 'manualFenceRepairs', 1);
+  assert(unlocked.indexOf('fence_mechanic_1') !== -1, 'first successful manual repair unlocks tier I');
+  assertEqual(api.getProgressValue(state, 'manualFenceRepairs'), 1, 'manual repair progress reads back from achievements runtime');
+  assertEqual(state.stats.manualFenceRepairsCount, 1, 'manual repair progress is mirrored into stats runtime');
+
+  unlocked = api.addProgress(state, 'manualFenceRepairs', 49);
+  assert(unlocked.indexOf('fence_mechanic_2') !== -1, '50 successful manual repairs unlock tier II');
+
+  unlocked = api.addProgress(state, 'manualFenceRepairs', 150);
+  assert(unlocked.indexOf('fence_mechanic_3') !== -1, '200 successful manual repairs unlock tier III');
+  assertEqual(api.getProgressValue(state, 'manualFenceRepairs'), 200, 'manual repair progress reaches the final threshold without drift');
+});
+
+test('TUT-8O: successful manual repair increments once and save restore keeps the counter plus reward state', () => {
+  const repairFnIdx = gameJs.indexOf('function tryRepairFenceSegmentAt(px, py){');
+  const repairFnEndIdx = gameJs.indexOf('function resolveFenceFrameScale(frame){', repairFnIdx);
+  const repairBlock = repairFnIdx !== -1 && repairFnEndIdx !== -1 ? gameJs.slice(repairFnIdx, repairFnEndIdx) : '';
+  assert(repairBlock.indexOf("processAchievementProgress('manualFenceRepairs', 1);") !== -1, 'successful manual repair advances the fence achievement counter');
+  assertEqual(repairBlock.split("processAchievementProgress('manualFenceRepairs', 1);").length - 1, 1, 'manual repair hook increments the counter exactly once inside the repair action');
+  assert(gameJs.indexOf("case 'fenceMechanicCoins75':") !== -1, 'game runtime grants the tier I fence mechanic reward');
+  assert(gameJs.indexOf("case 'fenceMechanicDust5':") !== -1, 'game runtime grants the tier II fence mechanic reward');
+  assert(gameJs.indexOf("case 'fenceMechanicFragment1':") !== -1, 'game runtime grants the tier III fence mechanic reward');
+  assert(gameJs.indexOf('ach.totalManualFenceRepairs = Number.isFinite(saved.achievements.totalManualFenceRepairs)') !== -1, 'restoreFullState keeps manual repair progress from saves');
+  assert(gameJs.indexOf("ach.rewarded = saved.achievements.rewarded && typeof saved.achievements.rewarded === 'object'") !== -1, 'restoreFullState keeps one-shot reward state from saves');
+  assert(gameJs.indexOf('ach.totalManualFenceRepairs = Number.isFinite(achievements.totalManualFenceRepairs)') !== -1, 'applySavedProgress keeps manual repair progress from save payloads');
+  assert(gameJs.indexOf("ach.rewarded = achievements.rewarded && typeof achievements.rewarded === 'object'") !== -1, 'applySavedProgress keeps one-shot reward state from save payloads');
+});
+
+test('TUT-8P: new technology II-IV achievements define thresholds, rewards, and synced copy', () => {
+  assert(achievementsJs.indexOf("id: 'new_technology_2'") !== -1, 'new technology II definition exists');
+  assert(achievementsJs.indexOf("id: 'new_technology_3'") !== -1, 'new technology III definition exists');
+  assert(achievementsJs.indexOf("id: 'new_technology_4'") !== -1, 'new technology IV definition exists');
+  assert(achievementsJs.indexOf("rewardMode: 'newTechnologyDust20'") !== -1, 'new technology II reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'newTechnologyRandomChips2'") !== -1, 'new technology III reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'newTechnologyUpgradePoints3'") !== -1, 'new technology IV reward mode is defined');
+  assert(achievementsJs.indexOf('target: 3') !== -1, 'new technology II threshold is defined');
+  assert(achievementsJs.indexOf('target: 8') !== -1, 'new technology III threshold is defined');
+  assert(achievementsJs.indexOf('target: 16') !== -1, 'new technology IV threshold is defined');
+  assert(ru.indexOf('"achievementNewTechnology2": "Новая технология II"') !== -1, 'ru new technology II title exists');
+  assert(ru.indexOf('"achievementNewTechnology4Desc": "Завершите изучение всех 16 уникальных технологий модификатора"') !== -1, 'ru new technology IV description exists');
+  assert(ru.indexOf('"achievementRewardNewTechnologyDust20": "20 кремниевой пыли"') !== -1, 'ru new technology II reward exists');
+  assert(en.indexOf('"achievementNewTechnology3": "New Technology III"') !== -1, 'en new technology III title exists');
+  assert(en.indexOf('"achievementNewTechnology2Desc": "Complete 3 unique modifier technology studies"') !== -1, 'en new technology II description exists');
+  assert(en.indexOf('"achievementRewardNewTechnologyUpgradePoints3": "3 upgrade points"') !== -1, 'en new technology IV reward exists');
+  assert(fallback.indexOf("achievementNewTechnology2: 'Новая технология II'") !== -1, 'fallback ru new technology II title exists');
+  assert(fallback.indexOf("achievementNewTechnology4Desc: 'Complete all 16 unique modifier technologies'") !== -1, 'fallback en new technology IV description exists');
+  assert(fallback.indexOf("achievementRewardNewTechnologyChips2: '2 random chips'") !== -1, 'fallback new technology III reward exists');
+});
+
+test('TUT-8Q: tech achievements recalculate from unlocked runtime state and grant tier rewards once', () => {
+  const rewardState = {
+    dust: 0,
+    chips: [],
+    fragments: [],
+  };
+  const chipDef = { chipId: 1, chipColor: 'red', modIds: [1, 2, 3], sourceComboKey: '1-2-3' };
+  const globalObj = {
+    window: null,
+    Game: {
+      HangarChips: {
+        allChips: [chipDef],
+        getUnlockedTechs() {
+          return { 15: true, 16: true, 17: true, 18: true, 19: true, 20: true, 21: true, 22: true };
+        },
+      },
+      HangarChipsUI: {
+        getSiliconDust() { return rewardState.dust; },
+        setSiliconDust(value) { rewardState.dust = value; },
+        addPlayerChip(def, level) { rewardState.chips.push({ def, level }); },
+        addPlayerFragment(fragmentId, count) { rewardState.fragments.push({ fragmentId, count }); },
+      },
+    },
+  };
+  globalObj.window = globalObj;
+  new Function('window', 'global', achievementsJs)(globalObj, globalObj);
+
+  const api = globalObj.Game.Achievements;
+  const state = {
+    achievements: { unlocked: {}, popupQueue: [], rewarded: {} },
+    stats: {},
+    player: {
+      talentsV2: { freePoints: 0 },
+      freeTalentPointsV2: 0,
+    },
+  };
+
+  api.ensureState(state);
+  assertEqual(state.achievements.totalModifierTechUnlocks, 8, 'ensureState infers eight completed tech studies from runtime');
+
+  let unlocked = api.recalculateUnlocks(state);
+  assert(unlocked.indexOf('new_technology_1') !== -1, 'retroactive recalculation unlocks new technology I');
+  assert(unlocked.indexOf('new_technology_2') !== -1, 'retroactive recalculation unlocks new technology II');
+  assert(unlocked.indexOf('new_technology_3') !== -1, 'retroactive recalculation unlocks new technology III');
+  assertEqual(rewardState.fragments.length, 2, 'new technology I grants two fragments once');
+  assertEqual(rewardState.dust, 20, 'new technology II grants 20 silicon dust');
+  assertEqual(rewardState.chips.length, 2, 'new technology III grants two random chips');
+  assertEqual(state.player.talentsV2.freePoints, 0, 'new technology IV is not granted before all 16 techs');
+
+  unlocked = api.recalculateUnlocks(state);
+  assertEqual(unlocked.length, 0, 're-running recalculation without new techs does not unlock anything else');
+  assertEqual(rewardState.fragments.length, 2, 'fragment reward stays one-shot');
+  assertEqual(rewardState.dust, 20, 'dust reward stays one-shot');
+  assertEqual(rewardState.chips.length, 2, 'chip reward stays one-shot');
+
+  const finalTechIds = [23, 24, 25, 26, 27, 28, 29, 30];
+  let finalUnlocks = [];
+  for (let i = 0; i < finalTechIds.length; i++) {
+    finalUnlocks = finalUnlocks.concat(api.recordModifierTechUnlock(state, finalTechIds[i]) || []);
+  }
+  assert(finalUnlocks.indexOf('new_technology_4') !== -1, 'recording all 16 unique techs unlocks new technology IV');
+  assertEqual(state.player.talentsV2.freePoints, 3, 'new technology IV grants 3 upgrade points');
+  assertEqual(state.player.freeTalentPointsV2, 3, 'upgrade points stay synchronized with freeTalentPointsV2');
+
+  api.recalculateUnlocks(state);
+  assertEqual(state.player.talentsV2.freePoints, 3, 'upgrade point reward stays one-shot after subsequent recalculation');
+});
+
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
   assert(aiIndexMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'AI index links to dedicated tutorial runtime map');
   assert(uiSystemMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'UI system doc links to dedicated tutorial runtime map');

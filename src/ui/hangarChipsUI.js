@@ -1021,6 +1021,9 @@
       var cells = ensureCells();
       var result = h.unlockTechnology(modId, chips, cells, ensurePlayerFragments());
       if (result.ok) {
+        if (global.Game && typeof global.Game.onModifierTechnologyUnlocked === 'function') {
+          global.Game.onModifierTechnologyUnlocked(modId);
+        }
         if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
           global.Game.Toast.show(t('techUnlockSuccess', 'Технология «{name}» открыта! Все чипы обновлены.').replace('{name}', modName(modId)), 2500);
         }
@@ -1238,6 +1241,9 @@
       var cells = ensureCells();
       var result = h.unlockTechnology(modId, chips, cells, ensurePlayerFragments());
       _techFeedProgress[modId] = cost; // cap at cost
+      if (result && result.ok && global.Game && typeof global.Game.onModifierTechnologyUnlocked === 'function') {
+        global.Game.onModifierTechnologyUnlocked(modId);
+      }
       return { ok: true, unlocked: true, fed: removed, replaced: result.replaced };
     }
 

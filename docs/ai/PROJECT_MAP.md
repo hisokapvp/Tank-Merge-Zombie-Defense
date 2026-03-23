@@ -1,6 +1,6 @@
 # Tank Merge Zombie Defense — Project Map
 
-> Документ для агентов. Обновлён: 2026-03-09.
+> Документ для агентов. Обновлён: 2026-03-23.
 > Навигация: раздел → файл документации → строки кода.
 
 ## О проекте
@@ -12,6 +12,7 @@
 | Конвейер `work` запускается от kill-hook, проигрывает полный цикл кадров и не перезапускается в середине текущего клипа. | [game.js](../../game.js#L5902-L5917), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L219-L227) |
 | `New game` не равен partial reset: при `reason='new_game'` игрок стартует без бесплатных talent/update points, а суперкомпьютер — с `computerLevel = 0` и `xpToNext = 50`; snapshot partial reset сохраняет текущий прогресс. | [src/core/bootstrap.js](../../src/core/bootstrap.js#L562-L563), [game.js](../../game.js#L454-L501), [game.js](../../game.js#L7875-L7952), [src/core/worldReset.js](../../src/core/worldReset.js#L33-L142) |
 | При true `new_game` стартовый `state.productionLine.firstNewGameBoxGuaranteedPending = true`: первая изготовленная коробка кладётся в storage с `guaranteedLootId='one_big_chip'`, а `openBox()` один раз резолвит её через `makeGuaranteedNewGameBigChip()` в рабочий red чип L1 (`chipId > 0`, `sourceComboKey` = sorted `modIds`, `3` уникальных base `modIds` из `1..9`); сериализация сохраняет флаг до первого открытия коробки. | [src/persistence/initialState.js](../../src/persistence/initialState.js#L123-L130), [src/mechanics/productionLine.js](../../src/mechanics/productionLine.js#L105-L122), [src/mechanics/productionLine.js](../../src/mechanics/productionLine.js#L192-L205), [src/mechanics/productionLine.js](../../src/mechanics/productionLine.js#L212-L322) |
+| Progress достижений за ручной ремонт ограды и уникальные технологии модификаторов обязан сохраняться вместе с `achievements.rewarded`, `completedModifierTechs` и mirrored `state.stats.*Count`; restore/apply могут backfill'ить self-managed tech rewards только один раз. | [src/persistence/initialState.js](../../src/persistence/initialState.js#L123-L137), [src/persistence/storage.js](../../src/persistence/storage.js#L413-L481), [src/mechanics/achievements.js](../../src/mechanics/achievements.js#L331-L512), [game.js](../../game.js#L5150-L5200), [game.js](../../game.js#L5376-L5412) |
 | Root-анимация `buildTank` запускается только покупкой танка и живёт ровно `assets/tanks.json -> tankPrintDurationSec`; kill-hook может запускать только conveyor `work`. | [game.js](../../game.js#L3289-L3307), [src/ui/supercomputerBuildTankFx.js](../../src/ui/supercomputerBuildTankFx.js#L7-L53), [game.js](../../game.js#L5902-L5917), [game.js](../../game.js#L11374-L11382) |
 | Tutorial runtime всегда выбирает first available incomplete tutorial step, а не более поздний доступный шаг; это защищает цепочки суперкомпьютера и production storage от skip-ahead и ложного автозавершения поздних шагов. | [src/ui/tutorialRuntime.js](../../src/ui/tutorialRuntime.js), [src/config/tutorialSteps.js](../../src/config/tutorialSteps.js) |
 | `assets/supercomputer.json` задаёт эффекты покадрово/per-state и layout частей `conveyor` / `conveyorBox` / `storageCell`; `conveyorBox.offset.x/y` — канонический data-driven способ посадить коробку на плоскость ленты. | [assets/supercomputer.json](../../assets/supercomputer.json#L125-L237), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L45-L145), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L853-L1030), [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L417-L445) |
@@ -33,7 +34,7 @@
 | `Game.FontFloor` | [src/ui/fontFloor.js](../../src/ui/fontFloor.js#L22-L108) | 22–108 | Глобальный floor `12px` для canvas/DOM текста; все close/remove-контролы исключаются через явный skip-лист |
 | `initBoard()` | [game.js](../../game.js#L2244-L2334) | 2244–2334 | Геометрия мира, позиция суперкомпьютера, layout production line |
 | `Game.ProductionLineUI.open()` | [src/ui/productionLineUI.js](../../src/ui/productionLineUI.js#L44-L61) | 44–61 | Открывает/закрывает склад коробок, toggles `body.pl-storage-open`, готовит focus trap и grid |
-| `Game.HangarChipsUI.init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2935-L3315) | 2935–3315 | Инициализация overlay ангара, drag-drop, tooltips |
+| `Game.HangarChipsUI.init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) | 3966–4358 | Инициализация overlay ангара, drag-drop, tooltips |
 | `Game.ProductionLineRender.syncState()` | [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L265-L311) | 265–311 | Синхронизация conveyor/storage runtime с `state.productionLine` |
 | `Game.TalentsV2.init()` | [src/systems/talents/talentsV2.js](../../src/systems/talents/talentsV2.js#L2491-L2505) | 2491–2505 | Поднятие runtime талантов v2 |
 
@@ -62,6 +63,7 @@
 | Подраздел | Файл документации | Hotspot |
 |---|---|---|
 | Combat / projectile pipeline | [SYSTEMS/combat.md](SYSTEMS/combat.md) | |
+| Achievements / reward ladders | [SYSTEMS/achievements.md](SYSTEMS/achievements.md) | |
 | Chip effects runtime | [CHIP_EFFECTS_MAP.md](CHIP_EFFECTS_MAP.md) | |
 | Talents v2 runtime | [TALENTS_V2_MAP.md](TALENTS_V2_MAP.md) | |
 | Save / offline / restore | [SYSTEMS/save.md](SYSTEMS/save.md) | [HOT] |

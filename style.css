@@ -1357,8 +1357,8 @@ body.scmodal-open{
 }
 .levelModal__panel_boost .levelModal__contentWrap{
   padding-top:var(--uiModalPad);
-  padding-right:var(--uiModalPad);
-  padding-left:var(--uiModalPad);
+  /* padding-right:var(--uiModalPad);
+  padding-left:var(--uiModalPad); */
   width:100%;
   max-width:100%;
   box-sizing:border-box;
@@ -2391,8 +2391,8 @@ input, select, textarea, button {
 
 #resetTalentsModal .levelModal__contentWrap,
 #talentResetCooldownModal .levelModal__contentWrap{
-  padding-right:var(--uiModalPad);
-  padding-left:var(--uiModalPad);
+  /* padding-right:var(--uiModalPad);
+  padding-left:var(--uiModalPad); */
 }
 
 #resetTalentsModal .levelModal__title,

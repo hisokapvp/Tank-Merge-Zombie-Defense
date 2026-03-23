@@ -1,6 +1,6 @@
 ﻿# Система: Save / Offline
 
-> Обновлено: 2026-03-09.
+> Обновлено: 2026-03-23.
 
 ## Где править
 - Хранилище: `src/persistence/storage.js`, `src/persistence/initialState.js`
@@ -14,6 +14,13 @@
 - Для офлайн-наград сохранять цепочку `offlineProgress -> offlineModal -> continueFlow`.
 - Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression, drones progression.
 - Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset, затем в `onAfterRestore` выполняется обязательное доведение runtime.
+
+## Achievement persistence contract
+- `createInitialState()` обязан seed'ить `achievements.rewarded`, `achievements.totalManualFenceRepairs`, `achievements.totalModifierTechUnlocks`, `achievements.completedModifierTechs` и mirrored `stats.manualFenceRepairsCount/modifierTechUnlocksCount`; эти поля не должны появляться лениво уже после первого gameplay-события: [src/persistence/initialState.js](../../../src/persistence/initialState.js#L123-L137)
+- `serializeState()` сохраняет `stats.manualFenceRepairsCount/modifierTechUnlocksCount` в нормализованном виде с fallback на legacy achievement totals и одновременно пишет весь объект `achievements`, чтобы slot payload держал counters, `rewarded` и `completedModifierTechs` как связанный контракт: [src/persistence/storage.js](../../../src/persistence/storage.js#L413-L418), [src/persistence/storage.js](../../../src/persistence/storage.js#L461-L481)
+- `restoreFullState()` и `applySavedProgress()` обязаны восстановить `rewarded`, `totalManualFenceRepairs`, `totalModifierTechUnlocks`, `completedModifierTechs`, а затем вызвать `reconcileAchievementRewardsForUnlocked()`; это позволяет добрать self-managed tech rewards на старых сейвах без повторной выдачи уже помеченных наград: [game.js](../../../game.js#L5150-L5200), [game.js](../../../game.js#L5376-L5412)
+- Gameplay по-прежнему поднимает счётчик ручного ремонта из `tryRepairFenceSegmentAt()` через `processAchievementProgress('manualFenceRepairs', 1)`, а achievements runtime зеркалит его в `state.stats`; persistence должна считать `stats.*Count` canonical при наличии и использовать `achievements.total*` только как fallback: [game.js](../../../game.js#L3254-L3284), [game.js](../../../game.js#L6720-L6736), [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L289-L327), [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L454-L512)
+- Текущий regression pack отдельно проверяет сохранение `rewarded` map, manual repair totals и retroactive tech rewards после load/apply: [Test/pack4/tutorial_first_run_runtime.test.js](../../../Test/pack4/tutorial_first_run_runtime.test.js#L358-L491)
 
 ## New Game baseline (не partial reset)
 - `New game` идёт отдельным UI-path: `src/core/bootstrap.js` очищает legacy `progress` и вызывает `resetGameState({ reason: 'new_game' })`, не используя snapshot partial restart: [src/core/bootstrap.js](../../../src/core/bootstrap.js#L557-L563), [game.js](../../../game.js#L7875-L7952).

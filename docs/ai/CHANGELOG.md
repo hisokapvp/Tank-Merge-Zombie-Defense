@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-23
+- **Документация: shared post-merge update для achievements runtime, tech reward flow и save-safe counters (`src/mechanics/achievements.js`, `game.js`, `src/ui/hangarChipsUI.js`, `src/persistence/initialState.js`, `src/persistence/storage.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
+  - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`.
+  - Зафиксированы: achievement ladders `manualFenceRepairs` (`1/50/200/1000/10000`) и `modifierTechUnlocks` (`1/3/8/16`), dedupe по `achievements.completedModifierTechs` и one-shot reward contract через `achievements.rewarded`.
+  - Зафиксированы: save shape рассматривает `rewarded`, `totalManualFenceRepairs`, `totalModifierTechUnlocks`, `completedModifierTechs` и mirrored `state.stats.*Count` как единый persistence-contract; restore/apply делают only-once backfill для self-managed tech rewards.
+  - Зафиксированы: оба tech unlock path в `src/ui/hangarChipsUI.js` routed через `Game.onModifierTechnologyUnlocked(modId)` после успешного unlock, а regression pack `tutorial_first_run_runtime.test.js` покрывает thresholds, single-increment repair hook, i18n sync и save-safe reward restore.
+
 - **Документация: shared post-merge update для talent reset cooldown modal, storage header right-actions и усиленного wobble talent edges (`game.js`, `index.html`, `style.css`, `src/ui/modals.js`, `src/ui/talentOverlayRenderer.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ui_talents_v2.md`.
   - Зафиксированы: footer-кнопка `Сбросить улучшения` больше не меняет label на cooldown; при active cooldown открывается отдельная `#talentResetCooldownModal` с timer-text, dismiss-кнопкой, ad-style refresh-stub CTA и синхронными i18n-ключами в `ru/en/fallback`.

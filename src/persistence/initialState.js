@@ -123,8 +123,18 @@
       achievements: {
         unlocked: {},
         popupQueue: [],
+        rewarded: {},
         totalPurchased: 0,
         totalMerges: 0,
+        totalManualFenceRepairs: 0,
+        totalModifierTechUnlocks: 0,
+        completedModifierTechs: {},
+      },
+      stats: {
+        tanksMergedCount: 0,
+        tanksBoughtCount: 0,
+        manualFenceRepairsCount: 0,
+        modifierTechUnlocksCount: 0,
       },
       ui: {
         talentsOpen: false,

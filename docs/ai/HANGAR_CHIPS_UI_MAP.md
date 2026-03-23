@@ -1,22 +1,24 @@
 # hangarChipsUI.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-10.
-> Файл большой (~3740 строк): используйте этот map перед чтением исходника.
+> Агент-ориентировано. Обновлён: 2026-03-23.
+> Файл большой (~4460 строк): используйте этот map перед чтением исходника.
 
 ## Что это
 `src/ui/hangarChipsUI.js` — единый runtime/UI-контроллер ангара: сетка ячеек, butterfly-SVG слоты, инвентарь чипов/фрагментов, workshop sub-tabs, tech unlock, chip craft, drag-drop и сохранение клиентского состояния.
 
 ## Быстрый старт для агента
-- Хочешь править вкладки ангара → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L604-L636), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L639-L683), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L693-L716).
-- Хочешь править сброс временного состояния мастерской при выходе из вкладок/окна → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L604-L636), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L639-L683), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L685-L697), [resetTransientUiState()](../../src/ui/hangarChipsUI.js#L2170-L2174) _(строки приблизительные, проверить после 2026-03-10)_ .
+- Хочешь править вкладки ангара → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L845), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L886), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L937).
+- Хочешь править сброс временного состояния мастерской при выходе из вкладок/окна → [switchHangarTab()](../../src/ui/hangarChipsUI.js#L845), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L886), [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L937), [resetTransientUiState()](../../src/ui/hangarChipsUI.js#L2652).
 - Хочешь править полные названия чипов/фрагментов и safe-wrap только по ` + ` → [_renderChipNameHtml()](../../src/ui/hangarChipsUI.js#L2311-L2320), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1934-L2012), [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2609-L2878).
 - Хочешь править карточный шаблон craft-слотов / силовые линии / результатные модалки → [_renderCraftSlotCard()](../../src/ui/hangarChipsUI.js#L2333-L2348), [_renderCraftRemoveButton()](../../src/ui/hangarChipsUI.js#L2350-L2355), [_renderCraftEnergyLines()](../../src/ui/hangarChipsUI.js#L2363-L2376), [_showCraftOutcomeModal()](../../src/ui/hangarChipsUI.js#L2484-L2506), [_showCraftRiskConfirmModal()](../../src/ui/hangarChipsUI.js#L2508-L2528).
-- Хочешь править rates, dust planner и итоговый summary ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L770-L785), [_getTechAccelSelectionState()](../../src/ui/hangarChipsUI.js#L1824-L1840), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L1909-L1988), [_formatTechAccelDustCount()](../../src/ui/hangarChipsUI.js#L1999-L2001), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L2003-L2047), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L2049-L2114).
+- Хочешь править completion unlock технологий и achievements sync → [_completeTechStudy()](../../src/ui/hangarChipsUI.js#L1011), [feedChipsForTech()](../../src/ui/hangarChipsUI.js#L1203), [game.js](../../game.js#L9348-L9373).
+- Хочешь править rates, dust planner и итоговый summary ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L1074), [_getTechAccelSelectionState()](../../src/ui/hangarChipsUI.js#L2240), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L2296), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L2386), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L2432).
 - Хочешь править split между assemble-panel и recycle-panel → [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2410-L2677), [_attachCraftPanelEvents()](../../src/ui/hangarChipsUI.js#L2679-L2789).
-- Хочешь править overlay wiring / tooltips / slot-drag → [init()](../../src/ui/hangarChipsUI.js#L2935-L3315).
+- Хочешь править overlay wiring / tooltips / slot-drag → [init()](../../src/ui/hangarChipsUI.js#L3966-L4358).
 
 ## Инварианты этого модуля ⚠️
-- Вкладки переключаются только через [switchHangarTab()](../../src/ui/hangarChipsUI.js#L604-L636), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L639-L683) и [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L693-L716): именно они синхронизируют `hidden`, `active`, `tabindex` и `aria-selected`.
+- Вкладки переключаются только через [switchHangarTab()](../../src/ui/hangarChipsUI.js#L845-L884), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L886-L935) и [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L937-L960): именно они синхронизируют `hidden`, `active`, `tabindex` и `aria-selected`.
+- Успешное завершение изучения технологии обязано вызвать `Game.onModifierTechnologyUnlocked(modId)` и в timer-path, и в direct feed-path, но только после `h.unlockTechnology(...).ok`; иначе achievements runtime, `completedModifierTechs` и persistence counters разойдутся с фактическим unlock-состоянием ангара: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1011-L1029), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1203-L1247), [game.js](../../game.js#L9348-L9373).
 - Top-level `workshopPanelChipCraft` — assemble-only panel, а `workshopPanelChipRecycle` управляет nested recycle-tabs `dust/disassemble/reprogram`; `_dustMode`, `_craftMode` и transient-state перепрограммирования должны вытекать из текущей под-вкладки, а не из отдельного UX-toggle: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L661-L716), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2800-L2800).
 - В assemble-режиме `_canAddFragment()` запрещает тройку одинаковых фрагментов и больше одного special-мода: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2077-L2101).
 - Dust-view recycle-panel обязан скрывать preview/right-column и переводить layout в single-column через `.chipCraftLayout--singleCol`; disassemble-view сохраняет preview/action-column и работает только с целыми чипами: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2418-L2668), [style.css](../../style.css#L4471-L4474).
@@ -47,13 +49,14 @@
 ### Блок: routing вкладок + tech study
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `switchHangarTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L604-L636) | Переключает `cells/workshop/techUnlock`, при входе в workshop ререндерит активную под-вкладку |
-| `switchWorkshopSubTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L639-L683) | Переключает `chipUpgrade/chipCraft/chipRecycle` |
-| `switchChipRecycleSubTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L685-L697) | Переключает nested recycle-tabs `dust/disassemble` |
-| `getTechStudying()`, `setTechStudying()`, `_startTechStudyTimer()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L674-L730) | Runtime таймера изучения технологий |
-| `_getTechAccelRates()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L770-L785) | Data-driven ставки ускорения для dust/chip/fragment |
-| `renderTechUnlockPanel()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L796-L915) | Главная панель tech unlock |
-| `feedChipsForTech()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L917-L974) | Прогресс кормления/изучения |
+| `switchHangarTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L845-L884) | Переключает `cells/workshop/techUnlock`, при входе в workshop ререндерит активную под-вкладку |
+| `switchWorkshopSubTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L886-L935) | Переключает `chipUpgrade/chipCraft/chipRecycle` |
+| `switchChipRecycleSubTab()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L937-L960) | Переключает nested recycle-tabs `dust/disassemble/reprogram` |
+| `getTechStudying()`, `setTechStudying()`, `_startTechStudyTimer()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L976-L1009) | Runtime таймера изучения технологий |
+| `_completeTechStudy()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1011-L1029) | Завершает timer-path unlock и шлёт `Game.onModifierTechnologyUnlocked(modId)` |
+| `_getTechAccelRates()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1074-L1084) | Data-driven ставки ускорения для dust/chip/fragment |
+| `renderTechUnlockPanel()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1100-L1190) | Главная панель tech unlock |
+| `feedChipsForTech()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1203-L1247) | Feed-путь изучения/instant unlock с тем же callback в achievements runtime |
 
 ### Блок: инвентарь, merge и tooltips
 | Функция / блок | Строки | Назначение |
@@ -78,16 +81,16 @@
 ### Блок: init / drag-drop / persistence API
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2935-L3315) | Главная инициализация overlay, hover-tooltips, slot-drag, chip merge drag |
+| `init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) | Главная инициализация overlay, hover-tooltips, slot-drag, chip merge drag |
 | `getCells()`, `setCells()`, `show()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3316-L3339) | Persisted hangar cells + safe-open overlay |
 | Debug/public API export | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3341-L3441) | Экспорт в `Game.HangarChipsUI` |
 
 ## Hotspots
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L639-L699) — routing workshop/recycle tabs и derived UI-state `_workshopSubTab/_chipRecycleSubTab`.
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1909-L2114) — tech accel modal, dust planner, total-summary и apply flow.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2296-L2432) — tech accel modal, dust planner, total-summary и apply flow.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2227-L2878) — chip-name pipeline, craft cards, силовые линии assemble-stage и result/confirm modal helpers.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2880-L3194) — nested recycle-tab events, reagent footer, craft confirm/result flow и loss-policy.
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2935-L3315) — overlay-level drag-drop/tooltips.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) — overlay-level drag-drop/tooltips.
 - [style.css](../../style.css#L3749-L3756) — nested recycle subtabs.
 - [style.css](../../style.css#L4302-L4379) — tech modal shell + craft confirm/result modal skin.
 - [style.css](../../style.css#L4754-L4879) — assemble-stage, energy lines и ingredient/result spacing.
