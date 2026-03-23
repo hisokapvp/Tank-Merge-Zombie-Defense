@@ -74,7 +74,8 @@
   "popHangar": "Hangar",
   "popTrack": "To battle!",
   "crateMessage": "Watch an ad to get a tank.",
-  "crateModalText": "Watch an ad to get a tank",
+  "crateModalTitle": "Military Aid",
+  "crateModalText": "To ensure successful mission completion, the command center has sent you an additional tank",
   "crateGet": "Claim",
   "crateAdLoading": "Watching ad...",
   "talentsBtn": "Upgrade Tree",
@@ -132,6 +133,7 @@
   "achievementUnlockedTitle": "Achievement unlocked",
   "achievementToastUnlocked": "Unlocked: {name}",
   "achievementClaim": "Claim",
+  "achievementCondition": "Condition: {condition}",
   "achievementStatusDone": "Unlocked",
   "achievementStatusTodo": "Locked",
   "achievementProgress": "Progress: {value}/{target}",
@@ -601,7 +603,7 @@
   ,"techAccelBtnLabel": "Accelerate by {pct}%"
   ,"techAccelClose": "Close"
   ,"techAccelApplied": "Acceleration applied. Total acceleration: {pct}%"
-  ,"techAccelMaxReached": "Maximum acceleration reached (95%)"
+  ,"techAccelMaxReached": "Maximum acceleration reached (96%)"
   ,"techAccelSelectionLimit": "This resource would exceed the acceleration limit. Choose another one."
   ,"techAccelLimitBadge": "Limit"
   ,"techAccelSelectedSummary": "Selected acceleration: {pct}% • total after apply: {total}% • remaining to cap: {left}%"

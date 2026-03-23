@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-23
+- **Документация: shared post-merge update для achievement rewards, zombie Health contract, crate military-aid modal и tech accel cap 96% (`assets/zombies.json`, `src/render/spriteLoaders.js`, `game.js`, `src/ui/hangarChipsUI.js`, `index.html`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/ui/modals.js`, `src/ui/adService.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/GAME_JS_MAP.md`.
+  - Зафиксированы: `ACHIEVEMENT_FAMILIES` и `flattenAchievementFamilies()` остаются canonical contract для achievement order/grouping, fence-награды идут через lazy-loaded `src/mechanics/achievementRewards.js`, а unlock-popup остаётся informational-only, потому что reward reconcile выполняется до `queueAchievementPopup(...)`.
+  - Зафиксированы: `assets/zombies.json` теперь рассматривается как explicit HP-contract через `types[].Health`; `ZombieSprites.load()` нормализует `Health/health` в `type.health`, а `makeZombie()` использует это значение раньше балансной HP-формулы.
+  - Зафиксированы: accel modal использует hard cap `96%`, модалка ящика оформлена как `Военная помощь` и claim CTA gate-ится rewarded-ad capture-stub'ом в `src/ui/adService.js`, а index-level cache-bust группа `20260323-branch3-achievements-crate-aid` покрывает `style.css`, `src/ui/adService.js`, `src/i18n/fallbackStrings.js` и `src/ui/modals.js`.
+
 - **Документация: shared post-merge update для achievements runtime, tech reward flow и save-safe counters (`src/mechanics/achievements.js`, `game.js`, `src/ui/hangarChipsUI.js`, `src/persistence/initialState.js`, `src/persistence/storage.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
   - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/save.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`.
   - Зафиксированы: achievement ladders `manualFenceRepairs` (`1/50/200/1000/10000`) и `modifierTechUnlocks` (`1/3/8/16`), dedupe по `achievements.completedModifierTechs` и one-shot reward contract через `achievements.rewarded`.

@@ -25,7 +25,9 @@ const ui = {
   achievementPopup: document.getElementById('achievementPopup'),
   achievementPopupClose: document.getElementById('achievementPopupClose'),
   achievementPopupClaim: document.getElementById('achievementPopupClaim'),
+  achievementPopupDismiss: document.getElementById('achievementPopupDismiss'),
   achievementPopupName: document.getElementById('achievementPopupName'),
+  achievementPopupCondition: document.getElementById('achievementPopupCondition'),
   achievementPopupReward: document.getElementById('achievementPopupReward'),
   achievementToast: document.getElementById('achievementToast'),
   settingsBtn: document.getElementById('settingsBtn'),
@@ -449,12 +451,15 @@ let crateRuntimeController = null;
 let zombieRenderRuntimeController = null;
 let bigMenuRuntimeController = null;
 let smallMenuRuntimeController = null;
+let achievementRewardsScriptRequested = false;
+let achievementRewardsScriptFailed = false;
 const InitialStateApi = GameApi?.InitialState ?? null;
 const AchievementsApi = GameApi?.Achievements ?? null;
 const SupercomputerApi = GameApi?.Supercomputer ?? null;
 const DronesApi = GameApi?.Drones ?? null;
 const TankHangarAnimationApi = GameApi?.TankHangarAnimation ?? null;
 const FenceSidesApi = GameApi?.FenceSides ?? null;
+const ACHIEVEMENT_REWARDS_SCRIPT_SRC = 'src/mechanics/achievementRewards.js';
 
 function createInitialState(options){
   const opts = options || {};
@@ -1275,6 +1280,7 @@ let menuPauseLocks = {
   settings: !!(state && state.ui && state.ui.menuOpen),
   supercomputer: false,
   achievements: false,
+  achievementPopup: false,
   productionStorage: false,
   undergroundHangar: false,
   critical: false,
@@ -3318,6 +3324,41 @@ function toAchievementToastMessage(event){
   return t('achievementToastUnlocked', { name: t(def.titleKey) });
 }
 
+function getAchievementConditionText(def){
+  if (!def || typeof def !== 'object') return '';
+  const target = Number.isFinite(def.target) ? Math.max(0, Math.floor(def.target)) : 0;
+  if (typeof def.descKey === 'string' && def.descKey) return t(def.descKey);
+  if (def.progressType === 'merges') return t('achievementDescriptionMergeTanks', { target });
+  if (def.progressType === 'purchases') return t('achievementDescriptionCreateTanks', { target });
+  return '';
+}
+
+function openAchievementPopupEvent(event){
+  if (!event || event.type !== 'achievement_unlock' || typeof event.id !== 'string') return false;
+  const def = getAchievementById(event.id);
+  if (!def || !ui.achievementPopup) return false;
+  if (ui.achievementPopupName) ui.achievementPopupName.textContent = t(def.titleKey);
+  if (ui.achievementPopupCondition) {
+    const conditionText = getAchievementConditionText(def);
+    ui.achievementPopupCondition.textContent = conditionText
+      ? t('achievementCondition', { condition: conditionText })
+      : '';
+  }
+  if (ui.achievementPopupReward) {
+    ui.achievementPopupReward.textContent = def.rewardKey
+      ? t('achievementReward', { reward: t(def.rewardKey) })
+      : '';
+  }
+  setMenuPauseSource('achievementPopup', true);
+  ui.achievementPopup.classList.remove('hidden');
+  ui.achievementPopup.setAttribute('aria-hidden', 'false');
+  a11yOpen(ui.achievementPopup, {
+    initialFocus: ui.achievementPopupClaim || ui.achievementPopupDismiss || ui.achievementPopupClose,
+    onClose: closeAchievementPopup,
+  });
+  return true;
+}
+
 function applyAchievementUnlockFx(achievementId, nowMs){
   if (typeof achievementId !== 'string') return;
   const uiState = ensureAchievementUiState();
@@ -3336,36 +3377,23 @@ function updateAchievementToastState(){
   const uiState = ensureAchievementUiState();
   if (!ach || !uiState.toast) return;
   const queue = ach.popupQueue;
-  const nowMs = Date.now();
   const blockedByPause = shouldBlockAchievementToastByPause();
-  if (!blockedByPause && uiState.toast.active && nowMs >= uiState.toast.active.expiresAtMs) {
-    uiState.toast.active = null;
-  }
   if (!uiState.toast.active && !blockedByPause) {
     while (queue.length > 0) {
       const nextEvent = normalizeAchievementQueueEvent(queue.shift());
       if (!nextEvent) continue;
-      const message = toAchievementToastMessage(nextEvent);
-      if (!message) continue;
+      if (!openAchievementPopupEvent(nextEvent)) continue;
       uiState.toast.active = {
         type: nextEvent.type,
         id: nextEvent.id,
-        message: message,
-        expiresAtMs: nowMs + ACHIEVEMENT_TOAST_DURATION_MS,
       };
-      applyAchievementUnlockFx(nextEvent.id, nowMs);
+      applyAchievementUnlockFx(nextEvent.id, Date.now());
       break;
     }
   }
   if (!ui.achievementToast) return;
-  if (uiState.toast.active && !blockedByPause) {
-    ui.achievementToast.textContent = uiState.toast.active.message || '';
-    ui.achievementToast.classList.remove('hidden');
-    ui.achievementToast.setAttribute('aria-hidden', 'false');
-  } else {
-    ui.achievementToast.classList.add('hidden');
-    ui.achievementToast.setAttribute('aria-hidden', 'true');
-  }
+  ui.achievementToast.classList.add('hidden');
+  ui.achievementToast.setAttribute('aria-hidden', 'true');
 }
 
 function applyUnlockPulseState(nowMs){
@@ -5654,10 +5682,15 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     : Math.random() * Math.PI*2;
   const dir = Math.random() < 0.5 ? -1 : 1;
 
-  const levelHpMul = zombieHpMultiplier(level);
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
-  const baseHp = BAL.zombieHpBase * (1 + (Math.random()*2-1)*BAL.zombieHpVar) * levelHpMul;
-  const zombieMaxHp = baseHp * (t?.hpMul ?? 1.0) * getZombieWaveHpMult();
+  const explicitHealth = Number.isFinite(t?.health) && t.health > 0 ? t.health : null;
+  const baseHp = explicitHealth != null
+    ? explicitHealth
+    : BAL.zombieHpBase
+      * (1 + (Math.random()*2-1)*BAL.zombieHpVar)
+      * zombieHpMultiplier(level)
+      * (t?.hpMul ?? 1.0);
+  const zombieMaxHp = baseHp * getZombieWaveHpMult();
   // Zombies no longer orbit; omegaBase is 0 (they approach the fence directly)
   const baseOmega = 0;
   const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
@@ -9231,101 +9264,57 @@ function getAchievementById(id){
   return null;
 }
 
-function isAchievementRewardGranted(achievementId){
-  if (typeof achievementId !== 'string' || !achievementId) return false;
-  if (AchievementsApi && typeof AchievementsApi.hasRewardGranted === 'function') {
-    return !!AchievementsApi.hasRewardGranted(state, achievementId);
+function getAchievementRewardsApi(){
+  return GameApi && GameApi.AchievementRewards ? GameApi.AchievementRewards : null;
+}
+
+function ensureAchievementRewardsModule(){
+  const achievementRewardsApi = getAchievementRewardsApi();
+  if (achievementRewardsApi && typeof achievementRewardsApi.grant === 'function') {
+    return achievementRewardsApi;
   }
-  const ach = ensureAchievementsState();
-  return !!(ach && ach.rewarded && ach.rewarded[achievementId]);
+  if (achievementRewardsScriptRequested || achievementRewardsScriptFailed) return null;
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null;
+  const target = document.head || document.body || document.documentElement;
+  if (!target) return null;
+  achievementRewardsScriptRequested = true;
+  const script = document.createElement('script');
+  script.src = ACHIEVEMENT_REWARDS_SCRIPT_SRC;
+  script.async = false;
+  script.onload = function(){
+    if (!getAchievementRewardsApi()) {
+      achievementRewardsScriptFailed = true;
+      return;
+    }
+    reconcileAchievementRewardsForUnlocked();
+    updateUI();
+  };
+  script.onerror = function(){
+    achievementRewardsScriptFailed = true;
+  };
+  target.appendChild(script);
+  return null;
 }
 
-function markAchievementRewardGranted(achievementId){
-  if (typeof achievementId !== 'string' || !achievementId) return false;
-  if (AchievementsApi && typeof AchievementsApi.markRewardGranted === 'function') {
-    return !!AchievementsApi.markRewardGranted(state, achievementId);
-  }
-  const ach = ensureAchievementsState();
-  if (!ach) return false;
-  if (!ach.rewarded || typeof ach.rewarded !== 'object') ach.rewarded = {};
-  ach.rewarded[achievementId] = true;
-  return true;
-}
-
-function getRandomAchievementFragmentId(){
-  return Math.floor(Math.random() * 14) + 1;
-}
-
-function getRandomAchievementChipDef(){
-  const HangarChips = window.Game && window.Game.HangarChips ? window.Game.HangarChips : null;
-  const pool = HangarChips && Array.isArray(HangarChips.allChips) ? HangarChips.allChips : null;
-  if (!pool || pool.length <= 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)] || null;
-}
-
-function grantAchievementRandomChips(count){
-  const ChipsUI = window.Game && window.Game.HangarChipsUI ? window.Game.HangarChipsUI : null;
-  const total = Math.max(0, Math.floor(Number(count) || 0));
-  if (!ChipsUI || typeof ChipsUI.addPlayerChip !== 'function' || total <= 0) return false;
-  for (let i = 0; i < total; i++) {
-    const chipDef = getRandomAchievementChipDef();
-    if (!chipDef) return false;
-    ChipsUI.addPlayerChip(chipDef, 1);
-  }
-  return true;
-}
-
-function grantAchievementRandomFragments(count){
-  const ChipsUI = window.Game && window.Game.HangarChipsUI ? window.Game.HangarChipsUI : null;
-  const total = Math.max(0, Math.floor(Number(count) || 0));
-  if (!ChipsUI || typeof ChipsUI.addPlayerFragment !== 'function' || total <= 0) return false;
-  for (let i = 0; i < total; i++) {
-    ChipsUI.addPlayerFragment(getRandomAchievementFragmentId(), 1);
-  }
-  return true;
-}
-
-function grantAchievementUpgradePoints(count){
-  const total = Math.max(0, Math.floor(Number(count) || 0));
-  if (total <= 0) return false;
-  const result = debugAdjustTalentPoints(total);
-  return !!(result && result.ok);
-}
+ensureAchievementRewardsModule();
 
 function grantAchievementReward(achievementId){
   if (typeof achievementId !== 'string' || !achievementId) return false;
-  if (isAchievementRewardGranted(achievementId)) return false;
   const def = getAchievementById(achievementId);
   if (!def || typeof def.rewardMode !== 'string') return false;
-  const ChipsUI = window.Game && window.Game.HangarChipsUI ? window.Game.HangarChipsUI : null;
   switch (def.rewardMode) {
     case 'fenceMechanicCoins75':
-      state.coins = Math.max(0, Math.floor(Number(state.coins) || 0)) + 75;
-      break;
-    case 'fenceMechanicDust5': {
-      if (!ChipsUI || typeof ChipsUI.getSiliconDust !== 'function' || typeof ChipsUI.setSiliconDust !== 'function') return false;
-      const currentDust = Math.max(0, Math.floor(Number(ChipsUI.getSiliconDust()) || 0));
-      ChipsUI.setSiliconDust(currentDust + 5);
-      break;
-    }
-    case 'fenceMechanicFragment1': {
-      if (!ChipsUI || typeof ChipsUI.addPlayerFragment !== 'function') return false;
-      ChipsUI.addPlayerFragment(getRandomAchievementFragmentId(), 1);
-      break;
-    }
+    case 'fenceMechanicDust5':
+    case 'fenceMechanicFragment1':
     case 'fenceMechanicRandomChips2':
-      if (!grantAchievementRandomChips(2)) return false;
-      break;
     case 'fenceMechanicUpgradePoint1':
-      if (!grantAchievementUpgradePoints(1)) return false;
-      break;
-    case 'newTechnologyFragments2':
-      if (!grantAchievementRandomFragments(2)) return false;
       break;
     default:
       return false;
   }
-  return markAchievementRewardGranted(achievementId);
+  const achievementRewardsApi = getAchievementRewardsApi() || ensureAchievementRewardsModule();
+  if (!achievementRewardsApi || typeof achievementRewardsApi.grant !== 'function') return false;
+  return !!achievementRewardsApi.grant(state, def);
 }
 
 function reconcileAchievementRewards(achievementIds){
@@ -9427,6 +9416,9 @@ function closeAchievementsModal(){
 }
 
 function closeAchievementPopup(){
+  const uiState = ensureAchievementUiState();
+  if (uiState.toast) uiState.toast.active = null;
+  setMenuPauseSource('achievementPopup', false);
   if (!ui.achievementPopup) return;
   ui.achievementPopup.classList.add('hidden');
   ui.achievementPopup.setAttribute('aria-hidden', 'true');
@@ -10563,6 +10555,7 @@ ui.achievementsModal?.addEventListener('click', (e) => {
 });
 ui.achievementPopupClose?.addEventListener('click', () => closeAchievementPopup());
 ui.achievementPopupClaim?.addEventListener('click', () => closeAchievementPopup());
+ui.achievementPopupDismiss?.addEventListener('click', () => closeAchievementPopup());
 ui.achievementPopup?.addEventListener('click', (e) => {
   if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
 });

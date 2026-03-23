@@ -11,6 +11,7 @@
 (function (global) {
   'use strict';
 
+  var TECH_ACCEL_MAX_PCT = 96;
   var HC; // lazy ref to Game.HangarChips
 
   function hc() {
@@ -1160,7 +1161,7 @@
 
           html += '<div class="techUnlockCard__actions">';
           html += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
-          var accelReachedMax = (_techStudying.acceleratedPct || 0) >= 95;
+          var accelReachedMax = (_techStudying.acceleratedPct || 0) >= TECH_ACCEL_MAX_PCT;
           var accelHasResources = _hasTechAccelerationResources();
           var accelDisabled = accelReachedMax || !accelHasResources;
           var accelLabel = accelReachedMax
@@ -2050,10 +2051,9 @@
     if (techAccelBtn) {
       var accelModId = parseInt(techAccelBtn.getAttribute('data-tech-accel'), 10);
       if (Number.isFinite(accelModId) && _techStudying && _techStudying.modId === accelModId) {
-        /* Fix 2: Block if at 95% */
-        if ((_techStudying.acceleratedPct || 0) >= 95) {
+        if ((_techStudying.acceleratedPct || 0) >= TECH_ACCEL_MAX_PCT) {
           if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-            global.Game.Toast.show(t('techAccelMaxReached', 'Достигнуто максимальное ускорение (95%)'), 1500);
+            global.Game.Toast.show(t('techAccelMaxReached'), 1500);
           }
           return;
         }
@@ -2259,7 +2259,7 @@
     if (!_techStudying) return 0;
     var currentAccel = _techStudying.acceleratedPct || 0;
     var selectedPct = _getTechAccelSelectionState().pct;
-    return Math.max(0, 95 - currentAccel - selectedPct);
+    return Math.max(0, TECH_ACCEL_MAX_PCT - currentAccel - selectedPct);
   }
 
   function _showTechCancelConfirm(modId) {
@@ -2359,7 +2359,7 @@
       + t('techAccelSelectedSummary', 'Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%')
         .replace('{pct}', '0')
         .replace('{total}', String(currentAccel))
-        .replace('{left}', String(Math.max(0, 95 - currentAccel)))
+        .replace('{left}', String(Math.max(0, TECH_ACCEL_MAX_PCT - currentAccel)))
       + '</div>';
     html += '</div>';
     html += '<div class="techModal__btns">' +
@@ -2389,8 +2389,8 @@
     var rates = _getTechAccelRates(_techStudying.modId);
     var pct = selection.pct;
     var currentAccel = _techStudying.acceleratedPct || 0;
-    var total = Math.min(95, currentAccel + pct);
-    var left = Math.max(0, 95 - currentAccel - pct);
+    var total = Math.min(TECH_ACCEL_MAX_PCT, currentAccel + pct);
+    var left = Math.max(0, TECH_ACCEL_MAX_PCT - currentAccel - pct);
     var confirmBtn = _techModalEl.querySelector('[data-tech-accel-confirm]');
     if (confirmBtn) {
       confirmBtn.textContent = t('techAccelBtnLabel', 'Ускорить на {pct}%').replace('{pct}', pct);
@@ -2432,10 +2432,9 @@
   function _applyTechAcceleration() {
     if (!_techModalEl || !_techStudying) return;
 
-    /* Fix 2: Block if already at 95% */
-    if ((_techStudying.acceleratedPct || 0) >= 95) {
+    if ((_techStudying.acceleratedPct || 0) >= TECH_ACCEL_MAX_PCT) {
       if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
-        global.Game.Toast.show(t('techAccelMaxReached', 'Достигнуто максимальное ускорение (95%)'), 1500);
+        global.Game.Toast.show(t('techAccelMaxReached'), 1500);
       }
       _closeTechModal();
       return;
@@ -2481,7 +2480,7 @@
     var accelRates = _getTechAccelRates(_techStudying.modId);
     var totalAccel = chipsToBurn.length * accelRates.chip + fragsToBurn.length * accelRates.fragment + dustToBurn * accelRates.dust;
     _techStudying.acceleratedPct = (_techStudying.acceleratedPct || 0) + totalAccel;
-    if (_techStudying.acceleratedPct > 95) _techStudying.acceleratedPct = 95; // Cap at 95%
+    if (_techStudying.acceleratedPct > TECH_ACCEL_MAX_PCT) _techStudying.acceleratedPct = TECH_ACCEL_MAX_PCT;
 
     /* Fix 7: Check completion against full duration (not reduced) */
     if (_techStudying.elapsed >= _techStudying.duration) {

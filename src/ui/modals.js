@@ -131,6 +131,27 @@
     hideModal(document.getElementById('talentResetCooldownModal'), opts.a11yClose);
   }
 
+  function ensureCrateClaimButtonContent(button) {
+    if (!button) return null;
+    button.classList.add('talentResetCooldownAdBtn', 'crateModal__claimBtn');
+
+    var labelEl = button.querySelector('.talentResetCooldownAdBtn__label');
+    var iconEl = button.querySelector('.talentResetCooldownAdBtn__icon');
+
+    if (!labelEl || !iconEl) {
+      button.textContent = '';
+      labelEl = document.createElement('span');
+      labelEl.className = 'talentResetCooldownAdBtn__label';
+      iconEl = document.createElement('span');
+      iconEl.className = 'talentResetCooldownAdBtn__icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      button.appendChild(labelEl);
+      button.appendChild(iconEl);
+    }
+
+    return labelEl;
+  }
+
   function openCrateModal(options) {
     var opts = options || {};
     var state = opts.state;
@@ -138,10 +159,19 @@
     var t = opts.t || function (k) { return k; };
     if (!state || !state.crate || !ui || !ui.crateModal) return;
 
+    var titleEl = document.getElementById('crateTitle');
+    var dismissBtn = document.getElementById('crateDismiss');
+    var closeBtn = ui.crateClose || document.getElementById('crateClose');
+    var claimLabelEl = ensureCrateClaimButtonContent(ui.crateGet);
+
+    if (titleEl) titleEl.textContent = t('crateModalTitle');
     if (ui.crateText) ui.crateText.textContent = t('crateModalText');
+    if (dismissBtn) dismissBtn.textContent = t('menuClose');
+    if (closeBtn) closeBtn.setAttribute('aria-label', t('menuClose'));
     if (ui.crateGet) {
       ui.crateGet.disabled = false;
-      ui.crateGet.textContent = t('crateGet');
+      if (claimLabelEl) claimLabelEl.textContent = t('crateGet');
+      else ui.crateGet.textContent = t('crateGet');
     }
 
     if (document && document.body) {

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="style.css?v=20260322-branch2-talent-reset-cooldown" />
+  <link rel="stylesheet" href="style.css?v=20260323-branch3-achievements-crate-aid" />
 </head>
 <body>
   <main class="layout">
@@ -178,15 +178,20 @@
         </div>
         <div class="levelModal crateModal hidden" id="crateModal" aria-hidden="true">
           <div class="levelModal__backdrop crateModal__backdrop" data-crate-close="true"></div>
-          <div class="levelModal__panel crateModal__panel" role="dialog" aria-modal="true" aria-labelledby="crateText" tabindex="-1">
-            <button class="levelModal__close crateModal__close scModal__close" id="crateClose" type="button" aria-label="Close">×</button>
+          <div class="levelModal__panel crateModal__panel" role="dialog" aria-modal="true" aria-labelledby="crateTitle" aria-describedby="crateText" tabindex="-1">
+            <button class="levelModal__close crateModal__close scModal__close" id="crateClose" type="button" aria-label="Закрыть">×</button>
             <div class="crateModal__content">
               <div class="crateModal__iconWrap">
                 <canvas id="crateTankIcon" width="96" height="96"></canvas>
               </div>
-              <div class="levelModal__title crateModal__text" id="crateText" data-i18n="crateModalText">Посмотреть рекламу и получить танк</div>
+              <div class="levelModal__title crateModal__title" id="crateTitle" data-i18n="crateModalTitle">Военная помощь</div>
+              <div class="levelModal__line crateModal__text" id="crateText" data-i18n="crateModalText">Для успешного завершения миссии центр управления отправил Вам дополнительный танк</div>
               <div class="crateModal__actions">
-                <button id="crateGet" class="btn btnPrimary" type="button" data-i18n="crateGet">Получить</button>
+                <button id="crateDismiss" class="btn btnSecondary" type="button" data-crate-close="true" data-i18n="menuClose">Закрыть</button>
+                <button id="crateGet" class="btn btnPrimary talentResetCooldownAdBtn crateModal__claimBtn" type="button">
+                  <span class="talentResetCooldownAdBtn__label">Получить</span>
+                  <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
+                </button>
               </div>
             </div>
           </div>
@@ -215,9 +220,13 @@
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementPopupTitle" tabindex="-1">
             <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">Достижение получено</div>
-            <div class="levelModal__line" id="achievementPopupName"></div>
-            <div class="levelModal__line" id="achievementPopupReward"></div>
-            <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
+            <div class="levelModal__line achievementPopup__name" id="achievementPopupName"></div>
+            <div class="levelModal__line achievementPopup__meta" id="achievementPopupCondition"></div>
+            <div class="levelModal__line achievementPopup__meta" id="achievementPopupReward"></div>
+            <div class="achievementPopup__actions">
+              <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
+              <button id="achievementPopupDismiss" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+            </div>
           </div>
         </div>
         <!-- Production Line Storage Modal -->
@@ -581,7 +590,7 @@
   <script src="src/render/tankHangarAnimation.js"></script>
   <script src="src/render/input.js"></script>
   <script src="src/config/tutorialSteps.js"></script>
-  <script src="src/ui/adService.js"></script>
+  <script src="src/ui/adService.js?v=20260323-branch3-achievements-crate-aid"></script>
   <script src="src/ui/continueFlow.js"></script>
   <script src="src/ui/shopUI.js"></script>
   <script src="src/ui/toast.js"></script>
@@ -603,7 +612,7 @@
   <script src="src/experiments/experiments.js"></script>
   <script src="src/perf/mobileMode.js"></script>
   <script src="src/i18n/index.js"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260322-branch2-talent-reset-cooldown"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260323-branch3-achievements-crate-aid"></script>
   <script src="src/ui/adminFlags.js"></script>
   <script src="src/ui/adminDamagePoints.js"></script>
   <script src="src/ui/analyticsPanel.js"></script>
@@ -614,7 +623,7 @@
   <script src="src/mechanics/hangarChips.js"></script>
   <script src="src/mechanics/chipEffects.js"></script>
   <script src="src/ui/hangarChipsUI.js"></script>
-  <script src="src/ui/modals.js?v=20260322-branch2-talent-reset-cooldown"></script>
+  <script src="src/ui/modals.js?v=20260323-branch3-achievements-crate-aid"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/talentOverlayDom.js"></script>
   <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>

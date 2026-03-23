@@ -76,7 +76,8 @@
   "popHangar": "Ангар",
   "popTrack": "В бой!",
   "crateMessage": "Посмотри рекламу и получи танк.",
-  "crateModalText": "Посмотреть рекламу и получить танк",
+  "crateModalTitle": "Военная помощь",
+  "crateModalText": "Для успешного завершения миссии центр управления отправил Вам дополнительный танк",
   "crateGet": "Получить",
   "crateAdLoading": "Просмотр рекламы...",
   "talentsBtn": "Древо улучшений",
@@ -134,6 +135,7 @@
   "achievementUnlockedTitle": "Достижение получено",
   "achievementToastUnlocked": "Открыто: {name}",
   "achievementClaim": "Получить",
+  "achievementCondition": "Условие: {condition}",
   "achievementStatusDone": "Получено",
   "achievementStatusTodo": "Не получено",
   "achievementProgress": "Прогресс: {value}/{target}",
@@ -601,7 +603,7 @@
   ,"techAccelBtnLabel": "Ускорить на {pct}%"
   ,"techAccelClose": "Закрыть"
   ,"techAccelApplied": "Ускорение применено. Итоговое ускорение: {pct}%"
-  ,"techAccelMaxReached": "Достигнуто максимальное ускорение (95%)"
+  ,"techAccelMaxReached": "Достигнуто максимальное ускорение (96%)"
   ,"techAccelSelectionLimit": "Этот ресурс превысит лимит ускорения. Выберите другой."
   ,"techAccelLimitBadge": "Лимит"
   ,"techAccelSelectedSummary": "Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%"

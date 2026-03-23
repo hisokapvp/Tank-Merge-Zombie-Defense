@@ -1119,7 +1119,7 @@ body.menu-open .stageUi .hudItem{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:16px;
+  gap:14px;
   padding-top:4px;
   width:100%;
 }
@@ -1137,19 +1137,37 @@ body.menu-open .stageUi .hudItem{
   border:1px solid rgba(255,184,114,.18);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 14px rgba(255,184,114,.1);
 }
-.crateModal__text{
+.crateModal__title{
   max-width:280px;
-  font-weight:700;
-  color:var(--text);
+}
+.crateModal__text{
+  max-width:312px;
+  color:rgba(240,246,255,.82);
   line-height:1.5;
 }
 .crateModal__actions{
   display:flex;
+  align-items:center;
   justify-content:center;
+  flex-wrap:nowrap;
+  gap:12px;
   width:100%;
 }
 .crateModal__actions .btn{
-  min-width:180px;
+  min-width:148px;
+}
+.crateModal__claimBtn{
+  min-width:188px;
+}
+@media (max-width: 480px){
+  .crateModal__actions{
+    flex-direction:column-reverse;
+  }
+  .crateModal__actions .btn,
+  .crateModal__claimBtn{
+    width:100%;
+    min-width:0;
+  }
 }
 
 .achievementsList{
@@ -1250,6 +1268,20 @@ body.menu-open .stageUi .hudItem{
 
 .achievementMeta + .achievementMeta{
   margin-top:4px;
+}
+.achievementPopup__name{
+  font-weight:700;
+  color:var(--text);
+}
+.achievementPopup__meta{
+  color:var(--muted);
+}
+.achievementPopup__actions{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  margin-top:14px;
+  flex-wrap:wrap;
 }
 #levelAccept{
   min-width:180px;

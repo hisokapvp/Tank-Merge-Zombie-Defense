@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-06.
+> Обновлено: 2026-03-23.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -18,13 +18,15 @@
 - Для визуальных изменений проверять соответствующий loader/renderer в `src/render/*`.
 - Для `assets/credits.json` учитываются поля элемента: `name`, `role_ru`, `role_en`.
 
-## `assets/zombies.json` (corpse lifecycle)
+## `assets/zombies.json` (spawn, corpse lifecycle, explicit Health)
+- Top-level `spawn` — часть runtime-контракта, а не просто баланс-данные: `ZombieSprites.load()` нормализует `targetAlive/sideCount/perSideTarget/perSideTolerance` в `ZombieSprites.spawnConfig`, а `game.js` читает этот объект в `getDefaultZombieTargetAlive()` и в spawn-planner'е attack-mode/alive-target логики: [assets/zombies.json](../../../assets/zombies.json#L1-L30), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L270-L278), [game.js](../../../game.js#L2173-L2190), [game.js](../../../game.js#L5608-L5626).
 - `corpseDespawnSec`: время существования трупа **после** завершения death-анимации.
 - `corpseFadeOutSec`: длительность fade-out в конце life-time трупа.
 - Нормализация runtime:
 	- оба поля приводятся к `Number` и clamp к `>= 0`;
 	- `corpseFadeOutSec` дополнительно clamp'ится до `corpseDespawnSec`.
 - Edge-case: при `corpseDespawnSec = 0` труп удаляется сразу после завершения death-анимации.
+- `types[].Health` — canonical поле явного HP для конкретного типа зомби; legacy `health` остаётся допустимым alias только на входе normalizer'а. `ZombieSprites.load()` сначала читает `Health`, потом fallback'ится к `health`, записывает результат в `type.health`, а `makeZombie()` использует этот explicit HP раньше общей формулы `BAL.zombieHpBase * zombieHpMultiplier(...) * hpMul`: [assets/zombies.json](../../../assets/zombies.json#L31-L2939), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L296-L305), [game.js](../../../game.js#L5676-L5687).
 
 ## `assets/tanks.json` (UI-параметры + печать танка)
 - Top-level `tankPrintDurationSec`:

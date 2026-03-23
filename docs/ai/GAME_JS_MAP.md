@@ -228,19 +228,19 @@
 ### Ящики (Crates)
 | Строка | Функция |
 |---|---|
-| 6207 | `pickCrateRewardLevel()` |
-| 6216 | `pickEmptyCell()` |
-| 6225 | `spawnCrate()` |
-| 6247 | `getCrateAnimation(stateName)` |
-| 6252 | `setCrateAnimationState(crate, nextState, resetTime)` |
-| 6259 | `syncCrateHoverAt(x, y)` |
-| 6272 | `maybeSpawnCrate()` |
-| 6279 | `stepCrate(dt)` |
-| 6302 | `crateHitTest(x, y)` |
-| 8017 | `openCrateModal()` |
-| 8042 | `closeCrateModal()` |
-| 8053 | `grantCrateTank(level, preferredIndex)` |
-| 8074 | `claimCrateReward()` |
+| 7957 | `pickCrateRewardLevel()` |
+| 7961 | `pickEmptyCell()` |
+| 7965 | `spawnCrate()` |
+| 7969 | `getCrateAnimation(stateName)` |
+| 7973 | `setCrateAnimationState(crate, nextState, resetTime)` |
+| 7977 | `syncCrateHoverAt(x, y)` |
+| 7981 | `maybeSpawnCrate()` |
+| 7985 | `stepCrate(dt)` |
+| 7989 | `crateHitTest(x, y)` |
+| 10108 | `openCrateModal()` |
+| 10132 | `closeCrateModal()` |
+| 10143 | `grantCrateTank(level, preferredIndex)` |
+| 10168 | `claimCrateReward()` |
 
 ### Kill / Respawn / Particles
 | Строка | Функция |
@@ -334,7 +334,7 @@
 | 7572 | `isTankSelectedForDismantle(tankId)` |
 | 7647 | `ensureProgressUI()` |
 | 7670 | `updateProgressUI()` |
-| 7965 | `renderCrateIcon(level)` |
+| 10003 | `renderCrateIcon(level)` |
 | 7999 | `openResetTalentsModal()` |
 | 8007 | `closeResetTalentsModal()` |
 
@@ -394,7 +394,7 @@
 | 9955 | `drawZombieFallback(x, y, z)` |
 | 10024 | `drawProjectiles()` |
 | 10067 | `drawImpacts()` |
-| 10121 | `drawCrate()` |
+| 12667 | `drawCrate()` |
 | 10191 | `drawDecals()` |
 | 10201 | `drawDamageNumbers()` |
 | 10217 | `drawParticles()` |

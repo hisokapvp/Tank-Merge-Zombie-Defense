@@ -293,6 +293,7 @@
           this.types = (data.types || []).map(function (t) {
             var animations = t && typeof t.animations === 'object' ? t.animations : null;
             var attackTuning = t && t.attack && typeof t.attack === 'object' ? t.attack : null;
+            var rawHealth = Number.isFinite(t && t.Health) ? t.Health : (Number.isFinite(t && t.health) ? t.health : null);
             return {
               id: t.id || 'zombie',
               frame: t.frame || { x: 0, y: 0, w: 64, h: 64 },
@@ -301,6 +302,7 @@
               anchor: t.anchor || { x: 0.5, y: 0.75 },
               scale: t.scale != null ? t.scale : 1.0,
               rotation: t.rotation != null ? t.rotation : 0,
+              health: rawHealth > 0 ? rawHealth : null,
               hpMul: t.hpMul != null ? t.hpMul : 1.0,
               omegaMul: t.omegaMul != null ? t.omegaMul : 1.0,
               rewardMul: t.rewardMul != null ? t.rewardMul : 1.0,
