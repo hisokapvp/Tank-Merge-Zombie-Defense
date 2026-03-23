@@ -166,6 +166,96 @@
         },
       ],
     },
+    {
+      id: 'duty_shift',
+      definitions: [
+        {
+          id: 'duty_shift_1',
+          familyId: 'duty_shift',
+          titleKey: 'achievementDutyShift1',
+          descKey: 'achievementDutyShift1Desc',
+          rewardKey: 'achievementRewardDutyShiftUpgradePoint1',
+          target: 1,
+          progressType: 'droneAcquisitions',
+          rewardMode: 'dutyShiftUpgradePoint1',
+        },
+        {
+          id: 'duty_shift_2',
+          familyId: 'duty_shift',
+          titleKey: 'achievementDutyShift2',
+          descKey: 'achievementDutyShift2Desc',
+          rewardKey: 'achievementRewardDutyShiftDamage20000',
+          target: 4,
+          progressType: 'droneAcquisitions',
+          rewardMode: 'dutyShiftDamage20000',
+        },
+        {
+          id: 'duty_shift_3',
+          familyId: 'duty_shift',
+          titleKey: 'achievementDutyShift3',
+          descKey: 'achievementDutyShift3Desc',
+          rewardKey: 'achievementRewardDutyShiftUpgradePoints2',
+          target: 9,
+          progressType: 'droneAcquisitions',
+          rewardMode: 'dutyShiftUpgradePoints2',
+        },
+      ],
+    },
+    {
+      id: 'track_cleanup',
+      definitions: [
+        {
+          id: 'track_cleanup_1',
+          familyId: 'track_cleanup',
+          titleKey: 'achievementTrackCleanup1',
+          descKey: 'achievementTrackCleanup1Desc',
+          rewardKey: 'achievementRewardTrackCleanupDamagePoints50',
+          target: 1,
+          progressType: 'noRepairAttackWaveStreak',
+          rewardMode: 'trackCleanupDamagePoints50',
+        },
+        {
+          id: 'track_cleanup_2',
+          familyId: 'track_cleanup',
+          titleKey: 'achievementTrackCleanup2',
+          descKey: 'achievementTrackCleanup2Desc',
+          rewardKey: 'achievementRewardTrackCleanupFragments2',
+          target: 5,
+          progressType: 'noRepairAttackWaveStreak',
+          rewardMode: 'trackCleanupFragments2',
+        },
+        {
+          id: 'track_cleanup_3',
+          familyId: 'track_cleanup',
+          titleKey: 'achievementTrackCleanup3',
+          descKey: 'achievementTrackCleanup3Desc',
+          rewardKey: 'achievementRewardTrackCleanupUpgradePoint1',
+          target: 10,
+          progressType: 'noRepairAttackWaveStreak',
+          rewardMode: 'trackCleanupUpgradePoint1',
+        },
+        {
+          id: 'track_cleanup_4',
+          familyId: 'track_cleanup',
+          titleKey: 'achievementTrackCleanup4',
+          descKey: 'achievementTrackCleanup4Desc',
+          rewardKey: 'achievementRewardTrackCleanupChips5',
+          target: 25,
+          progressType: 'noRepairAttackWaveStreak',
+          rewardMode: 'trackCleanupRandomChips5',
+        },
+        {
+          id: 'track_cleanup_5',
+          familyId: 'track_cleanup',
+          titleKey: 'achievementTrackCleanup5',
+          descKey: 'achievementTrackCleanup5Desc',
+          rewardKey: 'achievementRewardTrackCleanupUpgradePoints3',
+          target: 50,
+          progressType: 'noRepairAttackWaveStreak',
+          rewardMode: 'trackCleanupUpgradePoints3',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -349,11 +439,15 @@
     var hasBought = Number.isFinite(stats.tanksBoughtCount);
     var hasManualFenceRepairs = Number.isFinite(stats.manualFenceRepairsCount);
     var hasModifierTechUnlocks = Number.isFinite(stats.modifierTechUnlocksCount);
+    var hasDroneAcquisitions = Number.isFinite(stats.droneAcquisitionsCount);
+    var hasNoRepairAttackWaveStreak = Number.isFinite(stats.noRepairAttackWaveStreakCount);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
     var legacyManualFenceRepairs = normalizeCounter(ach.totalManualFenceRepairs);
     var legacyModifierTechUnlocks = normalizeCounter(ach.totalModifierTechUnlocks);
+    var legacyDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions);
+    var legacyNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -367,6 +461,12 @@
     if (!hasModifierTechUnlocks) stats.modifierTechUnlocksCount = legacyModifierTechUnlocks;
     else stats.modifierTechUnlocksCount = normalizeCounter(stats.modifierTechUnlocksCount);
 
+    if (!hasDroneAcquisitions) stats.droneAcquisitionsCount = legacyDroneAcquisitions;
+    else stats.droneAcquisitionsCount = normalizeCounter(stats.droneAcquisitionsCount);
+
+    if (!hasNoRepairAttackWaveStreak) stats.noRepairAttackWaveStreakCount = legacyNoRepairAttackWaveStreak;
+    else stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -378,6 +478,8 @@
     ach.totalPurchased = stats.tanksBoughtCount;
     ach.totalManualFenceRepairs = stats.manualFenceRepairsCount;
     ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
+    ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
+    ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
     return stats;
   }
 
@@ -433,6 +535,18 @@
       state.achievements.totalModifierTechUnlocks = normalizeCounter(state.achievements.totalModifierTechUnlocks);
     }
 
+    if (!Number.isFinite(state.achievements.totalDroneAcquisitions)) {
+      state.achievements.totalDroneAcquisitions = 0;
+    } else {
+      state.achievements.totalDroneAcquisitions = normalizeCounter(state.achievements.totalDroneAcquisitions);
+    }
+
+    if (!Number.isFinite(state.achievements.totalNoRepairAttackWaveStreak)) {
+      state.achievements.totalNoRepairAttackWaveStreak = 0;
+    } else {
+      state.achievements.totalNoRepairAttackWaveStreak = normalizeCounter(state.achievements.totalNoRepairAttackWaveStreak);
+    }
+
     if (completedModifierTechCount > state.achievements.totalModifierTechUnlocks) {
       state.achievements.totalModifierTechUnlocks = completedModifierTechCount;
     }
@@ -445,6 +559,17 @@
     return state.achievements;
   }
 
+  function setNoRepairAttackWaveStreak(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return 0;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.noRepairAttackWaveStreakCount = nextValue;
+    }
+    achievementState.totalNoRepairAttackWaveStreak = nextValue;
+    return nextValue;
+  }
+
   function getProgressValueFromState(progressType, state, ach) {
     var type = typeof progressType === 'string' ? progressType : 'purchases';
     var stats = state && state.stats && typeof state.stats === 'object' ? state.stats : null;
@@ -453,6 +578,8 @@
       if (type === 'merges') return normalizeCounter(stats.tanksMergedCount);
       if (type === 'manualFenceRepairs') return normalizeCounter(stats.manualFenceRepairsCount);
       if (type === 'modifierTechUnlocks') return normalizeCounter(stats.modifierTechUnlocksCount);
+      if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
+      if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
       return normalizeCounter(stats.tanksBoughtCount);
     }
 
@@ -465,6 +592,12 @@
     }
     if (type === 'modifierTechUnlocks') {
       return normalizeCounter(ach.totalModifierTechUnlocks);
+    }
+    if (type === 'droneAcquisitions') {
+      return normalizeCounter(ach.totalDroneAcquisitions);
+    }
+    if (type === 'noRepairAttackWaveStreak') {
+      return normalizeCounter(ach.totalNoRepairAttackWaveStreak);
     }
     return normalizeCounter(ach.totalPurchased);
   }
@@ -526,6 +659,10 @@
         stats.manualFenceRepairsCount = normalizeCounter(stats.manualFenceRepairsCount + delta);
       } else if (type === 'modifierTechUnlocks') {
         stats.modifierTechUnlocksCount = normalizeCounter(stats.modifierTechUnlocksCount + delta);
+      } else if (type === 'droneAcquisitions') {
+        stats.droneAcquisitionsCount = normalizeCounter(stats.droneAcquisitionsCount + delta);
+      } else if (type === 'noRepairAttackWaveStreak') {
+        stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount + delta);
       } else {
         stats.tanksBoughtCount = normalizeCounter(stats.tanksBoughtCount + delta);
       }
@@ -533,6 +670,12 @@
       ach.totalPurchased = stats.tanksBoughtCount;
       ach.totalManualFenceRepairs = stats.manualFenceRepairsCount;
       ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
+      ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
+      ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
+    } else if (type === 'droneAcquisitions') {
+      ach.totalDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions + delta);
+    } else if (type === 'noRepairAttackWaveStreak') {
+      ach.totalNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak + delta);
     } else if (type === 'modifierTechUnlocks') {
       ach.totalModifierTechUnlocks = normalizeCounter(ach.totalModifierTechUnlocks + delta);
     } else if (type === 'manualFenceRepairs') {
@@ -544,6 +687,22 @@
     }
 
     return recalculateUnlocks(state);
+  }
+
+  function recordNoRepairAttackWaveSuccess(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var current = getProgressValueFromState('noRepairAttackWaveStreak', state, ach);
+    setNoRepairAttackWaveStreak(state, ach, current + 1);
+    return recalculateUnlocks(state);
+  }
+
+  function resetNoRepairAttackWaveStreak(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    if (getProgressValueFromState('noRepairAttackWaveStreak', state, ach) <= 0) return false;
+    setNoRepairAttackWaveStreak(state, ach, 0);
+    return true;
   }
 
   function recordModifierTechUnlock(state, techId) {
@@ -589,5 +748,7 @@
     hasRewardGranted: hasRewardGranted,
     markRewardGranted: markRewardGranted,
     recordModifierTechUnlock: recordModifierTechUnlock,
+    recordNoRepairAttackWaveSuccess: recordNoRepairAttackWaveSuccess,
+    resetNoRepairAttackWaveStreak: resetNoRepairAttackWaveStreak,
   };
 })(typeof window !== 'undefined' ? window : this);

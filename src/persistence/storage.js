@@ -416,6 +416,8 @@
       tanksBoughtCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksBoughtCount) ? state.stats.tanksBoughtCount : achievements.totalPurchased),
       manualFenceRepairsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.manualFenceRepairsCount) ? state.stats.manualFenceRepairsCount : achievements.totalManualFenceRepairs),
       modifierTechUnlocksCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.modifierTechUnlocksCount) ? state.stats.modifierTechUnlocksCount : achievements.totalModifierTechUnlocks),
+      droneAcquisitionsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.droneAcquisitionsCount) ? state.stats.droneAcquisitionsCount : achievements.totalDroneAcquisitions),
+      noRepairAttackWaveStreakCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.noRepairAttackWaveStreakCount) ? state.stats.noRepairAttackWaveStreakCount : achievements.totalNoRepairAttackWaveStreak),
     };
     var drones = [];
     if (Array.isArray(state.drones)) {

@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-23
+- **Документация: shared post-merge update для duty_shift / track_cleanup achievements и save-safe counters (`game.js`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/persistence/initialState.js`, `src/persistence/storage.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
+  - Обновлены `docs/ai/SYSTEMS/achievements.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/save.md`.
+  - Зафиксированы: новые achievement families `duty_shift` (`1/4/9` drones) и `track_cleanup` (`1/5/10/25/50` attack waves without repair), canonical gameplay hooks через `addDron(level)` и attack-mode episode tracker, а также reset streak на manual repair и на реальный repair-drone HP delta.
+  - Зафиксированы: persistence contract теперь включает `totalDroneAcquisitions`, `totalNoRepairAttackWaveStreak`, mirrored `droneAcquisitionsCount/noRepairAttackWaveStreakCount` и reset transient no-repair runtime перед restore/apply.
+  - Зафиксированы: `dutyShiftDamage20000` семантически выдаёт `20000 damage points`, а regression pack `TUT-8R..TUT-8W` покрывает ladders, restore/recalc и reward dedupe.
+
 - **Документация: shared post-merge update для achievement rewards, zombie Health contract, crate military-aid modal и tech accel cap 96% (`assets/zombies.json`, `src/render/spriteLoaders.js`, `game.js`, `src/ui/hangarChipsUI.js`, `index.html`, `style.css`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/ui/modals.js`, `src/ui/adService.js`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/GAME_JS_MAP.md`.
   - Зафиксированы: `ACHIEVEMENT_FAMILIES` и `flattenAchievementFamilies()` остаются canonical contract для achievement order/grouping, fence-награды идут через lazy-loaded `src/mechanics/achievementRewards.js`, а unlock-popup остаётся informational-only, потому что reward reconcile выполняется до `queueAchievementPopup(...)`.

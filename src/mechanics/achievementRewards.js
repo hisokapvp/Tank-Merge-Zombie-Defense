@@ -1,9 +1,16 @@
 (function (global) {
   'use strict';
 
+  var DAMAGE_PROGRESS_PER_POINT = 10000;
+
   function normalizeCounter(value) {
     if (!Number.isFinite(value)) return 0;
     return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
+  }
+
+  function normalizeDamageProgress(value) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.floor(value));
   }
 
   function getAchievementsApi() {
@@ -105,6 +112,26 @@
     return true;
   }
 
+  function grantAchievementDamageProgress(state, amount) {
+    var total = normalizeDamageProgress(amount);
+    if (!state || total <= 0) return false;
+    if (!state.player || typeof state.player !== 'object') state.player = {};
+    var spentPoints = normalizeCounter(state.damagePointsSpent);
+    var currentProgress = normalizeDamageProgress(state.totalDamageDealtRaw);
+    var remainder = currentProgress % DAMAGE_PROGRESS_PER_POINT;
+    var totalDamagePoints = Math.floor(currentProgress / DAMAGE_PROGRESS_PER_POINT);
+    totalDamagePoints += Math.floor(total / DAMAGE_PROGRESS_PER_POINT);
+    state.totalDamageDealtRaw = totalDamagePoints * DAMAGE_PROGRESS_PER_POINT + remainder + (total % DAMAGE_PROGRESS_PER_POINT);
+    state.player.damagePoints = Math.max(0, Math.floor(state.totalDamageDealtRaw / DAMAGE_PROGRESS_PER_POINT) - spentPoints);
+    return true;
+  }
+
+  function grantAchievementDamagePoints(state, count) {
+    var total = normalizeCounter(count);
+    if (total <= 0) return false;
+    return grantAchievementDamageProgress(state, total * DAMAGE_PROGRESS_PER_POINT);
+  }
+
   function grant(state, definition, options) {
     var def = definition && typeof definition === 'object' ? definition : null;
     if (!state || !def || typeof def.id !== 'string' || typeof def.rewardMode !== 'string') return false;
@@ -125,6 +152,22 @@
       granted = grantAchievementRandomChips(2, randomFn);
     } else if (def.rewardMode === 'fenceMechanicUpgradePoint1') {
       granted = grantAchievementUpgradePoints(state, 1);
+    } else if (def.rewardMode === 'dutyShiftUpgradePoint1') {
+      granted = grantAchievementUpgradePoints(state, 1);
+    } else if (def.rewardMode === 'dutyShiftDamage20000') {
+      granted = grantAchievementDamagePoints(state, 20000);
+    } else if (def.rewardMode === 'dutyShiftUpgradePoints2') {
+      granted = grantAchievementUpgradePoints(state, 2);
+    } else if (def.rewardMode === 'trackCleanupDamagePoints50') {
+      granted = grantAchievementDamagePoints(state, 50);
+    } else if (def.rewardMode === 'trackCleanupFragments2') {
+      granted = grantAchievementRandomFragments(2, randomFn);
+    } else if (def.rewardMode === 'trackCleanupUpgradePoint1') {
+      granted = grantAchievementUpgradePoints(state, 1);
+    } else if (def.rewardMode === 'trackCleanupRandomChips5') {
+      granted = grantAchievementRandomChips(5, randomFn);
+    } else if (def.rewardMode === 'trackCleanupUpgradePoints3') {
+      granted = grantAchievementUpgradePoints(state, 3);
     }
 
     if (!granted) return false;

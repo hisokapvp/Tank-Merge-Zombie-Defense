@@ -128,6 +128,8 @@
         totalMerges: 0,
         totalManualFenceRepairs: 0,
         totalModifierTechUnlocks: 0,
+        totalDroneAcquisitions: 0,
+        totalNoRepairAttackWaveStreak: 0,
         completedModifierTechs: {},
       },
       stats: {
@@ -135,6 +137,8 @@
         tanksBoughtCount: 0,
         manualFenceRepairsCount: 0,
         modifierTechUnlocksCount: 0,
+        droneAcquisitionsCount: 0,
+        noRepairAttackWaveStreakCount: 0,
       },
       ui: {
         talentsOpen: false,

@@ -48,6 +48,7 @@ const talentOverlayRendererJs = fs.readFileSync(path.join(root, 'src/ui/talentOv
 const talentOverlayUiJs = fs.readFileSync(path.join(root, 'src/ui/talentOverlayUi.js'), 'utf-8');
 const productionLineUiJs = fs.readFileSync(path.join(root, 'src/ui/productionLineUI.js'), 'utf-8');
 const achievementsJs = fs.readFileSync(path.join(root, 'src/mechanics/achievements.js'), 'utf-8');
+const achievementRewardsJs = fs.readFileSync(path.join(root, 'src/mechanics/achievementRewards.js'), 'utf-8');
 const achievementsModalJs = fs.readFileSync(path.join(root, 'src/ui/achievementsModal.js'), 'utf-8');
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf-8');
 const ru = fs.readFileSync(path.join(root, 'src/i18n/ru.json'), 'utf-8');
@@ -485,6 +486,291 @@ test('TUT-8Q: tech achievements recalculate from unlocked runtime state and gran
 
   api.recalculateUnlocks(state);
   assertEqual(state.player.talentsV2.freePoints, 3, 'upgrade point reward stays one-shot after subsequent recalculation');
+});
+
+test('TUT-8R: duty shift achievements define 1/4/9 drone thresholds, rewards, and synced copy', () => {
+  assert(achievementsJs.indexOf("id: 'duty_shift_1'") !== -1, 'duty shift I definition exists');
+  assert(achievementsJs.indexOf("id: 'duty_shift_2'") !== -1, 'duty shift II definition exists');
+  assert(achievementsJs.indexOf("id: 'duty_shift_3'") !== -1, 'duty shift III definition exists');
+  assert(achievementsJs.indexOf("progressType: 'droneAcquisitions'") !== -1, 'drone acquisition progress type is defined');
+  assert(achievementsJs.indexOf('target: 4') !== -1, 'duty shift II threshold is defined');
+  assert(achievementsJs.indexOf('target: 9') !== -1, 'duty shift III threshold is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'dutyShiftUpgradePoint1'") !== -1, 'duty shift I reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'dutyShiftDamage20000'") !== -1, 'duty shift II reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'dutyShiftUpgradePoints2'") !== -1, 'duty shift III reward mode is defined');
+  assert(ru.indexOf('"achievementDutyShift1": "Смена дежурства I"') !== -1, 'ru duty shift I title exists');
+  assert(ru.indexOf('"achievementDutyShift3Desc": "Получите 9 дронов техподдержки"') !== -1, 'ru duty shift III description exists');
+  assert(ru.indexOf('"achievementRewardDutyShiftDamage20000": "20000 очков урона"') !== -1, 'ru duty shift II reward exists');
+  assert(en.indexOf('"achievementDutyShift1": "Shift Change I"') !== -1, 'en duty shift I title exists');
+  assert(en.indexOf('"achievementDutyShift2Desc": "Get 4 maintenance drones"') !== -1, 'en duty shift II description exists');
+  assert(en.indexOf('"achievementRewardDutyShiftUpgradePoints2": "2 upgrade points"') !== -1, 'en duty shift III reward exists');
+  assert(fallback.indexOf("achievementDutyShift1: 'Смена дежурства I'") !== -1, 'fallback ru duty shift I title exists');
+  assert(fallback.indexOf("achievementDutyShift3Desc: 'Get 9 maintenance drones'") !== -1, 'fallback en duty shift III description exists');
+  assert(fallback.indexOf("achievementRewardDutyShiftDamage20000: '20000 damage points'") !== -1, 'fallback duty shift II reward exists');
+});
+
+test('TUT-8S: drone acquisition achievements increment on addDron, persist counters, and grant rewards once', () => {
+  const globalObj = {
+    window: null,
+    Game: {},
+  };
+  globalObj.window = globalObj;
+  new Function('window', 'global', achievementsJs)(globalObj, globalObj);
+  new Function('window', 'global', achievementRewardsJs)(globalObj, globalObj);
+
+  const achievementsApi = globalObj.Game.Achievements;
+  const rewardsApi = globalObj.Game.AchievementRewards;
+  const dutyShiftDefs = achievementsApi.getDefinitions().filter(function (def) {
+    return def.familyId === 'duty_shift';
+  });
+  const byId = {};
+  for (let i = 0; i < dutyShiftDefs.length; i++) byId[dutyShiftDefs[i].id] = dutyShiftDefs[i];
+
+  const state = {
+    achievements: { unlocked: {}, popupQueue: [], rewarded: {} },
+    stats: {},
+    drones: [],
+    player: {
+      talentsV2: { freePoints: 0 },
+      freeTalentPointsV2: 0,
+      damagePoints: 0,
+    },
+    totalDamageDealtRaw: 0,
+    damagePointsSpent: 0,
+  };
+
+  achievementsApi.ensureState(state);
+  assertEqual(state.achievements.totalDroneAcquisitions, 0, 'drone acquisition counter starts from zero');
+  assertEqual(state.stats.droneAcquisitionsCount, 0, 'mirrored drone acquisition counter starts from zero');
+
+  let unlocked = achievementsApi.addProgress(state, 'droneAcquisitions', 1);
+  assert(unlocked.indexOf('duty_shift_1') !== -1, 'first drone unlocks duty shift I');
+  assertEqual(state.stats.droneAcquisitionsCount, 1, 'first drone increments mirrored counter');
+  assert(rewardsApi.grant(state, byId.duty_shift_1), 'tier I reward grants once');
+  assertEqual(state.player.talentsV2.freePoints, 1, 'tier I reward grants 1 upgrade point');
+  assertEqual(state.player.freeTalentPointsV2, 1, 'tier I reward keeps freeTalentPointsV2 in sync');
+  assertEqual(rewardsApi.grant(state, byId.duty_shift_1), false, 'tier I reward does not grant twice');
+
+  unlocked = achievementsApi.addProgress(state, 'droneAcquisitions', 3);
+  assert(unlocked.indexOf('duty_shift_2') !== -1, 'fourth drone unlocks duty shift II');
+  assert(rewardsApi.grant(state, byId.duty_shift_2), 'tier II reward grants once');
+  assertEqual(state.totalDamageDealtRaw, 200000000, 'tier II reward adds 20000 damage points worth of raw damage progress');
+  assertEqual(state.player.damagePoints, 20000, 'tier II reward grants 20000 available damage points');
+  assertEqual(rewardsApi.grant(state, byId.duty_shift_2), false, 'tier II reward does not grant twice');
+
+  unlocked = achievementsApi.addProgress(state, 'droneAcquisitions', 5);
+  assert(unlocked.indexOf('duty_shift_3') !== -1, 'ninth drone unlocks duty shift III');
+  assert(rewardsApi.grant(state, byId.duty_shift_3), 'tier III reward grants once');
+  assertEqual(state.player.talentsV2.freePoints, 3, 'tier III reward adds 2 more upgrade points');
+  assertEqual(state.achievements.totalDroneAcquisitions, 9, 'drone acquisition total reaches the final threshold');
+
+  assert(gameJs.indexOf("processAchievementProgress('droneAcquisitions', 1);") !== -1, 'canonical addDron hook increments the drone achievement counter');
+  assert(gameJs.indexOf('ach.totalDroneAcquisitions = Number.isFinite(saved.achievements.totalDroneAcquisitions)') !== -1, 'restoreFullState keeps drone acquisition progress from saves');
+  assert(gameJs.indexOf('ach.totalDroneAcquisitions = Number.isFinite(achievements.totalDroneAcquisitions)') !== -1, 'applySavedProgress keeps drone acquisition progress from save payloads');
+  assert(gameJs.indexOf('droneAcquisitionsCount: clampDevInt(') !== -1, 'serialized achievement stats include the mirrored drone acquisition counter');
+  assert(storageJs.indexOf('droneAcquisitionsCount: normalizeSafeCounter(') !== -1, 'storage serialization normalizes the mirrored drone acquisition counter');
+});
+
+test('TUT-8T: track cleanup achievements define a shared no-repair wave family, rewards, and synced copy', () => {
+  assert(achievementsJs.indexOf("id: 'track_cleanup'") !== -1, 'track cleanup family exists');
+  assert(achievementsJs.indexOf("id: 'track_cleanup_1'") !== -1, 'track cleanup I definition exists');
+  assert(achievementsJs.indexOf("id: 'track_cleanup_2'") !== -1, 'track cleanup II definition exists');
+  assert(achievementsJs.indexOf("id: 'track_cleanup_3'") !== -1, 'track cleanup III definition exists');
+  assert(achievementsJs.indexOf("id: 'track_cleanup_4'") !== -1, 'track cleanup IV definition exists');
+  assert(achievementsJs.indexOf("id: 'track_cleanup_5'") !== -1, 'track cleanup V definition exists');
+  assertEqual(achievementsJs.split("progressType: 'noRepairAttackWaveStreak'").length - 1, 5, 'track cleanup ladder shares one streak progress type');
+  assert(achievementsJs.indexOf("rewardMode: 'trackCleanupDamagePoints50'") !== -1, 'track cleanup I reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'trackCleanupFragments2'") !== -1, 'track cleanup II reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'trackCleanupUpgradePoint1'") !== -1, 'track cleanup III reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'trackCleanupRandomChips5'") !== -1, 'track cleanup IV reward mode is defined');
+  assert(achievementsJs.indexOf("rewardMode: 'trackCleanupUpgradePoints3'") !== -1, 'track cleanup V reward mode is defined');
+  assert(ru.indexOf('"achievementTrackCleanup1": "Уборка трассы I"') !== -1, 'ru track cleanup I title exists');
+  assert(ru.indexOf('"achievementTrackCleanup5Desc": "Переживите 50 волн атак зомби подряд без починки фрагментов забора"') !== -1, 'ru track cleanup V description exists');
+  assert(ru.indexOf('"achievementRewardTrackCleanupChips5": "5 случайных чипов"') !== -1, 'ru track cleanup IV reward exists');
+  assert(en.indexOf('"achievementTrackCleanup1": "Track Cleanup I"') !== -1, 'en track cleanup I title exists');
+  assert(en.indexOf('"achievementTrackCleanup4Desc": "Survive 25 zombie attack waves in a row without repairing fence segments"') !== -1, 'en track cleanup IV description exists');
+  assert(en.indexOf('"achievementRewardTrackCleanupUpgradePoints3": "3 upgrade points"') !== -1, 'en track cleanup V reward exists');
+  assert(fallback.indexOf("achievementTrackCleanup1: 'Уборка трассы I'") !== -1, 'fallback ru track cleanup I title exists');
+  assert(fallback.indexOf("achievementTrackCleanup5Desc: 'Survive 50 zombie attack waves in a row without repairing fence segments'") !== -1, 'fallback en track cleanup V description exists');
+  assert(fallback.indexOf("achievementRewardTrackCleanupChips5: '5 random chips'") !== -1, 'fallback track cleanup IV reward exists');
+  assert(fallback.indexOf("achievementRewardTrackCleanupUpgradePoints3: '3 upgrade points'") !== -1, 'fallback track cleanup V reward exists');
+});
+
+test('TUT-8U: no-repair wave streak runtime resets on invalidation, persists mirrored counters, and grants rewards once', () => {
+  const rewardState = {
+    fragments: [],
+    chips: [],
+  };
+  const globalObj = {
+    window: null,
+    Game: {
+      HangarChips: {
+        allChips: [{ chipId: 101 }, { chipId: 102 }],
+      },
+      HangarChipsUI: {
+        addPlayerChip(chipDef, count) { rewardState.chips.push({ chipDef, count }); },
+        addPlayerFragment(fragmentId, count) { rewardState.fragments.push({ fragmentId, count }); },
+        getSiliconDust() { return 0; },
+        setSiliconDust() {},
+      },
+    },
+  };
+  globalObj.window = globalObj;
+  new Function('window', 'global', achievementsJs)(globalObj, globalObj);
+  new Function('window', 'global', achievementRewardsJs)(globalObj, globalObj);
+
+  const achievementsApi = globalObj.Game.Achievements;
+  const rewardsApi = globalObj.Game.AchievementRewards;
+  const defs = achievementsApi.getDefinitions().filter(function (def) {
+    return def.familyId === 'track_cleanup';
+  });
+  const byId = {};
+  for (let i = 0; i < defs.length; i++) byId[defs[i].id] = defs[i];
+
+  const state = {
+    achievements: { unlocked: {}, popupQueue: [], rewarded: {} },
+    stats: {},
+    player: {
+      talentsV2: { freePoints: 0 },
+      freeTalentPointsV2: 0,
+      damagePoints: 0,
+    },
+    totalDamageDealtRaw: 0,
+    damagePointsSpent: 0,
+  };
+
+  achievementsApi.ensureState(state);
+  assertEqual(state.achievements.totalNoRepairAttackWaveStreak, 0, 'no-repair wave streak starts from zero');
+  assertEqual(state.stats.noRepairAttackWaveStreakCount, 0, 'mirrored no-repair wave streak starts from zero');
+
+  let unlocked = achievementsApi.recordNoRepairAttackWaveSuccess(state);
+  assert(unlocked.indexOf('track_cleanup_1') !== -1, 'first clean wave unlocks track cleanup I');
+  assertEqual(achievementsApi.getProgressValue(state, 'noRepairAttackWaveStreak'), 1, 'track cleanup streak reads back from runtime');
+  assertEqual(state.stats.noRepairAttackWaveStreakCount, 1, 'track cleanup streak is mirrored into stats');
+  assert(rewardsApi.grant(state, byId.track_cleanup_1), 'track cleanup I reward grants once');
+  assertEqual(state.player.damagePoints, 50, 'track cleanup I reward grants 50 damage points');
+  assertEqual(rewardsApi.grant(state, byId.track_cleanup_1), false, 'track cleanup I reward stays one-shot');
+
+  achievementsApi.resetNoRepairAttackWaveStreak(state);
+  assertEqual(achievementsApi.getProgressValue(state, 'noRepairAttackWaveStreak'), 0, 'invalidated wave resets the streak');
+
+  unlocked = [];
+  for (let i = 0; i < 5; i++) {
+    unlocked = unlocked.concat(achievementsApi.recordNoRepairAttackWaveSuccess(state) || []);
+  }
+  assert(unlocked.indexOf('track_cleanup_2') !== -1, 'five clean waves unlock track cleanup II');
+  assert(rewardsApi.grant(state, byId.track_cleanup_2), 'track cleanup II reward grants once');
+  assertEqual(rewardState.fragments.length, 2, 'track cleanup II reward grants two fragments');
+
+  unlocked = [];
+  for (let i = 0; i < 5; i++) {
+    unlocked = unlocked.concat(achievementsApi.recordNoRepairAttackWaveSuccess(state) || []);
+  }
+  assert(unlocked.indexOf('track_cleanup_3') !== -1, 'ten clean waves unlock track cleanup III');
+  assert(rewardsApi.grant(state, byId.track_cleanup_3), 'track cleanup III reward grants once');
+  assertEqual(state.player.talentsV2.freePoints, 1, 'track cleanup III reward grants 1 upgrade point');
+  assertEqual(state.player.freeTalentPointsV2, 1, 'track cleanup III reward keeps freeTalentPointsV2 in sync');
+
+  unlocked = [];
+  for (let i = 0; i < 15; i++) {
+    unlocked = unlocked.concat(achievementsApi.recordNoRepairAttackWaveSuccess(state) || []);
+  }
+  assert(unlocked.indexOf('track_cleanup_4') !== -1, 'twenty-five clean waves unlock track cleanup IV');
+  assert(rewardsApi.grant(state, byId.track_cleanup_4, { random: function () { return 0; } }), 'track cleanup IV reward grants once');
+  assertEqual(rewardState.chips.length, 5, 'track cleanup IV reward grants five random chips through the canonical chip inventory path');
+  assertEqual(rewardsApi.grant(state, byId.track_cleanup_4, { random: function () { return 0; } }), false, 'track cleanup IV reward stays one-shot');
+
+  unlocked = [];
+  for (let i = 0; i < 25; i++) {
+    unlocked = unlocked.concat(achievementsApi.recordNoRepairAttackWaveSuccess(state) || []);
+  }
+  assert(unlocked.indexOf('track_cleanup_5') !== -1, 'fifty clean waves unlock track cleanup V');
+  assert(rewardsApi.grant(state, byId.track_cleanup_5), 'track cleanup V reward grants once');
+  assertEqual(state.player.talentsV2.freePoints, 4, 'track cleanup V reward adds 3 more upgrade points');
+  assertEqual(state.player.freeTalentPointsV2, 4, 'track cleanup V reward keeps freeTalentPointsV2 in sync');
+  assertEqual(rewardsApi.grant(state, byId.track_cleanup_5), false, 'track cleanup V reward stays one-shot');
+
+  const initialStateSource = fs.readFileSync(path.join(root, 'src/persistence/initialState.js'), 'utf-8');
+  assert(initialStateSource.indexOf('totalNoRepairAttackWaveStreak: 0') !== -1, 'initial state seeds no-repair streak achievement field');
+  assert(initialStateSource.indexOf('noRepairAttackWaveStreakCount: 0') !== -1, 'initial state seeds mirrored no-repair streak stat');
+  assert(storageJs.indexOf('noRepairAttackWaveStreakCount: normalizeSafeCounter(') !== -1, 'storage serialization normalizes the mirrored no-repair streak stat');
+});
+
+test('TUT-8V: attack-wave tracking invalidates on both manual and drone fence repair and restores the streak from saves', () => {
+  assert(gameJs.indexOf('function beginNoRepairAttackWaveEpisode(){') !== -1, 'game runtime defines attack-wave start tracking');
+  assert(gameJs.indexOf('function finalizeNoRepairAttackWaveEpisode(){') !== -1, 'game runtime defines attack-wave completion tracking');
+  assert(gameJs.indexOf('handleNoRepairAttackWaveTransition(wasAttackActive, isZombieAttackModeActive());') !== -1, 'world events transition feeds the no-repair tracker');
+  const repairFnIdx = gameJs.indexOf('function tryRepairFenceSegmentAt(px, py){');
+  const repairFnEndIdx = gameJs.indexOf('function resolveFenceFrameScale(frame){', repairFnIdx);
+  const repairBlock = repairFnIdx !== -1 && repairFnEndIdx !== -1 ? gameJs.slice(repairFnIdx, repairFnEndIdx) : '';
+  const invalidationIdx = repairBlock.indexOf('invalidateNoRepairAttackWaveEpisode();');
+  const manualProgressIdx = repairBlock.indexOf("processAchievementProgress('manualFenceRepairs', 1);");
+  assert(invalidationIdx !== -1 && manualProgressIdx !== -1 && invalidationIdx < manualProgressIdx, 'manual fence repair invalidates the no-repair streak before counting manual repair progress');
+  assert(gameJs.indexOf('const repairHpSnapshot = captureFenceHpSnapshotForNoRepairTracking();') !== -1, 'drone repair path snapshots fence HP before drone step');
+  assert(gameJs.indexOf('invalidateNoRepairAttackWaveOnDroneRepair(repairHpSnapshot);') !== -1, 'drone repair path invalidates the no-repair streak on actual HP gain');
+  assert(gameJs.indexOf('ach.totalNoRepairAttackWaveStreak = Number.isFinite(saved.achievements.totalNoRepairAttackWaveStreak)') !== -1, 'restoreFullState keeps no-repair streak progress from saves');
+  assert(gameJs.indexOf('ach.totalNoRepairAttackWaveStreak = Number.isFinite(achievements.totalNoRepairAttackWaveStreak)') !== -1, 'applySavedProgress keeps no-repair streak progress from save payloads');
+  assert(gameJs.indexOf('noRepairAttackWaveStreakCount: clampDevInt(') !== -1, 'serialized achievement stats include the mirrored no-repair streak counter');
+  assert(gameJs.indexOf("case 'trackCleanupRandomChips5':") !== -1, 'game reward reconciliation recognizes track cleanup IV rewards');
+  assert(gameJs.indexOf("case 'trackCleanupUpgradePoints3':") !== -1, 'game reward reconciliation recognizes track cleanup V rewards');
+});
+
+test('TUT-8W: restore plus recalculation unlocks track cleanup IV-V once and preserves rewarded dedupe', () => {
+  const rewardState = {
+    chips: [],
+  };
+  const globalObj = {
+    window: null,
+    Game: {
+      HangarChips: {
+        allChips: [{ chipId: 201 }, { chipId: 202 }],
+      },
+      HangarChipsUI: {
+        addPlayerChip(chipDef, count) { rewardState.chips.push({ chipDef, count }); },
+      },
+    },
+  };
+  globalObj.window = globalObj;
+  new Function('window', 'global', achievementsJs)(globalObj, globalObj);
+  new Function('window', 'global', achievementRewardsJs)(globalObj, globalObj);
+
+  const achievementsApi = globalObj.Game.Achievements;
+  const rewardsApi = globalObj.Game.AchievementRewards;
+  const defs = achievementsApi.getDefinitions().filter(function (def) {
+    return def.familyId === 'track_cleanup';
+  });
+  const byId = {};
+  for (let i = 0; i < defs.length; i++) byId[defs[i].id] = defs[i];
+
+  const restoredState = {
+    achievements: {
+      unlocked: {},
+      popupQueue: [],
+      rewarded: {},
+      totalNoRepairAttackWaveStreak: 50,
+    },
+    stats: {
+      noRepairAttackWaveStreakCount: 50,
+    },
+    player: {
+      talentsV2: { freePoints: 0 },
+      freeTalentPointsV2: 0,
+    },
+  };
+
+  achievementsApi.ensureState(restoredState);
+  let unlocked = achievementsApi.recalculateUnlocks(restoredState) || [];
+  assert(unlocked.indexOf('track_cleanup_4') !== -1, 'recalculation restores track cleanup IV from persisted streak progress');
+  assert(unlocked.indexOf('track_cleanup_5') !== -1, 'recalculation restores track cleanup V from persisted streak progress');
+  assert(rewardsApi.grant(restoredState, byId.track_cleanup_4, { random: function () { return 0; } }), 'restored track cleanup IV reward grants once');
+  assertEqual(rewardState.chips.length, 5, 'restored track cleanup IV reward still uses the canonical chip inventory path');
+  assert(rewardsApi.grant(restoredState, byId.track_cleanup_5), 'restored track cleanup V reward grants once');
+  assertEqual(restoredState.player.talentsV2.freePoints, 3, 'restored track cleanup V reward grants 3 upgrade points once');
+
+  unlocked = achievementsApi.recalculateUnlocks(restoredState) || [];
+  assertEqual(unlocked.length, 0, 're-running recalculation after restore does not unlock track cleanup tiers again');
+  assertEqual(rewardsApi.grant(restoredState, byId.track_cleanup_4, { random: function () { return 0; } }), false, 'restored rewarded map blocks duplicate track cleanup IV rewards');
+  assertEqual(rewardsApi.grant(restoredState, byId.track_cleanup_5), false, 'restored rewarded map blocks duplicate track cleanup V rewards');
 });
 
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {

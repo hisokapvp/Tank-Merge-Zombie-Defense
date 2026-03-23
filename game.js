@@ -486,8 +486,8 @@ function createInitialState(options){
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
         endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
-        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, completedModifierTechs: {} },
-        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0 },
+        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, completedModifierTechs: {} },
+        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0 },
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
           unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
@@ -2148,6 +2148,7 @@ const worldEventsState = {
 };
 
 function resetWorldEventsRuntimeForNewGame(){
+  resetNoRepairAttackWaveRuntime();
   const attackCfg = getWorldEventsAttackCfg();
   const everySec = Number.isFinite(attackCfg.attackEverySec) ? Math.max(1, attackCfg.attackEverySec) : 75;
   worldEventsState.attackStartAt = nowSec() + everySec;
@@ -2886,7 +2887,9 @@ function getZombieIdleWavePhase(){
 }
 
 function updateWorldEvents(dt){
+  const wasAttackActive = isZombieAttackModeActive();
   ensureWorldEventsRuntimeController()?.updateWorldEvents(dt);
+  handleNoRepairAttackWaveTransition(wasAttackActive, isZombieAttackModeActive());
 }
 
 function ensureRainCache(requiredCount){
@@ -2938,6 +2941,7 @@ function addDron(level){
   if (!(DronesApi && typeof DronesApi.addDron === 'function')) return null;
   const drone = DronesApi.addDron(state, level, { dronConfig: getDronRuntimeConfig() });
   if (drone) {
+    processAchievementProgress('droneAcquisitions', 1);
     updateUI();
   }
   return drone;
@@ -3187,7 +3191,7 @@ function ensureAchievementsState(){
     return achievementsState;
   }
   if (!state.achievements || typeof state.achievements !== 'object') {
-    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, completedModifierTechs: {} };
+    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, completedModifierTechs: {} };
   }
   if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
@@ -3198,6 +3202,8 @@ function ensureAchievementsState(){
   if (!Number.isFinite(state.achievements.totalMerges)) state.achievements.totalMerges = 0;
   if (!Number.isFinite(state.achievements.totalManualFenceRepairs)) state.achievements.totalManualFenceRepairs = 0;
   if (!Number.isFinite(state.achievements.totalModifierTechUnlocks)) state.achievements.totalModifierTechUnlocks = 0;
+  if (!Number.isFinite(state.achievements.totalDroneAcquisitions)) state.achievements.totalDroneAcquisitions = 0;
+  if (!Number.isFinite(state.achievements.totalNoRepairAttackWaveStreak)) state.achievements.totalNoRepairAttackWaveStreak = 0;
   return state.achievements;
 }
 
@@ -3269,6 +3275,9 @@ function processAchievementProgress(progressType, deltaCount){
     const ach = ensureAchievementsState();
     if (type === 'merges') ach.totalMerges += count;
     else if (type === 'manualFenceRepairs') ach.totalManualFenceRepairs += count;
+    else if (type === 'modifierTechUnlocks') ach.totalModifierTechUnlocks += count;
+    else if (type === 'droneAcquisitions') ach.totalDroneAcquisitions += count;
+    else if (type === 'noRepairAttackWaveStreak') ach.totalNoRepairAttackWaveStreak += count;
     else ach.totalPurchased += count;
   }
   reconcileAchievementRewards(unlocked);
@@ -3288,6 +3297,8 @@ function getSerializedAchievementStats(){
     tanksBoughtCount: clampDevInt(Number.isFinite(stats.tanksBoughtCount) ? stats.tanksBoughtCount : ach.totalPurchased),
     manualFenceRepairsCount: clampDevInt(Number.isFinite(stats.manualFenceRepairsCount) ? stats.manualFenceRepairsCount : ach.totalManualFenceRepairs),
     modifierTechUnlocksCount: clampDevInt(Number.isFinite(stats.modifierTechUnlocksCount) ? stats.modifierTechUnlocksCount : ach.totalModifierTechUnlocks),
+    droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
+    noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
   };
 }
 
@@ -3298,6 +3309,8 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.tanksBoughtCount)) state.stats.tanksBoughtCount = clampDevInt(savedStats.tanksBoughtCount);
     if (Number.isFinite(savedStats.manualFenceRepairsCount)) state.stats.manualFenceRepairsCount = clampDevInt(savedStats.manualFenceRepairsCount);
     if (Number.isFinite(savedStats.modifierTechUnlocksCount)) state.stats.modifierTechUnlocksCount = clampDevInt(savedStats.modifierTechUnlocksCount);
+    if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
+    if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
   }
   ensureAchievementsState();
 }
@@ -3308,6 +3321,124 @@ function recalculateAchievementsAndQueuePopups(){
   reconcileAchievementRewards(unlocked);
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
   return unlocked;
+}
+
+const noRepairAttackWaveRuntime = {
+  activeEpisodeKey: null,
+  invalidated: false,
+  nextSyntheticEpisodeKey: 1,
+};
+
+function resetNoRepairAttackWaveRuntime(){
+  noRepairAttackWaveRuntime.activeEpisodeKey = null;
+  noRepairAttackWaveRuntime.invalidated = false;
+}
+
+function beginNoRepairAttackWaveEpisode(){
+  const runtimeEpisodeKey = Number.isFinite(worldEventsState.attackSpawnEpisodeKey)
+    ? Math.max(1, Math.floor(worldEventsState.attackSpawnEpisodeKey))
+    : noRepairAttackWaveRuntime.nextSyntheticEpisodeKey++;
+  noRepairAttackWaveRuntime.activeEpisodeKey = runtimeEpisodeKey;
+  noRepairAttackWaveRuntime.invalidated = false;
+}
+
+function completeNoRepairAttackWaveAchievementProgress(){
+  let unlocked = [];
+  if (AchievementsApi && typeof AchievementsApi.recordNoRepairAttackWaveSuccess === 'function') {
+    unlocked = AchievementsApi.recordNoRepairAttackWaveSuccess(state) || [];
+  } else {
+    const ach = ensureAchievementsState();
+    const nextValue = clampDevInt(ach.totalNoRepairAttackWaveStreak + 1);
+    ach.totalNoRepairAttackWaveStreak = nextValue;
+    if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+    state.stats.noRepairAttackWaveStreakCount = nextValue;
+  }
+  reconcileAchievementRewards(unlocked);
+  for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+}
+
+function resetNoRepairAttackWaveAchievementProgress(){
+  if (AchievementsApi && typeof AchievementsApi.resetNoRepairAttackWaveStreak === 'function') {
+    AchievementsApi.resetNoRepairAttackWaveStreak(state);
+    return;
+  }
+  const ach = ensureAchievementsState();
+  ach.totalNoRepairAttackWaveStreak = 0;
+  if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+  state.stats.noRepairAttackWaveStreakCount = 0;
+}
+
+function invalidateNoRepairAttackWaveEpisode(){
+  if (!noRepairAttackWaveRuntime.activeEpisodeKey || noRepairAttackWaveRuntime.invalidated) return false;
+  noRepairAttackWaveRuntime.invalidated = true;
+  resetNoRepairAttackWaveAchievementProgress();
+  return true;
+}
+
+function finalizeNoRepairAttackWaveEpisode(){
+  if (!noRepairAttackWaveRuntime.activeEpisodeKey) return;
+  const shouldCount = !noRepairAttackWaveRuntime.invalidated;
+  resetNoRepairAttackWaveRuntime();
+  if (!shouldCount) return;
+  completeNoRepairAttackWaveAchievementProgress();
+}
+
+function handleNoRepairAttackWaveTransition(wasAttackActive, attackActiveNow){
+  if (attackActiveNow && !wasAttackActive) {
+    beginNoRepairAttackWaveEpisode();
+    return;
+  }
+  if (!attackActiveNow && wasAttackActive) {
+    finalizeNoRepairAttackWaveEpisode();
+  }
+}
+
+function findFenceSegmentByIdForNoRepairTracking(segmentId){
+  if (segmentId == null || !Array.isArray(state.fenceSegments)) return null;
+  const byId = state.fenceSegmentsMeta && state.fenceSegmentsMeta.byId ? state.fenceSegmentsMeta.byId : null;
+  if (byId && byId[segmentId]) return byId[segmentId];
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (seg && seg.id === segmentId) return seg;
+  }
+  return null;
+}
+
+function hasActiveRepairDrone(){
+  if (!Array.isArray(state.drones)) return false;
+  for (let i = 0; i < state.drones.length; i++) {
+    if (state.drones[i] && state.drones[i].mode === 'repair') return true;
+  }
+  return false;
+}
+
+function captureFenceHpSnapshotForNoRepairTracking(){
+  if (!noRepairAttackWaveRuntime.activeEpisodeKey || noRepairAttackWaveRuntime.invalidated) return null;
+  if (!hasActiveRepairDrone() || !Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return null;
+  const hpById = {};
+  let hasTrackedSegments = false;
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || seg.id == null || !Number.isFinite(seg.hp) || !Number.isFinite(seg.maxHp)) continue;
+    if (seg.hp >= seg.maxHp) continue;
+    hpById[seg.id] = seg.hp;
+    hasTrackedSegments = true;
+  }
+  return hasTrackedSegments ? hpById : null;
+}
+
+function invalidateNoRepairAttackWaveOnDroneRepair(hpSnapshot){
+  if (!hpSnapshot || !noRepairAttackWaveRuntime.activeEpisodeKey || noRepairAttackWaveRuntime.invalidated) return false;
+  const ids = Object.keys(hpSnapshot);
+  for (let i = 0; i < ids.length; i++) {
+    const segmentId = ids[i];
+    const seg = findFenceSegmentByIdForNoRepairTracking(segmentId);
+    if (!seg || !Number.isFinite(seg.hp)) continue;
+    if (seg.hp > hpSnapshot[segmentId]) {
+      return invalidateNoRepairAttackWaveEpisode();
+    }
+  }
+  return false;
 }
 
 function shouldBlockAchievementToastByPause(){
@@ -5119,6 +5250,7 @@ function getSavedProgress(){
 
 function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
+  resetNoRepairAttackWaveRuntime();
   const forceFenceRuntimeResetOnLoad = !!saved.forceFenceRuntimeResetOnLoad;
   ensureAchievementsState();
   ensureMapSeedsState();
@@ -5190,6 +5322,12 @@ function restoreFullState(saved){
     ach.totalModifierTechUnlocks = Number.isFinite(saved.achievements.totalModifierTechUnlocks)
       ? Math.max(0, Math.floor(saved.achievements.totalModifierTechUnlocks))
       : ach.totalModifierTechUnlocks;
+    ach.totalDroneAcquisitions = Number.isFinite(saved.achievements.totalDroneAcquisitions)
+      ? Math.max(0, Math.floor(saved.achievements.totalDroneAcquisitions))
+      : ach.totalDroneAcquisitions;
+    ach.totalNoRepairAttackWaveStreak = Number.isFinite(saved.achievements.totalNoRepairAttackWaveStreak)
+      ? Math.max(0, Math.floor(saved.achievements.totalNoRepairAttackWaveStreak))
+      : ach.totalNoRepairAttackWaveStreak;
     ach.completedModifierTechs = saved.achievements.completedModifierTechs && typeof saved.achievements.completedModifierTechs === 'object'
       ? { ...saved.achievements.completedModifierTechs }
       : ach.completedModifierTechs;
@@ -5322,6 +5460,7 @@ function inflateBuyPrice(price, count){
 
 function applySavedProgress(data){
   if (!data) return false;
+  resetNoRepairAttackWaveRuntime();
   const { buyCounts, buyPrices, achievements, supercomputer, computerLevel, totalDamageDealtRaw, ...playerData } = data;
   let reconcileAchievementRewardsAfterApply = false;
   if (supercomputer && typeof supercomputer === 'object') {
@@ -5406,6 +5545,8 @@ function applySavedProgress(data){
     ach.totalMerges = Number.isFinite(achievements.totalMerges) ? Math.max(0, Math.floor(achievements.totalMerges)) : ach.totalMerges;
     ach.totalManualFenceRepairs = Number.isFinite(achievements.totalManualFenceRepairs) ? Math.max(0, Math.floor(achievements.totalManualFenceRepairs)) : ach.totalManualFenceRepairs;
     ach.totalModifierTechUnlocks = Number.isFinite(achievements.totalModifierTechUnlocks) ? Math.max(0, Math.floor(achievements.totalModifierTechUnlocks)) : ach.totalModifierTechUnlocks;
+    ach.totalDroneAcquisitions = Number.isFinite(achievements.totalDroneAcquisitions) ? Math.max(0, Math.floor(achievements.totalDroneAcquisitions)) : ach.totalDroneAcquisitions;
+    ach.totalNoRepairAttackWaveStreak = Number.isFinite(achievements.totalNoRepairAttackWaveStreak) ? Math.max(0, Math.floor(achievements.totalNoRepairAttackWaveStreak)) : ach.totalNoRepairAttackWaveStreak;
     ach.completedModifierTechs = achievements.completedModifierTechs && typeof achievements.completedModifierTechs === 'object' ? { ...achievements.completedModifierTechs } : ach.completedModifierTechs;
     ach.popupQueue = [];
     reconcileAchievementRewardsAfterApply = true;
@@ -6764,6 +6905,7 @@ function tryRepairFenceSegmentAt(px, py){
   seg.hp = seg.maxHp;
   seg.broken = false;
   if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
+  invalidateNoRepairAttackWaveEpisode();
   processAchievementProgress('manualFenceRepairs', 1);
   popText(px, py, t('fenceRepairDone'), '#7dffb2');
   return true;
@@ -9308,13 +9450,25 @@ function grantAchievementReward(achievementId){
     case 'fenceMechanicFragment1':
     case 'fenceMechanicRandomChips2':
     case 'fenceMechanicUpgradePoint1':
+    case 'dutyShiftUpgradePoint1':
+    case 'dutyShiftDamage20000':
+    case 'dutyShiftUpgradePoints2':
+    case 'trackCleanupDamagePoints50':
+    case 'trackCleanupFragments2':
+    case 'trackCleanupUpgradePoint1':
+    case 'trackCleanupRandomChips5':
+    case 'trackCleanupUpgradePoints3':
       break;
     default:
       return false;
   }
   const achievementRewardsApi = getAchievementRewardsApi() || ensureAchievementRewardsModule();
   if (!achievementRewardsApi || typeof achievementRewardsApi.grant !== 'function') return false;
-  return !!achievementRewardsApi.grant(state, def);
+  const granted = !!achievementRewardsApi.grant(state, def);
+  if (!granted) return false;
+  if (def.rewardMode === 'dutyShiftDamage20000' || def.rewardMode === 'trackCleanupDamagePoints50') updateDamagePointsUI();
+  updateUI();
+  return true;
 }
 
 function reconcileAchievementRewards(achievementIds){
@@ -9389,6 +9543,8 @@ function renderAchievementsList(){
       if (def.progressType === 'merges') return ach.totalMerges;
       if (def.progressType === 'manualFenceRepairs') return ach.totalManualFenceRepairs;
       if (def.progressType === 'modifierTechUnlocks') return ach.totalModifierTechUnlocks;
+      if (def.progressType === 'droneAcquisitions') return ach.totalDroneAcquisitions;
+      if (def.progressType === 'noRepairAttackWaveStreak') return ach.totalNoRepairAttackWaveStreak;
       return ach.totalPurchased;
     },
   });
@@ -13157,6 +13313,7 @@ function loop(now){
       }
     }
     if (DronesApi && typeof DronesApi.step === 'function') {
+      const repairHpSnapshot = captureFenceHpSnapshotForNoRepairTracking();
       DronesApi.step({
         state,
         dt: effDt,
@@ -13168,6 +13325,7 @@ function loop(now){
         worldBounds: { minX: 0, minY: 0, maxX: viewSize.w, maxY: viewSize.h },
         onFenceSegmentStateChanged: syncFenceBreachForSegment,
       });
+      invalidateNoRepairAttackWaveOnDroneRepair(repairHpSnapshot);
     }
   }
 
