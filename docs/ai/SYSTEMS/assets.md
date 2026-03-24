@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-23.
+> Обновлено: 2026-03-25.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -8,6 +8,7 @@
 - `assets/supercomputer.json`, `assets/bonusbox.json`, `assets/boost_icons.json`
 - `assets/credits.json` (данные для модалки `Credits/Создатели` в big menu)
 - `assets/chips.json` (спрайты, эффекты и звуки чип-модификаторов ангара)
+- `assets/levelreward.json` (data-driven настройки наград за повышение уровня суперкомпьютера)
 - `assets/balance/talentTree_v2.json` (PACK 1 baseline для data-driven дерева талантов v2)
 - `assets/ui/icons/talents/*.png`, `assets/ui/icons/status/*.png` (stable icon keys; placeholder допустим)
 - Для больших loader-contract файлов см. `docs/ai/SPRITE_LOADERS_MAP.md`
@@ -73,6 +74,18 @@
 - Конфиг кнопки/ячейки подземного ангара теперь опирается на существующий atlas `slot_warehouse_atlas.png`, а не на отсутствующий `underground_hangar_atlas.png`: [assets/underground_hangar.json](../../../assets/underground_hangar.json#L1-L12), [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57).
 - Runtime loader в [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57) держит тот же fallback atlas `slot_warehouse_atlas.png`, поэтому отсутствие поля `atlas` в JSON больше не возвращает 404 на несуществующий файл.
 - `animations.{idle,hover_start,hover_end,click,close}` для этой кнопки читаются как обычный sprite-sheet contract, но фактический badge количества техники дорисовывается поверх atlas уже в runtime, а не хранится в JSON: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L132-L182).
+
+## `assets/levelreward.json` (награды за повышение уровня)
+- Загружается в `boot()` через `fetch('assets/levelreward.json')` → `LevelRewardConfig`: [game.js](../../../game.js#L13697-L13702).
+- Передаётся в `ProgressionApi.levelGoldReward(level, BAL, LevelRewardConfig)` и `createLevelFlow({ levelRewardConfig })`.
+- Структура:
+	- `gold.formula`: `"tankCost"` (default, `50 * 2^(level-1)`) или `"fixed"` (legacy линейная из BAL);
+	- `gold.perLevel`: объект `{ "level": amount }` для per-level override (приоритет над формулой);
+	- `upgradePoints.basePerLevel`: базовые upgrade points за каждый уровень (default `1`);
+	- `upgradePoints.milestones`: объект `{ "level": bonusPoints }` для дополнительных upgrade points на milestone-уровнях;
+	- `damagePoints`: объект `{ "level": points }` для damage point rewards (default `{ "2": 5 }`).
+- Resolver-функции в [src/mechanics/levelFlow.js](../../../src/mechanics/levelFlow.js#L17-L65): `resolveMilestones()`, `resolveDamagePointRewards()`, `resolveBaseUpgradePoints()` валидируют и нормализуют config, возвращая fallback при отсутствии или невалидных значениях.
+- При отсутствии `levelreward.json` или ошибке fetch все resolvers возвращают hardcoded fallback, поведение полностью backward-compatible.
 
 ## `assets/balance/cannonUpgrades.json`
 - Формат: массив из **60** строк по уровням танка `1..60`.

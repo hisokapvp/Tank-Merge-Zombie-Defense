@@ -646,6 +646,61 @@
   function isTechUnlocked(modId) { return !!_unlockedTechs[modId]; }
 
   /**
+   * Reconcile _unlockedTechs from chip inventory, hangar cells and fragments.
+   * If a tech modId is present in the data, both it and its prerequisite(s)
+   * must have been unlocked at some point.
+   */
+  function reconcileUnlockedTechsFromData(chips, cells, fragments) {
+    var found = {};
+    var i, j, entry;
+    if (Array.isArray(chips)) {
+      for (i = 0; i < chips.length; i++) {
+        entry = chips[i];
+        if (entry && Array.isArray(entry.modIds)) {
+          for (j = 0; j < entry.modIds.length; j++) {
+            var mid = entry.modIds[j];
+            if (isTechMod(mid)) found[mid] = true;
+          }
+        }
+      }
+    }
+    if (Array.isArray(cells)) {
+      for (i = 0; i < cells.length; i++) {
+        entry = cells[i];
+        if (entry && Array.isArray(entry.modIds)) {
+          for (j = 0; j < entry.modIds.length; j++) {
+            var cellMid = entry.modIds[j];
+            if (isTechMod(cellMid)) found[cellMid] = true;
+          }
+        }
+      }
+    }
+    if (Array.isArray(fragments)) {
+      for (i = 0; i < fragments.length; i++) {
+        entry = fragments[i];
+        if (entry && Number.isFinite(entry.fragmentId) && isTechMod(entry.fragmentId)) {
+          found[entry.fragmentId] = true;
+        }
+      }
+    }
+    /* For each found tech, also mark its prerequisites as unlocked */
+    var keys = Object.keys(TECH_TREE);
+    for (i = 0; i < keys.length; i++) {
+      var chain = TECH_TREE[keys[i]];
+      for (j = 0; j < chain.length; j++) {
+        if (found[chain[j].modId]) {
+          /* Mark this tech */
+          _unlockedTechs[chain[j].modId] = true;
+          /* Mark all preceding techs in the chain */
+          for (var p = 0; p <= j; p++) {
+            _unlockedTechs[chain[p].modId] = true;
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Check if a tech upgrade is available to unlock.
    * Requires: prerequisite is unlocked (or it's the first level).
    */
@@ -828,6 +883,7 @@
     applyTechUpgradesToModIds: applyTechUpgradesToModIds,
     resolveLatestTechModId: resolveLatestTechModId,
     normalizeFragmentId: normalizeFragmentId,
-    normalizeFragmentsInventory: normalizeFragmentsInventory
+    normalizeFragmentsInventory: normalizeFragmentsInventory,
+    reconcileUnlockedTechsFromData: reconcileUnlockedTechsFromData
   };
 })(typeof window !== 'undefined' ? window : this);

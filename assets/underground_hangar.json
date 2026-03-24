@@ -1,9 +1,9 @@
 {
-  "atlas": "slot_warehouse_atlas.png",
+  "atlas": "underground_hangar_atlas.png",
   "anchor": { "x": 0.5, "y": 0.5 },
   "scale": 1.0,
   "animations": {
-    "idle":        { "x": 0,   "y": 0, "w": 32, "h": 32, "frames": 2, "frameRateFps": 4, "loop": true },
+    "idle":        { "x": 0,   "y": 0, "w": 63, "h": 64, "frames": 1, "frameRateFps": 4, "loop": true },
     "hover_start": { "x": 64,  "y": 0, "w": 32, "h": 32, "frames": 2, "frameRateFps": 10, "loop": false },
     "hover_end":   { "x": 128, "y": 0, "w": 32, "h": 32, "frames": 2, "frameRateFps": 10, "loop": false },
     "click":       { "x": 192, "y": 0, "w": 32, "h": 32, "frames": 1, "frameRateFps": 10, "loop": false },

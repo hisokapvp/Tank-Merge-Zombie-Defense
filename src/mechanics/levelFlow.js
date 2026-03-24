@@ -10,6 +10,55 @@
     35: 2, 40: 5, 45: 2, 50: 5, 55: 2, 60: 5,
   };
 
+  /**
+   * Resolve effective upgrade-point milestones from LevelRewardConfig (if loaded)
+   * or fall back to the hardcoded LEVEL_BONUS_UPGRADE_POINTS table.
+   */
+  function resolveMilestones(cfg) {
+    if (cfg && cfg.upgradePoints && cfg.upgradePoints.milestones && typeof cfg.upgradePoints.milestones === 'object') {
+      var out = {};
+      var keys = Object.keys(cfg.upgradePoints.milestones);
+      for (var i = 0; i < keys.length; i++) {
+        var lvl = Number(keys[i]);
+        var pts = Number(cfg.upgradePoints.milestones[keys[i]]);
+        if (Number.isFinite(lvl) && lvl > 0 && Number.isFinite(pts) && pts > 0) {
+          out[Math.floor(lvl)] = Math.floor(pts);
+        }
+      }
+      return out;
+    }
+    return LEVEL_BONUS_UPGRADE_POINTS;
+  }
+
+  /**
+   * Resolve damage-point rewards by level from LevelRewardConfig or fallback.
+   */
+  function resolveDamagePointRewards(cfg) {
+    if (cfg && cfg.damagePoints && typeof cfg.damagePoints === 'object') {
+      var out = {};
+      var keys = Object.keys(cfg.damagePoints);
+      for (var i = 0; i < keys.length; i++) {
+        var lvl = Number(keys[i]);
+        var pts = Number(cfg.damagePoints[keys[i]]);
+        if (Number.isFinite(lvl) && lvl > 0 && Number.isFinite(pts) && pts > 0) {
+          out[Math.floor(lvl)] = Math.floor(pts);
+        }
+      }
+      return out;
+    }
+    return { 2: SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD };
+  }
+
+  /**
+   * Resolve base upgrade points per level-up from config or fallback (1).
+   */
+  function resolveBaseUpgradePoints(cfg) {
+    if (cfg && cfg.upgradePoints && Number.isFinite(cfg.upgradePoints.basePerLevel) && cfg.upgradePoints.basePerLevel >= 0) {
+      return Math.floor(cfg.upgradePoints.basePerLevel);
+    }
+    return 1;
+  }
+
   function createLevelFlow(options) {
     var opts = options || {};
     var state = opts.state;
@@ -30,6 +79,10 @@
     var onComputerLevelChanged = typeof opts.onComputerLevelChanged === 'function' ? opts.onComputerLevelChanged : null;
     var onTalentPointsGained = typeof opts.onTalentPointsGained === 'function' ? opts.onTalentPointsGained : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
+    var levelRewardCfg = opts.levelRewardConfig || null;
+    var effectiveMilestones = resolveMilestones(levelRewardCfg);
+    var effectiveDamageRewards = resolveDamagePointRewards(levelRewardCfg);
+    var effectiveBaseUpgradePoints = resolveBaseUpgradePoints(levelRewardCfg);
 
     function notifyTutorialLevelRewardDismissed(level) {
       if (!windowObj || !windowObj.Game || !windowObj.Game.TutorialRuntime) return;
@@ -228,16 +281,15 @@
         leveled = true;
         gainedLevels += 1;
         rewardGold += levelGoldReward(p.computerLevel);
-        if (p.computerLevel === 2) {
-          rewardDamagePoints += SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD;
-        }
-        var levelBonus = LEVEL_BONUS_UPGRADE_POINTS[p.computerLevel];
+        var dmgRewardForLevel = effectiveDamageRewards[p.computerLevel];
+        if (dmgRewardForLevel) rewardDamagePoints += dmgRewardForLevel;
+        var levelBonus = effectiveMilestones[p.computerLevel];
         if (levelBonus) bonusUpgradePoints += levelBonus;
       }
 
       p.xpToNext = xpNeededForLevel(p.computerLevel);
       if (leveled) {
-        var totalUpgradePoints = gainedLevels + bonusUpgradePoints;
+        var totalUpgradePoints = gainedLevels * effectiveBaseUpgradePoints + bonusUpgradePoints;
         if (state.player) {
           state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + totalUpgradePoints;
           if (state.player.talentsV2 && typeof state.player.talentsV2 === 'object') {

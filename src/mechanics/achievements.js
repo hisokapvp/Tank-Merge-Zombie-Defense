@@ -311,6 +311,76 @@
         },
       ],
     },
+    {
+      id: 'tough_perimeter',
+      definitions: [
+        {
+          id: 'tough_perimeter',
+          familyId: 'tough_perimeter',
+          titleKey: 'achievementToughPerimeter',
+          descKey: 'achievementToughPerimeterDesc',
+          rewardKey: 'achievementRewardToughPerimeterUpgradePoint1',
+          target: 1,
+          progressType: 'perfectFenceWaves',
+          rewardMode: 'toughPerimeterUpgradePoint1',
+        },
+      ],
+    },
+    {
+      id: 'hangar_master',
+      definitions: [
+        {
+          id: 'hangar_master_1',
+          familyId: 'hangar_master',
+          titleKey: 'achievementHangarMaster1',
+          descKey: 'achievementHangarMaster1Desc',
+          rewardKey: 'achievementRewardHangarMaster1',
+          target: 1,
+          progressType: 'hangarMasterLevel',
+          rewardMode: 'hangarMasterFragmentDust10',
+        },
+        {
+          id: 'hangar_master_2',
+          familyId: 'hangar_master',
+          titleKey: 'achievementHangarMaster2',
+          descKey: 'achievementHangarMaster2Desc',
+          rewardKey: 'achievementRewardHangarMaster2',
+          target: 2,
+          progressType: 'hangarMasterLevel',
+          rewardMode: 'hangarMasterChips2Damage5000',
+        },
+        {
+          id: 'hangar_master_3',
+          familyId: 'hangar_master',
+          titleKey: 'achievementHangarMaster3',
+          descKey: 'achievementHangarMaster3Desc',
+          rewardKey: 'achievementRewardHangarMaster3',
+          target: 3,
+          progressType: 'hangarMasterLevel',
+          rewardMode: 'hangarMasterUpgradeDrone1',
+        },
+        {
+          id: 'hangar_master_4',
+          familyId: 'hangar_master',
+          titleKey: 'achievementHangarMaster4',
+          descKey: 'achievementHangarMaster4Desc',
+          rewardKey: 'achievementRewardHangarMaster4',
+          target: 4,
+          progressType: 'hangarMasterLevel',
+          rewardMode: 'hangarMasterDamage50000Chips5',
+        },
+        {
+          id: 'hangar_master_5',
+          familyId: 'hangar_master',
+          titleKey: 'achievementHangarMaster5',
+          descKey: 'achievementHangarMaster5Desc',
+          rewardKey: 'achievementRewardHangarMaster5',
+          target: 5,
+          progressType: 'hangarMasterLevel',
+          rewardMode: 'hangarMasterUpgrade3Drones2L5',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -500,6 +570,8 @@
     var hasDroneAcquisitions = Number.isFinite(stats.droneAcquisitionsCount);
     var hasNoRepairAttackWaveStreak = Number.isFinite(stats.noRepairAttackWaveStreakCount);
     var hasMoneyEarned = Number.isFinite(stats.moneyEarnedCount);
+    var hasPerfectFenceWaves = Number.isFinite(stats.perfectFenceWavesCount);
+    var hasHangarMasterLevel = Number.isFinite(stats.hangarMasterLevelCount);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -508,6 +580,8 @@
     var legacyDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions);
     var legacyNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak);
     var legacyMoneyEarned = normalizeCounter(ach.totalMoneyEarned);
+    var legacyPerfectFenceWaves = normalizeCounter(ach.totalPerfectFenceWaves);
+    var legacyHangarMasterLevel = normalizeCounter(ach.totalHangarMasterLevel);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -530,6 +604,12 @@
     if (!hasMoneyEarned) stats.moneyEarnedCount = legacyMoneyEarned;
     else stats.moneyEarnedCount = normalizeCounter(stats.moneyEarnedCount);
 
+    if (!hasPerfectFenceWaves) stats.perfectFenceWavesCount = legacyPerfectFenceWaves;
+    else stats.perfectFenceWavesCount = normalizeCounter(stats.perfectFenceWavesCount);
+
+    if (!hasHangarMasterLevel) stats.hangarMasterLevelCount = legacyHangarMasterLevel;
+    else stats.hangarMasterLevelCount = normalizeCounter(stats.hangarMasterLevelCount);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -544,6 +624,8 @@
     ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
     ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
     ach.totalMoneyEarned = stats.moneyEarnedCount;
+    ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
+    ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
     return stats;
   }
 
@@ -568,9 +650,16 @@
     var inferredModifierTechUnlocks = inferModifierTechUnlocksFromRuntime();
     var completedModifierTechCount = countCompletedModifierTechs(state.achievements.completedModifierTechs);
 
-    if (completedModifierTechCount <= 0 && inferredModifierTechUnlocks.count > 0) {
-      state.achievements.completedModifierTechs = inferredModifierTechUnlocks.map;
-      completedModifierTechCount = inferredModifierTechUnlocks.count;
+    /* Merge inference into completedModifierTechs so runtime-only unlocks
+       (e.g. techs unlocked before achievement tracking) are never missed. */
+    if (inferredModifierTechUnlocks.count > 0) {
+      var inferKeys = Object.keys(inferredModifierTechUnlocks.map);
+      for (var ik = 0; ik < inferKeys.length; ik++) {
+        if (!state.achievements.completedModifierTechs[inferKeys[ik]]) {
+          state.achievements.completedModifierTechs[inferKeys[ik]] = true;
+        }
+      }
+      completedModifierTechCount = countCompletedModifierTechs(state.achievements.completedModifierTechs);
     }
 
     if (!Number.isFinite(state.achievements.totalPurchased)) {
@@ -617,8 +706,23 @@
       state.achievements.totalMoneyEarned = normalizeCounter(state.achievements.totalMoneyEarned);
     }
 
+    if (!Number.isFinite(state.achievements.totalPerfectFenceWaves)) {
+      state.achievements.totalPerfectFenceWaves = 0;
+    } else {
+      state.achievements.totalPerfectFenceWaves = normalizeCounter(state.achievements.totalPerfectFenceWaves);
+    }
+
+    if (!Number.isFinite(state.achievements.totalHangarMasterLevel)) {
+      state.achievements.totalHangarMasterLevel = 0;
+    } else {
+      state.achievements.totalHangarMasterLevel = normalizeCounter(state.achievements.totalHangarMasterLevel);
+    }
+
     if (completedModifierTechCount > state.achievements.totalModifierTechUnlocks) {
       state.achievements.totalModifierTechUnlocks = completedModifierTechCount;
+      if (state.stats && typeof state.stats === 'object') {
+        state.stats.modifierTechUnlocksCount = completedModifierTechCount;
+      }
     }
 
     ensureStats(state, state.achievements, {
@@ -651,6 +755,8 @@
       if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
       if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
       if (type === 'moneyEarned') return normalizeCounter(stats.moneyEarnedCount);
+      if (type === 'perfectFenceWaves') return normalizeCounter(stats.perfectFenceWavesCount);
+      if (type === 'hangarMasterLevel') return normalizeCounter(stats.hangarMasterLevelCount);
       return normalizeCounter(stats.tanksBoughtCount);
     }
 
@@ -672,6 +778,12 @@
     }
     if (type === 'moneyEarned') {
       return normalizeCounter(ach.totalMoneyEarned);
+    }
+    if (type === 'perfectFenceWaves') {
+      return normalizeCounter(ach.totalPerfectFenceWaves);
+    }
+    if (type === 'hangarMasterLevel') {
+      return normalizeCounter(ach.totalHangarMasterLevel);
     }
     return normalizeCounter(ach.totalPurchased);
   }
@@ -739,6 +851,10 @@
         stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount + delta);
       } else if (type === 'moneyEarned') {
         stats.moneyEarnedCount = normalizeCounter(stats.moneyEarnedCount + delta);
+      } else if (type === 'perfectFenceWaves') {
+        stats.perfectFenceWavesCount = normalizeCounter(stats.perfectFenceWavesCount + delta);
+      } else if (type === 'hangarMasterLevel') {
+        stats.hangarMasterLevelCount = normalizeCounter(stats.hangarMasterLevelCount + delta);
       } else {
         stats.tanksBoughtCount = normalizeCounter(stats.tanksBoughtCount + delta);
       }
@@ -749,6 +865,8 @@
       ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
       ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
       ach.totalMoneyEarned = stats.moneyEarnedCount;
+      ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
+      ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
     } else if (type === 'droneAcquisitions') {
       ach.totalDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions + delta);
     } else if (type === 'noRepairAttackWaveStreak') {
@@ -761,6 +879,10 @@
       ach.totalMerges = normalizeCounter(ach.totalMerges + delta);
     } else if (type === 'moneyEarned') {
       ach.totalMoneyEarned = normalizeCounter(ach.totalMoneyEarned + delta);
+    } else if (type === 'perfectFenceWaves') {
+      ach.totalPerfectFenceWaves = normalizeCounter(ach.totalPerfectFenceWaves + delta);
+    } else if (type === 'hangarMasterLevel') {
+      ach.totalHangarMasterLevel = normalizeCounter(ach.totalHangarMasterLevel + delta);
     } else {
       ach.totalPurchased = normalizeCounter(ach.totalPurchased + delta);
     }

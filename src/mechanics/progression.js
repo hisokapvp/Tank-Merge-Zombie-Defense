@@ -22,9 +22,22 @@
     return Math.round(500 * growth * correction * decadeBoost);
   }
 
-  function levelGoldReward(level, bal) {
-    if (!bal) return 0;
-    return Math.max(0, Math.round(bal.levelGoldBase + bal.levelGoldPerLevel * Math.max(0, level - 1)));
+  function levelGoldReward(level, bal, levelRewardCfg) {
+    var lvl = Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+    var cfg = levelRewardCfg && typeof levelRewardCfg === 'object' ? levelRewardCfg : null;
+
+    /* Check for per-level override from JSON config */
+    if (cfg && cfg.gold && cfg.gold.perLevel && typeof cfg.gold.perLevel === 'object') {
+      var override = cfg.gold.perLevel[String(lvl)];
+      if (Number.isFinite(override) && override >= 0) return Math.round(override);
+    }
+
+    /* Formula-based: tankCost = 50 * 2^(level-1), or fixed from bal params */
+    var formula = cfg && cfg.gold && typeof cfg.gold.formula === 'string' ? cfg.gold.formula : 'tankCost';
+    if (formula === 'fixed' && bal) {
+      return Math.max(0, Math.round((bal.levelGoldBase || 0) + (bal.levelGoldPerLevel || 0) * Math.max(0, lvl - 1)));
+    }
+    return Math.max(0, Math.round(50 * Math.pow(2, lvl - 1)));
   }
 
   global.Game = global.Game || {};

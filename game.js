@@ -386,6 +386,7 @@ const FENCE_HP_MUL = 1.05;
 const FENCE_ARMOR_MUL = 1.05;
 
 let BalanceConfig = { zombie: {}, zombieOverrides: {}, tank: {}, tankOverrides: {} };
+let LevelRewardConfig = null;
 GameApi.Balance = GameApi.Balance || {};
 GameApi.Balance.CannonUpgrades = getCannonUpgradeConfig();
 
@@ -3279,6 +3280,8 @@ function processAchievementProgress(progressType, deltaCount){
     else if (type === 'droneAcquisitions') ach.totalDroneAcquisitions += count;
     else if (type === 'noRepairAttackWaveStreak') ach.totalNoRepairAttackWaveStreak += count;
     else if (type === 'moneyEarned') { if (!Number.isFinite(ach.totalMoneyEarned)) ach.totalMoneyEarned = 0; ach.totalMoneyEarned += count; }
+    else if (type === 'perfectFenceWaves') { if (!Number.isFinite(ach.totalPerfectFenceWaves)) ach.totalPerfectFenceWaves = 0; ach.totalPerfectFenceWaves += count; }
+    else if (type === 'hangarMasterLevel') { if (!Number.isFinite(ach.totalHangarMasterLevel)) ach.totalHangarMasterLevel = 0; ach.totalHangarMasterLevel += count; }
     else ach.totalPurchased += count;
   }
   reconcileAchievementRewards(unlocked);
@@ -3301,6 +3304,8 @@ function getSerializedAchievementStats(){
     droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
     noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
     moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
+    perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
+    hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
   };
 }
 
@@ -3314,6 +3319,8 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
     if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
     if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
+    if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
+    if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
   }
   ensureAchievementsState();
 }
@@ -3393,10 +3400,49 @@ function handleNoRepairAttackWaveTransition(wasAttackActive, attackActiveNow){
   }
   if (!attackActiveNow && wasAttackActive) {
     finalizeNoRepairAttackWaveEpisode();
+    checkPerfectFenceWave();
     return;
   }
   if (!attackActiveNow && noRepairAttackWaveRuntime.activeEpisodeKey) {
     finalizeNoRepairAttackWaveEpisode();
+  }
+}
+
+function checkPerfectFenceWave(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || !Number.isFinite(seg.hp) || !Number.isFinite(seg.maxHp)) return;
+    if (seg.hp < seg.maxHp) return;
+  }
+  processAchievementProgress('perfectFenceWaves', 1);
+}
+
+function computeHangarMasterLevel(){
+  const cells = Array.isArray(state.cells) ? state.cells : [];
+  if (cells.length < 16) return 0;
+  let minLevel = Infinity;
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (!cell || !cell.tank) return 0;
+    if (cell.tank.level < minLevel) minLevel = cell.tank.level;
+  }
+  if (minLevel >= 60) return 5;
+  if (minLevel >= 40) return 4;
+  if (minLevel >= 20) return 3;
+  if (minLevel >= 10) return 2;
+  return 1;
+}
+
+function checkHangarMasterAchievement(){
+  const level = computeHangarMasterLevel();
+  if (level <= 0) return;
+  let currentProgress = 0;
+  if (AchievementsApi && typeof AchievementsApi.getProgressValue === 'function') {
+    currentProgress = AchievementsApi.getProgressValue(state, 'hangarMasterLevel');
+  }
+  if (level > currentProgress) {
+    processAchievementProgress('hangarMasterLevel', level - currentProgress);
   }
 }
 
@@ -3751,7 +3797,10 @@ function performTankPurchaseOnce(opts){
 
 function tryBuyTank(opts){
   const bought = performTankPurchaseOnce(opts);
-  if (bought) processAchievementProgress('purchases', 1);
+  if (bought) {
+    processAchievementProgress('purchases', 1);
+    checkHangarMasterAchievement();
+  }
 }
 
 function buyBulkMode(){
@@ -3770,7 +3819,10 @@ function tryBuyBulk(opts){
     if (!performTankPurchaseOnce(opts)) return;
     purchased += 1;
   }
-  if (purchased === countToBuy) processAchievementProgress('purchases', purchased);
+  if (purchased === countToBuy) {
+    processAchievementProgress('purchases', purchased);
+    checkHangarMasterAchievement();
+  }
 }
 
 function resolveMergeResultCellIndex(fromIdx, toIdx, placeResult){
@@ -3889,6 +3941,7 @@ function performMerge(fromIdx, toIdx, opts){
   const oldMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
 
   processAchievementProgress('merges', 1);
+  checkHangarMasterAchievement();
   recordTankLevel(lvl);
   const newMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
@@ -3927,6 +3980,7 @@ function _performUndergroundMerge(fromIdx, toIdx){
   b.tank = makeTank(lvl, false);
   a.tank = null;
   processAchievementProgress('merges', 1);
+  checkHangarMasterAchievement();
   recordTankLevel(lvl);
   return true;
 }
@@ -3945,6 +3999,7 @@ function _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx){
   tgtCell.tank = makeTank(lvl, false);
   srcCell.tank = null;
   processAchievementProgress('merges', 1);
+  checkHangarMasterAchievement();
   recordTankLevel(lvl);
   return true;
 }
@@ -4537,9 +4592,10 @@ function xpNeededForLevel(level){
 
 function levelGoldReward(level){
   if (ProgressionApi && ProgressionApi.levelGoldReward) {
-    return ProgressionApi.levelGoldReward(level, BAL);
+    return ProgressionApi.levelGoldReward(level, BAL, LevelRewardConfig);
   }
-  return Math.max(0, Math.round(BAL.levelGoldBase + BAL.levelGoldPerLevel * Math.max(0, level - 1)));
+  var lvl = Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+  return Math.max(0, Math.round(50 * Math.pow(2, lvl - 1)));
 }
 
 function onComputerLevelChanged(payload){
@@ -4592,6 +4648,7 @@ function getLevelFlowController(){
       syncPlayerTalentsV2FromApi();
     },
     windowObj: window,
+    levelRewardConfig: LevelRewardConfig,
   });
 }
 
@@ -5412,6 +5469,34 @@ function restoreFullState(saved){
     if (_HC && typeof _HC.setUnlockedTechs === 'function') {
       const ach = ensureAchievementsState();
       _HC.setUnlockedTechs(ach.completedModifierTechs || {});
+      /* Reconcile from actual inventory/cells: picks up techs unlocked before tracking */
+      if (typeof _HC.reconcileUnlockedTechsFromData === 'function') {
+        _HC.reconcileUnlockedTechsFromData(
+          state.playerChips || [],
+          state.cells || [],
+          (window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function')
+            ? window.Game.HangarChipsUI.getPlayerFragments() : []
+        );
+        /* Sync any newly-discovered techs back to completedModifierTechs */
+        const reconciledTechs = _HC.getUnlockedTechs();
+        if (reconciledTechs && typeof reconciledTechs === 'object') {
+          const rKeys = Object.keys(reconciledTechs);
+          let rChanged = false;
+          for (let ri = 0; ri < rKeys.length; ri++) {
+            if (reconciledTechs[rKeys[ri]] && !ach.completedModifierTechs[rKeys[ri]]) {
+              ach.completedModifierTechs[rKeys[ri]] = true;
+              rChanged = true;
+            }
+          }
+          if (rChanged) {
+            const totalTracked = Object.keys(ach.completedModifierTechs).length;
+            ach.totalModifierTechUnlocks = Math.max(ach.totalModifierTechUnlocks || 0, totalTracked);
+            if (state.stats && typeof state.stats === 'object') {
+              state.stats.modifierTechUnlocksCount = Math.max(state.stats.modifierTechUnlocksCount || 0, totalTracked);
+            }
+          }
+        }
+      }
     }
   }
   /* Restore tech study state */
@@ -5635,6 +5720,32 @@ function applySavedProgress(data){
     if (_HC && typeof _HC.setUnlockedTechs === 'function') {
       const ach = ensureAchievementsState();
       _HC.setUnlockedTechs(ach.completedModifierTechs || {});
+      if (typeof _HC.reconcileUnlockedTechsFromData === 'function') {
+        _HC.reconcileUnlockedTechsFromData(
+          state.playerChips || [],
+          state.cells || [],
+          (window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function')
+            ? window.Game.HangarChipsUI.getPlayerFragments() : []
+        );
+        const reconciledTechs = _HC.getUnlockedTechs();
+        if (reconciledTechs && typeof reconciledTechs === 'object') {
+          const rKeys = Object.keys(reconciledTechs);
+          let rChanged = false;
+          for (let ri = 0; ri < rKeys.length; ri++) {
+            if (reconciledTechs[rKeys[ri]] && !ach.completedModifierTechs[rKeys[ri]]) {
+              ach.completedModifierTechs[rKeys[ri]] = true;
+              rChanged = true;
+            }
+          }
+          if (rChanged) {
+            const totalTracked = Object.keys(ach.completedModifierTechs).length;
+            ach.totalModifierTechUnlocks = Math.max(ach.totalModifierTechUnlocks || 0, totalTracked);
+            if (state.stats && typeof state.stats === 'object') {
+              state.stats.modifierTechUnlocksCount = Math.max(state.stats.modifierTechUnlocksCount || 0, totalTracked);
+            }
+          }
+        }
+      }
     }
   }
   /* Restore tech study state */
@@ -9527,6 +9638,19 @@ function grantAchievementReward(achievementId){
       syncPlayerTalentsV2FromApi();
     }
   }
+  if (entry.type === 'composite' && Array.isArray(entry.items)) {
+    for (var ci = 0; ci < entry.items.length; ci++) {
+      var sub = entry.items[ci];
+      if (sub.type === 'damagePoints') updateDamagePointsUI();
+      if (sub.type === 'upgradePoints' && isTalentsV2Ready()) {
+        var tApi = getTalentsV2Api();
+        if (tApi && typeof tApi.setFreePoints === 'function') {
+          tApi.setFreePoints(state.player.talentsV2.freePoints);
+          syncPlayerTalentsV2FromApi();
+        }
+      }
+    }
+  }
   updateUI();
   return true;
 }
@@ -10730,6 +10854,7 @@ canvas.addEventListener('pointerup', (e)=>{
       if (!merged && !target.tank){
         target.tank = from.tank;
         from.tank = null;
+        checkHangarMasterAchievement();
       }
       state.selectedHangarCellIndex = target.i;
     }
@@ -13566,6 +13691,15 @@ async function boot(){
         }
       }
     } catch (e) { console.warn('chips.json load failed:', e); }
+
+    // ── Load levelreward.json for data-driven level rewards ──
+    try {
+      const lrRes = await fetch('assets/levelreward.json', { cache: 'no-store' });
+      if (lrRes.ok) {
+        LevelRewardConfig = await lrRes.json();
+        console.log('[LevelReward] levelreward.json loaded OK');
+      }
+    } catch (e) { console.warn('levelreward.json load failed:', e); }
 
     await GroundSprites.load().catch(function () {});
     rebuildGroundLayer();

@@ -131,6 +131,8 @@
         totalDroneAcquisitions: 0,
         totalNoRepairAttackWaveStreak: 0,
         totalMoneyEarned: 0,
+        totalPerfectFenceWaves: 0,
+        totalHangarMasterLevel: 0,
         completedModifierTechs: {},
       },
       stats: {
@@ -141,6 +143,8 @@
         droneAcquisitionsCount: 0,
         noRepairAttackWaveStreakCount: 0,
         moneyEarnedCount: 0,
+        perfectFenceWavesCount: 0,
+        hangarMasterLevelCount: 0,
       },
       ui: {
         talentsOpen: false,

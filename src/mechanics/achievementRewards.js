@@ -174,11 +174,51 @@
     stableIncomeDamage100000:    { type: 'damagePoints',   amount: 100000,  i18nKey: 'achievementRewardStableIncomeDamage100000' },
     stableIncomeDamage500M:      { type: 'damagePoints',   amount: 500000000, i18nKey: 'achievementRewardStableIncomeDamage500M' },
     stableIncomeUpgradePoints10: { type: 'upgradePoints',  amount: 10,      i18nKey: 'achievementRewardStableIncomeUpgradePoints10' },
+    /* tough_perimeter family */
+    toughPerimeterUpgradePoint1: { type: 'upgradePoints',  amount: 1,       i18nKey: 'achievementRewardToughPerimeterUpgradePoint1' },
+    /* hangar_master family (composite rewards) */
+    hangarMasterFragmentDust10:     { type: 'composite', items: [{ type: 'fragments', amount: 1 }, { type: 'dust', amount: 10 }], i18nKey: 'achievementRewardHangarMaster1' },
+    hangarMasterChips2Damage5000:   { type: 'composite', items: [{ type: 'randomChips', amount: 2 }, { type: 'damagePoints', amount: 5000 }], i18nKey: 'achievementRewardHangarMaster2' },
+    hangarMasterUpgradeDrone1:      { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'drones', amount: 1, level: 1 }], i18nKey: 'achievementRewardHangarMaster3' },
+    hangarMasterDamage50000Chips5:  { type: 'composite', items: [{ type: 'damagePoints', amount: 50000 }, { type: 'randomChips', amount: 5 }], i18nKey: 'achievementRewardHangarMaster4' },
+    hangarMasterUpgrade3Drones2L5:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 2, level: 5 }], i18nKey: 'achievementRewardHangarMaster5' },
   };
+
+  function grantAchievementDrones(count, level) {
+    var addDronFn = global.Game && typeof global.Game._productionLineAddDron === 'function'
+      ? global.Game._productionLineAddDron : null;
+    if (!addDronFn) return false;
+    var total = normalizeCounter(count);
+    var droneLevel = normalizeCounter(level) || 1;
+    if (total <= 0) return false;
+    for (var i = 0; i < total; i++) {
+      addDronFn(droneLevel);
+    }
+    return true;
+  }
+
+  function grantSubItem(state, sub, randomFn) {
+    if (!sub || typeof sub.type !== 'string') return false;
+    if (sub.type === 'coins') { state.coins = normalizeCounter(state.coins) + sub.amount; return true; }
+    if (sub.type === 'dust') return grantAchievementDust(sub.amount);
+    if (sub.type === 'fragments') return grantAchievementRandomFragments(sub.amount, randomFn);
+    if (sub.type === 'randomChips') return grantAchievementRandomChips(sub.amount, randomFn);
+    if (sub.type === 'upgradePoints') return grantAchievementUpgradePoints(state, sub.amount);
+    if (sub.type === 'damagePoints') return grantAchievementDamagePoints(state, sub.amount);
+    if (sub.type === 'drones') return grantAchievementDrones(sub.amount, sub.level);
+    return false;
+  }
 
   function grantByTable(state, rewardMode, randomFn) {
     var entry = REWARD_TABLE[rewardMode];
     if (!entry) return false;
+    if (entry.type === 'composite' && Array.isArray(entry.items)) {
+      var allOk = true;
+      for (var ci = 0; ci < entry.items.length; ci++) {
+        if (!grantSubItem(state, entry.items[ci], randomFn)) allOk = false;
+      }
+      return allOk;
+    }
     if (entry.type === 'coins') {
       state.coins = normalizeCounter(state.coins) + entry.amount;
       return true;
