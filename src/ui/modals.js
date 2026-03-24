@@ -199,6 +199,9 @@
     var opts = options || {};
     var ui = opts.ui;
     if (!ui || !ui.dismantleModal) return;
+    if (document && document.body) {
+      document.body.classList.remove('dismantle-open');
+    }
     hideModal(ui.dismantleModal, opts.a11yClose);
   }
 
@@ -241,6 +244,9 @@
         drawTankIconTo: opts.drawTankIconTo,
       });
     }
+    if (document && document.body) {
+      document.body.classList.add('dismantle-open');
+    }
     showModal(ui.dismantleModal, opts.a11yOpen, ui.dismantleYes, opts.onClose);
   }
 
@@ -254,8 +260,8 @@
 
     if (!ui || !state) return;
     if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirmMulti');
-    if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
-    if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+    if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleConfirmYes');
+    if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleConfirmCancel');
 
     var wrap = document.getElementById('dismantleIconsWrap');
     if (!wrap) return;

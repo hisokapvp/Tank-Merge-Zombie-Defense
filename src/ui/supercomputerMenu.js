@@ -493,28 +493,31 @@
     }
 
     function updateDamagePointsLabel() {
+      var fmt = (global.Game && global.Game.NumberFormat && typeof global.Game.NumberFormat.formatCompactRu === 'function')
+        ? global.Game.NumberFormat.formatCompactRu
+        : function (n) { return String(Math.round(n)); };
       var damagePointsEl = documentObj.getElementById('modsTankWallDamagePoints');
       var count = Math.max(0, Math.floor(getDamagePoints()));
       if (damagePointsEl) {
-        damagePointsEl.textContent = translate('damagePointsLabel', { count: count });
+        damagePointsEl.textContent = translate('damagePointsLabel', { count: fmt(count) });
       }
       if (gunsUi.points) {
-        gunsUi.points.textContent = translate('damagePointsLabel', { count: count });
+        gunsUi.points.textContent = translate('damagePointsLabel', { count: fmt(count) });
       }
       if (gunsUi.reserve) {
-        gunsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedDamagePoints() });
+        gunsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: fmt(getReservedDamagePoints()) });
       }
       if (dronsUi.points) {
-        dronsUi.points.textContent = translate('damagePointsLabel', { count: count });
+        dronsUi.points.textContent = translate('damagePointsLabel', { count: fmt(count) });
       }
       if (dronsUi.reserve) {
-        dronsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedDronDamagePoints() });
+        dronsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: fmt(getReservedDronDamagePoints()) });
       }
       if (wallsUi.points) {
-        wallsUi.points.textContent = translate('damagePointsLabel', { count: count });
+        wallsUi.points.textContent = translate('damagePointsLabel', { count: fmt(count) });
       }
       if (wallsUi.reserve) {
-        wallsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: getReservedFenceDamagePoints() });
+        wallsUi.reserve.textContent = translate('modsGunsReservedLabel', { count: fmt(getReservedFenceDamagePoints()) });
       }
     }
 

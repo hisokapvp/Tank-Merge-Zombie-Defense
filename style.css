@@ -77,6 +77,7 @@ body.merge-popup-open::before,
 body.achievements-open::before,
 body.achievement-popup-open::before,
 body.levelmodal-open::before,
+body.dismantle-open::before,
 body.critical-open::before{
   content:"";
   position:fixed;
@@ -1302,6 +1303,18 @@ body.menu-open .stageUi .hudItem{
 }
 .levelModal.hidden{
   display:none;
+}
+/* Dismantle confirm modal: equal-width buttons */
+.dismantleModal__actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  margin-top:12px;
+}
+.dismantleModal__btn{
+  flex:1;
+  max-width:160px;
+  min-width:0;
 }
 #supercomputerMenuOverlay,
 #modsHangarOverlay,

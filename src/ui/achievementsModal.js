@@ -140,7 +140,10 @@
 
         var description = getAchievementDescription(def, target);
         if (description) descRow.appendChild(createMetaLine(description));
-        descRow.appendChild(createMetaLine(translate('achievementProgress', { value: progress, target: target })));
+        var fmt = (global.Game && global.Game.NumberFormat && typeof global.Game.NumberFormat.formatCompactRu === 'function')
+          ? global.Game.NumberFormat.formatCompactRu
+          : function (n) { return String(n); };
+        descRow.appendChild(createMetaLine(translate('achievementProgress', { value: fmt(progress), target: fmt(target) })));
         descRow.appendChild(createMetaLine(translate('achievementReward', { reward: translate(def.rewardKey) })));
 
         row.appendChild(headerRow);

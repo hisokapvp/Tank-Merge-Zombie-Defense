@@ -4,6 +4,12 @@
   var DAMAGE_PROGRESS_PER_POINT = 10000;
   var SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD = 5;
 
+  /* Bonus upgrade points for milestone levels */
+  var LEVEL_BONUS_UPGRADE_POINTS = {
+    5: 2, 10: 5, 15: 2, 20: 5, 25: 2, 30: 5,
+    35: 2, 40: 5, 45: 2, 50: 5, 55: 2, 60: 5,
+  };
+
   function createLevelFlow(options) {
     var opts = options || {};
     var state = opts.state;
@@ -208,6 +214,7 @@
       p.xp += amount;
       var leveled = false;
       var gainedLevels = 0;
+      var bonusUpgradePoints = 0;
       var rewardGold = 0;
       var rewardDamagePoints = 0;
       var previousMaxHp = Number.isFinite(p.maxHp) ? p.maxHp : 1;
@@ -224,20 +231,23 @@
         if (p.computerLevel === 2) {
           rewardDamagePoints += SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD;
         }
+        var levelBonus = LEVEL_BONUS_UPGRADE_POINTS[p.computerLevel];
+        if (levelBonus) bonusUpgradePoints += levelBonus;
       }
 
       p.xpToNext = xpNeededForLevel(p.computerLevel);
       if (leveled) {
+        var totalUpgradePoints = gainedLevels + bonusUpgradePoints;
         if (state.player) {
-          state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + gainedLevels;
+          state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + totalUpgradePoints;
           if (state.player.talentsV2 && typeof state.player.talentsV2 === 'object') {
-            state.player.talentsV2.freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0)) + gainedLevels;
+            state.player.talentsV2.freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0)) + totalUpgradePoints;
             state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
           } else if (Number.isFinite(state.player.freeTalentPointsV2)) {
-            state.player.freeTalentPointsV2 = Math.max(0, Math.floor(state.player.freeTalentPointsV2 || 0)) + gainedLevels;
+            state.player.freeTalentPointsV2 = Math.max(0, Math.floor(state.player.freeTalentPointsV2 || 0)) + totalUpgradePoints;
           }
         }
-        if (onTalentPointsGained) onTalentPointsGained(gainedLevels);
+        if (onTalentPointsGained) onTalentPointsGained(totalUpgradePoints);
         state.coins += rewardGold;
         rewardDamagePoints = grantDamagePointReward(rewardDamagePoints);
         if (onComputerLevelChanged) {
@@ -249,7 +259,7 @@
         refreshTanksPowerTier();
         triggerLevelUpVfx(p.computerLevel);
         checkPowerMomentEvents(p.computerLevel);
-        queueLevelReward(p.computerLevel, gainedLevels, rewardGold, rewardDamagePoints);
+        queueLevelReward(p.computerLevel, totalUpgradePoints, rewardGold, rewardDamagePoints);
         saveProgress();
         updateUI();
       }

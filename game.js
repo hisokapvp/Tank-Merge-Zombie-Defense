@@ -9366,6 +9366,7 @@ function openDismantleModal(){
     return;
   }
   fillDismantleConfirmModal(selected);
+  document.body.classList.add('dismantle-open');
   ui.dismantleModal.classList.remove('hidden');
   a11yOpen(ui.dismantleModal, { initialFocus: ui.dismantleYes, onClose: closeDismantleModal });
 }
@@ -9382,8 +9383,8 @@ function fillDismantleConfirmModal(selectedTankIds){
     return;
   }
   if (ui.dismantleConfirmText) ui.dismantleConfirmText.textContent = t('dismantleConfirmMulti');
-  if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleYes');
-  if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleNo');
+  if (ui.dismantleYes) ui.dismantleYes.textContent = t('dismantleConfirmYes');
+  if (ui.dismantleNo) ui.dismantleNo.textContent = t('dismantleConfirmCancel');
   const wrap = document.getElementById('dismantleIconsWrap');
   if (wrap){
     const maxIcons = 12;
@@ -9415,6 +9416,7 @@ function closeDismantleModal(){
     return;
   }
   if (!ui.dismantleModal) return;
+  document.body.classList.remove('dismantle-open');
   ui.dismantleModal.classList.add('hidden');
   ui.dismantleModal.setAttribute('aria-hidden', 'true');
   a11yClose(ui.dismantleModal);
@@ -10807,6 +10809,7 @@ ui.crateModal?.addEventListener('click', (e) => {
 ui.dismantleBtn?.addEventListener('click', () => openDismantleModal());
 ui.dismantleYes?.addEventListener('click', () => confirmDismantle());
 ui.dismantleNo?.addEventListener('click', () => closeDismantleModal());
+document.getElementById('dismantleClose')?.addEventListener('click', () => closeDismantleModal());
 ui.dismantleModal?.addEventListener('click', (e) => {
   if (e.target?.dataset?.dismantleClose === 'true') closeDismantleModal();
 });

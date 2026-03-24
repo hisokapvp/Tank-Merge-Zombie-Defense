@@ -172,6 +172,8 @@
     stableIncomeDamage5000:      { type: 'damagePoints',   amount: 5000,    i18nKey: 'achievementRewardStableIncomeDamage5000' },
     stableIncomeDamage20000:     { type: 'damagePoints',   amount: 20000,   i18nKey: 'achievementRewardStableIncomeDamage20000' },
     stableIncomeDamage100000:    { type: 'damagePoints',   amount: 100000,  i18nKey: 'achievementRewardStableIncomeDamage100000' },
+    stableIncomeDamage500M:      { type: 'damagePoints',   amount: 500000000, i18nKey: 'achievementRewardStableIncomeDamage500M' },
+    stableIncomeUpgradePoints10: { type: 'upgradePoints',  amount: 10,      i18nKey: 'achievementRewardStableIncomeUpgradePoints10' },
   };
 
   function grantByTable(state, rewardMode, randomFn) {
