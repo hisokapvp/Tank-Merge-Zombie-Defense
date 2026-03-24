@@ -74,6 +74,7 @@ body.pl-storage-open::before,
 body.crate-open::before,
 body.merge-popup-open::before,
 body.achievements-open::before,
+body.achievement-popup-open::before,
 body.levelmodal-open::before,
 body.critical-open::before{
   content:"";

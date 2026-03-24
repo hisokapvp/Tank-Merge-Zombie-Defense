@@ -132,6 +132,53 @@
     return grantAchievementDamageProgress(state, total * DAMAGE_PROGRESS_PER_POINT);
   }
 
+  /* ── Canonical reward mode → granter lookup table ─────── */
+  var REWARD_TABLE = {
+    /* fence_mechanic family */
+    fenceMechanicCoins75:        { type: 'coins',          amount: 75 },
+    fenceMechanicDust5:          { type: 'dust',           amount: 5 },
+    fenceMechanicFragment1:      { type: 'fragments',      amount: 1 },
+    fenceMechanicRandomChips2:   { type: 'randomChips',    amount: 2 },
+    fenceMechanicUpgradePoint1:  { type: 'upgradePoints',  amount: 1 },
+    /* duty_shift family */
+    dutyShiftUpgradePoint1:      { type: 'upgradePoints',  amount: 1 },
+    dutyShiftDamage20000:        { type: 'damagePoints',   amount: 20000 },
+    dutyShiftUpgradePoints2:     { type: 'upgradePoints',  amount: 2 },
+    /* track_cleanup family */
+    trackCleanupDamagePoints50:  { type: 'damagePoints',   amount: 50 },
+    trackCleanupFragments2:      { type: 'fragments',      amount: 2 },
+    trackCleanupUpgradePoint1:   { type: 'upgradePoints',  amount: 1 },
+    trackCleanupRandomChips5:    { type: 'randomChips',    amount: 5 },
+    trackCleanupUpgradePoints3:  { type: 'upgradePoints',  amount: 3 },
+    /* new_technology family (self-managed in achievements.js) */
+    newTechnologyFragments2:     { type: 'fragments',      amount: 2 },
+    newTechnologyDust20:         { type: 'dust',           amount: 20 },
+    newTechnologyRandomChips2:   { type: 'randomChips',    amount: 2 },
+    newTechnologyUpgradePoints3: { type: 'upgradePoints',  amount: 3 },
+    /* creator family (autoMerge — granted via game.js UI wiring, not granter functions) */
+    buy2:                        { type: 'autoMerge',      amount: 2 },
+    buy5:                        { type: 'autoMerge',      amount: 5 },
+    buyMax:                      { type: 'autoMerge',      amount: 0 },
+    autoMergeBasic:              { type: 'autoMerge',      amount: 0 },
+    autoMergeAdvanced:           { type: 'autoMerge',      amount: 0 },
+    autoMergeExpert:             { type: 'autoMerge',      amount: 0 },
+  };
+
+  function grantByTable(state, rewardMode, randomFn) {
+    var entry = REWARD_TABLE[rewardMode];
+    if (!entry) return false;
+    if (entry.type === 'coins') {
+      state.coins = normalizeCounter(state.coins) + entry.amount;
+      return true;
+    }
+    if (entry.type === 'dust') return grantAchievementDust(entry.amount);
+    if (entry.type === 'fragments') return grantAchievementRandomFragments(entry.amount, randomFn);
+    if (entry.type === 'randomChips') return grantAchievementRandomChips(entry.amount, randomFn);
+    if (entry.type === 'upgradePoints') return grantAchievementUpgradePoints(state, entry.amount);
+    if (entry.type === 'damagePoints') return grantAchievementDamagePoints(state, entry.amount);
+    return false;
+  }
+
   function grant(state, definition, options) {
     var def = definition && typeof definition === 'object' ? definition : null;
     if (!state || !def || typeof def.id !== 'string' || typeof def.rewardMode !== 'string') return false;
@@ -139,36 +186,7 @@
 
     var opts = options && typeof options === 'object' ? options : null;
     var randomFn = opts && typeof opts.random === 'function' ? opts.random : Math.random;
-    var granted = false;
-
-    if (def.rewardMode === 'fenceMechanicCoins75') {
-      state.coins = normalizeCounter(state.coins) + 75;
-      granted = true;
-    } else if (def.rewardMode === 'fenceMechanicDust5') {
-      granted = grantAchievementDust(5);
-    } else if (def.rewardMode === 'fenceMechanicFragment1') {
-      granted = grantAchievementRandomFragments(1, randomFn);
-    } else if (def.rewardMode === 'fenceMechanicRandomChips2') {
-      granted = grantAchievementRandomChips(2, randomFn);
-    } else if (def.rewardMode === 'fenceMechanicUpgradePoint1') {
-      granted = grantAchievementUpgradePoints(state, 1);
-    } else if (def.rewardMode === 'dutyShiftUpgradePoint1') {
-      granted = grantAchievementUpgradePoints(state, 1);
-    } else if (def.rewardMode === 'dutyShiftDamage20000') {
-      granted = grantAchievementDamagePoints(state, 20000);
-    } else if (def.rewardMode === 'dutyShiftUpgradePoints2') {
-      granted = grantAchievementUpgradePoints(state, 2);
-    } else if (def.rewardMode === 'trackCleanupDamagePoints50') {
-      granted = grantAchievementDamagePoints(state, 50);
-    } else if (def.rewardMode === 'trackCleanupFragments2') {
-      granted = grantAchievementRandomFragments(2, randomFn);
-    } else if (def.rewardMode === 'trackCleanupUpgradePoint1') {
-      granted = grantAchievementUpgradePoints(state, 1);
-    } else if (def.rewardMode === 'trackCleanupRandomChips5') {
-      granted = grantAchievementRandomChips(5, randomFn);
-    } else if (def.rewardMode === 'trackCleanupUpgradePoints3') {
-      granted = grantAchievementUpgradePoints(state, 3);
-    }
+    var granted = grantByTable(state, def.rewardMode, randomFn);
 
     if (!granted) return false;
     return markRewardGranted(state, def.id);
@@ -177,5 +195,6 @@
   global.Game = global.Game || {};
   global.Game.AchievementRewards = {
     grant: grant,
+    REWARD_TABLE: REWARD_TABLE,
   };
 })(typeof window !== 'undefined' ? window : this);

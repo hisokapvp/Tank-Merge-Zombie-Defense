@@ -39,7 +39,7 @@
 | 6138 | `MAX_DAMAGE_NUMBERS = 24` |
 | 9517–9525 | `AuraStyleByBand` array |
 | 10394–10399 | Main loop vars (`last`, `fpsAvg`, `qualityLow`, etc.) |
-| 10540–10541 | `DEBUG_MAX_TANK_LEVEL`, `DEBUG_LOG_MAX` |
+| 13385–13386 | `DEBUG_MAX_TANK_LEVEL`, `DEBUG_LOG_MAX` |
 
 ### State / Начальное состояние
 | Диапазон | Описание |
@@ -442,10 +442,11 @@
 ### Debug
 | Строка | Функция |
 |---|---|
-| 10543 | `debugLog(level, msg)` |
-| 10559 | `debugReset()` |
-| 10579 | `safeDebug(fn, fallbackMsg)` |
-| 10586 | `initDebugPanel()` |
+| 13385 | `DEBUG_MAX_TANK_LEVEL`, `DEBUG_LOG_MAX` |
+| 13388 | `debugLog(level, msg)` |
+| 13403 | `debugReset()` |
+| 13423 | `safeDebug(fn, fallbackMsg)` |
+| 13432 | `initDebugPanel()` |
 
 ---
 
@@ -488,5 +489,5 @@
 | 10394 | `last` | let | `performance.now()` |
 | 10396 | `fpsAvg` | let `60` | Скользящее среднее FPS |
 | 10398 | `qualityLow` | let `false` | Флаг низкого качества |
-| 10540 | `DEBUG_MAX_TANK_LEVEL` | const | = `MAX_TANK_LEVEL` |
-| 10541 | `DEBUG_LOG_MAX` | const `100` | |
+| 13385 | `DEBUG_MAX_TANK_LEVEL` | const | = `MAX_TANK_LEVEL` |
+| 13386 | `DEBUG_LOG_MAX` | const `100` | |

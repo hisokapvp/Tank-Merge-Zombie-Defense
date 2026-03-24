@@ -1,10 +1,10 @@
 ﻿# Система: Achievements
 
-> Обновлён: 2026-03-23.
+> Обновлён: 2026-03-24.
 
 ## Где править
 - Definitions, family grouping, прогресс и self-managed rewards: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L4-L512)
-- Immediate reward module для non-self-managed наград: [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L1-L117)
+- Immediate reward module для non-self-managed наград и REWARD_TABLE: [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L1-L200)
 - Gameplay hooks, lazy reward loader и informational popup render: [game.js](../../../game.js#L3254-L3275), [game.js](../../../game.js#L3336-L3388), [game.js](../../../game.js#L9267-L9357), [game.js](../../../game.js#L9418-L9425)
 - Начальная save-shape и mirrored counters: [src/persistence/initialState.js](../../../src/persistence/initialState.js#L123-L137)
 - I18n contract: [src/i18n/ru.json](../../../src/i18n/ru.json#L155-L193), [src/i18n/en.json](../../../src/i18n/en.json#L153-L191), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L130-L162), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L547-L579)
@@ -37,7 +37,7 @@ Achievements runtime теперь держит шесть семейств (`cre
 | `duty_shift` | `duty_shift_1..3` → `1 / 4 / 9` дронов | `droneAcquisitions` | `state.stats.droneAcquisitionsCount` → fallback `achievements.totalDroneAcquisitions` | `dutyShiftUpgradePoint1`, `dutyShiftDamage20000`, `dutyShiftUpgradePoints2` | `state.stats.droneAcquisitionsCount`, legacy mirror `achievements.totalDroneAcquisitions`, shared `achievements.unlocked/popupQueue/rewarded` |
 | `track_cleanup` | `track_cleanup_1..5` → `1 / 5 / 10 / 25 / 50` clean attack waves | `noRepairAttackWaveStreak` | `state.stats.noRepairAttackWaveStreakCount` → fallback `achievements.totalNoRepairAttackWaveStreak` | `trackCleanupDamagePoints50`, `trackCleanupFragments2`, `trackCleanupUpgradePoint1`, `trackCleanupRandomChips5`, `trackCleanupUpgradePoints3` | `state.stats.noRepairAttackWaveStreakCount`, legacy mirror `achievements.totalNoRepairAttackWaveStreak`, shared `achievements.unlocked/popupQueue/rewarded` |
 
-Награды `fenceMechanic*`, `dutyShift*` и `trackCleanup*` выдаются через lazy-loaded модуль [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js), а `newTechnologyFragments2/newTechnologyDust20/newTechnologyRandomChips2/newTechnologyUpgradePoints3` остаются self-managed внутри achievements runtime: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js), [game.js](../../../game.js)
+Все 23 reward-а описаны в единой `REWARD_TABLE` внутри [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L136-L170); `grantByTable()` dispatch'ит по `entry.type` (`coins`, `dust`, `fragments`, `randomChips`, `upgradePoints`, `damagePoints`); autoMerge-записи присутствуют в таблице для полноты, но `grantByTable()` для них возвращает `false` — autoMerge остаётся UI-wired. Self-managed rewards (`newTechnology*`) тоже в таблице, но `grantSelfManagedReward()` в `achievements.js` обрабатывает их напрямую при unlock: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js), [game.js](../../../game.js)
 
 ### Normalization, backfill и recalc
 - `ensureState()` нормализует `rewarded`, `completedModifierTechs`, retro-infer'ит завершённые технологии из `Game.HangarChips.getUnlockedTechs()`, синхронизирует mirrored stats и сразу пытается добрать пропущенные self-managed rewards один раз: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L331-L391)
@@ -45,13 +45,30 @@ Achievements runtime теперь держит шесть семейств (`cre
 - `recordModifierTechUnlock()` dedupe'ит `techId`, пересчитывает `totalModifierTechUnlocks` из `completedModifierTechs` и затем заново прогоняет unlock checks: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L496-L512)
 - `recordNoRepairAttackWaveSuccess()` и `resetNoRepairAttackWaveStreak()` держат canonical streak-state для `track_cleanup`; reset идёт через runtime invalidation path, а не через UI: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js)
 
+### REWARD_TABLE — canonical reward mapping
+`REWARD_TABLE` в [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L136-L170) — single source of truth для всех 23 reward modes. Каждая запись `{ type, amount }` маппит `rewardMode` → granter-тип. `grantByTable()` [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L172-L183) выполняет dispatch по `type`, а `grant()` [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L185-L196) оборачивает его с dedupe через `hasRewardGranted`/`markRewardGranted`. Модуль экспортирует `{ grant, REWARD_TABLE }` через `Game.AchievementRewards`.
+
 ### Интеграция с game.js
 - `processAchievementProgress()` — canonical funnel для gameplay-событий; после `AchievementsApi.addProgress()` он синхронизирует rewards и popup queue: [game.js](../../../game.js#L3254-L3273)
 - `addDron(level)` — canonical gameplay hook для `duty_shift`, а attack-mode episode tracker (`begin/finalize/invalidateNoRepairAttackWaveEpisode`) — canonical gameplay hook для `track_cleanup`: [game.js](../../../game.js)
 - `ensureAchievementRewardsModule()` lazy-load'ит `src/mechanics/achievementRewards.js`, а после успешной загрузки сразу backfill'ит уже unlocked non-self-managed rewards через `reconcileAchievementRewardsForUnlocked()` и обновляет UI: [game.js](../../../game.js)
-- `grantAchievementReward()` в `game.js` обслуживает non-self-managed reward modes для fence, duty_shift и track_cleanup; технологии II-IV намеренно отсутствуют в этом switch и остаются self-managed: [game.js](../../../game.js)
-- `openAchievementPopupEvent()` показывает только title/condition/reward copy, а `achievementPopupClaim`, `achievementPopupDismiss` и `achievementPopupClose` все маршрутизируются в `closeAchievementPopup()`: [game.js](../../../game.js#L3336-L3358), [game.js](../../../game.js#L9418-L9425), [game.js](../../../game.js#L10556-L10560)
+- `grantAchievementReward()` в `game.js` использует `REWARD_TABLE` из `Game.AchievementRewards` для lookup reward-mode → type/amount; если entry отсутствует или `type === 'autoMerge'` — reward skip'ается; `grant()` dispatch'ит через `grantByTable()`, а не if-else/switch: [game.js](../../../game.js#L9494-L9510), [src/mechanics/achievementRewards.js](../../../src/mechanics/achievementRewards.js#L136-L200)
+- `openAchievementPopupEvent()` показывает только title/condition/reward copy, а `achievementPopupClaim`, `achievementPopupDismiss` и `achievementPopupClose` все маршрутизируются в `closeAchievementPopup()`; popup toggle добавляет/удаляет `body.achievement-popup-open` для CRT/grain overlay: [game.js](../../../game.js#L3336-L3358), [game.js](../../../game.js#L9418-L9425), [game.js](../../../game.js#L10556-L10560)
 - `renderAchievementsList()` перед рендером всегда вызывает recalculation и получает прогресс `manualFenceRepairs/modifierTechUnlocks` через `AchievementsApi.getProgressValue()`: [game.js](../../../game.js#L9386-L9406)
+
+### Debug panel — canonical flow
+`debugUnlockAchievementAndClaim()` [game.js](../../../game.js#L3565-L3609) использует canonical progress hooks вместо прямого bypass `unlocked[]`:
+- `modifierTechUnlocks` → генерирует synthetic `techId` из `90001+` и вызывает `onModifierTechnologyUnlocked(syntheticBase)` для каждого недостающего unique unlock
+- `noRepairAttackWaveStreak` → вызывает `completeNoRepairAttackWaveAchievementProgress()` N раз
+- остальные progressType → вызывает `processAchievementProgress(progressType, needed)` с точным delta
+
+Все пути завершаются `updateUI()` и возвращают `!!ach.unlocked[def.id]`.
+
+### _unlockedTechs reconstruction
+Оба `restoreFullState()` [game.js](../../../game.js#L5286)] и `applySavedProgress()` [game.js](../../../game.js#L5504)] после restore achievements state реконструируют `_unlockedTechs` из `ach.completedModifierTechs` вызовом `HangarChips.setUnlockedTechs(ach.completedModifierTechs || {})`. Это необходимо для правильного подсчёта tier-2 tech prerequisites: [game.js](../../../game.js#L5405-L5411), [game.js](../../../game.js#L5627-L5633)
+
+### Stale-episode fallback для track_cleanup
+`handleNoRepairAttackWaveTransition()` [game.js](../../../game.js#L3386-L3404)] содержит третий guard: если attack mode уже неактивен, но `noRepairAttackWaveRuntime.activeEpisodeKey` всё ещё задан (stale state между кадрами), вызывается `finalizeNoRepairAttackWaveEpisode()` для корректного завершения эпизода.
 
 ## Save и copy contract
 - Новый save shape обязан стартовать с `rewarded`, `totalManualFenceRepairs`, `totalModifierTechUnlocks`, `totalDroneAcquisitions`, `totalNoRepairAttackWaveStreak`, `completedModifierTechs` и mirrored stats counters: [src/persistence/initialState.js](../../../src/persistence/initialState.js)

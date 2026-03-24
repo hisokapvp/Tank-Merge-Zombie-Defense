@@ -400,16 +400,15 @@
     if (!achievementState || !def || !isSelfManagedRewardMode(def.rewardMode)) return false;
     if (achievementState.rewarded[achievementId]) return false;
 
+    var table = (global.Game && global.Game.AchievementRewards && global.Game.AchievementRewards.REWARD_TABLE) || {};
+    var entry = table[def.rewardMode];
+    if (!entry) return false;
+
     var granted = false;
-    if (def.rewardMode === 'newTechnologyFragments2') {
-      granted = grantAchievementFragments(2);
-    } else if (def.rewardMode === 'newTechnologyDust20') {
-      granted = grantAchievementSiliconDust(20);
-    } else if (def.rewardMode === 'newTechnologyRandomChips2') {
-      granted = grantAchievementRandomChips(2);
-    } else if (def.rewardMode === 'newTechnologyUpgradePoints3') {
-      granted = grantAchievementUpgradePoints(state, 3);
-    }
+    if (entry.type === 'fragments')      granted = grantAchievementFragments(entry.amount);
+    else if (entry.type === 'dust')      granted = grantAchievementSiliconDust(entry.amount);
+    else if (entry.type === 'randomChips') granted = grantAchievementRandomChips(entry.amount);
+    else if (entry.type === 'upgradePoints') granted = grantAchievementUpgradePoints(state, entry.amount);
 
     if (!granted) return false;
     achievementState.rewarded[achievementId] = true;

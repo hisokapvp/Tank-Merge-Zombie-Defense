@@ -3390,6 +3390,10 @@ function handleNoRepairAttackWaveTransition(wasAttackActive, attackActiveNow){
   }
   if (!attackActiveNow && wasAttackActive) {
     finalizeNoRepairAttackWaveEpisode();
+    return;
+  }
+  if (!attackActiveNow && noRepairAttackWaveRuntime.activeEpisodeKey) {
+    finalizeNoRepairAttackWaveEpisode();
   }
 }
 
@@ -3481,6 +3485,7 @@ function openAchievementPopupEvent(event){
       : '';
   }
   setMenuPauseSource('achievementPopup', true);
+  document.body.classList.add('achievement-popup-open');
   ui.achievementPopup.classList.remove('hidden');
   ui.achievementPopup.setAttribute('aria-hidden', 'false');
   a11yOpen(ui.achievementPopup, {
@@ -3561,9 +3566,39 @@ function debugUnlockAchievementAndClaim(achievementId){
   const ach = ensureAchievementsState();
   const def = getAchievementById(achievementId);
   if (!ach || !def) return false;
-  ach.unlocked[def.id] = true;
+  if (ach.unlocked[def.id]) return false;
+  const progressType = def.progressType;
+  const target = def.target;
+  if (progressType === 'modifierTechUnlocks') {
+    const completedMap = ach.completedModifierTechs || {};
+    let currentCount = AchievementsApi && AchievementsApi.getProgressValue
+      ? AchievementsApi.getProgressValue(state, 'modifierTechUnlocks')
+      : clampDevInt(ach.totalModifierTechUnlocks);
+    let syntheticBase = 90001;
+    while (currentCount < target) {
+      if (!completedMap[String(syntheticBase)]) {
+        onModifierTechnologyUnlocked(syntheticBase);
+        currentCount++;
+      }
+      syntheticBase++;
+    }
+  } else if (progressType === 'noRepairAttackWaveStreak') {
+    let current = AchievementsApi && AchievementsApi.getProgressValue
+      ? AchievementsApi.getProgressValue(state, 'noRepairAttackWaveStreak')
+      : clampDevInt(ach.totalNoRepairAttackWaveStreak);
+    const needed = Math.max(0, target - current);
+    for (let i = 0; i < needed; i++) {
+      completeNoRepairAttackWaveAchievementProgress();
+    }
+  } else {
+    let current = AchievementsApi && AchievementsApi.getProgressValue
+      ? AchievementsApi.getProgressValue(state, progressType)
+      : 0;
+    const needed = Math.max(0, target - current);
+    if (needed > 0) processAchievementProgress(progressType, needed);
+  }
   updateUI();
-  return true;
+  return !!ach.unlocked[def.id];
 }
 
 function debugSetTotalMerges(rawValue){
@@ -5365,6 +5400,14 @@ function restoreFullState(saved){
   if (reconcileAchievementRewardsAfterRestore) {
     reconcileAchievementRewardsForUnlocked();
   }
+  /* Reconstruct _unlockedTechs from completedModifierTechs so tier-2 prerequisites resolve */
+  {
+    const _HC = window.Game && window.Game.HangarChips;
+    if (_HC && typeof _HC.setUnlockedTechs === 'function') {
+      const ach = ensureAchievementsState();
+      _HC.setUnlockedTechs(ach.completedModifierTechs || {});
+    }
+  }
   /* Restore tech study state */
   if (saved.techStudying && typeof saved.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
     window.Game.HangarChipsUI.setTechStudying(saved.techStudying);
@@ -5579,6 +5622,14 @@ function applySavedProgress(data){
   }
   if (reconcileAchievementRewardsAfterApply) {
     reconcileAchievementRewardsForUnlocked();
+  }
+  /* Reconstruct _unlockedTechs from completedModifierTechs so tier-2 prerequisites resolve */
+  {
+    const _HC = window.Game && window.Game.HangarChips;
+    if (_HC && typeof _HC.setUnlockedTechs === 'function') {
+      const ach = ensureAchievementsState();
+      _HC.setUnlockedTechs(ach.completedModifierTechs || {});
+    }
   }
   /* Restore tech study state */
   if (data.techStudying && typeof data.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
@@ -9444,29 +9495,14 @@ function grantAchievementReward(achievementId){
   if (typeof achievementId !== 'string' || !achievementId) return false;
   const def = getAchievementById(achievementId);
   if (!def || typeof def.rewardMode !== 'string') return false;
-  switch (def.rewardMode) {
-    case 'fenceMechanicCoins75':
-    case 'fenceMechanicDust5':
-    case 'fenceMechanicFragment1':
-    case 'fenceMechanicRandomChips2':
-    case 'fenceMechanicUpgradePoint1':
-    case 'dutyShiftUpgradePoint1':
-    case 'dutyShiftDamage20000':
-    case 'dutyShiftUpgradePoints2':
-    case 'trackCleanupDamagePoints50':
-    case 'trackCleanupFragments2':
-    case 'trackCleanupUpgradePoint1':
-    case 'trackCleanupRandomChips5':
-    case 'trackCleanupUpgradePoints3':
-      break;
-    default:
-      return false;
-  }
+  const rewardTable = (Game.AchievementRewards && Game.AchievementRewards.REWARD_TABLE) || {};
+  const entry = rewardTable[def.rewardMode];
+  if (!entry || entry.type === 'autoMerge') return false;
   const achievementRewardsApi = getAchievementRewardsApi() || ensureAchievementRewardsModule();
   if (!achievementRewardsApi || typeof achievementRewardsApi.grant !== 'function') return false;
   const granted = !!achievementRewardsApi.grant(state, def);
   if (!granted) return false;
-  if (def.rewardMode === 'dutyShiftDamage20000' || def.rewardMode === 'trackCleanupDamagePoints50') updateDamagePointsUI();
+  if (entry.type === 'damagePoints') updateDamagePointsUI();
   updateUI();
   return true;
 }
@@ -9510,6 +9546,7 @@ function onModifierTechnologyUnlocked(modId){
   if (usedFallbackRecalc) return unlocked;
   reconcileAchievementRewards(unlocked);
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  if (unlocked.length > 0) updateUI();
   return unlocked;
 }
 
@@ -9575,6 +9612,7 @@ function closeAchievementPopup(){
   const uiState = ensureAchievementUiState();
   if (uiState.toast) uiState.toast.active = null;
   setMenuPauseSource('achievementPopup', false);
+  document.body.classList.remove('achievement-popup-open');
   if (!ui.achievementPopup) return;
   ui.achievementPopup.classList.add('hidden');
   ui.achievementPopup.setAttribute('aria-hidden', 'true');
