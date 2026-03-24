@@ -392,6 +392,10 @@
     }
     state.player.talentsV2.freePoints = normalizeCounter(state.player.talentsV2.freePoints + total);
     state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
+    var tv2 = global.Game && global.Game.TalentsV2;
+    if (tv2 && typeof tv2.setFreePoints === 'function') {
+      tv2.setFreePoints(state.player.talentsV2.freePoints);
+    }
     return true;
   }
 
@@ -712,14 +716,17 @@
     if (!ach.completedModifierTechs || typeof ach.completedModifierTechs !== 'object') {
       ach.completedModifierTechs = {};
     }
-    if (ach.completedModifierTechs[String(normalizedTechId)]) return [];
-    ach.completedModifierTechs[String(normalizedTechId)] = true;
-
-    var totalCompleted = countCompletedModifierTechs(ach.completedModifierTechs);
-    ach.totalModifierTechUnlocks = totalCompleted;
-    if (state && state.stats && typeof state.stats === 'object') {
-      state.stats.modifierTechUnlocksCount = totalCompleted;
+    var alreadyTracked = !!ach.completedModifierTechs[String(normalizedTechId)];
+    if (!alreadyTracked) {
+      ach.completedModifierTechs[String(normalizedTechId)] = true;
+      var totalCompleted = countCompletedModifierTechs(ach.completedModifierTechs);
+      ach.totalModifierTechUnlocks = totalCompleted;
+      if (state && state.stats && typeof state.stats === 'object') {
+        state.stats.modifierTechUnlocksCount = totalCompleted;
+      }
     }
+    // Always recalculate — inference race may have added the tech
+    // but never ran recalculateUnlocks
     return recalculateUnlocks(state);
   }
 

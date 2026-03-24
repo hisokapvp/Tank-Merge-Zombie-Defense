@@ -109,6 +109,10 @@
     }
     state.player.talentsV2.freePoints = normalizeCounter(state.player.talentsV2.freePoints + total);
     state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
+    var tv2 = global.Game && global.Game.TalentsV2;
+    if (tv2 && typeof tv2.setFreePoints === 'function') {
+      tv2.setFreePoints(state.player.talentsV2.freePoints);
+    }
     return true;
   }
 
@@ -135,33 +139,33 @@
   /* ── Canonical reward mode → granter lookup table ─────── */
   var REWARD_TABLE = {
     /* fence_mechanic family */
-    fenceMechanicCoins75:        { type: 'coins',          amount: 75 },
-    fenceMechanicDust5:          { type: 'dust',           amount: 5 },
-    fenceMechanicFragment1:      { type: 'fragments',      amount: 1 },
-    fenceMechanicRandomChips2:   { type: 'randomChips',    amount: 2 },
-    fenceMechanicUpgradePoint1:  { type: 'upgradePoints',  amount: 1 },
+    fenceMechanicCoins75:        { type: 'coins',          amount: 75,    i18nKey: 'achievementRewardFenceMechanicCoins75' },
+    fenceMechanicDust5:          { type: 'dust',           amount: 5,     i18nKey: 'achievementRewardFenceMechanicDust5' },
+    fenceMechanicFragment1:      { type: 'fragments',      amount: 1,     i18nKey: 'achievementRewardFenceMechanicFragment1' },
+    fenceMechanicRandomChips2:   { type: 'randomChips',    amount: 2,     i18nKey: 'achievementRewardFenceMechanicChips2' },
+    fenceMechanicUpgradePoint1:  { type: 'upgradePoints',  amount: 1,     i18nKey: 'achievementRewardFenceMechanicUpgradePoint1' },
     /* duty_shift family */
-    dutyShiftUpgradePoint1:      { type: 'upgradePoints',  amount: 1 },
-    dutyShiftDamage20000:        { type: 'damagePoints',   amount: 20000 },
-    dutyShiftUpgradePoints2:     { type: 'upgradePoints',  amount: 2 },
+    dutyShiftUpgradePoint1:      { type: 'upgradePoints',  amount: 1,     i18nKey: 'achievementRewardDutyShiftUpgradePoint1' },
+    dutyShiftDamage20000:        { type: 'damagePoints',   amount: 20000, i18nKey: 'achievementRewardDutyShiftDamage20000' },
+    dutyShiftUpgradePoints2:     { type: 'upgradePoints',  amount: 2,     i18nKey: 'achievementRewardDutyShiftUpgradePoints2' },
     /* track_cleanup family */
-    trackCleanupDamagePoints50:  { type: 'damagePoints',   amount: 50 },
-    trackCleanupFragments2:      { type: 'fragments',      amount: 2 },
-    trackCleanupUpgradePoint1:   { type: 'upgradePoints',  amount: 1 },
-    trackCleanupRandomChips5:    { type: 'randomChips',    amount: 5 },
-    trackCleanupUpgradePoints3:  { type: 'upgradePoints',  amount: 3 },
+    trackCleanupDamagePoints50:  { type: 'damagePoints',   amount: 50,    i18nKey: 'achievementRewardTrackCleanupDamagePoints50' },
+    trackCleanupFragments2:      { type: 'fragments',      amount: 2,     i18nKey: 'achievementRewardTrackCleanupFragments2' },
+    trackCleanupUpgradePoint1:   { type: 'upgradePoints',  amount: 1,     i18nKey: 'achievementRewardTrackCleanupUpgradePoint1' },
+    trackCleanupRandomChips5:    { type: 'randomChips',    amount: 5,     i18nKey: 'achievementRewardTrackCleanupChips5' },
+    trackCleanupUpgradePoints3:  { type: 'upgradePoints',  amount: 3,     i18nKey: 'achievementRewardTrackCleanupUpgradePoints3' },
     /* new_technology family (self-managed in achievements.js) */
-    newTechnologyFragments2:     { type: 'fragments',      amount: 2 },
-    newTechnologyDust20:         { type: 'dust',           amount: 20 },
-    newTechnologyRandomChips2:   { type: 'randomChips',    amount: 2 },
-    newTechnologyUpgradePoints3: { type: 'upgradePoints',  amount: 3 },
+    newTechnologyFragments2:     { type: 'fragments',      amount: 2,     i18nKey: 'achievementRewardNewTechnologyFragments2' },
+    newTechnologyDust20:         { type: 'dust',           amount: 20,    i18nKey: 'achievementRewardNewTechnologyDust20' },
+    newTechnologyRandomChips2:   { type: 'randomChips',    amount: 2,     i18nKey: 'achievementRewardNewTechnologyChips2' },
+    newTechnologyUpgradePoints3: { type: 'upgradePoints',  amount: 3,     i18nKey: 'achievementRewardNewTechnologyUpgradePoints3' },
     /* creator family (autoMerge — granted via game.js UI wiring, not granter functions) */
-    buy2:                        { type: 'autoMerge',      amount: 2 },
-    buy5:                        { type: 'autoMerge',      amount: 5 },
-    buyMax:                      { type: 'autoMerge',      amount: 0 },
-    autoMergeBasic:              { type: 'autoMerge',      amount: 0 },
-    autoMergeAdvanced:           { type: 'autoMerge',      amount: 0 },
-    autoMergeExpert:             { type: 'autoMerge',      amount: 0 },
+    buy2:                        { type: 'autoMerge',      amount: 2,     i18nKey: 'achievementRewardCreate2' },
+    buy5:                        { type: 'autoMerge',      amount: 5,     i18nKey: 'achievementRewardCreate5' },
+    buyMax:                      { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardCreateMax' },
+    autoMergeBasic:              { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeBasic' },
+    autoMergeAdvanced:           { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeAdvanced' },
+    autoMergeExpert:             { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeExpert' },
   };
 
   function grantByTable(state, rewardMode, randomFn) {

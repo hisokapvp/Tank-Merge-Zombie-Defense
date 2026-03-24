@@ -1,5 +1,14 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-24
+- **Документация: shared post-merge update для REWARD_TABLE i18nKey, TalentsV2 sync при upgradePoints, inference race fix и chipUpgradeCard layout (`src/mechanics/achievementRewards.js`, `src/mechanics/achievements.js`, `game.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `style.css`)**
+  - Обновлены `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/INDEX.md`, `docs/talents_v2.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: все 23 записи `REWARD_TABLE` теперь несут `i18nKey` для автоматического i18n-lookup в achievement popup; popup render использует `entry.i18nKey` с fallback на `def.rewardKey`.
+  - Зафиксированы: `grantAchievementUpgradePoints()` в `achievementRewards.js` (L103-L116) и `achievements.js` (L386-L398), а также `grantAchievementReward()` в `game.js` (L9497-L9515) синхронизируют `TalentsV2.setFreePoints()` после инкремента `freePoints`.
+  - Зафиксированы: `recordModifierTechUnlock()` теперь всегда вызывает `recalculateUnlocks()` даже когда `ensureState` уже infer'ил текущую технологию — фикс inference race.
+  - Зафиксированы: `.chipUpgradeCard` height увеличена на 20px (`calc(var(--chipLabelCardHeight, 130px) + 40px)`), `.chipUpgradeCard__name` max-height увеличена до `60px` для вмещения 3-строчных названий модификаторов.
+  - Зафиксированы: `talentCantBuy_noPoints` текст обновлён во всех i18n-источниках (ru.json, en.json, fallbackStrings.js).
+
 ## 2026-03-23
 - **Документация: shared post-merge update для duty_shift / track_cleanup achievements и save-safe counters (`game.js`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/persistence/initialState.js`, `src/persistence/storage.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `Test/pack4/tutorial_first_run_runtime.test.js`)**
   - Обновлены `docs/ai/SYSTEMS/achievements.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/save.md`.

@@ -255,7 +255,7 @@
   "talentActiveRechargeReady": "Перезарядка: готово",
   "talentActiveDurationLeft": "Длительность: {sec}с",
   "talentCantBuy_tierLocked": "Тир ещё не открыт",
-  "talentCantBuy_noPoints": "Недостаточно очков талантов",
+  "talentCantBuy_noPoints": "У Вас нет доступных очков улучшения",
   "talentCantBuy_requires": "Требуются таланты",
   "talentCantBuy_maxRank": "Достигнут максимальный ранг",
   "levelLabel": "Уровень компьютера",

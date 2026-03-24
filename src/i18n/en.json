@@ -253,7 +253,7 @@
   "talentActiveRechargeReady": "Recharge: ready",
   "talentActiveDurationLeft": "Duration: {sec}s",
   "talentCantBuy_tierLocked": "Tier is locked",
-  "talentCantBuy_noPoints": "Not enough talent points",
+  "talentCantBuy_noPoints": "You have no available upgrade points",
   "talentCantBuy_requires": "Required talents",
   "talentCantBuy_maxRank": "Max rank reached",
   "levelLabel": "Computer level",

@@ -131,6 +131,7 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - внутренний setter (используется при load/save интеграции).
 - `getFreePoints() => number`
 - `setFreePoints(value)`
+  - вызывается из achievement grant-path'ов (`achievementRewards.js`, `achievements.js`, `game.js → grantAchievementReward`) для синхронизации runtime при выдаче `upgradePoints` наград.
 - `syncFromSave(payload)`
   - пост-restore синхронизация runtime из save payload: обновляет `ranksById/freePoints`, очищает pending-выбор и инвалидирует кеш модификаторов.
 - `getBranchSpent(branchId) => number`

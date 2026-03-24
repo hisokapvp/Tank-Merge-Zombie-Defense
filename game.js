@@ -3480,8 +3480,11 @@ function openAchievementPopupEvent(event){
       : '';
   }
   if (ui.achievementPopupReward) {
-    ui.achievementPopupReward.textContent = def.rewardKey
-      ? t('achievementReward', { reward: t(def.rewardKey) })
+    const rewardTable = (Game.AchievementRewards && Game.AchievementRewards.REWARD_TABLE) || {};
+    const rewardEntry = rewardTable[def.rewardMode];
+    const rewardI18nKey = (rewardEntry && rewardEntry.i18nKey) || def.rewardKey;
+    ui.achievementPopupReward.textContent = rewardI18nKey
+      ? t('achievementReward', { reward: t(rewardI18nKey) })
       : '';
   }
   setMenuPauseSource('achievementPopup', true);
@@ -9503,6 +9506,13 @@ function grantAchievementReward(achievementId){
   const granted = !!achievementRewardsApi.grant(state, def);
   if (!granted) return false;
   if (entry.type === 'damagePoints') updateDamagePointsUI();
+  if (entry.type === 'upgradePoints' && isTalentsV2Ready()) {
+    const api = getTalentsV2Api();
+    if (api && typeof api.setFreePoints === 'function') {
+      api.setFreePoints(state.player.talentsV2.freePoints);
+      syncPlayerTalentsV2FromApi();
+    }
+  }
   updateUI();
   return true;
 }
