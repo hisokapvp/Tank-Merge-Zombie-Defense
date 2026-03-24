@@ -166,6 +166,12 @@
     autoMergeBasic:              { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeBasic' },
     autoMergeAdvanced:           { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeAdvanced' },
     autoMergeExpert:             { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeExpert' },
+    /* stable_income family */
+    stableIncomeDamage100:       { type: 'damagePoints',   amount: 100,     i18nKey: 'achievementRewardStableIncomeDamage100' },
+    stableIncomeDamage1000:      { type: 'damagePoints',   amount: 1000,    i18nKey: 'achievementRewardStableIncomeDamage1000' },
+    stableIncomeDamage5000:      { type: 'damagePoints',   amount: 5000,    i18nKey: 'achievementRewardStableIncomeDamage5000' },
+    stableIncomeDamage20000:     { type: 'damagePoints',   amount: 20000,   i18nKey: 'achievementRewardStableIncomeDamage20000' },
+    stableIncomeDamage100000:    { type: 'damagePoints',   amount: 100000,  i18nKey: 'achievementRewardStableIncomeDamage100000' },
   };
 
   function grantByTable(state, rewardMode, randomFn) {

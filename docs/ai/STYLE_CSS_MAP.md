@@ -1,6 +1,6 @@
 # style.css — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-23.
+> Агент-ориентировано. Обновлён: 2026-03-24.
 > `style.css` — CSS-монолит проекта (~7.1k строк) и один из главных hotspot-файлов.
 
 ## Что это
@@ -26,7 +26,7 @@
 - `techModal__rateLine`, `techModal__selectionInfo`, `techModal__dustRow`, `techModal__dustValue`, `techAccelGridWrap`, `techAccelChip--disabled::after` и `techAccelDustControls*` — CSS-контракт accel-модалки: он обязан одновременно показывать ставки `dust/chip/fragment`, выбранное ускорение, итог после применения, остаток до cap `96%`, bordered-wrap со scrollable grid, нижнюю строку `доступно / выбрано` для кремниевой пыли, badge `Лимит` и `+/-` stepper: [style.css](../../style.css#L4222-L4315).
 - `.techModal__btns` находится **вне** `.techModal__footer` в DOM-дереве, поэтому `gap` footer-flex-контейнера на него не действует. Отступ между `techModal__selectionInfo` и кнопками задаётся исключительно `margin-top` на `.techModal__btns`. `techAccelGridWrap` имеет `overflow-x:hidden` — горизонтальный скролл запрещён.
 - `chipCraftBottomBar` (включая `chipCraftDustResource`) рендерится **только** когда `isDustView === true`. В вкладках `Создание чипов` и `Разобрать` этот блок полностью отсутствует. Инвентарная сетка в non-dust видах принудительно ограничена одним столбцом через `.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid { grid-template-columns:1fr }`.
-- `techAccelChip__label`, `chipCraftInvLabel`, `chipCraftSlotCard__name` и `chipCraftResultLabel` должны переносить полные названия только по ` + `; размер карточек задаётся общими vars `--chipLabelCardWidth/Height`: [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915).
+- `techAccelChip__label`, `chipCraftInvLabel`, `chipCraftSlotCard__name` и `chipCraftResultLabel` должны переносить полные названия только по ` + `; размер карточек задаётся общими vars `--chipLabelCardWidth/Height`; `.chipUpgradeCard__name` ограничивает высоту имени через `max-height: var(--chipNameMaxLines, 60px)`: [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915), [style.css](../../style.css#L5190-L5202).
 - Underground hangar modal держит отдельный visual contract: `.ughPanel > .levelModal__title` центрирует заголовок внутри panel shell, `.ughDroneClusterLabel` скрыт и не должен возвращаться в DOM как видимый заголовок, `.ughCell__emptyMark/.ughDroneCell__emptyMark` выключены без изменения размеров ячеек, `.ughCell__levelBadge/.ughDroneCell__levelBadge` остаются plain text у нижней кромки по центру, а `transferAll` теперь живёт в отдельной центрированной `.ughTransferLane` между верхним и подземным блоками как icon-only CTA `44×44` с зелёной стрелкой `#4af626`: [style.css](../../style.css#L4079-L4183), [style.css](../../style.css#L4321-L4406).
 - `chipCraftSlot` / `chipCraftSlotRow--withResult` обязаны оставлять headroom для внешнего `chipCraftSlotRemove`, чтобы крестик во вкладке `Разобрать` не клиппился и совпадал по позиции с future-preview эталоном: [style.css](../../style.css#L4480-L4652), [style.css](../../style.css#L4887-L4904).
 - Craft slots и future-preview используют квадратный карточный shell `chipCraftSlotCard`, визуально согласованный с inventory-карточками: [style.css](../../style.css#L4520-L4652).
@@ -36,7 +36,7 @@
 ## Оглавление файла
 | Блок | Строки | Назначение |
 |---|---|---|
-| Theme vars / body / HUD / stage shell | [style.css](../../style.css#L1-L267) | CSS-переменные, safe-area, stage layout, terminal panel |
+| Theme vars / body / HUD / stage shell | [style.css](../../style.css#L1-L267) | CSS-переменные (включая `--chipNameMaxLines`), safe-area, stage layout, terminal panel |
 | Buttons / menus / save views / forms | [style.css](../../style.css#L268-L1187) | HUD buttons, big menu, small menu, menu inputs, sliders |
 | Overlay / modal base / critical / close controls / supercomputer HUD / root tiles | [style.css](../../style.css#L1188-L1700) | Общие модалки, `.btn`, `.scButton`, `.levelModal__close`, `.supercomputerHudBtn`, `.scRootTiles` |
 | Talent modal / SC modal / tabs / tables / stage abilities | [style.css](../../style.css#L1701-L2665) | Talents, `.scModal__body`, table layout, stage active slots, debug panel start |

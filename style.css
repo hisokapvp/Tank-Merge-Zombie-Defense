@@ -27,6 +27,7 @@
   --scRootTileHeight: clamp(72px, var(--scRootTileHeightPx), var(--scRootTileHeightPx));
   --scTableTileWidthPx: 128px;
   --scTableTileHeightPx: 112px;
+  --chipNameMaxLines: 60px;
   --scTableTileWidth: clamp(72px, var(--scTableTileWidthPx), var(--scTableTileWidthPx));
   --scTableTileHeight: clamp(64px, var(--scTableTileHeightPx), var(--scTableTileHeightPx));
   --chipLabelCardWidthPx: 176px;
@@ -1527,7 +1528,7 @@ body.scmodal-open{
   display:flex;
   gap:10px;
   justify-content:center;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
 }
 .criticalModal__actions_single{
   margin-top:2px;
@@ -5188,7 +5189,7 @@ button.hangarChipInvItem{
 .chipUpgradeCard__name{
   width:100%;
   min-height:30px;
-  max-height:60px;
+  max-height:var(--chipNameMaxLines, 60px);
   display:flex;
   flex-wrap:wrap;
   align-items:center;

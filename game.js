@@ -3278,6 +3278,7 @@ function processAchievementProgress(progressType, deltaCount){
     else if (type === 'modifierTechUnlocks') ach.totalModifierTechUnlocks += count;
     else if (type === 'droneAcquisitions') ach.totalDroneAcquisitions += count;
     else if (type === 'noRepairAttackWaveStreak') ach.totalNoRepairAttackWaveStreak += count;
+    else if (type === 'moneyEarned') { if (!Number.isFinite(ach.totalMoneyEarned)) ach.totalMoneyEarned = 0; ach.totalMoneyEarned += count; }
     else ach.totalPurchased += count;
   }
   reconcileAchievementRewards(unlocked);
@@ -3299,6 +3300,7 @@ function getSerializedAchievementStats(){
     modifierTechUnlocksCount: clampDevInt(Number.isFinite(stats.modifierTechUnlocksCount) ? stats.modifierTechUnlocksCount : ach.totalModifierTechUnlocks),
     droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
     noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
+    moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
   };
 }
 
@@ -3311,6 +3313,7 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.modifierTechUnlocksCount)) state.stats.modifierTechUnlocksCount = clampDevInt(savedStats.modifierTechUnlocksCount);
     if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
     if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
+    if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
   }
   ensureAchievementsState();
 }
@@ -7098,7 +7101,9 @@ function startZombieDying(z){
   }
   z.corpseTimer = z.corpseTimerLeft;
 
-  state.coins += Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
+  const _killCoins = Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
+  state.coins += _killCoins;
+  if (_killCoins > 0) processAchievementProgress('moneyEarned', _killCoins);
   state.kills += 1;
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill', { level: z.level });
@@ -7703,7 +7708,9 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
         });
       }
     }
-    state.coins += coinsForShot(tank.level);
+    const _shotCoins = coinsForShot(tank.level);
+    state.coins += _shotCoins;
+    if (_shotCoins > 0) processAchievementProgress('moneyEarned', _shotCoins);
     if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('shotFired');
     if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('shotFired', { level: tank.level });
   };
@@ -9156,6 +9163,11 @@ function resetGameState(options){
   resetCriticalEntryRuntimeFlags();
   if (reason === 'new_game') {
     resetWorldEventsRuntimeForNewGame();
+    /* Clear unlocked modifier techs runtime cache so tier-2 techs don't persist across New Game */
+    const _HC_reset = window.Game && window.Game.HangarChips;
+    if (_HC_reset && typeof _HC_reset.setUnlockedTechs === 'function') {
+      _HC_reset.setUnlockedTechs({});
+    }
   }
   ensureDamageProgressState();
   ensureDamagePointsSpentState();

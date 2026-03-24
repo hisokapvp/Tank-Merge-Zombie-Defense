@@ -256,6 +256,61 @@
         },
       ],
     },
+    {
+      id: 'stable_income',
+      definitions: [
+        {
+          id: 'stable_income_1',
+          familyId: 'stable_income',
+          titleKey: 'achievementStableIncome1',
+          descKey: 'achievementStableIncome1Desc',
+          rewardKey: 'achievementRewardStableIncomeDamage100',
+          target: 10000,
+          progressType: 'moneyEarned',
+          rewardMode: 'stableIncomeDamage100',
+        },
+        {
+          id: 'stable_income_2',
+          familyId: 'stable_income',
+          titleKey: 'achievementStableIncome2',
+          descKey: 'achievementStableIncome2Desc',
+          rewardKey: 'achievementRewardStableIncomeDamage1000',
+          target: 1000000,
+          progressType: 'moneyEarned',
+          rewardMode: 'stableIncomeDamage1000',
+        },
+        {
+          id: 'stable_income_3',
+          familyId: 'stable_income',
+          titleKey: 'achievementStableIncome3',
+          descKey: 'achievementStableIncome3Desc',
+          rewardKey: 'achievementRewardStableIncomeDamage5000',
+          target: 100000000,
+          progressType: 'moneyEarned',
+          rewardMode: 'stableIncomeDamage5000',
+        },
+        {
+          id: 'stable_income_4',
+          familyId: 'stable_income',
+          titleKey: 'achievementStableIncome4',
+          descKey: 'achievementStableIncome4Desc',
+          rewardKey: 'achievementRewardStableIncomeDamage20000',
+          target: 100000000000,
+          progressType: 'moneyEarned',
+          rewardMode: 'stableIncomeDamage20000',
+        },
+        {
+          id: 'stable_income_5',
+          familyId: 'stable_income',
+          titleKey: 'achievementStableIncome5',
+          descKey: 'achievementStableIncome5Desc',
+          rewardKey: 'achievementRewardStableIncomeDamage100000',
+          target: 100000000000000,
+          progressType: 'moneyEarned',
+          rewardMode: 'stableIncomeDamage100000',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -444,6 +499,7 @@
     var hasModifierTechUnlocks = Number.isFinite(stats.modifierTechUnlocksCount);
     var hasDroneAcquisitions = Number.isFinite(stats.droneAcquisitionsCount);
     var hasNoRepairAttackWaveStreak = Number.isFinite(stats.noRepairAttackWaveStreakCount);
+    var hasMoneyEarned = Number.isFinite(stats.moneyEarnedCount);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -451,6 +507,7 @@
     var legacyModifierTechUnlocks = normalizeCounter(ach.totalModifierTechUnlocks);
     var legacyDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions);
     var legacyNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak);
+    var legacyMoneyEarned = normalizeCounter(ach.totalMoneyEarned);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -470,6 +527,9 @@
     if (!hasNoRepairAttackWaveStreak) stats.noRepairAttackWaveStreakCount = legacyNoRepairAttackWaveStreak;
     else stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount);
 
+    if (!hasMoneyEarned) stats.moneyEarnedCount = legacyMoneyEarned;
+    else stats.moneyEarnedCount = normalizeCounter(stats.moneyEarnedCount);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -483,6 +543,7 @@
     ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
     ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
     ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
+    ach.totalMoneyEarned = stats.moneyEarnedCount;
     return stats;
   }
 
@@ -550,6 +611,12 @@
       state.achievements.totalNoRepairAttackWaveStreak = normalizeCounter(state.achievements.totalNoRepairAttackWaveStreak);
     }
 
+    if (!Number.isFinite(state.achievements.totalMoneyEarned)) {
+      state.achievements.totalMoneyEarned = 0;
+    } else {
+      state.achievements.totalMoneyEarned = normalizeCounter(state.achievements.totalMoneyEarned);
+    }
+
     if (completedModifierTechCount > state.achievements.totalModifierTechUnlocks) {
       state.achievements.totalModifierTechUnlocks = completedModifierTechCount;
     }
@@ -583,6 +650,7 @@
       if (type === 'modifierTechUnlocks') return normalizeCounter(stats.modifierTechUnlocksCount);
       if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
       if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
+      if (type === 'moneyEarned') return normalizeCounter(stats.moneyEarnedCount);
       return normalizeCounter(stats.tanksBoughtCount);
     }
 
@@ -601,6 +669,9 @@
     }
     if (type === 'noRepairAttackWaveStreak') {
       return normalizeCounter(ach.totalNoRepairAttackWaveStreak);
+    }
+    if (type === 'moneyEarned') {
+      return normalizeCounter(ach.totalMoneyEarned);
     }
     return normalizeCounter(ach.totalPurchased);
   }
@@ -666,6 +737,8 @@
         stats.droneAcquisitionsCount = normalizeCounter(stats.droneAcquisitionsCount + delta);
       } else if (type === 'noRepairAttackWaveStreak') {
         stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount + delta);
+      } else if (type === 'moneyEarned') {
+        stats.moneyEarnedCount = normalizeCounter(stats.moneyEarnedCount + delta);
       } else {
         stats.tanksBoughtCount = normalizeCounter(stats.tanksBoughtCount + delta);
       }
@@ -675,6 +748,7 @@
       ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
       ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
       ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
+      ach.totalMoneyEarned = stats.moneyEarnedCount;
     } else if (type === 'droneAcquisitions') {
       ach.totalDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions + delta);
     } else if (type === 'noRepairAttackWaveStreak') {
@@ -685,6 +759,8 @@
       ach.totalManualFenceRepairs = normalizeCounter(ach.totalManualFenceRepairs + delta);
     } else if (type === 'merges') {
       ach.totalMerges = normalizeCounter(ach.totalMerges + delta);
+    } else if (type === 'moneyEarned') {
+      ach.totalMoneyEarned = normalizeCounter(ach.totalMoneyEarned + delta);
     } else {
       ach.totalPurchased = normalizeCounter(ach.totalPurchased + delta);
     }

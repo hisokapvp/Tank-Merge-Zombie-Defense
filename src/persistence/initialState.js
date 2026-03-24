@@ -130,6 +130,7 @@
         totalModifierTechUnlocks: 0,
         totalDroneAcquisitions: 0,
         totalNoRepairAttackWaveStreak: 0,
+        totalMoneyEarned: 0,
         completedModifierTechs: {},
       },
       stats: {
@@ -139,6 +140,7 @@
         modifierTechUnlocksCount: 0,
         droneAcquisitionsCount: 0,
         noRepairAttackWaveStreakCount: 0,
+        moneyEarnedCount: 0,
       },
       ui: {
         talentsOpen: false,
