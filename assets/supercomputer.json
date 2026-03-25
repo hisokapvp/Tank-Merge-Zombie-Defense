@@ -1,6 +1,6 @@
 {
   "atlas": "supercomputer_atlas.png",
-  "offsetY": 64,
+  "offsetY": 50,
   "anchor": {
     "x": 0.5,
     "y": 0.75
@@ -338,8 +338,8 @@
   },
   "button": {
     "offset": {
-      "x": 10,
-      "y": 0
+      "x": -10,
+      "y": -10
     }
   }
 }

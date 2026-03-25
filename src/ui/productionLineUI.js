@@ -312,7 +312,10 @@
 
     const yesBtn = document.getElementById('plConfirmYes');
     const noBtn  = document.getElementById('plConfirmNo');
-    if (yesBtn) yesBtn.textContent = _t('plConfirmYes_label');
+    if (yesBtn) {
+      var lbl = yesBtn.querySelector('.talentResetCooldownAdBtn__label');
+      if (lbl) lbl.textContent = _t('plConfirmYes_label');
+    }
     if (noBtn)  noBtn.textContent = _t('plConfirmNo_label');
 
     _confirmEl.classList.remove('hidden');

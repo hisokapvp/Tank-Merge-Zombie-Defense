@@ -337,7 +337,7 @@ const BAL = {
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
 
-  crateIntervalSec: 60,
+  crateIntervalSec: 120,
   crateDropSpeed: 220,
   crateSize: 34,
 
@@ -2389,6 +2389,8 @@ function resizeCanvas(){
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
   const scale = Math.min(displayW / BASE_CANVAS.w, displayH / BASE_CANVAS.h);
   applyBalScale(scale);
+  const uiScale = Math.max(0.55, Math.min(displayW / 1920, displayH / 1080));
+  document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(4));
   initBoard();
 }
 
@@ -10669,6 +10671,7 @@ function claimCrateReward(){
       return;
     }
     state.crate = null;
+    state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
     grantCrateTank(rewardLevel, crateSlotId);
     closeCrateModal();
   }, 1200);
@@ -11128,6 +11131,8 @@ function draw(){
   drawBackground();
   drawTankTrack();
   renderFenceBase();
+  drawBoard();
+  drawOrbitingTanks();
   drawSupercomputer();
   // ── Production Line draw ──
   {
@@ -11136,8 +11141,6 @@ function draw(){
       _PLR.draw(ctx, state);
     }
   }
-  drawBoard();
-  drawOrbitingTanks();
   renderZombiesAndCorpses();
   renderFenceHpBars();
   if (isTalentsV2Ready()) {

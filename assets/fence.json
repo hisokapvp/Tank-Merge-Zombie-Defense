@@ -1,8 +1,8 @@
 {
   "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }. Для UI вкладки Стены можно задавать levels[].uiIcon: { atlas, frameId } или { atlas, frame:{x,y,w,h} }.",
   "atlas": "fence_atlas.png",
-  "cornerInsetPx": 16,
-  "segmentsPerSide": 8,
+  "cornerInsetPx": 0,
+  "segmentsPerSide": 7,
   "levels": [
     {
       "segmentMaxHp": 100000,

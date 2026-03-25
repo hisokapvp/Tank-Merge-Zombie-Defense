@@ -1,6 +1,6 @@
 ﻿# Система: UI
 
-> Обновлено: 2026-03-23.
+> Обновлено: 2026-03-25.
 
 ## Где править
 - Разметка: `index.html`
@@ -42,6 +42,7 @@
 - Big menu функции (`setBigMenuOpen`, `openBigMenuLoadView`, `renderBigMenuTexts`, `startFromBigMenu`, `initBigMainMenu`) в `game.js` делегируются в `Game.BigMenuRuntime` через `ensureBigMenuRuntimeController()`.
 - Для загрузки save через small/big menu действует единый контракт: `restoreFullState(payload)` должен завершаться post-restore синхронизацией (`postRestoreSync`) для runtime-систем (в т.ч. TalentsV2), чтобы ранги/очки и UI состояния были согласованы сразу после старта.
 - Runtime crate-логика вынесена в `src/mechanics/crateRuntime.js`; в `game.js` crate entrypoints делегируются через `ensureCrateRuntimeController()`.
+- Crate timer reset: `state.nextCrateAt` сбрасывается в `claimCrateReward()` (при claim), а не в `spawnCrate()` — это гарантирует, что таймер следующего ящика стартует только после фактического открытия: [game.js](../../../game.js#L10646-L10680), [src/mechanics/crateRuntime.js](../../../src/mechanics/crateRuntime.js#L28-L44), [src/mechanics/crateRuntime.js](../../../src/mechanics/crateRuntime.js#L94-L100).
 
 ## Runtime font floor
 - `index.html` подключает [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L1-L133) как отдельный runtime-слой: [index.html](../../../index.html#L538).
@@ -62,7 +63,7 @@
 ## Underground hangar canvas button
 - FSM состояния: `idle → hover_start → hover_idle → hover_end → idle`; `click` и `close` — one-shot с возвратом в `idle`: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L13-L17).
 - `_isClosing` guard: при dismiss модалки `handleModalClose()` ставит `_isClosing=true` и запускает `close` анимацию; `handlePointerLeave()` не переключает на `hover_end` пока `_isClosing` активен: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L260-L277).
-- `draw()` применяет rounded rect clip (`arcTo`) перед `drawImage`, чтобы углы sprite не выступали за ячейку; badge рисуется после `ctx.restore()`, вне clip: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L149-L168).
+- `draw()` применяет rounded rect clip (`arcTo`) перед `drawImage`, чтобы углы sprite не выступали за ячейку; после sprite рисуется black 2px `#000` border по тому же rounded rect (отдельный `ctx.save/restore`); badge рисуется после border, вне clip: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L149-L190).
 
 ## Escape / menu priority
 - Глобальный Escape-routing живёт в `game.js`: `hasHigherPriorityEscapeLock()` резервирует приоритет за `supercomputer / achievements / productionStorage / undergroundHangar / critical / bigMenu`, поэтому Escape не должен открывать или закрывать small menu поверх этих overlay. Отдельный fast-path сначала закрывает underground hangar, затем small menu закрывается только если нет более высокого lock, а из чистого gameplay Escape открывает small menu: [game.js](../../../game.js#L7994-L8001), [game.js](../../../game.js#L10307-L10327).
@@ -77,6 +78,7 @@
 - Сетка ячеек склада центрируется внутри панели (`width:min(100%, 420px)`, `justify-items:center`), чтобы справа не оставалось «пустого хвоста» относительно help/title/close header: [style.css](../../../style.css#L6993-L7000).
 - Storage drag использует тот же порог `6px`, что и основной gameplay drag: после threshold UI клонирует исходную filled-cell в body-level `.plStorage__dragPreview`, оставляет source slot в состоянии `--dragging`, а merge target подсвечивает отдельным glow. Preview обязан быть `pointer-events:none`, без inherited `uiButtonBehavior` pressed/hover классов и без placeholder-state: [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L150-L176), [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L208-L257), [style.css](../../../style.css#L7001-L7090).
 - Empty storage cells больше не рендерят placeholder glyph/text внутри grid: они остаются disabled blank-shell (`textContent = ''`), а filled-cells показывают bottom-centered plain-text `plStorage__levelBadge` без pill/background chrome: [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L265-L300), [style.css](../../../style.css#L7030-L7075).
+- Confirm dialog `#plConfirmOverlay` использует `#plConfirmYes` с `talentResetCooldownAdBtn` shell: nested `<span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">` держит локализованный текст («Открыть» / «Open»), ad-icon span `talentResetCooldownAdBtn__icon`; `_showConfirm()` целится в nested label, а не в `textContent` кнопки: [index.html](../../../index.html#L250-L253), [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L307-L320), [src/i18n/ru.json](../../../src/i18n/ru.json#L647), [src/i18n/en.json](../../../src/i18n/en.json), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js).
 - Не возвращать storage modal к plain `levelModal__close`: `scModal__close` — это тот же 44×44 close-pattern с крупным крестом, только в green SC-skin; hover/active/focus у него должны совпадать с supercomputer/talent tree close controls: [style.css](../../../style.css#L1340-L1426), [style.css](../../../style.css#L1863-L1957).
 
 ## Cache-bust contract

@@ -60,7 +60,7 @@
 ## Быстрый старт для агента
 - Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
-- Нужен render order → [draw()](../../game.js#L9339-L9398)
+- Нужен render order → [draw()](../../game.js#L11127-L11200)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
 - Нужен Talents v2 redraw/update orchestration → `updateTalentUIV2()` делегирует orchestration в `src/ui/talentOverlayUi.js`, а `game.js` оставляет bootstrap/fallback helpers для node/edge render.
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
@@ -83,7 +83,7 @@
 | Board / layout / production line placement | [game.js](../../game.js#L2244-L2334) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
 | Core combat pipeline | [game.js](../../game.js#L5918-L6961) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `cleanupKills` |
 | Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L7107-L8838) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
-| World render | [game.js](../../game.js#L9339-L11278) | `draw()`, supercomputer, board, tanks, projectiles, HUD world overlay |
+| World render | [game.js](../../game.js#L11127-L11200) | `draw()`: z-order: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay |
 | Step tail / loop / boot | [game.js](../../game.js#L11425-L11885) | `stepSupercomputer`, `loop`, `boot` |
 
 ## Функциональное оглавление
@@ -96,6 +96,7 @@
 | `getDamagePoints()` / `applyCannonUpgrade()` | [game.js](../../game.js#L572-L693) | Damage points и апгрейды |
 | `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
 | `getTankWordKey(count)` | [game.js](../../game.js#L1064-L1082) | Pluralized i18n key для слова «танк»; делегирует в `Game.I18n.pluralize` с inline fallback |
+| `resizeCanvas()` | [game.js](../../game.js#L2373-L2395) | Resize canvas + compute `--ui-scale = max(0.55, min(W/1920, H/1080))` и ставит CSS custom property на `:root` |
 
 ### Layout / world init
 | Функция | Строки | Назначение |

@@ -39,6 +39,14 @@
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
 ## Фокус документации на 2026-03-25
+- `game.js`: `resizeCanvas()` вычисляет `--ui-scale = max(0.55, min(W/1920, H/1080))` и ставит CSS custom property на `:root`; `draw()` z-order изменён — `drawBoard()` теперь рисуется раньше `drawSupercomputer()` и production line; `claimCrateReward()` сбрасывает `state.nextCrateAt` при claim, а не при spawn.
+- `style.css`: adaptive `--ui-scale` CSS block для 10 modal selectors (`levelModal`, `crateModal`, `scModal`, `ughPanel`, `settingsTooltip`, `centerNotification`, `plStorage`, `lessonProgressPanel`); close-buttons не масштабируются (44×44 hit-area).
+- `src/mechanics/undergroundHangar.js`: black 2px `#000` border вокруг rounded-rect clip на cell draw.
+- `src/render/spriteLoaders.js`: `SupercomputerSprites.load()` нормализует `button.offset {x:10, y:0}` fallback.
+- `src/mechanics/crateRuntime.js`: `spawnCrate()` больше не трогает `nextCrateAt`.
+- `index.html`: `#plConfirmYes` переструктурирован как `talentResetCooldownAdBtn` shell с ad-icon и `data-i18n="plConfirmYes_label"` label.
+- `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`: `plConfirmYes_label` = «Открыть» / «Open» synced.
+- `src/ui/productionLineUI.js`: `_showConfirm()` целится в nested `talentResetCooldownAdBtn__label` span.
 - `src/i18n/pluralize.js` — новый модуль `Game.I18n.pluralize(n, one, few, many)` для Russian/English mod10/mod100 плюрализации; подключается в `index.html`; используется в `getTankWordKey()` (`game.js`) и `getDismantleTankCountText()` (`src/ui/modals.js`) с inline fallback.
 - `game.js`: `getHangarMasterThresholds()` читает achievement defs для config-driven hangar_master thresholds; `computeHangarMasterLevel()` использует их вместо hardcoded порогов; `applyBalScale()` не клампит на `1.35`, полное пропорциональное масштабирование; desktop cellW = `DESKTOP_CELL_BASE(42) * scale` вместо hardcoded `70`.
 - Underground hangar FSM: новый лупящий state `hover_idle` между `hover_start` и `hover_end`; `_isClosing` guard предотвращает double-anim при dismiss модалки; `draw()` применяет rounded rect clip перед sprite.

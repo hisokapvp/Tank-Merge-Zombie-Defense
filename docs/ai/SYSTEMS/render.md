@@ -1,6 +1,6 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-09.
+> Обновлено: 2026-03-25.
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
 
 ## Где править
@@ -12,7 +12,7 @@
 - World render orchestration: `game.js`
 
 ## Ключевые точки входа
-- `draw()` — основной render-orchestrator: [game.js](../../../game.js#L9339-L9398)
+- `draw()` — основной render-orchestrator: [game.js](../../../game.js#L11127-L11200)
 - `drawSupercomputerSpriteClip()` / `drawSupercomputerHpBarOverlay()` — root sprite + верхний HP overlay: [game.js](../../../game.js#L9699-L9755)
 - `Game.ProductionLine.step()` — kill-driven progress, storage-full pause и одноразовый `guaranteedLootId` для первой коробки после `new_game`: [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L141-L205)
 - `Game.ProductionLine.openBox()` — guaranteed `one_big_chip` после `new_game` идёт через `makeGuaranteedNewGameBigChip()` и выдаёт канонический red reward-chip L1; обычные коробки продолжают использовать общий loot/chip pool: [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L105-L122), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L212-L276)
@@ -26,7 +26,7 @@
 - Повторный kill не должен перезапускать conveyor, пока текущий `work`-цикл не закончился: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L219-L227), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L301-L306).
 - Root-анимация `buildTank` не является kill-driven: её включает только покупка танка, а длительность обязана совпадать с `assets/tanks.json -> tankPrintDurationSec`: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L41-L53).
 - Печать коробки идёт снизу вверх через reveal-clip и переключение `printLow` / `printHigh`: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L329-L444), [assets/supercomputer.json](../../../assets/supercomputer.json#L154-L208).
-- Fence HP bars остаются над зомби/трупами, а HP bar суперкомпьютера — финальным world overlay: [game.js](../../../game.js#L9339-L9398), [game.js](../../../game.js#L9750-L9755).
+- Z-order `draw()`: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status icons → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay: [game.js](../../../game.js#L11127-L11200), [game.js](../../../game.js#L11650-L11655).
 
 ## Supercomputer / production line
 - `SupercomputerSprites` нормализует root sprite и части `conveyor` / `conveyorBox` / `storageCell`, включая отдельный atlas `conveyor_box_atlas.png`: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L118-L145), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L853-L1030).
@@ -35,7 +35,7 @@
 - `tankPrintDurationSec` из `assets/tanks.json` нормализуется loader'ом один раз и переиспользуется и для stamp-reveal в слоте, и для root `buildTank` animation window: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L22-L53).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая изготовленная коробка кладётся с `guaranteedLootId='one_big_chip'`, а `openBox()` один раз резолвит эту гарантию в рабочий red чип L1 (`chipId > 0`, `sourceComboKey` = sorted `modIds`, `3` уникальных base `modIds` из `1..9`) и затем возвращается к обычной weight-table: [src/persistence/initialState.js](../../../src/persistence/initialState.js#L123-L130), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L105-L122), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L192-L205), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L212-L276).
 - `effects[]` из `assets/supercomputer.json` применяются во время draw как трансформации root sprite и частей (float/sway/vibration/pulse и т. п.): [game.js](../../../game.js#L9699-L9724), [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L146-L375), [assets/supercomputer.json](../../../assets/supercomputer.json#L20-L237).
-- `Game.ProductionLineRender.draw()` рисуется сразу после `drawSupercomputer()`, но до `drawBoard()`: [game.js](../../../game.js#L9339-L9354).
+- `Game.ProductionLineRender.draw()` рисуется сразу после `drawSupercomputer()`, **после `drawBoard()`** (доска теперь ниже SC/conveyor/storage в z-order): [game.js](../../../game.js#L11127-L11145).
 - Для большого render-модуля production line сначала открывайте [docs/ai/PRODUCTION_LINE_RENDER_MAP.md](../PRODUCTION_LINE_RENDER_MAP.md).
 
 ## Спрайты зомби: deathCommon

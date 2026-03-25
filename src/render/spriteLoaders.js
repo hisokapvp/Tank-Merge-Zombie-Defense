@@ -982,6 +982,16 @@
               maxLoops: maxLoops,
               cooldownSec: Number.isFinite(glitchRaw.cooldownSec) ? Math.max(0, glitchRaw.cooldownSec) : 0,
             },
+            button: (function () {
+              var raw = data && data.button && typeof data.button === 'object' ? data.button : {};
+              var off = raw.offset && typeof raw.offset === 'object' ? raw.offset : {};
+              return {
+                offset: {
+                  x: Number.isFinite(off.x) ? off.x : 10,
+                  y: Number.isFinite(off.y) ? off.y : 0,
+                },
+              };
+            }()),
             stats: data && data.stats && typeof data.stats === 'object' ? data.stats : {},
           };
 

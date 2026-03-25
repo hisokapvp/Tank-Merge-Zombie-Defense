@@ -172,6 +172,20 @@
     ctx.drawImage(_atlasImg, sx, sy, anim.w, anim.h, dx, dy, dw, dh);
     ctx.restore();
 
+    // Black border around the cell (same rounded corners as clip)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cell.x + clipR, cell.y);
+    ctx.arcTo(cell.x + cell.w, cell.y, cell.x + cell.w, cell.y + cell.h, clipR);
+    ctx.arcTo(cell.x + cell.w, cell.y + cell.h, cell.x, cell.y + cell.h, clipR);
+    ctx.arcTo(cell.x, cell.y + cell.h, cell.x, cell.y, clipR);
+    ctx.arcTo(cell.x, cell.y, cell.x + cell.w, cell.y, clipR);
+    ctx.closePath();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+    ctx.restore();
+
     // Badge drawn AFTER restore so it is not clipped
     drawTankCountBadge(ctx, cell, arguments[2]);
   }

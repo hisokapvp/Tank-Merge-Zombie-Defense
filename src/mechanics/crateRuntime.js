@@ -98,7 +98,6 @@
       if (!state.nextCrateAt) state.nextCrateAt = now + BAL.crateIntervalSec;
       if (!state.crate && now >= state.nextCrateAt) {
         spawnCrate();
-        state.nextCrateAt = now + BAL.crateIntervalSec;
       }
     }
 

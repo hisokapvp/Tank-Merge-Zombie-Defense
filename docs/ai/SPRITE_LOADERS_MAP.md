@@ -1,6 +1,6 @@
 # spriteLoaders.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-23.
+> Агент-ориентировано. Обновлён: 2026-03-25.
 > Файл большой (1350 строк); этот map покрывает реально прочитанные и grep-проверенные блоки.
 
 ## Что это
@@ -40,7 +40,8 @@
 ### Блок: SupercomputerSprites (подробно прочитан)
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `SupercomputerSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L853-L994) | Загружает root atlas, part atlases, hpBar, glitch, `animations.*`, `conveyor`, `conveyorBox`, `storageCell` |
+| `SupercomputerSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L853-L1000) | Загружает root atlas, part atlases, hpBar, glitch, `animations.*`, `conveyor`, `conveyorBox`, `storageCell`, `button.offset` normalization |
+| `button.offset` normalization | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L985-L995) | Нормализует `data.button.offset {x,y}` с fallback `{x:10, y:0}` для SC HUD button positioning |
 | `getAnimation()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L995-L1016) | Возвращает clip для root/conveyor/box/storage |
 | `getAtlasImage()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L1018-L1023) | Отдаёт конкретный atlas image по части |
 | `getPartConfig()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L1025-L1030) | Отдаёт normalized config части |

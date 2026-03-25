@@ -12,7 +12,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-  --ui-scale: clamp(0.95, 0.92 + 0.65vw, 1.22);
+  --ui-scale: 1;
   --ui-btn-transition: .15s;
   --ui-btn-press-shift: 1px;
   --audio-slider-track-bg: linear-gradient(90deg, #1e231e, #4af626);
@@ -7281,4 +7281,51 @@ button.hangarChipInvItem{
   border-radius:0;
   padding:20px 28px;
   box-shadow:2px 2px 0 #000;
+}
+
+/* ── Adaptive UI scaling ──
+   --ui-scale is set from resizeCanvas() in game.js.
+   Reference: 1920×1080 → scale = 1.0.
+   Floor: 0.55 (set in JS).
+   Close buttons are NOT scaled to preserve 44×44 hit-area. */
+.levelModal__panel{
+  gap: calc(16px * var(--ui-scale));
+  border-radius: calc(18px * var(--ui-scale));
+}
+.levelModal__title{
+  font-size: calc(18px * var(--ui-scale));
+}
+.levelModal__line{
+  font-size: calc(14px * var(--ui-scale));
+}
+.crateModal .crateModal__panel{
+  width: min(calc(400px * var(--ui-scale)), 92vw);
+}
+.scModal{
+  width: min(96vw, calc(1060px * var(--ui-scale)));
+  max-width: calc(1060px * var(--ui-scale));
+  max-height: min(90vh, calc(920px * var(--ui-scale)));
+}
+.ughPanel{
+  padding: calc(22px * var(--ui-scale)) calc(28px * var(--ui-scale)) calc(28px * var(--ui-scale));
+  width: min(96vw, calc(980px * var(--ui-scale)));
+}
+.settingsTooltip{
+  font-size: calc(13px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  max-width: min(calc(360px * var(--ui-scale)), 88vw);
+}
+.centerNotification{
+  padding: calc(14px * var(--ui-scale)) calc(24px * var(--ui-scale));
+  border-radius: calc(14px * var(--ui-scale));
+  font-size: calc(16.8px * var(--ui-scale));
+}
+.plStorage__panel{
+  padding: calc(20px * var(--ui-scale)) calc(20px * var(--ui-scale)) calc(18px * var(--ui-scale));
+  width: min(calc(540px * var(--ui-scale)), 92vw);
+}
+.lessonProgressPanel{
+  width: calc(320px * var(--ui-scale));
+  right: calc(12px * var(--ui-scale));
+  font-size: calc(14px * var(--ui-scale));
 }

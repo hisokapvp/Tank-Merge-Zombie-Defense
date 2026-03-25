@@ -1,5 +1,15 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-25
+- **Документация: shared post-merge update для --ui-scale adaptive scaling, draw() z-order reorder, crate timer claim flow, underground hangar border, button.offset normalization и storage confirm Yes→Open (`game.js`, `style.css`, `src/mechanics/undergroundHangar.js`, `src/render/spriteLoaders.js`, `src/mechanics/crateRuntime.js`, `index.html`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `src/ui/productionLineUI.js`)**
+  - Обновлены `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/INDEX.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `resizeCanvas()` вычисляет `--ui-scale` как `max(0.55, min(displayW/1920, displayH/1080))` и ставит CSS custom property на `:root`; adaptive CSS block масштабирует 10 modal-селекторов (`levelModal`, `crateModal`, `scModal`, `ughPanel`, `settingsTooltip`, `centerNotification`, `plStorage`, `lessonProgressPanel`).
+  - Зафиксированы: `draw()` z-order изменён — `drawBoard()` теперь рисуется раньше `drawSupercomputer()` и production line, а не после них.
+  - Зафиксированы: `claimCrateReward()` теперь сбрасывает `state.nextCrateAt` при claim, а не при spawn; `spawnCrate()` в `crateRuntime.js` больше не трогает `nextCrateAt`.
+  - Зафиксированы: underground hangar cell `draw()` добавляет black 2px `#000` border вокруг rounded-rect clip после sprite, перед badge.
+  - Зафиксированы: `SupercomputerSprites.load()` нормализует `button.offset` (`x`, `y`) из `assets/supercomputer.json` с fallback `{x:10, y:0}`.
+  - Зафиксированы: storage confirm `#plConfirmYes` переструктурирован как `talentResetCooldownAdBtn` shell с ad-icon span и `data-i18n="plConfirmYes_label"` label span; `_showConfirm()` обновляет nested label, а не `textContent` кнопки.
+
 ## 2026-03-24
 - **Документация: shared post-merge update для REWARD_TABLE i18nKey, TalentsV2 sync при upgradePoints, inference race fix и chipUpgradeCard layout (`src/mechanics/achievementRewards.js`, `src/mechanics/achievements.js`, `game.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `style.css`)**
   - Обновлены `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/INDEX.md`, `docs/talents_v2.md`, `docs/ai/CHANGELOG.md`.
