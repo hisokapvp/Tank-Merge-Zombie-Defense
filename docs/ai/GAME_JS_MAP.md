@@ -103,6 +103,16 @@
 | `getTankPrintDurationSec()` | [game.js](../../game.js#L2744-L2756) | Единая длительность печати/штампа из `assets/tanks.json` |
 | `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
 | `performTankPurchaseOnce()` | [game.js](../../game.js#L3289-L3307) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
+| `checkPerfectFenceWave()` | [game.js](../../game.js#L3481-L3490) | Проверка идеального завершения волны (fence без повреждений); использует `continue` для invalid сегментов |
+| `computeHangarMasterLevel()` | [game.js](../../game.js#L3491-L3507) | Вычисляет tier hangar_master по min tank level среди первых 15 ячеек |
+| `computeHangarCellCountForMinLevel()` | [game.js](../../game.js#L3508-L3517) | Количество ячеек ≥ minLevel из первых 15 — для per-tier progress display |
+| `checkHangarMasterAchievement()` | [game.js](../../game.js#L3519-L3530) | Сверяет текущий hangar_master level с прогрессом и инкрементит при повышении |
+| `resetDefenseOrderRuntime()` | [game.js](../../game.js#L3406-L3409) | Сброс defense order episode runtime |
+| `beginDefenseOrderEpisode()` | [game.js](../../game.js#L3411-L3415) | Старт episode defense_order при входе в attack mode |
+| `completeDefenseOrderAchievementProgress()` | [game.js](../../game.js#L3417-L3431) | Инкремент defense_order streak при успешном завершении episode |
+| `resetDefenseOrderAchievementProgress()` | [game.js](../../game.js#L3433-L3440) | Обнуление defense_order streak |
+| `invalidateDefenseOrderEpisode()` | [game.js](../../game.js#L3442-L3446) | Инвалидация defense_order episode при merge во время волны |
+| `finalizeDefenseOrderEpisode()` | [game.js](../../game.js#L3448-L3453) | Финализация defense_order episode при выходе из attack mode |
 | `getTalentV2ActiveIconByBranch()` / `getTalentV2ActiveIconUrlByBranch()` | [game.js](../../game.js#L3759-L3802) | Branch → active talent icon key/url для stage HUD |
 
 ### Combat / cleanup hooks

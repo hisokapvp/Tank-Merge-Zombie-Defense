@@ -182,6 +182,12 @@
     hangarMasterUpgradeDrone1:      { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'drones', amount: 1, level: 1 }], i18nKey: 'achievementRewardHangarMaster3' },
     hangarMasterDamage50000Chips5:  { type: 'composite', items: [{ type: 'damagePoints', amount: 50000 }, { type: 'randomChips', amount: 5 }], i18nKey: 'achievementRewardHangarMaster4' },
     hangarMasterUpgrade3Drones2L5:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 2, level: 5 }], i18nKey: 'achievementRewardHangarMaster5' },
+    /* defense_order family */
+    defenseOrderFragments2:         { type: 'fragments',      amount: 2,       i18nKey: 'achievementRewardDefenseOrder1' },
+    defenseOrderChips2:             { type: 'randomChips',    amount: 2,       i18nKey: 'achievementRewardDefenseOrder2' },
+    defenseOrderUpgrade1Drone1L1:   { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'drones', amount: 1, level: 1 }], i18nKey: 'achievementRewardDefenseOrder3' },
+    defenseOrderUpgrade3Drones3L3:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 3 }], i18nKey: 'achievementRewardDefenseOrder4' },
+    defenseOrderUpgrade5Chips15:    { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 15 }], i18nKey: 'achievementRewardDefenseOrder5' },
   };
 
   function grantAchievementDrones(count, level) {

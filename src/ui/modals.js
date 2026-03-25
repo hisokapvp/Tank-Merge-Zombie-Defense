@@ -250,6 +250,22 @@
     showModal(ui.dismantleModal, opts.a11yOpen, ui.dismantleYes, opts.onClose);
   }
 
+  function getDismantleTankCountText(count, t) {
+    var n = Math.max(0, Math.floor(Number(count) || 0));
+    var word1 = t('tankWord1');
+    var word2_4 = t('tankWord2_4');
+    var word5 = t('tankWord5');
+    if (word2_4 === word5) {
+      return n + ' ' + (n === 1 ? word1 : word5);
+    }
+    var mod10 = n % 10;
+    var mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return n + ' ' + word5;
+    if (mod10 === 1) return n + ' ' + word1;
+    if (mod10 >= 2 && mod10 <= 4) return n + ' ' + word2_4;
+    return n + ' ' + word5;
+  }
+
   function fillDismantleConfirmModal(options) {
     var opts = options || {};
     var ui = opts.ui;
@@ -291,10 +307,11 @@
 
     var span = document.createElement('span');
     span.style.marginLeft = '8px';
+    var countText = getDismantleTankCountText(selectedTankIds.length, t);
     if (rest > 0) {
-      span.textContent = t('dismantleMore') + ' ' + rest + ' · ' + selectedTankIds.length + ' ' + t('dismantleCount');
+      span.textContent = t('dismantleMore') + ' ' + rest + ' · ' + countText;
     } else {
-      span.textContent = selectedTankIds.length + ' ' + t('dismantleCount');
+      span.textContent = countText;
     }
     wrap.appendChild(span);
   }

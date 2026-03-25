@@ -97,9 +97,10 @@
 
         var done = !!unlocked[id];
         var target = Number.isFinite(def.target) ? Math.max(0, Math.floor(def.target)) : 0;
+        var displayTarget = Number.isFinite(def.displayTarget) ? Math.max(0, Math.floor(def.displayTarget)) : target;
         var progressRaw = Number(getProgress(def));
         if (!Number.isFinite(progressRaw)) progressRaw = 0;
-        var progress = Math.max(0, Math.min(target, Math.floor(progressRaw)));
+        var progress = Math.max(0, Math.min(displayTarget, Math.floor(progressRaw)));
 
         var row = documentObj.createElement('div');
         row.className = 'achievementRow' + (done ? ' done' : '');
@@ -138,12 +139,12 @@
         descRow.id = descId;
         descRow.setAttribute('aria-hidden', 'true');
 
-        var description = getAchievementDescription(def, target);
+        var description = getAchievementDescription(def, displayTarget);
         if (description) descRow.appendChild(createMetaLine(description));
         var fmt = (global.Game && global.Game.NumberFormat && typeof global.Game.NumberFormat.formatCompactRu === 'function')
           ? global.Game.NumberFormat.formatCompactRu
           : function (n) { return String(n); };
-        descRow.appendChild(createMetaLine(translate('achievementProgress', { value: fmt(progress), target: fmt(target) })));
+        descRow.appendChild(createMetaLine(translate('achievementProgress', { value: fmt(progress), target: fmt(displayTarget) })));
         descRow.appendChild(createMetaLine(translate('achievementReward', { reward: translate(def.rewardKey) })));
 
         row.appendChild(headerRow);
