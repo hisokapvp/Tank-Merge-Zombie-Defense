@@ -446,6 +446,71 @@
         },
       ],
     },
+    {
+      id: 'first_elite',
+      definitions: [
+        {
+          id: 'first_elite_1',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite1',
+          descKey: 'achievementFirstElite1Desc',
+          rewardKey: 'achievementRewardFirstElite1',
+          target: 10,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteDamage500',
+        },
+        {
+          id: 'first_elite_2',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite2',
+          descKey: 'achievementFirstElite2Desc',
+          rewardKey: 'achievementRewardFirstElite2',
+          target: 20,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteUpgradePoint1',
+        },
+        {
+          id: 'first_elite_3',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite3',
+          descKey: 'achievementFirstElite3Desc',
+          rewardKey: 'achievementRewardFirstElite3',
+          target: 30,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteDamage5000Chips2',
+        },
+        {
+          id: 'first_elite_4',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite4',
+          descKey: 'achievementFirstElite4Desc',
+          rewardKey: 'achievementRewardFirstElite4',
+          target: 40,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteUpgrade2Drone1L3',
+        },
+        {
+          id: 'first_elite_5',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite5',
+          descKey: 'achievementFirstElite5Desc',
+          rewardKey: 'achievementRewardFirstElite5',
+          target: 50,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteUpgrade3Drones2L5',
+        },
+        {
+          id: 'first_elite_6',
+          familyId: 'first_elite',
+          titleKey: 'achievementFirstElite6',
+          descKey: 'achievementFirstElite6Desc',
+          rewardKey: 'achievementRewardFirstElite6',
+          target: 60,
+          progressType: 'maxTankLevel',
+          rewardMode: 'firstEliteUpgrade5Damage50000',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -638,6 +703,7 @@
     var hasPerfectFenceWaves = Number.isFinite(stats.perfectFenceWavesCount);
     var hasHangarMasterLevel = Number.isFinite(stats.hangarMasterLevelCount);
     var hasDefenseOrderStreak = Number.isFinite(stats.defenseOrderStreakCount);
+    var hasMaxTankLevel = Number.isFinite(stats.maxTankLevelCount);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -649,6 +715,7 @@
     var legacyPerfectFenceWaves = normalizeCounter(ach.totalPerfectFenceWaves);
     var legacyHangarMasterLevel = normalizeCounter(ach.totalHangarMasterLevel);
     var legacyDefenseOrderStreak = normalizeCounter(ach.totalDefenseOrderStreak);
+    var legacyMaxTankLevel = normalizeCounter(ach.totalMaxTankLevel);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -680,6 +747,9 @@
     if (!hasDefenseOrderStreak) stats.defenseOrderStreakCount = legacyDefenseOrderStreak;
     else stats.defenseOrderStreakCount = normalizeCounter(stats.defenseOrderStreakCount);
 
+    if (!hasMaxTankLevel) stats.maxTankLevelCount = legacyMaxTankLevel;
+    else stats.maxTankLevelCount = normalizeCounter(stats.maxTankLevelCount);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -697,6 +767,7 @@
     ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
     ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
     ach.totalDefenseOrderStreak = stats.defenseOrderStreakCount;
+    ach.totalMaxTankLevel = stats.maxTankLevelCount;
     return stats;
   }
 
@@ -795,6 +866,18 @@
       state.achievements.totalDefenseOrderStreak = normalizeCounter(state.achievements.totalDefenseOrderStreak);
     }
 
+    if (!Number.isFinite(state.achievements.totalMaxTankLevel)) {
+      state.achievements.totalMaxTankLevel = normalizeCounter(
+        state.maxTankLevelAchieved || (state.runtimeMaxTankLevelAchieved || 0)
+      );
+    } else {
+      state.achievements.totalMaxTankLevel = normalizeCounter(state.achievements.totalMaxTankLevel);
+    }
+
+    if (!Array.isArray(state.achievements.deferredRewards)) {
+      state.achievements.deferredRewards = [];
+    }
+
     if (completedModifierTechCount > state.achievements.totalModifierTechUnlocks) {
       state.achievements.totalModifierTechUnlocks = completedModifierTechCount;
       if (state.stats && typeof state.stats === 'object') {
@@ -846,6 +929,7 @@
       if (type === 'perfectFenceWaves') return normalizeCounter(stats.perfectFenceWavesCount);
       if (type === 'hangarMasterLevel') return normalizeCounter(stats.hangarMasterLevelCount);
       if (type === 'defenseOrderStreak') return normalizeCounter(stats.defenseOrderStreakCount);
+      if (type === 'maxTankLevel') return normalizeCounter(stats.maxTankLevelCount);
       return normalizeCounter(stats.tanksBoughtCount);
     }
 
@@ -876,6 +960,9 @@
     }
     if (type === 'defenseOrderStreak') {
       return normalizeCounter(ach.totalDefenseOrderStreak);
+    }
+    if (type === 'maxTankLevel') {
+      return normalizeCounter(ach.totalMaxTankLevel);
     }
     return normalizeCounter(ach.totalPurchased);
   }
@@ -931,7 +1018,13 @@
     if (delta <= 0) return [];
 
     if (stats) {
-      if (type === 'merges') {
+      if (type === 'maxTankLevel') {
+        /* SET semantics: delta is the current max level, not an increment */
+        var level = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+        if (level > normalizeCounter(stats.maxTankLevelCount)) {
+          stats.maxTankLevelCount = level;
+        }
+      } else if (type === 'merges') {
         stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount + delta);
       } else if (type === 'manualFenceRepairs') {
         stats.manualFenceRepairsCount = normalizeCounter(stats.manualFenceRepairsCount + delta);
@@ -962,6 +1055,12 @@
       ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
       ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
       ach.totalDefenseOrderStreak = stats.defenseOrderStreakCount;
+      ach.totalMaxTankLevel = normalizeCounter(stats.maxTankLevelCount);
+    } else if (type === 'maxTankLevel') {
+      var lvl = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+      if (lvl > normalizeCounter(ach.totalMaxTankLevel)) {
+        ach.totalMaxTankLevel = lvl;
+      }
     } else if (type === 'droneAcquisitions') {
       ach.totalDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions + delta);
     } else if (type === 'noRepairAttackWaveStreak') {

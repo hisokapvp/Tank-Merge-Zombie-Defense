@@ -1218,6 +1218,27 @@ body.menu-open .stageUi .hudItem{
   box-shadow:inset 0 0 0 1px rgba(125,255,178,.16), 0 0 0 1px rgba(125,255,178,.12);
 }
 
+.achievementClaimRow{
+  padding:6px 0;
+  text-align:center;
+}
+.achievementClaimBtn{
+  display:inline-block;
+  padding:8px 20px;
+  border:1px solid rgba(255,200,60,.6);
+  border-radius:8px;
+  background:linear-gradient(150deg, rgba(80,60,10,.7), rgba(40,30,5,.8));
+  color:rgba(255,220,100,.95);
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:background .15s, box-shadow .15s;
+}
+.achievementClaimBtn:hover{
+  background:linear-gradient(150deg, rgba(100,80,15,.8), rgba(60,45,8,.85));
+  box-shadow:0 0 8px rgba(255,200,60,.3);
+}
+
 .achievementDoneBadge{
   margin-left:8px;
   padding:2px 8px;
@@ -7328,4 +7349,171 @@ button.hangarChipInvItem{
   width: calc(320px * var(--ui-scale));
   right: calc(12px * var(--ui-scale));
   font-size: calc(14px * var(--ui-scale));
+}
+
+/* ── Adaptive UI scaling — extended block ──
+   Covers remaining modals, overlays, menus, panels, HUD, tooltips.
+   Close buttons are still NOT scaled (44×44 hit-area preserved). */
+
+/* HUD */
+.hud{
+  gap: calc(6px * var(--ui-scale));
+}
+.hudItem{
+  padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
+}
+.hudItem .k{
+  font-size: calc(10px * var(--ui-scale));
+}
+.hudItem .v{
+  font-size: calc(16px * var(--ui-scale));
+}
+
+/* Big menu */
+.bigMenuPanel{
+  width: min(calc(560px * var(--ui-scale)), 92vw);
+  padding: calc(24px * var(--ui-scale));
+  border-radius: calc(22px * var(--ui-scale));
+  gap: calc(14px * var(--ui-scale));
+}
+.bigMenuTitle{
+  font-size: clamp(calc(20px * var(--ui-scale)), 2.2vw, calc(28px * var(--ui-scale)));
+}
+.bigMenuActions{
+  gap: calc(10px * var(--ui-scale));
+}
+
+/* Small menu (menuPanel) */
+.menuPanel{
+  width: min(calc(520px * var(--ui-scale)), 86%);
+  padding: calc(22px * var(--ui-scale));
+  gap: calc(16px * var(--ui-scale));
+}
+
+/* Credits modal */
+.creditsModal__panel{
+  padding: calc(18px * var(--ui-scale));
+}
+.creditsModal__list{
+  gap: calc(12px * var(--ui-scale));
+}
+
+/* Merge popup */
+.mergePopupModal__panel{
+  width: min(calc(320px * var(--ui-scale)), 90%);
+  padding: calc(52px * var(--ui-scale)) calc(18px * var(--ui-scale)) calc(18px * var(--ui-scale));
+  border-radius: calc(18px * var(--ui-scale));
+  gap: calc(8px * var(--ui-scale));
+}
+.mergePopupModal__subtitle{
+  font-size: calc(11px * var(--ui-scale));
+}
+.mergePopupModal__title{
+  font-size: calc(22px * var(--ui-scale));
+}
+.mergePopupModal__hint{
+  font-size: calc(12px * var(--ui-scale));
+}
+.mergePopupModal__stats{
+  gap: calc(6px * var(--ui-scale));
+}
+.mergePopupModal__stat{
+  font-size: calc(13px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(10px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
+}
+
+/* Achievement popup (inside levelModal shell) */
+.achievementPopup__actions{
+  gap: calc(10px * var(--ui-scale));
+  margin-top: calc(14px * var(--ui-scale));
+}
+
+/* Achievement rows */
+.achievementRow{
+  border-radius: calc(10px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(8px * var(--ui-scale));
+  font-size: calc(11px * var(--ui-scale));
+}
+.achievementHeaderRow{
+  gap: calc(10px * var(--ui-scale));
+}
+.achievementClaimBtn{
+  padding: calc(8px * var(--ui-scale)) calc(20px * var(--ui-scale));
+  border-radius: calc(8px * var(--ui-scale));
+  font-size: calc(12px * var(--ui-scale));
+}
+
+/* Talent overlay / tree */
+#talentOverlay .scModal{
+  width: min(96vw, calc(1060px * var(--ui-scale)));
+  max-width: calc(1060px * var(--ui-scale));
+}
+.talentTreeContainer{
+  gap: calc(10px * var(--ui-scale));
+}
+.talentBranch{
+  padding: calc(10px * var(--ui-scale));
+  gap: calc(8px * var(--ui-scale));
+}
+.talentBranchHeader{
+  gap: calc(8px * var(--ui-scale));
+}
+.talentActions{
+  gap: calc(8px * var(--ui-scale));
+}
+.talentFooter{
+  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
+  gap: calc(8px * var(--ui-scale));
+}
+
+/* Workshop / Chip craft */
+.chipCraftInvGrid{
+  gap: calc(8px * var(--ui-scale));
+  padding: calc(4px * var(--ui-scale));
+}
+.chipUpgradeGrid{
+  gap: calc(10px * var(--ui-scale));
+  padding: calc(6px * var(--ui-scale)) calc(2px * var(--ui-scale));
+}
+.chipUpgradeCard{
+  gap: calc(6px * var(--ui-scale));
+  padding: calc(8px * var(--ui-scale));
+  border-radius: calc(10px * var(--ui-scale));
+}
+.chipUpgradeTooltip{
+  padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  font-size: calc(12px * var(--ui-scale));
+  max-width: calc(280px * var(--ui-scale));
+  border-radius: calc(10px * var(--ui-scale));
+}
+
+/* Tech modal */
+.techModal__rateLine{
+  font-size: calc(12px * var(--ui-scale));
+}
+
+/* Tutorial bubble */
+.gameTutorial__bubble{
+  width: clamp(calc(332px * var(--ui-scale)), 34vw, calc(460px * var(--ui-scale)));
+  padding: calc(56px * var(--ui-scale)) calc(18px * var(--ui-scale)) calc(18px * var(--ui-scale));
+  gap: calc(14px * var(--ui-scale));
+}
+
+/* Debug panel */
+.debugPanel{
+  width: calc(280px * var(--ui-scale));
+  border-radius: calc(12px * var(--ui-scale));
+}
+.debugPanelHeader{
+  padding: calc(8px * var(--ui-scale)) calc(10px * var(--ui-scale));
+}
+.debugPanelBody{
+  padding: calc(8px * var(--ui-scale));
+}
+
+/* Dismantle modal */
+.dismantleModal__actions{
+  gap: calc(10px * var(--ui-scale));
+  margin-top: calc(12px * var(--ui-scale));
 }

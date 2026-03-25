@@ -124,6 +124,7 @@
         unlocked: {},
         popupQueue: [],
         rewarded: {},
+        deferredRewards: [],
         totalPurchased: 0,
         totalMerges: 0,
         totalManualFenceRepairs: 0,
@@ -133,6 +134,7 @@
         totalMoneyEarned: 0,
         totalPerfectFenceWaves: 0,
         totalHangarMasterLevel: 0,
+        totalMaxTankLevel: 0,
         completedModifierTechs: {},
       },
       stats: {
@@ -145,6 +147,7 @@
         moneyEarnedCount: 0,
         perfectFenceWavesCount: 0,
         hangarMasterLevelCount: 0,
+        maxTankLevelCount: 0,
       },
       ui: {
         talentsOpen: false,

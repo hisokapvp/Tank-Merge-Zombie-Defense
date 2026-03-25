@@ -487,8 +487,8 @@ function createInitialState(options){
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
         endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
-        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalDefenseOrderStreak: 0, completedModifierTechs: {} },
-        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, defenseOrderStreakCount: 0 },
+        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, deferredRewards: [], totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalDefenseOrderStreak: 0, totalMaxTankLevel: 0, completedModifierTechs: {} },
+        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, defenseOrderStreakCount: 0, maxTankLevelCount: 0 },
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
           unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
@@ -3147,7 +3147,7 @@ function recordTankLevel(level){
 
   syncFenceTierWithMaxTankLevel(state, { force: grewMax });
   if (!grewMax) return;
-
+  processAchievementProgress('maxTankLevel', nextLevel);
 }
 
 function buyTankLevel(){
@@ -9853,6 +9853,15 @@ function renderAchievementsList(){
   controller.renderList({
     defs,
     unlocked: ach.unlocked,
+    deferredCount: Array.isArray(ach.deferredRewards) ? ach.deferredRewards.length : 0,
+    onClaimDeferred: function () {
+      var api = getAchievementRewardsApi() || ensureAchievementRewardsModule();
+      if (api && typeof api.claimDeferredRewards === 'function') {
+        var claimed = api.claimDeferredRewards(state);
+        if (claimed > 0) updateUI();
+      }
+      renderAchievementsList();
+    },
     getProgress: (def) => {
       if (def.progressType === 'hangarMasterLevel') {
         return computeHangarCellCountForMinLevel(def.hangarMinLevel || 1);
@@ -9866,6 +9875,7 @@ function renderAchievementsList(){
       if (def.progressType === 'droneAcquisitions') return ach.totalDroneAcquisitions;
       if (def.progressType === 'noRepairAttackWaveStreak') return ach.totalNoRepairAttackWaveStreak;
       if (def.progressType === 'defenseOrderStreak') return ach.totalDefenseOrderStreak;
+      if (def.progressType === 'maxTankLevel') return ach.totalMaxTankLevel || 0;
       return ach.totalPurchased;
     },
   });
@@ -11151,6 +11161,7 @@ function draw(){
         const tank = state.cells[i] && state.cells[i].tank;
         if (tank && tank.onTrack) tanksOnTrack.push(tank);
       }
+      const _zSprites = window.Game && window.Game.Sprites && window.Game.Sprites.ZombieSprites;
       talentsApi.renderStatusIcons({
         canvasCtx: ctx,
         timeMs: Date.now(),
@@ -11162,6 +11173,8 @@ function draw(){
           return { x: tank._statusWorldX, y: tank._statusWorldY };
         },
         getZombiePos: zombiePos,
+        debuffIconScale: _zSprites ? _zSprites.debuffIconScale : 1,
+        debuffIconOpacity: _zSprites ? _zSprites.debuffIconOpacity : 1,
       });
     }
   }

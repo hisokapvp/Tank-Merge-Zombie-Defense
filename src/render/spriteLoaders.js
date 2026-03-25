@@ -227,6 +227,8 @@
       deathCommon: null,
       spawnConfig: null,
       corpseConfig: null,
+      debuffIconScale: 1.0,
+      debuffIconOpacity: 1.0,
       load: async function () {
         try {
           var res = await fetch('assets/zombies.json', { cache: 'no-store' });
@@ -290,6 +292,9 @@
             };
           }
 
+          this.debuffIconScale = Number.isFinite(data.debuffIconScale) ? Math.max(0.1, Math.min(3, data.debuffIconScale)) : 1.0;
+          this.debuffIconOpacity = Number.isFinite(data.debuffIconOpacity) ? Math.max(0, Math.min(1, data.debuffIconOpacity)) : 1.0;
+
           this.types = (data.types || []).map(function (t) {
             var animations = t && typeof t.animations === 'object' ? t.animations : null;
             var attackTuning = t && t.attack && typeof t.attack === 'object' ? t.attack : null;
@@ -345,6 +350,8 @@
           this.deathCommon = null;
           this.spawnConfig = null;
           this.corpseConfig = null;
+          this.debuffIconScale = 1.0;
+          this.debuffIconOpacity = 1.0;
           this.error = String(e);
         }
       },

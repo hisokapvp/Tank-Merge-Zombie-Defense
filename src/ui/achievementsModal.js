@@ -74,11 +74,20 @@
 
     function onListClick(event) {
       if (!event || !event.target || typeof event.target.closest !== 'function') return;
+      var claimBtn = event.target.closest('.achievementClaimBtn[data-claim-action]');
+      if (claimBtn && listEl.contains(claimBtn)) {
+        if (typeof currentClaimCallback === 'function') {
+          currentClaimCallback();
+        }
+        return;
+      }
       var toggleBtn = event.target.closest('.achievementToggleBtn[data-achievement-toggle]');
       if (!toggleBtn || !listEl.contains(toggleBtn)) return;
       var achievementId = toggleBtn.getAttribute('data-achievement-toggle');
       toggleAchievementById(achievementId);
     }
+
+    var currentClaimCallback = null;
 
     function renderList(params) {
       var input = params || {};
@@ -87,8 +96,22 @@
       var getProgress = typeof input.getProgress === 'function'
         ? input.getProgress
         : function () { return 0; };
+      var deferredCount = Number.isFinite(input.deferredCount) ? Math.max(0, input.deferredCount) : 0;
+      currentClaimCallback = typeof input.onClaimDeferred === 'function' ? input.onClaimDeferred : null;
 
       listEl.innerHTML = '';
+
+      if (deferredCount > 0 && currentClaimCallback) {
+        var claimRow = documentObj.createElement('div');
+        claimRow.className = 'achievementClaimRow';
+        var claimBtn = documentObj.createElement('button');
+        claimBtn.type = 'button';
+        claimBtn.className = 'achievementClaimBtn';
+        claimBtn.setAttribute('data-claim-action', 'true');
+        claimBtn.textContent = translate('achievementClaimReward') + ' (' + deferredCount + ')';
+        claimRow.appendChild(claimBtn);
+        listEl.appendChild(claimRow);
+      }
 
       for (var i = 0; i < defs.length; i++) {
         var def = defs[i] || {};

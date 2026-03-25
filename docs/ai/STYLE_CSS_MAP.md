@@ -42,7 +42,7 @@
 | Talent modal / SC modal / tabs / tables / stage abilities | [style.css](../../style.css#L1701-L2665) | Talents, `.scModal__body`, table layout, stage active slots, debug panel start |
 | Unified button behavior / merge popup / lesson progress / hangar core / workshop / tech unlock | [style.css](../../style.css#L2666-L4435) | Shared behavior layer, merge popup, hangar chips base, workshop, nested recycle subtabs, tech unlock |
 | Chip craft / reagent row / recycle single-column layout / production line storage modal | [style.css](../../style.css#L4335-L7090) | Inventory, slots, result preview, dust-only layout, future chip frame, storage header/help/grid/drag preview |
-| Adaptive UI scaling (`--ui-scale`) | [style.css](../../style.css#L7286-L7330) | `--ui-scale`-driven `calc()` для 10 modal selectors: `levelModal__panel/title/line`, `crateModal__panel`, `scModal`, `ughPanel`, `settingsTooltip`, `centerNotification`, `plStorage__panel`, `lessonProgressPanel`; close-buttons **NOT** scaled — 44×44 hit-area сохраняется |
+| Adaptive UI scaling (`--ui-scale`) | [style.css](../../style.css#L7286-L7330) | `--ui-scale`-driven `calc()` для 40+ modal/UI selectors; close-buttons **NOT** scaled — 44×44 hit-area сохраняется |
 
 ## Hotspots
 - [style.css](../../style.css#L54-L68) — CRT/grain overlay: `body.big-menu-open`, `.scmodal-open`, `.tutorial-modal-open`, `.pl-storage-open`, `.crate-open`, `.merge-popup-open`, `.achievements-open`, `.achievement-popup-open`, `.levelmodal-open`, `.critical-open`.
@@ -71,7 +71,8 @@
 - [style.css](../../style.css#L4887-L4915) — future chip frame и result label.
 - [style.css](../../style.css#L7001-L7058) — production line storage cells, level badge и drag preview.
 - [style.css](../../style.css#L7069-L7114) — production line storage header right-actions wrapper, help/close grouping и title padding.
-- [style.css](../../style.css#L7286-L7330) — adaptive UI scaling block (`--ui-scale`): `calc()` для modal panels, titles, tooltips, notifications, storage panel, lesson progress.
+- [style.css](../../style.css#L7286-L7330) — adaptive UI scaling block (`--ui-scale`): `calc()` для modal panels, titles, tooltips, notifications, storage panel, lesson progress, achievement claim button.
+- `.achievementClaimRow` / `.achievementClaimBtn` — gold-themed «Получить награду» кнопка в списке достижений для deferred drone rewards.
 
 ## Зависимости
 - Используется практически всеми UI runtime-модулями (`game.js`, `src/ui/*`).

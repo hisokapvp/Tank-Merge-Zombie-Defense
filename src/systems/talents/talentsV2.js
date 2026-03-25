@@ -3873,16 +3873,22 @@
       var zombiePos = resolveEntityPosition(zombie, getZombiePos);
       if (!zombiePos) continue;
       var zombieScreen = worldToScreen(camera, zombiePos.x, zombiePos.y);
+      var zIconScale = toNumber(renderCtx.debuffIconScale, 1);
+      var zIconOpacity = clamp(toNumber(renderCtx.debuffIconOpacity, 1), 0, 1);
+      var zIconSizePx = STATUS_ICON_SIZE_PX * zIconScale;
+      var zIconStepPx = STATUS_ICON_STEP_PX * zIconScale;
+      if (zIconOpacity < 1) { ctx.save(); ctx.globalAlpha = zIconOpacity; }
       for (var zci = 0; zci < zCandidates.length; zci++) {
         var zIcon = zCandidates[zci];
         var zImg = getStatusIcon(zIcon.iconKey);
-        var zx = zombieScreen.x + (zci - (zCandidates.length - 1) * 0.5) * STATUS_ICON_STEP_PX;
+        var zx = zombieScreen.x + (zci - (zCandidates.length - 1) * 0.5) * zIconStepPx;
         var zy = zombieScreen.y - 22;
         if (zImg && zImg.complete) {
-          ctx.drawImage(zImg, zx - STATUS_ICON_SIZE_PX * 0.5, zy - STATUS_ICON_SIZE_PX * 0.5, STATUS_ICON_SIZE_PX, STATUS_ICON_SIZE_PX);
+          ctx.drawImage(zImg, zx - zIconSizePx * 0.5, zy - zIconSizePx * 0.5, zIconSizePx, zIconSizePx);
         }
         drawStatusExpiryOverlay(ctx, zx, zy, zIcon.fill01);
       }
+      if (zIconOpacity < 1) { ctx.restore(); }
       out.push({ type: 'zombie', zombie: zombie, icons: zCandidates.length });
     }
 

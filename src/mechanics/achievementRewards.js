@@ -188,19 +188,52 @@
     defenseOrderUpgrade1Drone1L1:   { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'drones', amount: 1, level: 1 }], i18nKey: 'achievementRewardDefenseOrder3' },
     defenseOrderUpgrade3Drones3L3:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 3 }], i18nKey: 'achievementRewardDefenseOrder4' },
     defenseOrderUpgrade5Chips15:    { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 15 }], i18nKey: 'achievementRewardDefenseOrder5' },
+    /* first_elite family */
+    firstEliteDamage500:            { type: 'damagePoints',   amount: 500,     i18nKey: 'achievementRewardFirstElite1' },
+    firstEliteUpgradePoint1:        { type: 'upgradePoints',  amount: 1,       i18nKey: 'achievementRewardFirstElite2' },
+    firstEliteDamage5000Chips2:     { type: 'composite', items: [{ type: 'damagePoints', amount: 5000 }, { type: 'randomChips', amount: 2 }], i18nKey: 'achievementRewardFirstElite3' },
+    firstEliteUpgrade2Drone1L3:     { type: 'composite', items: [{ type: 'upgradePoints', amount: 2 }, { type: 'drones', amount: 1, level: 3 }], i18nKey: 'achievementRewardFirstElite4' },
+    firstEliteUpgrade3Drones2L5:    { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 2, level: 5 }], i18nKey: 'achievementRewardFirstElite5' },
+    firstEliteUpgrade5Damage50000:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'damagePoints', amount: 50000 }], i18nKey: 'achievementRewardFirstElite6' },
   };
 
-  function grantAchievementDrones(count, level) {
+  function grantAchievementDrones(count, level, state) {
     var addDronFn = global.Game && typeof global.Game._productionLineAddDron === 'function'
       ? global.Game._productionLineAddDron : null;
-    if (!addDronFn) return false;
     var total = normalizeCounter(count);
     var droneLevel = normalizeCounter(level) || 1;
     if (total <= 0) return false;
+    var placed = 0;
     for (var i = 0; i < total; i++) {
-      addDronFn(droneLevel);
+      var drone = addDronFn ? addDronFn(droneLevel) : null;
+      if (drone) { placed++; continue; }
+      /* Main drone slots full — try underground hangar */
+      var UH = global.Game && global.Game.UndergroundHangar;
+      if (UH && typeof UH.ensureStateShape === 'function' && state) {
+        UH.ensureStateShape(state);
+        var ugh = state.undergroundHangar;
+        if (ugh && Array.isArray(ugh.cells)) {
+          var freeIdx = null;
+          for (var ci = 0; ci < ugh.cells.length; ci++) {
+            var cell = ugh.cells[ci];
+            if (cell && !cell.tank && !cell.drone) { freeIdx = ci; break; }
+          }
+          if (freeIdx !== null) {
+            ugh.cells[freeIdx].drone = { level: droneLevel, mode: 'standby' };
+            placed++;
+            continue;
+          }
+        }
+      }
+      /* Both hangars full — defer reward */
+      if (state) {
+        if (!Array.isArray(state.achievements.deferredRewards)) {
+          state.achievements.deferredRewards = [];
+        }
+        state.achievements.deferredRewards.push({ type: 'drones', amount: 1, level: droneLevel });
+      }
     }
-    return true;
+    return placed > 0 || (state && Array.isArray(state.achievements.deferredRewards) && state.achievements.deferredRewards.length > 0);
   }
 
   function grantSubItem(state, sub, randomFn) {
@@ -211,7 +244,7 @@
     if (sub.type === 'randomChips') return grantAchievementRandomChips(sub.amount, randomFn);
     if (sub.type === 'upgradePoints') return grantAchievementUpgradePoints(state, sub.amount);
     if (sub.type === 'damagePoints') return grantAchievementDamagePoints(state, sub.amount);
-    if (sub.type === 'drones') return grantAchievementDrones(sub.amount, sub.level);
+    if (sub.type === 'drones') return grantAchievementDrones(sub.amount, sub.level, state);
     return false;
   }
 
@@ -250,9 +283,44 @@
     return markRewardGranted(state, def.id);
   }
 
+  function claimDeferredRewards(state) {
+    if (!state || !state.achievements || !Array.isArray(state.achievements.deferredRewards)) return 0;
+    var remaining = [];
+    var claimed = 0;
+    for (var i = 0; i < state.achievements.deferredRewards.length; i++) {
+      var item = state.achievements.deferredRewards[i];
+      if (!item || item.type !== 'drones') { remaining.push(item); continue; }
+      var droneLevel = normalizeCounter(item.level) || 1;
+      var addDronFn = global.Game && typeof global.Game._productionLineAddDron === 'function'
+        ? global.Game._productionLineAddDron : null;
+      var drone = addDronFn ? addDronFn(droneLevel) : null;
+      if (drone) { claimed++; continue; }
+      /* Try underground hangar */
+      var UH = global.Game && global.Game.UndergroundHangar;
+      if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+      var ugh = state.undergroundHangar;
+      if (ugh && Array.isArray(ugh.cells)) {
+        var freeIdx = null;
+        for (var ci = 0; ci < ugh.cells.length; ci++) {
+          var cell = ugh.cells[ci];
+          if (cell && !cell.tank && !cell.drone) { freeIdx = ci; break; }
+        }
+        if (freeIdx !== null) {
+          ugh.cells[freeIdx].drone = { level: droneLevel, mode: 'standby' };
+          claimed++;
+          continue;
+        }
+      }
+      remaining.push(item);
+    }
+    state.achievements.deferredRewards = remaining;
+    return claimed;
+  }
+
   global.Game = global.Game || {};
   global.Game.AchievementRewards = {
     grant: grant,
+    claimDeferredRewards: claimDeferredRewards,
     REWARD_TABLE: REWARD_TABLE,
   };
 })(typeof window !== 'undefined' ? window : this);
