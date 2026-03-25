@@ -42,6 +42,7 @@
 | `Game.HangarChipsUI.init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) | 3966–4358 | Инициализация overlay ангара, drag-drop, tooltips |
 | `Game.ProductionLineRender.syncState()` | [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L265-L311) | 265–311 | Синхронизация conveyor/storage runtime с `state.productionLine` |
 | `Game.TalentsV2.init()` | [src/systems/talents/talentsV2.js](../../src/systems/talents/talentsV2.js#L2491-L2505) | 2491–2505 | Поднятие runtime талантов v2 |
+| `Game.I18n.pluralize()` | [src/i18n/pluralize.js](../../src/i18n/pluralize.js#L17-L33) | 17–33 | Russian/English number pluralization (mod10/mod100 логика); используется в `getTankWordKey()` и `getDismantleTankCountText()` |
 
 ## Разделы документации
 
@@ -69,6 +70,7 @@
 |---|---|---|
 | Combat / projectile pipeline | [SYSTEMS/combat.md](SYSTEMS/combat.md) | |
 | Achievements / reward ladders | [SYSTEMS/achievements.md](SYSTEMS/achievements.md) | |
+| i18n / pluralization | `src/i18n/pluralize.js`, `src/i18n/ru.json`, `src/i18n/en.json` | |
 | Chip effects runtime | [CHIP_EFFECTS_MAP.md](CHIP_EFFECTS_MAP.md) | |
 | Talents v2 runtime | [TALENTS_V2_MAP.md](TALENTS_V2_MAP.md) | |
 | Save / offline / restore | [SYSTEMS/save.md](SYSTEMS/save.md) | [HOT] |
@@ -98,6 +100,7 @@ graph TD
   A --> E[src/ui/hangarChipsUI.js]
   A --> F[src/systems/talents/talentsV2.js]
   A --> G[src/mechanics/chipEffects.js]
+  A --> P[src/i18n/pluralize.js]
   C --> H[assets/supercomputer.json]
   E --> I[style.css]
   D --> I

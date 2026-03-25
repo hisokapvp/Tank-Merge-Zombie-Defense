@@ -51,7 +51,7 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-03-07.
+> Обновлено: 2026-03-25.
 > Текущая длина файла: ~11 880 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
 ## Что это
@@ -95,16 +95,19 @@
 | `createInitialState()` | [game.js](../../game.js#L454-L514) | Стартовое состояние мира |
 | `getDamagePoints()` / `applyCannonUpgrade()` | [game.js](../../game.js#L572-L693) | Damage points и апгрейды |
 | `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
+| `getTankWordKey(count)` | [game.js](../../game.js#L1064-L1082) | Pluralized i18n key для слова «танк»; делегирует в `Game.I18n.pluralize` с inline fallback |
 
 ### Layout / world init
 | Функция | Строки | Назначение |
 |---|---|---|
+| `DESKTOP_CELL_BASE` / `applyBalScale(scale)` | [game.js](../../game.js#L2336-L2370) | Desktop-responsive cellW/cellH: `DESKTOP_CELL_BASE=42` × clamped scale вместо hardcoded `70`; upper clamp `1.35` убран, полное пропорциональное масштабирование |
 | `initBoard()` | [game.js](../../game.js#L2244-L2334) | Геометрия карты, fence, supercomputer, production line layout |
 | `getTankPrintDurationSec()` | [game.js](../../game.js#L2744-L2756) | Единая длительность печати/штампа из `assets/tanks.json` |
 | `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
 | `performTankPurchaseOnce()` | [game.js](../../game.js#L3289-L3307) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
 | `checkPerfectFenceWave()` | [game.js](../../game.js#L3481-L3490) | Проверка идеального завершения волны (fence без повреждений); использует `continue` для invalid сегментов |
-| `computeHangarMasterLevel()` | [game.js](../../game.js#L3491-L3507) | Вычисляет tier hangar_master по min tank level среди первых 15 ячеек |
+| `getHangarMasterThresholds()` | [game.js](../../game.js#L3497-L3518) | Config-driven thresholds для hangar_master: читает achievement defs по `familyId='hangar_master'`, fallback на hardcoded `[60,40,20,10,1]` |
+| `computeHangarMasterLevel()` | [game.js](../../game.js#L3519-L3545) | Вычисляет tier hangar_master по min tank level среди первых 15 ячеек; использует `getHangarMasterThresholds()` |
 | `computeHangarCellCountForMinLevel()` | [game.js](../../game.js#L3508-L3517) | Количество ячеек ≥ minLevel из первых 15 — для per-tier progress display |
 | `checkHangarMasterAchievement()` | [game.js](../../game.js#L3519-L3530) | Сверяет текущий hangar_master level с прогрессом и инкрементит при повышении |
 | `resetDefenseOrderRuntime()` | [game.js](../../game.js#L3406-L3409) | Сброс defense order episode runtime |

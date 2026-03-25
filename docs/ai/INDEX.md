@@ -39,6 +39,9 @@
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
 ## Фокус документации на 2026-03-25
+- `src/i18n/pluralize.js` — новый модуль `Game.I18n.pluralize(n, one, few, many)` для Russian/English mod10/mod100 плюрализации; подключается в `index.html`; используется в `getTankWordKey()` (`game.js`) и `getDismantleTankCountText()` (`src/ui/modals.js`) с inline fallback.
+- `game.js`: `getHangarMasterThresholds()` читает achievement defs для config-driven hangar_master thresholds; `computeHangarMasterLevel()` использует их вместо hardcoded порогов; `applyBalScale()` не клампит на `1.35`, полное пропорциональное масштабирование; desktop cellW = `DESKTOP_CELL_BASE(42) * scale` вместо hardcoded `70`.
+- Underground hangar FSM: новый лупящий state `hover_idle` между `hover_start` и `hover_end`; `_isClosing` guard предотвращает double-anim при dismiss модалки; `draw()` применяет rounded rect clip перед sprite.
 - Tutorial runtime выбирает first available incomplete tutorial step и держит отдельный completion-gate для переходных UI-шагов; основной источник по ordering/activation/completion/pause — `docs/ai/SYSTEMS/tutorial-runtime.md`.
 - `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в рабочий red `one_big_chip` уровня 1 с валидным `chipId`, отсортированным `sourceComboKey` и 3 уникальными base `modIds` (`1..9`).

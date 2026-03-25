@@ -59,6 +59,11 @@
 - Каноническая логика живёт в [src/ui/modals.js](../../../src/ui/modals.js#L20-L129): `ensureResetTalentsModalControls()` реиспользует существующий confirm-button из HTML, переносит его в `menuInlineActions`, а при отсутствии инжектит secondary cancel-кнопку `resetTalentsModalCancel` с copy `Нет`; `openResetTalentsModal()` затем переопределяет текст/label через i18n и даёт фокус confirm/cancel-контролу.
 - Cooldown UX вынесен в отдельную modal `#talentResetCooldownModal`: footer-кнопка в дереве остаётся `Сбросить улучшения`, `requestResetAllTalents()` открывает отдельный timer-dialog при `cooldownActive`, `refreshTalentResetCooldownModalState()` обновляет copy каждые `250ms`, а modal держит `Закрыть` + ad-style refresh-stub CTA с отдельным icon-shell и tooltip-заглушкой до подключения рекламы: [game.js](../../../game.js#L4629-L4708), [index.html](../../../index.html#L403-L416), [src/ui/modals.js](../../../src/ui/modals.js#L96-L131), [style.css](../../../style.css#L2392-L2469).
 
+## Underground hangar canvas button
+- FSM состояния: `idle → hover_start → hover_idle → hover_end → idle`; `click` и `close` — one-shot с возвратом в `idle`: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L13-L17).
+- `_isClosing` guard: при dismiss модалки `handleModalClose()` ставит `_isClosing=true` и запускает `close` анимацию; `handlePointerLeave()` не переключает на `hover_end` пока `_isClosing` активен: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L260-L277).
+- `draw()` применяет rounded rect clip (`arcTo`) перед `drawImage`, чтобы углы sprite не выступали за ячейку; badge рисуется после `ctx.restore()`, вне clip: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L149-L168).
+
 ## Escape / menu priority
 - Глобальный Escape-routing живёт в `game.js`: `hasHigherPriorityEscapeLock()` резервирует приоритет за `supercomputer / achievements / productionStorage / undergroundHangar / critical / bigMenu`, поэтому Escape не должен открывать или закрывать small menu поверх этих overlay. Отдельный fast-path сначала закрывает underground hangar, затем small menu закрывается только если нет более высокого lock, а из чистого gameplay Escape открывает small menu: [game.js](../../../game.js#L7994-L8001), [game.js](../../../game.js#L10307-L10327).
 

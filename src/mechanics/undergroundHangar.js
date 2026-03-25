@@ -10,16 +10,18 @@
   let _ready = false;
 
   // Animation state
-  let _animState = 'idle'; // idle | hover_start | hover_end | click | close
+  let _animState = 'idle'; // idle | hover_start | hover_idle | hover_end | click | close
   let _animFrame = 0;
   let _animTimer = 0;
   let _isHovered = false;
+  let _isClosing = false;  // true while close anim plays after modal dismiss
   let _onAnimDone = null;  // callback when one-shot anim finishes
 
   // Cached anim defs after config load
   let _anims = {
     idle: null,
     hover_start: null,
+    hover_idle: null,
     hover_end: null,
     click: null,
     close: null,
@@ -78,6 +80,7 @@
 
       _anims.idle = parseAnim(rawAnims.idle);
       _anims.hover_start = parseAnim(rawAnims.hover_start);
+      _anims.hover_idle = parseAnim(rawAnims.hover_idle);
       _anims.hover_end = parseAnim(rawAnims.hover_end);
       _anims.click = parseAnim(rawAnims.click);
       _anims.close = parseAnim(rawAnims.close);
@@ -155,7 +158,21 @@
     const dx = cell.x + cell.w * _config.anchor.x - dw * _config.anchor.x;
     const dy = cell.y + cell.h * _config.anchor.y - dh * _config.anchor.y;
 
+    // Rounded clip so sprite corners don't poke out of the cell
+    const clipR = Math.min(10, cell.w / 2, cell.h / 2);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cell.x + clipR, cell.y);
+    ctx.arcTo(cell.x + cell.w, cell.y, cell.x + cell.w, cell.y + cell.h, clipR);
+    ctx.arcTo(cell.x + cell.w, cell.y + cell.h, cell.x, cell.y + cell.h, clipR);
+    ctx.arcTo(cell.x, cell.y + cell.h, cell.x, cell.y, clipR);
+    ctx.arcTo(cell.x, cell.y, cell.x + cell.w, cell.y, clipR);
+    ctx.closePath();
+    ctx.clip();
     ctx.drawImage(_atlasImg, sx, sy, anim.w, anim.h, dx, dy, dw, dh);
+    ctx.restore();
+
+    // Badge drawn AFTER restore so it is not clipped
     drawTankCountBadge(ctx, cell, arguments[2]);
   }
 
@@ -229,15 +246,18 @@
   function handlePointerEnter() {
     if (_isHovered) return;
     _isHovered = true;
+    _isClosing = false;
     setAnim('hover_start', function () {
-      // After hover_start finishes, go to idle while still hovered
-      if (_isHovered) setAnim('idle');
+      // After hover_start finishes, loop hover_idle while cursor stays
+      if (_isHovered) setAnim('hover_idle');
     });
   }
 
   function handlePointerLeave() {
     if (!_isHovered) return;
     _isHovered = false;
+    // Skip hover_end when close animation is already playing (modal dismiss)
+    if (_isClosing || _animState === 'close') return;
     setAnim('hover_end', function () {
       setAnim('idle');
     });
@@ -251,7 +271,10 @@
   }
 
   function handleModalClose() {
+    _isHovered = false;
+    _isClosing = true;
     setAnim('close', function () {
+      _isClosing = false;
       setAnim('idle');
     });
   }

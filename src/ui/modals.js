@@ -252,6 +252,11 @@
 
   function getDismantleTankCountText(count, t) {
     var n = Math.max(0, Math.floor(Number(count) || 0));
+    var pluralize = window.Game && window.Game.I18n && window.Game.I18n.pluralize;
+    if (typeof pluralize === 'function') {
+      return n + ' ' + pluralize(n, t('tankWord1'), t('tankWord2_4'), t('tankWord5'));
+    }
+    // inline fallback if pluralize module not loaded
     var word1 = t('tankWord1');
     var word2_4 = t('tankWord2_4');
     var word5 = t('tankWord5');

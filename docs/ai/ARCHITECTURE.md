@@ -1,6 +1,6 @@
 ﻿# Архитектура (кратко)
 
-> Обновлено: 2026-03-06.
+> Обновлено: 2026-03-25.
 > Главная навигация: `docs/ai/PROJECT_MAP.md` → нужный `SYSTEMS/*.md` → `*_MAP.md` для больших файлов.
 
 ## Документационные entrypoints
@@ -12,6 +12,7 @@
 - Вход: `index.html`, `game.js` (~11.9k строк), `src/core/bootstrap.js`
 - Ядро: `src/core/runtimeTasks.js`, `src/core/worldReset.js`
 - Домен: `src/mechanics/*`, `src/systems/*`, `src/persistence/*`
+- i18n / pluralize: `src/i18n/*` (включая `pluralize.js` — `Game.I18n.pluralize`)
 - Рендер/ввод: `src/render/*`, `src/ui/*`, `src/audio/*`
 - Конфиг: `src/config/*`, `assets/*.json`
 - Поддержка: `src/analytics/*`, `src/telemetry/*`, `src/flags/*`, `src/experiments/*`

@@ -73,7 +73,10 @@
 ## `assets/underground_hangar.json` (canvas shell кнопки ангара)
 - Конфиг кнопки/ячейки подземного ангара теперь опирается на существующий atlas `slot_warehouse_atlas.png`, а не на отсутствующий `underground_hangar_atlas.png`: [assets/underground_hangar.json](../../../assets/underground_hangar.json#L1-L12), [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57).
 - Runtime loader в [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L40-L57) держит тот же fallback atlas `slot_warehouse_atlas.png`, поэтому отсутствие поля `atlas` в JSON больше не возвращает 404 на несуществующий файл.
-- `animations.{idle,hover_start,hover_end,click,close}` для этой кнопки читаются как обычный sprite-sheet contract, но фактический badge количества техники дорисовывается поверх atlas уже в runtime, а не хранится в JSON: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L132-L182).
+- `animations.{idle,hover_start,hover_idle,hover_end,click,close}` для этой кнопки читаются как обычный sprite-sheet contract; `hover_idle` — looping state между `hover_start` и `hover_end`, обеспечивает плавный idle пока курсор остаётся над ячейкой: [assets/underground_hangar.json](../../../assets/underground_hangar.json#L8), [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L13-L24).
+- Фактический badge количества техники дорисовывается поверх atlas уже в runtime, а не хранится в JSON: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L170-L195).
+- `_isClosing` guard предотвращает запуск `hover_end` во время проигрывания `close` анимации после dismiss модалки: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L17), [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L260).
+- `draw()` применяет rounded rect clip перед отрисовкой sprite, чтобы углы atlas не выступали за ячейку; badge рисуется **после** restore, вне clip: [src/mechanics/undergroundHangar.js](../../../src/mechanics/undergroundHangar.js#L149-L168).
 
 ## `assets/levelreward.json` (награды за повышение уровня)
 - Загружается в `boot()` через `fetch('assets/levelreward.json')` → `LevelRewardConfig`: [game.js](../../../game.js#L13697-L13702).

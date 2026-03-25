@@ -1063,6 +1063,11 @@ function t(key, vars = {}){
 
 function getTankWordKey(count){
   const n = Math.max(0, Math.floor(Number(count) || 0));
+  const pluralize = window.Game && window.Game.I18n && window.Game.I18n.pluralize;
+  if (typeof pluralize === 'function') {
+    return pluralize(n, 'tankWord1', 'tankWord2_4', 'tankWord5');
+  }
+  // inline fallback if pluralize module not loaded
   if (getCurrentLang() === 'ru') {
     const mod10 = n % 10;
     const mod100 = n % 100;
@@ -2328,14 +2333,15 @@ const BASE_CANVAS = { w: 1100, h: 650 };
 let balScale = 1;
 
 const DESKTOP_BREAKPOINT = 768;
+const DESKTOP_CELL_BASE = 42; // ≈70 at 1920×1080 reference (scale≈1.66)
 
 function applyBalScale(scale){
-  const clamped = clamp(scale, 1, 1.35);
+  const clamped = Math.max(1, scale);
   balScale = clamped;
 
   if (viewSize && viewSize.w >= DESKTOP_BREAKPOINT) {
-    BAL.cellW = 70;
-    BAL.cellH = 70;
+    BAL.cellW = Math.round(DESKTOP_CELL_BASE * clamped);
+    BAL.cellH = Math.round(DESKTOP_CELL_BASE * clamped);
   } else {
     BAL.cellW = BASE_BAL.cellW * clamped;
     BAL.cellH = BASE_BAL.cellH * clamped;
@@ -2350,7 +2356,7 @@ function applyBalScale(scale){
   BAL.zombieFencePush = BASE_BAL.zombieFencePush * clamped;
   BAL.tankOrbitRadius = BASE_BAL.tankOrbitRadius * clamped;
   BAL.tankTrackWidth = BASE_BAL.tankTrackWidth * clamped;
-  BAL.roadFenceGap = clamp(BASE_BAL.roadFenceGap * clamped, 6, 12);
+  BAL.roadFenceGap = clamp(BASE_BAL.roadFenceGap * clamped, 6, 12 * clamped);
 
   BAL.zombieScaleMul = BASE_BAL.zombieScaleMul * clamped;
   BAL.zombieBobAmp = BASE_BAL.zombieBobAmp * clamped;
@@ -3488,6 +3494,28 @@ function checkPerfectFenceWave(){
   processAchievementProgress('perfectFenceWaves', 1);
 }
 
+function getHangarMasterThresholds(){
+  const FALLBACK = [
+    { tier: 5, min: 60 },
+    { tier: 4, min: 40 },
+    { tier: 3, min: 20 },
+    { tier: 2, min: 10 },
+    { tier: 1, min: 1 },
+  ];
+  const defs = getAchievementDefinitions();
+  if (!defs || defs.length === 0) return FALLBACK;
+  const hmDefs = [];
+  for (let i = 0; i < defs.length; i++) {
+    const d = defs[i];
+    if (d.familyId === 'hangar_master' && Number.isFinite(d.hangarMinLevel) && Number.isFinite(d.target)) {
+      hmDefs.push({ tier: d.target, min: d.hangarMinLevel });
+    }
+  }
+  if (hmDefs.length === 0) return FALLBACK;
+  hmDefs.sort(function(a, b){ return b.min - a.min; });
+  return hmDefs;
+}
+
 function computeHangarMasterLevel(){
   const cells = Array.isArray(state.cells) ? state.cells : [];
   if (cells.length < 15) return 0;
@@ -3498,10 +3526,10 @@ function computeHangarMasterLevel(){
     if (!cell || !cell.tank) return 0;
     if (cell.tank.level < minLevel) minLevel = cell.tank.level;
   }
-  if (minLevel >= 60) return 5;
-  if (minLevel >= 40) return 4;
-  if (minLevel >= 20) return 3;
-  if (minLevel >= 10) return 2;
+  const thresholds = getHangarMasterThresholds();
+  for (let i = 0; i < thresholds.length; i++) {
+    if (minLevel >= thresholds[i].min) return thresholds[i].tier;
+  }
   return 1;
 }
 
