@@ -905,6 +905,12 @@
       }
     }
 
+    function refreshRootTilesLayout() {
+      if (!state.isOpen || state.view !== 'root') return;
+      applyLayoutTuningVars();
+      normalizeRootTilesSize();
+    }
+
     function getTankLevelViewData(level) {
       var tankCfg = global.TankSprites && typeof global.TankSprites.getTank === 'function'
         ? global.TankSprites.getTank(level)
@@ -1728,6 +1734,7 @@
     tankWallOverlay.addEventListener('click', function (evt) {
       if (evt.target && evt.target.dataset && evt.target.dataset.modsTankWallClose === 'true') backFromChild();
     });
+    global.addEventListener('resize', refreshRootTilesLayout);
 
     return {
       openRoot: openRoot,

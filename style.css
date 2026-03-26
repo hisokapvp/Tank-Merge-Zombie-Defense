@@ -22,11 +22,11 @@
   --audio-slider-thumb-border: 1px solid #000;
   --audio-slider-thumb-shadow: 2px 2px 0 rgba(0,0,0,.5);
   --scTileIconSizePx: 200px;
-  --scTileIconSize: clamp(64px, var(--scTileIconSizePx), var(--scTileIconSizePx));
+  --scTileIconSize: clamp(64px, calc(var(--scTileIconSizePx) * var(--ui-scale)), calc(var(--scTileIconSizePx) * var(--ui-scale)));
   --scRootTileWidthPx: 128px;
   --scRootTileHeightPx: 106px;
-  --scRootTileWidth: clamp(80px, var(--scRootTileWidthPx), var(--scRootTileWidthPx));
-  --scRootTileHeight: clamp(72px, var(--scRootTileHeightPx), var(--scRootTileHeightPx));
+  --scRootTileWidth: clamp(80px, calc(var(--scRootTileWidthPx) * var(--ui-scale)), calc(var(--scRootTileWidthPx) * var(--ui-scale)));
+  --scRootTileHeight: clamp(72px, calc(var(--scRootTileHeightPx) * var(--ui-scale)), calc(var(--scRootTileHeightPx) * var(--ui-scale)));
   --scTableTileWidthPx: 128px;
   --scTableTileHeightPx: 112px;
   --chipNameMaxLines: 60px;
@@ -188,7 +188,8 @@ body::after{
     inset 0 0 40px rgba(74, 246, 38, 0.05),
     2px 2px 0px #1a1a1a;
   pointer-events: auto;
-  width: 100%;
+  width: min(100%, 380px);
+  max-width: 100%;
   box-sizing: border-box;
   overflow: visible;
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -207,13 +208,26 @@ body::after{
   content: "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM";
   position: absolute;
   top: 8px;
-  left: 20px;
+  left: 16px;
+  right: 16px;
   background: transparent;
-  padding: 0 10px;
+  padding: 0 8px;
   color: #4af626;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: bold;
-  letter-spacing: 1px;
+  letter-spacing: 0.7px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px){
+  .terminal-panel::before {
+    left: 10px;
+    right: 10px;
+    padding: 0;
+    font-size: 7px;
+    letter-spacing: 0;
+  }
 }
 
 .terminal-panel::after {
@@ -1749,12 +1763,12 @@ input, select, textarea, button {
   display:grid;
   grid-template-columns:repeat(3, var(--scRootTileWidth, 128px));
   justify-content:center;
-  gap:10px;
+  gap:calc(10px * var(--ui-scale));
   align-items:stretch;
-  margin-top:12px;
+  margin-top:calc(12px * var(--ui-scale));
   margin-left:-8px;
   margin-right:-8px;
-  padding:8px;
+  padding:calc(8px * var(--ui-scale));
   width:100%;
   overflow:visible;
 }
@@ -1768,7 +1782,7 @@ input, select, textarea, button {
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:8px;
+  gap:calc(8px * var(--ui-scale));
   text-align:center;
   overflow:hidden;
 }
@@ -1812,7 +1826,7 @@ input, select, textarea, button {
 }
 @media (max-width: 768px){
   :root{
-    --scTileIconSize: clamp(56px, calc(var(--scTileIconSizePx) * 0.72), 72px);
+    --scTileIconSize: clamp(56px, calc(var(--scTileIconSizePx) * var(--ui-scale) * 0.72), calc(72px * var(--ui-scale)));
   }
   .scRootTile__label{
     font-size:clamp(12px, 3.1vw, 13px);
@@ -3176,8 +3190,12 @@ input, select, textarea, button {
     align-items:center;
   }
   .stageUiRight{
-    width:100%;
-    align-items:center;
+    position:absolute;
+    top:12px;
+    right:12px;
+    left:auto;
+    width:min(380px, calc(100vw - 24px));
+    align-items:flex-end;
   }
   .hud{justify-content:center}
   .talentBranches{
@@ -4214,21 +4232,32 @@ button[data-tutorial-locked="true"]::after,
 
 /* --- Modal sizing --- */
 .hangarChipsModal{
-  width:min(1050px, 96vw) !important;
-  max-height: 98vh;
+  --modsHangarScale: clamp(0.72, var(--ui-scale), 1);
+  --chipLabelCardWidth: clamp(132px, calc(176px * var(--modsHangarScale)), 176px);
+  --chipLabelCardHeight: clamp(104px, calc(116px * var(--modsHangarScale)), 116px);
+  --chipNameMaxLines: clamp(44px, calc(60px * var(--modsHangarScale)), 60px);
+  --modsHangarGap: calc(14px * var(--modsHangarScale));
+  --modsHangarSlotWidth: clamp(280px, calc(420px * var(--modsHangarScale)), 420px);
+  --modsHangarSlotHeight: clamp(260px, calc(380px * var(--modsHangarScale)), 380px);
+  --modsHangarLeftColWidth: clamp(176px, calc(220px * var(--modsHangarScale)), 220px);
+  --modsHangarDropMinHeight: clamp(176px, calc(220px * var(--modsHangarScale)), 220px);
+  --modsHangarSectionPad: clamp(6px, calc(10px * var(--modsHangarScale)), 10px);
+  width:min(calc(1050px * var(--modsHangarScale)), var(--ui-shell-max-width)) !important;
+  max-width:min(calc(1050px * var(--modsHangarScale)), var(--ui-shell-max-width));
+  max-height:min(calc(920px * var(--modsHangarScale)), var(--ui-shell-max-height));
 }
 .hangarChipsHelpBtn{
   position:absolute;
-  top:18px;
-  right:70px;
-  width:34px;
-  min-width:34px;
-  height:34px;
+  top:calc(18px * var(--modsHangarScale, 1));
+  right:calc(70px * var(--modsHangarScale, 1));
+  width:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
+  min-width:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
+  height:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
   padding:0 !important;
   display:grid;
   place-items:center;
   border-radius:999px !important;
-  font-size:18px !important;
+  font-size:clamp(16px, calc(18px * var(--modsHangarScale, 1)), 18px) !important;
   line-height:1;
 }
 .hangarChipsHelpBtn:hover:not(:disabled){
@@ -4241,7 +4270,7 @@ button[data-tutorial-locked="true"]::after,
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding:8px 10px calc(var(--ui-btn-press-shift,2px) + 4px);
+  padding:calc(8px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1)) calc(var(--ui-btn-press-shift,2px) + calc(4px * var(--modsHangarScale, 1)));
 }
 /* Pass height through each visible tab panel inside the hangar overlay */
 #modsHangarOverlay .scTabPanel:not([hidden]){
@@ -4253,14 +4282,26 @@ button[data-tutorial-locked="true"]::after,
 }
 #modsHangarOverlay .scTabs{
   flex: 0 0 auto;
-  margin:8px 0 0;
-  padding:0 10px;
+  margin:calc(8px * var(--modsHangarScale, 1)) 0 0;
+  padding:0 calc(10px * var(--modsHangarScale, 1));
+}
+
+#modsHangarOverlay .scTab{
+  padding:calc(8px * var(--modsHangarScale, 1)) calc(12px * var(--modsHangarScale, 1));
+  font-size:calc(12px * var(--modsHangarScale, 1));
+}
+
+.modsHangarActions{
+  display:flex;
+  gap:calc(10px * var(--modsHangarScale, 1));
+  justify-content:center;
+  margin-bottom:calc(12px * var(--modsHangarScale, 1));
 }
 
 /* --- Main layout: grid left, detail right --- */
 .hangarLayout{
   display:flex;
-  gap:14px;
+  gap:var(--modsHangarGap, 14px);
   align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
@@ -4282,7 +4323,7 @@ button[data-tutorial-locked="true"]::after,
 /* --- 4×4 Cell Grid --- */
 .hangarGridWrap{
   flex: 1 1 auto;
-  padding:8px;
+  padding:calc(8px * var(--modsHangarScale, 1));
   border:1px solid rgba(255,255,255,.1);
   border-radius:6px;
   background:rgba(20,18,16,.5);
@@ -4293,18 +4334,18 @@ button[data-tutorial-locked="true"]::after,
 .hangarGrid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:4px;
+  gap:clamp(3px, calc(4px * var(--modsHangarScale, 1)), 4px);
   width: auto;
 }
 .hangarGridCell{
   position:relative;
-  width:42px;
-  height:42px;
+  width:clamp(34px, calc(42px * var(--modsHangarScale, 1)), 42px);
+  height:clamp(34px, calc(42px * var(--modsHangarScale, 1)), 42px);
   border:1.5px solid rgba(255,255,255,.18);
-  border-radius:5px;
+  border-radius:clamp(4px, calc(5px * var(--modsHangarScale, 1)), 5px);
   background:rgba(60,55,50,.55);
   color:rgba(255,255,255,.35);
-  font-size:11px;
+  font-size:calc(11px * var(--modsHangarScale, 1));
   font-family:monospace;
   cursor:pointer;
   display:flex;
@@ -4794,8 +4835,8 @@ body.ugh-open::before{
   border-radius: 8px;
   background: rgba(30,28,24,.7);
   padding: 0;
-  width: 420px;
-  height: 380px;
+  width: var(--modsHangarSlotWidth);
+  height: var(--modsHangarSlotHeight);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -4895,16 +4936,16 @@ body.ugh-open::before{
   border:1px solid rgba(255,255,255,.1);
   border-radius:6px;
   background:rgba(20,18,16,.5);
-  padding: 10px;
+  padding: calc(10px * var(--modsHangarScale, 1));
   flex: 1 1 auto;
-  min-height: 140px; 
+  min-height: clamp(104px, calc(140px * var(--modsHangarScale, 1)), 140px);
   display: flex;
   flex-direction: column;
 }
 
 .hangarGridWrapUnder{
   flex: 1 1 auto;
-  padding:8px;
+  padding:calc(8px * var(--modsHangarScale, 1));
   border:1px solid rgba(255,255,255,.1);
   border-radius:6px;
   background:rgba(20,18,16,.5);
@@ -4966,7 +5007,7 @@ body.ugh-open::before{
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-top: 10px;
+  margin-top: calc(10px * var(--modsHangarScale, 1));
 }
 .hangarChipsListHeader{
   flex: 0 0 auto;
@@ -4974,9 +5015,9 @@ body.ugh-open::before{
   align-items:center;
   justify-content:space-between;
   flex-wrap:wrap;
-  gap:6px;
-  margin-bottom:6px;
-  padding: 0 4px;
+  gap:calc(6px * var(--modsHangarScale, 1));
+  margin-bottom:calc(6px * var(--modsHangarScale, 1));
+  padding: 0 calc(4px * var(--modsHangarScale, 1));
 }
 .hangarChipsAvailLabel{
   font-size:13px;
@@ -4987,15 +5028,15 @@ body.ugh-open::before{
 }
 .hangarChipsFilters{
   display:flex;
-  gap:4px;
+  gap:calc(4px * var(--modsHangarScale, 1));
 }
 .hangarFilterBtn{
   background:rgba(60,55,50,.6);
   border:1px solid rgba(255,255,255,.15);
   border-radius:4px;
   color:rgba(255,255,255,.6);
-  font-size:11px;
-  padding:2px 8px;
+  font-size:calc(11px * var(--modsHangarScale, 1));
+  padding:calc(2px * var(--modsHangarScale, 1)) calc(8px * var(--modsHangarScale, 1));
   cursor:pointer;
   font-family:inherit;
 }
@@ -5019,16 +5060,16 @@ body.ugh-open::before{
 }
 .hangarChipsGrid{
   display:grid;
-  --hangar-chip-grid-min:176px;
+  --hangar-chip-grid-min:var(--chipLabelCardWidth);
   grid-template-columns:repeat(auto-fit, minmax(min(100%, var(--hangar-chip-grid-min)), 1fr));
   justify-content:stretch;
   align-content:start;
-  gap:8px;
+  gap:calc(8px * var(--modsHangarScale, 1));
   flex: 1 1 auto;
   min-height: 0;
   overflow-y:auto;
   overflow-x:hidden;
-  padding:10px;
+  padding:calc(10px * var(--modsHangarScale, 1));
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
@@ -5091,16 +5132,16 @@ button.hangarChipInvItem{
 /* Slot hint label on chip inventory cards */
 .chipInvSlotHint{
   position:absolute;
-  top:6px;
-  right:6px;
-  max-width:calc(100% - 12px);
-  font-size:12px;
+  top:calc(6px * var(--modsHangarScale, 1));
+  right:calc(6px * var(--modsHangarScale, 1));
+  max-width:calc(100% - calc(12px * var(--modsHangarScale, 1)));
+  font-size:calc(12px * var(--modsHangarScale, 1));
   font-weight:700;
   font-family:monospace;
   color:#ff9800;
   background:rgba(0,0,0,.55);
   border-radius:3px;
-  padding:2px 5px;
+  padding:calc(2px * var(--modsHangarScale, 1)) calc(5px * var(--modsHangarScale, 1));
   line-height:1.1;
   text-align:right;
   pointer-events:none;
@@ -5147,14 +5188,14 @@ button.hangarChipInvItem{
 .workshopSubTabs{
   display:flex;
   flex:0 0 auto;
-  gap:6px;
-  margin-bottom:12px;
+  gap:calc(6px * var(--modsHangarScale, 1));
+  margin-bottom:calc(12px * var(--modsHangarScale, 1));
   border-bottom:1px solid rgba(255,255,255,.1);
-  padding-bottom:8px;
+  padding-bottom:calc(8px * var(--modsHangarScale, 1));
 }
 .workshopSubTab{
-  font-size:12px;
-  padding:5px 14px;
+  font-size:calc(12px * var(--modsHangarScale, 1));
+  padding:calc(5px * var(--modsHangarScale, 1)) calc(14px * var(--modsHangarScale, 1));
   background:rgba(60,55,50,.5);
   border:1px solid rgba(255,255,255,.12);
   border-radius:5px 5px 0 0;
@@ -5174,23 +5215,25 @@ button.hangarChipInvItem{
   text-shadow: none;
 }
 .workshopSubTabs--nested{
-  margin-bottom:14px;
-  padding-bottom:10px;
+  margin-bottom:calc(14px * var(--modsHangarScale, 1));
+  padding-bottom:calc(10px * var(--modsHangarScale, 1));
   border-bottom-color:rgba(74,246,38,.18);
 }
 .workshopSubTab--nested{
-  font-size:11px;
-  padding:4px 12px;
+  font-size:calc(11px * var(--modsHangarScale, 1));
+  padding:calc(4px * var(--modsHangarScale, 1)) calc(12px * var(--modsHangarScale, 1));
 }
 
 /* --- Chip upgrade grid --- */
 .chipUpgradeGrid{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(var(--chipLabelCardWidth), 1fr));
-  gap:10px;
-  max-height:400px;
+  gap:calc(10px * var(--modsHangarScale, 1));
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none;
   overflow-y:auto;
-  padding:6px 2px;
+  padding:calc(6px * var(--modsHangarScale, 1)) calc(2px * var(--modsHangarScale, 1));
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
@@ -5199,12 +5242,12 @@ button.hangarChipInvItem{
   flex-direction:column;
   align-items:center;
   justify-content:flex-start;
-  gap:6px;
+  gap:calc(6px * var(--modsHangarScale, 1));
   width:100%;
   height:calc(var(--chipLabelCardHeight, 130px) + 40px);
   min-height:calc(var(--chipLabelCardHeight, 130px) + 40px);
   max-height:calc(var(--chipLabelCardHeight, 130px) + 40px);
-  padding:8px 8px 6px;
+  padding:calc(8px * var(--modsHangarScale, 1)) calc(8px * var(--modsHangarScale, 1)) calc(6px * var(--modsHangarScale, 1));
   border:1px solid rgba(255,255,255,.12);
   border-radius:6px;
   background:rgba(40,36,32,.6);
@@ -5219,8 +5262,8 @@ button.hangarChipInvItem{
   background:rgba(50,46,40,.85);
 }
 .chipUpgradeCard__icon{
-  width:52px;
-  height:48px;
+  width:clamp(40px, calc(52px * var(--modsHangarScale, 1)), 52px);
+  height:clamp(36px, calc(48px * var(--modsHangarScale, 1)), 48px);
 }
 .chipUpgradeCard__name{
   width:100%;
@@ -5360,9 +5403,9 @@ button.hangarChipInvItem{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:8px 0 12px;
+  padding:calc(8px * var(--modsHangarScale, 1)) 0 calc(12px * var(--modsHangarScale, 1));
   border-bottom:1px solid rgba(255,255,255,.1);
-  margin-bottom:12px;
+  margin-bottom:calc(12px * var(--modsHangarScale, 1));
 }
 .techUnlockTitle{
   font-size:15px;
@@ -5375,11 +5418,13 @@ button.hangarChipInvItem{
 }
 .techUnlockGrid{
   display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:16px;
-  max-height:420px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, clamp(220px, calc(300px * var(--modsHangarScale, 1)), 300px)), 1fr));
+  gap:calc(16px * var(--modsHangarScale, 1));
+  flex:1 1 auto;
+  min-height:0;
+  max-height:none;
   overflow-y:auto;
-  padding-right:8px;
+  padding-right:calc(8px * var(--modsHangarScale, 1));
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
 }
@@ -5402,10 +5447,10 @@ button.hangarChipInvItem{
   background:rgba(255,255,255,.04);
   border:1px solid rgba(255,255,255,.08);
   border-radius:8px;
-  padding:10px 12px;
+  padding:calc(10px * var(--modsHangarScale, 1)) calc(12px * var(--modsHangarScale, 1));
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns:repeat(auto-fit, minmax(min(100%, clamp(220px, calc(300px * var(--modsHangarScale, 1)), 300px)), 1fr));
+  gap: calc(12px * var(--modsHangarScale, 1));
 }
 .techUnlockGroup__base{
   grid-column: 1 / -1;
@@ -5420,13 +5465,13 @@ button.hangarChipInvItem{
   background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.08);
   border-radius:6px;
-  padding:16px 18px;
+  padding:calc(16px * var(--modsHangarScale, 1)) calc(18px * var(--modsHangarScale, 1));
   margin-bottom:0;
   transition:border-color .15s;
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 140px;
+  min-height: clamp(120px, calc(140px * var(--modsHangarScale, 1)), 140px);
   justify-content: space-between;
 }
 .techUnlockCard__name{
@@ -6146,7 +6191,9 @@ button.hangarChipInvItem{
 /* ─── Chip Craft Panel (Создание чипов) ─── */
 .chipCraftLayout{
   display:flex;
-  gap:14px;
+  gap:var(--modsHangarGap, 14px);
+  flex-wrap:wrap;
+  align-content:flex-start;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -6154,11 +6201,12 @@ button.hangarChipInvItem{
   flex:1 1 auto;
 }
 .chipCraftLeftCol{
-  flex:0 0 220px;
+  flex:0 1 var(--modsHangarLeftColWidth, 220px);
+  max-width:100%;
   min-height: 0;
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:calc(8px * var(--modsHangarScale, 1));
 }
 .chipCraftInventory{
   flex:1 1 auto;
@@ -6171,9 +6219,9 @@ button.hangarChipInvItem{
   overflow:hidden;
 }
 .chipCraftInvHeader{
-  font-size:12px;
+  font-size:calc(12px * var(--modsHangarScale, 1));
   color:#4af626;
-  padding:6px 10px;
+  padding:calc(6px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1));
   background:rgba(74,246,38,.08);
   border-bottom:1px solid rgba(255,255,255,.08);
   text-transform:uppercase;
@@ -6183,8 +6231,8 @@ button.hangarChipInvItem{
 .chipCraftInvGrid{
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(var(--chipLabelCardWidth), 1fr));
-  gap:10px;
-  padding:8px;
+  gap:calc(10px * var(--modsHangarScale, 1));
+  padding:calc(8px * var(--modsHangarScale, 1));
   flex:1 1 auto;
   min-height: 0;
   overflow-y:auto;
@@ -6204,10 +6252,10 @@ button.hangarChipInvItem{
   flex-direction:column;
   align-items:center;
   justify-content:flex-start;
-  gap:6px;
+  gap:calc(6px * var(--modsHangarScale, 1));
   width:100%;
   min-height:var(--chipLabelCardHeight);
-  padding:8px 8px 6px;
+  padding:calc(8px * var(--modsHangarScale, 1)) calc(8px * var(--modsHangarScale, 1)) calc(6px * var(--modsHangarScale, 1));
   border:1px solid rgba(255,255,255,.1);
   border-radius:5px;
   background:rgba(40,36,32,.5);
@@ -6218,8 +6266,8 @@ button.hangarChipInvItem{
   width:100%;
   max-width:none;
   min-width:0;
-  min-height:150px;
-  padding:26px 10px 8px;
+  min-height:clamp(132px, calc(150px * var(--modsHangarScale, 1)), 150px);
+  padding:calc(26px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1)) calc(8px * var(--modsHangarScale, 1));
 }
 .chipCraftInvItem:hover{
   border-color:rgba(74,246,38,.5);
@@ -6229,8 +6277,8 @@ button.hangarChipInvItem{
   border-style:dashed;
 }
 .chipCraftInvIcon{
-  width:48px;
-  height:44px;
+  width:clamp(40px, calc(48px * var(--modsHangarScale, 1)), 48px);
+  height:clamp(36px, calc(44px * var(--modsHangarScale, 1)), 44px);
 }
 .chipCraftInvLabel{
   width:100%;
@@ -6274,11 +6322,36 @@ button.hangarChipInvItem{
 }
 .chipCraftPreview{
   flex:1;
+  min-width:min(100%, 280px);
   min-height: 0;
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:calc(8px * var(--modsHangarScale, 1));
   overflow:visible;
+}
+
+@media (max-width: 980px){
+  #modsHangarOverlay .chipCraftLayout{
+    flex-direction:column;
+    flex-wrap:nowrap;
+  }
+  #modsHangarOverlay .chipCraftLeftCol,
+  #modsHangarOverlay .chipCraftPreview{
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+  }
+  #modsHangarOverlay .chipCraftAssemblyStage,
+  #modsHangarOverlay .chipCraftReprogramStage{
+    max-width:100%;
+  }
+  #modsHangarOverlay .chipCraftReprogramStage{
+    grid-template-columns:1fr;
+  }
+  #modsHangarOverlay .chipCraftReprogramControls{
+    width:min(100%, 320px);
+    margin:0 auto;
+  }
 }
 .chipCraftPreview--disassemble{
   justify-content:flex-start;
@@ -6292,10 +6365,10 @@ button.hangarChipInvItem{
   align-items:stretch;
   justify-content:flex-start;
   flex-direction:column;
-  gap:10px;
-  min-height:220px;
+  gap:calc(10px * var(--modsHangarScale, 1));
+  min-height:var(--modsHangarDropMinHeight);
   position:relative;
-  padding:18px 16px 10px;
+  padding:calc(18px * var(--modsHangarScale, 1)) calc(16px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1));
   overflow:visible;
 }
 .chipCraftDropZone--disassemble{
@@ -6303,7 +6376,7 @@ button.hangarChipInvItem{
   min-height:0;
   align-items:stretch;
   justify-content:flex-start;
-  padding:18px 16px 16px;
+  padding:calc(18px * var(--modsHangarScale, 1)) calc(16px * var(--modsHangarScale, 1)) calc(16px * var(--modsHangarScale, 1));
 }
 .chipCraftDropZone__body{
   flex:1 1 auto;
@@ -6323,20 +6396,20 @@ button.hangarChipInvItem{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:8px;
+  gap:calc(8px * var(--modsHangarScale, 1));
   opacity:.5;
 }
 .chipCraftPlaceholderSvg{
-  width:100px;
-  height:90px;
+  width:clamp(72px, calc(100px * var(--modsHangarScale, 1)), 100px);
+  height:clamp(64px, calc(90px * var(--modsHangarScale, 1)), 90px);
 }
 .chipCraftPlaceholderText{
-  font-size:11px;
+  font-size:calc(11px * var(--modsHangarScale, 1));
   color:rgba(255,255,255,.3);
   text-align:center;
 }
 .chipCraftPlaceholderText--stage{
-  max-width:260px;
+  max-width:clamp(200px, calc(260px * var(--modsHangarScale, 1)), 260px);
 }
 .chipCraftSlotOverlay{
   position:absolute;
@@ -6350,12 +6423,12 @@ button.hangarChipInvItem{
   z-index:3;
 }
 .chipCraftSlotOverlay__text{
-  font-size:16px;
+  font-size:calc(16px * var(--modsHangarScale, 1));
   color:#fdd835;
   font-weight:800;
   text-shadow:0 0 10px rgba(253,216,53,.18);
   text-align:center;
-  padding:0 20px;
+  padding:0 calc(20px * var(--modsHangarScale, 1));
   line-height:1.45;
 }
 .chipCraftDragGhost{
@@ -6368,7 +6441,7 @@ button.hangarChipInvItem{
 }
 .chipCraftAssemblyStage{
   width:100%;
-  max-width:660px;
+  max-width:min(100%, calc(660px * var(--modsHangarScale, 1)));
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -6376,10 +6449,10 @@ button.hangarChipInvItem{
 }
 .chipCraftReprogramStage{
   width:100%;
-  max-width:720px;
+  max-width:min(100%, calc(720px * var(--modsHangarScale, 1)));
   display:grid;
-  grid-template-columns:var(--chipLabelCardWidth) minmax(180px, 1fr) var(--chipLabelCardWidth);
-  gap:18px;
+  grid-template-columns:var(--chipLabelCardWidth) minmax(clamp(140px, calc(180px * var(--modsHangarScale, 1)), 180px), 1fr) var(--chipLabelCardWidth);
+  gap:calc(18px * var(--modsHangarScale, 1));
   align-items:center;
 }
 .chipCraftReprogramColumn{
@@ -6390,9 +6463,9 @@ button.hangarChipInvItem{
 .chipCraftReprogramControls{
   display:flex;
   flex-direction:column;
-  gap:10px;
-  min-height:132px;
-  padding:14px 16px;
+  gap:calc(10px * var(--modsHangarScale, 1));
+  min-height:clamp(112px, calc(132px * var(--modsHangarScale, 1)), 132px);
+  padding:calc(14px * var(--modsHangarScale, 1)) calc(16px * var(--modsHangarScale, 1));
   border:1px solid rgba(255,255,255,.14);
   border-radius:8px;
   background:linear-gradient(180deg, rgba(52,46,40,.9) 0%, rgba(26,23,20,.96) 100%);

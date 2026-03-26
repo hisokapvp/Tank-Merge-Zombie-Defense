@@ -11066,9 +11066,6 @@ ui.achievementsModal?.addEventListener('click', (e) => {
 ui.achievementPopupClose?.addEventListener('click', () => closeAchievementPopup());
 ui.achievementPopupClaim?.addEventListener('click', () => closeAchievementPopup());
 ui.achievementPopupDismiss?.addEventListener('click', () => closeAchievementPopup());
-ui.achievementPopup?.addEventListener('click', (e) => {
-  if (e.target?.dataset?.achievementPopupClose === 'true') closeAchievementPopup();
-});
 document.getElementById('resetTalentsModalClose')?.addEventListener('click', () => closeResetTalentsModal());
 document.getElementById('resetTalentsModal')?.addEventListener('click', (e) => {
   if (e.target?.dataset?.resetTalentsClose === 'true') closeResetTalentsModal();
@@ -11153,6 +11150,152 @@ window.addEventListener('keydown', function(e) {
   setMenuOpen(true);
 });
 
+const ZOMBIE_DEBUFF_OVERLAY_SIZE_PX = 14;
+const ZOMBIE_DEBUFF_OVERLAY_STEP_PX = 16;
+const ZOMBIE_DEBUFF_OVERLAY_LIMIT = 3;
+const ZOMBIE_DEBUFF_STATUS_PRIORITIES = {
+  stun: 100,
+  slow: 90,
+  mark: 80,
+  acid: 70,
+  convert: 68,
+};
+const zombieDebuffOverlayScratchPriorities = [-1, -1, -1];
+const zombieDebuffOverlayScratchFills = [0, 0, 0];
+
+function getTalentModNumber(mods, key, aliases, fallback){
+  let value = null;
+  if (mods && Number.isFinite(mods[key])) value = Number(mods[key]);
+  if (!Number.isFinite(value) && Array.isArray(aliases)) {
+    for (let i = 0; i < aliases.length; i++) {
+      const aliasKey = aliases[i];
+      if (mods && Number.isFinite(mods[aliasKey])) {
+        value = Number(mods[aliasKey]);
+        break;
+      }
+    }
+  }
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function computeTalentStatusFill(untilMs, durationMs, nowMs){
+  const until = Number.isFinite(untilMs) ? untilMs : 0;
+  const duration = Math.max(0, Number.isFinite(durationMs) ? durationMs : 0);
+  if (until <= 0 || duration <= 0) return 0;
+  const remaining = Math.max(0, until - nowMs);
+  return clamp(1 - (remaining / Math.max(1, duration)), 0, 1);
+}
+
+function resetZombieDebuffOverlayScratch(){
+  for (let i = 0; i < ZOMBIE_DEBUFF_OVERLAY_LIMIT; i++) {
+    zombieDebuffOverlayScratchPriorities[i] = -1;
+    zombieDebuffOverlayScratchFills[i] = 0;
+  }
+}
+
+function pushZombieDebuffOverlayCandidate(count, priority, fill01){
+  const fill = clamp(Number.isFinite(fill01) ? fill01 : 0, 0, 1);
+  if (fill <= 0.0001 || !Number.isFinite(priority)) return count;
+  let insertAt = count;
+  if (insertAt > ZOMBIE_DEBUFF_OVERLAY_LIMIT - 1) insertAt = ZOMBIE_DEBUFF_OVERLAY_LIMIT - 1;
+  while (insertAt > 0 && priority > zombieDebuffOverlayScratchPriorities[insertAt - 1]) {
+    if (insertAt < ZOMBIE_DEBUFF_OVERLAY_LIMIT) {
+      zombieDebuffOverlayScratchPriorities[insertAt] = zombieDebuffOverlayScratchPriorities[insertAt - 1];
+      zombieDebuffOverlayScratchFills[insertAt] = zombieDebuffOverlayScratchFills[insertAt - 1];
+    }
+    insertAt -= 1;
+  }
+  if (insertAt >= ZOMBIE_DEBUFF_OVERLAY_LIMIT) return count;
+  zombieDebuffOverlayScratchPriorities[insertAt] = priority;
+  zombieDebuffOverlayScratchFills[insertAt] = fill;
+  if (count < ZOMBIE_DEBUFF_OVERLAY_LIMIT) count += 1;
+  return count;
+}
+
+function drawScaledDebuffExpiryOverlay(ctx, centerX, centerY, sizePx, fill01){
+  if (!ctx) return;
+  const fill = clamp(Number.isFinite(fill01) ? fill01 : 0, 0, 1);
+  if (fill <= 0.0001) return;
+  const size = Math.max(1, Number.isFinite(sizePx) ? sizePx : ZOMBIE_DEBUFF_OVERLAY_SIZE_PX);
+  const left = centerX - size * 0.5;
+  const top = centerY - size * 0.5;
+  const startAngle = -Math.PI * 0.5;
+  const endAngle = startAngle + Math.PI * 2 * fill;
+  const dotRadius = Math.max(1, (size / ZOMBIE_DEBUFF_OVERLAY_SIZE_PX) * 1.4);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left, top, size, size);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.arc(centerX, centerY, size, startAngle, endAngle, false);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.58)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2, false);
+  ctx.fillStyle = 'rgba(255,255,255,0.78)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffIconScale, debuffIconOpacity){
+  if (!ctx || !talentsApi || !Array.isArray(zombies)) return;
+  if (typeof talentsApi.ensureZombieRt !== 'function' || typeof talentsApi.getMods !== 'function') return;
+  const iconScale = Number.isFinite(debuffIconScale) ? Math.max(0.1, Math.min(3, debuffIconScale)) : 1;
+  if (Math.abs(iconScale - 1) <= 0.001) return;
+  const iconOpacity = clamp(Number.isFinite(debuffIconOpacity) ? debuffIconOpacity : 1, 0, 1);
+  const iconSizePx = ZOMBIE_DEBUFF_OVERLAY_SIZE_PX * iconScale;
+  const iconStepPx = ZOMBIE_DEBUFF_OVERLAY_STEP_PX * iconScale;
+  const mods = talentsApi.getMods();
+  const stunDurationMs = getTalentModNumber(mods, 'stunOnWallHitDurationMs', [], 0);
+  const slowDurationMs = getTalentModNumber(mods, 'ccMicroSlowDurationMs', [], 0);
+  const markDurationMs = getTalentModNumber(mods, 'markDurationMs', [], 0);
+  const acidDurationMs = getTalentModNumber(mods, 'acidDotDurationMs', [], 0);
+  const convertDurationMs = getTalentModNumber(mods, 'convertToDotDurationMs', [], 0);
+  for (let i = 0; i < zombies.length; i++) {
+    const zombie = zombies[i];
+    if (!zombie || zombie.state === 'dying') continue;
+    const zRt = talentsApi.ensureZombieRt(zombie);
+    if (!zRt) continue;
+    resetZombieDebuffOverlayScratch();
+    let count = 0;
+    const stunUntilMs = zRt.cc && Number.isFinite(zRt.cc.stunUntilMs) ? zRt.cc.stunUntilMs : 0;
+    if (nowMs < stunUntilMs) {
+      count = pushZombieDebuffOverlayCandidate(count, ZOMBIE_DEBUFF_STATUS_PRIORITIES.stun, computeTalentStatusFill(stunUntilMs, stunDurationMs, nowMs));
+    }
+    const slowUntilMs = zRt.cc && Number.isFinite(zRt.cc.slowUntilMs) ? zRt.cc.slowUntilMs : 0;
+    if (nowMs < slowUntilMs) {
+      count = pushZombieDebuffOverlayCandidate(count, ZOMBIE_DEBUFF_STATUS_PRIORITIES.slow, computeTalentStatusFill(slowUntilMs, slowDurationMs, nowMs));
+    }
+    const markUntilMs = Number.isFinite(zRt.markUntilMs) ? zRt.markUntilMs : 0;
+    if (nowMs < markUntilMs) {
+      count = pushZombieDebuffOverlayCandidate(count, ZOMBIE_DEBUFF_STATUS_PRIORITIES.mark, computeTalentStatusFill(markUntilMs, markDurationMs, nowMs));
+    }
+    const acidUntilMs = zRt.dots && zRt.dots.acid && Number.isFinite(zRt.dots.acid.untilMs) ? zRt.dots.acid.untilMs : 0;
+    if (nowMs < acidUntilMs) {
+      count = pushZombieDebuffOverlayCandidate(count, ZOMBIE_DEBUFF_STATUS_PRIORITIES.acid, computeTalentStatusFill(acidUntilMs, acidDurationMs, nowMs));
+    }
+    const convertUntilMs = zRt.dots && zRt.dots.converted && Number.isFinite(zRt.dots.converted.untilMs) ? zRt.dots.converted.untilMs : 0;
+    if (nowMs < convertUntilMs) {
+      count = pushZombieDebuffOverlayCandidate(count, ZOMBIE_DEBUFF_STATUS_PRIORITIES.convert, computeTalentStatusFill(convertUntilMs, convertDurationMs, nowMs));
+    }
+    if (!count) continue;
+    const pos = zombiePos(zombie);
+    if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue;
+    if (iconOpacity < 1) {
+      ctx.save();
+      ctx.globalAlpha = iconOpacity;
+    }
+    for (let iconIndex = 0; iconIndex < count; iconIndex++) {
+      const zx = pos.x + (iconIndex - (count - 1) * 0.5) * iconStepPx;
+      const zy = pos.y - 22;
+      drawScaledDebuffExpiryOverlay(ctx, zx, zy, iconSizePx, zombieDebuffOverlayScratchFills[iconIndex]);
+    }
+    if (iconOpacity < 1) ctx.restore();
+  }
+}
+
 
 // ---------- Render ----------
 function draw(){
@@ -11182,9 +11325,10 @@ function draw(){
         if (tank && tank.onTrack) tanksOnTrack.push(tank);
       }
       const _zSprites = ZombieSprites;
+      const statusNowMs = Date.now();
       talentsApi.renderStatusIcons({
         canvasCtx: ctx,
-        timeMs: Date.now(),
+        timeMs: statusNowMs,
         camera: null,
         tanks: tanksOnTrack,
         zombies: state.zombies,
@@ -11196,6 +11340,14 @@ function draw(){
         debuffIconScale: _zSprites ? _zSprites.debuffIconScale : 1,
         debuffIconOpacity: _zSprites ? _zSprites.debuffIconOpacity : 1,
       });
+      drawScaledZombieDebuffOverlays(
+        ctx,
+        talentsApi,
+        state.zombies,
+        statusNowMs,
+        _zSprites ? _zSprites.debuffIconScale : 1,
+        _zSprites ? _zSprites.debuffIconOpacity : 1
+      );
     }
   }
   renderProjectilesAndEffects();

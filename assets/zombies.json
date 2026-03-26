@@ -34,8 +34,8 @@
   },
   "corpseDespawnSec": 1.5,
   "corpseFadeOutSec": 0.8,
-  "debuffIconScale": 0.5,
-  "debuffIconOpacity": 0.5,
+  "debuffIconScale": 0.2,
+  "debuffIconOpacity": 0.8,
   "types": [
     {
       "id": "zombie_lvl1",

@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="style.css?v=20260326-branch1-ui-scale-early-capital" />
+  <link rel="stylesheet" href="style.css?v=20260326-branch2-sc-rename-hangar-scale" />
 </head>
 <body>
   <main class="layout">
@@ -218,7 +218,7 @@
           </div>
         </div>
         <div class="levelModal hidden" id="achievementPopup" aria-hidden="true">
-          <div class="levelModal__backdrop" data-achievement-popup-close="true"></div>
+          <div class="levelModal__backdrop"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementPopupTitle" tabindex="-1">
             <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
             <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">Достижение получено</div>
@@ -272,7 +272,7 @@
                   </button>
                   <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
                     <span class="scRootTile__icon" aria-hidden="true"></span>
-                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации танков и стен</span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации техники и стен</span>
                   </button>
                   <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
                     <span class="scRootTile__icon" aria-hidden="true"></span>
@@ -337,7 +337,7 @@
                 <div class="techUnlockContainer" id="techUnlockContainer"></div>
               </section>
             </div>
-            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">
+            <div class="levelModal__actions modsHangarActions">
               <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
             </div>
           </div>
@@ -347,8 +347,8 @@
           <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="modsTankWallTitle" tabindex="-1">
             <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="Справка">?</button>
             <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации танков и стен</div>
-            <div class="scTabs" role="tablist" aria-label="Модификации танков и стен">
+            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации техники и стен</div>
+            <div class="scTabs" role="tablist" aria-label="Модификации техники и стен">
               <button id="modsTankWallTabGuns" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="modsTankWallPanelGuns" tabindex="0" data-i18n="modsTabGuns">Орудия</button>
               <button id="modsTankWallTabDrones" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelDrones" tabindex="-1" data-i18n="modsTabDrones">Дроны</button>
               <button id="modsTankWallTabWalls" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelWalls" tabindex="-1" data-i18n="modsTabWalls">Стены</button>
@@ -595,7 +595,7 @@
   <script src="src/render/tankHangarAnimation.js"></script>
   <script src="src/render/input.js"></script>
   <script src="src/config/tutorialSteps.js"></script>
-  <script src="src/ui/adService.js?v=20260326-branch1-ui-scale-early-capital"></script>
+  <script src="src/ui/adService.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/ui/continueFlow.js"></script>
   <script src="src/ui/shopUI.js"></script>
   <script src="src/ui/toast.js"></script>
@@ -617,7 +617,7 @@
   <script src="src/experiments/experiments.js"></script>
   <script src="src/perf/mobileMode.js"></script>
   <script src="src/i18n/index.js"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260326-branch1-ui-scale-early-capital"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/i18n/pluralize.js"></script>
   <script src="src/ui/adminFlags.js"></script>
   <script src="src/ui/adminDamagePoints.js"></script>
@@ -629,7 +629,7 @@
   <script src="src/mechanics/hangarChips.js"></script>
   <script src="src/mechanics/chipEffects.js"></script>
   <script src="src/ui/hangarChipsUI.js"></script>
-  <script src="src/ui/modals.js?v=20260326-branch1-ui-scale-early-capital"></script>
+  <script src="src/ui/modals.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/talentOverlayDom.js"></script>
   <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>
@@ -660,6 +660,6 @@
   <script src="src/ui/undergroundHangarUI.js"></script>
   <script src="src/mechanics/corpseDespawn.js"></script>
   <script src="src/ui/supercomputerBuildTankFx.js"></script>
-  <script src="game.js?v=20260326-branch1-ui-scale-early-capital"></script>
+  <script src="game.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
 </body>
 </html>

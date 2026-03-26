@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-26
+- **Документация: shared post-merge update для achievement popup close contract, debuff overlay scale-path, supercomputer root-tile resize refresh, adaptive hangar modal vars и narrow-screen terminal shell (`game.js`, `index.html`, `style.css`, `src/ui/supercomputerMenu.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: achievement popup использует `scModal__close` как визуальный X-contract, но accessibility focus идёт `Claim -> Dismiss -> X`, а обе action-кнопки popup остаются pure-close path без reward-side effects.
+  - Зафиксированы: `debuffIconScale` теперь масштабирует не только status icons, но и белый expiry wedge/dot overlay; канонический read-path по-прежнему идёт из локального `ZombieSprites`, а не через `window.Game.Sprites.ZombieSprites`.
+  - Зафиксированы: `refreshRootTilesLayout()` переиспользует layout tuning и `normalizeRootTilesSize()` на `window.resize`, но только пока supercomputer controller открыт в root-view; root docs переименованы из `tank/wall` в более точный vehicle/wall phrasing.
+  - Зафиксированы: `.hangarChipsModal` держит scale-aware внутренние размеры через `--modsHangar*` vars, а top-right terminal shell документирован с узким header-contract для `<=420px` и mobile width clamp для правой панели.
 - **Документация: shared post-merge update для ui-scale/cache-bust, early_capital achievements и debuff-icon read path (`style.css`, `game.js`, `index.html`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/CHANGELOG.md`.
   - Зафиксированы: shared cache-bust token `20260326-branch1-ui-scale-early-capital` покрывает `style.css`, `src/ui/adService.js`, `src/i18n/fallbackStrings.js`, `src/ui/modals.js` и `game.js`, а `achievementRewards.js` получает тот же token через lazy loader `ACHIEVEMENT_REWARDS_SCRIPT_SRC`.
