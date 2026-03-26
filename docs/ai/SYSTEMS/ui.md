@@ -1,6 +1,6 @@
 ﻿# Система: UI
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-26.
 
 ## Где править
 - Разметка: `index.html`
@@ -81,9 +81,15 @@
 - Confirm dialog `#plConfirmOverlay` использует `#plConfirmYes` с `talentResetCooldownAdBtn` shell: nested `<span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">` держит локализованный текст («Открыть» / «Open»), ad-icon span `talentResetCooldownAdBtn__icon`; `_showConfirm()` целится в nested label, а не в `textContent` кнопки: [index.html](../../../index.html#L250-L253), [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L307-L320), [src/i18n/ru.json](../../../src/i18n/ru.json#L647), [src/i18n/en.json](../../../src/i18n/en.json), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js).
 - Не возвращать storage modal к plain `levelModal__close`: `scModal__close` — это тот же 44×44 close-pattern с крупным крестом, только в green SC-skin; hover/active/focus у него должны совпадать с supercomputer/talent tree close controls: [style.css](../../../style.css#L1340-L1426), [style.css](../../../style.css#L1863-L1957).
 
+## Adaptive UI scale
+- `resizeCanvas()` в `game.js` пишет на `:root` `--ui-scale = max(0.4, min(displayW/1920, displayH/1080))`; CSS читает эту переменную в двух блоках `style.css`: базовый shell-block для modal/storage selectors и extended block для HUD, big menu и вспомогательных panel'ей. Close-кнопки в этот scale-path не входят и обязаны оставаться фиксированными 44×44: [game.js](../../../game.js#L2389-L2395), [style.css](../../../style.css#L7309-L7380).
+
+## Zombie debuff icons
+- Status/debuff icon scale и opacity в draw-path читаются из локального `ZombieSprites` singleton прямо внутри `game.js`, когда вызывается status render. В этом репозитории нельзя маршрутизировать эти значения через `window.Game.Sprites.ZombieSprites`: namespace не populated, и такой read-path тихо свалится в `1`/`1`, игнорируя config из `assets/zombies.json`: [game.js](../../../game.js#L11184-L11197).
+
 ## Cache-bust contract
-- После merged achievements/crate-aid update `index.html` держит новую query-группу `?v=20260323-branch3-achievements-crate-aid`: её одновременно используют `style.css`, `src/ui/adService.js`, `src/i18n/fallbackStrings.js` и `src/ui/modals.js`. Параллельно `src/ui/talentOverlayRenderer.js` остаётся на `?v=20260322-branch1-talents-storage-v2`, а `src/ui/supercomputerMenu.js` и `src/ui/productionLineUI.js` — на `?v=20260322-ui-postmerge`; если менять DOM/CSS/i18n/ad-gate shell для crate/achievement flow, bump-ать нужно именно branch3-группу, не задевая старые post-merge tokens: [index.html](../../../index.html#L10-L10), [index.html](../../../index.html#L593-L626).
-- `src/mechanics/achievementRewards.js` не подключается напрямую из `index.html`: `game.js` lazy-load'ит его через `ACHIEVEMENT_REWARDS_SCRIPT_SRC`, поэтому wiring этой награды живёт в runtime-loader, а не в index-level cache-bust группе: [game.js](../../../game.js#L462-L462), [game.js](../../../game.js#L9271-L9299).
+- После merged `ui-scale + early_capital` update `index.html` держит query-группу `?v=20260326-branch1-ui-scale-early-capital`: её одновременно используют `style.css`, `src/ui/adService.js`, `src/i18n/fallbackStrings.js`, `src/ui/modals.js` и `game.js`. `src/ui/talentOverlayRenderer.js` остаётся на `?v=20260322-branch1-talents-storage-v2`, а `src/ui/supercomputerMenu.js` и `src/ui/productionLineUI.js` — на `?v=20260322-ui-postmerge`; если менять DOM/CSS/i18n/ad-gate shell, achievement popup wiring или scale-sensitive UI shell, bump-ать нужно именно `branch1-ui-scale-early-capital`, не задевая старые post-merge tokens: [index.html](../../../index.html#L10-L10), [index.html](../../../index.html#L598-L663).
+- `src/mechanics/achievementRewards.js` по-прежнему не подключается напрямую из `index.html`: `game.js` собирает `ACHIEVEMENT_REWARDS_SCRIPT_SRC` из `UI_BRANCH1_ASSET_VERSION` и lazy-load'ит reward-module тем же cache-bust token'ом, так что achievement reward wiring живёт в runtime-loader, а не в статическом script-list: [game.js](../../../game.js#L463-L464), [game.js](../../../game.js#L9749-L9758).
 
 ## Military aid / crate modal
 - Fallback DOM `#crateModal` теперь оформлен как модалка `Военная помощь`: shell переиспользует `levelModal`-семейство, title живёт в `#crateTitle`, текст — в `#crateText`, а action-row держит dismiss + claim CTA `#crateGet`. Это canonical HTML shell для crate reward flow: [index.html](../../../index.html#L179-L191).

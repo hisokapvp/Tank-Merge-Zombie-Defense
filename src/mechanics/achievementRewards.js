@@ -174,6 +174,12 @@
     stableIncomeDamage100000:    { type: 'damagePoints',   amount: 100000,  i18nKey: 'achievementRewardStableIncomeDamage100000' },
     stableIncomeDamage500M:      { type: 'damagePoints',   amount: 500000000, i18nKey: 'achievementRewardStableIncomeDamage500M' },
     stableIncomeUpgradePoints10: { type: 'upgradePoints',  amount: 10,      i18nKey: 'achievementRewardStableIncomeUpgradePoints10' },
+    /* early_capital family */
+    earlyCapitalFragments2:        { type: 'fragments',     amount: 2,       i18nKey: 'achievementRewardEarlyCapitalFragments2' },
+    earlyCapitalChips2:            { type: 'randomChips',   amount: 2,       i18nKey: 'achievementRewardEarlyCapitalChips2' },
+    earlyCapitalDamage10000:       { type: 'damagePoints',  amount: 10000,   i18nKey: 'achievementRewardEarlyCapitalDamage10000' },
+    earlyCapitalFragments20:       { type: 'fragments',     amount: 20,      i18nKey: 'achievementRewardEarlyCapitalFragments20' },
+    earlyCapitalUpgrade3Drones5L2: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 5, level: 2 }], i18nKey: 'achievementRewardEarlyCapitalUpgrade3Drones5L2' },
     /* tough_perimeter family */
     toughPerimeterUpgradePoint1: { type: 'upgradePoints',  amount: 1,       i18nKey: 'achievementRewardToughPerimeterUpgradePoint1' },
     /* hangar_master family (composite rewards) */

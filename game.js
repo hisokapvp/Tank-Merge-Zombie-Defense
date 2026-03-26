@@ -460,7 +460,8 @@ const SupercomputerApi = GameApi?.Supercomputer ?? null;
 const DronesApi = GameApi?.Drones ?? null;
 const TankHangarAnimationApi = GameApi?.TankHangarAnimation ?? null;
 const FenceSidesApi = GameApi?.FenceSides ?? null;
-const ACHIEVEMENT_REWARDS_SCRIPT_SRC = 'src/mechanics/achievementRewards.js';
+const UI_BRANCH1_ASSET_VERSION = '20260326-branch1-ui-scale-early-capital';
+const ACHIEVEMENT_REWARDS_SCRIPT_SRC = 'src/mechanics/achievementRewards.js?v=' + UI_BRANCH1_ASSET_VERSION;
 
 function createInitialState(options){
   const opts = options || {};
@@ -2389,7 +2390,7 @@ function resizeCanvas(){
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
   const scale = Math.min(displayW / BASE_CANVAS.w, displayH / BASE_CANVAS.h);
   applyBalScale(scale);
-  const uiScale = Math.max(0.55, Math.min(displayW / 1920, displayH / 1080));
+  const uiScale = Math.max(0.4, Math.min(displayW / 1920, displayH / 1080));
   document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(4));
   initBoard();
 }
@@ -3299,6 +3300,19 @@ function processAchievementProgress(progressType, deltaCount){
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
 }
 
+let lastAchievementCoinsSync = Number.NaN;
+
+function syncCurrentBalanceAchievements(){
+  const currentCoins = clampDevInt(state && state.coins);
+  if (!(AchievementsApi && AchievementsApi.recalculateUnlocks)) {
+    lastAchievementCoinsSync = Number.NaN;
+    return;
+  }
+  if (currentCoins === lastAchievementCoinsSync) return;
+  lastAchievementCoinsSync = currentCoins;
+  recalculateAchievementsAndQueuePopups();
+}
+
 function clampDevInt(value){
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
@@ -3762,6 +3776,10 @@ function debugUnlockAchievementAndClaim(achievementId){
     for (let i = 0; i < needed; i++) {
       completeDefenseOrderAchievementProgress();
     }
+  } else if (progressType === 'currentBalance') {
+    if (state.coins < target) state.coins = target;
+    lastAchievementCoinsSync = Number.NaN;
+    recalculateAchievementsAndQueuePopups();
   } else {
     let current = AchievementsApi && AchievementsApi.getProgressValue
       ? AchievementsApi.getProgressValue(state, progressType)
@@ -5478,6 +5496,7 @@ function restoreFullState(saved){
   ensureMapSeedsState();
   ensureDamageProgressState();
   state.coins = saved.coins != null ? saved.coins : state.coins;
+  lastAchievementCoinsSync = Number.NaN;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
   state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(saved.zombieWaveAtkMult);
@@ -9483,6 +9502,7 @@ function updateUI(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
+  syncCurrentBalanceAchievements();
   ui.coins.textContent = fmt(state.coins);
   ui.zcount.textContent = state.kills;
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
@@ -11161,7 +11181,7 @@ function draw(){
         const tank = state.cells[i] && state.cells[i].tank;
         if (tank && tank.onTrack) tanksOnTrack.push(tank);
       }
-      const _zSprites = window.Game && window.Game.Sprites && window.Game.Sprites.ZombieSprites;
+      const _zSprites = ZombieSprites;
       talentsApi.renderStatusIcons({
         canvasCtx: ctx,
         timeMs: Date.now(),

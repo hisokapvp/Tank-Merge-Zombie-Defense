@@ -312,6 +312,61 @@
       ],
     },
     {
+      id: 'early_capital',
+      definitions: [
+        {
+          id: 'early_capital_1',
+          familyId: 'early_capital',
+          titleKey: 'achievementEarlyCapital1',
+          descKey: 'achievementEarlyCapital1Desc',
+          rewardKey: 'achievementRewardEarlyCapitalFragments2',
+          target: 10000,
+          progressType: 'currentBalance',
+          rewardMode: 'earlyCapitalFragments2',
+        },
+        {
+          id: 'early_capital_2',
+          familyId: 'early_capital',
+          titleKey: 'achievementEarlyCapital2',
+          descKey: 'achievementEarlyCapital2Desc',
+          rewardKey: 'achievementRewardEarlyCapitalChips2',
+          target: 1000000,
+          progressType: 'currentBalance',
+          rewardMode: 'earlyCapitalChips2',
+        },
+        {
+          id: 'early_capital_3',
+          familyId: 'early_capital',
+          titleKey: 'achievementEarlyCapital3',
+          descKey: 'achievementEarlyCapital3Desc',
+          rewardKey: 'achievementRewardEarlyCapitalDamage10000',
+          target: 100000000,
+          progressType: 'currentBalance',
+          rewardMode: 'earlyCapitalDamage10000',
+        },
+        {
+          id: 'early_capital_4',
+          familyId: 'early_capital',
+          titleKey: 'achievementEarlyCapital4',
+          descKey: 'achievementEarlyCapital4Desc',
+          rewardKey: 'achievementRewardEarlyCapitalFragments20',
+          target: 100000000000,
+          progressType: 'currentBalance',
+          rewardMode: 'earlyCapitalFragments20',
+        },
+        {
+          id: 'early_capital_5',
+          familyId: 'early_capital',
+          titleKey: 'achievementEarlyCapital5',
+          descKey: 'achievementEarlyCapital5Desc',
+          rewardKey: 'achievementRewardEarlyCapitalUpgrade3Drones5L2',
+          target: 100000000000000,
+          progressType: 'currentBalance',
+          rewardMode: 'earlyCapitalUpgrade3Drones5L2',
+        },
+      ],
+    },
+    {
       id: 'tough_perimeter',
       definitions: [
         {
@@ -920,6 +975,7 @@
     var stats = state && state.stats && typeof state.stats === 'object' ? state.stats : null;
 
     if (stats) {
+      if (type === 'currentBalance') return normalizeCounter(state && state.coins);
       if (type === 'merges') return normalizeCounter(stats.tanksMergedCount);
       if (type === 'manualFenceRepairs') return normalizeCounter(stats.manualFenceRepairsCount);
       if (type === 'modifierTechUnlocks') return normalizeCounter(stats.modifierTechUnlocksCount);
@@ -934,6 +990,9 @@
     }
 
     if (!ach || typeof ach !== 'object') return 0;
+    if (type === 'currentBalance') {
+      return normalizeCounter(state && state.coins);
+    }
     if (type === 'merges') {
       return normalizeCounter(ach.totalMerges);
     }

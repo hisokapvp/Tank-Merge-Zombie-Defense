@@ -49,7 +49,7 @@
       speedMult: 1.5,
       damageMult: 1.5,
       fenceBreachAwarenessRadiusPx: 100,
-      safeWaves: 3,
+      safeWaves: 1,
       eveningDimAlpha: 0.40,
       eveningTransitionSec: 1,
     },

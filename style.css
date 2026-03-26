@@ -13,6 +13,8 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --ui-scale: 1;
+  --ui-shell-max-width: calc(100vw - clamp(28px, 5vw, 96px));
+  --ui-shell-max-height: calc(100vh - clamp(28px, 5vh, 96px));
   --ui-btn-transition: .15s;
   --ui-btn-press-shift: 1px;
   --audio-slider-track-bg: linear-gradient(90deg, #1e231e, #4af626);
@@ -7307,9 +7309,11 @@ button.hangarChipInvItem{
 /* ── Adaptive UI scaling ──
    --ui-scale is set from resizeCanvas() in game.js.
    Reference: 1920×1080 → scale = 1.0.
-   Floor: 0.55 (set in JS).
+   Floor: 0.40 (set in JS).
+   Shared width/height caps avoid percent-based full-screen stretch.
    Close buttons are NOT scaled to preserve 44×44 hit-area. */
 .levelModal__panel{
+  width: min(calc(440px * var(--ui-scale)), var(--ui-shell-max-width));
   gap: calc(16px * var(--ui-scale));
   border-radius: calc(18px * var(--ui-scale));
 }
@@ -7320,21 +7324,21 @@ button.hangarChipInvItem{
   font-size: calc(14px * var(--ui-scale));
 }
 .crateModal .crateModal__panel{
-  width: min(calc(400px * var(--ui-scale)), 92vw);
+  width: min(calc(400px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .scModal{
-  width: min(96vw, calc(1060px * var(--ui-scale)));
-  max-width: calc(1060px * var(--ui-scale));
-  max-height: min(90vh, calc(920px * var(--ui-scale)));
+  width: min(calc(1060px * var(--ui-scale)), var(--ui-shell-max-width));
+  max-width: min(calc(1060px * var(--ui-scale)), var(--ui-shell-max-width));
+  max-height: min(calc(920px * var(--ui-scale)), var(--ui-shell-max-height));
 }
 .ughPanel{
   padding: calc(22px * var(--ui-scale)) calc(28px * var(--ui-scale)) calc(28px * var(--ui-scale));
-  width: min(96vw, calc(980px * var(--ui-scale)));
+  width: min(calc(980px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .settingsTooltip{
   font-size: calc(13px * var(--ui-scale));
   padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
-  max-width: min(calc(360px * var(--ui-scale)), 88vw);
+  max-width: min(calc(360px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .centerNotification{
   padding: calc(14px * var(--ui-scale)) calc(24px * var(--ui-scale));
@@ -7343,7 +7347,7 @@ button.hangarChipInvItem{
 }
 .plStorage__panel{
   padding: calc(20px * var(--ui-scale)) calc(20px * var(--ui-scale)) calc(18px * var(--ui-scale));
-  width: min(calc(540px * var(--ui-scale)), 92vw);
+  width: min(calc(540px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .lessonProgressPanel{
   width: calc(320px * var(--ui-scale));
@@ -7371,7 +7375,7 @@ button.hangarChipInvItem{
 
 /* Big menu */
 .bigMenuPanel{
-  width: min(calc(560px * var(--ui-scale)), 92vw);
+  width: min(calc(560px * var(--ui-scale)), var(--ui-shell-max-width));
   padding: calc(24px * var(--ui-scale));
   border-radius: calc(22px * var(--ui-scale));
   gap: calc(14px * var(--ui-scale));
@@ -7385,7 +7389,7 @@ button.hangarChipInvItem{
 
 /* Small menu (menuPanel) */
 .menuPanel{
-  width: min(calc(520px * var(--ui-scale)), 86%);
+  width: min(calc(520px * var(--ui-scale)), var(--ui-shell-max-width));
   padding: calc(22px * var(--ui-scale));
   gap: calc(16px * var(--ui-scale));
 }
@@ -7400,7 +7404,7 @@ button.hangarChipInvItem{
 
 /* Merge popup */
 .mergePopupModal__panel{
-  width: min(calc(320px * var(--ui-scale)), 90%);
+  width: min(calc(320px * var(--ui-scale)), var(--ui-shell-max-width));
   padding: calc(52px * var(--ui-scale)) calc(18px * var(--ui-scale)) calc(18px * var(--ui-scale));
   border-radius: calc(18px * var(--ui-scale));
   gap: calc(8px * var(--ui-scale));
@@ -7446,8 +7450,8 @@ button.hangarChipInvItem{
 
 /* Talent overlay / tree */
 #talentOverlay .scModal{
-  width: min(96vw, calc(1060px * var(--ui-scale)));
-  max-width: calc(1060px * var(--ui-scale));
+  width: min(calc(1060px * var(--ui-scale)), var(--ui-shell-max-width));
+  max-width: min(calc(1060px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .talentTreeContainer{
   gap: calc(10px * var(--ui-scale));
@@ -7495,7 +7499,7 @@ button.hangarChipInvItem{
 
 /* Tutorial bubble */
 .gameTutorial__bubble{
-  width: clamp(calc(332px * var(--ui-scale)), 34vw, calc(460px * var(--ui-scale)));
+  width: min(clamp(calc(332px * var(--ui-scale)), calc(34vw * var(--ui-scale)), calc(460px * var(--ui-scale))), var(--ui-shell-max-width));
   padding: calc(56px * var(--ui-scale)) calc(18px * var(--ui-scale)) calc(18px * var(--ui-scale));
   gap: calc(14px * var(--ui-scale));
 }

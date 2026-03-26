@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-26.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -38,9 +38,9 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-25
-- `game.js`: `resizeCanvas()` вычисляет `--ui-scale = max(0.55, min(W/1920, H/1080))` и ставит CSS custom property на `:root`; `draw()` z-order изменён — `drawBoard()` теперь рисуется раньше `drawSupercomputer()` и production line; `claimCrateReward()` сбрасывает `state.nextCrateAt` при claim, а не при spawn.
-- `style.css`: adaptive `--ui-scale` CSS block для 10 modal selectors (`levelModal`, `crateModal`, `scModal`, `ughPanel`, `settingsTooltip`, `centerNotification`, `plStorage`, `lessonProgressPanel`); close-buttons не масштабируются (44×44 hit-area).
+## Фокус документации на 2026-03-26
+- `game.js`: `UI_BRANCH1_ASSET_VERSION = 20260326-branch1-ui-scale-early-capital`; `resizeCanvas()` вычисляет `--ui-scale = max(0.4, min(W/1920, H/1080))` и ставит CSS custom property на `:root`; `syncCurrentBalanceAchievements()` рекалькулирует unlock'и для `currentBalance`/`early_capital` при изменении баланса; `openAchievementPopupEvent()` берёт reward-text через `REWARD_TABLE.i18nKey`; status/debuff render читает `debuffIconScale/debuffIconOpacity` из локального singleton `ZombieSprites`, а не из `window.Game.Sprites.ZombieSprites`.
+- `style.css`: adaptive `--ui-scale` разбит на base + extended blocks и теперь масштабирует не только modal shells, но и HUD/big menu/panels/tooltips; close-buttons по-прежнему не масштабируются, чтобы сохранить 44×44 hit-area.
 - `src/mechanics/undergroundHangar.js`: black 2px `#000` border вокруг rounded-rect clip на cell draw.
 - `src/render/spriteLoaders.js`: `SupercomputerSprites.load()` нормализует `button.offset {x:10, y:0}` fallback.
 - `src/mechanics/crateRuntime.js`: `spawnCrate()` больше не трогает `nextCrateAt`.
@@ -54,7 +54,7 @@
 - `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в рабочий red `one_big_chip` уровня 1 с валидным `chipId`, отсортированным `sourceComboKey` и 3 уникальными base `modIds` (`1..9`).
 - `assets/zombies.json` держит явный числовой `Health` в каждом `types[]`; `ZombieSprites.load()` нормализует `Health/health` в `type.health`, а `makeZombie()` использует это значение раньше формулы из balance.
-- Achievements runtime: 10 семейств и 41 reward mode в единой `REWARD_TABLE` внутри `src/mechanics/achievementRewards.js`; новые семейства: `tough_perimeter` (single-tier, `checkPerfectFenceWave()` с `continue` для invalid сегментов), `hangar_master` (5 tiers, первые 15 ячеек, `displayTarget:15` + `hangarMinLevel`), `defense_order` (5 tiers streak, invalidation при merge через `invalidateDefenseOrderEpisode()`); composite reward type (`items[]`) для hangar_master и defense_order; `i18nKey` для popup; `grant()`/`grantByTable()` dispatch; `grantAchievementUpgradePoints()` и `grantAchievementReward()` синхронизируют `TalentsV2.setFreePoints()` в трёх grant-path'ах; `recordModifierTechUnlock()` всегда `recalculateUnlocks()`; debug panel canonical hooks; restore `_unlockedTechs` из `completedModifierTechs`; `ensureState` мержит inferred techs; `reconcileUnlockedTechsFromData()`; stale-episode fallback; CRT/grain overlay; `stable_income` (5 уровней, `moneyEarned`); `resetGameState` `new_game` очищает `_unlockedTechs`; state shape: `totalDefenseOrderStreak` в achievements, `defenseOrderStreakCount` в stats.
+- Achievements runtime: 12 семейств и 52 reward mappings в единой `REWARD_TABLE` внутри `src/mechanics/achievementRewards.js`; `early_capital` добавляет 5 current-balance tiers (`10K / 1M / 100M / 100B / 100T`) с reward ladder fragments/chips/damage/composite drones+upgradePoints; `stable_income` остаётся lifetime-income ladder, то есть `moneyEarned` и `currentBalance` теперь документированы как разные контракты прогресса.
 - `assets/levelreward.json` — data-driven конфиг наград за повышение уровня суперкомпьютера: gold formula (`tankCost` = `50*2^(L-1)` или `fixed`), per-level overrides, milestone upgrade points и damage points; загружается в `boot()`, передаётся через `LevelRewardConfig` в `progression.js` и `levelFlow.js`; при отсутствии файла fallback полностью backward-compatible.
 - Модалка ускорения технологий использует `_getTechAccelRates()`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; кремниевая пыль встроена в тот же accel-grid и делит общий cap `96%`.
 - `techAccelChip--disabled` и fallback i18n для accel UI синхронизированы между `ru.json`, `en.json`, `fallbackStrings.js`, чтобы summary/limit/dust-строки не расходились до загрузки JSON.

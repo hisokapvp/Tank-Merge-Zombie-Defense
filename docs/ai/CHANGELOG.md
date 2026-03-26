@@ -1,5 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-26
+- **Документация: shared post-merge update для ui-scale/cache-bust, early_capital achievements и debuff-icon read path (`style.css`, `game.js`, `index.html`, `src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: shared cache-bust token `20260326-branch1-ui-scale-early-capital` покрывает `style.css`, `src/ui/adService.js`, `src/i18n/fallbackStrings.js`, `src/ui/modals.js` и `game.js`, а `achievementRewards.js` получает тот же token через lazy loader `ACHIEVEMENT_REWARDS_SCRIPT_SRC`.
+  - Зафиксированы: `resizeCanvas()` теперь документирован с floor `--ui-scale = 0.40`, а adaptive CSS map расширен на base + extended blocks для modal shells, HUD и big menu без масштабирования close-controls.
+  - Зафиксированы: `early_capital` family добавляет 5 achievement tiers по `currentBalance`; canonical sync-path живёт в `syncCurrentBalanceAchievements()`, отдельно от `stable_income` lifetime-income ladder.
+  - Зафиксированы: status/debuff icon scale/opacity в `game.js` читаются из локального `ZombieSprites` singleton напрямую в draw-path; чтение из `window.Game.Sprites.ZombieSprites` в этом репозитории невалидно и silently теряет config.
+
 ## 2026-03-25
 - **Документация: shared post-merge update для --ui-scale adaptive scaling, draw() z-order reorder, crate timer claim flow, underground hangar border, button.offset normalization и storage confirm Yes→Open (`game.js`, `style.css`, `src/mechanics/undergroundHangar.js`, `src/render/spriteLoaders.js`, `src/mechanics/crateRuntime.js`, `index.html`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`, `src/ui/productionLineUI.js`)**
   - Обновлены `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/INDEX.md`, `docs/ai/CHANGELOG.md`.
