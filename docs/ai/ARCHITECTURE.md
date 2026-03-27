@@ -45,4 +45,5 @@
 - В `src/*` использовать IIFE + `'use strict'` + `global.Game.*`
 - Новая логика не должна раздувать `game.js`; монолит сохраняет bootstrap/fallback wiring
 - Горячий путь (`loop` / `draw` / `step*`) — без лишних аллокаций; `draw()` только рисует
+- Master UI scale контракт общий для hybrid seam: `resizeCanvas()` в `game.js` вычисляет `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` синхронизирует DOM shells, HUD, tutorial, canvas previews и Phaser overlay adapters. Close/help controls сохраняют минимум `44×44`, font floor остаётся `12px`, drag threshold остаётся `6px`.
 - JSON-конфиги с runtime-логикой (`assets/supercomputer.json`, `assets/chips.json`, `assets/tanks.json`, `assets/zombies.json`) считаются частью кода и проходят через loader/runtime normalizers

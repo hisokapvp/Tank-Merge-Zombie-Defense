@@ -43,6 +43,12 @@
 - `Game.HudAdapter` — per-element mode (dom/phaser/both), 5 HUD elements: [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js)
 - DOM overlays, Phaser overlay scenes и HUD adapters образуют общий visual contract; layout/modal/HUD правки нельзя описывать как Canvas-only cosmetic patch.
 
+### UI scale seam (hybrid Canvas + Phaser)
+- `resizeCanvas()` в `game.js` вычисляет master `--ui-scale` по формуле `max(0.4, min(displayW / 1920, displayH / 1080))`, пишет token в `:root` и сразу вызывает `syncHybridUiScale()`; это единственный source-of-truth для DOM shells, HUD, tutorial и Phaser overlays: [game.js](../../../game.js#L2374-L2430).
+- `Game.HudAdapter.refreshUiScale()` и `Game.ModalAdapter.refreshUiScale()` не считают scale локально, а читают его через `Game.getUiScale()`/переданный token и проталкивают дальше в HUD elements и modal overlay path: [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L46-L63), [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L251-L284), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L51-L55), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L272-L306).
+- `Game.SceneOverlayManager` хранит `uiScale` per overlay, а scene side применяет scale через `setUiScale()` или event `ui-scale-changed`; scene modules не должны вводить второй независимый scale contract: [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L38-L64), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L107-L140), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L228-L285).
+- UI scale seam обязан сохранять общие TMZD invariants: close/help controls остаются минимум `44×44`, font floor остаётся `12px`, pointer drag threshold — `6px`, а render z-order не меняется от того, что Phaser overlay получил новый scale: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L22-L133), [src/phaser/inputAdapter.js](../../../src/phaser/inputAdapter.js), [game.js](../../../game.js#L11127-L11200).
+
 ### Audio
 - `Game.AudioAdapter` — pool-based Phaser Web Audio bridge: [src/phaser/audioAdapter.js](../../../src/phaser/audioAdapter.js)
 

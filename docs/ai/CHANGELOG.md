@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-27
+- **Документация: shared post-merge update для master UI scale contract в hybrid Canvas + Phaser runtime (`game.js`, `style.css`, `index.html`, `src/ui/tutorialRuntime.js`, `src/ui/undergroundHangarUI.js`, `src/phaser/hudAdapter.js`, `src/phaser/modalAdapter.js`, `src/phaser/sceneOverlayManager.js`)**
+  - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/phaser.md`, `docs/ai/ARCHITECTURE.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `resizeCanvas()` теперь документирован как единственный source-of-truth для `--ui-scale = max(0.4, min(displayW/1920, displayH/1080))`; `readMasterUiScale()` и `syncHybridUiScale()` синхронизируют DOM/CSS с `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`.
+  - Зафиксированы: охват поверхностей включает static DOM shells, dynamic help/confirm/tooltip/notification families, top-right terminal, HUD, tutorial pointer/bubble, underground hangar canvas previews и Phaser overlay/HUD seam.
+  - Зафиксированы: startup path снова вызывает `boot().catch(...)`, поэтому `resizeCanvas()` срабатывает на старте страницы; `index.html` использует split cache-bust `style.css?v=20260327-branch1-master-scale-dom-contract` и `game.js?v=20260327-faildetector-ui-scale-startup`.
+  - Зафиксированы инварианты: close/help controls не меньше `44×44`, глобальный font floor остаётся `12px`, drag threshold остаётся `6px`, а hybrid runtime продолжает делить один scale token между legacy Canvas и Phaser overlays.
 - **Phaser 3 migration: Phase 4 — Parity & Rollout complete**
   - Созданы 4 новых модуля: `parityHarness.js`, `parityGate.js`, `rolloutController.js`, `legacyCleanupManifest.js` в `src/phaser/`.
   - `ParityHarness`: A/B snapshot/comparison engine (6 check categories, history до 50 записей).

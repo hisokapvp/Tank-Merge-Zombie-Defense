@@ -2371,6 +2371,39 @@ function applyBalScale(scale){
   BAL.crateSize = BASE_BAL.crateSize * clamped;
 }
 
+function readMasterUiScale(){
+  const root = document.documentElement;
+  if (!root) return 1;
+  let raw = '';
+  if (root.style && typeof root.style.getPropertyValue === 'function') {
+    raw = root.style.getPropertyValue('--ui-scale') || '';
+  }
+  if ((!raw || !raw.trim()) && typeof window.getComputedStyle === 'function') {
+    const styles = window.getComputedStyle(root);
+    raw = styles ? (styles.getPropertyValue('--ui-scale') || '') : '';
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function syncHybridUiScale(nextScale){
+  const uiScale = Number.isFinite(nextScale) && nextScale > 0 ? nextScale : readMasterUiScale();
+  const gameNs = window.Game || {};
+  if (gameNs.HudAdapter && typeof gameNs.HudAdapter.refreshUiScale === 'function') {
+    gameNs.HudAdapter.refreshUiScale(uiScale);
+  }
+  if (gameNs.ModalAdapter && typeof gameNs.ModalAdapter.refreshUiScale === 'function') {
+    gameNs.ModalAdapter.refreshUiScale(uiScale);
+  }
+  if (gameNs.SceneOverlayManager && typeof gameNs.SceneOverlayManager.refreshUiScale === 'function') {
+    gameNs.SceneOverlayManager.refreshUiScale(uiScale);
+  }
+  return uiScale;
+}
+
+GameApi.getUiScale = readMasterUiScale;
+GameApi.syncHybridUiScale = syncHybridUiScale;
+
 function resizeCanvas(){
   const stage = document.querySelector('.stageCanvas');
   if (!stage) return;
@@ -2390,8 +2423,11 @@ function resizeCanvas(){
   center = { x: viewSize.w / 2, y: viewSize.h / 2 };
   const scale = Math.min(displayW / BASE_CANVAS.w, displayH / BASE_CANVAS.h);
   applyBalScale(scale);
+  // Canonical DOM scale path for modal, HUD and overlay shells.
+  // Reference space is 1920x1080; CSS reads only --ui-scale from here.
   const uiScale = Math.max(0.4, Math.min(displayW / 1920, displayH / 1080));
   document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(4));
+  syncHybridUiScale(uiScale);
   initBoard();
 
   // Phase 2b: notify Phaser of canvas resize so internal resolution stays in sync
@@ -14633,6 +14669,10 @@ initBigMainMenu();
     if (_UH2 && typeof _UH2.ensureStateShape === 'function') _UH2.ensureStateShape(state);
   }
 }
+
+  boot().catch(function (err) {
+    console.error('[boot] startup failed:', err);
+  });
 
 /*
 assets/zombies.json example:

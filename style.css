@@ -15,6 +15,12 @@
   --ui-scale: 1;
   --ui-shell-max-width: calc(100vw - clamp(28px, 5vw, 96px));
   --ui-shell-max-height: calc(100vh - clamp(28px, 5vh, 96px));
+  --uiModalPad: clamp(16px, calc(18px * var(--ui-scale)), 50px);
+  --ui-help-btn-size: clamp(44px, calc(44px * var(--ui-scale)), 52px);
+  --ui-help-btn-offset-top: clamp(10px, calc(18px * var(--ui-scale)), 18px);
+  --ui-help-btn-offset-right: clamp(56px, calc(70px * var(--ui-scale)), 70px);
+  --ui-terminal-width: clamp(280px, calc(380px * var(--ui-scale)), 380px);
+  --ui-terminal-expand-size: clamp(44px, calc(64px * var(--ui-scale)), 64px);
   --ui-btn-transition: .15s;
   --ui-btn-press-shift: 1px;
   --audio-slider-track-bg: linear-gradient(90deg, #1e231e, #4af626);
@@ -36,7 +42,6 @@
   --chipLabelCardHeightPx: 116px;
   --chipLabelCardWidth: clamp(168px, var(--chipLabelCardWidthPx), var(--chipLabelCardWidthPx));
   --chipLabelCardHeight: clamp(108px, var(--chipLabelCardHeightPx), var(--chipLabelCardHeightPx));
-  --uiModalPad: clamp(16px, 4vw, 50px);
 }
 *{box-sizing:border-box}
 body{
@@ -153,21 +158,21 @@ body::after{
 }
 .stageUi{
   position:absolute;
-  top:12px;
+  top:calc(12px * var(--ui-scale));
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:calc(10px * var(--ui-scale));
   z-index:3;
   pointer-events:none;
 }
 .stageUiLeft{
-  left:12px;
+  left:calc(12px * var(--ui-scale));
   align-items:flex-start;
 }
 .stageUiRight{
-  right:16px;
+  right:calc(16px * var(--ui-scale));
   align-items:flex-end;
-  width:min(380px, 36vw);
+  width:min(var(--ui-terminal-width), 36vw);
   padding: 0; 
   box-sizing:border-box;
   transition: width 0.3s ease;
@@ -182,13 +187,13 @@ body::after{
   background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
   border: 2px solid #4af127;
   border-radius: 0px;
-  padding: 34px 20px 40px 20px;
+  padding: clamp(28px, calc(34px * var(--ui-scale)), 34px) clamp(16px, calc(20px * var(--ui-scale)), 20px) clamp(30px, calc(40px * var(--ui-scale)), 40px) clamp(16px, calc(20px * var(--ui-scale)), 20px);
   box-shadow: 
     0 0 20px rgba(0, 0, 0, 0.8),
     inset 0 0 40px rgba(74, 246, 38, 0.05),
     2px 2px 0px #1a1a1a;
   pointer-events: auto;
-  width: min(100%, 380px);
+  width: min(100%, var(--ui-terminal-width));
   max-width: 100%;
   box-sizing: border-box;
   overflow: visible;
@@ -196,9 +201,9 @@ body::after{
 }
 
 .terminal-panel .stageAbilitySlots {
-  margin: 10px 0 15px 0;
+  margin: calc(10px * var(--ui-scale)) 0 calc(15px * var(--ui-scale)) 0;
   justify-content: center;
-  padding: 10px 0;
+  padding: calc(10px * var(--ui-scale)) 0;
   border-top: 1px solid rgba(74, 246, 38, 0.15);
   border-bottom: 1px solid rgba(74, 246, 38, 0.15);
   background: rgba(0, 0, 0, 0.2);
@@ -207,15 +212,15 @@ body::after{
 .terminal-panel::before {
   content: "ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM";
   position: absolute;
-  top: 8px;
-  left: 16px;
-  right: 16px;
+  top: clamp(6px, calc(8px * var(--ui-scale)), 8px);
+  left: clamp(10px, calc(16px * var(--ui-scale)), 16px);
+  right: clamp(10px, calc(16px * var(--ui-scale)), 16px);
   background: transparent;
-  padding: 0 8px;
+  padding: 0 clamp(4px, calc(8px * var(--ui-scale)), 8px);
   color: #4af626;
-  font-size: 10px;
+  font-size: clamp(8px, calc(10px * var(--ui-scale)), 10px);
   font-weight: bold;
-  letter-spacing: 0.7px;
+  letter-spacing: calc(0.7px * var(--ui-scale));
   line-height: 1.1;
   white-space: nowrap;
 }
@@ -235,18 +240,18 @@ body::after{
   position: absolute;
   inset: 0;
   background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
-  background-size: 100% 4px;
+  background-size: 100% calc(4px * var(--ui-scale));
   pointer-events: none;
   z-index: 10;
-  border-radius: 4px;
+  border-radius: calc(4px * var(--ui-scale));
 }
 
 .terminalCollapseBtn {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
-  width: 34px;
-  height: 24px;
+  bottom: clamp(6px, calc(8px * var(--ui-scale)), 8px);
+  left: clamp(6px, calc(8px * var(--ui-scale)), 8px);
+  width: clamp(36px, calc(40px * var(--ui-scale)), 44px);
+  height: clamp(24px, calc(28px * var(--ui-scale)), 28px);
   background: #1a2318;
   border: 1px solid #4af626;
   color: #4af626;
@@ -267,18 +272,18 @@ body::after{
 
 .terminalExpandBtn {
   display: none;
-  width: 64px;
-  height: 64px;
+  width: var(--ui-terminal-expand-size);
+  height: var(--ui-terminal-expand-size);
   background: #0d140b;
   border: 3px solid #4af626;
   border-radius: 0;
-  padding: 6px;
+  padding: clamp(4px, calc(6px * var(--ui-scale)), 6px);
   cursor: pointer;
   pointer-events: auto;
   box-shadow: 0 0 15px rgba(74, 246, 38, 0.2), 3px 3px 0 #000;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: calc(12px * var(--ui-scale));
   transition: transform 0.2s ease;
 }
 .terminalExpandBtn:hover {
@@ -303,10 +308,10 @@ body::after{
 
 .stageUiRight.collapsed .stageAbilitySlots {
   flex-direction: row;
-  margin-top: 5px;
+  margin-top: calc(5px * var(--ui-scale));
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: calc(8px * var(--ui-scale));
 }
 
 .supercomputerHudBtn,
@@ -1657,11 +1662,11 @@ body.scmodal-open{
   outline-offset:2px;
 }
 .supercomputerHudBtn{
-  width:42px !important;
-  min-width:42px !important;
-  height:42px;
+  width:clamp(32px, calc(42px * var(--ui-scale)), 42px) !important;
+  min-width:clamp(32px, calc(42px * var(--ui-scale)), 42px) !important;
+  height:clamp(32px, calc(42px * var(--ui-scale)), 42px);
   padding:0;
-  border-radius:14px;
+  border-radius:calc(14px * var(--ui-scale));
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -1685,7 +1690,7 @@ body.scmodal-open{
     opacity var(--ui-btn-transition) ease;
 }
 .stageUi .supercomputerHudBtn{
-  width:42px;
+  width:clamp(32px, calc(42px * var(--ui-scale)), 42px);
 }
 input, select, textarea, button {
   font-family: 'Courier New', Courier, monospace !important;
@@ -1754,7 +1759,7 @@ input, select, textarea, button {
   transform:scale(0.94);
 }
 .supercomputerHudBtn__icon{
-  font-size:20px;
+  font-size:clamp(16px, calc(20px * var(--ui-scale)), 20px);
   line-height:1;
   pointer-events:none;
   transition:transform .12s ease;
@@ -2061,8 +2066,8 @@ input, select, textarea, button {
   right:10px;
 }
 #talentOverlay .hangarChipsHelpBtn{
-  top:18px;
-  right:70px;
+  top:var(--ui-help-btn-offset-top);
+  right:var(--ui-help-btn-offset-right);
 }
 #talentOverlay .modalClose::before,
 #talentOverlay .modalClose::after,
@@ -3004,12 +3009,13 @@ input, select, textarea, button {
 }
 .stageAbilitySlots{
   justify-content:center;
+  gap:calc(8px * var(--ui-scale));
 }
 .stageAbilitySlots .talentAbilitySlot{
-  width:44px;
-  height:44px;
-  min-width:44px;
-  min-height:44px;
+  width:clamp(32px, calc(44px * var(--ui-scale)), 44px);
+  height:clamp(32px, calc(44px * var(--ui-scale)), 44px);
+  min-width:clamp(32px, calc(44px * var(--ui-scale)), 44px);
+  min-height:clamp(32px, calc(44px * var(--ui-scale)), 44px);
   position:relative;
   overflow:hidden;
   background-size:contain;
@@ -3069,19 +3075,19 @@ input, select, textarea, button {
 .stageAbilitySlots .talentAbilitySlot[data-charge-badge]:not([data-charge-badge=""])::after{
   content:attr(data-charge-badge);
   position:absolute;
-  top:2px;
-  right:2px;
-  min-width:18px;
-  height:18px;
+  top:calc(2px * var(--ui-scale));
+  right:calc(2px * var(--ui-scale));
+  min-width:calc(18px * var(--ui-scale));
+  height:calc(18px * var(--ui-scale));
   border-radius:999px;
-  padding:0 4px;
+  padding:0 calc(4px * var(--ui-scale));
   display:flex;
   align-items:center;
   justify-content:center;
   background:rgba(52,174,27,.9);
   border:1px solid rgba(255,255,255,.18);
   color:rgba(255, 255, 255, 0.98);
-  font-size:16px;
+  font-size:calc(16px * var(--ui-scale));
   line-height:1;
   font-weight:900;
   box-sizing:border-box;
@@ -3739,25 +3745,25 @@ input, select, textarea, button {
 .gameTutorial__close,
 .gameTutorial__disableBtn{
   position:absolute;
-  top:10px;
+  top:calc(10px * var(--ui-scale));
 }
 
 .gameTutorial__close{
-  right:10px;
+  right:calc(10px * var(--ui-scale));
 }
 
 .gameTutorial__disableBtn{
-  right:70px;
-  top:12px;
-  width:40px;
-  min-width:45px;
-  max-width:45px;
-  height:40px;
+  right:calc(70px * var(--ui-scale));
+  top:calc(12px * var(--ui-scale));
+  width:clamp(40px, calc(40px * var(--ui-scale)), 45px);
+  min-width:clamp(40px, calc(45px * var(--ui-scale)), 45px);
+  max-width:clamp(40px, calc(45px * var(--ui-scale)), 45px);
+  height:clamp(40px, calc(40px * var(--ui-scale)), 45px);
   padding:0 !important;
   display:grid;
   place-items:center;
   border-radius:999px !important;
-  font-size:18px !important;
+  font-size:clamp(14px, calc(18px * var(--ui-scale)), 18px) !important;
   line-height:1;
   color:#ffe7e7 !important;
   background:linear-gradient(180deg, rgba(104,18,28,.96) 0%, rgba(58,10,16,.98) 100%) !important;
@@ -3767,8 +3773,8 @@ input, select, textarea, button {
 
 .gameTutorial__message{
   margin:0;
-  padding-top: 10px;
-  font-size:15px;
+  padding-top:calc(10px * var(--ui-scale));
+  font-size:clamp(12px, calc(15px * var(--ui-scale)), 15px);
   line-height:1.35;
   color:#ebffe2;
   text-align:center;
@@ -3781,7 +3787,7 @@ input, select, textarea, button {
   display:flex;
   justify-content:center;
   align-items:center;
-  gap:12px;
+  gap:calc(12px * var(--ui-scale));
   flex-wrap:wrap;
 }
 
@@ -3797,7 +3803,7 @@ input, select, textarea, button {
   box-shadow:2px 2px 0 #000;
 }
 .gameTutorial__continueBtn{
-  min-width:148px;
+  min-width:min(calc(148px * var(--ui-scale)), 100%);
 }
 .gameTutorial__continueBtn:hover:not(:disabled),
 .gameTutorial__skipBtn:hover:not(:disabled),
@@ -3851,12 +3857,12 @@ input, select, textarea, button {
 .gameTutorial__confirmPanel{
   position:relative;
   z-index:1;
-  width:min(420px, calc(100vw - 32px));
-  margin:0 16px;
-  padding:56px 20px 20px;
+  width:min(calc(420px * var(--ui-scale)), var(--ui-shell-max-width));
+  margin:0 calc(16px * var(--ui-scale));
+  padding:calc(56px * var(--ui-scale)) calc(20px * var(--ui-scale)) calc(20px * var(--ui-scale));
   display:flex;
   flex-direction:column;
-  gap:16px;
+  gap:calc(16px * var(--ui-scale));
 }
 
 .gameTutorial__confirmClose{
@@ -3866,7 +3872,7 @@ input, select, textarea, button {
 
 .gameTutorial__confirmText{
   margin:0;
-  font-size:15px;
+  font-size:clamp(12px, calc(15px * var(--ui-scale)), 15px);
   line-height:1.4;
   color:#ebffe2;
   text-align:center;
@@ -3875,12 +3881,12 @@ input, select, textarea, button {
 .gameTutorial__confirmActions{
   display:flex;
   justify-content:center;
-  gap:12px;
+  gap:calc(12px * var(--ui-scale));
   flex-wrap:wrap;
 }
 
 .gameTutorial__confirmBtn{
-  min-width:148px;
+  min-width:min(calc(148px * var(--ui-scale)), 100%);
 }
 
 [data-tutorial-locked="true"]{
@@ -4232,7 +4238,8 @@ button[data-tutorial-locked="true"]::after,
 
 /* --- Modal sizing --- */
 .hangarChipsModal{
-  --modsHangarScale: clamp(0.72, var(--ui-scale), 1);
+  /* Canonical source stays in resizeCanvas() -> --ui-scale. */
+  --modsHangarScale: var(--ui-scale);
   --chipLabelCardWidth: clamp(132px, calc(176px * var(--modsHangarScale)), 176px);
   --chipLabelCardHeight: clamp(104px, calc(116px * var(--modsHangarScale)), 116px);
   --chipNameMaxLines: clamp(44px, calc(60px * var(--modsHangarScale)), 60px);
@@ -4248,16 +4255,17 @@ button[data-tutorial-locked="true"]::after,
 }
 .hangarChipsHelpBtn{
   position:absolute;
-  top:calc(18px * var(--modsHangarScale, 1));
-  right:calc(70px * var(--modsHangarScale, 1));
-  width:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
-  min-width:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
-  height:clamp(30px, calc(34px * var(--modsHangarScale, 1)), 34px);
+  top:var(--ui-help-btn-offset-top);
+  right:var(--ui-help-btn-offset-right);
+  width:var(--ui-help-btn-size);
+  min-width:var(--ui-help-btn-size);
+  height:var(--ui-help-btn-size);
+  min-height:var(--ui-help-btn-size);
   padding:0 !important;
   display:grid;
   place-items:center;
   border-radius:999px !important;
-  font-size:clamp(16px, calc(18px * var(--modsHangarScale, 1)), 18px) !important;
+  font-size:clamp(18px, calc(18px * var(--ui-scale)), 20px) !important;
   line-height:1;
 }
 .hangarChipsHelpBtn:hover:not(:disabled){
@@ -4440,6 +4448,8 @@ body.ugh-open::before{
   position:relative;
   width:min(96vw, 980px);
   max-height:92vh;
+  --ugh-cell-size:clamp(56px, calc(64px * var(--ui-scale)), 64px);
+  --ugh-drone-cell-size:clamp(38px, calc(44px * var(--ui-scale)), 44px);
   overflow-y:auto;
   background:#0d100d;
   border:2px solid #4af626;
@@ -4479,15 +4489,15 @@ body.ugh-open::before{
   justify-content:center;
 }
 .ughGrid--main{
-  grid-template-columns:repeat(4, 64px);
+  grid-template-columns:repeat(4, var(--ugh-cell-size, 64px));
 }
 .ughGrid--underground{
-  grid-template-columns:repeat(4, 64px);
+  grid-template-columns:repeat(4, var(--ugh-cell-size, 64px));
 }
 .ughCell{
   position:relative;
-  width:64px;
-  height:64px;
+  width:var(--ugh-cell-size, 64px);
+  height:var(--ugh-cell-size, 64px);
   border:1.5px solid rgba(255,255,255,.18);
   border-radius:8px;
   background:linear-gradient(180deg, rgba(26,33,32,.92), rgba(14,18,20,.9));
@@ -4684,8 +4694,8 @@ body.ugh-open::before{
 /* --- Drone cells --- */
 .ughDroneCell{
   position:relative;
-  width:44px;
-  height:44px;
+  width:var(--ugh-drone-cell-size, 44px);
+  height:var(--ugh-drone-cell-size, 44px);
   border:1.5px solid rgba(255,255,255,.14);
   border-radius:8px;
   background:linear-gradient(180deg, rgba(24,30,36,.92), rgba(11,15,20,.9));
@@ -4759,24 +4769,28 @@ body.ugh-open::before{
 }
 
 @media (max-width: 720px){
+  .ughPanel{
+    --ugh-cell-size:clamp(48px, calc(56px * var(--ui-scale)), 56px);
+    --ugh-drone-cell-size:clamp(34px, calc(38px * var(--ui-scale)), 38px);
+  }
   .ughMainCluster__row{
     gap:8px;
   }
   .ughGrid--main,
   .ughGrid--underground{
-    grid-template-columns:repeat(4, 56px);
+    grid-template-columns:repeat(4, var(--ugh-cell-size, 56px));
     gap:6px;
   }
   .ughCell{
-    width:56px;
-    height:56px;
+    width:var(--ugh-cell-size, 56px);
+    height:var(--ugh-cell-size, 56px);
   }
   .ughDroneRail{
     gap:6px;
   }
   .ughDroneCell{
-    width:38px;
-    height:38px;
+    width:var(--ugh-drone-cell-size, 38px);
+    height:var(--ugh-drone-cell-size, 38px);
   }
   .ughPanel > .levelModal__title{
     margin:0 38px 22px;
@@ -7593,4 +7607,131 @@ button.hangarChipInvItem{
 .dismantleModal__actions{
   gap: calc(10px * var(--ui-scale));
   margin-top: calc(12px * var(--ui-scale));
+}
+
+.plStorage__confirmActions,
+.modsTankWall__panelActions,
+.modsTankWall__footerActions{
+  display:flex;
+  gap:calc(10px * var(--ui-scale));
+  justify-content:center;
+  margin-top:calc(12px * var(--ui-scale));
+  flex-wrap:wrap;
+}
+
+/* Notification / tooltip / terminal families */
+.achievementToast{
+  top:calc(var(--safe-top) + calc(16px * var(--ui-scale)));
+  min-width:min(calc(420px * var(--ui-scale)), 86vw);
+  padding:calc(10px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  border-radius:calc(14px * var(--ui-scale));
+}
+
+/* Confirm / help families */
+.plStorage__confirmBox{
+  width:min(calc(420px * var(--ui-scale)), var(--ui-shell-max-width));
+  padding:calc(20px * var(--ui-scale)) calc(28px * var(--ui-scale));
+  border-radius:calc(14px * var(--ui-scale));
+}
+.criticalModal{
+  width:min(calc(640px * var(--ui-scale)), var(--ui-shell-max-width));
+  max-height:min(calc(620px * var(--ui-scale)), var(--ui-shell-max-height));
+}
+.criticalModal__log{
+  min-height:calc(220px * var(--ui-scale));
+  max-height:min(calc(420px * var(--ui-scale)), 54vh);
+  padding:calc(12px * var(--ui-scale));
+  border-radius:calc(12px * var(--ui-scale));
+  font-size:calc(12px * var(--ui-scale));
+}
+.criticalModal__actions{
+  gap:calc(10px * var(--ui-scale));
+}
+.criticalModal__actions .btn{
+  min-width:min(calc(220px * var(--ui-scale)), 100%);
+}
+.techModal__dialog{
+  padding:calc(24px * var(--ui-scale)) calc(28px * var(--ui-scale));
+  max-width:min(calc(360px * var(--ui-scale)), var(--ui-shell-max-width));
+  border-radius:calc(10px * var(--ui-scale));
+}
+.techModal__dialog--wide{
+  max-width:min(calc(520px * var(--ui-scale)), var(--ui-shell-max-width));
+}
+.techModal__dialog--craft{
+  max-width:min(calc(480px * var(--ui-scale)), var(--ui-shell-max-width));
+  padding:calc(28px * var(--ui-scale)) calc(28px * var(--ui-scale)) calc(24px * var(--ui-scale));
+}
+.techModal__dialog--help{
+  max-width:min(calc(620px * var(--ui-scale)), var(--ui-shell-max-width));
+  padding:calc(60px * var(--ui-scale)) calc(72px * var(--ui-scale)) calc(28px * var(--ui-scale)) calc(28px * var(--ui-scale));
+}
+.techModal__close{
+  top:calc(14px * var(--ui-scale));
+  right:calc(14px * var(--ui-scale));
+}
+.techModal__title,
+.modalTitle{
+  font-size:calc(16px * var(--ui-scale));
+}
+.techModal__title{
+  margin-bottom:calc(8px * var(--ui-scale));
+}
+.techModal__subtitle{
+  font-size:calc(12px * var(--ui-scale));
+  margin-bottom:calc(8px * var(--ui-scale));
+}
+.techModal__title--help{
+  margin-bottom:calc(6px * var(--ui-scale));
+}
+.techModal__subtitle--help{
+  margin-bottom:calc(14px * var(--ui-scale));
+}
+.techModal__text{
+  font-size:calc(14px * var(--ui-scale));
+  margin-bottom:calc(20px * var(--ui-scale));
+}
+.techModal__text--compact{
+  margin-bottom:calc(16px * var(--ui-scale));
+}
+.techModal__text--help{
+  margin-bottom:calc(22px * var(--ui-scale));
+}
+.techModal__paragraph{
+  margin:0 0 calc(14px * var(--ui-scale));
+}
+.techModal__list{
+  margin:0 0 calc(14px * var(--ui-scale)) calc(18px * var(--ui-scale));
+}
+.techModal__list--help{
+  padding-left:calc(20px * var(--ui-scale));
+}
+.techModal__listItem{
+  margin:0 0 calc(8px * var(--ui-scale));
+}
+.techModal__accordion{
+  gap:calc(12px * var(--ui-scale));
+}
+.techModal__accordionToggle{
+  gap:calc(12px * var(--ui-scale));
+  padding:calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  min-height:var(--ui-help-btn-size);
+}
+.techModal__accordionTitle{
+  font-size:calc(14px * var(--ui-scale));
+}
+.techModal__accordionMarker{
+  min-width:calc(18px * var(--ui-scale));
+  font-size:calc(22px * var(--ui-scale));
+}
+.techModal__accordionPanel{
+  padding:0 calc(14px * var(--ui-scale)) calc(14px * var(--ui-scale));
+}
+
+/* Dynamic modal shells */
+.talentTreeModal{
+  width:min(calc(980px * var(--ui-scale)), var(--ui-shell-max-width));
+}
+.modalBody{
+  gap:calc(16px * var(--ui-scale));
 }

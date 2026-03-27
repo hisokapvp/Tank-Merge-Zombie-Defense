@@ -41,6 +41,28 @@
   /** @type {Object<string, HudElement>} */
   var _elements = {};
   var _initialized = false;
+  var _uiScale = 1;
+
+  function resolveUiScale(nextScale) {
+    if (Number.isFinite(nextScale) && nextScale > 0) return nextScale;
+    var gameApi = global.Game;
+    if (gameApi && typeof gameApi.getUiScale === 'function') {
+      var scale = Number(gameApi.getUiScale());
+      if (Number.isFinite(scale) && scale > 0) return scale;
+    }
+    return 1;
+  }
+
+  function applyUiScaleToElement(el) {
+    if (!el) return;
+    if (typeof el.onUiScale === 'function') {
+      el.onUiScale(_uiScale, el);
+      return;
+    }
+    if (el.phaserObj && typeof el.phaserObj.setUiScale === 'function') {
+      el.phaserObj.setUiScale(_uiScale);
+    }
+  }
 
   /**
    * Initialize the HUD adapter.
@@ -48,6 +70,7 @@
    */
   function init(config) {
     _elements = {};
+    _uiScale = resolveUiScale(config && config.uiScale);
     _initialized = true;
     console.log('[HudAdapter] Initialized');
   }
@@ -70,7 +93,9 @@
       type: options.type || 'text',
       lastText: '',
       lastProgress: 0,
+      onUiScale: typeof options.onUiScale === 'function' ? options.onUiScale : null,
     };
+    applyUiScaleToElement(_elements[id]);
   }
 
   /**
@@ -82,6 +107,7 @@
     var el = _elements[id];
     if (!el) return;
     el.phaserObj = phaserObj || null;
+    applyUiScaleToElement(el);
   }
 
   /**
@@ -187,6 +213,7 @@
         el.phaserObj.setVisible(false);
       }
     }
+    applyUiScaleToElement(el);
   }
 
   /**
@@ -221,9 +248,24 @@
     return _initialized;
   }
 
+  function refreshUiScale(nextScale) {
+    _uiScale = resolveUiScale(nextScale);
+    for (var id in _elements) {
+      if (_elements.hasOwnProperty(id)) {
+        applyUiScaleToElement(_elements[id]);
+      }
+    }
+    return _uiScale;
+  }
+
+  function getUiScale() {
+    return _uiScale;
+  }
+
   function destroy() {
     _elements = {};
     _initialized = false;
+    _uiScale = 1;
   }
 
   global.Game = global.Game || {};
@@ -238,6 +280,8 @@
     getMode: getMode,
     getElements: getElements,
     isInitialized: isInitialized,
+    refreshUiScale: refreshUiScale,
+    getUiScale: getUiScale,
     destroy: destroy,
   };
 }(window));

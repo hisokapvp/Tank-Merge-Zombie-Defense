@@ -238,6 +238,19 @@
     return html;
   }
 
+  function syncCanvasResolution(canvas) {
+    if (!canvas) return { width: 0, height: 0 };
+    const rect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : null;
+    const logicalWidth = rect && rect.width > 0 ? rect.width : (canvas.clientWidth || canvas.width || 0);
+    const logicalHeight = rect && rect.height > 0 ? rect.height : (canvas.clientHeight || canvas.height || 0);
+    const dpr = Math.min(global.devicePixelRatio || 1, 2);
+    const pixelWidth = Math.max(1, Math.round(logicalWidth * dpr));
+    const pixelHeight = Math.max(1, Math.round(logicalHeight * dpr));
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+    return { width: canvas.width, height: canvas.height };
+  }
+
   function drawTankSpriteCanvas(canvas, level) {
     if (!canvas) return;
     const targetCtx = canvas.getContext('2d');
@@ -248,8 +261,9 @@
     const cannon = sprites.pickCannon(level);
     if (!body || !cannon) return;
 
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
+    const canvasMetrics = syncCanvasResolution(canvas);
+    const canvasWidth = canvasMetrics.width;
+    const canvasHeight = canvasMetrics.height;
     const bodyWidth = body.cfg && body.cfg.frame && body.cfg.frame.w ? body.cfg.frame.w : body.img.width;
     const bodyHeight = body.cfg && body.cfg.frame && body.cfg.frame.h ? body.cfg.frame.h : body.img.height;
     const bodyFrameX = body.cfg && body.cfg.frame && Number.isFinite(body.cfg.frame.x) ? body.cfg.frame.x : 0;
@@ -308,14 +322,15 @@
     const frame = frameId ? dronSprites.pickFrame(frameId) : null;
     if (!frame) return;
 
+    const canvasMetrics = syncCanvasResolution(canvas);
     const cfg = dronSprites.config || {};
     const scaleBase = Number.isFinite(cfg.scale) && cfg.scale > 0 ? cfg.scale : 1;
-    const scale = Math.min(canvas.width * 0.62 / frame.w, canvas.height * 0.62 / frame.h) * scaleBase;
+    const scale = Math.min(canvasMetrics.width * 0.62 / frame.w, canvasMetrics.height * 0.62 / frame.h) * scaleBase;
     const anchor = cfg.anchor && typeof cfg.anchor === 'object' ? cfg.anchor : { x: 0.5, y: 0.5 };
-    const centerX = canvas.width * 0.5;
-    const centerY = canvas.height * 0.5;
+    const centerX = canvasMetrics.width * 0.5;
+    const centerY = canvasMetrics.height * 0.5;
 
-    targetCtx.clearRect(0, 0, canvas.width, canvas.height);
+    targetCtx.clearRect(0, 0, canvasMetrics.width, canvasMetrics.height);
     targetCtx.imageSmoothingEnabled = false;
     targetCtx.globalAlpha = 0.96;
     targetCtx.drawImage(

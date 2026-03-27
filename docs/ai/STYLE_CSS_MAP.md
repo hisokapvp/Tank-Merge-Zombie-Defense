@@ -1,6 +1,6 @@
 # style.css — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-26.
+> Агент-ориентировано. Обновлён: 2026-03-27.
 > `style.css` — CSS-монолит проекта (~7.1k строк) и один из главных hotspot-файлов.
 
 ## Что это
@@ -27,7 +27,8 @@
 - `.techModal__btns` находится **вне** `.techModal__footer` в DOM-дереве, поэтому `gap` footer-flex-контейнера на него не действует. Отступ между `techModal__selectionInfo` и кнопками задаётся исключительно `margin-top` на `.techModal__btns`. `techAccelGridWrap` имеет `overflow-x:hidden` — горизонтальный скролл запрещён.
 - `chipCraftBottomBar` (включая `chipCraftDustResource`) рендерится **только** когда `isDustView === true`. В вкладках `Создание чипов` и `Разобрать` этот блок полностью отсутствует. Инвентарная сетка в non-dust видах принудительно ограничена одним столбцом через `.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid { grid-template-columns:1fr }`.
 - `techAccelChip__label`, `chipCraftInvLabel`, `chipCraftSlotCard__name` и `chipCraftResultLabel` должны переносить полные названия только по ` + `; размер карточек задаётся общими vars `--chipLabelCardWidth/Height`; `.chipUpgradeCard__name` ограничивает высоту имени через `max-height: var(--chipNameMaxLines, 60px)`: [style.css](../../style.css#L4104-L4327), [style.css](../../style.css#L4410-L4568), [style.css](../../style.css#L4904-L4915), [style.css](../../style.css#L5190-L5202).
-- `.hangarChipsModal` держит собственный adaptive scale-contract для cell upgrades modal: все внутренние размеры (`--modsHangarScale`, `--modsHangarGap`, `--modsHangarSlotWidth/Height`, `--modsHangarLeftColWidth`, `--modsHangarDropMinHeight`, `--modsHangarSectionPad`) и позиция help-button обязаны вычисляться через vars, а не разъезжаться ad-hoc px-правками по внутренним секциям: [style.css](../../style.css#L4231-L4267).
+- `.hangarChipsModal` больше не держит локальный scale-cap: `--modsHangarScale` теперь напрямую читает master `--ui-scale`, а help-button/section paddings обязаны оставаться var-driven. Не возвращать локальный clamp до `1`, иначе modal-family снова расходится с HUD/tutorial/terminal contract: [style.css](../../style.css#L4242-L4268).
+- Master `--ui-scale` contract начинается в root vars и обязан единообразно питать terminal shell, HUD, tutorial, notification/help/confirm families и dynamic modal shells. Close/help hit-area остаётся не меньше `44×44`, а font floor `12px` и drag threshold `6px` не должны «чиниться» через отдельные CSS scale hacks: [style.css](../../style.css#L15-L22), [style.css](../../style.css#L1664-L1692), [style.css](../../style.css#L3774-L3888), [style.css](../../style.css#L7612-L7726), [src/ui/fontFloor.js](../../src/ui/fontFloor.js#L22-L133).
 - Underground hangar modal держит отдельный visual contract: `.ughPanel > .levelModal__title` центрирует заголовок внутри panel shell, `.ughDroneClusterLabel` скрыт и не должен возвращаться в DOM как видимый заголовок, `.ughCell__emptyMark/.ughDroneCell__emptyMark` выключены без изменения размеров ячеек, `.ughCell__levelBadge/.ughDroneCell__levelBadge` остаются plain text у нижней кромки по центру, а `transferAll` теперь живёт в отдельной центрированной `.ughTransferLane` между верхним и подземным блоками как icon-only CTA `44×44` с зелёной стрелкой `#4af626`: [style.css](../../style.css#L4079-L4183), [style.css](../../style.css#L4321-L4406).
 - `chipCraftSlot` / `chipCraftSlotRow--withResult` обязаны оставлять headroom для внешнего `chipCraftSlotRemove`, чтобы крестик во вкладке `Разобрать` не клиппился и совпадал по позиции с future-preview эталоном: [style.css](../../style.css#L4480-L4652), [style.css](../../style.css#L4887-L4904).
 - Craft slots и future-preview используют квадратный карточный shell `chipCraftSlotCard`, визуально согласованный с inventory-карточками: [style.css](../../style.css#L4520-L4652).
@@ -43,7 +44,7 @@
 | Talent modal / SC modal / tabs / tables / stage abilities | [style.css](../../style.css#L1701-L2665) | Talents, `.scModal__body`, table layout, stage active slots, debug panel start |
 | Unified button behavior / merge popup / lesson progress / hangar core / workshop / tech unlock | [style.css](../../style.css#L2666-L4435) | Shared behavior layer, merge popup, hangar chips base, workshop, nested recycle subtabs, tech unlock |
 | Chip craft / reagent row / recycle single-column layout / production line storage modal | [style.css](../../style.css#L4335-L7090) | Inventory, slots, result preview, dust-only layout, future chip frame, storage header/help/grid/drag preview |
-| Adaptive UI scaling (`--ui-scale`) | [style.css](../../style.css#L7309-L7380) | Base + extended `--ui-scale` blocks: modal/storage shells, tooltips, notifications, lesson panel, HUD и big menu; close-buttons **NOT** scaled — 44×44 hit-area сохраняется |
+| Adaptive UI scaling (`--ui-scale`) | [style.css](../../style.css#L15-L22), [style.css](../../style.css#L1664-L1692), [style.css](../../style.css#L3774-L3888), [style.css](../../style.css#L4242-L4268), [style.css](../../style.css#L7612-L7726) | Root vars + HUD/tutorial/hangar/shared-shell blocks: modal/storage/help/confirm/tooltip/notification/terminal families масштабируются от master token, close-buttons **NOT** scaled — 44×44 hit-area сохраняется |
 
 ## Hotspots
 - [style.css](../../style.css#L54-L68) — CRT/grain overlay: `body.big-menu-open`, `.scmodal-open`, `.tutorial-modal-open`, `.pl-storage-open`, `.crate-open`, `.merge-popup-open`, `.achievements-open`, `.achievement-popup-open`, `.levelmodal-open`, `.critical-open`.
@@ -75,7 +76,7 @@
 - [style.css](../../style.css#L4887-L4915) — future chip frame и result label.
 - [style.css](../../style.css#L7001-L7058) — production line storage cells, level badge и drag preview.
 - [style.css](../../style.css#L7069-L7114) — production line storage header right-actions wrapper, help/close grouping и title padding.
-- [style.css](../../style.css#L7309-L7380) — adaptive UI scaling base + extended blocks (`--ui-scale`): shell selectors, storage panel, lesson progress, tooltips, notifications, HUD и big-menu geometry; JS floor задаётся в `game.js` как `0.40`.
+- [style.css](../../style.css#L15-L22), [style.css](../../style.css#L1664-L1692), [style.css](../../style.css#L3774-L3888), [style.css](../../style.css#L4242-L4268), [style.css](../../style.css#L7612-L7726) — master adaptive UI scaling (`--ui-scale`): root tokens, HUD, tutorial, hangar modal passthrough и shared shell selectors; JS floor задаётся в `game.js` как `0.40`, а cap остаётся `1.0` на 1920×1080 и выше.
 - `.achievementClaimRow` / `.achievementClaimBtn` — gold-themed «Получить награду» кнопка в списке достижений для deferred drone rewards.
 
 ## Зависимости

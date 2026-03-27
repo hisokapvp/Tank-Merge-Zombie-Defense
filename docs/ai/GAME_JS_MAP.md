@@ -61,6 +61,7 @@
 - Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L11127-L11200)
+- Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2374-L2387), [syncHybridUiScale()](../../game.js#L2389-L2403), [resizeCanvas()](../../game.js#L2407-L2437)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
 - Нужен Talents v2 redraw/update orchestration → `updateTalentUIV2()` делегирует orchestration в `src/ui/talentOverlayUi.js`, а `game.js` оставляет bootstrap/fallback helpers для node/edge render.
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
@@ -69,6 +70,7 @@
 ## Инварианты ⚠️
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
 - `draw()` не мутирует gameplay-state; render side-effects выносятся в step/runtime-модули.
+- Master UI scale source-of-truth живёт в `resizeCanvas()`: `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))` пишется в `:root`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` прокидывает scale в `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`; startup `boot().catch(...)` должен вызывать этот path уже при загрузке страницы.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
 - Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
@@ -96,7 +98,9 @@
 | `getDamagePoints()` / `applyCannonUpgrade()` | [game.js](../../game.js#L572-L693) | Damage points и апгрейды |
 | `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
 | `getTankWordKey(count)` | [game.js](../../game.js#L1064-L1082) | Pluralized i18n key для слова «танк»; делегирует в `Game.I18n.pluralize` с inline fallback |
-| `resizeCanvas()` | [game.js](../../game.js#L2373-L2395) | Resize canvas + compute `--ui-scale = max(0.55, min(W/1920, H/1080))` и ставит CSS custom property на `:root` |
+| `readMasterUiScale()` | [game.js](../../game.js#L2374-L2387) | Читает `--ui-scale` из `:root`/computed styles и отдаёт runtime-friendly число |
+| `syncHybridUiScale(nextScale)` | [game.js](../../game.js#L2389-L2403) | Обновляет `HudAdapter`, `ModalAdapter` и `SceneOverlayManager` одним master scale token |
+| `resizeCanvas()` | [game.js](../../game.js#L2407-L2437) | Resize canvas + compute `--ui-scale = max(0.4, min(W/1920, H/1080))`, sync hybrid seam и `initBoard()` |
 
 ### Layout / world init
 | Функция | Строки | Назначение |

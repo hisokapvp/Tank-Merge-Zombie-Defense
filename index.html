@@ -7,7 +7,7 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="style.css?v=20260326-branch2-sc-rename-hangar-scale" />
+  <link rel="stylesheet" href="style.css?v=20260327-branch1-master-scale-dom-contract" />
 </head>
 <body>
   <main class="layout">
@@ -246,7 +246,7 @@
             <div class="plStorage__confirm hidden" id="plConfirmOverlay">
               <div class="plStorage__confirmBox">
                 <div id="plConfirmText" class="levelModal__line">Хотите открыть коробку?</div>
-                <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                <div class="levelModal__actions plStorage__confirmActions">
                   <button id="plConfirmYes" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
                     <span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">Открыть</span>
                     <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
@@ -366,13 +366,13 @@
                   <div class="levelModal__line" id="modsTankWallFenceLevel">Уровень стен: 1</div>
                   <div class="levelModal__line" id="modsTankWallFenceHp">HP сегмента: 0</div>
                   <div class="levelModal__line" id="modsTankWallFenceArmor">Броня: 0</div>
-                  <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                  <div class="levelModal__actions modsTankWall__panelActions">
                     <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">Улучшить</button>
                   </div>
                 </section>
               </div>
             </div>
-            <div class="levelModal__actions" style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+            <div class="levelModal__actions modsTankWall__footerActions">
               <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
             </div>
           </div>
@@ -717,6 +717,6 @@
   <script src="src/phaser/parityGate.js"></script>
   <script src="src/phaser/rolloutController.js"></script>
   <script src="src/phaser/legacyCleanupManifest.js"></script>
-  <script src="game.js?v=20260327-phase4-parity-rollout"></script>
+  <script src="game.js?v=20260327-faildetector-ui-scale-startup"></script>
 </body>
 </html>

@@ -46,6 +46,17 @@
   /** @type {Object<string, ModalEntry>} */
   var _modals = {};
   var _initialized = false;
+  var _uiScale = 1;
+
+  function resolveUiScale(nextScale) {
+    if (Number.isFinite(nextScale) && nextScale > 0) return nextScale;
+    var gameApi = global.Game;
+    if (gameApi && typeof gameApi.getUiScale === 'function') {
+      var scale = Number(gameApi.getUiScale());
+      if (Number.isFinite(scale) && scale > 0) return scale;
+    }
+    return 1;
+  }
 
   /**
    * Initialize the modal adapter.
@@ -53,6 +64,7 @@
    */
   function init(config) {
     _modals = {};
+    _uiScale = resolveUiScale(config && config.uiScale);
     _initialized = true;
     console.log('[ModalAdapter] Initialized');
   }
@@ -224,7 +236,7 @@
     if ((mode === 'phaser' || mode === 'both') && entry.phaserSceneKey) {
       var overlayMgr = global.Game && global.Game.SceneOverlayManager;
       if (overlayMgr && typeof overlayMgr.show === 'function') {
-        overlayMgr.show(entry.phaserSceneKey, data);
+        overlayMgr.show(entry.phaserSceneKey, data, _uiScale);
       }
     }
     // In phaser-only mode, ensure DOM is hidden (caller may have shown it)
@@ -257,9 +269,23 @@
     return _initialized;
   }
 
+  function refreshUiScale(nextScale) {
+    _uiScale = resolveUiScale(nextScale);
+    var overlayMgr = global.Game && global.Game.SceneOverlayManager;
+    if (overlayMgr && typeof overlayMgr.refreshUiScale === 'function') {
+      overlayMgr.refreshUiScale(_uiScale);
+    }
+    return _uiScale;
+  }
+
+  function getUiScale() {
+    return _uiScale;
+  }
+
   function destroy() {
     _modals = {};
     _initialized = false;
+    _uiScale = 1;
   }
 
   global.Game = global.Game || {};
@@ -276,6 +302,8 @@
     getMode: getMode,
     getModals: getModals,
     isInitialized: isInitialized,
+    refreshUiScale: refreshUiScale,
+    getUiScale: getUiScale,
     destroy: destroy,
   };
 }(window));

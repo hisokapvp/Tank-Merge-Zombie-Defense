@@ -1220,6 +1220,15 @@
     return animations[requested] ? requested : 'click';
   }
 
+  function getMasterUiScale() {
+    const gameApi = global.Game;
+    if (gameApi && typeof gameApi.getUiScale === 'function') {
+      const scale = Number(gameApi.getUiScale());
+      if (Number.isFinite(scale) && scale > 0) return scale;
+    }
+    return 1;
+  }
+
   function syncPointerSprite(nowMs) {
     if (!runtime.pointerEl || !runtime.pointerSpriteEl) return;
     ensureCursorConfigLoaded();
@@ -1229,8 +1238,10 @@
     const animation = animations[runtime.pointerAnimationKey] || animations.click;
     if (!animation) return;
 
-    const width = Math.max(1, Math.round(animation.w * animation.scale));
-    const height = Math.max(1, Math.round(animation.h * animation.scale));
+    const spriteScale = animation.scale * getMasterUiScale();
+
+    const width = Math.max(1, Math.round(animation.w * spriteScale));
+    const height = Math.max(1, Math.round(animation.h * spriteScale));
     runtime.pointerEl.style.width = width + 'px';
     runtime.pointerEl.style.height = height + 'px';
 
@@ -1249,8 +1260,8 @@
 
     runtime.pointerEl.classList.add('gameTutorial__pointer--spriteReady');
     runtime.pointerSpriteEl.style.backgroundImage = 'url("' + runtime.cursorAtlasUrl + '")';
-    runtime.pointerSpriteEl.style.backgroundSize = Math.round(runtime.cursorAtlasImage.naturalWidth * animation.scale) + 'px ' + Math.round(runtime.cursorAtlasImage.naturalHeight * animation.scale) + 'px';
-    runtime.pointerSpriteEl.style.backgroundPosition = (-Math.round((animation.x + animation.w * frameIndex) * animation.scale)) + 'px ' + (-Math.round(animation.y * animation.scale)) + 'px';
+    runtime.pointerSpriteEl.style.backgroundSize = Math.round(runtime.cursorAtlasImage.naturalWidth * spriteScale) + 'px ' + Math.round(runtime.cursorAtlasImage.naturalHeight * spriteScale) + 'px';
+    runtime.pointerSpriteEl.style.backgroundPosition = (-Math.round((animation.x + animation.w * frameIndex) * spriteScale)) + 'px ' + (-Math.round(animation.y * spriteScale)) + 'px';
   }
 
   function ensureDom() {
@@ -1597,21 +1608,27 @@
 
     const pointerWidth = runtime.pointerEl.offsetWidth || 32;
     const pointerHeight = runtime.pointerEl.offsetHeight || 32;
+    const uiScale = getMasterUiScale();
+    const pointerGap = 6 * uiScale;
+    const bubbleOffsetX = 28 * uiScale;
+    const bubbleOffsetY = 18 * uiScale;
+    const bubbleFallbackTop = 20 * uiScale;
+    const bubblePadding = 12 * uiScale;
     runtime.pointerEl.style.left = Math.round(centerX - pointerWidth * 0.5) + 'px';
-    runtime.pointerEl.style.top = Math.round(centerY - pointerHeight - 6) + 'px';
+    runtime.pointerEl.style.top = Math.round(centerY - pointerHeight - pointerGap) + 'px';
 
     if (!runtime.bubbleEl || runtime.bubbleEl.classList.contains('gameTutorial__bubble--hidden')) return;
 
     const bubbleWidth = runtime.bubbleEl.offsetWidth || 340;
     const bubbleHeight = runtime.bubbleEl.offsetHeight || 160;
-  let bubbleLeft = pointerLayout.bubbleAnchorX + 28;
-  let bubbleTop = pointerLayout.bubbleAnchorY - bubbleHeight - 18;
+    let bubbleLeft = pointerLayout.bubbleAnchorX + bubbleOffsetX;
+    let bubbleTop = pointerLayout.bubbleAnchorY - bubbleHeight - bubbleOffsetY;
 
-    if (bubbleLeft + bubbleWidth > stageRect.width - 12) bubbleLeft = centerX - bubbleWidth - 28;
-    if (bubbleTop < 12) bubbleTop = centerY + 20;
+    if (bubbleLeft + bubbleWidth > stageRect.width - bubblePadding) bubbleLeft = centerX - bubbleWidth - bubbleOffsetX;
+    if (bubbleTop < bubblePadding) bubbleTop = centerY + bubbleFallbackTop;
 
-    bubbleLeft = clamp(bubbleLeft, 12, Math.max(12, stageRect.width - bubbleWidth - 12));
-    bubbleTop = clamp(bubbleTop, 12, Math.max(12, stageRect.height - bubbleHeight - 12));
+    bubbleLeft = clamp(bubbleLeft, bubblePadding, Math.max(bubblePadding, stageRect.width - bubbleWidth - bubblePadding));
+    bubbleTop = clamp(bubbleTop, bubblePadding, Math.max(bubblePadding, stageRect.height - bubbleHeight - bubblePadding));
 
     runtime.bubbleEl.style.left = Math.round(bubbleLeft) + 'px';
     runtime.bubbleEl.style.top = Math.round(bubbleTop) + 'px';
