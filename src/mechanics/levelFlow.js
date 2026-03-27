@@ -190,6 +190,12 @@
         if (typeof a11yOpen === 'function') a11yOpen(ui.levelModal, { initialFocus: ui.levelAccept, onClose: closeLevelModal });
         updateLevelModal();
       }
+      // Phase 3b: notify ModalAdapter
+      var reward = state && state.ui ? state.ui.levelReward : null;
+      var ma = windowObj.Game && windowObj.Game.ModalAdapter;
+      if (ma && ma.isInitialized && ma.isInitialized()) {
+        ma.notifyOpen('levelUp', reward ? { level: reward.level, points: reward.points, gold: reward.gold, damagePoints: reward.damagePoints || 0 } : null);
+      }
     }
 
     function closeLevelModal() {
@@ -207,6 +213,9 @@
         ui.levelModal.setAttribute('aria-hidden', 'true');
         if (typeof a11yClose === 'function') a11yClose(ui.levelModal);
       }
+      // Phase 3b: notify ModalAdapter
+      var ma2 = windowObj.Game && windowObj.Game.ModalAdapter;
+      if (ma2 && ma2.isInitialized && ma2.isInitialized()) ma2.notifyClose('levelUp');
       if (state.ui.levelRewardTimer) {
         windowObj.clearTimeout(state.ui.levelRewardTimer);
         state.ui.levelRewardTimer = 0;

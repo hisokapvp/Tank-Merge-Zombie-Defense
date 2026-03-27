@@ -2393,6 +2393,15 @@ function resizeCanvas(){
   const uiScale = Math.max(0.4, Math.min(displayW / 1920, displayH / 1080));
   document.documentElement.style.setProperty('--ui-scale', uiScale.toFixed(4));
   initBoard();
+
+  // Phase 2b: notify Phaser of canvas resize so internal resolution stays in sync
+  if (phaserLoopActive) {
+    const _pGame = window.Game && window.Game.PhaserBootstrap
+      && window.Game.PhaserBootstrap.getGame();
+    if (_pGame && _pGame.scale && typeof _pGame.scale.resize === 'function') {
+      _pGame.scale.resize(canvas.width, canvas.height);
+    }
+  }
 }
 
 // ---------- Board ----------
@@ -3670,6 +3679,7 @@ function openAchievementPopupEvent(event){
     initialFocus: ui.achievementPopupClaim || ui.achievementPopupDismiss || ui.achievementPopupClose,
     onClose: closeAchievementPopup,
   });
+  _notifyModal('achievementPopup', true, { name: t(def.titleKey), condition: ui.achievementPopupCondition ? ui.achievementPopupCondition.textContent : '', reward: ui.achievementPopupReward ? ui.achievementPopupReward.textContent : '' });
   return true;
 }
 
@@ -5273,6 +5283,7 @@ function openTalents(options){
   }
   talentCloseRequestHandler = typeof opts.onClose === 'function' ? opts.onClose : closeTalents;
   state.ui.talentsOpen = true;
+  _notifyModal('talents', true);
   ensureTalentUI();
   updateTalentUI();
   const overlay = document.getElementById('talentOverlay');
@@ -5311,6 +5322,7 @@ function openTalents(options){
 
 function closeTalents(){
   state.ui.talentsOpen = false;
+  _notifyModal('talents', false);
   invalidateTalentOverlayLayoutCache();
   const overlay = document.getElementById('talentOverlay');
   if (overlay){
@@ -8543,6 +8555,7 @@ function setMenuOpen(open){
       onClose: () => setMenuOpen(false),
       updateMenuState,
     });
+    _notifyModal('pauseMenu', shouldOpen);
     return;
   }
   state.ui.menuOpen = shouldOpen;
@@ -8553,6 +8566,7 @@ function setMenuOpen(open){
     if (shouldOpen) a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: () => setMenuOpen(false) });
     else a11yClose(ui.menuOverlay);
   }
+  _notifyModal('pauseMenu', shouldOpen);
   updateMenuState();
 }
 
@@ -8602,6 +8616,7 @@ function ensureBigMenuRuntimeController(){
 function setBigMenuOpen(open){
   if (open) stopTrackLoopSfxImmediate();
   ensureBigMenuRuntimeController()?.setBigMenuOpen(open);
+  _notifyModal('bigMenu', !!open);
 }
 
 function isBigMenuOpen(){
@@ -9503,8 +9518,14 @@ function updateUI(){
   const cost = buyTankCost(level);
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   syncCurrentBalanceAchievements();
-  ui.coins.textContent = fmt(state.coins);
-  ui.zcount.textContent = state.kills;
+  const _hud = window.Game && window.Game.HudAdapter;
+  if (_hud && _hud.isInitialized()) {
+    _hud.updateText('coins', fmt(state.coins));
+    _hud.updateText('zcount', String(state.kills));
+  } else {
+    ui.coins.textContent = fmt(state.coins);
+    ui.zcount.textContent = state.kills;
+  }
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) buyLabel.textContent = t('buyTank', {level});
   ui.buyCost.textContent = fmt(cost);
@@ -9911,6 +9932,7 @@ function openAchievementsModal(){
   ui.achievementsModal.setAttribute('aria-hidden', 'false');
   document.body.classList.add('achievements-open');
   a11yOpen(ui.achievementsModal, { initialFocus: ui.achievementsClose, onClose: closeAchievementsModal });
+  _notifyModal('achievements', true);
 }
 
 function closeAchievementsModal(){
@@ -9920,6 +9942,7 @@ function closeAchievementsModal(){
   ui.achievementsModal.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('achievements-open');
   a11yClose(ui.achievementsModal);
+  _notifyModal('achievements', false);
 }
 
 function closeAchievementPopup(){
@@ -9931,6 +9954,7 @@ function closeAchievementPopup(){
   ui.achievementPopup.classList.add('hidden');
   ui.achievementPopup.setAttribute('aria-hidden', 'true');
   a11yClose(ui.achievementPopup);
+  _notifyModal('achievementPopup', false);
 }
 
 function ensureProgressUI(){
@@ -9962,10 +9986,17 @@ function updateProgressUI(){
   const pct = clamp(p.xp / need, 0, 1) * 100;
   const pctRounded = Math.round(pct * 10) / 10;
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
-  lvlText.textContent = `${t('levelLabel')}: ${p.computerLevel}`;
-  xpText.textContent = `${fmt(p.xp)}/${fmt(need)}`;
-  const nextWidth = `${pctRounded}%`;
-  if (xpBar.style.width !== nextWidth) xpBar.style.width = nextWidth;
+  const _hud2 = window.Game && window.Game.HudAdapter;
+  if (_hud2 && _hud2.isInitialized()) {
+    _hud2.updateText('lvlText', `${t('levelLabel')}: ${p.computerLevel}`);
+    _hud2.updateText('xpText', `${fmt(p.xp)}/${fmt(need)}`);
+    _hud2.updateProgress('xpBar', clamp(p.xp / need, 0, 1));
+  } else {
+    lvlText.textContent = `${t('levelLabel')}: ${p.computerLevel}`;
+    xpText.textContent = `${fmt(p.xp)}/${fmt(need)}`;
+    const nextWidth = `${pctRounded}%`;
+    if (xpBar.style.width !== nextWidth) xpBar.style.width = nextWidth;
+  }
 }
 
 function ensureTalentUI(){
@@ -10623,6 +10654,7 @@ function openCrateModal(){
       onClose: closeCrateModal,
       renderCrateIcon,
     });
+    _notifyModal('crateReward', true, { rewardLevel: state.crate ? state.crate.rewardLevel : 1 });
     return;
   }
   if (!state.crate || !ui.crateModal) return;
@@ -10635,17 +10667,20 @@ function openCrateModal(){
   }
   a11yOpen(ui.crateModal, { initialFocus: ui.crateGet, onClose: closeCrateModal });
   renderCrateIcon(state.crate.rewardLevel ?? 1);
+  _notifyModal('crateReward', true, { rewardLevel: state.crate.rewardLevel ?? 1 });
 }
 
 function closeCrateModal(){
   if (UIModals && typeof UIModals.closeCrateModal === 'function') {
     UIModals.closeCrateModal({ ui, a11yClose });
+    _notifyModal('crateReward', false);
     return;
   }
   if (!ui.crateModal) return;
   ui.crateModal.classList.add('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'true');
   a11yClose(ui.crateModal);
+  _notifyModal('crateReward', false);
 }
 
 function grantCrateTank(level, preferredIndex = null){
@@ -10723,6 +10758,10 @@ function getSupercomputerMenuController(){
     onPauseLockChange: function (open) {
       setMenuPauseSource('supercomputer', !!open);
     },
+    onViewChange: function (newView, prevView) {
+      if (newView === 'hangar') _notifyModal('hangarChips', true);
+      if (prevView === 'hangar' && newView !== 'hangar') _notifyModal('hangarChips', false);
+    },
     getDamagePoints: getDamagePoints,
     getAppliedCannonUpgradeLevel: getAppliedCannonUpgradeLevel,
     getCannonUpgradeStepCost: getCannonUpgradeStepCost,
@@ -10757,12 +10796,14 @@ function openSupercomputerMenu(){
     return;
   }
   controller.openRoot();
+  _notifyModal('supercomputerRoot', true);
 }
 
 function closeSupercomputerMenu(){
   const controller = getSupercomputerMenuController();
   if (!controller || typeof controller.closeAll !== 'function') return;
   controller.closeAll();
+  _notifyModal('supercomputerRoot', false);
 }
 
 function supercomputerHitTest(x, y){
@@ -10787,6 +10828,8 @@ function supercomputerHitTest(x, y){
 
 // ---------- Input ----------
 function getPointerPos(evt){
+  const ia = window.Game && window.Game.InputAdapter;
+  if (ia && typeof ia.getPointerPos === 'function') return ia.getPointerPos(evt);
   const r = canvas.getBoundingClientRect();
   const x = (evt.clientX - r.left) * (viewSize.w / r.width);
   const y = (evt.clientY - r.top) * (viewSize.h / r.height);
@@ -10794,6 +10837,8 @@ function getPointerPos(evt){
 }
 
 function cellAt(x,y){
+  const ia = window.Game && window.Game.InputAdapter;
+  if (ia && typeof ia.cellAt === 'function') return ia.cellAt(x, y, state.cells);
   for (const c of state.cells){
     if (x>=c.x && x<=c.x+c.w && y>=c.y && y<=c.y+c.h) return c;
   }
@@ -10873,6 +10918,7 @@ canvas.addEventListener('pointerdown', (e)=>{
           const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
           if (_UGHUI && typeof _UGHUI.open === 'function') {
             _UGHUI.open(state);
+            _notifyModal('undergroundHangar', true);
           }
         });
         return;
@@ -10952,7 +10998,10 @@ canvas.addEventListener('pointermove', (e)=>{
   if (!state.dragging) return;
   const dx = p.x - state.dragging.startX;
   const dy = p.y - state.dragging.startY;
-  if (!state.dragging.moved && Math.hypot(dx, dy) > 6) state.dragging.moved = true;
+  const _ia = window.Game && window.Game.InputAdapter;
+  if (!state.dragging.moved && (_ia && typeof _ia.isDragExceeded === 'function'
+    ? _ia.isDragExceeded(state.dragging.startX, state.dragging.startY, p.x, p.y)
+    : Math.hypot(dx, dy) > 6)) state.dragging.moved = true;
   if (state.dragging.moved) {
     state.dragging.x = p.x;
     state.dragging.y = p.y;
@@ -11138,6 +11187,7 @@ window.addEventListener('keydown', function(e) {
   const _UGHUI = window.Game && window.Game.UndergroundHangarUI;
   if (_UGHUI && typeof _UGHUI.isOpen === 'function' && _UGHUI.isOpen()) {
     if (typeof _UGHUI.close === 'function') _UGHUI.close();
+    _notifyModal('undergroundHangar', false);
     return;
   }
   const higherPriorityLockOpen = hasHigherPriorityEscapeLock();
@@ -11299,24 +11349,48 @@ function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffI
 
 // ---------- Render ----------
 function draw(){
+  const _RR = window.Game && window.Game.RenderRegistry;
+  // Phase 2b: Phaser renderer resets ctx transform to identity after each
+  // frame; restore DPR scaling before legacy draw calls.
+  if (phaserLoopActive) {
+    ctx.setTransform(viewSize.dpr, 0, 0, viewSize.dpr, 0, 0);
+  }
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
-  drawBackground();
-  drawTankTrack();
-  renderFenceBase();
-  drawBoard();
-  drawOrbitingTanks();
-  drawSupercomputer();
+  const _PLM = window.Game && window.Game.PhaserLayerManager;
+  if (_RR && _RR.isPhaser('background') && _PLM) _PLM.drawLayer('background', ctx);
+  if (!_RR || _RR.isLegacy('background')) drawBackground();
+  if (_RR && _RR.isPhaser('tankTrack') && _PLM) _PLM.drawLayer('tankTrack', ctx);
+  if (!_RR || _RR.isLegacy('tankTrack')) drawTankTrack();
+  if (_RR && _RR.isPhaser('fenceBase') && _PLM) _PLM.drawLayer('fenceBase', ctx);
+  if (!_RR || _RR.isLegacy('fenceBase')) renderFenceBase();
+  if (_RR && _RR.isPhaser('board') && _PLM) _PLM.drawLayer('board', ctx);
+  if (!_RR || _RR.isLegacy('board')) drawBoard();
+  if (_RR && _RR.isPhaser('orbitingTanks') && _PLM) _PLM.drawLayer('orbitingTanks', ctx);
+  if (!_RR || _RR.isLegacy('orbitingTanks')) drawOrbitingTanks();
+  if (_RR && _RR.isPhaser('supercomputer') && _PLM) _PLM.drawLayer('supercomputer', ctx);
+  if (!_RR || _RR.isLegacy('supercomputer')) drawSupercomputer();
   // ── Production Line draw ──
-  {
+  if (_RR && _RR.isPhaser('productionLine') && _PLM) _PLM.drawLayer('productionLine', ctx);
+  if (!_RR || _RR.isLegacy('productionLine')) {
     const _PLR = window.Game && window.Game.ProductionLineRender;
     if (_PLR && typeof _PLR.draw === 'function') {
       _PLR.draw(ctx, state);
     }
   }
-  renderZombiesAndCorpses();
-  renderFenceHpBars();
-  if (isTalentsV2Ready()) {
+  if (_RR && _RR.isPhaser('zombiesCorpses') && _PLM) _PLM.drawLayer('zombiesCorpses', ctx);
+  if (!_RR || _RR.isLegacy('zombiesCorpses')) renderZombiesAndCorpses();
+  if (_RR && _RR.isPhaser('fenceHpBars') && _PLM) {
+    const _PL = window.Game && window.Game.PhaserLayers;
+    if (_PL && _PL.FenceHpBars) _PL.FenceHpBars.update({
+      fenceSegments: state.fenceSegments,
+      center: center,
+      hpBarConfig: getFenceHealthBarConfig(),
+    });
+    _PLM.drawLayer('fenceHpBars', ctx);
+  }
+  if (!_RR || _RR.isLegacy('fenceHpBars')) renderFenceHpBars();
+  if ((!_RR || _RR.isLegacy('talentStatusIcons')) && isTalentsV2Ready()) {
     const talentsApi = getTalentsV2Api();
     if (talentsApi && typeof talentsApi.renderStatusIcons === 'function') {
       const tanksOnTrack = [];
@@ -11350,13 +11424,25 @@ function draw(){
       );
     }
   }
-  renderProjectilesAndEffects();
-  drawDrones();
-  drawCrate();
-  drawWeather();
-  drawAttackModeEveningDim();
-  drawLevelUpVfx();
-  drawSupercomputerBoostIcons();
+  if (_RR && _RR.isPhaser('projectilesEffects') && _PLM) _PLM.drawLayer('projectilesEffects', ctx);
+  if (!_RR || _RR.isLegacy('projectilesEffects')) renderProjectilesAndEffects();
+  if (_RR && _RR.isPhaser('drones') && _PLM) _PLM.drawLayer('drones', ctx);
+  if (!_RR || _RR.isLegacy('drones')) drawDrones();
+  if (!_RR || _RR.isLegacy('crate')) drawCrate();
+  if (!_RR || _RR.isLegacy('weather')) drawWeather();
+  if (_RR && _RR.isPhaser('eveningDim') && _PLM) {
+    const _PL = window.Game && window.Game.PhaserLayers;
+    const attackCfg = getWorldEventsAttackCfg();
+    if (_PL && _PL.EveningDim) _PL.EveningDim.update({
+      baseAlpha: attackCfg && Number.isFinite(attackCfg.eveningDimAlpha) ? attackCfg.eveningDimAlpha : 0,
+      blend: Number.isFinite(worldEventsState.eveningDimBlend) ? worldEventsState.eveningDimBlend : 0,
+      viewSize: viewSize,
+    });
+    _PLM.drawLayer('eveningDim', ctx);
+  }
+  if (!_RR || _RR.isLegacy('eveningDim')) drawAttackModeEveningDim();
+  if (!_RR || _RR.isLegacy('levelUpVfx')) drawLevelUpVfx();
+  if (!_RR || _RR.isLegacy('boostIcons')) drawSupercomputerBoostIcons();
   if (DebugPanelEnabled && zombieAttackOverlayEnabled) drawZombieAttackOverlay();
 
   // If sprites failed to load, show a small hint on canvas
@@ -11369,7 +11455,7 @@ function draw(){
     const previewDt = Math.min(0.033, 1/60);
     window.Game.ZombieAnimPreview.renderPreview(ctx, viewSize.w, viewSize.h, previewDt);
   }
-  drawSupercomputerHpBarOverlay();
+  if (!_RR || _RR.isLegacy('hpBarOverlay')) drawSupercomputerHpBarOverlay();
 }
 
 function drawZombieAttackOverlay(){
@@ -13696,9 +13782,10 @@ let lastProgressSave = 0;
 let qualityLow = false;
 let mainLoopRafId = 0;
 let sessionRuntimeStopped = false;
+let phaserLoopActive = false;
 
 function scheduleMainLoop(){
-  if (sessionRuntimeStopped || mainLoopRafId) return;
+  if (phaserLoopActive || sessionRuntimeStopped || mainLoopRafId) return;
   mainLoopRafId = requestAnimationFrame(function (ts) {
     mainLoopRafId = 0;
     loop(ts);
@@ -13969,6 +14056,315 @@ function initDebugPanel(){
   debugLog('warn', 'DebugPanel module unavailable.');
 }
 
+// ---------- Phase 3b: ModalAdapter notification bridge ----------
+function _notifyModal(id, isOpen, data) {
+  const ma = window.Game && window.Game.ModalAdapter;
+  if (!ma || !ma.isInitialized()) return;
+  if (isOpen) ma.notifyOpen(id, data);
+  else ma.notifyClose(id);
+}
+
+// ---------- Engine Adapter Phase 1 ----------
+function initEngineAdapterPhase1() {
+  const adapter = window.Game && window.Game.EngineAdapter;
+  if (!adapter) return;
+
+  // Initialize engine adapter with current legacy context
+  adapter.init({
+    legacyCtx: ctx,
+    canvas: canvas,
+  });
+
+  // Initialize clock adapter for future Phaser integration
+  const clockAdapter = window.Game && window.Game.ClockAdapter;
+  if (clockAdapter && typeof clockAdapter.init === 'function') {
+    clockAdapter.init({
+      nowSec: nowSec,
+      isPaused: function () {
+        const pm = window.Game && window.Game.PauseManager;
+        return pm && typeof pm.isPaused === 'function' ? pm.isPaused() : false;
+      },
+      getTimeScale: function () {
+        return state && Number.isFinite(state.timeScale) ? state.timeScale : 1;
+      },
+    });
+  }
+
+  // Phase 2: Initialize input adapter
+  const inputAdapter = window.Game && window.Game.InputAdapter;
+  if (inputAdapter && typeof inputAdapter.init === 'function') {
+    inputAdapter.init({
+      canvas: canvas,
+      getViewSize: function () { return viewSize; },
+    });
+  }
+
+  // Phase 2: Initialize render registry (all layers start as legacy)
+  const renderReg = window.Game && window.Game.RenderRegistry;
+  if (renderReg && typeof renderReg.init === 'function') {
+    renderReg.init();
+  }
+
+  // Phase 2c: Initialize Phaser layer manager and register layer modules
+  const _PLM = window.Game && window.Game.PhaserLayerManager;
+  const _PL = window.Game && window.Game.PhaserLayers;
+  if (_PLM && typeof _PLM.init === 'function') {
+    _PLM.init({
+      viewSize: viewSize,
+      center: center,
+      nowSec: nowSec,
+      balScale: balScale,
+    });
+    if (_PL) {
+      if (_PL.Background) _PLM.registerLayer('background', _PL.Background);
+      if (_PL.TankTrack) _PLM.registerLayer('tankTrack', _PL.TankTrack);
+      if (_PL.FenceHpBars) _PLM.registerLayer('fenceHpBars', _PL.FenceHpBars);
+      if (_PL.EveningDim) _PLM.registerLayer('eveningDim', _PL.EveningDim);
+      if (_PL.FenceBase) _PLM.registerLayer('fenceBase', _PL.FenceBase);
+      if (_PL.Board) _PLM.registerLayer('board', _PL.Board);
+      if (_PL.OrbitingTanks) _PLM.registerLayer('orbitingTanks', _PL.OrbitingTanks);
+      if (_PL.Supercomputer) _PLM.registerLayer('supercomputer', _PL.Supercomputer);
+      if (_PL.ProductionLine) _PLM.registerLayer('productionLine', _PL.ProductionLine);
+      if (_PL.ZombiesCorpses) _PLM.registerLayer('zombiesCorpses', _PL.ZombiesCorpses);
+      if (_PL.ProjectilesEffects) _PLM.registerLayer('projectilesEffects', _PL.ProjectilesEffects);
+      if (_PL.Drones) _PLM.registerLayer('drones', _PL.Drones);
+    }
+    // Init individual layers with specific config
+    if (_PL && _PL.Background) _PL.Background.init({
+      viewSize: viewSize,
+      groundLayer: groundLayer,
+      backgroundLayer: backgroundLayer,
+      groundSprites: GroundSprites,
+    });
+    if (_PL && _PL.TankTrack) _PL.TankTrack.init({
+      viewSize: viewSize,
+      center: center,
+      orbitRadius: BAL.tankOrbitRadius,
+      trackWidth: BAL.tankTrackWidth,
+    });
+    if (_PL && _PL.FenceHpBars) _PL.FenceHpBars.init({
+      center: center,
+      hpBarConfig: getFenceHealthBarConfig(),
+    });
+    if (_PL && _PL.EveningDim) _PL.EveningDim.init({
+      viewSize: viewSize,
+    });
+    // Phase 2c: delegation layers — wire legacy draw functions
+    if (_PL && _PL.FenceBase) _PL.FenceBase.setDrawFn(renderFenceBase);
+    if (_PL && _PL.Board) _PL.Board.setDrawFn(drawBoard);
+    if (_PL && _PL.OrbitingTanks) _PL.OrbitingTanks.setDrawFn(drawOrbitingTanks);
+    if (_PL && _PL.Supercomputer) _PL.Supercomputer.setDrawFn(drawSupercomputer);
+    if (_PL && _PL.ProductionLine) _PL.ProductionLine.setDrawFn(function () {
+      const _PLR = window.Game && window.Game.ProductionLineRender;
+      if (_PLR && typeof _PLR.draw === 'function') _PLR.draw(ctx, state);
+    });
+    if (_PL && _PL.ZombiesCorpses) _PL.ZombiesCorpses.setDrawFn(renderZombiesAndCorpses);
+    if (_PL && _PL.ProjectilesEffects) _PL.ProjectilesEffects.setDrawFn(renderProjectilesAndEffects);
+    if (_PL && _PL.Drones) _PL.Drones.setDrawFn(drawDrones);
+  }
+
+  // Phase 2d: Initialize input comparison harness
+  const inputHarness = window.Game && window.Game.InputComparisonHarness;
+  if (inputHarness && typeof inputHarness.init === 'function') {
+    inputHarness.init({ enabled: adapter.isPhaser() });
+  }
+
+  // Phase 2d: Initialize Phaser audio adapter (lazy — activated after Phaser scene ready)
+  const audioAdapter = window.Game && window.Game.PhaserAudioAdapter;
+  if (audioAdapter && typeof audioAdapter.init === 'function' && adapter.isPhaser()) {
+    // Deferred: init after Phaser game is created (sound manager needs running game)
+    const pBridge = window.Game && window.Game.PhaserBridge;
+    if (pBridge && typeof pBridge.whenSceneReady === 'function') {
+      pBridge.whenSceneReady(function () {
+        const pGame = window.Game.PhaserBootstrap && window.Game.PhaserBootstrap.getGame();
+        if (pGame) {
+          audioAdapter.init({ phaserGame: pGame, poolSize: 6 });
+        }
+      });
+    }
+  }
+
+  // Phase 3: Initialize HUD adapter and register core HUD elements
+  const hudAdapter = window.Game && window.Game.HudAdapter;
+  if (hudAdapter && typeof hudAdapter.init === 'function') {
+    hudAdapter.init();
+    // Register core HUD DOM elements for managed updates
+    var coinsEl = document.getElementById('coins');
+    var zcountEl = document.getElementById('zcount');
+    var xpBarEl = document.getElementById('xpBar');
+    var lvlTextEl = document.getElementById('lvlText');
+    var xpTextEl = document.getElementById('xpText');
+    if (coinsEl) hudAdapter.registerElement('coins', coinsEl, { type: 'text' });
+    if (zcountEl) hudAdapter.registerElement('zcount', zcountEl, { type: 'text' });
+    if (xpBarEl) hudAdapter.registerElement('xpBar', xpBarEl, { type: 'progress' });
+    if (lvlTextEl) hudAdapter.registerElement('lvlText', lvlTextEl, { type: 'text' });
+    if (xpTextEl) hudAdapter.registerElement('xpText', xpTextEl, { type: 'text' });
+  }
+
+  // Phase 3: Initialize modal adapter and register core modals
+  const modalAdapter = window.Game && window.Game.ModalAdapter;
+  if (modalAdapter && typeof modalAdapter.init === 'function') {
+    modalAdapter.init();
+    if (ui.menuOverlay) modalAdapter.registerModal('pauseMenu', ui.menuOverlay, { hiddenClass: 'hidden' });
+    if (ui.bigMenuOverlay) modalAdapter.registerModal('bigMenu', ui.bigMenuOverlay, { hiddenClass: 'bigMenuOverlayHidden' });
+    if (ui.crateModal) modalAdapter.registerModal('crateReward', ui.crateModal, { hiddenClass: 'hidden' });
+    if (ui.levelModal) modalAdapter.registerModal('levelUp', ui.levelModal, { hiddenClass: 'hidden' });
+    if (ui.achievementsModal) modalAdapter.registerModal('achievements', ui.achievementsModal, { hiddenClass: 'hidden' });
+    // Phase 3c: Register achievement popup modal
+    var achPopupEl = document.getElementById('achievementPopup');
+    if (achPopupEl) modalAdapter.registerModal('achievementPopup', achPopupEl, { hiddenClass: 'hidden' });
+    // Phase 3d: Register talents, supercomputer root, and help modals
+    var talentOverlayEl = document.getElementById('talentOverlay');
+    if (talentOverlayEl) modalAdapter.registerModal('talents', talentOverlayEl, { hiddenClass: 'hidden' });
+    var scRootOverlayEl = document.getElementById('supercomputerMenuOverlay');
+    if (scRootOverlayEl) modalAdapter.registerModal('supercomputerRoot', scRootOverlayEl, { hiddenClass: 'hidden' });
+    // Help uses no DOM element (standalone Phaser scene)
+    modalAdapter.registerModal('help', null, { hiddenClass: 'hidden' });
+    // Tutorial overlay uses no DOM modal element (standalone Phaser scene)
+    modalAdapter.registerModal('tutorialOverlay', null, { hiddenClass: 'hidden' });
+    // Phase 3e: Register hangar, workshop, underground hangar modals
+    var hangarChipsEl = document.getElementById('modsHangarOverlay');
+    modalAdapter.registerModal('hangarChips', hangarChipsEl || null, { hiddenClass: 'hidden' });
+    modalAdapter.registerModal('workshop', null, { hiddenClass: 'hidden' });
+    var undergroundEl = document.getElementById('undergroundHangarOverlay');
+    modalAdapter.registerModal('undergroundHangar', undergroundEl || null, { hiddenClass: 'hidden' });
+  }
+
+  // Phase 4: Initialize parity harness (A/B comparison)
+  const parityHarness = window.Game && window.Game.ParityHarness;
+  if (parityHarness && typeof parityHarness.init === 'function') {
+    parityHarness.init({ enabled: adapter.isPhaser() });
+  }
+
+  // Phase 4: Initialize parity gate (automated verification)
+  const parityGate = window.Game && window.Game.ParityGate;
+  if (parityGate && typeof parityGate.init === 'function') {
+    parityGate.init();
+  }
+
+  // Phase 4: Initialize rollout controller
+  const rolloutCtrl = window.Game && window.Game.RolloutController;
+  if (rolloutCtrl && typeof rolloutCtrl.init === 'function') {
+    rolloutCtrl.init();
+  }
+
+  // Register PhaserBridge delegates
+  const bridge = window.Game && window.Game.PhaserBridge;
+  if (bridge && typeof bridge.register === 'function') {
+    bridge.register({
+      step: function (_dt, time) {
+        if (phaserLoopActive) {
+          // Phase 2b: Phaser scene drives the full game loop
+          // time is performance.now()-based ms — same format loop() expects
+          loop(time);
+        }
+      },
+      draw: function () {
+        // draw() is called by loop() internally.
+        // No explicit draw here to prevent double-rendering
+        // in both Phase 1 (legacy drives) and Phase 2b (Phaser drives).
+      },
+    });
+  }
+
+  // If Phaser engine selected, start Phaser
+  if (adapter.isPhaser()) {
+    const bootstrap = window.Game && window.Game.PhaserBootstrap;
+    if (bootstrap && typeof bootstrap.start === 'function') {
+      // Phase 2b: Phaser takes over the main canvas and game loop.
+      // Stop the legacy RAF loop — Phaser drives from now on.
+      phaserLoopActive = true;
+      if (mainLoopRafId) {
+        cancelAnimationFrame(mainLoopRafId);
+        mainLoopRafId = 0;
+      }
+
+      bootstrap.start({
+        canvas: canvas,
+        width: canvas.width,
+        height: canvas.height,
+        transparent: true,
+        clearBeforeRender: false,
+      });
+
+      // Phase 2d: Wire input comparison and A/B mode after scene is ready
+      const pBridge2 = window.Game && window.Game.PhaserBridge;
+      if (pBridge2 && typeof pBridge2.whenSceneReady === 'function') {
+        pBridge2.whenSceneReady(function (scene) {
+          // Enable InputAdapter A/B comparison
+          const ia = window.Game && window.Game.InputAdapter;
+          if (ia && typeof ia.enablePhaserInput === 'function') {
+            ia.enablePhaserInput(scene);
+          }
+          // Wire InputComparisonHarness to Phaser pointer events
+          const ich = window.Game && window.Game.InputComparisonHarness;
+          if (ich && ich.isActive && ich.isActive()) {
+            scene.input.on('pointerdown', function (ptr) { ich.onPhaserPointer('pointerdown', ptr); });
+            scene.input.on('pointermove', function (ptr) { ich.onPhaserPointer('pointermove', ptr); });
+            scene.input.on('pointerup', function (ptr) { ich.onPhaserPointer('pointerup', ptr); });
+          }
+
+          // Phase 3: Initialize SceneOverlayManager and register HudScene
+          const overlayMgr = window.Game && window.Game.SceneOverlayManager;
+          if (overlayMgr && typeof overlayMgr.init === 'function') {
+            const pGame = window.Game.PhaserBootstrap && window.Game.PhaserBootstrap.getGame();
+            if (pGame) {
+              overlayMgr.init({ phaserGame: pGame });
+              overlayMgr.register('HudScene', { autoLaunch: false });
+              // Phase 3b: Register modal overlay scenes
+              overlayMgr.register('PauseMenuScene', { autoLaunch: false });
+              overlayMgr.register('LevelUpScene', { autoLaunch: false });
+              overlayMgr.register('CrateRewardScene', { autoLaunch: false });
+              // Phase 3c: Register progression & achievement overlay scenes
+              overlayMgr.register('BigMenuScene', { autoLaunch: false });
+              overlayMgr.register('AchievementsScene', { autoLaunch: false });
+              overlayMgr.register('AchievementPopupScene', { autoLaunch: false });
+              // Phase 3d: Register talents, supercomputer root, help, tutorial overlay scenes
+              overlayMgr.register('TalentsScene', { autoLaunch: false });
+              overlayMgr.register('SupercomputerRootScene', { autoLaunch: false });
+              overlayMgr.register('HelpScene', { autoLaunch: false });
+              overlayMgr.register('TutorialOverlayScene', { autoLaunch: false });
+              // Phase 3e: Register hangar, workshop, underground hangar overlay scenes
+              overlayMgr.register('HangarChipsScene', { autoLaunch: false });
+              overlayMgr.register('WorkshopScene', { autoLaunch: false });
+              overlayMgr.register('UndergroundHangarScene', { autoLaunch: false });
+            }
+          }
+
+          // Phase 3b: Wire ModalAdapter scene keys
+          const maReady = window.Game && window.Game.ModalAdapter;
+          if (maReady && maReady.isInitialized()) {
+            maReady.setPhaserSceneKey('pauseMenu', 'PauseMenuScene');
+            maReady.setPhaserSceneKey('crateReward', 'CrateRewardScene');
+            maReady.setPhaserSceneKey('levelUp', 'LevelUpScene');
+            // Phase 3c: Wire progression & achievement scene keys
+            maReady.setPhaserSceneKey('bigMenu', 'BigMenuScene');
+            maReady.setPhaserSceneKey('achievements', 'AchievementsScene');
+            maReady.setPhaserSceneKey('achievementPopup', 'AchievementPopupScene');
+            // Phase 3d: Wire talents, supercomputer root, help, tutorial scene keys
+            maReady.setPhaserSceneKey('talents', 'TalentsScene');
+            maReady.setPhaserSceneKey('supercomputerRoot', 'SupercomputerRootScene');
+            maReady.setPhaserSceneKey('help', 'HelpScene');
+            maReady.setPhaserSceneKey('tutorialOverlay', 'TutorialOverlayScene');
+            // Phase 3e: Wire hangar, workshop, underground hangar scene keys
+            maReady.setPhaserSceneKey('hangarChips', 'HangarChipsScene');
+            maReady.setPhaserSceneKey('workshop', 'WorkshopScene');
+            maReady.setPhaserSceneKey('undergroundHangar', 'UndergroundHangarScene');
+          }
+
+          // Phase 4: Mark parity gate as scene-ready after all deferred wiring
+          var pg = window.Game && window.Game.ParityGate;
+          if (pg && typeof pg.markSceneReady === 'function') {
+            pg.markSceneReady();
+          }
+        });
+      }
+
+      console.log('[Phase2b] Phaser loop handoff — main canvas, Phaser drives RAF');
+    }
+  }
+}
+
 // ---------- Boot ----------
 async function boot(){
   if (bootPromise) return bootPromise;
@@ -14102,6 +14498,10 @@ async function boot(){
         startLoop: scheduleMainLoop,
       });
       rebuildGroundLayer();
+
+      // ── Phase 1: Initialize engine adapter and Phaser infrastructure ──
+      initEngineAdapterPhase1();
+
       return;
     }
     throw new Error('Bootstrap module unavailable');

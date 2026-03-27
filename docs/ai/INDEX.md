@@ -6,7 +6,7 @@
 1. `docs/ai/STYLE.md`
 2. `docs/ai/PROJECT_MAP.md`
 3. `docs/ai/ARCHITECTURE.md`
-4. Целевой файл из `docs/ai/SYSTEMS/*.md`
+4. Для render/UI/runtime/hud/input и TMZD visual/UI/UX/layout/modal/HUD style-sensitive задач сначала `docs/ai/SYSTEMS/phaser.md`, затем целевой файл из `docs/ai/SYSTEMS/*.md`
 5. Если целевой файл большой — соответствующий `docs/ai/*_MAP.md`
 6. Для типовой задачи — нужный `docs/ai/PLAYBOOKS/*.md`
 
@@ -22,6 +22,7 @@
 - `docs/ai/TALENTS_V2_MAP.md` — монолит talents v2.
 
 ## Карта систем
+- **Phaser 3 migration**: `docs/ai/SYSTEMS/phaser.md` (runtime, scenes, layers, rollout)
 - UI: `docs/ai/SYSTEMS/ui.md`
 - Render/Canvas: `docs/ai/SYSTEMS/render.md`
 - Assets/JSON: `docs/ai/SYSTEMS/assets.md`
@@ -38,7 +39,11 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-26
+## Фокус документации на 2026-03-27
+- **Phaser 3 migration phases 0–4 complete.** 43 module files in `src/phaser/`, 14 adapters/bridges, 12 render layer modules, 16 scenes, 4 rollout modules. Master spec: `docs/migration/PHASER_MIGRATION.md`. Runtime doc: `docs/ai/SYSTEMS/phaser.md`. 467 dedicated migration tests across 11 test files.
+- **TMZD visual/UI/UX/layout/modal/HUD style-sensitive задачи** читают `docs/ai/SYSTEMS/phaser.md` вместе с `docs/ai/SYSTEMS/ui.md`; TMZD-specific UX route идёт через `tmzd-ux-ui-designer`, а runtime-изменения остаются в зоне `tmzd-developer`.
+
+### Предыдущий фокус (2026-03-26)
 - `game.js`: `UI_BRANCH1_ASSET_VERSION = 20260326-branch1-ui-scale-early-capital`; `resizeCanvas()` вычисляет `--ui-scale = max(0.4, min(W/1920, H/1080))` и ставит CSS custom property на `:root`; `syncCurrentBalanceAchievements()` рекалькулирует unlock'и для `currentBalance`/`early_capital` при изменении баланса; `openAchievementPopupEvent()` берёт reward-text через `REWARD_TABLE.i18nKey`; status/debuff render читает `debuffIconScale/debuffIconOpacity` из локального singleton `ZombieSprites`, а не из `window.Game.Sprites.ZombieSprites`.
 - `style.css`: adaptive `--ui-scale` разбит на base + extended blocks и теперь масштабирует не только modal shells, но и HUD/big menu/panels/tooltips; close-buttons по-прежнему не масштабируются, чтобы сохранить 44×44 hit-area.
 - `src/mechanics/undergroundHangar.js`: black 2px `#000` border вокруг rounded-rect clip на cell draw.

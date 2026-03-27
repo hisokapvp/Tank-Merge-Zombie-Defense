@@ -1,6 +1,6 @@
 ﻿# Архитектура (кратко)
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-27.
 > Главная навигация: `docs/ai/PROJECT_MAP.md` → нужный `SYSTEMS/*.md` → `*_MAP.md` для больших файлов.
 
 ## Документационные entrypoints
@@ -16,6 +16,7 @@
 - Рендер/ввод: `src/render/*`, `src/ui/*`, `src/audio/*`
 - Конфиг: `src/config/*`, `assets/*.json`
 - Поддержка: `src/analytics/*`, `src/telemetry/*`, `src/flags/*`, `src/experiments/*`
+- Phaser 3 runtime: `src/phaser/*` (adapters, bridges, layers, scenes, rollout)
 
 ## Ключевые runtime-швы
 - `game.js` связывает `SupercomputerSprites` с `Game.ProductionLineRender`: `setSpriteSource(...)` выполняется в [game.js](../../game.js#L1869-L1875).
@@ -32,6 +33,13 @@
 - Crate runtime: `src/mechanics/crateRuntime.js` (`Game.CrateRuntime`)
 - Big menu runtime: `src/ui/bigMenuRuntime.js` (`Game.BigMenuRuntime`)
 - В `game.js` используются `ensure*RuntimeController()` с fallback на встроенную реализацию
+
+## Phaser 3 миграция
+- Полная документация: `docs/ai/SYSTEMS/phaser.md`, master spec: `docs/migration/PHASER_MIGRATION.md`
+- Feature flag `usePhaser` (default off), 4-phase rollout: off → shadow → overlay → phaser
+- 14 adapters/bridges в `src/phaser/`, 12 layer modules в `src/phaser/layers/`, 16 scenes в `src/phaser/scenes/`
+- `Game.RolloutController` — управление прогрессией; `Game.ParityGate` — автоматический gate
+- `game.js` wiring в `initEngineAdapterPhase1()` — всё инициализируется между EngineAdapter и PhaserBridge
 
 ## Контракты
 - В `src/*` использовать IIFE + `'use strict'` + `global.Game.*`

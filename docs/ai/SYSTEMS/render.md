@@ -1,7 +1,8 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-27.
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
+> Для Phaser layer/render migration: `docs/ai/SYSTEMS/phaser.md`.
 
 ## Где править
 - Canvas root и layout: `src/render/canvasRoot.js`, `src/render/groundLayer.js`, `src/render/fenceLayout.js`
@@ -41,6 +42,12 @@
 ## Спрайты зомби: deathCommon
 - `ZombieSprites.deathCommon` — массив вариантов общей анимации смерти: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L179-L259).
 - В `assets/zombies.json` разрешены legacy-object и array; loader приводит к массиву.
+
+## Phaser render layer modules
+- Все 18 draw-слоёв в `draw()` gated через `Game.RenderRegistry` (mode: legacy/phaser/both)
+- 12 Phaser layer modules в `src/phaser/layers/` управляются через `Game.PhaserLayerManager`
+- В hybrid mode каждый слой делегирует legacy draw functions через ctx callback
+- Подробности: `docs/ai/SYSTEMS/phaser.md`
 
 ## Fallback-контракт
 - Если atlas или part-config недоступен, рендер остаётся на legacy geometry и vector fallback без падения runtime: [src/render/productionLineRender.js](../../../src/render/productionLineRender.js#L377-L515).

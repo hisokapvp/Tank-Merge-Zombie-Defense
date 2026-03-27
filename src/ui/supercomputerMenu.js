@@ -214,6 +214,7 @@
     var a11yOpen = opts.a11yOpen;
     var a11yClose = opts.a11yClose;
     var onPauseLockChange = typeof opts.onPauseLockChange === 'function' ? opts.onPauseLockChange : function () {};
+    var onViewChange = typeof opts.onViewChange === 'function' ? opts.onViewChange : function () {};
     var openTalents = typeof opts.openTalents === 'function' ? opts.openTalents : null;
     var closeTalents = typeof opts.closeTalents === 'function' ? opts.closeTalents : null;
     var getDamagePoints = typeof opts.getDamagePoints === 'function' ? opts.getDamagePoints : function () { return 0; };
@@ -1622,6 +1623,7 @@
         Game.HangarChipsUI.show();
       }
       setBodyScrollLock(true);
+      onViewChange('hangar');
     }
 
     function showTankWallMods() {
@@ -1669,16 +1671,19 @@
 
     function backFromChild() {
       if (!state.isOpen) return;
+      var prevView = state.view;
       if (state.view === 'hangar') {
         var chipsUi = global.Game && global.Game.HangarChipsUI;
         if (chipsUi && typeof chipsUi.resetTransientUiState === 'function') chipsUi.resetTransientUiState();
       }
       if (state.view === 'talents' && closeTalents) closeTalents();
       openRoot();
+      onViewChange('root', prevView);
     }
 
     function closeAll() {
       if (!state.isOpen) return;
+      var prevView = state.view;
       if (state.view === 'hangar') {
         var chipsUi = global.Game && global.Game.HangarChipsUI;
         if (chipsUi && typeof chipsUi.resetTransientUiState === 'function') chipsUi.resetTransientUiState();
@@ -1696,6 +1701,7 @@
       state.view = 'closed';
       setBodyScrollLock(false);
       onPauseLockChange(false);
+      onViewChange('closed', prevView);
     }
 
     documentObj.getElementById('supercomputerOpenHangarMods')?.addEventListener('click', showHangarMods);

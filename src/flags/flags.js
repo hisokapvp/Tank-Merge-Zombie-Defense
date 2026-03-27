@@ -20,7 +20,8 @@
     economyTuningV2: { rollout: 0, description: 'Alternate economy tuning.' },
     mobileMode: { rollout: 0, description: 'Force mobile performance mode.' },
     mobileFxLite: { rollout: 0, description: 'Force lighter FX in mobile mode.' },
-    mobileFxUltraLite: { rollout: 0, description: 'Force ultra-light FX in mobile mode.' }
+    mobileFxUltraLite: { rollout: 0, description: 'Force ultra-light FX in mobile mode.' },
+    usePhaser: { rollout: 0, description: 'Enable Phaser 3 runtime instead of legacy Canvas.' }
   };
 
   var flags = {};

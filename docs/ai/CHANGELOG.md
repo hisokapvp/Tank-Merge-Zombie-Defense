@@ -1,5 +1,19 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-27
+- **Phaser 3 migration: Phase 4 — Parity & Rollout complete**
+  - Созданы 4 новых модуля: `parityHarness.js`, `parityGate.js`, `rolloutController.js`, `legacyCleanupManifest.js` в `src/phaser/`.
+  - `ParityHarness`: A/B snapshot/comparison engine (6 check categories, history до 50 записей).
+  - `ParityGate`: automated go/no-go gate — 6 categories (structural/render/modal/hud/scene/flags), проверяет 16 scenes, 12 layers, 18 render IDs, 13 modals, 5 HUD elements, 14 overlay scenes.
+  - `RolloutController`: 4-phase progression (off→shadow→overlay→phaser); advance to `phaser` blocked unless ParityGate passes; propagates modes to RenderRegistry/ModalAdapter/HudAdapter.
+  - `LegacyCleanupManifest`: inventory 17 legacy code paths across 6 categories.
+  - Wiring в `game.js initEngineAdapterPhase1()`: ParityHarness (enabled if isPhaser), ParityGate, RolloutController.
+  - 4 `<script>` tags добавлены в `index.html`, cache-bust обновлён на `phase4-parity-rollout`.
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/ARCHITECTURE.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/render.md`.
+  - Создан `docs/ai/SYSTEMS/phaser.md` — полная документация Phaser 3 migration подсистемы.
+  - 55 новых тестов Phase 4 (all pass); regression: 84 tests.js + 467 migration tests pass.
+  - **Все фазы 0–4 миграции на Phaser 3 завершены.**
+
 ## 2026-03-26
 - **Документация: shared post-merge update для achievement popup close contract, debuff overlay scale-path, supercomputer root-tile resize refresh, adaptive hangar modal vars и narrow-screen terminal shell (`game.js`, `index.html`, `style.css`, `src/ui/supercomputerMenu.js`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/CHANGELOG.md`.

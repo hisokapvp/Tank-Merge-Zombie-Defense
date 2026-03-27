@@ -614,6 +614,7 @@
   <script src="src/tools/anki/importer.js"></script>
   <script src="src/tools/anki/anki_export.js"></script>
   <script src="src/flags/flags.js"></script>
+  <script src="src/core/engineAdapter.js"></script>
   <script src="src/experiments/experiments.js"></script>
   <script src="src/perf/mobileMode.js"></script>
   <script src="src/i18n/index.js"></script>
@@ -660,6 +661,62 @@
   <script src="src/ui/undergroundHangarUI.js"></script>
   <script src="src/mechanics/corpseDespawn.js"></script>
   <script src="src/ui/supercomputerBuildTankFx.js"></script>
-  <script src="game.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
+  <!-- ── Phaser 3 migration layer ── -->
+  <!-- Phaser is always loaded (cached by browser); activation controlled by usePhaser flag -->
+  <script src="vendor/phaser.min.js"></script>
+  <!-- Phase 1: core bridge/clock/scenes/bootstrap -->
+  <script src="src/phaser/phaserBridge.js"></script>
+  <script src="src/phaser/clockAdapter.js"></script>
+  <script src="src/phaser/scenes/BootScene.js"></script>
+  <script src="src/phaser/scenes/GameScene.js"></script>
+  <script src="src/phaser/phaserBootstrap.js"></script>
+  <!-- Phase 2: input adapter + render registry -->
+  <script src="src/phaser/inputAdapter.js"></script>
+  <script src="src/phaser/renderRegistry.js"></script>
+  <!-- Phase 2c: Phaser layer manager + layer modules -->
+  <script src="src/phaser/layers/PhaserLayerManager.js"></script>
+  <script src="src/phaser/layers/BackgroundLayer.js"></script>
+  <script src="src/phaser/layers/TankTrackLayer.js"></script>
+  <script src="src/phaser/layers/FenceHpBarsLayer.js"></script>
+  <script src="src/phaser/layers/EveningDimLayer.js"></script>
+  <script src="src/phaser/layers/FenceBaseLayer.js"></script>
+  <script src="src/phaser/layers/BoardLayer.js"></script>
+  <script src="src/phaser/layers/OrbitingTanksLayer.js"></script>
+  <script src="src/phaser/layers/SupercomputerLayer.js"></script>
+  <script src="src/phaser/layers/ProductionLineLayer.js"></script>
+  <script src="src/phaser/layers/ZombiesCorpsesLayer.js"></script>
+  <script src="src/phaser/layers/ProjectilesEffectsLayer.js"></script>
+  <script src="src/phaser/layers/DronesLayer.js"></script>
+  <!-- Phase 2d: audio adapter + input comparison harness -->
+  <script src="src/phaser/audioAdapter.js"></script>
+  <script src="src/phaser/inputComparisonHarness.js"></script>
+  <!-- Phase 3: HUD / modal / overlay adapters + HUD scene -->
+  <script src="src/phaser/hudAdapter.js"></script>
+  <script src="src/phaser/sceneOverlayManager.js"></script>
+  <script src="src/phaser/modalAdapter.js"></script>
+  <script src="src/phaser/scenes/HudScene.js"></script>
+  <!-- Phase 3b: Modal overlay scenes -->
+  <script src="src/phaser/scenes/PauseMenuScene.js"></script>
+  <script src="src/phaser/scenes/LevelUpScene.js"></script>
+  <script src="src/phaser/scenes/CrateRewardScene.js"></script>
+  <!-- Phase 3c: Progression & achievement overlay scenes -->
+  <script src="src/phaser/scenes/BigMenuScene.js"></script>
+  <script src="src/phaser/scenes/AchievementsScene.js"></script>
+  <script src="src/phaser/scenes/AchievementPopupScene.js"></script>
+  <!-- Phase 3d: Talents, supercomputer root, help, tutorial overlay scenes -->
+  <script src="src/phaser/scenes/TalentsScene.js"></script>
+  <script src="src/phaser/scenes/SupercomputerRootScene.js"></script>
+  <script src="src/phaser/scenes/HelpScene.js"></script>
+  <script src="src/phaser/scenes/TutorialOverlayScene.js"></script>
+  <!-- Phase 3e: Hangar, workshop, underground hangar overlay scenes -->
+  <script src="src/phaser/scenes/HangarChipsScene.js"></script>
+  <script src="src/phaser/scenes/WorkshopScene.js"></script>
+  <script src="src/phaser/scenes/UndergroundHangarScene.js"></script>
+  <!-- Phase 4: Parity & rollout modules -->
+  <script src="src/phaser/parityHarness.js"></script>
+  <script src="src/phaser/parityGate.js"></script>
+  <script src="src/phaser/rolloutController.js"></script>
+  <script src="src/phaser/legacyCleanupManifest.js"></script>
+  <script src="game.js?v=20260327-phase4-parity-rollout"></script>
 </body>
 </html>

@@ -1,10 +1,12 @@
 # Tank Merge Zombie Defense — Project Map
 
-> Документ для агентов. Обновлён: 2026-03-25.
+> Документ для агентов. Обновлён: 2026-03-27.
 > Навигация: раздел → файл документации → строки кода.
 
 ## О проекте
-Браузерная 2D HTML5 Canvas-игра без build-step и без npm: башенная оборона, merge-механика, суперкомпьютер, ангарные чипы и data-driven конфиги. Точка входа — [game.js](../../game.js#L11714-L11885) через [index.html](../../index.html); каноническая новая логика живёт в `src/*`, а `game.js` держит bootstrap и fallback wiring.
+Браузерная 2D игра без build-step и без npm: legacy Canvas 2D + Phaser 3 dual-mode runtime, башенная оборона, merge-механика, суперкомпьютер, ангарные чипы и data-driven конфиги. Точка входа — [game.js](../../game.js#L11714-L11885) через [index.html](../../index.html); каноническая новая логика живёт в `src/*`, а `game.js` держит bootstrap и fallback wiring.
+
+Для TMZD visual/UI/UX/layout/modal/HUD style-sensitive задач основной UX route — `tmzd-ux-ui-designer`; runtime/seam-часть этих же задач остаётся привязанной к `docs/ai/SYSTEMS/phaser.md` и инженерному маршруту `tmzd-developer`.
 
 ## ⚠️ Инварианты — нарушать нельзя
 | Правило | Где задано |
@@ -59,11 +61,19 @@
 |---|---|---|
 | Render / Canvas | [SYSTEMS/render.md](SYSTEMS/render.md) | [HOT] |
 | UI / overlays / hangar | [SYSTEMS/ui.md](SYSTEMS/ui.md) | [HOT] |
+| TMZD-specific visual routing | [SYSTEMS/phaser.md](SYSTEMS/phaser.md), [SYSTEMS/ui.md](SYSTEMS/ui.md) | [HOT] |
 | Assets / JSON contracts | [SYSTEMS/assets.md](SYSTEMS/assets.md) | [HOT] |
 | `src/ui/hangarChipsUI.js` map | [HANGAR_CHIPS_UI_MAP.md](HANGAR_CHIPS_UI_MAP.md) | [HOT] |
 | `src/ui/supercomputerMenu.js` map | [SUPERCOMPUTER_MENU_MAP.md](SUPERCOMPUTER_MENU_MAP.md) | [HOT] |
 | `src/render/spriteLoaders.js` map | [SPRITE_LOADERS_MAP.md](SPRITE_LOADERS_MAP.md) | [HOT] |
 | `src/render/productionLineRender.js` map | [PRODUCTION_LINE_RENDER_MAP.md](PRODUCTION_LINE_RENDER_MAP.md) | |
+
+### Phaser 3 migration
+| Подраздел | Файл документации | Hotspot |
+|---|---|---|
+| Phaser runtime, scenes, rollout | [SYSTEMS/phaser.md](SYSTEMS/phaser.md) | [HOT] |
+| Migration master spec | [../migration/PHASER_MIGRATION.md](../migration/PHASER_MIGRATION.md) | |
+| Risk register | [../migration/RISK_REGISTER.md](../migration/RISK_REGISTER.md) | |
 
 ### Gameplay / mechanics / persistence
 | Подраздел | Файл документации | Hotspot |
