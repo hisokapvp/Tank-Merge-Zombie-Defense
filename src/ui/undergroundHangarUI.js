@@ -238,17 +238,12 @@
     return html;
   }
 
-  function syncCanvasResolution(canvas) {
-    if (!canvas) return { width: 0, height: 0 };
-    const rect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : null;
-    const logicalWidth = rect && rect.width > 0 ? rect.width : (canvas.clientWidth || canvas.width || 0);
-    const logicalHeight = rect && rect.height > 0 ? rect.height : (canvas.clientHeight || canvas.height || 0);
-    const dpr = Math.min(global.devicePixelRatio || 1, 2);
-    const pixelWidth = Math.max(1, Math.round(logicalWidth * dpr));
-    const pixelHeight = Math.max(1, Math.round(logicalHeight * dpr));
-    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
-    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
-    return { width: canvas.width, height: canvas.height };
+  function syncPreviewCanvasResolution(canvas) {
+    const canvasRootApi = global.Game && global.Game.CanvasRoot;
+    if (canvasRootApi && typeof canvasRootApi.syncDomCanvasResolution === 'function') {
+      return canvasRootApi.syncDomCanvasResolution(canvas);
+    }
+    return { width: canvas ? canvas.width || 0 : 0, height: canvas ? canvas.height || 0 : 0 };
   }
 
   function drawTankSpriteCanvas(canvas, level) {
@@ -261,7 +256,7 @@
     const cannon = sprites.pickCannon(level);
     if (!body || !cannon) return;
 
-    const canvasMetrics = syncCanvasResolution(canvas);
+    const canvasMetrics = syncPreviewCanvasResolution(canvas);
     const canvasWidth = canvasMetrics.width;
     const canvasHeight = canvasMetrics.height;
     const bodyWidth = body.cfg && body.cfg.frame && body.cfg.frame.w ? body.cfg.frame.w : body.img.width;
@@ -322,7 +317,7 @@
     const frame = frameId ? dronSprites.pickFrame(frameId) : null;
     if (!frame) return;
 
-    const canvasMetrics = syncCanvasResolution(canvas);
+    const canvasMetrics = syncPreviewCanvasResolution(canvas);
     const cfg = dronSprites.config || {};
     const scaleBase = Number.isFinite(cfg.scale) && cfg.scale > 0 ? cfg.scale : 1;
     const scale = Math.min(canvasMetrics.width * 0.62 / frame.w, canvasMetrics.height * 0.62 / frame.h) * scaleBase;

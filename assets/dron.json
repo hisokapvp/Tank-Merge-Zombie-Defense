@@ -2,27 +2,163 @@
   "atlas": "dron_atlas.png",
   "png": "dron_atlas.png",
   "baseRepairSec": 5,
-  "iconSize": { "w": 15, "h": 15 },
+  "iconSize": {
+    "w": 15,
+    "h": 15
+  },
   "iconsOffsetY": -34,
-  "anchor": { "x": 0.5, "y": 0.5 },
+  "anchor": {
+    "x": 0.5,
+    "y": 0.5
+  },
   "scale": 0.5,
   "animations": {
-    "idle": { "x": 0, "y": 96, "w": 96, "h": 96, "frames": 4, "frameRateFps": 15, "loop": true },
-    "wait": { "x": 960, "y": 46, "w": 96, "h": 96, "frames": 4, "frameRateFps": 6, "loop": true },
-    "work": { "x": 960, "y": 46, "w": 96, "h": 96, "frames": 1, "frameRateFps": 12, "loop": true },
-    "fly": { "x": 0, "y": 192, "w": 96, "h": 96, "frames": 4, "frameRateFps": 30, "loop": true },
-    "repair": { "x": 0, "y": 0, "w": 96, "h": 96, "frames": 16, "frameRateFps": 15, "loop": true }
+    "idle": {
+      "x": 0,
+      "y": 96,
+      "w": 96,
+      "h": 96,
+      "frames": 4,
+      "frameRateFps": 15,
+      "loop": true
+    },
+    "wait": {
+      "x": 960,
+      "y": 46,
+      "w": 96,
+      "h": 96,
+      "frames": 4,
+      "frameRateFps": 6,
+      "loop": true
+    },
+    "work": {
+      "x": 960,
+      "y": 46,
+      "w": 96,
+      "h": 96,
+      "frames": 1,
+      "frameRateFps": 12,
+      "loop": true
+    },
+    "fly": {
+      "x": 0,
+      "y": 192,
+      "w": 96,
+      "h": 96,
+      "frames": 4,
+      "frameRateFps": 30,
+      "loop": true
+    },
+    "repair": {
+      "x": 0,
+      "y": 0,
+      "w": 96,
+      "h": 96,
+      "frames": 16,
+      "frameRateFps": 15,
+      "loop": true
+    }
   },
   "levels": {
-    "1": { "moveSpeedPxSec": 74, "repairSpeedMult": 1.0, "costMult": 0.1 },
-    "2": { "moveSpeedPxSec": 80, "repairSpeedMult": 1.08, "costMult": 1.02 },
-    "3": { "moveSpeedPxSec": 86, "repairSpeedMult": 1.16, "costMult": 1.04 },
-    "4": { "moveSpeedPxSec": 92, "repairSpeedMult": 1.24, "costMult": 1.06 },
-    "5": { "moveSpeedPxSec": 98, "repairSpeedMult": 1.32, "costMult": 1.08 },
-    "6": { "moveSpeedPxSec": 104, "repairSpeedMult": 1.40, "costMult": 1.10 },
-    "7": { "moveSpeedPxSec": 110, "repairSpeedMult": 1.48, "costMult": 1.12 },
-    "8": { "moveSpeedPxSec": 116, "repairSpeedMult": 1.56, "costMult": 1.14 },
-    "9": { "moveSpeedPxSec": 122, "repairSpeedMult": 1.64, "costMult": 1.16 },
-    "10": { "moveSpeedPxSec": 128, "repairSpeedMult": 1.72, "costMult": 1.18 }
+    "1": {
+      "moveSpeedPxSec": 74,
+      "repairSpeedMult": 1,
+      "costMult": 0.1,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 2,
+        "repairSpeedMult": 2,
+        "costMult": 2
+      }
+    },
+    "2": {
+      "moveSpeedPxSec": 80,
+      "repairSpeedMult": 1.08,
+      "costMult": 1.02,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 2,
+        "repairSpeedMult": 2,
+        "costMult": 2
+      }
+    },
+    "3": {
+      "moveSpeedPxSec": 86,
+      "repairSpeedMult": 1.16,
+      "costMult": 1.04,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 3,
+        "repairSpeedMult": 3,
+        "costMult": 3
+      }
+    },
+    "4": {
+      "moveSpeedPxSec": 92,
+      "repairSpeedMult": 1.24,
+      "costMult": 1.06,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 3,
+        "repairSpeedMult": 3,
+        "costMult": 3
+      }
+    },
+    "5": {
+      "moveSpeedPxSec": 98,
+      "repairSpeedMult": 1.32,
+      "costMult": 1.08,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 4,
+        "repairSpeedMult": 4,
+        "costMult": 4
+      }
+    },
+    "6": {
+      "moveSpeedPxSec": 104,
+      "repairSpeedMult": 1.4,
+      "costMult": 1.1,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 4,
+        "repairSpeedMult": 4,
+        "costMult": 4
+      }
+    },
+    "7": {
+      "moveSpeedPxSec": 110,
+      "repairSpeedMult": 1.48,
+      "costMult": 1.12,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 5,
+        "repairSpeedMult": 5,
+        "costMult": 5
+      }
+    },
+    "8": {
+      "moveSpeedPxSec": 116,
+      "repairSpeedMult": 1.56,
+      "costMult": 1.14,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 5,
+        "repairSpeedMult": 5,
+        "costMult": 5
+      }
+    },
+    "9": {
+      "moveSpeedPxSec": 122,
+      "repairSpeedMult": 1.64,
+      "costMult": 1.16,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 6,
+        "repairSpeedMult": 6,
+        "costMult": 6
+      }
+    },
+    "10": {
+      "moveSpeedPxSec": 128,
+      "repairSpeedMult": 1.72,
+      "costMult": 1.18,
+      "upgradeDamagePointsCosts": {
+        "moveSpeedPxSec": 6,
+        "repairSpeedMult": 6,
+        "costMult": 6
+      }
+    }
   }
 }

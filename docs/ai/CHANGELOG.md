@@ -1,6 +1,17 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-28
+- **Документация: shared post-merge update для live-layout фиксов Tech Unlock card и responsive action lane в modifiers modal после join (`style.css`)**
+  - Обновлены `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Tech Unlock` cards документированы как CSS-owned self-sized shell с `min-height` clamp, bottom-anchored `progress/footer` и full-width primary CTA; runtime `renderTechUnlockPanel()` не берёт на себя per-state height hacks.
+  - Зафиксированы: в `Supercomputer -> Tank/Drone/Wall Mods` narrow-layout contract для row-level `Upgrade` теперь явно документирован как полноширинная нижняя центрированная action lane при viewports `< 1200px`; header action-cell скрывается, чтобы CTA не клипался, а runtime/apply seam не меняется.
+
 ## 2026-03-27
+- **Документация: shared post-merge update для modifiers modal per-stat contract после join (`game.js`, `src/ui/supercomputerMenu.js`, `src/config/tutorialSteps.js`, `src/ui/tutorialRuntime.js`, `style.css`, `assets/tanks.json`, `assets/dron.json`, `assets/fence.json`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/tutorial-runtime.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Supercomputer -> Tank/Drone/Wall Mods` теперь документирован как shared hybrid seam с expandable summary/detail rows, stat-specific pending state, second-click apply через `applyPendingStats(...)` и scale-aware wrappers `.modsTankWall__panelActions/.modsTankWall__footerActions`.
+  - Зафиксированы: canonical cost schema живёт в `upgradeDamagePointsCosts` внутри `assets/tanks.json`, `assets/dron.json`, `assets/fence.json`; `game.js` остаётся единственным apply/cost runtime layer через `get*UpgradeTotalCost()` / `apply*Upgrade()`.
+  - Зафиксированы: tutorial damage-step теперь таргетит expand-toggle первой weapon row и завершается по любому applied damage-upgrade в weapons/drones/walls, с preserve-pending completion contract в `tutorialRuntime`.
 - **Документация: shared post-merge update для master UI scale contract в hybrid Canvas + Phaser runtime (`game.js`, `style.css`, `index.html`, `src/ui/tutorialRuntime.js`, `src/ui/undergroundHangarUI.js`, `src/phaser/hudAdapter.js`, `src/phaser/modalAdapter.js`, `src/phaser/sceneOverlayManager.js`)**
   - Обновлены `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/phaser.md`, `docs/ai/ARCHITECTURE.md`, `docs/ai/CHANGELOG.md`.
   - Зафиксированы: `resizeCanvas()` теперь документирован как единственный source-of-truth для `--ui-scale = max(0.4, min(displayW/1920, displayH/1080))`; `readMasterUiScale()` и `syncHybridUiScale()` синхронизируют DOM/CSS с `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`.

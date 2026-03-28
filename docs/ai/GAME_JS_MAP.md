@@ -51,7 +51,7 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-27.
 > Текущая длина файла: ~11 880 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
 ## Что это
@@ -62,6 +62,7 @@
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L11127-L11200)
 - Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2374-L2387), [syncHybridUiScale()](../../game.js#L2389-L2403), [resizeCanvas()](../../game.js#L2407-L2437)
+- Нужен per-stat modifiers seam для weapons/drones/walls → [getCannonUpgradeTotalCost()](../../game.js#L878-L888), [applyCannonUpgrade()](../../game.js#L890-L910), [getFenceUpgradeTotalCost()](../../game.js#L912-L922), [applyFenceUpgrade()](../../game.js#L924-L945), [getDronUpgradeTotalCost()](../../game.js#L3282-L3292), [applyDronUpgrade()](../../game.js#L3294-L3313)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
 - Нужен Talents v2 redraw/update orchestration → `updateTalentUIV2()` делегирует orchestration в `src/ui/talentOverlayUi.js`, а `game.js` оставляет bootstrap/fallback helpers для node/edge render.
 - Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
@@ -74,6 +75,7 @@
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
 - Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
+- `game.js` — canonical apply/cost layer для supercomputer modifiers modal: UI передаёт `level + statKey + pendingCount`, а функции `applyCannonUpgrade` / `applyDronUpgrade` / `applyFenceUpgrade` сами нормализуют ключ, суммируют per-stat step cost и обновляют encoded applied arrays. Стоимость не дублируется в UI и не должна хардкодиться вне JSON/runtime helper'ов.
 
 ## Ключевые блоки файла
 | Блок | Строки | Назначение |
@@ -95,7 +97,7 @@
 |---|---|---|
 | `computePowerTier()` | [game.js](../../game.js#L113-L125) | Power-tier helper |
 | `createInitialState()` | [game.js](../../game.js#L454-L514) | Стартовое состояние мира |
-| `getDamagePoints()` / `applyCannonUpgrade()` | [game.js](../../game.js#L572-L693) | Damage points и апгрейды |
+| `getDamagePoints()` / damage upgrade helpers | [game.js](../../game.js#L572-L693), [game.js](../../game.js#L878-L945), [game.js](../../game.js#L3282-L3313) | Damage points и per-stat apply/cost helpers для cannon/fence/dron modifiers modal |
 | `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
 | `getTankWordKey(count)` | [game.js](../../game.js#L1064-L1082) | Pluralized i18n key для слова «танк»; делегирует в `Game.I18n.pluralize` с inline fallback |
 | `readMasterUiScale()` | [game.js](../../game.js#L2374-L2387) | Читает `--ui-scale` из `:root`/computed styles и отдаёт runtime-friendly число |

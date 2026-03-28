@@ -24,6 +24,29 @@
     return Math.min(global.devicePixelRatio || 1, 2);
   }
 
+  function syncDomCanvasResolution(canvas) {
+    if (!canvas) {
+      return { width: 0, height: 0, logicalWidth: 0, logicalHeight: 0, dpr: getDpr() };
+    }
+    var rect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : null;
+    var logicalWidth = rect && rect.width > 0 ? rect.width : (canvas.clientWidth || canvas.width || 0);
+    var logicalHeight = rect && rect.height > 0 ? rect.height : (canvas.clientHeight || canvas.height || 0);
+    var dpr = getDpr();
+    var pixelWidth = Math.max(1, Math.round(logicalWidth * dpr));
+    var pixelHeight = Math.max(1, Math.round(logicalHeight * dpr));
+
+    if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+    if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      logicalWidth: logicalWidth,
+      logicalHeight: logicalHeight,
+      dpr: dpr,
+    };
+  }
+
   /**
    * Resize canvas: CSS-габариты + внутренние размеры = CSS * DPR.
    * @param {HTMLCanvasElement} canvas
@@ -59,6 +82,7 @@
   global.Game.CanvasRoot = {
     initCanvas: initCanvas,
     resizeCanvas: resizeCanvas,
+    syncDomCanvasResolution: syncDomCanvasResolution,
     getDpr: getDpr,
     BASE_W: BASE_W,
     BASE_H: BASE_H,

@@ -7,7 +7,27 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="style.css?v=20260327-branch1-master-scale-dom-contract" />
+  <script>
+    (function (global, doc) {
+      var game = global.Game = global.Game || {};
+      var token = '20260328-branch1-tech-unlock-stat-contract';
+      function resolve(path) {
+        var normalized = String(path || '');
+        var separator = normalized.indexOf('?') === -1 ? '?' : '&';
+        return normalized + separator + 'v=' + encodeURIComponent(token);
+      }
+      game.EntryAssetVersion = {
+        getToken: function () { return token; },
+        resolve: resolve,
+      };
+
+      // Only entry assets loaded directly by index.html belong to this shared token.
+      var stylesheet = doc.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = resolve('style.css');
+      doc.head.appendChild(stylesheet);
+    }(window, document));
+  </script>
 </head>
 <body>
   <main class="layout">
@@ -578,7 +598,7 @@
   <script src="src/persistence/storage.js"></script>
   <script src="src/persistence/offlineRewardModel.js"></script>
   <script src="src/persistence/offlineProgress.js"></script>
-  <script src="src/render/canvasRoot.js"></script>
+  <script src="src/render/canvasRoot.js?v=20260327-branch2-dom-preview-helper"></script>
   <script src="src/config/layoutTuning.js"></script>
   <script src="src/config/criticalModalTuning.js"></script>
   <script src="src/config/criticalAudioPolicy.js"></script>
@@ -594,7 +614,7 @@
   <script src="src/render/tankPortrait.js"></script>
   <script src="src/render/tankHangarAnimation.js"></script>
   <script src="src/render/input.js"></script>
-  <script src="src/config/tutorialSteps.js"></script>
+  <script src="src/config/tutorialSteps.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
   <script src="src/ui/adService.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/ui/continueFlow.js"></script>
   <script src="src/ui/shopUI.js"></script>
@@ -629,13 +649,14 @@
   <script src="src/ui/debugPanel.js"></script>
   <script src="src/mechanics/hangarChips.js"></script>
   <script src="src/mechanics/chipEffects.js"></script>
-  <script src="src/ui/hangarChipsUI.js"></script>
+  <script src="src/ui/hangarChipsUI.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
   <script src="src/ui/modals.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/talentOverlayDom.js"></script>
   <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>
   <script src="src/ui/talentOverlayUi.js"></script>
-  <script src="src/ui/supercomputerMenu.js?v=20260322-ui-postmerge"></script>
+  <script src="src/config/tankWallStatCatalog.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
+  <script src="src/ui/supercomputerMenu.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
   <script src="src/ui/productionLineUI.js?v=20260322-ui-postmerge"></script>
   <script src="src/ui/criticalModal.js"></script>
   <script src="src/systems/pauseManager.js"></script>
@@ -650,7 +671,7 @@
   <script src="src/systems/talents/talentsV2.js"></script>
   <script src="src/ui/bigMenuRuntime.js"></script>
   <script src="src/ui/lessonProgress.js"></script>
-  <script src="src/ui/tutorialRuntime.js"></script>
+  <script src="src/ui/tutorialRuntime.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
   <script src="src/core/bootstrap.js"></script>
   <script src="src/core/worldReset.js"></script>
   <script src="src/mechanics/targeting.js"></script>
@@ -658,7 +679,7 @@
   <script src="src/mechanics/drones.js"></script>
   <script src="src/mechanics/autoMerge.js"></script>
   <script src="src/mechanics/undergroundHangar.js"></script>
-  <script src="src/ui/undergroundHangarUI.js"></script>
+  <script src="src/ui/undergroundHangarUI.js?v=20260327-branch2-dom-preview-helper"></script>
   <script src="src/mechanics/corpseDespawn.js"></script>
   <script src="src/ui/supercomputerBuildTankFx.js"></script>
   <!-- ── Phaser 3 migration layer ── -->
@@ -717,6 +738,18 @@
   <script src="src/phaser/parityGate.js"></script>
   <script src="src/phaser/rolloutController.js"></script>
   <script src="src/phaser/legacyCleanupManifest.js"></script>
-  <script src="game.js?v=20260327-faildetector-ui-scale-startup"></script>
+  <script>
+    (function (global, doc) {
+      var game = global.Game || {};
+      var helper = game.EntryAssetVersion;
+      var resolve = helper && typeof helper.resolve === 'function'
+        ? helper.resolve
+        : function (path) { return path; };
+      var script = doc.createElement('script');
+      script.async = false;
+      script.src = resolve('game.js');
+      doc.body.appendChild(script);
+    }(window, document));
+  </script>
 </body>
 </html>

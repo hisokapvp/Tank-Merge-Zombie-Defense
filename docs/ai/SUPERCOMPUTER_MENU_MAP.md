@@ -1,25 +1,27 @@
 # supercomputerMenu.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-26.
-> Файл большой (1759 строк): перед правками модалок суперкомпьютера открой этот map.
+> Агент-ориентировано. Обновлён: 2026-03-28.
+> Файл большой (~1.9k строк): перед правками модалок суперкомпьютера открой этот map.
 
 ## Что это
-`src/ui/supercomputerMenu.js` — контроллер трёх связанных overlay: root supercomputer menu, hangar mods и vehicle/wall mods. Здесь живут scroll-lock, root tiles, таблицы апгрейдов оружия/дронов/стен и маршрутизация между дочерними окнами.
+`src/ui/supercomputerMenu.js` — контроллер трёх связанных overlay: root supercomputer menu, hangar mods и vehicle/wall mods. Здесь живут scroll-lock, root tiles, shared help shell, а также общий contract для expandable таблиц апгрейдов оружия/дронов/стен: summary row раскрывает stat-specific controls, damage points резервируются по pending шагам, а повторный клик по раскрытой строке применяет pending per-stat upgrades через runtime callbacks.
 
 С начала файла также живёт shared help-shell API для SC-family overlays: общий `techModal__dialog--help` теперь открывается не только из talents/tank-wall flow, но и переиспользуется underground hangar и production storage modal; accordion-toggle для help sections тоже централизован здесь через `Game.SupercomputerMenu.showSharedHelpModal()` и `syncHelpButtonCopy()`.
 
 ## Быстрый старт для агента
-- Shared help modal / accordion / help-button copy sync → [toggleSharedHelpSection()](../../src/ui/supercomputerMenu.js#L52-L60), [showSharedHelpModal()](../../src/ui/supercomputerMenu.js#L159-L185), [syncSharedHelpButtonCopy()](../../src/ui/supercomputerMenu.js#L150-L157), export в [global.Game.SupercomputerMenu](../../src/ui/supercomputerMenu.js#L1755-L1759).
-- Root-плитки и общая геометрия → [openRoot()](../../src/ui/supercomputerMenu.js#L1581-L1602), [normalizeRootTilesSize()](../../src/ui/supercomputerMenu.js#L890-L905), [refreshRootTilesLayout()](../../src/ui/supercomputerMenu.js#L908-L911).
-- Таблица оружий → [ensureGunsPanelUI()](../../src/ui/supercomputerMenu.js#L923-L1120).
-- Таблица стен → [ensureWallsPanelUI()](../../src/ui/supercomputerMenu.js#L1339-L1579).
-- Вход в ангарные моды → [showHangarMods()](../../src/ui/supercomputerMenu.js#L1604-L1617).
+- Shared help modal / accordion / help-button copy sync → [toggleSharedHelpSection()](../../src/ui/supercomputerMenu.js#L52-L60), [showSharedHelpModal()](../../src/ui/supercomputerMenu.js#L159-L185), [syncSharedHelpButtonCopy()](../../src/ui/supercomputerMenu.js#L150-L157), export в [global.Game.SupercomputerMenu](../../src/ui/supercomputerMenu.js#L1908-L1913).
+- Per-stat pending/reserve/apply seam → [CANNON_STAT_KEYS / DRON_STAT_KEYS / FENCE_STAT_KEYS + state](../../src/ui/supercomputerMenu.js#L319-L339), [pending helpers](../../src/ui/supercomputerMenu.js#L578-L739), [expanded row / stat-control / applyPendingStats](../../src/ui/supercomputerMenu.js#L755-L839).
+- Root-плитки и общая геометрия → [openRoot()](../../src/ui/supercomputerMenu.js#L1713-L1736), [normalizeRootTilesSize()](../../src/ui/supercomputerMenu.js#L1002-L1019), [refreshRootTilesLayout()](../../src/ui/supercomputerMenu.js#L1020-L1025).
+- Таблицы modifiers modal → [ensureGunsPanelUI()](../../src/ui/supercomputerMenu.js#L1044-L1132), [renderGunsPanel()](../../src/ui/supercomputerMenu.js#L1134-L1256), [ensureDronsPanelUI()](../../src/ui/supercomputerMenu.js#L1258-L1347), [renderDronsPanel()](../../src/ui/supercomputerMenu.js#L1349-L1480), [ensureWallsPanelUI()](../../src/ui/supercomputerMenu.js#L1482-L1570), [renderWallsPanel()](../../src/ui/supercomputerMenu.js#L1572-L1708).
+- Вход в tank/drone/wall mods → [showTankWallMods()](../../src/ui/supercomputerMenu.js#L1753-L1769).
 
 ## Инварианты этого модуля ⚠️
 - Scroll-lock модалок суперкомпьютера централизован в `setBodyScrollLock()`: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L362-L367), [style.css](../../style.css#L1195-L1204).
 - Shared help modal shell (`showSharedHelpModal` / `hideSharedHelpModal` / `syncSharedHelpButtonCopy`) — это public SC-family contract, а не talents-only helper: его переиспользуют talents shell, tank-wall help, underground hangar и production storage help, поэтому copy/DOM shell и accordion-toggle нельзя разносить по отдельным модалкам. См. [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L52-L185), export в [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1755-L1759), consumer в [src/ui/productionLineUI.js](../../src/ui/productionLineUI.js#L90-L116).
 - `applySharedTalentModalClass()` обязан навешивать на `talentOverlay` не только `.scModal`, но и `scModal__close` + `data-font-floor-ignore="true"` на `.modalClose`, чтобы крестик дерева улучшений был визуально и по hit-area идентичен supercomputer modal: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L386-L407), [style.css](../../style.css#L1828-L1920).
-- Pending upgrade state (`pendingUpgradesByLevel`, `pendingDronUpgradesByLevel`, `pendingFenceUpgradesByLevel`) живёт только пока открыт контроллер: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L304-L360), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1581-L1685).
+- Pending upgrade state живёт только пока открыт контроллер, но теперь он строго per-stat: `pendingUpgradesByLevel`, `pendingDronUpgradesByLevel`, `pendingFenceUpgradesByLevel` нормализуются как массивы entry-object'ов по `CANNON_STAT_KEYS` / `DRON_STAT_KEYS` / `FENCE_STAT_KEYS`, а `expandedTankWallRows` хранит ровно одну раскрытую строку на таб. Это не flat pending-counter на уровень: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L319-L339), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L578-L739), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L781-L839).
+- Summary row в weapons/drones/walls остаётся read-only preview, а реальное изменение pending идёт только через detail cards `scGunsStatControl`; row-level `Upgrade` и per-card `Apply` коммитят один и тот же pending batch строки через `applyPendingStats(...)`, не меняя ownership apply-логики. Для viewports `< 1200px` row-level `Upgrade` уезжает в нижнюю центрированную action lane строки, header action-cell скрывается, а сама CTA ограничена `width:min(100%, 220px)`, чтобы кнопка не клипалась. Tutorial-target для первого damage-step поэтому по-прежнему должен целиться в `data-guns-action="toggle"`, а не в plus/minus/apply: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L796-L839), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1044-L1708), [style.css](../../style.css#L2872-L3085), [src/config/tutorialSteps.js](../../src/config/tutorialSteps.js#L249-L279).
+- Canonical owner/source-of-truth для per-stat cost growth не живёт в DOM: `src/config/tankWallStatCatalog.js` держит stat-key order, action attrs и selector contract; base per-stat costs приходят из `assets/tanks.json`, `assets/dron.json`, `assets/fence.json`, а `game.js` через `load*StatUpgradeCosts()`, `get*UpgradeCostBase()` и `getProgressiveUpgradeStepCost(baseCost, appliedIndex)` считает прогрессивный шаг `ceil(base * 1.2^appliedIndex)`. `src/ui/supercomputerMenu.js` только читает `get*UpgradeStepCost()` и рендерит affordances: [src/config/tankWallStatCatalog.js](../../src/config/tankWallStatCatalog.js), [game.js](../../game.js#L734-L845), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L578-L839).
 - Root routing keeps `rootOverlay` owner for embedded talents view: `showTalents()` оставляет root overlay открытым, переключает root panel в `scModal--talentsView` и отдаёт фактический tree-shell в `openTalents({ embedded:true, skipSupercomputerRouting:true })`; закрытие/возврат всегда идут через `backFromChild()` / `closeAll()`, а не через отдельный overlay-state: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L420-L457), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1640-L1685).
 - Размер root tiles и icon scale приходят из `LayoutTuning` в CSS variables, а root-view обязан заново применять эти vars и uniform-height на глобальном `resize` через `refreshRootTilesLayout()`; refresh не должен затрагивать дочерние overlay, пока контроллер не в `view === 'root'`: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L368-L385), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L908-L911), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1737-L1737), [style.css](../../style.css#L1-L37), [style.css](../../style.css#L1771-L1833).
 
@@ -29,55 +31,55 @@
 | Функция / блок | Строки | Назначение |
 |---|---|---|
 | `setOverlayOpen()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L187-L198) | Унифицированное open/close поведение overlay |
-| `ensureSharedHelpModal()`, `showSharedHelpModal()`, `syncSharedHelpButtonCopy()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L109-L185) | Общий SC-style help dialog, accordion sections и tooltip/a11y copy для talents / tank-wall / underground hangar / production storage |
-| `createController()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L200-L360) | Сборка зависимостей, DOM refs, локального state |
-| `setBodyScrollLock()`, `applyLayoutTuningVars()`, `applySharedTalentModalClass()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L362-L407) | Body-lock, CSS vars, shared modal class и talent close-skin |
+| `ensureSharedHelpModal()`, `showSharedHelpModal()`, `syncSharedHelpButtonCopy()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L121-L185) | Общий SC-style help dialog, accordion sections и tooltip/a11y copy для talents / tank-wall / underground hangar / production storage |
+| `createController()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L200-L339) | Сборка зависимостей, DOM refs и per-tab local state |
+| `setBodyScrollLock()`, `applyLayoutTuningVars()`, `applySharedTalentModalClass()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L371-L447) | Body-lock, CSS vars, shared modal class и talent close-skin |
 
 ### Блок: tab state + pending counters
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `setTankWallTab()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L460-L493) | Переключение `weapons/drones/walls` |
-| `updateDamagePointsLabel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L495-L519) | Общие labels damage points / reserve |
-| Pending/reserve helpers | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L521-L740) | Подсчёт уровней, pending cost, reserved points для оружий/дронов/стен |
+| `setTankWallTab()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L490-L523) | Переключение `weapons/drones/walls` и tab-local redraw |
+| `updateDamagePointsLabel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L525-L550) | Общие labels damage points / reserve |
+| Pending/reserve helpers | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L578-L739) | Нормализация size, per-stat cost sum и reserved points для оружий/дронов/стен |
+| `formatAppliedPendingSummary()`, `getExpandedRow()`, `setExpandedRow()`, `buildStatControlHtml()`, `applyPendingStats()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L755-L839) | Expand/collapse rows, stat-control cards и commit pending per-stat upgrades |
 
 ### Блок: sprite-preview / root tiles
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `getSpriteImageForSrc()`, `drawGunsSpriteCanvas()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L742-L809) | Canvas-preview оружия/дронов/стен |
-| `tickGunsIconSprites()`, `startGunsIconTicker()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L810-L876) | Shared ticker для icon-animations |
-| `normalizeRootTilesSize()`, `refreshRootTilesLayout()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L890-L911) | Нормализация высоты root cards и scale-aware refresh на resize |
-| `getTankLevelViewData()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L905-L922) | View-model строки оружия |
+| `getSpriteImageForSrc()`, `drawGunsSpriteCanvas()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L857-L923) | Canvas-preview оружия/дронов/стен |
+| `tickGunsIconSprites()`, `startGunsIconTicker()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L925-L1001) | Shared ticker для icon-animations |
+| `normalizeRootTilesSize()`, `refreshRootTilesLayout()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1002-L1025) | Нормализация высоты root cards и scale-aware refresh на resize |
+| `getTankLevelViewData()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1026-L1042) | View-model строки оружия |
 
 ### Блок: таблицы апгрейдов
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `ensureGunsPanelUI()`, `renderGunsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L923-L1120) | Таблица `Орудия` |
-| `ensureDronsPanelUI()`, `renderDronsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1121-L1338) | Таблица `Дроны` |
-| `ensureWallsPanelUI()`, `renderWallsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1339-L1579) | Таблица `Стены`, preview frame lookup из `assets/fence.json` |
+| `ensureGunsPanelUI()`, `renderGunsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1044-L1256) | Таблица `Орудия`: summary row + expandable per-stat controls для `attackSpeed/baseDamage` |
+| `ensureDronsPanelUI()`, `renderDronsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1258-L1480) | Таблица `Дроны`: shared expand/apply contract для `moveSpeedPxSec/repairSpeedMult/costMult` |
+| `ensureWallsPanelUI()`, `renderWallsPanel()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1482-L1708) | Таблица `Стены`: expandable `segmentMaxHp/armorFlat`, preview frame lookup из `assets/fence.json` |
 
 ### Блок: modal routing
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `updateFenceStatsUI()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1577-L1579) | Refresh root stats |
-| `openRoot()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1581-L1602) | Открывает root overlay |
-| `showHangarMods()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1604-L1617) | Делегирует в `Game.HangarChipsUI` |
-| `showTankWallMods()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1618-L1638) | Открывает overlay техники/стен (vehicle/wall mods) |
-| `showTalents()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1640-L1659) | Переход в embedded talents overlay |
-| `backFromChild()`, `closeAll()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1661-L1732) | Возврат/полное закрытие контроллера |
+| `updateFenceStatsUI()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1709-L1711) | Refresh root stats |
+| `openRoot()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1713-L1736) | Открывает root overlay |
+| `showHangarMods()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1738-L1751) | Делегирует в `Game.HangarChipsUI` |
+| `showTankWallMods()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1753-L1769) | Открывает overlay техники/стен и готовит все три таблицы |
+| `showTalents()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1776-L1795) | Переход в embedded talents overlay |
+| `backFromChild()`, `closeAll()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1797-L1850) | Возврат/полное закрытие контроллера |
 
 ## Hotspots
 - [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L52-L185) — shared help modal, accordion toggle и public help-shell contract.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L386-L407) — shared talent modal class и close-skin tree overlay.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L890-L911) — геометрия root tiles и resize-safe refresh.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1737-L1737) — global resize hook для root-view.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L923-L1120) — оружейная таблица.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1339-L1579) — стены, preview icon lookup.
-- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1581-L1732) — open/close routing.
+- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L416-L447) — shared talent modal class и close-skin tree overlay.
+- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L578-L839) — per-stat pending/reserved/apply helpers и expanded row state.
+- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1002-L1025) — геометрия root tiles и resize-safe refresh.
+- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1044-L1708) — weapons/drones/walls tables, expandable controls и preview/icon lookup.
+- [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L1753-L1850) — open/close routing.
 
 ## Зависимости
 - Использует: `LayoutTuning`, `Game.HangarChipsUI`, `Game.NumberFormat`, upgrade getter/apply callbacks из `game.js`.
 - Используется из: `game.js` через `ensureSupercomputerMenuController()`.
 
 ## Известные ограничения / TODO
-- Root и table layout опираются на CSS-монолит [STYLE_CSS_MAP.md](STYLE_CSS_MAP.md); без него читать правки неудобно.
+- Root и table layout опираются на CSS-монолит [STYLE_CSS_MAP.md](STYLE_CSS_MAP.md); expandable stat cards, detail rows и footer action wrappers документированы там же.
 - Внутренние DOM id панелей (`modsTankWallPanel*`) не задокументированы отдельно вне этого map.

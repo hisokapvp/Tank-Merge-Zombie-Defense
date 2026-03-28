@@ -255,7 +255,10 @@
         minDamagePoints: 2,
       },
       target: {
-        selector: '#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]',
+        kind: 'supercomputer_tank_wall_stat_action',
+        family: 'weapons',
+        level: 1,
+        action: 'toggle',
       },
       completion: {
         kind: 'supercomputer_damage_upgrade_applied',
@@ -267,17 +270,9 @@
         selectors: [
           '#modsTankWallTabGuns',
           '#modsTankWallTabDrones',
-          '#modsTankWallTabWalls',
-          '#modsTankWallOverlay [data-guns-action="plus"]',
-          '#modsTankWallOverlay [data-guns-action="minus"]',
-          '#modsTankWallOverlay [data-guns-action="apply"]',
-          '#modsTankWallOverlay [data-dron-action="plus"]',
-          '#modsTankWallOverlay [data-dron-action="minus"]',
-          '#modsTankWallOverlay [data-dron-action="apply"]',
-          '#modsTankWallOverlay [data-walls-action="plus"]',
-          '#modsTankWallOverlay [data-walls-action="minus"]',
-          '#modsTankWallOverlay [data-walls-action="apply"]'
+          '#modsTankWallTabWalls'
         ],
+        targetKinds: ['supercomputer_tank_wall_per_stat_controls'],
       },
     }),
     createStep({

@@ -1,6 +1,20 @@
 ﻿# Система: UI
 
-> Обновлено: 2026-03-26.
+> Обновлено: 2026-03-28.
+
+## Post-merge update (2026-03-28)
+- CSS-only post-merge fix для shared modifiers modal не меняет runtime/apply contract, но уточняет responsive layout contract: при viewports `< 1200px` header action-column скрывается, а row-level `Upgrade` уезжает в полноширинную нижнюю центрированную action lane строки, чтобы CTA не клипался в weapons/drones/walls: [style.css](../../../style.css#L3049-L3085), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L796-L839).
+- CSS-only post-merge fix для `Tech Unlock` cards не меняет runtime/i18n seam: карточка теперь документирована как self-sized flex-column shell с `min-height` clamp, нижним anchor для `progress/footer` через `margin-top:auto` и full-width primary CTA, чтобы locked/studying/active состояния не дёргали высоту и action-stack: [style.css](../../../style.css#L5570-L5872), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1100-L1190).
+
+## Post-merge update (2026-03-27)
+- Shared hybrid seam `Supercomputer -> Tank/Drone/Wall Mods` перешёл на общий expandable-row contract: summary row показывает base/current stat preview и aggregated `applied (+pending)`, detail row раскрывает `scGunsStatControl` cards с отдельными `+/-` по статам, а canonical cost каждого шага приходит из `assets/tanks.json`, `assets/dron.json`, `assets/fence.json`; повторный клик по уже раскрытой строке коммитит pending через runtime helpers в `game.js`, а не через DOM-состояние: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L319-L339), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L578-L839), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1708), [game.js](../../../game.js#L878-L945), [game.js](../../../game.js#L3282-L3313), [style.css](../../../style.css#L2872-L3031).
+- Explicit per-stat cost-growth contract для этой же modal family теперь такой: `src/config/tankWallStatCatalog.js` — canonical owner табов, stat-key order, action attrs и tutorial/query selectors; `assets/tanks.json -> tank_lvlN.upgradeDamagePointsCosts`, `assets/dron.json -> levels[N].upgradeDamagePointsCosts`, `assets/fence.json -> levels[N].upgradeDamagePointsCosts` (с legacy fallback на `upgradeCostDamagePoints` только для стен) задают per-stat base cost; `game.js` остаётся единственным runtime owner загрузки/санитизации и growth-formula через `load*StatUpgradeCosts()`, `get*UpgradeCostBase()` и `getProgressiveUpgradeStepCost(baseCost, appliedIndex) = ceil(baseCost * 1.2^appliedIndex)`. `src/ui/supercomputerMenu.js` не вычисляет рост цены сам: он только читает `getCannonUpgradeStepCost/getDronUpgradeStepCost/getFenceUpgradeStepCost`, держит pending reserve state и даёт два одинаково-valid apply entrypoints — row-level `Upgrade` и per-card `Apply`. На viewports `< 1200px` row-level `Upgrade` переносится в нижнюю центрированную action lane строки, чтобы CTA не клипался: [src/config/tankWallStatCatalog.js](../../../src/config/tankWallStatCatalog.js), [game.js](../../../game.js#L734-L845), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L871-L905), [style.css](../../../style.css#L2872-L3085).
+- Tutorial damage-step для этого же seam теперь целится в toggle первой weapon row и считается завершённым по любому applied damage-upgrade в weapons/drones/walls; unlock surface intentionally включает stat controls всех трёх табов, чтобы tutorial не расходился с новой modal flow: [src/config/tutorialSteps.js](../../../src/config/tutorialSteps.js#L225-L279), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L197-L229), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L626-L635), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L947-L980), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L2249-L2255).
+- Entry assets получили единый helper `Game.EntryAssetVersion`: `index.html` задаёт токен и через `resolve(path)` подключает `style.css`, а в конце страницы тем же helper подключается `game.js`; runtime дополнительно экспортирует `Game.getEntryAssetVersionToken()` и `Game.resolveEntryAssetUrl()` для внутреннего wiring. Это сохраняет parity между startup shell и bootstrap/runtime seam: [index.html](../../../index.html#L10-L25), [index.html](../../../index.html#L743-L754), [game.js](../../../game.js#L9-L20).
+- DOM preview canvas теперь нормализует backing resolution через общий helper `Game.CanvasRoot.syncDomCanvasResolution(canvas)`; underground hangar UI больше не держит локальный дублирующий DPR-path: [src/render/canvasRoot.js](../../../src/render/canvasRoot.js#L27-L52), [src/render/canvasRoot.js](../../../src/render/canvasRoot.js#L81-L86), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js#L243-L245).
+- Общий scale-aware tokens block для modal/help/confirm вынесен в начало `style.css` (`--uiModalPad`, `--ui-help-btn-size`, `--ui-help-btn-offset-*`) и теперь является ранним source-of-truth для shell spacing и help-button offsets: [style.css](../../../style.css#L40-L48), [style.css](../../../style.css#L1434-L1455), [style.css](../../../style.css#L2063-L2075).
+- Tech unlock accel modal держит scroll/grid/help parity: dust-row и grid-wrap оформлены единым shell, карточки ресурса живут в отдельной scroll-grid, а help CTA в дочерних модалках маршрутизируется через shared help API суперкомпьютера: [style.css](../../../style.css#L6000-L6088), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L159-L190), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js#L53-L57).
+- Root backdrop close в supercomputer modal защищён guard'ом `fresh pointerdown after open`: при открытии arm-ится блокировка, а закрытие по backdrop пропускается только после нового `pointerdown` на root backdrop-элементе. Это фиксирует mobile mis-tap race при первом открытии: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L371-L388), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1623-L1634), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1747-L1757).
 
 ## Где править
 - Разметка: `index.html`
@@ -84,7 +98,7 @@
 ## Adaptive UI scale
 - `resizeCanvas()` в `game.js` — единственный source-of-truth для master UI scale: `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))`; `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` проталкивает scale в `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`: [game.js](../../../game.js#L2374-L2430).
 - CSS scale contract покрывает static DOM shells и dynamic DOM families: terminal, HUD, tutorial, help/confirm/tooltips/notifications, modal action rows и underground hangar sizing vars; локальный hangar cap снят, потому что `--modsHangarScale` теперь напрямую читает `--ui-scale`: [style.css](../../../style.css#L15-L22), [style.css](../../../style.css#L1664-L1692), [style.css](../../../style.css#L3774-L3888), [style.css](../../../style.css#L4242-L4268), [style.css](../../../style.css#L7612-L7726).
-- Tutorial pointer sprite и bubble offsets читают master scale через `getMasterUiScale()`, а underground hangar canvas preview синхронизирует backing resolution с DOM size + DPR через `syncCanvasResolution(canvas)`: [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L1223-L1241), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L1611-L1620), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js#L241-L255), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js#L264-L325).
+- Tutorial pointer sprite и bubble offsets читают master scale через `getMasterUiScale()`, а DOM canvas preview surfaces должны переиспользовать `Game.CanvasRoot.syncDomCanvasResolution(canvas)` вместо локального DPR-sync. Underground hangar preview уже сидит на этом helper, поэтому новые preview shells не дублируют backing-resolution contract: [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L1223-L1241), [src/ui/tutorialRuntime.js](../../../src/ui/tutorialRuntime.js#L1611-L1620), [src/render/canvasRoot.js](../../../src/render/canvasRoot.js), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js).
 - Phaser-side seam не вычисляет scale самостоятельно: `HudAdapter.refreshUiScale()`, `ModalAdapter.refreshUiScale()` и `SceneOverlayManager.refreshUiScale()` получают master token из `game.js`; overlay scenes применяют его через `setUiScale()` или event `ui-scale-changed`: [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L46-L63), [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L251-L284), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L51-L55), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L272-L306), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L38-L64), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L228-L285).
 - Инварианты scale-contract: close/help controls сохраняют минимум `44×44`, глобальный font floor остаётся `12px`, а drag threshold `6px` не зависит от UI scale и не должен компенсироваться CSS-правками: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L22-L133), [src/ui/productionLineUI.js](../../../src/ui/productionLineUI.js#L150-L176).
 
@@ -93,7 +107,7 @@
 - `debuffIconScale` теперь масштабирует не только status-иконки, но и белый expiry overlay (wedge + центральную точку) через `drawScaledDebuffExpiryOverlay()` и `drawScaledZombieDebuffOverlays()`, поэтому любые правки fill overlay должны идти через тот же scale-path, а не отдельными fixed px-константами: [game.js](../../../game.js#L11212-L11249), [game.js](../../../game.js#L11327-L11348).
 
 ## Cache-bust contract
-- `index.html` сейчас держит split cache-bust для master-scale rollout: `style.css?v=20260327-branch1-master-scale-dom-contract` фиксирует DOM/CSS shell contract, а `game.js?v=20260327-faildetector-ui-scale-startup` фиксирует startup/runtime seam после восстановления `boot().catch(...)` на старте. Если меняется CSS geometry/DOM shell — bump style token; если меняется startup scale wiring или `resizeCanvas()` path — bump `game.js` token: [index.html](../../../index.html#L9-L9), [index.html](../../../index.html#L720-L720), [game.js](../../../game.js#L14673-L14675).
+- `index.html` держит единый entry cache-bust helper `Game.EntryAssetVersion`: только `style.css` и финальный `game.js` берут query token через `resolve(path)`, чтобы startup shell и boot/runtime seam не расходились по разным версиям. Если меняется любой из этих двух entry assets, bump делается один раз в helper; остальные статические runtime scripts не подмешиваются в этот helper и получают локальный query bump только когда реально меняется их HTML-loaded контракт (например `canvasRoot.js` / `undergroundHangarUI.js` для DOM preview seam): [index.html](../../../index.html), [game.js](../../../game.js), [src/render/canvasRoot.js](../../../src/render/canvasRoot.js), [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js).
 - `src/mechanics/achievementRewards.js` по-прежнему не подключается напрямую из `index.html`: reward-module живёт в runtime-loader `game.js`, а не в статическом script-list; не смешивать этот lazy path с master-scale cache-bust токенами UI shell: [game.js](../../../game.js#L463-L464), [game.js](../../../game.js#L9749-L9758).
 
 ## Military aid / crate modal
@@ -163,6 +177,7 @@
 - Длительность изучения: 2 часа (7200 сек) для открытых технологий, 5 часов (18000 сек) для технологий под замком. Константы: `TECH_STUDY_DURATION_OPEN`, `TECH_STUDY_DURATION_LOCKED`.
 - Одновременно можно изучать только одну технологию; при попытке начать вторую — auto-отказ.
 - Состояние изучения: `_techStudying = { techId, remaining, total, timer }`, хранится в `HangarChipsUI`.
+- Live-layout карточки изучения держится в `style.css`, а не в JS: `techUnlockCard` остаётся self-sized flex-column shell с `min-height` clamp, `align-self:flex-start`, bottom-anchored `progress/footer` и full-width primary CTA в `.techUnlockCard__actions--primary`. Не компенсировать locked/studying state инлайновыми height-хакaми в `renderTechUnlockPanel()`: [style.css](../../../style.css#L5570-L5872), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1100-L1190).
 - Таймер: `setInterval(1000)` декрементирует `remaining`; при `remaining <= 0` технология разблокируется, таймер останавливается.
 - Кнопка «Отменить»: показывает модальное окно подтверждения (`_showTechCancelConfirm`). При подтверждении прогресс изучения теряется полностью.
 - Кнопка «Ускорить процесс открытия»: показывает модальное окно (`_showTechAccelModal`) с единым grid для кремниевой пыли, больших чипов и фрагментов. Ставки считаются через `_getTechAccelRates(modId)`: для 2ч технологий `dust/chip/fragment = 2/20/6`, для 5ч — `1/10/1`; общий hard cap задаётся `TECH_ACCEL_MAX_PCT = 96`, а элементы, не влезающие в остаток, получают `techAccelChip--disabled` + badge `Лимит`. Grid ресурсов теперь оборачивается в `techAccelGridWrap` (rounded border + scrollbar skin), а summary строка живёт под dust-row, а не над списком ресурсов. Пыль выбирается отдельным `+/-` stepper, нижняя строка всегда показывает `доступно / выбрано`, а `apply` использует тот же selection-state без отдельного скрытого пересчёта: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L12-L14), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L1074-L1084), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js#L2296-L2454), [style.css](../../../style.css#L4222-L4315).
@@ -280,7 +295,7 @@
 - Для SC/Talents overlay shimmer-псевдоэлемент `.btn::after` отключён, чтобы hover не давал белый прямоугольник на кнопках.
 - Для `.scButton` обязателен `box-sizing:border-box`; на active/pressed запрещено менять `border-width`, `padding`, `height`, `margin`, `line-height`.
 - Правило overflow: одновременно скроллится только один контейнер (`.scModal__body`), а `overlay/panel/body` страницы не должны получать параллельный scroll.
-- Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll. **Кнопка «Закрыть» (`modsTankWallBack`) должна быть прямым дочерним элементом `.levelModal__panel.scModal`, а НЕ внутри `.scModal__body`** — это предотвращает появление второго скроллбара на вкладке «Дроны», где таблица занимает всю высоту body.
+- Для `modsTankWall` табы и крестик остаются доступными, а длинный контент (`таблицы/списки`) прокручивается внутри внутреннего scroll-контейнера, без внешнего page/overlay scroll. **Кнопка «Закрыть» (`modsTankWallBack`) должна быть прямым дочерним элементом `.levelModal__panel.scModal`, а НЕ внутри `.scModal__body`** — это предотвращает появление второго скроллбара на вкладке `Дроны`, где таблица с expanded detail rows занимает всю высоту body.
 - Для root/hangar модалок SC body-скролл отключён; для `modsTankWall` скролл оставлен только у `#modsTankWallOverlay .scModal__body`.
 
 ### Диагностика: второй scrollbar в supercomputer modal
@@ -304,18 +319,13 @@
 - Изменения в unified button behavior не должны ломать HUD supercomputer (позиция остаётся под runtime `transform`).
 - Disabled toast правило: если у кнопки `data-disabled-reason="noSaves"`, показывается «Нет сохранений/No saves», иначе «Недоступно/Unavailable». Сообщение показывается через единый helper `src/ui/toast.js` (один DOM, таймер перезапускается, без бесконечного stacking).
 
-## Supercomputer: вкладка "Стены"
-- Вкладка "Стены" (`walls`) в supercomputerMenu рендерит таблицу L1..L60 аналогично вкладке "Орудия".
-- В `modsTankWall` доступны только вкладки `Орудия` и `Стены`; вкладка `Базы` полностью удалена из DOM/runtime/i18n.
-- В `modsTankWall` таблицы `Орудия` и `Стены` должны показывать минимум 4 строки сразу (без дополнительного скролла на первом экране).
-- Состояние pending/reserved для стен (`pendingFenceUpgradesByLevel`, `getReservedFenceDamagePoints`) полностью независимо от состояния пушек.
-- При смене вкладок внутри модалки (Орудия <-> Стены) pending state не сбрасывается. Сброс происходит только при полном закрытии модалки.
-- Стоимость шага улучшения стены вычисляется через `getCannonUpgradeStepCost` (которая внутри вызывает общую `getUpgradeStepCost`).
-- Суммарная стоимость pending шагов для уровня вычисляется как сумма стоимостей каждого шага: `sum_{i=0..k-1} getUpgradeStepCost(level, applied+i)`.
-- Overflow-блокировки: если стоимость следующего шага превышает `Number.MAX_SAFE_INTEGER` или уходит в бесконечность, кнопка `+` блокируется.
-- Preview стены рисуется в canvas через `drawGunsSpriteCanvas`.
-- Источник превью кадра (по приоритету): `levels[].uiIcon.frame.id` -> `levels[].uiIcon.frame (x/y/w/h)` -> `levels[].uiIcon.frameId` -> `levels[].uiFrameId` -> `sideTop`.
-- Источник превью atlas (по приоритету): `levels[].uiIcon.atlas` -> `levels[].uiAtlas` -> `levels[].atlas` -> `fence.json.atlas`.
+## Supercomputer: shared modifiers tabs
+- `modsTankWall` теперь всегда держит три вкладки: `Орудия`, `Дроны`, `Стены`. Для всех трёх действует один и тот же table contract: summary row + expandable detail row, локальный per-tab pending state и общий redraw через `setTankWallTab()` / `render*Panel()`: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L490-L523), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1708).
+- Summary row показывает уровень, sprite preview, base/current values, aggregated upgrade text `applied (+pending)` и cost range для следующего stat-specific шага; detail row рисует `scGunsStatControl` cards с pill'ами `Upgrade level` / `Cost` и только двумя кнопками `+/-`. Отдельной inline `Apply` кнопки в detail row нет: повторный клик по summary toggle коммитит pending через `applyPendingStats(...)`, а на viewports `< 1200px` row-level CTA уезжает в полноширинную нижнюю центрированную lane строки: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L796-L839), [style.css](../../../style.css#L2942-L3085).
+- Pending state разделён по подсистемам: `pendingUpgradesByLevel` для weapons, `pendingDronUpgradesByLevel` для drones, `pendingFenceUpgradesByLevel` для walls. При смене вкладок внутри `modsTankWall` pending не сбрасывается; полный reset происходит только при закрытии контроллера: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L319-L339), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L674-L739), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1753-L1769).
+- `Reserved points` считаются как сумма pending step costs по статам и уровням в текущей подсистеме. Стоимость шага для weapons/drones/walls канонически берётся из JSON (`assets/tanks.json`, `assets/dron.json`, `assets/fence.json`) и суммируется runtime helper'ами `getCannonUpgradeStepCost` / `getDronUpgradeStepCost` / `getFenceUpgradeStepCost`; UI не выводит cost из хардкода: [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L641-L739), [game.js](../../../game.js#L878-L945), [game.js](../../../game.js#L3282-L3313).
+- В `modsTankWall` таблицы должны показывать минимум 4 строки сразу, а shared detail rows не должны ломать scroll-contract `#modsTankWallOverlay .scModal__body`. Scale-aware wrappers `.modsTankWall__panelActions` / `.modsTankWall__footerActions` остаются частью этого visual contract; narrow-layout action lane и скрытие header action-cell тоже считаются частью того же CSS seam: [style.css](../../../style.css#L2872-L3085), [style.css](../../../style.css#L7701-L7725).
+- Preview стены по-прежнему рисуется в canvas через `drawGunsSpriteCanvas`; источник preview frame остаётся data-driven из `fence.json` по приоритету `levels[].uiIcon.frame.id` -> `levels[].uiIcon.frame (x/y/w/h)` -> `levels[].uiIcon.frameId` -> `levels[].uiFrameId` -> `sideTop`, а atlas — `levels[].uiIcon.atlas` -> `levels[].uiAtlas` -> `levels[].atlas` -> `fence.json.atlas`.
 
 ## Modal padding standard
 - Единый отступ модалок задаётся через `:root { --uiModalPad: clamp(16px, 4vw, 50px) }`.
@@ -363,23 +373,18 @@
 	- уровень `L`,
 	- `attackSpeed` (базовое / текущее),
 	- `baseDamage` (базовое / текущее),
-	- уровень улучшения (`applied` и `+pending`),
-	- стоимость только текущего шага (`nextStepCost`),
-	- действия `+`, `-`, `Улучшить` (кнопки `+/-` собраны в вертикальный стек `.scGunsActionStepper`).
-- `pendingUpgradesByLevel` — локальное UI-состояние (живет только пока открыт supercomputer menu, сбрасывается при полном закрытии).
-- `reservedDamagePoints` считается как сумма стоимости всех pending-шагов по всем уровням с учётом текущего `applied`.
+- 	- уровень улучшения (`applied` и `+pending` по двум stat keys),
+	- диапазон стоимости следующих stat-specific шагов,
+	- summary toggle `Улучшить`, который раскрывает или коммитит строку.
+- `pendingUpgradesByLevel` — локальное UI-состояние per stat (`attackSpeed`, `baseDamage`), живёт только пока открыт supercomputer menu и сбрасывается при полном закрытии.
+- `reservedDamagePoints` считается как сумма стоимости всех pending-шагов по всем уровням и обоим stat keys с учётом текущего `applied`.
 - Расчёт стоимости для уровня `L`:
-	- `applied = state.player.cannonUpgradesApplied[L]`;
-	- `pending = pendingByLevel[L]`;
-	- `u0 = applied + pending`;
-	- `nextStepCost = getCannonUpgradeStepCost(level, applied + pending)`.
-- Обновление значений: при `+/-` и после `Улучшить` пересчитывается только `nextStepCost` и состояние pending/applied.
-- Кнопка `+` увеличивает pending только если `availableDamagePoints - reservedDamagePoints >= nextStepCost`.
-- Кнопка `-` уменьшает pending до нуля и освобождает reserve.
-- Кнопка `Улучшить`:
-	- disabled при `pending=0`;
-	- при `pending>0` повторно валидирует доступные очки,
-	- списывает очки, применяет апгрейд в state и сбрасывает pending для выбранного уровня.
+	- `applied = getAppliedCannonUpgradeLevel(level, statKey)`;
+	- `pending = pendingUpgradesByLevel[level][statKey]`;
+	- `nextStepCost = getCannonUpgradeStepCost(level, statKey, applied + pending)`;
+	- `totalPendingCost = Σ getCannonUpgradeStepCost(level, statKey, applied + stepIndex)` по каждому pending step.
+- Обновление значений: `+/-` меняют только pending конкретного stat key; повторный клик по уже раскрытой строке прогоняет `applyPendingStats(...)` и очищает pending entry для выбранного уровня.
+- Кнопка `+` увеличивает pending только если `availableDamagePoints - reservedDamagePoints >= nextStepCost`; `-` уменьшает pending только для конкретного stat key.
 - Формат отображения статов: целые значения показываются без суффикса `.00` (для `attackSpeed`, `damage`, `HP`, `armor`).
 - Иконки орудий:
 	- источник кадра — текущий `cannon` spritesheet (`TankSprites.pickCannon(level)`);

@@ -1132,8 +1132,11 @@
         else if (isStudying) cardClass += ' techUnlockCard--studying';
 
         html += '<div class="' + cardClass + '">';
+        html += '<div class="techUnlockCard__body">';
         html += '<div class="techUnlockCard__name">' + modName(tech.modId) + '</div>';
         html += '<div class="techUnlockCard__desc">' + _getTechDescription(tech.modId) + '</div>';
+
+        var footerHtml = '';
 
         if (isUnlocked) {
           html += '<div class="techUnlockCard__status techUnlockCard__status--done">' + t('techUnlockDone', '✓ Открыто') + '</div>';
@@ -1159,8 +1162,9 @@
             html += '<div class="techUnlockCard__accelInfo">' + t('techUnlockAccelerated', 'Ускорено на {pct}%').replace('{pct}', _techStudying.acceleratedPct) + '</div>';
           }
 
-          html += '<div class="techUnlockCard__actions">';
-          html += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
+          footerHtml += '<div class="techUnlockCard__footer">';
+          footerHtml += '<div class="techUnlockCard__actions">';
+          footerHtml += '<button class="btn scButton techUnlockCard__cancelBtn" data-tech-cancel="' + tech.modId + '" type="button">' + t('techUnlockCancel', 'Отменить') + '</button>';
           var accelReachedMax = (_techStudying.acceleratedPct || 0) >= TECH_ACCEL_MAX_PCT;
           var accelHasResources = _hasTechAccelerationResources();
           var accelDisabled = accelReachedMax || !accelHasResources;
@@ -1169,17 +1173,22 @@
             : (!accelHasResources
               ? t('techUnlockAccelNoResources', 'Нет ресурсов для ускорения')
               : t('techUnlockAccel', 'Ускорить процесс открытия'));
-          html += '<button class="btn scButton techUnlockCard__accelBtn' + (accelDisabled ? ' techUnlockCard__accelBtn--disabled' : '') + '" data-tech-accel="' + tech.modId + '" type="button"' + (accelDisabled ? ' disabled aria-disabled="true"' : '') + (accelDisabled ? ' title="' + _escapeHtml(accelLabel) + '"' : '') + '>' + accelLabel + '</button>';
-          html += '</div>';
+          footerHtml += '<button class="btn scButton techUnlockCard__accelBtn' + (accelDisabled ? ' techUnlockCard__accelBtn--disabled' : '') + '" data-tech-accel="' + tech.modId + '" type="button"' + (accelDisabled ? ' disabled aria-disabled="true"' : '') + (accelDisabled ? ' title="' + _escapeHtml(accelLabel) + '"' : '') + '>' + accelLabel + '</button>';
+          footerHtml += '</div>';
+          footerHtml += '</div>';
         } else {
           /* Show "Start study" button + duration */
           html += '<div class="techUnlockCard__durationInfo">' + t('techUnlockDuration', 'Время изучения: {time}').replace('{time}', _formatTime(duration)) + '</div>';
-          html += '<div class="techUnlockCard__actions">';
+          footerHtml += '<div class="techUnlockCard__footer">';
+          footerHtml += '<div class="techUnlockCard__actions techUnlockCard__actions--primary">';
           var disabled = anotherStudying ? ' disabled' : '';
-          html += '<button class="btn scButton techUnlockCard__startBtn' + (anotherStudying ? ' techUnlockCard__startBtn--disabled' : '') + '" data-tech-start="' + tech.modId + '" type="button"' + disabled + '>' + t('techUnlockStart', 'Начать процесс изучения') + '</button>';
-          html += '</div>';
+          footerHtml += '<button class="btn scButton techUnlockCard__startBtn' + (anotherStudying ? ' techUnlockCard__startBtn--disabled' : '') + '" data-tech-start="' + tech.modId + '" type="button"' + disabled + '>' + t('techUnlockStart', 'Начать процесс изучения') + '</button>';
+          footerHtml += '</div>';
+          footerHtml += '</div>';
         }
 
+        html += '</div>';
+        html += footerHtml;
         html += '</div>'; // techUnlockCard
       }
     }

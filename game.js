@@ -6,6 +6,19 @@ ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
 const SeededRngApi = GameApi?.SeededRng ?? null;
 
+function getEntryAssetVersionToken(){
+  const helper = GameApi.EntryAssetVersion;
+  return helper && typeof helper.getToken === 'function' ? helper.getToken() : '';
+}
+
+function resolveEntryAssetUrl(path){
+  const helper = GameApi.EntryAssetVersion;
+  return helper && typeof helper.resolve === 'function' ? helper.resolve(path) : path;
+}
+
+GameApi.getEntryAssetVersionToken = getEntryAssetVersionToken;
+GameApi.resolveEntryAssetUrl = resolveEntryAssetUrl;
+
 const RuntimeTasks = GameApi.RuntimeTasks || { install(){}, clearAll(){}, suspendAll(){}, resumeAll(){} };
 
 RuntimeTasks.install();
@@ -153,9 +166,122 @@ function getCannonUpgradeRow(level){
   return cfg[lvl - 1] || null;
 }
 
-function normalizeAppliedCannonUpgrade(value){
+function getTankWallStorageKeys(tabKey, fallbackKeys){
+  const catalog = window.Game && window.Game.TankWallStatCatalog;
+  if (catalog && typeof catalog.getStorageKeys === 'function') {
+    const keys = catalog.getStorageKeys(tabKey);
+    if (Array.isArray(keys) && keys.length) return keys;
+  }
+  return Array.isArray(fallbackKeys) ? fallbackKeys.slice() : [];
+}
+
+const CANNON_UPGRADE_STAT_KEYS = getTankWallStorageKeys('weapons', ['baseDamage', 'attackSpeed']);
+const DRON_UPGRADE_STAT_KEYS = getTankWallStorageKeys('drones', ['moveSpeedPxSec', 'repairSpeedMult', 'costMult']);
+const FENCE_UPGRADE_STAT_KEYS = getTankWallStorageKeys('walls', ['segmentMaxHp', 'armorFlat']);
+
+let TankStatUpgradeCostsByLevel = Object.create(null);
+let DronStatUpgradeCostsByLevel = Object.create(null);
+
+function toSafeUpgradeCount(value){
   if (!Number.isFinite(value)) return 0;
+  if (value <= 0) return 0;
   return Math.max(0, Math.floor(value));
+}
+
+function normalizeUpgradeStatKey(statKeys, statKey){
+  if (typeof statKey === 'string') {
+    for (let i = 0; i < statKeys.length; i++) {
+      if (statKeys[i] === statKey) return statKeys[i];
+    }
+  }
+  return statKeys[0];
+}
+
+function decodeAppliedUpgradeEntry(value, statKeys){
+  const counts = Object.create(null);
+  for (let i = 0; i < statKeys.length; i++) {
+    counts[statKeys[i]] = 0;
+  }
+  if (typeof value === 'string' && value.length > 0) {
+    const parts = value.split('|');
+    for (let i = 0; i < Math.min(parts.length, statKeys.length); i++) {
+      counts[statKeys[i]] = toSafeUpgradeCount(Number(parts[i]));
+    }
+    if (parts.length === 1) {
+      const shared = counts[statKeys[0]];
+      for (let i = 1; i < statKeys.length; i++) counts[statKeys[i]] = shared;
+    }
+    return counts;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < Math.min(value.length, statKeys.length); i++) {
+      counts[statKeys[i]] = toSafeUpgradeCount(Number(value[i]));
+    }
+    return counts;
+  }
+  if (value && typeof value === 'object') {
+    let hasAny = false;
+    for (let i = 0; i < statKeys.length; i++) {
+      const key = statKeys[i];
+      if (Number.isFinite(Number(value[key]))) {
+        counts[key] = toSafeUpgradeCount(Number(value[key]));
+        hasAny = true;
+      }
+    }
+    if (!hasAny && Number.isFinite(Number(value.value))) {
+      const shared = toSafeUpgradeCount(Number(value.value));
+      for (let i = 0; i < statKeys.length; i++) counts[statKeys[i]] = shared;
+    }
+    return counts;
+  }
+  if (Number.isFinite(Number(value))) {
+    const shared = toSafeUpgradeCount(Number(value));
+    for (let i = 0; i < statKeys.length; i++) counts[statKeys[i]] = shared;
+  }
+  return counts;
+}
+
+function encodeAppliedUpgradeEntry(counts, statKeys){
+  const parts = [];
+  for (let i = 0; i < statKeys.length; i++) {
+    parts.push(String(toSafeUpgradeCount(counts && counts[statKeys[i]])));
+  }
+  return parts.join('|');
+}
+
+function normalizeAppliedUpgradeEntry(value, statKeys){
+  return encodeAppliedUpgradeEntry(decodeAppliedUpgradeEntry(value, statKeys), statKeys);
+}
+
+function getAppliedUpgradeEntryCount(value, statKeys, statKey){
+  const counts = decodeAppliedUpgradeEntry(value, statKeys);
+  if (typeof statKey === 'string') {
+    return counts[normalizeUpgradeStatKey(statKeys, statKey)] || 0;
+  }
+  let max = 0;
+  for (let i = 0; i < statKeys.length; i++) {
+    const nextValue = counts[statKeys[i]] || 0;
+    if (nextValue > max) max = nextValue;
+  }
+  return max;
+}
+
+function getAppliedUpgradeEntryTotal(value, statKeys){
+  const counts = decodeAppliedUpgradeEntry(value, statKeys);
+  let total = 0;
+  for (let i = 0; i < statKeys.length; i++) total += counts[statKeys[i]] || 0;
+  return total;
+}
+
+function incrementAppliedUpgradeEntry(value, statKeys, statKey, delta){
+  const key = normalizeUpgradeStatKey(statKeys, statKey);
+  const counts = decodeAppliedUpgradeEntry(value, statKeys);
+  counts[key] = toSafeUpgradeCount((counts[key] || 0) + toSafeUpgradeCount(delta));
+  return encodeAppliedUpgradeEntry(counts, statKeys);
+}
+
+function normalizeAppliedCannonUpgrade(value){
+  return normalizeAppliedUpgradeEntry(value, CANNON_UPGRADE_STAT_KEYS);
 }
 
 function ensureCannonUpgradesAppliedState(){
@@ -164,35 +290,41 @@ function ensureCannonUpgradesAppliedState(){
   }
   const source = Array.isArray(state.player.cannonUpgradesApplied) ? state.player.cannonUpgradesApplied : [];
   if (source.length !== CANNON_UPGRADES_LEVELS) {
-    state.player.cannonUpgradesApplied = Array(CANNON_UPGRADES_LEVELS).fill(0);
+    state.player.cannonUpgradesApplied = Array(CANNON_UPGRADES_LEVELS).fill(normalizeAppliedCannonUpgrade(0));
     for (let i = 0; i < Math.min(source.length, CANNON_UPGRADES_LEVELS); i++) {
       state.player.cannonUpgradesApplied[i] = normalizeAppliedCannonUpgrade(source[i]);
     }
     return state.player.cannonUpgradesApplied;
+  }
+  for (let i = 0; i < source.length; i++) {
+    const normalized = normalizeAppliedCannonUpgrade(source[i]);
+    if (source[i] !== normalized) source[i] = normalized;
   }
   state.player.cannonUpgradesApplied = source;
   return source;
 }
 
 function normalizeAppliedFenceUpgrade(value){
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.floor(value));
+  return normalizeAppliedUpgradeEntry(value, FENCE_UPGRADE_STAT_KEYS);
 }
 
 function normalizeAppliedDronUpgrade(value){
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.floor(value));
+  return normalizeAppliedUpgradeEntry(value, DRON_UPGRADE_STAT_KEYS);
 }
 
 function ensureFenceUpgradesAppliedState(){
   if (!state.player || typeof state.player !== 'object') state.player = {};
   var source = Array.isArray(state.player.fenceUpgradesApplied) ? state.player.fenceUpgradesApplied : [];
   if (source.length !== MAX_TANK_LEVEL) {
-    state.player.fenceUpgradesApplied = Array(MAX_TANK_LEVEL).fill(0);
+    state.player.fenceUpgradesApplied = Array(MAX_TANK_LEVEL).fill(normalizeAppliedFenceUpgrade(0));
     for (var i = 0; i < Math.min(source.length, MAX_TANK_LEVEL); i++) {
       state.player.fenceUpgradesApplied[i] = normalizeAppliedFenceUpgrade(source[i]);
     }
     return state.player.fenceUpgradesApplied;
+  }
+  for (var j = 0; j < source.length; j++) {
+    var normalized = normalizeAppliedFenceUpgrade(source[j]);
+    if (source[j] !== normalized) source[j] = normalized;
   }
   state.player.fenceUpgradesApplied = source;
   return source;
@@ -209,11 +341,15 @@ function ensureDronUpgradesAppliedState(){
   }
   var source = Array.isArray(state.player.dronUpgradesApplied) ? state.player.dronUpgradesApplied : [];
   if (source.length !== levelsCount) {
-    state.player.dronUpgradesApplied = Array(levelsCount).fill(0);
+    state.player.dronUpgradesApplied = Array(levelsCount).fill(normalizeAppliedDronUpgrade(0));
     for (var i = 0; i < Math.min(source.length, levelsCount); i++) {
       state.player.dronUpgradesApplied[i] = normalizeAppliedDronUpgrade(source[i]);
     }
     return state.player.dronUpgradesApplied;
+  }
+  for (var j = 0; j < source.length; j++) {
+    var normalized = normalizeAppliedDronUpgrade(source[j]);
+    if (source[j] !== normalized) source[j] = normalized;
   }
   state.player.dronUpgradesApplied = source;
   return source;
@@ -246,7 +382,7 @@ function getAppliedFenceUpgradeLevel(level){
   var idx = lvl - 1;
   var value = normalizeAppliedFenceUpgrade(applied[idx]);
   if (applied[idx] !== value) applied[idx] = value;
-  return value;
+  return getAppliedUpgradeEntryCount(value, FENCE_UPGRADE_STAT_KEYS, arguments[1]);
 }
 
 function getAppliedCannonUpgradeLevel(level){
@@ -255,7 +391,7 @@ function getAppliedCannonUpgradeLevel(level){
   const idx = lvl - 1;
   const value = normalizeAppliedCannonUpgrade(applied[idx]);
   if (applied[idx] !== value) applied[idx] = value;
-  return value;
+  return getAppliedUpgradeEntryCount(value, CANNON_UPGRADE_STAT_KEYS, arguments[1]);
 }
 
 function refreshTanksPowerTier(){
@@ -405,7 +541,9 @@ function getTankBalanceMul(level, key) {
   }
   const row = getCannonUpgradeRow(level);
   if (!row) return baseMul;
-  const applied = getAppliedCannonUpgradeLevel(level);
+  const applied = key === 'attackDamageMul'
+    ? getAppliedCannonUpgradeLevel(level, 'baseDamage')
+    : getAppliedCannonUpgradeLevel(level, 'attackSpeed');
   if (applied <= 0) return baseMul;
   const perUpgradeMul = key === 'attackDamageMul' ? Number(row[3]) : Number(row[4]);
   if (!Number.isFinite(perUpgradeMul) || perUpgradeMul <= 0) return baseMul;
@@ -594,31 +732,96 @@ function getDamagePoints(){
   return getAvailableDamagePoints();
 }
 
-function getCannonUpgradeStepCost(level, appliedIndex){
-  return getUpgradeStepCost(level, appliedIndex);
+function getFallbackUpgradeCostBase(level){
+  const row = getCannonUpgradeRow(level);
+  if (row && Number.isFinite(Number(row[1]))) return Math.max(0, Math.floor(Number(row[1])));
+  return 0;
 }
 
-function getUpgradeStepCost(level, appliedIndex){
-  // unified upgrade cost for fences and cannons
-  var lvl = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) : 1;
-  var idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
-  // try fence config first
-  var cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
-  var base = 0;
-  if (cfg && Array.isArray(cfg.levels) && cfg.levels[lvl - 1] && Number.isFinite(cfg.levels[lvl - 1].upgradeCostDamagePoints)) {
-    base = Math.max(0, Math.floor(cfg.levels[lvl - 1].upgradeCostDamagePoints));
-  } else {
-    // fallback to cannon upgrades balance table
-    var row = getCannonUpgradeRow(lvl);
-    if (row && Number.isFinite(Number(row[1]))) base = Math.max(0, Math.floor(Number(row[1])));
+function sanitizeUpgradeCostEntry(raw, statKeys){
+  if (!raw || typeof raw !== 'object') return null;
+  const out = Object.create(null);
+  let hasAny = false;
+  for (let i = 0; i < statKeys.length; i++) {
+    const key = statKeys[i];
+    if (!Number.isFinite(Number(raw[key]))) continue;
+    out[key] = Math.max(0, Math.floor(Number(raw[key])));
+    hasAny = true;
   }
+  return hasAny ? out : null;
+}
+
+function loadTankStatUpgradeCosts(raw){
+  const out = Object.create(null);
+  if (!raw || typeof raw !== 'object') return out;
+  for (let level = 1; level <= CANNON_UPGRADES_LEVELS; level++) {
+    const tankCfg = raw['tank_lvl' + level];
+    const entry = sanitizeUpgradeCostEntry(tankCfg && tankCfg.upgradeDamagePointsCosts, CANNON_UPGRADE_STAT_KEYS);
+    if (entry) out[level] = entry;
+  }
+  return out;
+}
+
+function loadDronStatUpgradeCosts(raw){
+  const out = Object.create(null);
+  if (!raw || typeof raw !== 'object' || !raw.levels || typeof raw.levels !== 'object') return out;
+  const levelKeys = Object.keys(raw.levels);
+  for (let i = 0; i < levelKeys.length; i++) {
+    const key = levelKeys[i];
+    const level = Math.max(1, Math.floor(Number(key) || 0));
+    const levelCfg = raw.levels[key];
+    const entry = sanitizeUpgradeCostEntry(levelCfg && levelCfg.upgradeDamagePointsCosts, DRON_UPGRADE_STAT_KEYS);
+    if (entry) out[level] = entry;
+  }
+  return out;
+}
+
+function getProgressiveUpgradeStepCost(baseCost, appliedIndex){
+  const base = Number.isFinite(baseCost) ? Math.max(0, Math.floor(baseCost)) : 0;
+  const idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
   if (!Number.isFinite(base) || base <= 0) return 0;
-  // exponential growth per step (safe, ceil)
-  var multiplier = 1.2;
-  var cost = Math.ceil(base * Math.pow(multiplier, idx));
+  const multiplier = 1.2;
+  const cost = Math.ceil(base * Math.pow(multiplier, idx));
   if (!Number.isFinite(cost) || cost <= 0) return 0;
   if (cost > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
   return cost;
+}
+
+function getCannonUpgradeCostBase(level, statKey){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(CANNON_UPGRADE_STAT_KEYS, statKey);
+  const entry = TankStatUpgradeCostsByLevel[lvl];
+  if (entry && Number.isFinite(entry[key])) return Math.max(0, Math.floor(entry[key]));
+  return getFallbackUpgradeCostBase(lvl);
+}
+
+function getDronUpgradeCostBase(level, statKey){
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
+  const entry = DronStatUpgradeCostsByLevel[lvl];
+  if (entry && Number.isFinite(entry[key])) return Math.max(0, Math.floor(entry[key]));
+  return getFallbackUpgradeCostBase(lvl);
+}
+
+function getFenceUpgradeCostBase(level, statKey){
+  const levels = getFenceLevels();
+  const lvl = Number.isFinite(level) ? Math.max(1, Math.min(levels.length, Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(FENCE_UPGRADE_STAT_KEYS, statKey);
+  const levelCfg = levels[lvl - 1] || levels[0] || {};
+  const rawCosts = sanitizeUpgradeCostEntry(levelCfg.upgradeDamagePointsCosts, FENCE_UPGRADE_STAT_KEYS);
+  if (rawCosts && Number.isFinite(rawCosts[key])) return Math.max(0, Math.floor(rawCosts[key]));
+  if (Number.isFinite(levelCfg.upgradeCostDamagePoints)) {
+    return Math.max(0, Math.floor(levelCfg.upgradeCostDamagePoints));
+  }
+  return 0;
+}
+
+function getCannonUpgradeStepCost(level, statKey, appliedIndex){
+  return getProgressiveUpgradeStepCost(getCannonUpgradeCostBase(level, statKey), appliedIndex);
+}
+
+function getFenceUpgradeStepCost(level, statKey, appliedIndex){
+  return getProgressiveUpgradeStepCost(getFenceUpgradeCostBase(level, statKey), appliedIndex);
 }
 
 function getCannonUpgradeIconFrames(level){
@@ -681,63 +884,68 @@ function getDronUpgradeIconFps(level){
   return fps;
 }
 
-function getCannonUpgradeTotalCost(level, pendingCount){
+function getCannonUpgradeTotalCost(level, statKey, pendingCount){
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return 0;
-  const applied = getAppliedCannonUpgradeLevel(level);
+  const key = normalizeUpgradeStatKey(CANNON_UPGRADE_STAT_KEYS, statKey);
+  const applied = getAppliedCannonUpgradeLevel(level, key);
   let total = 0;
   for (let k = 0; k < count; k++) {
-    total += getCannonUpgradeStepCost(level, applied + k);
+    total += getCannonUpgradeStepCost(level, key, applied + k);
   }
   return total;
 }
 
-function applyCannonUpgrade(level, pendingCount){
+function applyCannonUpgrade(level, statKey, pendingCount){
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(CANNON_UPGRADES_LEVELS, Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(CANNON_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getCannonUpgradeTotalCost(lvl, count);
+  const totalCost = getCannonUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
   const applied = ensureCannonUpgradesAppliedState();
-  applied[lvl - 1] = normalizeAppliedCannonUpgrade(applied[lvl - 1]) + count;
+  applied[lvl - 1] = incrementAppliedUpgradeEntry(applied[lvl - 1], CANNON_UPGRADE_STAT_KEYS, key, count);
   state.damagePointsSpent = ensureDamagePointsSpentState() + totalCost;
   state.player.modsDirty = true;
   updateDamagePointsUI();
   return {
     ok: true,
     totalCost: totalCost,
-    appliedLevel: applied[lvl - 1],
+    statKey: key,
+    appliedLevel: getAppliedCannonUpgradeLevel(lvl, key),
   };
 }
 
-function getFenceUpgradeTotalCost(level, pendingCount){
+function getFenceUpgradeTotalCost(level, statKey, pendingCount){
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return 0;
-  const applied = getAppliedFenceUpgradeLevel(level);
+  const key = normalizeUpgradeStatKey(FENCE_UPGRADE_STAT_KEYS, statKey);
+  const applied = getAppliedFenceUpgradeLevel(level, key);
   let total = 0;
   for (let k = 0; k < count; k++) {
-    total += getUpgradeStepCost(level, applied + k);
+    total += getFenceUpgradeStepCost(level, key, applied + k);
   }
   return total;
 }
 
-function applyFenceUpgrade(level, pendingCount){
+function applyFenceUpgrade(level, statKey, pendingCount){
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(FENCE_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getFenceUpgradeTotalCost(lvl, count);
+  const totalCost = getFenceUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
   const applied = ensureFenceUpgradesAppliedState();
-  applied[lvl - 1] = normalizeAppliedFenceUpgrade(applied[lvl - 1]) + count;
+  applied[lvl - 1] = incrementAppliedUpgradeEntry(applied[lvl - 1], FENCE_UPGRADE_STAT_KEYS, key, count);
   state.damagePointsSpent = ensureDamagePointsSpentState() + totalCost;
   state.player.modsDirty = true;
 
   const currentLevel = getFenceLevelIndex() + 1;
-  if (lvl === currentLevel) {
+  if (lvl === currentLevel && key === 'segmentMaxHp') {
     const maxHp = getFenceSegmentMaxHp();
     clampFenceSegmentsToMaxHp(maxHp);
     if (state.fenceSegmentsMeta) state.fenceSegmentsMeta.segmentMaxHp = maxHp;
@@ -747,7 +955,8 @@ function applyFenceUpgrade(level, pendingCount){
   return {
     ok: true,
     totalCost: totalCost,
-    appliedLevel: applied[lvl - 1],
+    statKey: key,
+    appliedLevel: getAppliedFenceUpgradeLevel(lvl, key),
   };
 }
 
@@ -3015,11 +3224,11 @@ function getAppliedDronUpgradeLevel(level){
   const idx = lvl - 1;
   const value = normalizeAppliedDronUpgrade(applied[idx]);
   if (applied[idx] !== value) applied[idx] = value;
-  return value;
+  return getAppliedUpgradeEntryCount(value, DRON_UPGRADE_STAT_KEYS, arguments[1]);
 }
 
-function getDronUpgradeStepCost(level, appliedIndex){
-  return getUpgradeStepCost(level, appliedIndex);
+function getDronUpgradeStepCost(level, statKey, appliedIndex){
+  return getProgressiveUpgradeStepCost(getDronUpgradeCostBase(level, statKey), appliedIndex);
 }
 
 function getDronUpgradePercentsForLevel(level){
@@ -3038,18 +3247,17 @@ function buildDronStatsWithApplied(baseStats, level, applied){
   const baseMove = Number.isFinite(baseStats && baseStats.moveSpeedPxSec) ? Math.max(0, Number(baseStats.moveSpeedPxSec)) : 0;
   const baseRepair = Number.isFinite(baseStats && baseStats.repairSpeedMult) ? Math.max(0, Number(baseStats.repairSpeedMult)) : 0;
   const baseCost = Number.isFinite(baseStats && baseStats.costMult) ? Math.max(0.01, Number(baseStats.costMult)) : 1;
-  const up = Number.isFinite(applied) ? Math.max(0, Math.floor(applied)) : 0;
-  if (up <= 0) {
-    return {
-      moveSpeedPxSec: baseMove,
-      repairSpeedMult: baseRepair,
-      costMult: baseCost,
-    };
-  }
+  const appliedCounts = Number.isFinite(applied)
+    ? {
+        moveSpeedPxSec: Math.max(0, Math.floor(applied)),
+        repairSpeedMult: Math.max(0, Math.floor(applied)),
+        costMult: Math.max(0, Math.floor(applied)),
+      }
+    : decodeAppliedUpgradeEntry(applied, DRON_UPGRADE_STAT_KEYS);
   const percents = getDronUpgradePercentsForLevel(level);
-  const moveSpeedPxSec = baseMove * (1 + percents.moveSpeedIncPer * up);
-  const repairSpeedMult = baseRepair * (1 + percents.repairSpeedIncPer * up);
-  const costMulRaw = baseCost * (1 - percents.repairCostDecPer * up);
+  const moveSpeedPxSec = baseMove * (1 + percents.moveSpeedIncPer * (appliedCounts.moveSpeedPxSec || 0));
+  const repairSpeedMult = baseRepair * (1 + percents.repairSpeedIncPer * (appliedCounts.repairSpeedMult || 0));
+  const costMulRaw = baseCost * (1 - percents.repairCostDecPer * (appliedCounts.costMult || 0));
   return {
     moveSpeedPxSec: moveSpeedPxSec,
     repairSpeedMult: repairSpeedMult,
@@ -3070,31 +3278,39 @@ function getDronStatsForLevel(level, appliedOverride){
   };
   const applied = Number.isFinite(appliedOverride)
     ? Math.max(0, Math.floor(appliedOverride))
-    : getAppliedDronUpgradeLevel(lvl);
+    : (appliedOverride && typeof appliedOverride === 'object'
+      ? appliedOverride
+      : {
+          moveSpeedPxSec: getAppliedDronUpgradeLevel(lvl, 'moveSpeedPxSec'),
+          repairSpeedMult: getAppliedDronUpgradeLevel(lvl, 'repairSpeedMult'),
+          costMult: getAppliedDronUpgradeLevel(lvl, 'costMult'),
+        });
   return buildDronStatsWithApplied(baseStats, lvl, applied);
 }
 
-function getDronUpgradeTotalCost(level, pendingCount){
+function getDronUpgradeTotalCost(level, statKey, pendingCount){
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return 0;
-  const applied = getAppliedDronUpgradeLevel(level);
+  const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
+  const applied = getAppliedDronUpgradeLevel(level, key);
   let total = 0;
   for (let k = 0; k < count; k++) {
-    total += getDronUpgradeStepCost(level, applied + k);
+    total += getDronUpgradeStepCost(level, key, applied + k);
   }
   return total;
 }
 
-function applyDronUpgrade(level, pendingCount){
+function applyDronUpgrade(level, statKey, pendingCount){
   const lvl = Number.isFinite(level) ? Math.max(1, Math.min(getDronLevelsCount(), Math.floor(level))) : 1;
+  const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getDronUpgradeTotalCost(lvl, count);
+  const totalCost = getDronUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
   const applied = ensureDronUpgradesAppliedState();
-  applied[lvl - 1] = normalizeAppliedDronUpgrade(applied[lvl - 1]) + count;
+  applied[lvl - 1] = incrementAppliedUpgradeEntry(applied[lvl - 1], DRON_UPGRADE_STAT_KEYS, key, count);
 
   const spent = totalCost;
   state.damagePointsSpent = ensureDamagePointsSpentState() + spent;
@@ -3103,7 +3319,8 @@ function applyDronUpgrade(level, pendingCount){
   return {
     ok: true,
     totalCost: spent,
-    appliedLevel: normalizeAppliedDronUpgrade(applied[lvl - 1]),
+    statKey: key,
+    appliedLevel: getAppliedDronUpgradeLevel(lvl, key),
   };
 }
 
@@ -6454,6 +6671,9 @@ function getFenceLevels(){
       ? Math.max(0, Math.floor(raw.upgradeCostDamagePoints))
       : null;
     const level = { segmentMaxHp, armorFlat, upgradeCostDamagePoints };
+    if (raw.upgradeDamagePointsCosts && typeof raw.upgradeDamagePointsCosts === 'object') {
+      level.upgradeDamagePointsCosts = raw.upgradeDamagePointsCosts;
+    }
     if (typeof raw.atlas === 'string' && raw.atlas) level.atlas = raw.atlas;
     if (typeof raw.uiAtlas === 'string' && raw.uiAtlas) level.uiAtlas = raw.uiAtlas;
     if (typeof raw.uiFrameId === 'string' && raw.uiFrameId) level.uiFrameId = raw.uiFrameId;
@@ -6488,14 +6708,23 @@ function getFenceStatsForLevel(level, appliedIndex){
   const levelCfg = levels[lvl - 1] || levels[0];
   const baseHp = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
   const baseArmor = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
-  const applied = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
-  const currentHp = Math.max(1, Math.round(baseHp * Math.pow(FENCE_HP_MUL, applied)));
-  const currentArmor = Math.max(0, Math.round(baseArmor * Math.pow(FENCE_ARMOR_MUL, applied)));
+  const appliedCounts = Number.isFinite(appliedIndex)
+    ? { segmentMaxHp: Math.max(0, Math.floor(appliedIndex)), armorFlat: Math.max(0, Math.floor(appliedIndex)) }
+    : (appliedIndex && typeof appliedIndex === 'object'
+      ? appliedIndex
+      : {
+          segmentMaxHp: getAppliedFenceUpgradeLevel(lvl, 'segmentMaxHp'),
+          armorFlat: getAppliedFenceUpgradeLevel(lvl, 'armorFlat'),
+        });
+  const currentHp = Math.max(1, Math.round(baseHp * Math.pow(FENCE_HP_MUL, Math.max(0, Math.floor(appliedCounts.segmentMaxHp || 0)))));
+  const currentArmor = Math.max(0, Math.round(baseArmor * Math.pow(FENCE_ARMOR_MUL, Math.max(0, Math.floor(appliedCounts.armorFlat || 0)))));
   return {
     baseHp: baseHp,
     baseArmor: baseArmor,
     currentHp: currentHp,
     currentArmor: currentArmor,
+    appliedSegmentMaxHp: Math.max(0, Math.floor(appliedCounts.segmentMaxHp || 0)),
+    appliedArmorFlat: Math.max(0, Math.floor(appliedCounts.armorFlat || 0)),
   };
 }
 
@@ -6503,7 +6732,7 @@ function getFenceSegmentMaxHp(){
   const levelCfg = getCurrentFenceLevelConfig();
   const base = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
   const level = getFenceLevelIndex() + 1;
-  const applied = getAppliedFenceUpgradeLevel(level);
+  const applied = getAppliedFenceUpgradeLevel(level, 'segmentMaxHp');
   const val = Math.round(base * Math.pow(FENCE_HP_MUL, applied));
   return Math.max(1, val);
 }
@@ -6512,31 +6741,36 @@ function getFenceArmorFlat(){
   const levelCfg = getCurrentFenceLevelConfig();
   const base = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
   const level = getFenceLevelIndex() + 1;
-  const applied = getAppliedFenceUpgradeLevel(level);
+  const applied = getAppliedFenceUpgradeLevel(level, 'armorFlat');
   const val = Math.round(base * Math.pow(FENCE_ARMOR_MUL, applied));
   return Math.max(0, val);
 }
 
 function getFenceUpgradeCostDamagePoints(){
-  const levels = getFenceLevels();
-  const index = getFenceLevelIndex();
-  if (index >= levels.length - 1) return null;
-  const levelCfg = levels[index] || {};
-  return Number.isFinite(levelCfg.upgradeCostDamagePoints)
-    ? Math.max(0, Math.floor(levelCfg.upgradeCostDamagePoints))
-    : 0;
+  const level = getFenceLevelIndex() + 1;
+  const hpCost = getFenceUpgradeStepCost(level, 'segmentMaxHp', getAppliedFenceUpgradeLevel(level, 'segmentMaxHp'));
+  const armorCost = getFenceUpgradeStepCost(level, 'armorFlat', getAppliedFenceUpgradeLevel(level, 'armorFlat'));
+  const costs = [hpCost, armorCost].filter(function (value) {
+    return Number.isFinite(value) && value > 0;
+  });
+  if (!costs.length) return null;
+  return Math.min.apply(Math, costs);
 }
 
 function getFenceStats(){
   const levels = getFenceLevels();
   const index = getFenceLevelIndex();
   const level = index + 1;
-  const levelsCount = levels.length;
   const segmentMaxHp = getFenceSegmentMaxHp();
   const armorFlat = getFenceArmorFlat();
-  // unlimited steps inside the same level (per-level applied upgrades)
-  const applied = getAppliedFenceUpgradeLevel(level);
-  const upgradeCostDamagePoints = getUpgradeStepCost(level, applied);
+  const hpApplied = getAppliedFenceUpgradeLevel(level, 'segmentMaxHp');
+  const armorApplied = getAppliedFenceUpgradeLevel(level, 'armorFlat');
+  const hpCost = getFenceUpgradeStepCost(level, 'segmentMaxHp', hpApplied);
+  const armorCost = getFenceUpgradeStepCost(level, 'armorFlat', armorApplied);
+  const costs = [hpCost, armorCost].filter(function (value) {
+    return Number.isFinite(value) && value > 0;
+  });
+  const upgradeCostDamagePoints = costs.length ? Math.min.apply(Math, costs) : null;
   const availableDamagePoints = getAvailableDamagePoints();
   const hasNextLevel = true;
   const canUpgrade = Number.isFinite(upgradeCostDamagePoints) && upgradeCostDamagePoints > 0 && availableDamagePoints >= upgradeCostDamagePoints;
@@ -10814,6 +11048,7 @@ function getSupercomputerMenuController(){
     getDronUpgradeIconFps: getDronUpgradeIconFps,
     applyDronUpgrade: applyDronUpgrade,
     getAppliedFenceUpgradeLevel: getAppliedFenceUpgradeLevel,
+    getFenceUpgradeStepCost: getFenceUpgradeStepCost,
     applyFenceUpgrade: applyFenceUpgrade,
     getFenceLevels: getFenceLevels,
     getFenceConfig: getFenceConfig,
@@ -10825,13 +11060,13 @@ function getSupercomputerMenuController(){
   return supercomputerMenuController;
 }
 
-function openSupercomputerMenu(){
+function openSupercomputerMenu(options){
   const controller = getSupercomputerMenuController();
   if (!controller || typeof controller.openRoot !== 'function') {
     openTalents();
     return;
   }
-  controller.openRoot();
+  controller.openRoot(options || null);
   _notifyModal('supercomputerRoot', true);
 }
 
@@ -10912,7 +11147,10 @@ canvas.addEventListener('pointerdown', (e)=>{
     }
   }
   if (supercomputerHitTest(p.x, p.y)) {
-    openSupercomputerMenu();
+    openSupercomputerMenu({
+      inputType: e && typeof e.pointerType === 'string' ? e.pointerType : '',
+      suppressSameGestureBackdropClose: true,
+    });
     return;
   }
   // Production line: storage cell click
@@ -14432,6 +14670,24 @@ async function boot(){
       GameApi.Balance = GameApi.Balance || {};
       GameApi.Balance.CannonUpgrades = CannonUpgradesBalance;
       console.warn('[Balance] using fallback CannonUpgrades:', e);
+    }
+
+    try {
+      const tanksRes = await fetch('assets/tanks.json', { cache: 'no-store' });
+      if (!tanksRes.ok) throw new Error('HTTP ' + tanksRes.status);
+      TankStatUpgradeCostsByLevel = loadTankStatUpgradeCosts(await tanksRes.json());
+    } catch (e) {
+      TankStatUpgradeCostsByLevel = Object.create(null);
+      console.warn('[Balance] using fallback tank per-stat upgrade costs:', e);
+    }
+
+    try {
+      const dronRes = await fetch('assets/dron.json', { cache: 'no-store' });
+      if (!dronRes.ok) throw new Error('HTTP ' + dronRes.status);
+      DronStatUpgradeCostsByLevel = loadDronStatUpgradeCosts(await dronRes.json());
+    } catch (e) {
+      DronStatUpgradeCostsByLevel = Object.create(null);
+      console.warn('[Balance] using fallback drone per-stat upgrade costs:', e);
     }
 
     // ── Load chips.json for chip modifier visuals / sounds ──

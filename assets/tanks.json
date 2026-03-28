@@ -7,28 +7,67 @@
     "onTrackIconOpacity": 0.35
   },
   "hangarAnimations": {
-    "defaultCycle": ["alertPulse", "idleBob", "hoverScan"],
+    "defaultCycle": [
+      "alertPulse",
+      "idleBob",
+      "hoverScan"
+    ],
     "hoverScan": {
       "effects": [
-        { "preset": "float", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.1 },
-        { "preset": "sway", "angleDeg": 1.6, "frequencyHz": 0.48, "phase": 0.22 }
+        {
+          "preset": "float",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.1
+        },
+        {
+          "preset": "sway",
+          "angleDeg": 1.6,
+          "frequencyHz": 0.48,
+          "phase": 0.22
+        }
       ]
     },
     "idleBob": {
       "effects": [
-        { "preset": "bob", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.35 },
-        { "preset": "pulse", "scaleMul": 0.01, "frequencyHz": 5, "phase": 0.18 }
+        {
+          "preset": "bob",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.35
+        },
+        {
+          "preset": "pulse",
+          "scaleMul": 0.01,
+          "frequencyHz": 5,
+          "phase": 0.18
+        }
       ]
     },
     "alertPulse": {
       "effects": [
-        { "preset": "hover", "amplitudeY": 0.5, "frequencyHz": 5, "phase": 0.52 },
-        { "preset": "vibration", "amplitudeX": 0.15, "amplitudeY": 0.15, "frequencyHz": 5, "phase": 0.08 },
-        { "preset": "pulse", "scaleMul": 0.005, "frequencyHz": 5, "phase": 0.4 }
+        {
+          "preset": "hover",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.52
+        },
+        {
+          "preset": "vibration",
+          "amplitudeX": 0.15,
+          "amplitudeY": 0.15,
+          "frequencyHz": 5,
+          "phase": 0.08
+        },
+        {
+          "preset": "pulse",
+          "scaleMul": 0.005,
+          "frequencyHz": 5,
+          "phase": 0.4
+        }
       ]
     }
   },
-
   "tank_lvl1": {
     "stats": {
       "moveSpeed": 1,
@@ -74,9 +113,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 2,
+      "attackSpeed": 2
+    }
   },
-
   "tank_lvl2": {
     "stats": {
       "moveSpeed": 1,
@@ -122,9 +164,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 2,
+      "attackSpeed": 2
+    }
   },
-
   "tank_lvl3": {
     "stats": {
       "moveSpeed": 1,
@@ -170,9 +215,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 3,
+      "attackSpeed": 3
+    }
   },
-
   "tank_lvl4": {
     "stats": {
       "moveSpeed": 1,
@@ -218,9 +266,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 3,
+      "attackSpeed": 3
+    }
   },
-
   "tank_lvl5": {
     "stats": {
       "moveSpeed": 1,
@@ -266,9 +317,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 4,
+      "attackSpeed": 4
+    }
   },
-
   "tank_lvl6": {
     "stats": {
       "moveSpeed": 1,
@@ -314,9 +368,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 4,
+      "attackSpeed": 4
+    }
   },
-
   "tank_lvl7": {
     "stats": {
       "moveSpeed": 1,
@@ -362,9 +419,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 5,
+      "attackSpeed": 5
+    }
   },
-
   "tank_lvl8": {
     "stats": {
       "moveSpeed": 1,
@@ -410,9 +470,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 5,
+      "attackSpeed": 5
+    }
   },
-
   "tank_lvl9": {
     "stats": {
       "moveSpeed": 1,
@@ -458,9 +521,12 @@
       "recoil": 4
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 6,
+      "attackSpeed": 6
+    }
   },
-
   "tank_lvl10": {
     "stats": {
       "moveSpeed": 1,
@@ -522,10 +588,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 6,
+      "attackSpeed": 6
+    }
   },
-
-
   "tank_lvl11": {
     "stats": {
       "moveSpeed": 1,
@@ -587,9 +655,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 7,
+      "attackSpeed": 7
+    }
   },
-
   "tank_lvl12": {
     "stats": {
       "moveSpeed": 1,
@@ -651,9 +722,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 7,
+      "attackSpeed": 7
+    }
   },
-
   "tank_lvl13": {
     "stats": {
       "moveSpeed": 1,
@@ -715,9 +789,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 8,
+      "attackSpeed": 8
+    }
   },
-
   "tank_lvl14": {
     "stats": {
       "moveSpeed": 1,
@@ -779,9 +856,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 8,
+      "attackSpeed": 8
+    }
   },
-
   "tank_lvl15": {
     "stats": {
       "moveSpeed": 1,
@@ -843,9 +923,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 9,
+      "attackSpeed": 9
+    }
   },
-
   "tank_lvl16": {
     "stats": {
       "moveSpeed": 1,
@@ -907,9 +990,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 9,
+      "attackSpeed": 9
+    }
   },
-
   "tank_lvl17": {
     "stats": {
       "moveSpeed": 1,
@@ -971,9 +1057,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 10,
+      "attackSpeed": 10
+    }
   },
-
   "tank_lvl18": {
     "stats": {
       "moveSpeed": 1,
@@ -1035,9 +1124,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 10,
+      "attackSpeed": 10
+    }
   },
-
   "tank_lvl19": {
     "stats": {
       "moveSpeed": 1,
@@ -1099,9 +1191,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 11,
+      "attackSpeed": 11
+    }
   },
-
   "tank_lvl20": {
     "stats": {
       "moveSpeed": 1,
@@ -1163,10 +1258,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 11,
+      "attackSpeed": 11
+    }
   },
-
-
   "tank_lvl21": {
     "stats": {
       "moveSpeed": 1,
@@ -1228,9 +1325,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 12,
+      "attackSpeed": 12
+    }
   },
-
   "tank_lvl22": {
     "stats": {
       "moveSpeed": 1,
@@ -1292,9 +1392,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 12,
+      "attackSpeed": 12
+    }
   },
-
   "tank_lvl23": {
     "stats": {
       "moveSpeed": 1,
@@ -1356,9 +1459,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 13,
+      "attackSpeed": 13
+    }
   },
-
   "tank_lvl24": {
     "stats": {
       "moveSpeed": 1,
@@ -1420,9 +1526,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 13,
+      "attackSpeed": 13
+    }
   },
-
   "tank_lvl25": {
     "stats": {
       "moveSpeed": 1,
@@ -1484,9 +1593,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 14,
+      "attackSpeed": 14
+    }
   },
-
   "tank_lvl26": {
     "stats": {
       "moveSpeed": 1,
@@ -1548,9 +1660,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 14,
+      "attackSpeed": 14
+    }
   },
-
   "tank_lvl27": {
     "stats": {
       "moveSpeed": 1,
@@ -1612,9 +1727,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 15,
+      "attackSpeed": 15
+    }
   },
-
   "tank_lvl28": {
     "stats": {
       "moveSpeed": 1,
@@ -1676,9 +1794,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 15,
+      "attackSpeed": 15
+    }
   },
-
   "tank_lvl29": {
     "stats": {
       "moveSpeed": 1,
@@ -1740,9 +1861,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 16,
+      "attackSpeed": 16
+    }
   },
-
   "tank_lvl30": {
     "stats": {
       "moveSpeed": 1,
@@ -1804,10 +1928,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 16,
+      "attackSpeed": 16
+    }
   },
-
-
   "tank_lvl31": {
     "stats": {
       "moveSpeed": 1,
@@ -1869,9 +1995,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 17,
+      "attackSpeed": 17
+    }
   },
-
   "tank_lvl32": {
     "stats": {
       "moveSpeed": 1,
@@ -1933,9 +2062,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 17,
+      "attackSpeed": 17
+    }
   },
-
   "tank_lvl33": {
     "stats": {
       "moveSpeed": 1,
@@ -1997,9 +2129,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 18,
+      "attackSpeed": 18
+    }
   },
-
   "tank_lvl34": {
     "stats": {
       "moveSpeed": 1,
@@ -2061,9 +2196,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 18,
+      "attackSpeed": 18
+    }
   },
-
   "tank_lvl35": {
     "stats": {
       "moveSpeed": 1,
@@ -2125,9 +2263,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 19,
+      "attackSpeed": 19
+    }
   },
-
   "tank_lvl36": {
     "stats": {
       "moveSpeed": 1,
@@ -2189,9 +2330,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 19,
+      "attackSpeed": 19
+    }
   },
-
   "tank_lvl37": {
     "stats": {
       "moveSpeed": 1,
@@ -2253,9 +2397,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 20,
+      "attackSpeed": 20
+    }
   },
-
   "tank_lvl38": {
     "stats": {
       "moveSpeed": 1,
@@ -2317,9 +2464,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 20,
+      "attackSpeed": 20
+    }
   },
-
   "tank_lvl39": {
     "stats": {
       "moveSpeed": 1,
@@ -2381,9 +2531,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 21,
+      "attackSpeed": 21
+    }
   },
-
   "tank_lvl40": {
     "stats": {
       "moveSpeed": 1,
@@ -2445,10 +2598,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 21,
+      "attackSpeed": 21
+    }
   },
-
-
   "tank_lvl41": {
     "stats": {
       "moveSpeed": 1,
@@ -2510,9 +2665,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 22,
+      "attackSpeed": 22
+    }
   },
-
   "tank_lvl42": {
     "stats": {
       "moveSpeed": 1,
@@ -2574,9 +2732,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 22,
+      "attackSpeed": 22
+    }
   },
-
   "tank_lvl43": {
     "stats": {
       "moveSpeed": 1,
@@ -2638,9 +2799,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 23,
+      "attackSpeed": 23
+    }
   },
-
   "tank_lvl44": {
     "stats": {
       "moveSpeed": 1,
@@ -2702,9 +2866,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 23,
+      "attackSpeed": 23
+    }
   },
-
   "tank_lvl45": {
     "stats": {
       "moveSpeed": 1,
@@ -2766,9 +2933,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 24,
+      "attackSpeed": 24
+    }
   },
-
   "tank_lvl46": {
     "stats": {
       "moveSpeed": 1,
@@ -2830,9 +3000,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 24,
+      "attackSpeed": 24
+    }
   },
-
   "tank_lvl47": {
     "stats": {
       "moveSpeed": 1,
@@ -2894,9 +3067,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 25,
+      "attackSpeed": 25
+    }
   },
-
   "tank_lvl48": {
     "stats": {
       "moveSpeed": 1,
@@ -2958,9 +3134,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 25,
+      "attackSpeed": 25
+    }
   },
-
   "tank_lvl49": {
     "stats": {
       "moveSpeed": 1,
@@ -3022,9 +3201,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 26,
+      "attackSpeed": 26
+    }
   },
-
   "tank_lvl50": {
     "stats": {
       "moveSpeed": 1,
@@ -3086,10 +3268,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 26,
+      "attackSpeed": 26
+    }
   },
-
-
   "tank_lvl51": {
     "stats": {
       "moveSpeed": 1,
@@ -3151,9 +3335,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 27,
+      "attackSpeed": 27
+    }
   },
-
   "tank_lvl52": {
     "stats": {
       "moveSpeed": 1,
@@ -3215,9 +3402,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 27,
+      "attackSpeed": 27
+    }
   },
-
   "tank_lvl53": {
     "stats": {
       "moveSpeed": 1,
@@ -3279,9 +3469,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 28,
+      "attackSpeed": 28
+    }
   },
-
   "tank_lvl54": {
     "stats": {
       "moveSpeed": 1,
@@ -3343,9 +3536,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 28,
+      "attackSpeed": 28
+    }
   },
-
   "tank_lvl55": {
     "stats": {
       "moveSpeed": 1,
@@ -3407,9 +3603,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 29,
+      "attackSpeed": 29
+    }
   },
-
   "tank_lvl56": {
     "stats": {
       "moveSpeed": 1,
@@ -3471,9 +3670,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 29,
+      "attackSpeed": 29
+    }
   },
-
   "tank_lvl57": {
     "stats": {
       "moveSpeed": 1,
@@ -3535,9 +3737,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 30,
+      "attackSpeed": 30
+    }
   },
-
   "tank_lvl58": {
     "stats": {
       "moveSpeed": 1,
@@ -3599,9 +3804,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 30,
+      "attackSpeed": 30
+    }
   },
-
   "tank_lvl59": {
     "stats": {
       "moveSpeed": 1,
@@ -3663,9 +3871,12 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 31,
+      "attackSpeed": 31
+    }
   },
-
   "tank_lvl60": {
     "stats": {
       "moveSpeed": 1,
@@ -3727,6 +3938,10 @@
       "scale": 0.8
     },
     "bulletId": "bullet_base",
-    "bulletLevel": 1
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 31,
+      "attackSpeed": 31
+    }
   }
 }

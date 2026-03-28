@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-26.
+> Обновлено: 2026-03-27.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -42,6 +42,7 @@
 ## Фокус документации на 2026-03-27
 - **Phaser 3 migration phases 0–4 complete.** 43 module files in `src/phaser/`, 14 adapters/bridges, 12 render layer modules, 16 scenes, 4 rollout modules. Master spec: `docs/migration/PHASER_MIGRATION.md`. Runtime doc: `docs/ai/SYSTEMS/phaser.md`. 467 dedicated migration tests across 11 test files.
 - **TMZD visual/UI/UX/layout/modal/HUD style-sensitive задачи** читают `docs/ai/SYSTEMS/phaser.md` вместе с `docs/ai/SYSTEMS/ui.md`; TMZD-specific UX route идёт через `tmzd-ux-ui-designer`, а runtime-изменения остаются в зоне `tmzd-developer`.
+- **Shared hybrid seam для `Supercomputer -> Tank/Drone/Wall Mods`** теперь документирован как per-stat modal contract: `src/ui/supercomputerMenu.js` держит expandable rows и reserved-points state, `game.js` — per-stat total/apply helpers, а `assets/tanks.json`, `assets/dron.json`, `assets/fence.json` — canonical `upgradeDamagePointsCosts` по статам. Tutorial contract для этого же seam живёт в `docs/ai/SYSTEMS/tutorial-runtime.md`.
 
 ### Предыдущий фокус (2026-03-26)
 - `game.js`: `UI_BRANCH1_ASSET_VERSION = 20260326-branch1-ui-scale-early-capital`; `resizeCanvas()` вычисляет `--ui-scale = max(0.4, min(W/1920, H/1080))` и ставит CSS custom property на `:root`; `syncCurrentBalanceAchievements()` рекалькулирует unlock'и для `currentBalance`/`early_capital` при изменении баланса; `openAchievementPopupEvent()` берёт reward-text через `REWARD_TABLE.i18nKey`; status/debuff render читает `debuffIconScale/debuffIconOpacity` из локального singleton `ZombieSprites`, а не из `window.Game.Sprites.ZombieSprites`.

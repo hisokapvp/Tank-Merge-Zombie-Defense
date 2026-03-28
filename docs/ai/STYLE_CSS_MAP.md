@@ -1,6 +1,6 @@
 # style.css — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-27.
+> Агент-ориентировано. Обновлён: 2026-03-28.
 > `style.css` — CSS-монолит проекта (~7.1k строк) и один из главных hotspot-файлов.
 
 ## Что это
@@ -9,7 +9,9 @@
 ## Быстрый старт для агента
 - HUD / top-right terminal shell / supercomputer HUD button → [style.css](../../style.css#L1-L420), [style.css](../../style.css#L1443-L1547).
 - SC overlays / root tiles / modal scroll contract → [style.css](../../style.css#L1195-L1204), [style.css](../../style.css#L1771-L1833), [style.css](../../style.css#L2061-L2124).
-- Hangar chips / workshop / tech unlock → [style.css](../../style.css#L3063-L4435).
+- SC modifiers tables / expandable detail rows / responsive action lane → [style.css](../../style.css#L2872-L3085), [style.css](../../style.css#L7701-L7725).
+- Hangar chips / workshop → [style.css](../../style.css#L3063-L4435).
+- Tech unlock cards / study actions → [style.css](../../style.css#L5570-L5872).
 - Chip craft / future chip / storage modal → [style.css](../../style.css#L4335-L7090).
 
 ## Инварианты этого модуля ⚠️
@@ -23,6 +25,7 @@
 - Stage active slots держат `activeOff/activeDef/activeEco` только как CSS fallback; runtime branch-icon приходит через inline `--talentAbilityIcon`: [style.css](../../style.css#L2384-L2406).
 - `#resetTalentsModal` и `#talentResetCooldownModal` делят один modal-shell contract: symmetric horizontal padding на `.levelModal__contentWrap`, равномерный `menuInlineActions`, green `scModal__close` и ad-style CTA `.talentResetCooldownAdBtn*` для refresh-stub. Если менять один из диалогов, надо держать оба визуально синхронными: [style.css](../../style.css#L2377-L2469).
 - `.workshopSubTabs--nested` / `.workshopSubTab--nested` — отдельный слой стилей для recycle-only subtabs внутри Мастерской; не смешивать их с top-level workshop tabs через одноразовые inline tweaks: [style.css](../../style.css#L3749-L3756).
+- `techUnlockCard*` держат live-layout contract панели изучения технологий: карточка остаётся self-sized flex-column shell с `min-height` clamp, `align-self:flex-start` и `height:max-content`, а `progress/footer` закреплены к низу через `margin-top:auto`; primary CTA внутри `.techUnlockCard__actions--primary` тянется на полную ширину, не ломая locked/studying варианты и двухколоночную сетку группы: [style.css](../../style.css#L5570-L5872).
 - `techModal__rateLine`, `techModal__selectionInfo`, `techModal__dustRow`, `techModal__dustValue`, `techAccelGridWrap`, `techAccelChip--disabled::after` и `techAccelDustControls*` — CSS-контракт accel-модалки: он обязан одновременно показывать ставки `dust/chip/fragment`, выбранное ускорение, итог после применения, остаток до cap `96%`, bordered-wrap со scrollable grid, нижнюю строку `доступно / выбрано` для кремниевой пыли, badge `Лимит` и `+/-` stepper: [style.css](../../style.css#L4222-L4315).
 - `.techModal__btns` находится **вне** `.techModal__footer` в DOM-дереве, поэтому `gap` footer-flex-контейнера на него не действует. Отступ между `techModal__selectionInfo` и кнопками задаётся исключительно `margin-top` на `.techModal__btns`. `techAccelGridWrap` имеет `overflow-x:hidden` — горизонтальный скролл запрещён.
 - `chipCraftBottomBar` (включая `chipCraftDustResource`) рендерится **только** когда `isDustView === true`. В вкладках `Создание чипов` и `Разобрать` этот блок полностью отсутствует. Инвентарная сетка в non-dust видах принудительно ограничена одним столбцом через `.chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid { grid-template-columns:1fr }`.
@@ -34,6 +37,7 @@
 - Craft slots и future-preview используют квадратный карточный shell `chipCraftSlotCard`, визуально согласованный с inventory-карточками: [style.css](../../style.css#L4520-L4652).
 - «Будущий» чип получает dashed-рамку на `.chipCraftResultChip--future`, placeholder — на `.chipCraftSlot--resultSlot`, а не через перекраску SVG: [style.css](../../style.css#L4887-L4904).
 - Storage modal использует отдельный header-shell `.plStorage__header` с right-side wrapper `.plStorage__headerActions`: help и close собраны в одной action-группе справа, title остаётся по центру и получает дополнительный top padding, а grid ячеек по-прежнему centred; filled-cell level badge — plain text у нижней кромки, empty slots не получают placeholder glyph, drag preview живёт отдельным fixed-layer `.plStorage__dragPreview` поверх body: [style.css](../../style.css#L7001-L7114).
+- `#modsTankWallOverlay` держит общий expandable-table contract для weapons/drones/walls: summary row (`.scGunsTable__row`) и detail row (`.scGunsTable__detailRow`) живут в одном scroll stack, `scGunsStatControl*` оформляют stat-specific pills + stepper controls, а `.modsTankWall__panelActions/.modsTankWall__footerActions` скейлятся от master `--ui-scale`. На viewports `<= 1200px` header action-cell скрывается, а row-level CTA переезжает в полноширинную нижнюю центрированную lane строки с `width:min(100%, 220px)`, чтобы `Upgrade` не клипался. Не возвращать flat inline buttons или локальные padding-харды вне этих селекторов: [style.css](../../style.css#L2872-L3085), [style.css](../../style.css#L7701-L7725).
 
 ## Оглавление файла
 | Блок | Строки | Назначение |
@@ -42,7 +46,8 @@
 | Buttons / menus / save views / forms | [style.css](../../style.css#L268-L1187) | HUD buttons, big menu, small menu, menu inputs, sliders |
 | Overlay / modal base / critical / close controls / supercomputer HUD / root tiles | [style.css](../../style.css#L1188-L1700) | Общие модалки, `.btn`, `.scButton`, `.levelModal__close`, `.supercomputerHudBtn`, `.scRootTiles` |
 | Talent modal / SC modal / tabs / tables / stage abilities | [style.css](../../style.css#L1701-L2665) | Talents, `.scModal__body`, table layout, stage active slots, debug panel start |
-| Unified button behavior / merge popup / lesson progress / hangar core / workshop / tech unlock | [style.css](../../style.css#L2666-L4435) | Shared behavior layer, merge popup, hangar chips base, workshop, nested recycle subtabs, tech unlock |
+| Unified button behavior / merge popup / lesson progress / hangar core / workshop | [style.css](../../style.css#L2666-L4435) | Shared behavior layer, merge popup, hangar chips base, workshop, nested recycle subtabs |
+| Active modifiers / tech unlock / tech modal | [style.css](../../style.css#L5050-L6194) | Active modifiers box, tech unlock cards, study-state buttons, help/confirm tech modal shell |
 | Chip craft / reagent row / recycle single-column layout / production line storage modal | [style.css](../../style.css#L4335-L7090) | Inventory, slots, result preview, dust-only layout, future chip frame, storage header/help/grid/drag preview |
 | Adaptive UI scaling (`--ui-scale`) | [style.css](../../style.css#L15-L22), [style.css](../../style.css#L1664-L1692), [style.css](../../style.css#L3774-L3888), [style.css](../../style.css#L4242-L4268), [style.css](../../style.css#L7612-L7726) | Root vars + HUD/tutorial/hangar/shared-shell blocks: modal/storage/help/confirm/tooltip/notification/terminal families масштабируются от master token, close-buttons **NOT** scaled — 44×44 hit-area сохраняется |
 
@@ -57,6 +62,7 @@
 - [style.css](../../style.css#L167-L305) — top-right terminal shell: `.stageUiRight`, `.terminal-panel`, collapse state и narrow-screen header contract (`::before` при `<=420px`).
 - [style.css](../../style.css#L1771-L1833) — root tile icon/label shell, mobile icon shrink и overlay label band.
 - [style.css](../../style.css#L2061-L2124) — `.scModal__body` и scroll/pressed behavior.
+- [style.css](../../style.css#L2872-L3085) — `#modsTankWallOverlay` tables, detail rows, stat-control cards и responsive bottom action lane для row-level CTA.
 - [style.css](../../style.css#L2076-L2108) — talent tree container vars, grey base edges и постоянный SVG-layer.
 - [style.css](../../style.css#L2134-L2179) — ready/active edge pulse + stronger shake/wobble contract без travelling dash flow.
 - [style.css](../../style.css#L2377-L2469) — reset talents confirm + cooldown modal shell, symmetric padding и ad-style refresh CTA.
@@ -68,6 +74,7 @@
 - [style.css](../../style.css#L3749-L3756) — nested recycle subtabs.
 - [style.css](../../style.css#L4079-L4183) — underground hangar modal title/empty-state/level-badge contract.
 - [style.css](../../style.css#L4321-L4406) — underground hangar centered transfer lane + icon-only CTA.
+- [style.css](../../style.css#L5570-L5872) — `techUnlockCard` shell, locked/studying states, progress/footer anchoring и full-width primary study CTA.
 - [style.css](../../style.css#L4222-L4315) — tech accel summary row, bordered grid wrapper, limit badges и dust controls.
 - [style.css](../../style.css#L4231-L4267) — adaptive vars `hangarChipsModal` для cell-upgrade internals и scale-aware help button.
 - [style.css](../../style.css#L4410-L4652) — craft inventory / slot-card labels / `chipCraftSlotRemove`.
@@ -76,6 +83,7 @@
 - [style.css](../../style.css#L4887-L4915) — future chip frame и result label.
 - [style.css](../../style.css#L7001-L7058) — production line storage cells, level badge и drag preview.
 - [style.css](../../style.css#L7069-L7114) — production line storage header right-actions wrapper, help/close grouping и title padding.
+- [style.css](../../style.css#L7701-L7725) — scale-aware wrappers `.modsTankWall__panelActions` / `.modsTankWall__footerActions`.
 - [style.css](../../style.css#L15-L22), [style.css](../../style.css#L1664-L1692), [style.css](../../style.css#L3774-L3888), [style.css](../../style.css#L4242-L4268), [style.css](../../style.css#L7612-L7726) — master adaptive UI scaling (`--ui-scale`): root tokens, HUD, tutorial, hangar modal passthrough и shared shell selectors; JS floor задаётся в `game.js` как `0.40`, а cap остаётся `1.0` на 1920×1080 и выше.
 - `.achievementClaimRow` / `.achievementClaimBtn` — gold-themed «Получить награду» кнопка в списке достижений для deferred drone rewards.
 

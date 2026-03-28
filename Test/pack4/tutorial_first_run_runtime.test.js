@@ -209,10 +209,9 @@ test('TUT-8: tutorial steps are defined in separate data-driven config', () => {
   assert(tutorialStepsJs.indexOf('#talentOverlay .talentNode[data-talent-id="off_caliber"]') !== -1, 'caliber step targets the caliber talent node');
   assert(tutorialStepsJs.indexOf("talentId: 'off_caliber'") !== -1, 'caliber step completes on apply for the caliber talent');
   assert(tutorialStepsJs.indexOf("selector: '#supercomputerOpenTankWallMods'") !== -1, 'damage tutorial points to the tank-wall tile');
-  assert(tutorialStepsJs.indexOf('#modsTankWallOverlay .scGunsTable__row[data-level="1"] [data-guns-action="plus"]') !== -1, 'damage tutorial points to the first gun level plus button');
+  assert(tutorialStepsJs.indexOf("action: 'toggle'") !== -1, 'damage tutorial targets the first gun level toggle button');
   assert(tutorialStepsJs.indexOf("kind: 'supercomputer_damage_upgrade_applied'") !== -1, 'damage tutorial completes on any applied weapons/drones/walls upgrade');
-  assert(tutorialStepsJs.indexOf('#modsTankWallOverlay [data-dron-action="apply"]') !== -1, 'damage tutorial unlocks drone apply controls too');
-  assert(tutorialStepsJs.indexOf('#modsTankWallOverlay [data-walls-action="apply"]') !== -1, 'damage tutorial unlocks wall apply controls too');
+  assert(tutorialStepsJs.indexOf("targetKinds: ['supercomputer_tank_wall_per_stat_controls']") !== -1, 'damage tutorial unlocks the current per-stat controls across all tabs');
   assert(tutorialStepsJs.indexOf("id: 'production_storage_open_first_box'") !== -1, 'production storage open step lives in tutorial config');
   assert(tutorialStepsJs.indexOf("id: 'production_storage_open_box'") !== -1, 'production storage box step lives in tutorial config');
   assert(tutorialStepsJs.indexOf("kind: 'production_storage_first_box'") !== -1, 'production storage tutorial targets the first filled slot');
@@ -225,6 +224,7 @@ test('TUT-8F: caliber lesson accepts any talent purchase and pending completion 
   assert(tutorialRuntimeJs.indexOf('getAppliedTalentRankTotal') !== -1, 'tutorial runtime can measure total applied talent ranks');
   assert(tutorialRuntimeJs.indexOf("kind === 'production_box_opened'") !== -1, 'tutorial runtime preserves pending completion for production box opening');
   assert(tutorialRuntimeJs.indexOf('preservePendingCompletion') !== -1, 'completion eligibility preserves action-based lessons after spending the gated resource');
+  assert(tutorialRuntimeJs.indexOf('queryAction(runtime.documentObj, family, level, statKey, action)') !== -1, 'tank-wall tutorial target resolution uses the shared action contract helper');
 });
 
 test('TUT-8A: supercomputer tutorial reward dismissal is wired through level flow into tutorial runtime', () => {

@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-25.
+> Обновлено: 2026-03-27.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -36,12 +36,22 @@
 	- назначение: единая длительность stamp-reveal в слоте и root-анимации `buildTank` у суперкомпьютера;
 	- нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.tankPrintDurationSec`), затем чтение из `game.js` / `src/ui/supercomputerBuildTankFx.js`: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L22-L53).
 - Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
+- Каждый `tank_lvlN` теперь также считается частью modifiers-modal контракта: `upgradeDamagePointsCosts.{baseDamage,attackSpeed}` задаёт canonical стоимость stat-specific шага для expandable row в `Supercomputer -> Орудия`, а `game.js` суммирует эти шаги через `getCannonUpgradeTotalCost()` / `applyCannonUpgrade()`, не через CSS/DOM-derived числа: [assets/tanks.json](../../../assets/tanks.json#L117-L170), [game.js](../../../game.js#L878-L910), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1256).
 - Ключ `ui.onTrackIconOpacity`:
 	- диапазон: `0..1`;
 	- default: `0.45`;
 	- назначение: dim-непрозрачность иконки танка в слоте при `onTrack=true`.
 - Нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.ui.onTrackIconOpacity`, clamp `0..1`).
 - Fallback: при отсутствии или невалидном значении runtime использует `0.45`.
+
+## `assets/dron.json` (runtime уровни дронов + per-stat upgrade costs)
+- `levels.{1..N}` — это не только runtime base stats, но и canonical contract для modifiers modal `Дроны`: `moveSpeedPxSec`, `repairSpeedMult`, `costMult` показываются в summary row, а `upgradeDamagePointsCosts` задаёт стоимость stat-specific шага для detail cards. UI не должен выводить «примерную» стоимость без чтения этого JSON: [assets/dron.json](../../../assets/dron.json#L63-L110), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1258-L1480).
+- `game.js` применяет pending upgrades per stat через `getDronUpgradeTotalCost()` / `applyDronUpgrade()`, поэтому изменения ключей `upgradeDamagePointsCosts` должны рассматриваться как runtime-code change, а не косметика конфига: [game.js](../../../game.js#L3282-L3313).
+
+## `assets/fence.json` (tier config + wall modifiers modal)
+- `levels[]` по-прежнему описывают base tier fence (`segmentMaxHp`, `armorFlat`, `upgradeCostDamagePoints`, atlas/uiIcon), но для модалки `Стены` появился отдельный stat-level contract `upgradeDamagePointsCosts.{segmentMaxHp,armorFlat}`. Это canonical источник стоимости detail-card stepper'ов в `Supercomputer -> Стены`: [assets/fence.json](../../../assets/fence.json#L1-L120), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1482-L1708).
+- `upgradeCostDamagePoints` и `upgradeDamagePointsCosts` не эквивалентны: первое описывает tier-level fence progression, второе — stat-specific modifiers modal; `game.js` использует второе через `getFenceUpgradeTotalCost()` / `applyFenceUpgrade()`, включая clamp текущих segment HP после апгрейда `segmentMaxHp`: [game.js](../../../game.js#L912-L945).
+- Для UI preview стены приоритет `uiIcon` остаётся data-driven (`atlas`, `frame.id` или inline frame), поэтому docs/renderer рассматривают этот JSON как кодовый контракт, а не просто atlas listing: [assets/fence.json](../../../assets/fence.json#L10-L77), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1600-L1708).
 
 ## `assets/supercomputer.json` (боевой рендер + production line)
 - Root-конфиг суперкомпьютера: [assets/supercomputer.json](../../../assets/supercomputer.json#L1-L123).

@@ -585,22 +585,42 @@
   function getAppliedCannonUpgradeLevel(state, level) {
     if (!state || !state.player || !Array.isArray(state.player.cannonUpgradesApplied)) return 0;
     const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
-    const value = Number(state.player.cannonUpgradesApplied[index]);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+    return getEncodedUpgradeEntryTotal(state.player.cannonUpgradesApplied[index]);
   }
 
   function getAppliedDronUpgradeLevel(state, level) {
     if (!state || !state.player || !Array.isArray(state.player.dronUpgradesApplied)) return 0;
     const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
-    const value = Number(state.player.dronUpgradesApplied[index]);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+    return getEncodedUpgradeEntryTotal(state.player.dronUpgradesApplied[index]);
   }
 
   function getAppliedFenceUpgradeLevel(state, level) {
     if (!state || !state.player || !Array.isArray(state.player.fenceUpgradesApplied)) return 0;
     const index = Math.max(1, Math.floor(Number(level) || 1)) - 1;
-    const value = Number(state.player.fenceUpgradesApplied[index]);
-    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+    return getEncodedUpgradeEntryTotal(state.player.fenceUpgradesApplied[index]);
+  }
+
+  function getEncodedUpgradeEntryTotal(value) {
+    if (Number.isFinite(Number(value))) {
+      const numericValue = Number(value);
+      return numericValue > 0 ? Math.floor(numericValue) : 0;
+    }
+    if (typeof value === 'string' && value.length > 0) {
+      return value.split('|').reduce((total, item) => {
+        const numericValue = Number(item);
+        return total + (Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0);
+      }, 0);
+    }
+    if (Array.isArray(value)) {
+      return value.reduce((total, item) => total + getEncodedUpgradeEntryTotal(item), 0);
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value).reduce((total, key) => {
+        const numericValue = Number(value[key]);
+        return total + (Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0);
+      }, 0);
+    }
+    return 0;
   }
 
   function getAppliedDamageUpgradeTotal(state) {
@@ -610,8 +630,7 @@
     for (let arrayIndex = 0; arrayIndex < arrays.length; arrayIndex++) {
       const list = Array.isArray(arrays[arrayIndex]) ? arrays[arrayIndex] : [];
       for (let itemIndex = 0; itemIndex < list.length; itemIndex++) {
-        const value = Number(list[itemIndex]);
-        if (Number.isFinite(value) && value > 0) total += Math.floor(value);
+        total += getEncodedUpgradeEntryTotal(list[itemIndex]);
       }
     }
     return total;
@@ -965,6 +984,52 @@
     list.push(target);
   }
 
+  function getTankWallStatCatalog() {
+    return global.Game && global.Game.TankWallStatCatalog ? global.Game.TankWallStatCatalog : null;
+  }
+
+  function resolveSupercomputerTankWallPerStatControls() {
+    const targets = [];
+    if (!runtime.documentObj) return targets;
+    const overlay = runtime.documentObj.getElementById('modsTankWallOverlay');
+    if (!isElementVisible(overlay)) return targets;
+    const catalog = getTankWallStatCatalog();
+    if (!catalog || typeof catalog.getActionAttr !== 'function') return targets;
+    const families = ['weapons', 'drones', 'walls'];
+    for (let i = 0; i < families.length; i++) {
+      const actionAttr = catalog.getActionAttr(families[i]);
+      if (!actionAttr) continue;
+      const selector = '.scGunsStatControl[data-sc-upgrade-family="' + families[i] + '"] [' + actionAttr + ']';
+      const elements = overlay.querySelectorAll(selector);
+      for (let elementIndex = 0; elementIndex < elements.length; elementIndex++) {
+        if (isElementVisible(elements[elementIndex])) pushUniqueTarget(targets, elements[elementIndex]);
+      }
+    }
+    return targets;
+  }
+
+  function resolveSupercomputerTankWallStatActionTarget(targetSpec) {
+    if (!runtime.documentObj || !targetSpec || typeof targetSpec !== 'object') return null;
+    const overlay = runtime.documentObj.getElementById('modsTankWallOverlay');
+    if (!isElementVisible(overlay)) return null;
+    const family = typeof targetSpec.family === 'string' && targetSpec.family ? targetSpec.family : 'weapons';
+    const level = Number.isFinite(Number(targetSpec.level)) ? Math.max(1, Math.floor(Number(targetSpec.level))) : 1;
+    const action = typeof targetSpec.action === 'string' && targetSpec.action ? targetSpec.action : 'plus';
+    const statKey = typeof targetSpec.statKey === 'string' ? targetSpec.statKey : '';
+    const catalog = getTankWallStatCatalog();
+    if (catalog && typeof catalog.queryAction === 'function') {
+      const actionTarget = catalog.queryAction(runtime.documentObj, family, level, statKey, action);
+      if (actionTarget && isElementVisible(actionTarget)) return actionTarget;
+    }
+    const actionAttr = catalog && typeof catalog.getActionAttr === 'function' ? catalog.getActionAttr(family) : '';
+    if (!actionAttr) return null;
+    const selector = action === 'toggle'
+      ? '#modsTankWallOverlay .scGunsTable__row[data-level="' + String(level) + '"] [' + actionAttr + '="toggle"]'
+      : '#modsTankWallOverlay .scGunsStatControl[data-sc-upgrade-family="' + family + '"][data-level="' + String(level) + '"] [' + actionAttr + '="' + action + '"]';
+    const target = runtime.documentObj.querySelector(selector);
+    return target && isElementVisible(target) ? target : null;
+  }
+
   function resolveTargetsByKind(kind, state) {
     const targets = [];
     if (!kind || !state) return targets;
@@ -1039,11 +1104,22 @@
       return targets;
     }
 
+    if (kind === 'supercomputer_tank_wall_per_stat_controls') {
+      const controls = resolveSupercomputerTankWallPerStatControls();
+      for (let i = 0; i < controls.length; i++) {
+        pushUniqueTarget(targets, controls[i]);
+      }
+      return targets;
+    }
+
     return targets;
   }
 
   function resolveTargetBySpec(targetSpec, state) {
     if (!targetSpec || !state) return null;
+    if (targetSpec.kind === 'supercomputer_tank_wall_stat_action') {
+      return resolveSupercomputerTankWallStatActionTarget(targetSpec);
+    }
     if (typeof targetSpec.kind === 'string') {
       const targets = resolveTargetsByKind(targetSpec.kind, state);
       return targets.length ? targets[0] : null;

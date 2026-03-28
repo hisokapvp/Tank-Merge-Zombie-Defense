@@ -19,8 +19,15 @@
           "h": 128,
           "scale": 1,
           "rotation": 0,
-          "anchor": { "x": 0.5, "y": 0.5 }
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
         }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 2,
+        "armorFlat": 2
       }
     },
     {
@@ -38,8 +45,15 @@
           "h": 128,
           "scale": 1,
           "rotation": 0,
-          "anchor": { "x": 0.5, "y": 0.5 }
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
         }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 4,
+        "armorFlat": 4
       }
     },
     {
@@ -57,201 +71,1498 @@
           "h": 128,
           "scale": 1,
           "rotation": 0,
-          "anchor": { "x": 0.5, "y": 0.5 }
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
         }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 6,
+        "armorFlat": 6
       }
     },
     {
       "segmentMaxHp": 109661,
       "armorFlat": 18,
-      "upgradeCostDamagePoints": 8
+      "upgradeCostDamagePoints": 8,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 8,
+        "armorFlat": 8
+      }
     },
     {
       "segmentMaxHp": 112881,
       "armorFlat": 21,
-      "upgradeCostDamagePoints": 10
-      
-      
+      "upgradeCostDamagePoints": 10,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 10,
+        "armorFlat": 10
+      }
     },
     {
       "segmentMaxHp": 116101,
       "armorFlat": 24,
-      "upgradeCostDamagePoints": 12
+      "upgradeCostDamagePoints": 12,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 12,
+        "armorFlat": 12
+      }
     },
     {
       "segmentMaxHp": 119322,
       "armorFlat": 27,
-      "upgradeCostDamagePoints": 14
+      "upgradeCostDamagePoints": 14,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 14,
+        "armorFlat": 14
+      }
     },
     {
       "segmentMaxHp": 122542,
       "armorFlat": 30,
-      "upgradeCostDamagePoints": 16
+      "upgradeCostDamagePoints": 16,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 16,
+        "armorFlat": 16
+      }
     },
     {
       "segmentMaxHp": 125763,
       "armorFlat": 33,
-      "upgradeCostDamagePoints": 18
+      "upgradeCostDamagePoints": 18,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 18,
+        "armorFlat": 18
+      }
     },
     {
       "segmentMaxHp": 128983,
       "armorFlat": 36,
-      "upgradeCostDamagePoints": 20
+      "upgradeCostDamagePoints": 20,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 20,
+        "armorFlat": 20
+      }
     },
     {
       "segmentMaxHp": 132203,
       "armorFlat": 39,
-      "upgradeCostDamagePoints": 22
+      "upgradeCostDamagePoints": 22,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 22,
+        "armorFlat": 22
+      }
     },
     {
       "segmentMaxHp": 135424,
       "armorFlat": 42,
-      "upgradeCostDamagePoints": 24
+      "upgradeCostDamagePoints": 24,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 24,
+        "armorFlat": 24
+      }
     },
     {
       "segmentMaxHp": 138644,
       "armorFlat": 45,
-      "upgradeCostDamagePoints": 26
+      "upgradeCostDamagePoints": 26,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 26,
+        "armorFlat": 26
+      }
     },
     {
       "segmentMaxHp": 141865,
       "armorFlat": 48,
-      "upgradeCostDamagePoints": 28
+      "upgradeCostDamagePoints": 28,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 28,
+        "armorFlat": 28
+      }
     },
     {
       "segmentMaxHp": 145085,
       "armorFlat": 51,
-      "upgradeCostDamagePoints": 30
+      "upgradeCostDamagePoints": 30,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 30,
+        "armorFlat": 30
+      }
     },
     {
       "segmentMaxHp": 148306,
       "armorFlat": 54,
-      "upgradeCostDamagePoints": 32
+      "upgradeCostDamagePoints": 32,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 32,
+        "armorFlat": 32
+      }
     },
     {
       "segmentMaxHp": 151526,
       "armorFlat": 57,
-      "upgradeCostDamagePoints": 34
+      "upgradeCostDamagePoints": 34,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 34,
+        "armorFlat": 34
+      }
     },
     {
       "segmentMaxHp": 154746,
       "armorFlat": 60,
-      "upgradeCostDamagePoints": 36
+      "upgradeCostDamagePoints": 36,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 36,
+        "armorFlat": 36
+      }
     },
     {
       "segmentMaxHp": 157967,
       "armorFlat": 63,
-      "upgradeCostDamagePoints": 38
+      "upgradeCostDamagePoints": 38,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 38,
+        "armorFlat": 38
+      }
     },
     {
       "segmentMaxHp": 161187,
       "armorFlat": 66,
-      "upgradeCostDamagePoints": 40
+      "upgradeCostDamagePoints": 40,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 40,
+        "armorFlat": 40
+      }
     },
     {
       "segmentMaxHp": 164408,
       "armorFlat": 69,
-      "upgradeCostDamagePoints": 42
+      "upgradeCostDamagePoints": 42,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 42,
+        "armorFlat": 42
+      }
     },
     {
       "segmentMaxHp": 167628,
       "armorFlat": 72,
-      "upgradeCostDamagePoints": 44
+      "upgradeCostDamagePoints": 44,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 44,
+        "armorFlat": 44
+      }
     },
     {
       "segmentMaxHp": 170848,
       "armorFlat": 75,
-      "upgradeCostDamagePoints": 46
+      "upgradeCostDamagePoints": 46,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 46,
+        "armorFlat": 46
+      }
     },
     {
       "segmentMaxHp": 174069,
       "armorFlat": 78,
-      "upgradeCostDamagePoints": 48
+      "upgradeCostDamagePoints": 48,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 48,
+        "armorFlat": 48
+      }
     },
     {
       "segmentMaxHp": 177289,
       "armorFlat": 81,
-      "upgradeCostDamagePoints": 50
+      "upgradeCostDamagePoints": 50,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 50,
+        "armorFlat": 50
+      }
     },
     {
       "segmentMaxHp": 180510,
       "armorFlat": 84,
-      "upgradeCostDamagePoints": 52
+      "upgradeCostDamagePoints": 52,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 52,
+        "armorFlat": 52
+      }
     },
     {
       "segmentMaxHp": 183730,
       "armorFlat": 87,
-      "upgradeCostDamagePoints": 54
+      "upgradeCostDamagePoints": 54,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 54,
+        "armorFlat": 54
+      }
     },
     {
       "segmentMaxHp": 186951,
       "armorFlat": 90,
-      "upgradeCostDamagePoints": 56
+      "upgradeCostDamagePoints": 56,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 56,
+        "armorFlat": 56
+      }
     },
     {
       "segmentMaxHp": 190171,
       "armorFlat": 93,
-      "upgradeCostDamagePoints": 58
+      "upgradeCostDamagePoints": 58,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 58,
+        "armorFlat": 58
+      }
     },
     {
       "segmentMaxHp": 193391,
       "armorFlat": 96,
-      "upgradeCostDamagePoints": 60
+      "upgradeCostDamagePoints": 60,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 60,
+        "armorFlat": 60
+      }
     },
     {
       "segmentMaxHp": 196612,
       "armorFlat": 99,
-      "upgradeCostDamagePoints": 62
+      "upgradeCostDamagePoints": 62,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 62,
+        "armorFlat": 62
+      }
     },
     {
       "segmentMaxHp": 199832,
       "armorFlat": 102,
-      "upgradeCostDamagePoints": 64
+      "upgradeCostDamagePoints": 64,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 64,
+        "armorFlat": 64
+      }
     },
     {
       "segmentMaxHp": 203053,
       "armorFlat": 105,
-      "upgradeCostDamagePoints": 66
+      "upgradeCostDamagePoints": 66,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 66,
+        "armorFlat": 66
+      }
     },
     {
       "segmentMaxHp": 206273,
       "armorFlat": 108,
-      "upgradeCostDamagePoints": 68
+      "upgradeCostDamagePoints": 68,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 68,
+        "armorFlat": 68
+      }
     },
     {
       "segmentMaxHp": 209494,
       "armorFlat": 111,
-      "upgradeCostDamagePoints": 70
+      "upgradeCostDamagePoints": 70,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 70,
+        "armorFlat": 70
+      }
     },
     {
       "segmentMaxHp": 212714,
       "armorFlat": 114,
-      "upgradeCostDamagePoints": 72
+      "upgradeCostDamagePoints": 72,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 72,
+        "armorFlat": 72
+      }
     },
     {
       "segmentMaxHp": 215934,
       "armorFlat": 117,
-      "upgradeCostDamagePoints": 74
+      "upgradeCostDamagePoints": 74,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 74,
+        "armorFlat": 74
+      }
     },
     {
       "segmentMaxHp": 219155,
       "armorFlat": 120,
-      "upgradeCostDamagePoints": 76
+      "upgradeCostDamagePoints": 76,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 76,
+        "armorFlat": 76
+      }
     },
     {
       "segmentMaxHp": 222375,
       "armorFlat": 123,
-      "upgradeCostDamagePoints": 78
+      "upgradeCostDamagePoints": 78,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 78,
+        "armorFlat": 78
+      }
     },
     {
       "segmentMaxHp": 225596,
       "armorFlat": 126,
-      "upgradeCostDamagePoints": 80
+      "upgradeCostDamagePoints": 80,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 80,
+        "armorFlat": 80
+      }
     },
     {
       "segmentMaxHp": 228816,
       "armorFlat": 129,
-      "upgradeCostDamagePoints": 82
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 228816,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
     }
   ],
   "healthBar": {
@@ -272,7 +1583,10 @@
       "h": 128,
       "scale": 1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "rail",
@@ -282,7 +1596,10 @@
       "h": 128,
       "scale": 1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "segment",
@@ -292,7 +1609,10 @@
       "h": 128,
       "scale": 1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerTL",
@@ -302,7 +1622,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 270,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerTR",
@@ -312,7 +1635,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerBR",
@@ -322,7 +1648,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 90,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerBL",
@@ -332,7 +1661,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 180,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideTop",
@@ -342,7 +1674,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideRight",
@@ -352,7 +1687,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 90,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideBottom",
@@ -362,7 +1700,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideLeft",
@@ -372,7 +1713,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 270,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideTopBroken",
@@ -382,7 +1726,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideRightBroken",
@@ -392,7 +1739,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 90,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideBottomBroken",
@@ -402,7 +1752,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 180,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "sideLeftBroken",
@@ -412,7 +1765,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 270,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerTLBroken",
@@ -422,7 +1778,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 270,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerTRBroken",
@@ -432,7 +1791,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 0,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerBRBroken",
@@ -442,7 +1804,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 90,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     },
     {
       "id": "cornerBLBroken",
@@ -452,7 +1817,10 @@
       "h": 128,
       "scale": 2.1,
       "rotation": 180,
-      "anchor": { "x": 0.5, "y": 0.5 }
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
     }
   ]
 }
