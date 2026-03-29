@@ -1,6 +1,17 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-28
+- **Документация: shared post-merge update после join для debuff overlay scale, SC header-actions, shared button behavior mobile guard и narrow-shell modal contracts (`game.js`, `index.html`, `src/ui/buttonBehavior.js`, `src/ui/supercomputerMenu.js`, `style.css`)**
+  - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `drawScaledDebuffExpiryOverlay()` / `drawScaledZombieDebuffOverlays()` документированы как единый scale-path от `debuffIconScale`; белый expiry wedge/dot больше не рассматривается как fixed-px overlay.
+  - Зафиксированы: talents shell теперь документирован через shared right-side header-actions row `supercomputerTalentsHeaderActions` / `scModal__headerActions`, с унифицированным порядком `help -> close` и без отдельного talents-only header layout.
+  - Зафиксированы: mobile disappearing-control fix привязан к общему split-contract `src/ui/buttonBehavior.js` + `.uiButtonBehavior` coarse-hover media guard, а не к разрозненным button-specific overrides.
+  - Зафиксированы: SC-family fullscreen shells под coarse-pointer / `< 1280px` и expanded/scaled Production Storage shell под narrow/mobile path описаны как deliberate responsive contracts, а не как случайные CSS-побочные эффекты.
+
+- **Документация: shared post-merge update для repo-local context-mode consumer alignment (`.github/hooks/context-mode.json`, `.vscode/mcp.json`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: TMZD `.github/hooks/context-mode.json` и `.vscode/mcp.json` документированы как plain consumer mirror shared `.agents` baseline (`PreToolUse/PostToolUse/PreCompact/SessionStart` + `npx -y context-mode`), а Telegram broker ownership явно остаётся вне game repo.
+
 - **Документация: shared post-merge update для live-layout фиксов Tech Unlock card и responsive action lane в modifiers modal после join (`style.css`)**
   - Обновлены `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/CHANGELOG.md`.
   - Зафиксированы: `Tech Unlock` cards документированы как CSS-owned self-sized shell с `min-height` clamp, bottom-anchored `progress/footer` и full-width primary CTA; runtime `renderTechUnlockPanel()` не берёт на себя per-state height hacks.

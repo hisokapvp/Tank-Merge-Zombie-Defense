@@ -120,6 +120,7 @@
   }
 
   function handlePointerDown(event) {
+    clearPressedOnAll();
     var target = event.target && event.target.closest
       ? event.target.closest('.' + BEHAVIOR_CLASS)
       : null;

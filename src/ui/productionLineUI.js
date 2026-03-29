@@ -2,6 +2,7 @@
   'use strict';
 
   let _modalEl     = null;
+  let _panelEl     = null;
   let _gridEl      = null;
   let _confirmEl   = null;
   let _isOpen      = false;
@@ -17,6 +18,7 @@
   let _dragPreviewEl = null;
   let _suppressClicksUntil = 0;
   const DRAG_THRESHOLD_PX = 6;
+  const FULLSCREEN_BREAKPOINT_PX = 1280;
 
   // ─── Init (call once after DOM ready) ──────────────────────
   function init(options) {
@@ -29,6 +31,7 @@
     _onOpenBox = typeof opts.onOpenBox === 'function' ? opts.onOpenBox : null;
 
     _modalEl   = document.getElementById('productionLineStorageModal');
+    _panelEl   = _modalEl ? _modalEl.querySelector('.plStorage__panel') : null;
     _gridEl    = document.getElementById('plStorageGrid');
     _confirmEl = document.getElementById('plConfirmOverlay');
 
@@ -46,6 +49,11 @@
     const noBtn  = document.getElementById('plConfirmNo');
     if (yesBtn) yesBtn.addEventListener('click', _confirmOpen);
     if (noBtn)  noBtn.addEventListener('click', _cancelConfirm);
+
+    if (typeof global.addEventListener === 'function') {
+      global.addEventListener('resize', _syncResponsiveShellState);
+    }
+    _syncResponsiveShellState();
   }
 
   // ─── Open / close modal ────────────────────────────────────
@@ -55,6 +63,7 @@
     _isOpen = true;
     _stateRef = state;
     _pendingIdx = -1;
+    _syncResponsiveShellState();
     _hideConfirm();
     _renderGrid(state.productionLine);
     if (document.body) document.body.classList.add('pl-storage-open');
@@ -80,6 +89,24 @@
   }
 
   function isOpen() { return _isOpen; }
+
+  function _shouldUseExpandedShell() {
+    const viewportWidth = Number(global.innerWidth) || 0;
+    let coarsePointer = false;
+    try {
+      coarsePointer = !!(typeof global.matchMedia === 'function'
+        && global.matchMedia('(hover: none) and (pointer: coarse)').matches);
+    } catch (_err) {
+      coarsePointer = false;
+    }
+    return coarsePointer || (viewportWidth > 0 && viewportWidth < FULLSCREEN_BREAKPOINT_PX);
+  }
+
+  function _syncResponsiveShellState() {
+    const expanded = _shouldUseExpandedShell();
+    if (_modalEl) _modalEl.classList.toggle('plStorage--expanded', expanded);
+    if (_panelEl) _panelEl.classList.toggle('plStorage__panel--expanded', expanded);
+  }
 
   function _translate(key, fallback) {
     const value = _t(key);

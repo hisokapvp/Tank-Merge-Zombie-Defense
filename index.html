@@ -10,7 +10,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260328-branch1-tech-unlock-stat-contract';
+      var token = '20260328-branch2-modal-fullscreen-storage-v3';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -309,8 +309,10 @@
         <div class="levelModal hidden" id="modsHangarOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-mods-hangar-close="true"></div>
           <div class="levelModal__panel scModal hangarChipsModal" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
-            <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsHangarHelpBtn" type="button" data-tech-help-open="true" aria-label="Справка">?</button>
-            <button class="levelModal__close scModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
+            <div class="scModal__headerActions">
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsHangarHelpBtn" type="button" data-tech-help-open="true" aria-label="Справка">?</button>
+              <button class="levelModal__close scModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
+            </div>
             <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">Улучшения ячеек ангара</div>
             <div class="scTabs" role="tablist" aria-label="Hangar tabs">
               <button id="hangarTabCells" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="hangarPanelCells" tabindex="0" data-i18n="hangarChipsTabCells">Улучшение ячеек</button>
@@ -365,8 +367,10 @@
         <div class="levelModal hidden" id="modsTankWallOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-mods-tank-wall-close="true"></div>
           <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="modsTankWallTitle" tabindex="-1">
-            <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="Справка">?</button>
-            <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
+            <div class="scModal__headerActions">
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="Справка">?</button>
+              <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
+            </div>
             <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации техники и стен</div>
             <div class="scTabs" role="tablist" aria-label="Модификации техники и стен">
               <button id="modsTankWallTabGuns" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="modsTankWallPanelGuns" tabindex="0" data-i18n="modsTabGuns">Орудия</button>
@@ -624,7 +628,7 @@
   <script src="src/ui/mergePopup/mergePopupSeenLevels.js"></script>
   <script src="src/ui/mergePopup/mergePopupStats.js"></script>
   <script src="src/config/audioUi.js"></script>
-  <script src="src/ui/buttonBehavior.js"></script>
+  <script src="src/ui/buttonBehavior.js?v=20260328-branch1-debuff-header-mobile"></script>
   <script src="src/ui/fontFloor.js"></script>
   <script src="src/ui/mergePopup.js"></script>
   <script src="src/ui/zombieAnimPreview.js"></script>
@@ -656,7 +660,7 @@
   <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>
   <script src="src/ui/talentOverlayUi.js"></script>
   <script src="src/config/tankWallStatCatalog.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
-  <script src="src/ui/supercomputerMenu.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
+  <script src="src/ui/supercomputerMenu.js?v=20260328-branch1-debuff-header-mobile"></script>
   <script src="src/ui/productionLineUI.js?v=20260322-ui-postmerge"></script>
   <script src="src/ui/criticalModal.js"></script>
   <script src="src/systems/pauseManager.js"></script>

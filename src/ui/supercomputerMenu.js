@@ -206,6 +206,8 @@
     var hangarOverlay = documentObj.getElementById('modsHangarOverlay');
     var tankWallOverlay = documentObj.getElementById('modsTankWallOverlay');
     var rootPanel = rootOverlay ? rootOverlay.querySelector('.levelModal__panel.scModal') : null;
+    var hangarPanel = hangarOverlay ? hangarOverlay.querySelector('.levelModal__panel.scModal') : null;
+    var tankWallPanel = tankWallOverlay ? tankWallOverlay.querySelector('.levelModal__panel.scModal') : null;
     var rootView = documentObj.getElementById('supercomputerMenuRootView');
     var talentsView = documentObj.getElementById('supercomputerTalentsView');
 
@@ -409,6 +411,41 @@
       rootBackdropPointerDownSinceOpen: false,
     };
 
+    function shouldUseFullscreenShell() {
+      var viewportWidth = Number(global.innerWidth) || 0;
+      var coarsePointer = false;
+      try {
+        coarsePointer = !!(typeof global.matchMedia === 'function' && global.matchMedia('(hover: none) and (pointer: coarse)').matches);
+      } catch (_err) {
+        coarsePointer = false;
+      }
+      return coarsePointer || (viewportWidth > 0 && viewportWidth < 1280);
+    }
+
+    function getEmbeddedTalentPanel() {
+      var talentOverlay = documentObj.getElementById('talentOverlay');
+      return talentOverlay ? talentOverlay.querySelector('.talentTreeModal') : null;
+    }
+
+    function toggleResponsiveClass(target, className, enabled) {
+      if (!target || !className) return;
+      target.classList.toggle(className, !!enabled);
+    }
+
+    function syncResponsiveShellState() {
+      var fullscreen = shouldUseFullscreenShell();
+      var talentsFullscreen = fullscreen && state.view === 'talents';
+      var hangarFullscreen = fullscreen && state.view === 'hangar';
+      var tankWallFullscreen = fullscreen && state.view === 'tankWall';
+      toggleResponsiveClass(rootOverlay, 'levelModal--fullscreenShell', talentsFullscreen);
+      toggleResponsiveClass(rootPanel, 'scModal--fullscreenShell', talentsFullscreen);
+      toggleResponsiveClass(hangarOverlay, 'levelModal--fullscreenShell', hangarFullscreen);
+      toggleResponsiveClass(hangarPanel, 'scModal--fullscreenShell', hangarFullscreen);
+      toggleResponsiveClass(tankWallOverlay, 'levelModal--fullscreenShell', tankWallFullscreen);
+      toggleResponsiveClass(tankWallPanel, 'scModal--fullscreenShell', tankWallFullscreen);
+      toggleResponsiveClass(getEmbeddedTalentPanel(), 'talentTreeModal--fullscreenShell', talentsFullscreen);
+    }
+
     var tankWallTabButtons = {
       weapons: documentObj.getElementById('modsTankWallTabGuns'),
       drones: documentObj.getElementById('modsTankWallTabDrones'),
@@ -495,6 +532,16 @@
       var panel = talentOverlay.querySelector('.modal');
       if (!panel) return;
       panel.classList.add('scModal');
+      var headerActions = documentObj.getElementById('supercomputerTalentsHeaderActions');
+      if (!headerActions) {
+        headerActions = documentObj.createElement('div');
+        headerActions.id = 'supercomputerTalentsHeaderActions';
+        headerActions.className = 'scModal__headerActions supercomputerTalentsHeaderActions';
+        if (rootPanel) rootPanel.appendChild(headerActions);
+        else panel.appendChild(headerActions);
+      } else if (rootPanel && headerActions.parentNode !== rootPanel) {
+        rootPanel.appendChild(headerActions);
+      }
       var closeBtn = documentObj.querySelector('#supercomputerMenuOverlay .supercomputerTalentsShellClose')
         || talentOverlay.querySelector('.talentOverlayClose')
         || talentOverlay.querySelector('.modalClose');
@@ -503,7 +550,8 @@
         closeBtn.classList.add('scModal__close');
         closeBtn.classList.add('supercomputerTalentsShellClose');
         closeBtn.setAttribute('data-font-floor-ignore', 'true');
-        if (rootPanel && closeBtn.parentNode !== rootPanel) rootPanel.appendChild(closeBtn);
+        if (headerActions && closeBtn.parentNode !== headerActions) headerActions.appendChild(closeBtn);
+        else if (rootPanel && closeBtn.parentNode !== rootPanel) rootPanel.appendChild(closeBtn);
       }
       var helpBtn = documentObj.getElementById('supercomputerTalentsHelpBtn');
       if (!helpBtn) {
@@ -521,15 +569,21 @@
             textKey: 'supercomputerTalentsHelpText',
           });
         });
-        if (rootPanel) rootPanel.appendChild(helpBtn);
+        if (headerActions) headerActions.appendChild(helpBtn);
+        else if (rootPanel) rootPanel.appendChild(helpBtn);
         else panel.appendChild(helpBtn);
         if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
           global.Game.ButtonBehavior.decorateTree(helpBtn);
         }
+      } else if (headerActions && helpBtn.parentNode !== headerActions) {
+        headerActions.appendChild(helpBtn);
       } else if (rootPanel && helpBtn.parentNode !== rootPanel) {
         rootPanel.appendChild(helpBtn);
       }
       helpBtn.classList.add('btn', 'scButton', 'uiButtonBehavior', 'hangarChipsHelpBtn', 'supercomputerTalentsShellHelp');
+      if (headerActions && helpBtn && closeBtn) {
+        headerActions.insertBefore(helpBtn, closeBtn);
+      }
       syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
     }
 
@@ -1887,6 +1941,7 @@
       });
       state.isOpen = true;
       state.view = 'root';
+      syncResponsiveShellState();
       normalizeRootTilesSize();
       setBodyScrollLock(true);
       onPauseLockChange(true);
@@ -1903,6 +1958,7 @@
         Game.HangarChipsUI.init();
         Game.HangarChipsUI.show();
       }
+      syncResponsiveShellState();
       setBodyScrollLock(true);
       onViewChange('hangar');
     }
@@ -1926,6 +1982,7 @@
         onClose: backFromChild,
       });
       state.view = 'tankWall';
+      syncResponsiveShellState();
       startGunsIconTicker();
       setBodyScrollLock(true);
     }
@@ -1942,6 +1999,7 @@
       state.view = 'talents';
       openTalents({ onClose: backFromChild, embedded: true, skipSupercomputerRouting: true });
       applySharedTalentModalClass();
+      syncResponsiveShellState();
       setBodyScrollLock(true);
       onPauseLockChange(true);
     }
@@ -1984,6 +2042,7 @@
       resetExpandedRows();
       state.isOpen = false;
       state.view = 'closed';
+      syncResponsiveShellState();
       setBodyScrollLock(false);
       onPauseLockChange(false);
       onViewChange('closed', prevView);
@@ -2034,7 +2093,10 @@
     tankWallOverlay.addEventListener('click', function (evt) {
       if (evt.target && evt.target.dataset && evt.target.dataset.modsTankWallClose === 'true') backFromChild();
     });
-    global.addEventListener('resize', refreshRootTilesLayout);
+    global.addEventListener('resize', function () {
+      refreshRootTilesLayout();
+      syncResponsiveShellState();
+    });
 
     return {
       openRoot: openRoot,

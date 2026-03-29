@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-27.
+> Обновлено: 2026-03-28.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -39,7 +39,10 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-27
+## Фокус документации на 2026-03-28
+- **Repo-local Copilot context-mode consumer baseline**: `.github/hooks/context-mode.json` и `.vscode/mcp.json` в TMZD зеркалят shared `.agents` consumer contract (`PreToolUse/PostToolUse/PreCompact/SessionStart` + `npx -y context-mode`), но не становятся владельцем Telegram broker bridge; для broker ownership читать `.agents/docs/CONTEXT_MODE_TELEGRAM_BASELINE.md`, а внутри TMZD считать эти два файла support-surface, не gameplay runtime.
+
+### Предыдущий фокус (2026-03-27)
 - **Phaser 3 migration phases 0–4 complete.** 43 module files in `src/phaser/`, 14 adapters/bridges, 12 render layer modules, 16 scenes, 4 rollout modules. Master spec: `docs/migration/PHASER_MIGRATION.md`. Runtime doc: `docs/ai/SYSTEMS/phaser.md`. 467 dedicated migration tests across 11 test files.
 - **TMZD visual/UI/UX/layout/modal/HUD style-sensitive задачи** читают `docs/ai/SYSTEMS/phaser.md` вместе с `docs/ai/SYSTEMS/ui.md`; TMZD-specific UX route идёт через `tmzd-ux-ui-designer`, а runtime-изменения остаются в зоне `tmzd-developer`.
 - **Shared hybrid seam для `Supercomputer -> Tank/Drone/Wall Mods`** теперь документирован как per-stat modal contract: `src/ui/supercomputerMenu.js` держит expandable rows и reserved-points state, `game.js` — per-stat total/apply helpers, а `assets/tanks.json`, `assets/dron.json`, `assets/fence.json` — canonical `upgradeDamagePointsCosts` по статам. Tutorial contract для этого же seam живёт в `docs/ai/SYSTEMS/tutorial-runtime.md`.

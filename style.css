@@ -15,6 +15,7 @@
   --ui-scale: 1;
   --ui-shell-max-width: calc(100vw - clamp(28px, 5vw, 96px));
   --ui-shell-max-height: calc(100vh - clamp(28px, 5vh, 96px));
+  --ui-shell-fullscreen-gap: clamp(10px, 1.4vw, 18px);
   --uiModalPad: clamp(16px, calc(18px * var(--ui-scale)), 50px);
   --ui-help-btn-size: clamp(44px, calc(44px * var(--ui-scale)), 52px);
   --ui-help-btn-offset-top: clamp(10px, calc(18px * var(--ui-scale)), 18px);
@@ -1347,6 +1348,15 @@ body.menu-open .stageUi .hudItem{
 .levelModal.hidden{
   display:none;
 }
+.levelModal--fullscreenShell{
+  align-items:stretch;
+  justify-content:stretch;
+  padding:
+    calc(var(--safe-top) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-right) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-bottom) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-left) + var(--ui-shell-fullscreen-gap));
+}
 /* Dismantle confirm modal: equal-width buttons */
 .dismantleModal__actions{
   display:flex;
@@ -2669,27 +2679,46 @@ input, select, textarea, button {
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView{
   padding-top:0;
 }
-#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellClose,
-#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellHelp{
-  display:none;
-  z-index:2;
-}
-#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsShellClose{
+.scModal__headerActions{
   position:absolute;
   top:10px;
   right:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  z-index:2;
+  padding:0;
+  margin:0;
+  border:0;
+  background:none;
+}
+#modsHangarOverlay .levelModal__panel.scModal > .levelModal__title,
+#modsTankWallOverlay .levelModal__panel.scModal > .levelModal__title{
+  padding-left:min(118px, 26vw);
+  padding-right:min(118px, 26vw);
+}
+.scModal__headerActions > .hangarChipsHelpBtn,
+.scModal__headerActions > .levelModal__close,
+.scModal__headerActions > .modalClose,
+.scModal__headerActions > .supercomputerTalentsShellClose,
+.scModal__headerActions > .supercomputerTalentsShellHelp{
+  position:relative;
+  top:auto;
+  right:auto;
   left:auto;
   bottom:auto;
+  margin:0;
+  flex:0 0 auto;
+}
+#supercomputerMenuOverlay .levelModal__panel.scModal > .supercomputerTalentsHeaderActions{
+  display:none;
 }
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > #supercomputerMenuTitle,
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > #supercomputerMenuClose{
   display:none;
 }
-#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .supercomputerTalentsShellClose{
+#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .supercomputerTalentsHeaderActions{
   display:flex;
-}
-#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .supercomputerTalentsShellHelp{
-  display:grid;
 }
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .scModal__body{
   padding:0;
@@ -3486,9 +3515,11 @@ input, select, textarea, button {
   }
 }
 @media (hover: none), (pointer: coarse){
-  .uiButtonBehavior:hover,
-  .uiButtonBehavior:hover::after{
+  .uiButtonBehavior:hover{
     filter: none;
+    transform: none;
+  }
+  .uiButtonBehavior:hover::after{
     transform: none;
     opacity: 0;
   }
@@ -7334,6 +7365,7 @@ button.hangarChipInvItem{
   display:flex;
   align-items:center;
   justify-content:center;
+  padding:0;
 }
 .plStorage.hidden{display:none}
 .plStorage__backdrop{
@@ -7342,12 +7374,28 @@ button.hangarChipInvItem{
   background:rgba(0,0,0,0.65);
 }
 .plStorage__panel{
+  --pl-storage-shell-scale:1;
+  --pl-storage-cell-scale:1;
+  --pl-storage-padding-x:20px;
+  --pl-storage-padding-top:20px;
+  --pl-storage-padding-bottom:18px;
+  --pl-storage-header-min-height:86px;
+  --pl-storage-header-title-pad-top:22px;
+  --pl-storage-header-actions-gap:10px;
+  --pl-storage-grid-width:420px;
+  --pl-storage-grid-gap:12px;
+  --pl-storage-cell-size:64px;
+  --pl-storage-cell-gap:4px;
+  --pl-storage-icon-size:28px;
+  --pl-storage-icon-offset-y:-5px;
+  --pl-storage-badge-bottom:4px;
+  --pl-storage-badge-size:10px;
   position:relative;
   width:min(540px, 92vw);
   background:#1a1e1a;
   border:4px solid #3e3e3e;
   border-radius:0;
-  padding:20px 20px 18px;
+  padding:var(--pl-storage-padding-top) var(--pl-storage-padding-x) var(--pl-storage-padding-bottom);
   max-width:92vw;
   max-height:86vh;
   overflow-y:auto;
@@ -7371,17 +7419,17 @@ button.hangarChipInvItem{
 }
 .plStorage__header{
   position:relative;
-  min-height:86px;
-  padding:8px min(118px, 26vw) 0 min(118px, 26vw);
-  margin-bottom:18px;
+  min-height:var(--pl-storage-header-min-height);
+  padding:8px min(calc(118px * var(--pl-storage-shell-scale)), 26vw) 0 min(calc(118px * var(--pl-storage-shell-scale)), 26vw);
+  margin-bottom:calc(18px * var(--pl-storage-shell-scale));
 }
 .plStorage__headerActions{
   position:absolute;
-  top:10px;
+  top:calc(10px * var(--pl-storage-shell-scale));
   right:0;
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:var(--pl-storage-header-actions-gap);
 }
 .plStorage__headerHelp{
   position:relative;
@@ -7395,7 +7443,7 @@ button.hangarChipInvItem{
 }
 .plStorage__header .levelModal__title{
   margin:0;
-  padding-top:22px;
+  padding-top:var(--pl-storage-header-title-pad-top);
   line-height:1.3;
   text-align:center;
 }
@@ -7404,47 +7452,31 @@ button.hangarChipInvItem{
   top:auto;
   right:auto;
 }
-@media (max-width: 520px){
-  .plStorage__header{
-    min-height:102px;
-    padding-top:12px;
-    padding-right:min(112px, 32vw);
-    padding-left:min(112px, 32vw);
-  }
-  .plStorage__headerActions{
-    gap:10px;
-  }
-  .plStorage__header .levelModal__title{
-    padding-top:30px;
-    font-size:clamp(16px, 4.3vw, 20px);
-    line-height:1.35;
-  }
-}
 .plStorage__grid{
   display:grid;
-  gap:12px;
-  width:min(100%, 420px);
+  gap:var(--pl-storage-grid-gap);
+  width:min(100%, var(--pl-storage-grid-width));
   margin:0 auto;
-  max-width:420px;
+  max-width:var(--pl-storage-grid-width);
   justify-items:center;
 }
 .plStorage__cell{
   --pl-cell-accent:#4af626;
   --pl-cell-glow:rgba(74,246,38,.35);
   position:relative;
-  width:64px;
-  height:64px;
+  width:var(--pl-storage-cell-size);
+  height:var(--pl-storage-cell-size);
   border:2px solid var(--pl-cell-accent);
   border-radius:0;
   background:linear-gradient(to bottom, #202820 0%, #0d140b 100%);
   color:var(--text);
-  font-size:24px;
+  font-size:calc(24px * var(--pl-storage-cell-scale));
   cursor:pointer;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:4px;
+  gap:var(--pl-storage-cell-gap);
   box-shadow:2px 2px 0 #000;
   transition:background .15s, border-color .15s, box-shadow .15s, transform .15s;
 }
@@ -7482,20 +7514,20 @@ button.hangarChipInvItem{
   box-shadow:0 0 16px var(--pl-cell-glow), 2px 2px 0 #000;
 }
 .plStorage__cellIcon{
-  font-size:28px;
+  font-size:var(--pl-storage-icon-size);
   line-height:1;
-  transform:translateY(-5px);
+  transform:translateY(var(--pl-storage-icon-offset-y));
 }
 .plStorage__levelBadge{
   position:absolute;
   left:50%;
-  bottom:4px;
+  bottom:var(--pl-storage-badge-bottom);
   transform:translateX(-50%);
   padding:0;
   border:none;
   background:none;
   color:#f0f6ff;
-  font-size:10px;
+  font-size:var(--pl-storage-badge-size);
   font-weight:700;
   line-height:1;
   letter-spacing:.04em;
@@ -7880,4 +7912,153 @@ button.hangarChipInvItem{
 }
 .modalBody{
   gap:calc(16px * var(--ui-scale));
+}
+
+/* Shared fullscreen shell contract for narrow/mobile SC-family overlays. */
+.scModal--fullscreenShell{
+  width:100% !important;
+  max-width:none !important;
+  max-height:100%;
+  min-height:0;
+  height:100%;
+  border-radius:clamp(18px, 3vw, 26px);
+}
+#modsHangarOverlay .scModal--fullscreenShell,
+#modsTankWallOverlay .scModal--fullscreenShell{
+  display:flex;
+  flex-direction:column;
+}
+#modsHangarOverlay .scModal--fullscreenShell > .scModal__body,
+#modsTankWallOverlay .scModal--fullscreenShell > .scModal__body{
+  display:flex;
+  flex-direction:column;
+  flex:1 1 auto;
+  min-height:0;
+}
+#modsHangarOverlay .scModal--fullscreenShell > .scModal__body{
+  overflow:auto;
+  padding:calc(10px * var(--modsHangarScale, 1)) calc(12px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1));
+}
+#modsHangarOverlay .scModal--fullscreenShell{
+  --modsHangarScale:clamp(0.92, calc(0.84 + var(--ui-scale) * 0.42), 1.08);
+}
+#modsHangarOverlay .scModal--fullscreenShell .hangarLayout,
+#modsHangarOverlay .scModal--fullscreenShell .hangarDetail,
+#modsHangarOverlay .scModal--fullscreenShell .chipCraftContainer,
+#modsHangarOverlay .scModal--fullscreenShell .techUnlockContainer,
+#modsHangarOverlay .scModal--fullscreenShell .workshopSubPanel{
+  min-height:0;
+}
+#modsHangarOverlay .scModal--fullscreenShell .hangarRow{
+  flex-direction:column;
+}
+#modsHangarOverlay .scModal--fullscreenShell .hangarSlotViewWrap,
+#modsHangarOverlay .scModal--fullscreenShell .hangarRightCol{
+  width:100%;
+}
+#modsHangarOverlay .scModal--fullscreenShell .hangarSlotView{
+  width:min(100%, var(--modsHangarSlotWidth));
+  margin:0 auto;
+}
+#modsHangarOverlay .scModal--fullscreenShell .hangarGridWrap{
+  min-height:0;
+}
+#modsTankWallOverlay .scModal--fullscreenShell > .scModal__body{
+  overflow-y:auto;
+}
+#modsTankWallOverlay .scModal--fullscreenShell .scTabPanels,
+#modsTankWallOverlay .scModal--fullscreenShell .scTabPanel:not([hidden]),
+#modsTankWallOverlay .scModal--fullscreenShell .scGunsTable,
+#modsTankWallOverlay .scModal--fullscreenShell .scGunsTable__rows{
+  flex:1 1 auto;
+  min-height:0;
+}
+#modsTankWallOverlay .scModal--fullscreenShell .scGunsTable__rows{
+  max-height:none;
+}
+.talentTreeModal--fullscreenShell{
+  width:100%;
+  max-width:none;
+  max-height:100%;
+  min-height:0;
+  height:100%;
+}
+#supercomputerMenuOverlay .scModal--fullscreenShell > .scModal__body,
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount,
+#supercomputerTalentsMount > #talentOverlay.overlay,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .modalBody,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentTreeBody{
+  flex:1 1 auto;
+  min-height:0;
+}
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.talentTreeModal--fullscreenShell .talentTreeBody,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentTreeBody{
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding-bottom:calc(14px * var(--ui-scale));
+}
+
+.plStorage--expanded{
+  align-items:stretch;
+  justify-content:stretch;
+  padding:
+    calc(var(--safe-top) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-right) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-bottom) + var(--ui-shell-fullscreen-gap))
+    calc(var(--safe-left) + var(--ui-shell-fullscreen-gap));
+}
+.plStorage__panel--expanded{
+  --pl-storage-shell-scale:clamp(1.06, calc(0.92 + var(--ui-scale) * 0.62), 1.22);
+  --pl-storage-cell-scale:clamp(1.08, calc(0.96 + var(--ui-scale) * 0.58), 1.24);
+  --pl-storage-padding-x:clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
+  --pl-storage-padding-top:clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
+  --pl-storage-padding-bottom:clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
+  --pl-storage-header-min-height:clamp(88px, calc(110px * var(--pl-storage-shell-scale)), 132px);
+  --pl-storage-header-title-pad-top:clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
+  --pl-storage-header-actions-gap:clamp(10px, calc(14px * var(--pl-storage-shell-scale)), 16px);
+  --pl-storage-grid-width:min(100%, calc(600px * var(--pl-storage-cell-scale)));
+  --pl-storage-grid-gap:clamp(12px, calc(16px * var(--pl-storage-cell-scale)), 20px);
+  --pl-storage-cell-size:clamp(72px, calc(84px * var(--pl-storage-cell-scale)), 96px);
+  --pl-storage-cell-gap:clamp(6px, calc(6px * var(--pl-storage-cell-scale)), 8px);
+  --pl-storage-icon-size:clamp(30px, calc(36px * var(--pl-storage-cell-scale)), 42px);
+  --pl-storage-icon-offset-y:calc(-6px * var(--pl-storage-cell-scale));
+  --pl-storage-badge-bottom:clamp(5px, calc(8px * var(--pl-storage-cell-scale)), 10px);
+  --pl-storage-badge-size:clamp(11px, calc(12px * var(--pl-storage-cell-scale)), 14px);
+  width:100%;
+  max-width:none;
+  max-height:100%;
+  min-height:0;
+  border-radius:clamp(18px, 3vw, 26px);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  overflow:hidden;
+}
+.plStorage__panel--expanded .plStorage__header{
+  padding-left:min(calc(132px * var(--pl-storage-shell-scale)), 28vw);
+  padding-right:min(calc(132px * var(--pl-storage-shell-scale)), 28vw);
+}
+.plStorage__panel--expanded .plStorage__header .levelModal__title{
+  font-size:clamp(16px, calc(16px * var(--pl-storage-shell-scale)), 22px);
+  line-height:1.35;
+}
+.plStorage__panel--expanded .plStorage__grid{
+  flex:1 1 auto;
+  min-height:0;
+  align-content:start;
+  padding-bottom:calc(6px * var(--pl-storage-shell-scale));
+}
+.plStorage__panel--expanded .plStorage__confirmBox{
+  width:min(calc(460px * var(--pl-storage-shell-scale)), calc(100% - 24px));
+  padding:calc(20px * var(--pl-storage-shell-scale)) calc(28px * var(--pl-storage-shell-scale));
+}
+.plStorage__panel--expanded .plStorage__confirmActions{
+  gap:clamp(10px, calc(12px * var(--pl-storage-shell-scale)), 16px);
 }

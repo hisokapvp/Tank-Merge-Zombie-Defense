@@ -34,7 +34,7 @@
   },
   "corpseDespawnSec": 1.5,
   "corpseFadeOutSec": 0.8,
-  "debuffIconScale": 0.2,
+  "debuffIconScale": 0.5,
   "debuffIconOpacity": 0.8,
   "types": [
     {

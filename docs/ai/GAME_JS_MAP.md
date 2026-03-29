@@ -61,6 +61,7 @@
 - Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
 - Нужен world loop → [loop()](../../game.js#L11460-L11713)
 - Нужен render order → [draw()](../../game.js#L11127-L11200)
+- Нужен zombie debuff overlay scale-path → [drawScaledDebuffExpiryOverlay()](../../game.js#L11561-L11586), [drawScaledZombieDebuffOverlays()](../../game.js#L11588-L11643), вызов из [draw()](../../game.js#L11714-L11723)
 - Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2374-L2387), [syncHybridUiScale()](../../game.js#L2389-L2403), [resizeCanvas()](../../game.js#L2407-L2437)
 - Нужен per-stat modifiers seam для weapons/drones/walls → [getCannonUpgradeTotalCost()](../../game.js#L878-L888), [applyCannonUpgrade()](../../game.js#L890-L910), [getFenceUpgradeTotalCost()](../../game.js#L912-L922), [applyFenceUpgrade()](../../game.js#L924-L945), [getDronUpgradeTotalCost()](../../game.js#L3282-L3292), [applyDronUpgrade()](../../game.js#L3294-L3313)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
@@ -74,6 +75,7 @@
 - Master UI scale source-of-truth живёт в `resizeCanvas()`: `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))` пишется в `:root`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` прокидывает scale в `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`; startup `boot().catch(...)` должен вызывать этот path уже при загрузке страницы.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
+- Zombie debuff expiry overlay не имеет отдельного fixed-px render path: `drawScaledZombieDebuffOverlays()` вычисляет `iconSizePx/iconStepPx` из `debuffIconScale`, `drawScaledDebuffExpiryOverlay()` получает этот размер напрямую, а `draw()` прокидывает значения из локального `ZombieSprites`. Любая правка wedge/dot overlay должна сохранять этот shared scale contract: [game.js](../../game.js#L11561-L11643), [game.js](../../game.js#L11714-L11723).
 - Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
 - `game.js` — canonical apply/cost layer для supercomputer modifiers modal: UI передаёт `level + statKey + pendingCount`, а функции `applyCannonUpgrade` / `applyDronUpgrade` / `applyFenceUpgrade` сами нормализуют ключ, суммируют per-stat step cost и обновляют encoded applied arrays. Стоимость не дублируется в UI и не должна хардкодиться вне JSON/runtime helper'ов.
 
@@ -150,6 +152,7 @@
 | Функция | Строки | Назначение |
 |---|---|---|
 | `draw()` | [game.js](../../game.js#L9339-L9398) | Main render orchestrator |
+| `drawScaledDebuffExpiryOverlay()` / `drawScaledZombieDebuffOverlays()` | [game.js](../../game.js#L11561-L11643) | Shared debuff icon + expiry wedge/dot scale path от `debuffIconScale` |
 | `drawBackground()` / `drawTankTrack()` | [game.js](../../game.js#L9490-L9568) | Фон и track |
 | `drawSupercomputerSpriteClip()` | [game.js](../../game.js#L9699-L9724) | Root sprite + animation effects |
 | `drawSupercomputerHpBar()` / `drawSupercomputerHpBarOverlay()` | [game.js](../../game.js#L9725-L9755) | Финальный HP overlay |
@@ -174,6 +177,7 @@
 - Purchase-driven `buildTank` FX window: [game.js](../../game.js#L3289-L3307), [game.js](../../game.js#L11374-L11382)
 - Kill-driven conveyor work trigger: [game.js](../../game.js#L5902-L5917)
 - Draw order + финальный HP overlay: [game.js](../../game.js#L9339-L9398)
+- Zombie debuff icon/expiry overlay scale path: [game.js](../../game.js#L11561-L11643), [game.js](../../game.js#L11714-L11723)
 - Root supercomputer effects / hp overlay helpers: [game.js](../../game.js#L9699-L9794)
 
 ## Связанные map-файлы
