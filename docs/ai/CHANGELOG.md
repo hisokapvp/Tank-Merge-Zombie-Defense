@@ -1,5 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-29
+- **Документация: shared post-merge update после join для SC-family shell ownership, Production Storage responsive token families и per-zombie atlas contract (`src/ui/supercomputerMenu.js`, `src/ui/productionLineUI.js`, `style.css`, `index.html`, `assets/zombies.json`, `src/render/spriteLoaders.js`, `src/render/zombieRender.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Game.SupercomputerMenu` документирован как canonical owner shared help-shell, fullscreen-shell routing и talents header action-row `help -> close`; production storage help переиспользует тот же API вместо отдельного storage-only shell.
+  - Зафиксированы: responsive storage contract теперь явно разделён на `default / expanded / mobile-fit`; root `style.css` token block рядом с modal-family vars содержит `--pl-storage-*` default/expanded/mobile families, а `src/ui/productionLineUI.js` только переключает runtime classes по breakpoints `<1280` / `<1000`.
+  - Зафиксированы: `assets/zombies.json` теперь документирован как shared `atlas` + `atlasesById` map на `assets/zombie_lvl{1..60}_atlas.png`; `ZombieSprites.load()` preload'ит per-type atlas images и выдаёт `getAtlasImage(...)`, а `zombieRender` использует shared atlas только для `deathCommon`, иначе рисует конкретный type atlas.
+
 ## 2026-03-28
 - **Документация: shared post-merge update после join для debuff overlay scale, SC header-actions, shared button behavior mobile guard и narrow-shell modal contracts (`game.js`, `index.html`, `src/ui/buttonBehavior.js`, `src/ui/supercomputerMenu.js`, `style.css`)**
   - Обновлены `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/CHANGELOG.md`.

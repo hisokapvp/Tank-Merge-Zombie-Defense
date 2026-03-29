@@ -6,6 +6,29 @@
   function createController(deps) {
     deps = deps || {};
 
+    function isCommonDeathAnimation(z, ZombieSprites) {
+      if (!z || z.state !== 'dying') return false;
+      if (z.deathUsesCommonAtlas === true) return true;
+      if (!z.deathAnim || !ZombieSprites || !ZombieSprites.deathCommon) return false;
+      if (Array.isArray(ZombieSprites.deathCommon)) {
+        for (var i = 0; i < ZombieSprites.deathCommon.length; i++) {
+          if (z.deathAnim === ZombieSprites.deathCommon[i]) return true;
+        }
+        return false;
+      }
+      return z.deathAnim === ZombieSprites.deathCommon;
+    }
+
+    function resolveZombieAtlasImage(ZombieSprites, z) {
+      if (!ZombieSprites) return null;
+      var preferSharedAtlas = isCommonDeathAnimation(z, ZombieSprites);
+      if (typeof ZombieSprites.getAtlasImage === 'function') {
+        return ZombieSprites.getAtlasImage(z && z.type, preferSharedAtlas) || ZombieSprites.atlasImg || null;
+      }
+      if (preferSharedAtlas) return ZombieSprites.atlasImg || null;
+      return (z && z.type && z.type.atlasImg) || ZombieSprites.atlasImg || null;
+    }
+
     function getCorpseFadeAlpha(z, isDying) {
       if (!isDying) return 1;
       var deathTimer = Number.isFinite(z && z.deathTimer) ? z.deathTimer : 0;
@@ -24,18 +47,20 @@
 
     function drawZombieEntity(z, x, y) {
       var ZombieSprites = deps.getZombieSprites();
-      if (ZombieSprites.ready && ZombieSprites.atlasImg && z.type) {
-        drawZombieSprite(x, y, z);
+      var zombieAtlasImg = ZombieSprites.ready && z.type
+        ? resolveZombieAtlasImage(ZombieSprites, z)
+        : null;
+      if (zombieAtlasImg) {
+        drawZombieSprite(x, y, z, zombieAtlasImg);
       } else {
         drawZombieFallback(x, y, z);
       }
     }
 
-    function drawZombieSprite(x, y, z) {
+    function drawZombieSprite(x, y, z, img) {
       var ctx = deps.getCtx();
       var ZombieSprites = deps.getZombieSprites();
       var BAL = deps.getBalance();
-      var img = ZombieSprites.atlasImg;
       var t = z.type;
       var f = t.frame;
       var a = t.anchor;

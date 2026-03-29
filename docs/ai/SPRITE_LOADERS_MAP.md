@@ -1,6 +1,6 @@
 # spriteLoaders.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-25.
+> Агент-ориентировано. Обновлён: 2026-03-29.
 > Файл большой (1350 строк); этот map покрывает реально прочитанные и grep-проверенные блоки.
 
 ## Что это
@@ -9,11 +9,12 @@
 ## Быстрый старт для агента
 - Нужен контракт `assets/supercomputer.json` → [normalizeAnimationClip()](../../src/render/spriteLoaders.js#L45-L80), [normalizeSupercomputerPart()](../../src/render/spriteLoaders.js#L83-L116), [normalizeSupercomputerBoxPart()](../../src/render/spriteLoaders.js#L118-L145), [SupercomputerSprites.load()](../../src/render/spriteLoaders.js#L853-L994).
 - Нужны alias `storage` → `storageCell` и `box` → `conveyorBox` → [getAnimation()](../../src/render/spriteLoaders.js#L995-L1016), [getPartConfig()](../../src/render/spriteLoaders.js#L1025-L1030).
-- Нужен spawn/corpse/explicit `Health` contract зомби → [ZombieSprites.load()](../../src/render/spriteLoaders.js#L179-L346).
+- Нужен per-zombie atlas + spawn/corpse/explicit `Health` contract зомби → [normalizeAtlasPath()](../../src/render/spriteLoaders.js#L222-L225), [ZombieSprites.load()](../../src/render/spriteLoaders.js#L228-L380), [getAtlasImage()](../../src/render/spriteLoaders.js#L416-L426).
 
 ## Инварианты этого модуля ⚠️
 - Все runtime-конфиги проходят через normalizer'ы этого файла; render code не должен парсить raw JSON заново.
-- `ZombieSprites.load()` — canonical normalizer для `assets/zombies.json`: он приводит top-level `spawn.*`, corpse timing и per-type `Health/health` к безопасному runtime shape; downstream gameplay должен читать `ZombieSprites.spawnConfig` и `type.health`, а не raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L232-L305).
+- `ZombieSprites.load()` — canonical normalizer для `assets/zombies.json`: он приводит top-level `atlas`/`atlasesById`, `spawn.*`, corpse timing и per-type `Health/health` к безопасному runtime shape; downstream gameplay и render должны читать `type.atlasPath`, `ZombieSprites.atlasImages`, `ZombieSprites.spawnConfig` и `type.health`, а не raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L222-L380).
+- Shared death atlas остаётся deliberate contract even при per-type atlas map: `getAtlasImage(type, preferSharedAtlas)` обязан возвращать общий atlas для `deathCommon` path и type-specific atlas для walk/attack/default render, не смешивая эти два режима на уровне raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L416-L426).
 - Для суперкомпьютера legacy `storage` остаётся допустимым alias для `storageCell`, а `box` — для `conveyorBox`: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L903-L928), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L995-L1030).
 - `conveyorBox` нормализует две стадии печати `printLow` / `printHigh` и понимает legacy alias-имена (`buildLow`, `buildHigh`, `under50`, `over50`, `lessThanHalf`, `moreThanHalf`): [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L118-L145).
 - Если atlas части совпадает с главным atlas, loader переиспользует одно и то же `Image`, не создавая дубль: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L914-L928).
@@ -35,7 +36,10 @@
 ### Блок: ZombieSprites (прочитан)
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `ZombieSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L179-L346) | Читает `assets/zombies.json`, normalizes `deathCommon`, `spawn`, corpse timing и per-type `Health/health -> health` |
+| `normalizeAtlasPath()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L222-L225) | Канонический normalizer `atlas` / `atlasesById` значений в `assets/...` paths |
+| `ZombieSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L228-L380) | Читает `assets/zombies.json`, preload'ит shared + per-type atlas map, normalizes `deathCommon`, `spawn`, corpse timing и per-type `Health/health -> health` |
+| `pickType()` / `pickTypeByLevel()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L390-L415) | Runtime-selection по weight и deterministic `zombie_lvlN` lookup |
+| `getAtlasImage()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L416-L426) | Отдаёт общий или type-specific atlas image для render path |
 
 ### Блок: SupercomputerSprites (подробно прочитан)
 | Функция / блок | Строки | Назначение |
@@ -53,7 +57,8 @@
 | Финальные loader-экспорты (`getAnimation(name)` для других atlas-driven loaders) | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L1209-L1350) | частично исследовано, открыть при правке бонусов/пуль/дронов |
 
 ## Hotspots
-- [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L232-L305) — zombie spawn config, corpse timing и explicit `Health` normalizer.
+- [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L243-L339) — shared atlas, `atlasesById`, type-local atlas override, spawn config, corpse timing и explicit `Health` normalizer.
+- [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L416-L426) — render bridge `getAtlasImage(type, preferSharedAtlas)`.
 - [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L45-L145) — все новые animation contracts проходят здесь.
 - [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L853-L1030) — суперкомпьютер, production line, `conveyorBox`, per-state effects.
 

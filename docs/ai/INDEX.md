@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-28.
+> Обновлено: 2026-03-29.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -39,7 +39,11 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-28
+## Фокус документации на 2026-03-29
+- **SC-family fullscreen/help ownership + storage responsive shell**: `src/ui/supercomputerMenu.js` держит canonical `showSharedHelpModal()` / `syncSharedHelpButtonCopy()`, `shouldUseFullscreenShell()` и `applySharedTalentModalClass()` для talents/hangar/tank-wall shells; production storage переиспользует тот же help API, а responsive modes `expanded/mobile-fit` живут в `src/ui/productionLineUI.js` + root `--pl-storage-*` token block в `style.css`.
+- **Per-zombie atlas contract**: `assets/zombies.json` теперь документируется как shared `atlas` + `atlasesById` map на `assets/zombie_lvl{1..60}_atlas.png`; `ZombieSprites.load()` нормализует `atlasPath`, preload'ит per-type atlas map и отдаёт `getAtlasImage(...)`, а `src/render/zombieRender.js` берёт shared atlas только для `deathCommon`, иначе рисует type-specific atlas.
+
+### Предыдущий фокус (2026-03-28)
 - **Repo-local Copilot context-mode consumer baseline**: `.github/hooks/context-mode.json` и `.vscode/mcp.json` в TMZD зеркалят shared `.agents` consumer contract (`PreToolUse/PostToolUse/PreCompact/SessionStart` + `npx -y context-mode`), но не становятся владельцем Telegram broker bridge; для broker ownership читать `.agents/docs/CONTEXT_MODE_TELEGRAM_BASELINE.md`, а внутри TMZD считать эти два файла support-surface, не gameplay runtime.
 
 ### Предыдущий фокус (2026-03-27)

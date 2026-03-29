@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-27.
+> Обновлено: 2026-03-29.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -19,15 +19,17 @@
 - Для визуальных изменений проверять соответствующий loader/renderer в `src/render/*`.
 - Для `assets/credits.json` учитываются поля элемента: `name`, `role_ru`, `role_en`.
 
-## `assets/zombies.json` (spawn, corpse lifecycle, explicit Health)
-- Top-level `spawn` — часть runtime-контракта, а не просто баланс-данные: `ZombieSprites.load()` нормализует `targetAlive/sideCount/perSideTarget/perSideTolerance` в `ZombieSprites.spawnConfig`, а `game.js` читает этот объект в `getDefaultZombieTargetAlive()` и в spawn-planner'е attack-mode/alive-target логики: [assets/zombies.json](../../../assets/zombies.json#L1-L30), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L270-L278), [game.js](../../../game.js#L2173-L2190), [game.js](../../../game.js#L5608-L5626).
+## `assets/zombies.json` (spawn, corpse lifecycle, atlas routing, explicit Health)
+- Top-level `atlas` остаётся shared fallback/shared-death atlas, а `atlasesById` мапит `types[].id` на отдельные atlas PNG (`assets/zombie_lvl{1..60}_atlas.png` в текущем наборе данных). Loader также понимает optional `types[].atlas` override, поэтому `id` становится authoring key не только для pick-by-level, но и для atlas routing: [assets/zombies.json](../../../assets/zombies.json#L1-L63), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L222-L267), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L333-L339).
+- Top-level `spawn` — часть runtime-контракта, а не просто баланс-данные: `ZombieSprites.load()` нормализует `targetAlive/sideCount/perSideTarget/perSideTolerance` в `ZombieSprites.spawnConfig`, а `game.js` читает этот объект в `getDefaultZombieTargetAlive()` и в spawn-planner'е attack-mode/alive-target логики: [assets/zombies.json](../../../assets/zombies.json#L91-L101), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L270-L278), [game.js](../../../game.js#L2173-L2190), [game.js](../../../game.js#L5608-L5626).
+- `ZombieSprites.load()` нормализует для каждого типа `atlas` / `atlasPath`, preload'ит per-type images в `atlasImages` и сохраняет fallback на shared `assets/zombie_atlas.png`, если mapping отсутствует или конкретный atlas не загрузился. Render-path обязан брать image через `getAtlasImage(...)`, а не строить URL заново в draw code: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L243-L380), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L416-L426), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L22-L29).
 - `corpseDespawnSec`: время существования трупа **после** завершения death-анимации.
 - `corpseFadeOutSec`: длительность fade-out в конце life-time трупа.
 - Нормализация runtime:
 	- оба поля приводятся к `Number` и clamp к `>= 0`;
 	- `corpseFadeOutSec` дополнительно clamp'ится до `corpseDespawnSec`.
 - Edge-case: при `corpseDespawnSec = 0` труп удаляется сразу после завершения death-анимации.
-- `types[].Health` — canonical поле явного HP для конкретного типа зомби; legacy `health` остаётся допустимым alias только на входе normalizer'а. `ZombieSprites.load()` сначала читает `Health`, потом fallback'ится к `health`, записывает результат в `type.health`, а `makeZombie()` использует этот explicit HP раньше общей формулы `BAL.zombieHpBase * zombieHpMultiplier(...) * hpMul`: [assets/zombies.json](../../../assets/zombies.json#L31-L2939), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L296-L305), [game.js](../../../game.js#L5676-L5687).
+- `types[].Health` — canonical поле явного HP для конкретного типа зомби; legacy `health` остаётся допустимым alias только на входе normalizer'а. `ZombieSprites.load()` сначала читает `Health`, потом fallback'ится к `health`, записывает результат в `type.health`, а `makeZombie()` использует этот explicit HP раньше общей формулы `BAL.zombieHpBase * zombieHpMultiplier(...) * hpMul`: [assets/zombies.json](../../../assets/zombies.json#L101-L2939) _(строки приблизительные, повторяющийся `types[]` block)_, [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L296-L305), [game.js](../../../game.js#L5676-L5687).
 
 ## `assets/tanks.json` (UI-параметры + печать танка)
 - Top-level `tankPrintDurationSec`:

@@ -18,7 +18,8 @@
   let _dragPreviewEl = null;
   let _suppressClicksUntil = 0;
   const DRAG_THRESHOLD_PX = 6;
-  const FULLSCREEN_BREAKPOINT_PX = 1280;
+  const EXPANDED_BREAKPOINT_PX = 1280;
+  const MOBILE_FIT_BREAKPOINT_PX = 1000;
 
   // ─── Init (call once after DOM ready) ──────────────────────
   function init(options) {
@@ -90,7 +91,7 @@
 
   function isOpen() { return _isOpen; }
 
-  function _shouldUseExpandedShell() {
+  function _getResponsiveShellMode() {
     const viewportWidth = Number(global.innerWidth) || 0;
     let coarsePointer = false;
     try {
@@ -99,13 +100,24 @@
     } catch (_err) {
       coarsePointer = false;
     }
-    return coarsePointer || (viewportWidth > 0 && viewportWidth < FULLSCREEN_BREAKPOINT_PX);
+
+    if (viewportWidth > 0 && viewportWidth < MOBILE_FIT_BREAKPOINT_PX) return 'mobile-fit';
+    if (coarsePointer || (viewportWidth > 0 && viewportWidth < EXPANDED_BREAKPOINT_PX)) return 'expanded';
+    return 'default';
   }
 
   function _syncResponsiveShellState() {
-    const expanded = _shouldUseExpandedShell();
-    if (_modalEl) _modalEl.classList.toggle('plStorage--expanded', expanded);
-    if (_panelEl) _panelEl.classList.toggle('plStorage__panel--expanded', expanded);
+    const mode = _getResponsiveShellMode();
+    const expanded = mode === 'expanded';
+    const mobileFit = mode === 'mobile-fit';
+    if (_modalEl) {
+      _modalEl.classList.toggle('plStorage--expanded', expanded);
+      _modalEl.classList.toggle('plStorage--mobileFit', mobileFit);
+    }
+    if (_panelEl) {
+      _panelEl.classList.toggle('plStorage__panel--expanded', expanded);
+      _panelEl.classList.toggle('plStorage__panel--mobileFit', mobileFit);
+    }
   }
 
   function _translate(key, fallback) {

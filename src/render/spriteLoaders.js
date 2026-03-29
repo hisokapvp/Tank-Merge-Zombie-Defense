@@ -219,10 +219,16 @@
       };
     }
 
+    function normalizeAtlasPath(value, fallbackPath) {
+      if (typeof value !== 'string' || !value) return fallbackPath;
+      return value.indexOf('assets/') === 0 ? value : ('assets/' + value);
+    }
+
     var ZombieSprites = {
       ready: false,
       error: '',
       atlasImg: null,
+      atlasImages: null,
       types: [],
       deathCommon: null,
       spawnConfig: null,
@@ -234,8 +240,33 @@
           var res = await fetch('assets/zombies.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
-          var atlasPath = 'assets/' + (data.atlas || 'zombie_atlas.png');
-          var img = await loadImage(atlasPath);
+          var sharedAtlasPath = normalizeAtlasPath(data.atlas, 'assets/zombie_atlas.png');
+          var img = await loadImage(sharedAtlasPath);
+          var rawTypeAtlasMap = data.atlasesById && typeof data.atlasesById === 'object'
+            ? data.atlasesById
+            : null;
+          var atlasImages = new Map();
+          var requestedAtlasPaths = new Set();
+          atlasImages.set(sharedAtlasPath, img);
+
+          function resolveTypeAtlasValue(rawType) {
+            if (rawType && typeof rawType.atlas === 'string' && rawType.atlas) return rawType.atlas;
+            if (!rawTypeAtlasMap || !rawType || typeof rawType.id !== 'string') return '';
+            return typeof rawTypeAtlasMap[rawType.id] === 'string' ? rawTypeAtlasMap[rawType.id] : '';
+          }
+
+          function queueTypeAtlasLoad(atlasPath) {
+            if (!atlasPath || atlasPath === sharedAtlasPath || requestedAtlasPaths.has(atlasPath)) return;
+            requestedAtlasPaths.add(atlasPath);
+            atlasImages.set(atlasPath, img);
+            loadImage(atlasPath)
+              .then(function (loadedImg) {
+                atlasImages.set(atlasPath, loadedImg || img);
+              })
+              .catch(function () {
+                atlasImages.set(atlasPath, img);
+              });
+          }
 
           var defaultAnimFps = {
             walk: 10,
@@ -299,8 +330,13 @@
             var animations = t && typeof t.animations === 'object' ? t.animations : null;
             var attackTuning = t && t.attack && typeof t.attack === 'object' ? t.attack : null;
             var rawHealth = Number.isFinite(t && t.Health) ? t.Health : (Number.isFinite(t && t.health) ? t.health : null);
+            var atlasValue = resolveTypeAtlasValue(t);
+            var atlasPath = normalizeAtlasPath(atlasValue, sharedAtlasPath);
+            queueTypeAtlasLoad(atlasPath);
             return {
               id: t.id || 'zombie',
+              atlas: atlasValue || '',
+              atlasPath: atlasPath,
               frame: t.frame || { x: 0, y: 0, w: 64, h: 64 },
               frames: t.frames != null ? t.frames : 1,
               animSpeed: t.animSpeed != null ? t.animSpeed : 1.0,
@@ -341,11 +377,13 @@
           if (!this.types.length) throw new Error('types[] empty');
 
           this.atlasImg = img;
+          this.atlasImages = atlasImages;
           this.ready = true;
           this.error = '';
         } catch (e) {
           this.ready = false;
           this.atlasImg = null;
+          this.atlasImages = null;
           this.types = [];
           this.deathCommon = null;
           this.spawnConfig = null;
@@ -374,6 +412,18 @@
         if (found) return found;
         var idx = (lvl - 1) % this.types.length;
         return this.types[idx] || this.types[0];
+      },
+      getAtlasImage: function (typeOrId, preferSharedAtlas) {
+        if (preferSharedAtlas) return this.atlasImg;
+        var type = typeOrId;
+        if (typeof typeOrId === 'string') {
+          type = this.types.find(function (entry) { return entry.id === typeOrId; }) || null;
+        }
+        var atlasPath = type && typeof type.atlasPath === 'string' ? type.atlasPath : '';
+        if (this.atlasImages && atlasPath && this.atlasImages.has(atlasPath)) {
+          return this.atlasImages.get(atlasPath) || this.atlasImg;
+        }
+        return this.atlasImg;
       },
     };
 

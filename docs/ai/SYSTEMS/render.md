@@ -1,6 +1,6 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-27.
+> Обновлено: 2026-03-29.
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
 > Для Phaser layer/render migration: `docs/ai/SYSTEMS/phaser.md`.
 
@@ -39,9 +39,11 @@
 - `Game.ProductionLineRender.draw()` рисуется сразу после `drawSupercomputer()`, **после `drawBoard()`** (доска теперь ниже SC/conveyor/storage в z-order): [game.js](../../../game.js#L11127-L11145).
 - Для большого render-модуля production line сначала открывайте [docs/ai/PRODUCTION_LINE_RENDER_MAP.md](../PRODUCTION_LINE_RENDER_MAP.md).
 
-## Спрайты зомби: deathCommon
-- `ZombieSprites.deathCommon` — массив вариантов общей анимации смерти: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L179-L259).
-- В `assets/zombies.json` разрешены legacy-object и array; loader приводит к массиву.
+## Спрайты зомби: per-zombie atlas + deathCommon
+- `assets/zombies.json` authoring contract теперь делит shared `atlas` / `deathCommon` и `atlasesById` per type; loader нормализует каждую запись в `type.atlasPath`, preload'ит atlas map и сохраняет общий fallback atlas, если конкретный PNG не загрузился: [assets/zombies.json](../../../assets/zombies.json#L1-L101), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L222-L380).
+- `ZombieSprites.getAtlasImage(type, preferSharedAtlas)` — canonical bridge между asset config и render path: при `preferSharedAtlas=true` используется общий atlas, иначе возвращается image для `type.atlasPath` с fallback на shared atlas: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L416-L426).
+- `src/render/zombieRender.js` использует shared atlas только для `deathCommon` / `deathUsesCommonAtlas`; `resolveZombieAtlasImage()` и `drawZombieEntity()` передают type-specific image в `drawZombieSprite()` для walk/attack/default render, не ломая corpse fade contract: [src/render/zombieRender.js](../../../src/render/zombieRender.js#L9-L29), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L49-L55), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L60-L170).
+- `ZombieSprites.deathCommon` по-прежнему принимает legacy-object и array, loader всегда приводит его к массиву: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L283-L300).
 
 ## Phaser render layer modules
 - Все 18 draw-слоёв в `draw()` gated через `Game.RenderRegistry` (mode: legacy/phaser/both)

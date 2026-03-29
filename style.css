@@ -20,6 +20,66 @@
   --ui-help-btn-size: clamp(44px, calc(44px * var(--ui-scale)), 52px);
   --ui-help-btn-offset-top: clamp(10px, calc(18px * var(--ui-scale)), 18px);
   --ui-help-btn-offset-right: clamp(56px, calc(70px * var(--ui-scale)), 70px);
+  --pl-storage-shell-scale-default: 1;
+  --pl-storage-cell-scale-default: 1;
+  --pl-storage-padding-x-default: 20px;
+  --pl-storage-padding-top-default: 20px;
+  --pl-storage-padding-bottom-default: 18px;
+  --pl-storage-header-min-height-default: 86px;
+  --pl-storage-header-title-pad-top-default: 22px;
+  --pl-storage-header-actions-gap-default: 10px;
+  --pl-storage-header-side-pad-default: 118px;
+  --pl-storage-header-side-cap-default: 26vw;
+  --pl-storage-grid-width-default: 420px;
+  --pl-storage-grid-gap-default: 12px;
+  --pl-storage-cell-size-default: 64px;
+  --pl-storage-cell-gap-default: 4px;
+  --pl-storage-icon-size-default: 28px;
+  --pl-storage-icon-offset-y-default: -5px;
+  --pl-storage-badge-bottom-default: 4px;
+  --pl-storage-badge-size-default: 10px;
+  --pl-storage-title-size-default: clamp(16px, calc(16px * var(--ui-scale)), 22px);
+  --pl-storage-confirm-width-default: min(calc(420px * var(--ui-scale)), var(--ui-shell-max-width));
+  --pl-storage-shell-scale-expanded: clamp(1.06, calc(0.92 + var(--ui-scale) * 0.62), 1.22);
+  --pl-storage-cell-scale-expanded: clamp(1.08, calc(0.96 + var(--ui-scale) * 0.58), 1.24);
+  --pl-storage-padding-x-expanded: clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
+  --pl-storage-padding-top-expanded: clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
+  --pl-storage-padding-bottom-expanded: clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
+  --pl-storage-header-min-height-expanded: clamp(88px, calc(110px * var(--pl-storage-shell-scale)), 132px);
+  --pl-storage-header-title-pad-top-expanded: clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
+  --pl-storage-header-actions-gap-expanded: clamp(10px, calc(14px * var(--pl-storage-shell-scale)), 16px);
+  --pl-storage-header-side-pad-expanded: 132px;
+  --pl-storage-header-side-cap-expanded: 28vw;
+  --pl-storage-grid-width-expanded: min(100%, calc(600px * var(--pl-storage-cell-scale)));
+  --pl-storage-grid-gap-expanded: clamp(12px, calc(16px * var(--pl-storage-cell-scale)), 20px);
+  --pl-storage-cell-size-expanded: clamp(72px, calc(84px * var(--pl-storage-cell-scale)), 96px);
+  --pl-storage-cell-gap-expanded: clamp(6px, calc(6px * var(--pl-storage-cell-scale)), 8px);
+  --pl-storage-icon-size-expanded: clamp(30px, calc(36px * var(--pl-storage-cell-scale)), 42px);
+  --pl-storage-icon-offset-y-expanded: calc(-6px * var(--pl-storage-cell-scale));
+  --pl-storage-badge-bottom-expanded: clamp(5px, calc(8px * var(--pl-storage-cell-scale)), 10px);
+  --pl-storage-badge-size-expanded: clamp(11px, calc(12px * var(--pl-storage-cell-scale)), 14px);
+  --pl-storage-title-size-expanded: clamp(16px, calc(16px * var(--pl-storage-shell-scale)), 22px);
+  --pl-storage-confirm-width-expanded: min(calc(460px * var(--pl-storage-shell-scale)), calc(100% - 24px));
+  --pl-storage-shell-scale-mobile: clamp(0.84, calc(0.72 + var(--ui-scale) * 0.54), 0.98);
+  --pl-storage-cell-scale-mobile: clamp(0.82, calc(0.74 + var(--ui-scale) * 0.46), 0.96);
+  --pl-storage-padding-x-mobile: clamp(12px, calc(18px * var(--pl-storage-shell-scale)), 18px);
+  --pl-storage-padding-top-mobile: clamp(14px, calc(18px * var(--pl-storage-shell-scale)), 20px);
+  --pl-storage-padding-bottom-mobile: clamp(14px, calc(18px * var(--pl-storage-shell-scale)), 20px);
+  --pl-storage-header-min-height-mobile: clamp(64px, calc(80px * var(--pl-storage-shell-scale)), 88px);
+  --pl-storage-header-title-pad-top-mobile: clamp(12px, calc(18px * var(--pl-storage-shell-scale)), 22px);
+  --pl-storage-header-actions-gap-mobile: clamp(8px, calc(10px * var(--pl-storage-shell-scale)), 12px);
+  --pl-storage-header-side-pad-mobile: 72px;
+  --pl-storage-header-side-cap-mobile: 22vw;
+  --pl-storage-grid-width-mobile: min(100%, calc(310px * var(--pl-storage-cell-scale)));
+  --pl-storage-grid-gap-mobile: clamp(8px, calc(10px * var(--pl-storage-cell-scale)), 12px);
+  --pl-storage-cell-size-mobile: clamp(54px, calc(62px * var(--pl-storage-cell-scale)), 68px);
+  --pl-storage-cell-gap-mobile: clamp(4px, calc(5px * var(--pl-storage-cell-scale)), 6px);
+  --pl-storage-icon-size-mobile: clamp(22px, calc(26px * var(--pl-storage-cell-scale)), 30px);
+  --pl-storage-icon-offset-y-mobile: calc(-4px * var(--pl-storage-cell-scale));
+  --pl-storage-badge-bottom-mobile: clamp(3px, calc(5px * var(--pl-storage-cell-scale)), 6px);
+  --pl-storage-badge-size-mobile: clamp(9px, calc(10px * var(--pl-storage-cell-scale)), 11px);
+  --pl-storage-title-size-mobile: clamp(14px, calc(15px * var(--pl-storage-shell-scale)), 18px);
+  --pl-storage-confirm-width-mobile: min(calc(320px * var(--pl-storage-shell-scale)), calc(100% - 12px));
   --ui-terminal-width: clamp(280px, calc(380px * var(--ui-scale)), 380px);
   --ui-terminal-expand-size: clamp(44px, calc(64px * var(--ui-scale)), 64px);
   --ui-btn-transition: .15s;
@@ -2131,6 +2191,7 @@ input, select, textarea, button {
   align-items:start;
   gap:28px;
   width:100%;
+  min-width:0;
 }
 .talentBranch{
   position: relative;
@@ -2678,6 +2739,8 @@ input, select, textarea, button {
 }
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView{
   padding-top:0;
+  overflow:auto;
+  overscroll-behavior:contain;
 }
 .scModal__headerActions{
   position:absolute;
@@ -2722,6 +2785,7 @@ input, select, textarea, button {
 }
 #supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .scModal__body{
   padding:0;
+  overflow:hidden;
 }
 .supercomputerMenuView.hidden{
   display:none;
@@ -2732,6 +2796,7 @@ input, select, textarea, button {
   flex:1;
   min-height:0;
   width:100%;
+  overflow:hidden;
 }
 #supercomputerTalentsMount > #talentOverlay.overlay{
   position:static;
@@ -2774,7 +2839,9 @@ input, select, textarea, button {
 }
 #supercomputerTalentsMount > #talentOverlay .talentTreeBody{
   padding-top:0;
-  overflow:visible;
+  overflow:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
   min-height:0;
 }
 #supercomputerTalentsMount > #talentOverlay .talentTreeContainer{
@@ -3311,7 +3378,7 @@ input, select, textarea, button {
   to{transform:translateY(0);opacity:1}
 }
 
-@media (max-width: 980px){
+@media (max-width: 1000px){
   .layout{
     grid-template-columns:1fr;
     grid-template-rows:minmax(220px, 1fr) auto;
@@ -3337,12 +3404,17 @@ input, select, textarea, button {
   .hud{justify-content:center}
   .talentBranches{
     grid-template-columns:1fr;
+    gap:clamp(14px, 3vw, 18px);
+  }
+  .talentBranch{
+    min-width:0;
   }
   .talentTreeContainer{
     --talent-node-size:44px;
     --talent-row-gap:24px;
     --talent-col-gap:20px;
     min-height:auto;
+    padding-inline:2px;
   }
   .talentTreeGrid{
     min-height:auto;
@@ -3355,7 +3427,7 @@ input, select, textarea, button {
     font-size:12px;
   }
   .talentNodeRank{
-    font-size:8px;
+    font-size:9px;
   }
 }
 
@@ -7374,22 +7446,26 @@ button.hangarChipInvItem{
   background:rgba(0,0,0,0.65);
 }
 .plStorage__panel{
-  --pl-storage-shell-scale:1;
-  --pl-storage-cell-scale:1;
-  --pl-storage-padding-x:20px;
-  --pl-storage-padding-top:20px;
-  --pl-storage-padding-bottom:18px;
-  --pl-storage-header-min-height:86px;
-  --pl-storage-header-title-pad-top:22px;
-  --pl-storage-header-actions-gap:10px;
-  --pl-storage-grid-width:420px;
-  --pl-storage-grid-gap:12px;
-  --pl-storage-cell-size:64px;
-  --pl-storage-cell-gap:4px;
-  --pl-storage-icon-size:28px;
-  --pl-storage-icon-offset-y:-5px;
-  --pl-storage-badge-bottom:4px;
-  --pl-storage-badge-size:10px;
+  --pl-storage-shell-scale:var(--pl-storage-shell-scale-default);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-default);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-default);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-default);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-default);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-default);
+  --pl-storage-header-title-pad-top:var(--pl-storage-header-title-pad-top-default);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-default);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-default);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-default);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-default);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-default);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-default);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-default);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-default);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-default);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-default);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-default);
+  --pl-storage-title-size:var(--pl-storage-title-size-default);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-default);
   position:relative;
   width:min(540px, 92vw);
   background:#1a1e1a;
@@ -7420,7 +7496,7 @@ button.hangarChipInvItem{
 .plStorage__header{
   position:relative;
   min-height:var(--pl-storage-header-min-height);
-  padding:8px min(calc(118px * var(--pl-storage-shell-scale)), 26vw) 0 min(calc(118px * var(--pl-storage-shell-scale)), 26vw);
+  padding:8px min(calc(var(--pl-storage-header-side-pad) * var(--pl-storage-shell-scale)), var(--pl-storage-header-side-cap)) 0 min(calc(var(--pl-storage-header-side-pad) * var(--pl-storage-shell-scale)), var(--pl-storage-header-side-cap));
   margin-bottom:calc(18px * var(--pl-storage-shell-scale));
 }
 .plStorage__headerActions{
@@ -7444,6 +7520,7 @@ button.hangarChipInvItem{
 .plStorage__header .levelModal__title{
   margin:0;
   padding-top:var(--pl-storage-header-title-pad-top);
+  font-size:var(--pl-storage-title-size);
   line-height:1.3;
   text-align:center;
 }
@@ -7719,21 +7796,21 @@ button.hangarChipInvItem{
   max-width: min(calc(1060px * var(--ui-scale)), var(--ui-shell-max-width));
 }
 .talentTreeContainer{
-  gap: calc(10px * var(--ui-scale));
+  gap: clamp(8px, calc(10px * var(--ui-scale)), 10px);
 }
 .talentBranch{
-  padding: calc(10px * var(--ui-scale));
-  gap: calc(8px * var(--ui-scale));
+  padding: clamp(8px, calc(10px * var(--ui-scale)), 12px);
+  gap: clamp(8px, calc(8px * var(--ui-scale)), 10px);
 }
 .talentBranchHeader{
-  gap: calc(8px * var(--ui-scale));
+  gap: clamp(8px, calc(8px * var(--ui-scale)), 10px);
 }
 .talentActions{
-  gap: calc(8px * var(--ui-scale));
+  gap: clamp(8px, calc(8px * var(--ui-scale)), 10px);
 }
 .talentFooter{
-  padding: calc(8px * var(--ui-scale)) calc(12px * var(--ui-scale));
-  gap: calc(8px * var(--ui-scale));
+  padding: clamp(8px, calc(8px * var(--ui-scale)), 12px) clamp(12px, calc(12px * var(--ui-scale)), 16px);
+  gap: clamp(8px, calc(8px * var(--ui-scale)), 10px);
 }
 
 /* Workshop / Chip craft */
@@ -7807,8 +7884,8 @@ button.hangarChipInvItem{
 
 /* Confirm / help families */
 .plStorage__confirmBox{
-  width:min(calc(420px * var(--ui-scale)), var(--ui-shell-max-width));
-  padding:calc(20px * var(--ui-scale)) calc(28px * var(--ui-scale));
+  width:var(--pl-storage-confirm-width);
+  padding:calc(20px * var(--pl-storage-shell-scale)) calc(28px * var(--pl-storage-shell-scale));
   border-radius:calc(14px * var(--ui-scale));
 }
 .criticalModal{
@@ -7983,6 +8060,15 @@ button.hangarChipInvItem{
   min-height:0;
   height:100%;
 }
+#supercomputerMenuOverlay .scModal--fullscreenShell{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+#supercomputerMenuOverlay .scModal--fullscreenShell > .scModal__body{
+  display:flex;
+  flex-direction:column;
+}
 #supercomputerMenuOverlay .scModal--fullscreenShell > .scModal__body,
 #supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
 #supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount,
@@ -7992,6 +8078,25 @@ button.hangarChipInvItem{
 #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentTreeBody{
   flex:1 1 auto;
   min-height:0;
+}
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount,
+#supercomputerTalentsMount > #talentOverlay.overlay,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell{
+  height:100%;
+  max-height:100%;
+  overflow:hidden;
+}
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount{
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+}
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .modalBody,
+#supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentTreeBody{
+  height:100%;
+  max-height:100%;
 }
 #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell{
   display:flex;
@@ -8014,23 +8119,36 @@ button.hangarChipInvItem{
     calc(var(--safe-bottom) + var(--ui-shell-fullscreen-gap))
     calc(var(--safe-left) + var(--ui-shell-fullscreen-gap));
 }
+.plStorage--mobileFit{
+  align-items:center;
+  justify-content:center;
+  padding:
+    calc(var(--safe-top) + clamp(8px, 2vw, 14px))
+    calc(var(--safe-right) + clamp(8px, 2vw, 14px))
+    calc(var(--safe-bottom) + clamp(8px, 2vw, 14px))
+    calc(var(--safe-left) + clamp(8px, 2vw, 14px));
+}
 .plStorage__panel--expanded{
-  --pl-storage-shell-scale:clamp(1.06, calc(0.92 + var(--ui-scale) * 0.62), 1.22);
-  --pl-storage-cell-scale:clamp(1.08, calc(0.96 + var(--ui-scale) * 0.58), 1.24);
-  --pl-storage-padding-x:clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
-  --pl-storage-padding-top:clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
-  --pl-storage-padding-bottom:clamp(18px, calc(24px * var(--pl-storage-shell-scale)), 30px);
-  --pl-storage-header-min-height:clamp(88px, calc(110px * var(--pl-storage-shell-scale)), 132px);
-  --pl-storage-header-title-pad-top:clamp(18px, calc(28px * var(--pl-storage-shell-scale)), 36px);
-  --pl-storage-header-actions-gap:clamp(10px, calc(14px * var(--pl-storage-shell-scale)), 16px);
-  --pl-storage-grid-width:min(100%, calc(600px * var(--pl-storage-cell-scale)));
-  --pl-storage-grid-gap:clamp(12px, calc(16px * var(--pl-storage-cell-scale)), 20px);
-  --pl-storage-cell-size:clamp(72px, calc(84px * var(--pl-storage-cell-scale)), 96px);
-  --pl-storage-cell-gap:clamp(6px, calc(6px * var(--pl-storage-cell-scale)), 8px);
-  --pl-storage-icon-size:clamp(30px, calc(36px * var(--pl-storage-cell-scale)), 42px);
-  --pl-storage-icon-offset-y:calc(-6px * var(--pl-storage-cell-scale));
-  --pl-storage-badge-bottom:clamp(5px, calc(8px * var(--pl-storage-cell-scale)), 10px);
-  --pl-storage-badge-size:clamp(11px, calc(12px * var(--pl-storage-cell-scale)), 14px);
+  --pl-storage-shell-scale:var(--pl-storage-shell-scale-expanded);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-expanded);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-expanded);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-expanded);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-expanded);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-expanded);
+  --pl-storage-header-title-pad-top:var(--pl-storage-header-title-pad-top-expanded);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-expanded);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-expanded);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-expanded);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-expanded);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-expanded);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-expanded);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-expanded);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-expanded);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-expanded);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-expanded);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-expanded);
+  --pl-storage-title-size:var(--pl-storage-title-size-expanded);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-expanded);
   width:100%;
   max-width:none;
   max-height:100%;
@@ -8041,24 +8159,48 @@ button.hangarChipInvItem{
   justify-content:flex-start;
   overflow:hidden;
 }
-.plStorage__panel--expanded .plStorage__header{
-  padding-left:min(calc(132px * var(--pl-storage-shell-scale)), 28vw);
-  padding-right:min(calc(132px * var(--pl-storage-shell-scale)), 28vw);
-}
-.plStorage__panel--expanded .plStorage__header .levelModal__title{
-  font-size:clamp(16px, calc(16px * var(--pl-storage-shell-scale)), 22px);
-  line-height:1.35;
-}
 .plStorage__panel--expanded .plStorage__grid{
   flex:1 1 auto;
   min-height:0;
   align-content:start;
   padding-bottom:calc(6px * var(--pl-storage-shell-scale));
 }
-.plStorage__panel--expanded .plStorage__confirmBox{
-  width:min(calc(460px * var(--pl-storage-shell-scale)), calc(100% - 24px));
-  padding:calc(20px * var(--pl-storage-shell-scale)) calc(28px * var(--pl-storage-shell-scale));
-}
 .plStorage__panel--expanded .plStorage__confirmActions{
   gap:clamp(10px, calc(12px * var(--pl-storage-shell-scale)), 16px);
+}
+.plStorage__panel--mobileFit{
+  --pl-storage-shell-scale:var(--pl-storage-shell-scale-mobile);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-mobile);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-mobile);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-mobile);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-mobile);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-mobile);
+  --pl-storage-header-title-pad-top:var(--pl-storage-header-title-pad-top-mobile);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-mobile);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-mobile);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-mobile);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-mobile);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-mobile);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-mobile);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-mobile);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-mobile);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-mobile);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-mobile);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-mobile);
+  --pl-storage-title-size:var(--pl-storage-title-size-mobile);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-mobile);
+  width:min(calc(420px * var(--pl-storage-shell-scale)), calc(100vw - 16px));
+  max-width:calc(100vw - 16px);
+  max-height:min(calc(620px * var(--pl-storage-shell-scale)), var(--ui-shell-max-height));
+  min-height:0;
+  height:auto;
+  border-radius:clamp(14px, 3vw, 22px);
+  overflow-y:auto;
+}
+.plStorage__panel--mobileFit .plStorage__grid{
+  align-content:start;
+  padding-bottom:calc(4px * var(--pl-storage-shell-scale));
+}
+.plStorage__panel--mobileFit .plStorage__confirmActions{
+  gap:clamp(8px, calc(10px * var(--pl-storage-shell-scale)), 12px);
 }

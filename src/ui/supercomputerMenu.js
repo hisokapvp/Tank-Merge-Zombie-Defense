@@ -411,15 +411,17 @@
       rootBackdropPointerDownSinceOpen: false,
     };
 
+    function isCoarsePointerViewport() {
+      try {
+        return !!(typeof global.matchMedia === 'function' && global.matchMedia('(hover: none) and (pointer: coarse)').matches);
+      } catch (_err) {
+        return false;
+      }
+    }
+
     function shouldUseFullscreenShell() {
       var viewportWidth = Number(global.innerWidth) || 0;
-      var coarsePointer = false;
-      try {
-        coarsePointer = !!(typeof global.matchMedia === 'function' && global.matchMedia('(hover: none) and (pointer: coarse)').matches);
-      } catch (_err) {
-        coarsePointer = false;
-      }
-      return coarsePointer || (viewportWidth > 0 && viewportWidth < 1280);
+      return isCoarsePointerViewport() || (viewportWidth > 0 && viewportWidth < 1280);
     }
 
     function getEmbeddedTalentPanel() {
@@ -432,18 +434,40 @@
       target.classList.toggle(className, !!enabled);
     }
 
+    function applyFullscreenShellState(entry) {
+      if (!entry) return;
+      toggleResponsiveClass(entry.overlay, 'levelModal--fullscreenShell', entry.enabled);
+      toggleResponsiveClass(entry.panel, 'scModal--fullscreenShell', entry.enabled);
+      if (entry.embeddedPanel) toggleResponsiveClass(entry.embeddedPanel, 'talentTreeModal--fullscreenShell', entry.enabled);
+    }
+
+    function buildFullscreenShellEntries(fullscreen) {
+      return [
+        {
+          enabled: !!fullscreen && state.view === 'talents',
+          overlay: rootOverlay,
+          panel: rootPanel,
+          embeddedPanel: getEmbeddedTalentPanel(),
+        },
+        {
+          enabled: !!fullscreen && state.view === 'hangar',
+          overlay: hangarOverlay,
+          panel: hangarPanel,
+        },
+        {
+          enabled: !!fullscreen && state.view === 'tankWall',
+          overlay: tankWallOverlay,
+          panel: tankWallPanel,
+        },
+      ];
+    }
+
     function syncResponsiveShellState() {
       var fullscreen = shouldUseFullscreenShell();
-      var talentsFullscreen = fullscreen && state.view === 'talents';
-      var hangarFullscreen = fullscreen && state.view === 'hangar';
-      var tankWallFullscreen = fullscreen && state.view === 'tankWall';
-      toggleResponsiveClass(rootOverlay, 'levelModal--fullscreenShell', talentsFullscreen);
-      toggleResponsiveClass(rootPanel, 'scModal--fullscreenShell', talentsFullscreen);
-      toggleResponsiveClass(hangarOverlay, 'levelModal--fullscreenShell', hangarFullscreen);
-      toggleResponsiveClass(hangarPanel, 'scModal--fullscreenShell', hangarFullscreen);
-      toggleResponsiveClass(tankWallOverlay, 'levelModal--fullscreenShell', tankWallFullscreen);
-      toggleResponsiveClass(tankWallPanel, 'scModal--fullscreenShell', tankWallFullscreen);
-      toggleResponsiveClass(getEmbeddedTalentPanel(), 'talentTreeModal--fullscreenShell', talentsFullscreen);
+      var entries = buildFullscreenShellEntries(fullscreen);
+      for (var index = 0; index < entries.length; index++) {
+        applyFullscreenShellState(entries[index]);
+      }
     }
 
     var tankWallTabButtons = {
@@ -526,41 +550,54 @@
       }
     }
 
-    function applySharedTalentModalClass() {
-      var talentOverlay = documentObj.getElementById('talentOverlay');
-      if (!talentOverlay) return;
-      var panel = talentOverlay.querySelector('.modal');
-      if (!panel) return;
-      panel.classList.add('scModal');
+    function ensureTalentsHeaderActions() {
+      if (!rootPanel) return null;
       var headerActions = documentObj.getElementById('supercomputerTalentsHeaderActions');
       if (!headerActions) {
         headerActions = documentObj.createElement('div');
         headerActions.id = 'supercomputerTalentsHeaderActions';
         headerActions.className = 'scModal__headerActions supercomputerTalentsHeaderActions';
-        if (rootPanel) rootPanel.appendChild(headerActions);
-        else panel.appendChild(headerActions);
-      } else if (rootPanel && headerActions.parentNode !== rootPanel) {
-        rootPanel.appendChild(headerActions);
       }
-      var closeBtn = documentObj.querySelector('#supercomputerMenuOverlay .supercomputerTalentsShellClose')
-        || talentOverlay.querySelector('.talentOverlayClose')
-        || talentOverlay.querySelector('.modalClose');
-      if (closeBtn) {
-        closeBtn.classList.add('levelModal__close');
-        closeBtn.classList.add('scModal__close');
-        closeBtn.classList.add('supercomputerTalentsShellClose');
-        closeBtn.setAttribute('data-font-floor-ignore', 'true');
-        if (headerActions && closeBtn.parentNode !== headerActions) headerActions.appendChild(closeBtn);
-        else if (rootPanel && closeBtn.parentNode !== rootPanel) rootPanel.appendChild(closeBtn);
+      if (headerActions.parentNode !== rootPanel) rootPanel.appendChild(headerActions);
+      return headerActions;
+    }
+
+    function syncTalentsHeaderActionsVisibility(isTalentsView) {
+      var headerActions = documentObj.getElementById('supercomputerTalentsHeaderActions');
+      if (!headerActions) return;
+      headerActions.hidden = !isTalentsView;
+      headerActions.setAttribute('aria-hidden', isTalentsView ? 'false' : 'true');
+    }
+
+    function ensureTalentsShellCloseButton(headerActions) {
+      if (!headerActions) return null;
+      var closeBtn = documentObj.getElementById('supercomputerTalentsShellCloseBtn');
+      if (!closeBtn) {
+        closeBtn = documentObj.createElement('button');
+        closeBtn.id = 'supercomputerTalentsShellCloseBtn';
+        closeBtn.type = 'button';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', function (evt) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          backFromChild();
+        });
       }
+      closeBtn.className = 'levelModal__close scModal__close supercomputerTalentsShellClose';
+      closeBtn.setAttribute('data-font-floor-ignore', 'true');
+      closeBtn.setAttribute('aria-label', translate('menuClose', 'Close'));
+      if (closeBtn.parentNode !== headerActions) headerActions.appendChild(closeBtn);
+      return closeBtn;
+    }
+
+    function ensureTalentsShellHelpButton(headerActions) {
+      if (!headerActions) return null;
       var helpBtn = documentObj.getElementById('supercomputerTalentsHelpBtn');
       if (!helpBtn) {
         helpBtn = documentObj.createElement('button');
         helpBtn.id = 'supercomputerTalentsHelpBtn';
         helpBtn.type = 'button';
-        helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn supercomputerTalentsShellHelp';
         helpBtn.textContent = '?';
-        helpBtn.setAttribute('data-font-floor-ignore', 'true');
         helpBtn.addEventListener('click', function (evt) {
           evt.preventDefault();
           evt.stopPropagation();
@@ -569,22 +606,37 @@
             textKey: 'supercomputerTalentsHelpText',
           });
         });
-        if (headerActions) headerActions.appendChild(helpBtn);
-        else if (rootPanel) rootPanel.appendChild(helpBtn);
-        else panel.appendChild(helpBtn);
-        if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
-          global.Game.ButtonBehavior.decorateTree(helpBtn);
-        }
-      } else if (headerActions && helpBtn.parentNode !== headerActions) {
-        headerActions.appendChild(helpBtn);
-      } else if (rootPanel && helpBtn.parentNode !== rootPanel) {
-        rootPanel.appendChild(helpBtn);
       }
-      helpBtn.classList.add('btn', 'scButton', 'uiButtonBehavior', 'hangarChipsHelpBtn', 'supercomputerTalentsShellHelp');
-      if (headerActions && helpBtn && closeBtn) {
-        headerActions.insertBefore(helpBtn, closeBtn);
+      helpBtn.className = 'btn scButton uiButtonBehavior hangarChipsHelpBtn supercomputerTalentsShellHelp';
+      helpBtn.setAttribute('data-font-floor-ignore', 'true');
+      if (helpBtn.parentNode !== headerActions) headerActions.appendChild(helpBtn);
+      if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
+        global.Game.ButtonBehavior.decorateTree(helpBtn);
       }
       syncHelpButtonCopy(helpBtn, 'supercomputerTalentsHelpButton');
+      return helpBtn;
+    }
+
+    function applySharedTalentModalClass() {
+      var talentOverlay = documentObj.getElementById('talentOverlay');
+      if (!talentOverlay) return;
+      var panel = talentOverlay.querySelector('.modal');
+      if (!panel) return;
+      panel.classList.add('scModal');
+      var embeddedCloseBtn = talentOverlay.querySelector('.talentOverlayClose')
+        || talentOverlay.querySelector('.modalClose');
+      if (embeddedCloseBtn) {
+        embeddedCloseBtn.classList.add('levelModal__close');
+        embeddedCloseBtn.classList.add('scModal__close');
+        embeddedCloseBtn.classList.add('supercomputerTalentsEmbeddedClose');
+        embeddedCloseBtn.setAttribute('data-font-floor-ignore', 'true');
+      }
+      var headerActions = ensureTalentsHeaderActions();
+      var helpBtn = ensureTalentsShellHelpButton(headerActions);
+      var closeBtn = ensureTalentsShellCloseButton(headerActions);
+      if (headerActions && helpBtn) headerActions.appendChild(helpBtn);
+      if (headerActions && closeBtn) headerActions.appendChild(closeBtn);
+      syncTalentsHeaderActionsVisibility(state.view === 'talents');
     }
 
     function setRootViewMode(nextMode) {
@@ -600,6 +652,7 @@
       if (rootPanel) {
         rootPanel.classList.toggle('scModal--talentsView', isTalentsView);
       }
+      syncTalentsHeaderActionsVisibility(isTalentsView);
     }
 
     function syncHelpButtonCopy(button, labelKey) {
