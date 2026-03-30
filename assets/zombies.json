@@ -69,7 +69,8 @@
       "w": 191,
       "h": 204,
       "frames": 15,
-      "frameRateFps": 10
+      "frameRateFps": 10,
+      "scale": 0.5
     },
     {
       "x": 0,
@@ -77,7 +78,8 @@
       "w": 84,
       "h": 126,
       "frames": 11,
-      "frameRateFps": 5
+      "frameRateFps": 5,
+      "scale": 0.5
     },
     {
       "x": 0,
@@ -85,7 +87,8 @@
       "w": 47,
       "h": 74,
       "frames": 11,
-      "frameRateFps": 10
+      "frameRateFps": 10,
+      "scale": 0.5
     }
   ],
   "spawn": {
@@ -130,6 +133,7 @@
         "y": 0.5
       },
       "scale": 1.25,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,

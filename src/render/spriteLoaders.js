@@ -293,6 +293,7 @@
                 h: dc.h != null ? dc.h : 96,
                 frames: dc.frames != null ? dc.frames : 1,
                 frameRateFps: toPositiveNumber(dc.frameRateFps, defaultAnimFps.deathCommon),
+                scale: toPositiveNumber(dc.scale, 1),
               });
             }
             this.deathCommon = parsedDC;
@@ -342,6 +343,7 @@
               animSpeed: t.animSpeed != null ? t.animSpeed : 1.0,
               anchor: t.anchor || { x: 0.5, y: 0.75 },
               scale: t.scale != null ? t.scale : 1.0,
+              shadowScale: toPositiveNumber(t.shadowScale, 1),
               rotation: t.rotation != null ? t.rotation : 0,
               health: rawHealth > 0 ? rawHealth : null,
               hpMul: t.hpMul != null ? t.hpMul : 1.0,

@@ -16,6 +16,8 @@
   --ui-shell-max-width: calc(100vw - clamp(28px, 5vw, 96px));
   --ui-shell-max-height: calc(100vh - clamp(28px, 5vh, 96px));
   --ui-shell-fullscreen-gap: clamp(10px, 1.4vw, 18px);
+  --ui-shell-narrow-inline: calc(100vw - clamp(16px, 4vw, 28px));
+  --ui-shell-narrow-height: calc(100vh - clamp(16px, 4vh, 28px));
   --uiModalPad: clamp(16px, calc(18px * var(--ui-scale)), 50px);
   --ui-help-btn-size: clamp(44px, calc(44px * var(--ui-scale)), 52px);
   --ui-help-btn-offset-top: clamp(10px, calc(18px * var(--ui-scale)), 18px);
@@ -2790,7 +2792,7 @@ input, select, textarea, button {
 .supercomputerMenuView.hidden{
   display:none;
 }
-.supercomputerTalentsView,
+#supercomputerTalentsView,
 .supercomputerTalentsMount{
   display:flex;
   flex:1;
@@ -8070,7 +8072,7 @@ button.hangarChipInvItem{
   flex-direction:column;
 }
 #supercomputerMenuOverlay .scModal--fullscreenShell > .scModal__body,
-#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell #supercomputerTalentsView,
 #supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount,
 #supercomputerTalentsMount > #talentOverlay.overlay,
 #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell,
@@ -8079,7 +8081,7 @@ button.hangarChipInvItem{
   flex:1 1 auto;
   min-height:0;
 }
-#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell #supercomputerTalentsView,
 #supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount,
 #supercomputerTalentsMount > #talentOverlay.overlay,
 #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell{
@@ -8087,7 +8089,7 @@ button.hangarChipInvItem{
   max-height:100%;
   overflow:hidden;
 }
-#supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsView,
+#supercomputerMenuOverlay .scModal--fullscreenShell #supercomputerTalentsView,
 #supercomputerMenuOverlay .scModal--fullscreenShell .supercomputerTalentsMount{
   overflow-y:auto;
   overflow-x:hidden;
@@ -8111,8 +8113,8 @@ button.hangarChipInvItem{
 }
 
 .plStorage--expanded{
-  align-items:stretch;
-  justify-content:stretch;
+  align-items:center;
+  justify-content:center;
   padding:
     calc(var(--safe-top) + var(--ui-shell-fullscreen-gap))
     calc(var(--safe-right) + var(--ui-shell-fullscreen-gap))
@@ -8149,15 +8151,18 @@ button.hangarChipInvItem{
   --pl-storage-badge-size:var(--pl-storage-badge-size-expanded);
   --pl-storage-title-size:var(--pl-storage-title-size-expanded);
   --pl-storage-confirm-width:var(--pl-storage-confirm-width-expanded);
-  width:100%;
-  max-width:none;
-  max-height:100%;
+  width:min(calc(640px * var(--pl-storage-shell-scale)), calc(100vw - 24px));
+  max-width:calc(100vw - 24px);
+  max-height:min(calc(760px * var(--pl-storage-shell-scale)), var(--ui-shell-max-height));
   min-height:0;
+  height:auto;
+  margin:0 auto;
   border-radius:clamp(18px, 3vw, 26px);
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
-  overflow:hidden;
+  overflow-y:auto;
+  overflow-x:hidden;
 }
 .plStorage__panel--expanded .plStorage__grid{
   flex:1 1 auto;
@@ -8203,4 +8208,134 @@ button.hangarChipInvItem{
 }
 .plStorage__panel--mobileFit .plStorage__confirmActions{
   gap:clamp(8px, calc(10px * var(--pl-storage-shell-scale)), 12px);
+}
+
+@media (max-width: 1279px), (hover: none) and (pointer: coarse){
+  .levelModal__panel{
+    width:min(440px, var(--ui-shell-narrow-inline));
+  }
+  .crateModal .crateModal__panel{
+    width:min(400px, var(--ui-shell-narrow-inline));
+  }
+  .scModal{
+    width:min(1060px, var(--ui-shell-narrow-inline));
+    max-width:min(1060px, var(--ui-shell-narrow-inline));
+    max-height:min(920px, var(--ui-shell-narrow-height));
+  }
+  .ughPanel{
+    width:min(980px, var(--ui-shell-narrow-inline));
+  }
+  .settingsTooltip{
+    max-width:min(360px, var(--ui-shell-narrow-inline));
+  }
+  .plStorage__panel{
+    width:min(540px, var(--ui-shell-narrow-inline));
+    max-width:var(--ui-shell-narrow-inline);
+  }
+  .bigMenuPanel{
+    width:min(560px, var(--ui-shell-narrow-inline));
+  }
+  .menuPanel{
+    width:min(520px, var(--ui-shell-narrow-inline));
+  }
+  .mergePopupModal__panel{
+    width:min(320px, var(--ui-shell-narrow-inline));
+  }
+  .criticalModal{
+    width:min(640px, var(--ui-shell-narrow-inline));
+    max-height:min(620px, var(--ui-shell-narrow-height));
+  }
+  .techModal__dialog{
+    max-width:min(360px, var(--ui-shell-narrow-inline));
+  }
+  .techModal__dialog--wide{
+    max-width:min(520px, var(--ui-shell-narrow-inline));
+  }
+  .techModal__dialog--craft{
+    max-width:min(480px, var(--ui-shell-narrow-inline));
+  }
+  .techModal__dialog--help{
+    max-width:min(620px, var(--ui-shell-narrow-inline));
+  }
+  .talentTreeModal{
+    width:min(980px, var(--ui-shell-narrow-inline));
+    max-width:min(980px, var(--ui-shell-narrow-inline));
+  }
+  .gameTutorial__confirmPanel{
+    width:min(420px, var(--ui-shell-narrow-inline));
+  }
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .modalBody{
+    height:auto;
+    max-height:none;
+    overflow:hidden;
+  }
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentTreeBody{
+    height:auto;
+    max-height:none;
+    flex:1 1 auto;
+    overflow:auto;
+    padding-bottom:calc(10px * var(--ui-scale));
+  }
+  .talentTreeModal--fullscreenShell .talentFooter,
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentFooter{
+    flex:0 0 auto;
+    justify-content:center;
+    padding:12px 14px calc(14px + var(--safe-bottom));
+    background:linear-gradient(180deg, rgba(13,17,13,.92) 0%, rgba(13,17,13,.98) 100%);
+  }
+  .talentTreeModal--fullscreenShell .talentSummary,
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentSummary{
+    width:100%;
+    text-align:center;
+  }
+  .talentTreeModal--fullscreenShell .talentActions,
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentActions{
+    width:100%;
+    justify-content:center;
+  }
+  .talentTreeModal--fullscreenShell .talentActions .btn,
+  #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentActions .btn{
+    flex:1 1 180px;
+  }
+}
+
+@media (max-width: 1199px){
+  :root{
+    --ui-terminal-width: clamp(220px, 26vw, 280px);
+  }
+  .stageUiRight{
+    width:min(var(--ui-terminal-width), calc(100vw - 20px));
+  }
+  .terminal-panel{
+    width:min(100%, var(--ui-terminal-width));
+    padding:20px 12px 22px 12px;
+  }
+  .terminal-panel::before{
+    top:6px;
+    left:10px;
+    right:10px;
+    font-size:8px;
+    letter-spacing:.3px;
+  }
+  .terminal-panel .stageAbilitySlots{
+    margin:8px 0 10px 0;
+    padding:8px 0;
+  }
+  .stageUi .supercomputerHudBtn{
+    width:36px;
+    min-width:36px;
+    height:36px;
+  }
+  .supercomputerHudBtn__icon{
+    font-size:12px;
+  }
+  .settingsGear{
+    width:44px;
+    height:44px;
+    padding:4px 6px;
+    font-size:12px;
+  }
+  .hudBelow{
+    gap:6px;
+  }
 }

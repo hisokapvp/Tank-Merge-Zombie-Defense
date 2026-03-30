@@ -45,6 +45,22 @@
       return deps.clamp(timeToRemove / fadeSec, 0, 1);
     }
 
+    function getZombieDeathScale(z) {
+      var deathAnimScale = Number.isFinite(z && z.deathAnim && z.deathAnim.scale)
+        ? z.deathAnim.scale
+        : 1;
+      var typeScale = Number.isFinite(z && z.type && z.type.scale)
+        ? z.type.scale
+        : 1;
+      return typeScale * deathAnimScale;
+    }
+
+    function getZombieShadowScale(z) {
+      return Number.isFinite(z && z.type && z.type.shadowScale)
+        ? z.type.shadowScale
+        : 1;
+    }
+
     function drawZombieEntity(z, x, y) {
       var ZombieSprites = deps.getZombieSprites();
       var zombieAtlasImg = ZombieSprites.ready && z.type
@@ -104,7 +120,8 @@
         fh = f.h;
       }
 
-      var scale = (t.scale ?? 1.0) * BAL.zombieScaleMul * deps.zombieLevelScale(z);
+      var scale = getZombieDeathScale(z) * BAL.zombieScaleMul * deps.zombieLevelScale(z);
+      var shadowScale = getZombieShadowScale(z);
       var baseW = hasDeathAnim ? z.deathAnim.w : (hasAttackAnim ? t.attack.w : f.w);
       var baseH = hasDeathAnim ? z.deathAnim.h : (hasAttackAnim ? t.attack.h : f.h);
       var w = baseW * scale;
@@ -145,8 +162,8 @@
         ctx.ellipse(
           x,
           y + BAL.zombieShadowY + groundOffset,
-          BAL.zombieShadowW * scale,
-          BAL.zombieShadowH * scale,
+          BAL.zombieShadowW * scale * shadowScale,
+          BAL.zombieShadowH * scale * shadowScale,
           0, 0, Math.PI * 2
         );
         ctx.fill();
@@ -191,6 +208,7 @@
       var center = deps.getCenter();
       var facing = x >= center.x ? -1 : 1;
       var s = BAL.zombieScaleMul * deps.zombieLevelScale(z);
+      var shadowScale = getZombieShadowScale(z);
       var levelBoost = deps.clamp((z.level ?? 1) - 1, 0, 6);
       var isDying = z.state === 'dying';
       var corpseFadeAlpha = getCorpseFadeAlpha(z, isDying);
@@ -218,7 +236,7 @@
         ctx.save();
         ctx.beginPath();
         ctx.fillStyle = 'rgba(0,0,0,.20)';
-        ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW * s, BAL.zombieShadowH * s, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y + BAL.zombieShadowY + groundOffset, BAL.zombieShadowW * s * shadowScale, BAL.zombieShadowH * s * shadowScale, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }

@@ -470,6 +470,13 @@
       }
     }
 
+    function invalidateTalentsLayoutCache() {
+      var talentOverlayUi = global.Game && global.Game.TalentOverlayUi;
+      if (talentOverlayUi && typeof talentOverlayUi.invalidateLayoutCache === 'function') {
+        talentOverlayUi.invalidateLayoutCache();
+      }
+    }
+
     var tankWallTabButtons = {
       weapons: documentObj.getElementById('modsTankWallTabGuns'),
       drones: documentObj.getElementById('modsTankWallTabDrones'),
@@ -2053,6 +2060,7 @@
       openTalents({ onClose: backFromChild, embedded: true, skipSupercomputerRouting: true });
       applySharedTalentModalClass();
       syncResponsiveShellState();
+      invalidateTalentsLayoutCache();
       setBodyScrollLock(true);
       onPauseLockChange(true);
     }
@@ -2149,6 +2157,10 @@
     global.addEventListener('resize', function () {
       refreshRootTilesLayout();
       syncResponsiveShellState();
+      if (state.view === 'talents') {
+        applySharedTalentModalClass();
+        invalidateTalentsLayoutCache();
+      }
     });
 
     return {
