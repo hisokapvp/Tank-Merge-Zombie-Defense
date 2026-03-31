@@ -1,6 +1,12 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-31
+- **Документация: shared post-merge update после join для aura sprite treatment, immediate hangar slot actions, responsive hangar/workshop shell и entry cache token (`game.js`, `src/ui/hangarChipsUI.js`, `style.css`, `index.html`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `game.js` сохраняет chip-count aura routing через `getInstalledChipCountForCell()` / `resolveTankAuraVisual()`, но `drawTankAuraSprite()` теперь добавляет variant-specific runtime glow/ring treatment для `aura1/aura2/aura3`, а `computeAuraBand()` остаётся fallback-path.
+  - Зафиксированы: `src/ui/hangarChipsUI.js` сразу вызывает `activateInstalledSlotActions()` после успешной установки чипа, поэтому rotate/remove actions появляются на занятом слоте без дополнительного повторного клика.
+  - Зафиксированы: `style.css` убирает локальный `modsHangarScale` clamp, держит narrow/fullscreen hangar side-by-side (`hangarSlotView + right column`), сохраняет recycle mobile side-by-side для `Разобрать/Перепрограммировать`, делает dust bottom bar sticky и в narrow SC/terminal path больше не полагается на старый title clamp/max-width fork, снимая `min-width` floor с terminal action buttons.
+  - Зафиксированы: `index.html` bump'ает shared entry cache token до `20260331-branch3-sc-shell-terminal-mobile-v1` для свежего подхвата `style.css` и `game.js` после merge.
 - **Документация: shared post-merge update для bullet atlas overflow fix, chip-count aura overhaul, zombie unstick, responsive hangar scaling и touch chip drag capture (`assets/bullet.json`, `game.js`, `assets/tanks.json`, `src/render/spriteLoaders.js`, `style.css`, `src/ui/hangarChipsUI.js`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/combat.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/CHANGELOG.md`.
   - Зафиксированы: `assets/bullet.json` frame h `36→34` (atlas overflow fix); `drawProjectiles()` в `game.js` теперь clampит source rect к atlas bounds, fallback на круг при полном выходе за пределы.

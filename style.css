@@ -6601,11 +6601,36 @@ button.hangarChipInvItem{
     flex-direction:column;
     flex-wrap:nowrap;
   }
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol){
+    flex-direction:row;
+    align-items:stretch;
+  }
   #modsHangarOverlay .chipCraftLeftCol,
   #modsHangarOverlay .chipCraftPreview{
     flex:0 0 auto;
     width:100%;
     min-width:0;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftLeftCol{
+    flex:0 1 clamp(132px, 42%, 220px);
+    width:auto;
+    max-width:clamp(132px, 42%, 220px);
+    overflow:hidden;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftPreview{
+    flex:1 1 0;
+    width:auto;
+    min-width:0;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInventory,
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftInvGrid,
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftDropZone{
+    min-height:0;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout:not(.chipCraftLayout--singleCol) .chipCraftDropZone{
+    min-width:0;
+    padding-left:calc(12px * var(--modsHangarScale, 1));
+    padding-right:calc(12px * var(--modsHangarScale, 1));
   }
   #modsHangarOverlay .chipCraftAssemblyStage,
   #modsHangarOverlay .chipCraftReprogramStage{
@@ -6617,6 +6642,25 @@ button.hangarChipInvItem{
   #modsHangarOverlay .chipCraftReprogramControls{
     width:min(100%, 320px);
     margin:0 auto;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol,
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftLeftCol{
+    min-height:0;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInventory{
+    max-height:min(42vh, 360px);
+  }
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftBottomBar{
+    position:sticky;
+    bottom:0;
+    z-index:1;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftDustActions,
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftDustTotal{
+    width:100%;
+  }
+  #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftDustResource{
+    margin-left:0;
   }
 }
 .chipCraftPreview--disassemble{
@@ -8075,9 +8119,6 @@ button.hangarChipInvItem{
   overflow:auto;
   padding:calc(10px * var(--modsHangarScale, 1)) calc(12px * var(--modsHangarScale, 1)) calc(10px * var(--modsHangarScale, 1));
 }
-#modsHangarOverlay .scModal--fullscreenShell{
-  --modsHangarScale:clamp(0.92, calc(0.84 + var(--ui-scale) * 0.42), 1.08);
-}
 #modsHangarOverlay .scModal--fullscreenShell .hangarLayout,
 #modsHangarOverlay .scModal--fullscreenShell .hangarDetail,
 #modsHangarOverlay .scModal--fullscreenShell .chipCraftContainer,
@@ -8086,15 +8127,25 @@ button.hangarChipInvItem{
   min-height:0;
 }
 #modsHangarOverlay .scModal--fullscreenShell .hangarRow{
-  flex-direction:column;
+  flex-direction:row;
+  flex-wrap:nowrap;
+  align-items:stretch;
 }
-#modsHangarOverlay .scModal--fullscreenShell .hangarSlotViewWrap,
+#modsHangarOverlay .scModal--fullscreenShell .hangarSlotViewWrap{
+  width:auto;
+  flex:0 1 var(--modsHangarSlotWidth);
+  min-width:140px;
+}
 #modsHangarOverlay .scModal--fullscreenShell .hangarRightCol{
-  width:100%;
+  width:auto;
+  flex:1 1 var(--modsHangarLeftColWidth);
+  min-width:145px;
 }
 #modsHangarOverlay .scModal--fullscreenShell .hangarSlotView{
-  width:min(100%, var(--modsHangarSlotWidth));
-  margin:0 auto;
+  width:100%;
+  height:auto;
+  aspect-ratio:420 / 380;
+  margin:0;
 }
 #modsHangarOverlay .scModal--fullscreenShell .hangarGridWrap{
   min-height:0;
@@ -8214,7 +8265,6 @@ button.hangarChipInvItem{
   min-height:0;
   height:auto;
   margin:0 auto;
-  border-radius:clamp(18px, 3vw, 26px);
   display:flex;
   flex-direction:column;
   justify-content:flex-start;
@@ -8276,8 +8326,12 @@ button.hangarChipInvItem{
   }
   .scModal{
     width:min(1060px, var(--ui-shell-narrow-inline));
-    max-width:min(1060px, var(--ui-shell-narrow-inline));
     max-height:min(920px, var(--ui-shell-narrow-height));
+  }
+  #supercomputerMenuOverlay .levelModal__panel.scModal > .levelModal__title,
+  #modsHangarOverlay .levelModal__panel.scModal > .levelModal__title,
+  #modsTankWallOverlay .levelModal__panel.scModal > .levelModal__title{
+    font-size:18px;
   }
   .ughPanel{
     width:min(980px, var(--ui-shell-narrow-inline));
@@ -8357,30 +8411,38 @@ button.hangarChipInvItem{
 
   /* ─── Hangar chips modal responsive scaling (spec-item-7) ─── */
   .hangarChipsModal{
-    --modsHangarSlotWidth: clamp(180px, calc(420px * var(--modsHangarScale)), 420px);
-    --modsHangarSlotHeight: clamp(160px, calc(380px * var(--modsHangarScale)), 380px);
-    --modsHangarLeftColWidth: clamp(120px, calc(220px * var(--modsHangarScale)), 220px);
+    --modsHangarSlotWidth: clamp(140px, calc(420px * var(--modsHangarScale)), 420px);
+    --modsHangarSlotHeight: clamp(126px, calc(380px * var(--modsHangarScale)), 380px);
+    --modsHangarLeftColWidth: clamp(145px, calc(220px * var(--modsHangarScale)), 220px);
     --modsHangarDropMinHeight: clamp(120px, calc(220px * var(--modsHangarScale)), 220px);
     --chipLabelCardWidth: clamp(96px, calc(176px * var(--modsHangarScale)), 176px);
     --chipLabelCardHeight: clamp(76px, calc(116px * var(--modsHangarScale)), 116px);
     --chipNameMaxLines: clamp(34px, calc(60px * var(--modsHangarScale)), 60px);
   }
   .hangarRow{
-    flex-direction:column;
+    flex-direction:row;
+    flex-wrap:nowrap;
+    align-items:stretch;
     gap:calc(8px * var(--modsHangarScale, 1));
   }
-  .hangarSlotViewWrap,
+  .hangarSlotViewWrap{
+    width:auto;
+    flex:0 1 var(--modsHangarSlotWidth);
+    min-width:140px;
+  }
   .hangarRightCol{
-    width:100%;
+    width:auto;
+    flex:1 1 var(--modsHangarLeftColWidth);
+    min-width:145px;
   }
   .hangarSlotView{
-    width:min(100%, var(--modsHangarSlotWidth));
+    width:100%;
     height:auto;
     aspect-ratio:420 / 380;
-    margin:0 auto;
+    margin:0;
   }
   .hangarActiveMods{
-    min-height:clamp(56px, calc(140px * var(--modsHangarScale, 1)), 140px);
+    min-height:clamp(72px, calc(132px * var(--modsHangarScale, 1)), 140px);
     padding:calc(6px * var(--modsHangarScale, 1));
   }
   .hangarGridWrapUnder{
@@ -8420,6 +8482,11 @@ button.hangarChipInvItem{
   }
   .stageUiRight{
     width:min(var(--ui-terminal-width), calc(100vw - 20px));
+  }
+  .stageUiRight .stageActions .btn,
+  .stageUiRight #talentsBtn,
+  .stageUiRight #achievementsBtn{
+    min-width:0;
   }
   .terminal-panel{
     width:min(100%, var(--ui-terminal-width));

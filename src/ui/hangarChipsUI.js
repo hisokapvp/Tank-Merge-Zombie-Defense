@@ -195,6 +195,12 @@
     _visualSelectedSlot = { type: slotType, slotId: slotId };
   }
 
+  function activateInstalledSlotActions(slotType, slotId) {
+    _selectedSlot = null;
+    _visualSelectedSlot = { type: slotType, slotId: slotId };
+    _activeSlotActions = { type: slotType, slotId: slotId };
+  }
+
   /* ─── Helpers ──────────────────────────────────────────── */
 
   function el(id) { return _doc ? _doc.getElementById(id) : null; }
@@ -1844,10 +1850,8 @@
     var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl, invEntry.modIds);
     if (ok) {
       /* Remove from inventory */
-      _visualSelectedSlot = { type: _selectedSlot.type, slotId: _selectedSlot.slotId };
+      activateInstalledSlotActions(_selectedSlot.type, _selectedSlot.slotId);
       removePlayerChipOne(chipId, lvl);
-      _selectedSlot = null;
-      _activeSlotActions = null;
       render();
     }
   }
@@ -2535,8 +2539,7 @@
   /**
    * Check if a fragment can still be added to the assemble slots.
    * Rules: no all-same triple, max 1 special mod.
-   * @param {number} fragId — modId to add
-   * @returns {boolean}
+   * @param {number} fragId - modId to add
    */
   function _canAddFragment(fragId) {
     var h = hc();
@@ -4292,9 +4295,7 @@
           var ok2 = h2.installChip(cell, slotType, slotId, chipDef, sd.level, invE2.modIds);
           if (ok2) {
             removePlayerChipOne(sd.chipId, sd.level);
-            _visualSelectedSlot = { type: slotType, slotId: slotId };
-            _selectedSlot = null;
-            _activeSlotActions = null;
+            activateInstalledSlotActions(slotType, slotId);
             render();
           }
           return;

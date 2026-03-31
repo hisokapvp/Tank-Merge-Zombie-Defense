@@ -1,6 +1,6 @@
 # hangarChipsUI.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-30.
+> Агент-ориентировано. Обновлён: 2026-03-31.
 > Файл большой (~4460 строк): используйте этот map перед чтением исходника.
 
 ## Что это
@@ -35,6 +35,7 @@
 - Assemble craft перед шансом < 100% обязан показывать confirm modal, а после любого roll — result modal. При провале сжигается только один случайный выбранный фрагмент и reagent dust, если он был добавлен; остальные выбранные фрагменты остаются в инвентаре: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1746-L1758), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2484-L2528), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3102-L3194), [style.css](../../style.css#L4310-L4379).
 - Авто-переключение craft-mode при клике/drag из инвентаря живёт только в `_addItemToSlot()`; reprogram-flow — единственное исключение, где fragment-click не должен переключать панель обратно в assemble, а должен только заполнить `_reprogramSourceFragmentId`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2680-L2694).
 - `init()` — canonical owner touch-safe drag contract для мастерской: slot-install и chip-merge drags держат pointer capture на overlay, вызывают `_preventTouchDragDefault()` только для cancelable touch events и не считают drag начатым до порога `6px`; `pointercancel` handler явно очищает drag state и release pointer capture для корректного touch cleanup; до порога нельзя обновлять ghost/drop-target state, иначе tap по inventory превращается в ложный move на mobile: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L4065-L4395).
+- Успешная установка чипа обязана сразу раскрывать rotate/remove actions на занятом слоте: и `installChipAction()`, и drag-install path вызывают `activateInstalledSlotActions(slotType, slotId)` до `render()`, чтобы игрок видел действия для установленного слота без дополнительного повторного клика по butterfly-slot: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1819-L1856), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L4298-L4304).
 
 ## Оглавление файла
 

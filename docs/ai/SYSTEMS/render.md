@@ -6,8 +6,8 @@
 
 ## Post-merge update (2026-03-31)
 - `drawProjectiles()` теперь clampит source rect (`sx+sw`, `sy+sh`) к atlas bounds (`naturalWidth`, `naturalHeight`); если frame полностью за пределами atlas, rendер fallbackится на circle. Это defensive fix для `assets/bullet.json` frame h `36→34`: [game.js](../../../game.js#L13635-L13670), [assets/bullet.json](../../../assets/bullet.json#L12).
-- `resolveTankAuraVisual(cellIndex, level)` теперь использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально занятых red/yellow слотов, вместо удалённых `normalizeAuraChipCount()` / `getInstalledChipCountForTank()`: [game.js](../../../game.js#L13267-L13296).
-- `drawTank()` теперь принимает `cellIndex` параметр для aura routing: [game.js](../../../game.js#L13416).
+- `resolveTankAuraVisual(cellIndex, level)` по-прежнему использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально занятых red/yellow слотов, а `drawTankAuraSprite()` теперь даёт variant-specific runtime glow/ring treatment для `aura1/aura2/aura3`; `computeAuraBand()` сохраняется как fallback-path, если named variant недоступен. Это deliberate render contract поверх существующего chip-count routing, а не возврат к level-only visual gate: [game.js](../../../game.js#L13267-L13548).
+- `drawTank()` по-прежнему принимает `cellIndex` параметр для aura routing и вызывает sprite path раньше fallback band path: [game.js](../../../game.js#L13533-L13548).
 - Zombie unstick mechanism: `stepZombies()` теперь держит per-zombie `_unstickTimer`/`_unstickCheckR`; если зомби не продвинулся ближе к центру на ≥2px за 4 сек, scalar nudge подталкивает его к fence: [game.js](../../../game.js#L7820-L7840).
 
 ## Post-merge update (2026-03-30)
