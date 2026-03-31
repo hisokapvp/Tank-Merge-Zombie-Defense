@@ -34,6 +34,7 @@ nav { background: var(--surface); display: flex; gap: 0; border-bottom: 1px soli
 nav button { background: transparent; border: none; color: var(--muted); padding: 10px 20px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: .15s; }
 nav button:hover { color: var(--text); }
 nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+nav { flex-wrap: wrap; }
 main { padding: 16px 24px; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
@@ -67,6 +68,7 @@ table.data-table input.changed { background: var(--changed); }
 #exportDiffPre { background: #111; padding: 12px; border-radius: 6px; max-height: 400px; overflow: auto; font-family: 'Cascadia Code', monospace; font-size: 12px; white-space: pre-wrap; }
 .diff-add { color: var(--green); }
 .diff-del { color: var(--red); }
+.analytics-table td.metric { text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -83,6 +85,7 @@ table.data-table input.changed { background: var(--changed); }
 
 <nav id="tabs">
   <button class="active" data-tab="tanks">🔫 Танки</button>
+  <button data-tab="damage-points">⚡ Очки урона / мин</button>
   <button data-tab="zombies">🧟 Зомби</button>
   <button data-tab="walls">🧱 Стены</button>
   <button data-tab="drones">🤖 Дроны</button>
@@ -119,9 +122,29 @@ table.data-table input.changed { background: var(--changed); }
     </div>
   </div>
 
+  <!-- DAMAGE POINTS -->
+  <div id="tab-damage-points" class="tab-content">
+    <h3 class="section-title">Танки — Damage Points Per Minute</h3>
+    <div class="info-box">
+      Аналитика считает именно очки урона, а не grey damage: в runtime 1 очко урона = 10000 raw damage.
+      Выстрел считается как <code>baseDamage + bullet addDamage</code> с множителем <code>attackDamageMul</code>,
+      а fire rate берётся из runtime-кривой <code>0.85 + 0.075 × (lvl-1)</code> с множителем <code>attackSpeedMul</code>.
+    </div>
+    <div class="chart-container"><canvas id="chartDamagePoints" class="chart"></canvas></div>
+    <div class="scroll-wrap">
+      <table class="data-table analytics-table" id="tableDamagePoints">
+        <thead><tr><th>Уровень</th><th>Shot Damage</th><th>Выстр./мин</th><th>Raw Damage/мин</th><th>Damage Points/мин</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ZOMBIES -->
   <div id="tab-zombies" class="tab-content">
     <h3 class="section-title">Зомби — Прогрессия (60 типов)</h3>
+    <div class="info-box">
+      Сравнение на графике идёт по tank shot damage против zombie HP. Для HP приоритет у явного поля <code>Health</code> из assets/zombies.json.
+    </div>
     <div class="chart-container"><canvas id="chartZombies" class="chart"></canvas></div>
     <div class="formula-bar">
       <label>Формула attackDamage:</label>
@@ -243,6 +266,14 @@ const DATA = {};       // original loaded data
 const EDIT = {};       // working copies
 let changeCounter = 0;
 const BASE_PATH = '../assets/';
+const ANALYTICS_RUNTIME = {
+  tankFireRateBase: 0.85,
+  tankFireRateAddPerLevel: 0.075,
+  zombieHpBase: 44,
+  tankDamagePointDivisor: 10000,
+  zombieHpExtraPerLevel: 0.12,
+  dmgMultPerLevel: 1.48,
+};
 
 /* ======== LOAD ======== */
 async function loadJSON(path) {
@@ -305,6 +336,7 @@ document.getElementById('tabs').addEventListener('click', function (e) {
 /* ======== RENDER ALL ======== */
 function renderAll() {
   renderTanks();
+  renderDamagePoints();
   renderZombies();
   renderWalls();
   renderDrones();
@@ -348,6 +380,77 @@ function drawTankChart(levels) {
     'Танки — baseDamage по уровню');
 }
 
+function getTankBalanceMultiplier(level, key) {
+  const balance = EDIT.balance || {};
+  const base = Number.isFinite(balance.tank && balance.tank[key]) ? balance.tank[key] : 1;
+  const overrides = balance.tankOverrides && balance.tankOverrides['level_' + level];
+  return overrides && Number.isFinite(overrides[key]) ? overrides[key] : base;
+}
+
+function getBulletConfigForTankLevel(level) {
+  const tankCfg = EDIT.tanks['tank_lvl' + level] || {};
+  const bulletId = tankCfg.bulletId || 'bullet_base';
+  const bulletLevel = Number.isFinite(tankCfg.bulletLevel) ? Math.max(1, Math.floor(tankCfg.bulletLevel)) : 1;
+  const bulletLevels = EDIT.bullet && EDIT.bullet.bullets && EDIT.bullet.bullets[bulletId] && Array.isArray(EDIT.bullet.bullets[bulletId].levels)
+    ? EDIT.bullet.bullets[bulletId].levels
+    : [];
+  return {
+    tankCfg: tankCfg,
+    bulletCfg: bulletLevels[bulletLevel - 1] || bulletLevels[0] || null,
+  };
+}
+
+function getTankShotDamage(level) {
+  const bulletInfo = getBulletConfigForTankLevel(level);
+  const tankBaseDamage = Number.isFinite(bulletInfo.tankCfg && bulletInfo.tankCfg.stats && bulletInfo.tankCfg.stats.baseDamage)
+    ? bulletInfo.tankCfg.stats.baseDamage
+    : 0;
+  const bulletAddDamage = Number.isFinite(bulletInfo.bulletCfg && bulletInfo.bulletCfg.addDamage)
+    ? bulletInfo.bulletCfg.addDamage
+    : 0;
+  return Math.max(0, tankBaseDamage + bulletAddDamage) * getTankBalanceMultiplier(level, 'attackDamageMul');
+}
+
+function getTankShotsPerMinute(level) {
+  const fireRate = ANALYTICS_RUNTIME.tankFireRateBase + ANALYTICS_RUNTIME.tankFireRateAddPerLevel * Math.max(0, level - 1);
+  return Math.max(0, fireRate * getTankBalanceMultiplier(level, 'attackSpeedMul') * 60);
+}
+
+function getTankDamagePointMetrics() {
+  return getTankLevels().map(function (tank) {
+    const shotDamage = getTankShotDamage(tank.level);
+    const shotsPerMinute = getTankShotsPerMinute(tank.level);
+    const rawDamagePerMinute = shotDamage * shotsPerMinute;
+    return {
+      level: tank.level,
+      shotDamage: shotDamage,
+      shotsPerMinute: shotsPerMinute,
+      rawDamagePerMinute: rawDamagePerMinute,
+      damagePointsPerMinute: rawDamagePerMinute / ANALYTICS_RUNTIME.tankDamagePointDivisor,
+    };
+  });
+}
+
+function renderDamagePoints() {
+  const rows = getTankDamagePointMetrics();
+  const tbody = document.querySelector('#tableDamagePoints tbody');
+  tbody.innerHTML = rows.map(function (row) {
+    return '<tr>' +
+      '<td>' + row.level + '</td>' +
+      '<td class="metric">' + formatMetric(row.shotDamage, 2) + '</td>' +
+      '<td class="metric">' + formatMetric(row.shotsPerMinute, 2) + '</td>' +
+      '<td class="metric">' + formatMetric(row.rawDamagePerMinute, 2) + '</td>' +
+      '<td class="metric">' + formatMetric(row.damagePointsPerMinute, 4) + '</td>' +
+      '</tr>';
+  }).join('');
+  drawLineChart(
+    document.getElementById('chartDamagePoints'),
+    rows.map(function (row) { return row.level; }),
+    [{ label: 'Damage points / min', data: rows.map(function (row) { return row.damagePointsPerMinute; }), color: '#53a8b6' }],
+    'Танки — Очки урона в минуту'
+  );
+}
+
 function applyTankFormula() {
   const formula = document.getElementById('tankFormula').value;
   const base = parseFloat(document.getElementById('tankBase').value) || 20;
@@ -363,6 +466,8 @@ function applyTankFormula() {
     EDIT.tanks[k].stats.baseDamage = Math.round(val);
   }
   renderTanks();
+  renderDamagePoints();
+  drawZombieChart(getZombieTypes());
   updateChangeCount();
 }
 
@@ -371,6 +476,15 @@ function getZombieTypes() {
   return EDIT.zombies.types.map(function (z, i) {
     return { level: i + 1, data: z };
   });
+}
+
+function getZombieHpForChart(zombieType, level) {
+  if (Number.isFinite(zombieType && zombieType.Health) && zombieType.Health > 0) return zombieType.Health;
+  if (Number.isFinite(zombieType && zombieType.health) && zombieType.health > 0) return zombieType.health;
+  const hpMul = Number.isFinite(zombieType && zombieType.hpMul) ? zombieType.hpMul : 1;
+  const levelScale = Math.pow(ANALYTICS_RUNTIME.dmgMultPerLevel, Math.max(0, level - 1));
+  const extraScale = 1 + ANALYTICS_RUNTIME.zombieHpExtraPerLevel * Math.max(0, level - 1);
+  return ANALYTICS_RUNTIME.zombieHpBase * levelScale * extraScale * hpMul;
 }
 
 function renderZombies() {
@@ -394,13 +508,14 @@ function renderZombies() {
 
 function drawZombieChart(types) {
   const canvas = document.getElementById('chartZombies');
-  const tankLevels = getTankLevels();
+  const tankShotDamage = types.map(function (z) { return getTankShotDamage(z.level); });
+  const zombieHp = types.map(function (z) { return getZombieHpForChart(z.data, z.level); });
   drawLineChart(canvas, types.map(function (z) { return z.level; }),
     [
-      { label: 'Zombie attackDmg', data: types.map(function (z) { return z.data.attackDamage; }), color: '#4caf50' },
-      { label: 'Tank baseDmg', data: tankLevels.map(function (t) { return t.stats.baseDamage; }), color: '#e94560' }
+      { label: 'Zombie HP', data: zombieHp, color: '#4caf50' },
+      { label: 'Tank shotDmg', data: tankShotDamage, color: '#e94560' }
     ],
-    'Танки vs Зомби — Урон по уровню');
+    'Танки vs Зомби — Shot Damage и HP по уровню');
 }
 
 function applyZombieFormula() {
@@ -508,6 +623,7 @@ function renderGlobal() {
       setNestedValue(EDIT.balance, this.dataset.path, parseFloat(this.value));
       this.nextElementSibling.textContent = parseFloat(this.value).toFixed(2);
       updateChangeCount();
+      refreshAnalytics();
     });
   });
 
@@ -530,6 +646,7 @@ function renderGlobal() {
       setNestedValue(EDIT.zombies, this.dataset.path, parseFloat(this.value));
       this.nextElementSibling.textContent = this.value;
       updateChangeCount();
+      drawZombieChart(getZombieTypes());
     });
   });
 }
@@ -707,6 +824,16 @@ function formatChartNum(v) {
   return v.toFixed(v % 1 === 0 ? 0 : 2);
 }
 
+function formatMetric(value, digits) {
+  return Number.isFinite(value) ? value.toFixed(digits) : '0';
+}
+
+function refreshAnalytics() {
+  drawTankChart(getTankLevels());
+  renderDamagePoints();
+  drawZombieChart(getZombieTypes());
+}
+
 /* ======== EDITABLE INPUT HELPER ======== */
 function editInput(configKey, path, value, step) {
   if (step === undefined) step = 1;
@@ -728,7 +855,7 @@ function handleEdit(inp) {
   inp.classList.toggle('changed', origVal !== undefined && val !== origVal);
   updateChangeCount();
   // re-draw chart if relevant
-  if (config === 'tanks') drawTankChart(getTankLevels());
+  if (config === 'tanks' || config === 'bullet' || config === 'balance') refreshAnalytics();
   if (config === 'zombies') drawZombieChart(getZombieTypes());
 }
 

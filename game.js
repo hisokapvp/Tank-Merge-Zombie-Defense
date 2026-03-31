@@ -13316,55 +13316,40 @@ const AuraStyleByBand = [
   { color: 'rgba(255,248,220,.35)', radius: 40, alpha: 0.32, effect: 'intenseGlow', pulseSpeed: 2 },
 ];
 
+const AuraSpriteHueShiftFilters = (function () {
+  const filters = new Array(72);
+  for (let i = 0; i < filters.length; i++) {
+    filters[i] = 'hue-rotate(' + (i * 5) + 'deg) saturate(178%) brightness(104%) contrast(108%)';
+  }
+  return filters;
+}());
+
 const AuraSpriteStyleByVariant = [
   null,
   {
-    glowColor: 'rgba(122,255,176,0.30)',
-    ringColor: 'rgba(212,255,228,0.72)',
     scaleMul: 0.94,
     pulseAmplitude: 0.05,
     pulseSpeed: 2.1,
     rotationSpeed: 0.5,
-    glowRadiusMul: 0.34,
-    ringRadiusMul: 0.42,
-    ringWidth: 2.2,
-    glowAlpha: 0.22,
-    ringAlpha: 0.58,
     spriteAlpha: 0.78,
-    spriteGlowAlpha: 0.12,
-    accent: 'singleRing',
+    filter: 'none',
   },
   {
-    glowColor: 'rgba(108,224,255,0.34)',
-    ringColor: 'rgba(196,246,255,0.76)',
     scaleMul: 1.01,
     pulseAmplitude: 0.09,
     pulseSpeed: 3.2,
     rotationSpeed: -0.78,
-    glowRadiusMul: 0.37,
-    ringRadiusMul: 0.47,
-    ringWidth: 2,
-    glowAlpha: 0.26,
-    ringAlpha: 0.62,
     spriteAlpha: 0.84,
-    spriteGlowAlpha: 0.18,
-    accent: 'spokes',
+    filter: 'hue-rotate(240deg) saturate(210%) brightness(94%) contrast(112%)',
   },
   {
-    glowColor: 'rgba(255,214,118,0.36)',
-    ringColor: 'rgba(255,246,214,0.84)',
     scaleMul: 1.08,
     pulseAmplitude: 0.13,
     pulseSpeed: 4.1,
     rotationSpeed: 1.12,
-    glowRadiusMul: 0.40,
-    ringRadiusMul: 0.53,
-    ringWidth: 2.8,
-    glowAlpha: 0.3,
-    ringAlpha: 0.74,
     spriteAlpha: 0.9,
-    spriteGlowAlpha: 0.24,
-    accent: 'doubleRing',
+    hueShiftFilters: AuraSpriteHueShiftFilters,
+    hueShiftSpeed: 10,
   },
 ];
 
@@ -13451,54 +13436,20 @@ function drawTankAuraSprite(x, y, aura){
   const scale = baseScale * pulseScale * variantPulse * (variantStyle ? variantStyle.scaleMul : 1);
   const drawW = w * scale;
   const drawH = h * scale;
+  let spriteFilter = 'none';
+  if (variantStyle) {
+    if (variantStyle.filter && variantStyle.filter !== 'none') {
+      spriteFilter = variantStyle.filter;
+    } else if (variantStyle.hueShiftFilters && variantStyle.hueShiftFilters.length > 0) {
+      const filterIndex = Math.floor(t * variantStyle.hueShiftSpeed) % variantStyle.hueShiftFilters.length;
+      spriteFilter = variantStyle.hueShiftFilters[filterIndex];
+    }
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(t * (variantStyle ? variantStyle.rotationSpeed : 0.8));
-  if (variantStyle) {
-    const maxDim = Math.max(drawW, drawH);
-    const haloRadius = maxDim * (variantStyle.glowRadiusMul + 0.02 * Math.sin(t * (variantStyle.pulseSpeed * 0.5)));
-    const ringRadius = maxDim * (variantStyle.ringRadiusMul + 0.02 * Math.cos(t * (variantStyle.pulseSpeed * 0.7)));
-    const ringWidth = Math.max(1.25, variantStyle.ringWidth * balScale);
-
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = variantStyle.glowAlpha * (0.88 + 0.12 * Math.sin(t * variantStyle.pulseSpeed));
-    ctx.fillStyle = variantStyle.glowColor;
-    ctx.beginPath();
-    ctx.arc(0, 0, haloRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = variantStyle.ringAlpha;
-    ctx.strokeStyle = variantStyle.ringColor;
-    ctx.lineWidth = ringWidth;
-    ctx.beginPath();
-    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
-    ctx.stroke();
-
-    if (variantStyle.accent === 'spokes') {
-      for (let i = 0; i < 4; i++) {
-        const angle = t * 0.9 + Math.PI * 0.25 + i * (Math.PI / 2);
-        const inner = ringRadius * 0.58;
-        const outer = ringRadius * 1.06;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
-        ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
-        ctx.stroke();
-      }
-    } else if (variantStyle.accent === 'doubleRing') {
-      ctx.globalAlpha = variantStyle.ringAlpha * 0.7;
-      ctx.beginPath();
-      ctx.arc(0, 0, ringRadius * 0.76, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = variantStyle.ringAlpha * 0.9;
-      for (let i = 0; i < 3; i++) {
-        const angle = -t * 1.5 + i * ((Math.PI * 2) / 3);
-        const dotRadius = ringRadius * 0.12;
-        const orbitRadius = ringRadius * 1.04;
-        ctx.beginPath();
-        ctx.arc(Math.cos(angle) * orbitRadius, Math.sin(angle) * orbitRadius, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+  if (spriteFilter !== 'none' && typeof ctx.filter === 'string') {
+    ctx.filter = spriteFilter;
   }
   ctx.globalAlpha = variantStyle ? variantStyle.spriteAlpha : 0.85;
   ctx.drawImage(
@@ -13512,22 +13463,6 @@ function drawTankAuraSprite(x, y, aura){
     drawW,
     drawH
   );
-  if (variantStyle && variantStyle.spriteGlowAlpha > 0) {
-    const glowScale = variant === 3 ? 1.08 : 1.03;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = variantStyle.spriteGlowAlpha;
-    ctx.drawImage(
-      aura.img,
-      sx,
-      sy,
-      w,
-      h,
-      -(drawW * glowScale) * anchor.x,
-      -(drawH * glowScale) * anchor.y,
-      drawW * glowScale,
-      drawH * glowScale
-    );
-  }
   ctx.restore();
 }
 

@@ -621,8 +621,8 @@
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 3,
+      "animSpeed": 3,
       "anchor": {
         "x": 0.5,
         "y": 0.5
@@ -637,8 +637,8 @@
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 3,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
@@ -648,18 +648,18 @@
     "aura3": {
       "src": "tanks/Aura3.png",
       "frame": {
-        "x": 0,
+        "x": 666,
         "y": 0,
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 9,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 0.8
+      "scale": 2
     }
   },
   "tank_lvl7": {

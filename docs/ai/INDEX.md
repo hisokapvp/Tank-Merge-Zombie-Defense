@@ -26,6 +26,7 @@
 - UI: `docs/ai/SYSTEMS/ui.md`
 - Render/Canvas: `docs/ai/SYSTEMS/render.md`
 - Assets/JSON: `docs/ai/SYSTEMS/assets.md`
+- Balance Editor / config analytics: `docs/ai/SYSTEMS/balance-editor.md`
 - Combat: `docs/ai/SYSTEMS/combat.md`
 - Save/Offline: `docs/ai/SYSTEMS/save.md`
 - Achievements: `docs/ai/SYSTEMS/achievements.md`
@@ -41,6 +42,7 @@
 
 ## Фокус документации на 2026-03-31
 - **Aura sprite treatment + hangar/workshop responsive shell refresh**: `game.js` держит chip-count routing через `getInstalledChipCountForCell()`/`resolveTankAuraVisual()`, но `drawTankAuraSprite()` теперь даёт variant-specific runtime glow/ring treatment для `aura1/aura2/aura3`; `src/ui/hangarChipsUI.js` сразу раскрывает rotate/remove actions через `activateInstalledSlotActions()` после успешной установки чипа; `style.css` убирает локальный `modsHangarScale` clamp, сохраняет `hangarSlotView + right column` side-by-side в narrow/fullscreen hangar, держит recycle mobile в side-by-side режиме для `Разобрать/Перепрограммировать` и sticky bottom bar для `Распылить`, а mobile SC/terminal path больше не опирается на старый title clamp/max-width fork и снимает `min-width` floor с terminal action buttons. `index.html` bump'ает entry token до `20260331-branch3-sc-shell-terminal-mobile-v1`.
+- **Balance Editor analytics tab + zombie HP comparison**: `tools/balance-editor.html` документирован как repo-local tuning tool без build step: damage-points tab считает именно `damage points / minute` через runtime формулу `shotDamage = (tank baseDamage + bullet addDamage) * attackDamageMul`, `shotsPerMinute = (0.85 + 0.075 × (lvl-1)) * attackSpeedMul * 60`, а график `Танки vs Зомби` сравнивает tank shot damage против zombie HP с приоритетом явного `types[].Health` из `assets/zombies.json` над fallback-формулой `hpMul`.
 - **Bullet atlas overflow fix + drawProjectiles defensive clamp**: `assets/bullet.json` frame h `36→34`; `drawProjectiles()` в `game.js` clampит source rect к atlas bounds и fallbackится на circle при полном overflow.
 - **Chip-count aura overhaul**: старые `normalizeAuraChipCount()`/`getInstalledChipCountForTank()` удалены; новый `getInstalledChipCountForCell(cellIndex)` считает занятые red/yellow слоты, `resolveTankAuraVisual()` выбирает `aura1/2/3` по count; `assets/tanks.json` несёт `aura1/aura2/aura3` вместо старого `aura`; `TankSprites.load()` нормализует все 3 варианта, `pickAura(level, variant)` выбирает по variant.
 - **Zombie unstick mechanism**: per-zombie `_unstickTimer` / `_unstickCheckR` в `stepZombies()`: 4s таймер, 2px radial threshold, scalar nudge к fence при застревании.

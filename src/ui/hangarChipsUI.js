@@ -113,6 +113,21 @@
     return fallback || key;
   }
 
+  function isCoarsePointerViewport() {
+    try {
+      return !!(typeof global.matchMedia === 'function'
+        && global.matchMedia('(hover: none) and (pointer: coarse)').matches);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function shouldDisableCraftInventoryDrag() {
+    return _workshopSubTab === 'chipRecycle'
+      && _chipRecycleSubTab === 'disassemble'
+      && isCoarsePointerViewport();
+  }
+
   function getHangarHelpSectionTitle(tabId) {
     if (tabId === 'techUnlock') return t('hangarChipsTabTechUnlock', 'Открытие технологий');
     if (tabId === 'workshop') return t('hangarChipsTabWorkshop', 'Мастерская');
@@ -3676,6 +3691,7 @@
           /* ── Pointer-based drag to drop zone ── */
           item.addEventListener('pointerdown', function (evt) {
             if (_dustMode) return;
+            if (shouldDisableCraftInventoryDrag()) return;
             if (evt.target.tagName === 'INPUT') return;
             if (item.getAttribute('data-craft-disabled') === 'true') return;
             var srcType = item.getAttribute('data-craft-src');

@@ -1,6 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-03-31
+- **Документация: one-shot shared post-merge update после join для hangar/workshop responsive shell, aura render contract и Balance Editor analytics (`style.css`, `src/ui/hangarChipsUI.js`, `game.js`, `tools/balance-editor.html`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/balance-editor.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: responsive hangar cells и workshop recycle shell теперь явно документированы как side-by-side contract для narrow/fullscreen hangar и для mobile `Разобрать/Перепрограммировать`, тогда как dust-only path остаётся single-column со sticky bottom bar.
+  - Зафиксированы: mobile recycle/disassemble drag policy не отделяется от layout и остаётся canonical pointer-capture + cancelable touch `preventDefault` + общий threshold `6px` через `src/ui/hangarChipsUI.js`.
+  - Зафиксированы: `game.js` документирует variant-specific aura sprite treatment как runtime render contract (`aura1` soft pulse, `aura2` stronger blue hue treatment, `aura3` strongest pulse + hue cycling) поверх `resolveTankAuraVisual(cellIndex, level)`.
+  - Добавлен новый agent doc `docs/ai/SYSTEMS/balance-editor.md`: `tools/balance-editor.html` теперь описан как repo-local analytics tool с damage-points tab, selective refresh и zombie HP comparison, где явный `types[].Health` имеет приоритет над fallback-формулой.
+
 - **Документация: shared post-merge update после join для aura sprite treatment, immediate hangar slot actions, responsive hangar/workshop shell и entry cache token (`game.js`, `src/ui/hangarChipsUI.js`, `style.css`, `index.html`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/CHANGELOG.md`.
   - Зафиксированы: `game.js` сохраняет chip-count aura routing через `getInstalledChipCountForCell()` / `resolveTankAuraVisual()`, но `drawTankAuraSprite()` теперь добавляет variant-specific runtime glow/ring treatment для `aura1/aura2/aura3`, а `computeAuraBand()` остаётся fallback-path.
