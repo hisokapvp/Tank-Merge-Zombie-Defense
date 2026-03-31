@@ -5457,6 +5457,7 @@ button.hangarChipInvItem{
   padding:calc(6px * var(--modsHangarScale, 1)) calc(2px * var(--modsHangarScale, 1));
   scrollbar-width:thin;
   scrollbar-color: rgba(74,246,38,0.4) rgba(0,0,0,0.2);
+  touch-action:pan-y;
 }
 .chipUpgradeCard{
   display:flex;
@@ -7454,6 +7455,62 @@ button.hangarChipInvItem{
   --pl-storage-padding-top:var(--pl-storage-padding-top-default);
   --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-default);
   --pl-storage-header-min-height:var(--pl-storage-header-min-height-default);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-default);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-default);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-default);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-default);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-default);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-default);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-default);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-default);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-default);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-default);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-default);
+  --pl-storage-title-size:var(--pl-storage-title-size-default);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-default);  --pl-storage-shell-scale:var(--pl-storage-shell-scale-default);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-default);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-default);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-default);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-default);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-default);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-default);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-default);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-default);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-default);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-default);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-default);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-default);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-default);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-default);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-default);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-default);
+  --pl-storage-title-size:var(--pl-storage-title-size-default);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-default);
+  --pl-storage-shell-scale:var(--pl-storage-shell-scale-default);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-default);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-default);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-default);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-default);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-default);
+  --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-default);
+  --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-default);
+  --pl-storage-header-side-cap:var(--pl-storage-header-side-cap-default);
+  --pl-storage-grid-width:var(--pl-storage-grid-width-default);
+  --pl-storage-grid-gap:var(--pl-storage-grid-gap-default);
+  --pl-storage-cell-size:var(--pl-storage-cell-size-default);
+  --pl-storage-cell-gap:var(--pl-storage-cell-gap-default);
+  --pl-storage-icon-size:var(--pl-storage-icon-size-default);
+  --pl-storage-icon-offset-y:var(--pl-storage-icon-offset-y-default);
+  --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-default);
+  --pl-storage-badge-size:var(--pl-storage-badge-size-default);
+  --pl-storage-title-size:var(--pl-storage-title-size-default);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-default);
+  --pl-storage-shell-scale:var(--pl-storage-shell-scale-default);
+  --pl-storage-cell-scale:var(--pl-storage-cell-scale-default);
+  --pl-storage-padding-x:var(--pl-storage-padding-x-default);
+  --pl-storage-padding-top:var(--pl-storage-padding-top-default);
+  --pl-storage-padding-bottom:var(--pl-storage-padding-bottom-default);
+  --pl-storage-header-min-height:var(--pl-storage-header-min-height-default);
   --pl-storage-header-title-pad-top:var(--pl-storage-header-title-pad-top-default);
   --pl-storage-header-actions-gap:var(--pl-storage-header-actions-gap-default);
   --pl-storage-header-side-pad:var(--pl-storage-header-side-pad-default);
@@ -8131,7 +8188,7 @@ button.hangarChipInvItem{
     calc(var(--safe-left) + clamp(8px, 2vw, 14px));
 }
 .plStorage__panel--expanded{
-  --pl-storage-shell-scale:var(--pl-storage-shell-scale-expanded);
+  /* --pl-storage-shell-scale:var(--pl-storage-shell-scale-expanded);
   --pl-storage-cell-scale:var(--pl-storage-cell-scale-expanded);
   --pl-storage-padding-x:var(--pl-storage-padding-x-expanded);
   --pl-storage-padding-top:var(--pl-storage-padding-top-expanded);
@@ -8150,7 +8207,7 @@ button.hangarChipInvItem{
   --pl-storage-badge-bottom:var(--pl-storage-badge-bottom-expanded);
   --pl-storage-badge-size:var(--pl-storage-badge-size-expanded);
   --pl-storage-title-size:var(--pl-storage-title-size-expanded);
-  --pl-storage-confirm-width:var(--pl-storage-confirm-width-expanded);
+  --pl-storage-confirm-width:var(--pl-storage-confirm-width-expanded); */
   width:min(calc(640px * var(--pl-storage-shell-scale)), calc(100vw - 24px));
   max-width:calc(100vw - 24px);
   max-height:min(calc(760px * var(--pl-storage-shell-scale)), var(--ui-shell-max-height));
@@ -8296,6 +8353,64 @@ button.hangarChipInvItem{
   .talentTreeModal--fullscreenShell .talentActions .btn,
   #supercomputerTalentsMount > #talentOverlay .talentTreeModal--fullscreenShell .talentActions .btn{
     flex:1 1 180px;
+  }
+
+  /* ─── Hangar chips modal responsive scaling (spec-item-7) ─── */
+  .hangarChipsModal{
+    --modsHangarSlotWidth: clamp(180px, calc(420px * var(--modsHangarScale)), 420px);
+    --modsHangarSlotHeight: clamp(160px, calc(380px * var(--modsHangarScale)), 380px);
+    --modsHangarLeftColWidth: clamp(120px, calc(220px * var(--modsHangarScale)), 220px);
+    --modsHangarDropMinHeight: clamp(120px, calc(220px * var(--modsHangarScale)), 220px);
+    --chipLabelCardWidth: clamp(96px, calc(176px * var(--modsHangarScale)), 176px);
+    --chipLabelCardHeight: clamp(76px, calc(116px * var(--modsHangarScale)), 116px);
+    --chipNameMaxLines: clamp(34px, calc(60px * var(--modsHangarScale)), 60px);
+  }
+  .hangarRow{
+    flex-direction:column;
+    gap:calc(8px * var(--modsHangarScale, 1));
+  }
+  .hangarSlotViewWrap,
+  .hangarRightCol{
+    width:100%;
+  }
+  .hangarSlotView{
+    width:min(100%, var(--modsHangarSlotWidth));
+    height:auto;
+    aspect-ratio:420 / 380;
+    margin:0 auto;
+  }
+  .hangarActiveMods{
+    min-height:clamp(56px, calc(140px * var(--modsHangarScale, 1)), 140px);
+    padding:calc(6px * var(--modsHangarScale, 1));
+  }
+  .hangarGridWrapUnder{
+    padding:calc(6px * var(--modsHangarScale, 1));
+    min-height:0;
+  }
+  .hangarActiveModsTitle{
+    font-size:max(10px, calc(12px * var(--modsHangarScale, 1)));
+    margin-bottom:calc(3px * var(--modsHangarScale, 1));
+  }
+  .hangarActiveMods__row{
+    font-size:max(10px, calc(13px * var(--modsHangarScale, 1)));
+    gap:calc(4px * var(--modsHangarScale, 1));
+  }
+  .hangarActiveMods__dot{
+    width:max(6px, calc(8px * var(--modsHangarScale, 1)));
+    height:max(6px, calc(8px * var(--modsHangarScale, 1)));
+  }
+  .hangarChipsList{
+    margin-top:calc(6px * var(--modsHangarScale, 1));
+  }
+  .hangarChipsListHeader{
+    gap:calc(4px * var(--modsHangarScale, 1));
+    margin-bottom:calc(4px * var(--modsHangarScale, 1));
+  }
+  .hangarDetail{
+    gap:calc(6px * var(--modsHangarScale, 1));
+  }
+  .hangarCellTitle{
+    font-size:max(10px, calc(14px * var(--modsHangarScale, 1)));
   }
 }
 

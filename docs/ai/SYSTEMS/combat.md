@@ -13,6 +13,9 @@
 - Не ломать интеграцию с `worldEvents`, `supercomputer`, `fence`.
 - Чип-модификаторы: эффекты реализованы в `chipEffects.js`, визуал/звуки настраиваются через `assets/chips.json`.
 
+## Zombie unstick mechanism
+- `stepZombies()` держит per-zombie `_unstickTimer` / `_unstickCheckR`: если зомби не продвинулся ≥ 2px к центру за 4 сек, scalar nudge `min(8, max(1, (r - fenceR)*0.15))` подталкивает его к fence. Не срабатывает для dying/breached зомби: [game.js](../../../game.js#L7820-L7840).
+
 ## Мини-проверка
 - Урон, cooldown и target selection предсказуемы.
 - Нет регрессий в critical/attack режимах.

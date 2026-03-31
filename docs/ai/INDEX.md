@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-29.
+> Обновлено: 2026-03-31.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -39,10 +39,19 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-29
-- **SC-family fullscreen/help ownership + bounded responsive shells**: `src/ui/supercomputerMenu.js` держит canonical `showSharedHelpModal()` / `syncSharedHelpButtonCopy()`, а `shouldUseFullscreenShell()` маршрутизирует в fullscreen только talents/hangar/tank-wall; fullscreen talents path держит outer shell и mounts в `overflow:hidden`, оставляя реальный scroll-containment за `#supercomputerTalentsView` и `.talentTreeBody`, тогда как production storage переиспользует тот же help API, но на responsive path остаётся centered bounded panel через `expanded/mobile-fit` token families в `style.css`, а не fullscreen-stretch shell.
-- **Per-zombie atlas + scale contract**: `assets/zombies.json` теперь документируется не только как shared `atlas` + `atlasesById` map на `assets/zombie_lvl{1..60}_atlas.png`, но и как источник `deathCommon[].scale` и `types[].shadowScale`; `ZombieSprites.load()` нормализует эти поля, а `src/render/zombieRender.js` складывает death-variant scale с `type.scale` и применяет `shadowScale` к sprite/fallback shadow paths.
-- **Sub-1200 terminal downsizing**: root `--ui-terminal-width` / `--ui-terminal-expand-size` в `style.css` остаются source-of-truth для top-right terminal shell, а media override `< 1200px` отдельно ужимает ширину, panel padding, header chrome, stage-ability spacing и HUD button sizing без локального разрыва с master `--ui-scale` contract.
+## Фокус документации на 2026-03-31
+- **Bullet atlas overflow fix + drawProjectiles defensive clamp**: `assets/bullet.json` frame h `36→34`; `drawProjectiles()` в `game.js` clampит source rect к atlas bounds и fallbackится на circle при полном overflow.
+- **Chip-count aura overhaul**: старые `normalizeAuraChipCount()`/`getInstalledChipCountForTank()` удалены; новый `getInstalledChipCountForCell(cellIndex)` считает занятые red/yellow слоты, `resolveTankAuraVisual()` выбирает `aura1/2/3` по count; `assets/tanks.json` несёт `aura1/aura2/aura3` вместо старого `aura`; `TankSprites.load()` нормализует все 3 варианта, `pickAura(level, variant)` выбирает по variant.
+- **Zombie unstick mechanism**: per-zombie `_unstickTimer` / `_unstickCheckR` в `stepZombies()`: 4s таймер, 2px radial threshold, scalar nudge к fence при застревании.
+- **Hangar modal responsive**: `@media (max-width:1279px)` в `style.css` включает proportional scaling block с `--modsHangarSlotWidth/Height/LeftColWidth/DropMinHeight` и column layout для hangar modal below 1280px.
+- **Touch chip drag fix**: `src/ui/hangarChipsUI.js` `init()` добавляет `setPointerCapture` + cancelable `preventDefault` на `pointermove` + явный `pointercancel` handler для корректного touch drag на mobile.
+
+### Предыдущий фокус (2026-03-30)
+- **Responsive terminal + storage confirm shell**: root `--ui-terminal-width` / `--ui-terminal-expand-size` в `style.css` остаются source-of-truth для top-right terminal shell, `<1200px` override ужимает shell и снимает `min-width` с terminal buttons, а `#plConfirmOverlay` держит token-driven width через `--pl-storage-confirm-width-*` с переходом на `width:auto; max-width:100%` при `<=1250px` вместо fixed narrow clamp.
+- **Underground hangar header action lane**: `src/ui/undergroundHangarUI.js` теперь вешает help-кнопку в `.ughPanel__headerActions` / `.scModal__headerActions` и вставляет её перед `#undergroundHangarClose`, так что underground modal остаётся в том же `help -> close` header contract, что и SC-family overlays.
+- **Aura routing by installed chip count**: `game.js` считает количество реально установленных чипов в ячейке танка и активирует `aura1/aura2/aura3` по count `1..3`; `TankSprites.auraVariantLevels` в `src/render/spriteLoaders.js` остаётся только asset-lookup mapping на `tank_lvl10/20/30`, а не forced high-level visual gate.
+- **Projectile near-hit + touch-safe drag**: `src/mechanics/targeting.js` держит near-hit latch через `lastDistToTarget`, когда цель начала удаляться после почти достигнутого попадания, а canvas/storage/chip drags в `game.js`, `src/ui/productionLineUI.js` и `src/ui/hangarChipsUI.js` синхронизированы по touch `preventDefault`, pointer capture и порогу `6px` без обновления drag-state до threshold.
+- **Fence seam scaling below 1400px**: `src/render/fenceLayout.js` усиливает overlap угол→сторона через `resolveSeamOverlapPx()` при viewport `< 1400px`, чтобы на узких экранах не открывались визуальные щели; regression закреплён в `Test/pack7/fenceCornerSlots.test.js`.
 
 ### Предыдущий фокус (2026-03-28)
 - **Repo-local Copilot context-mode consumer baseline**: `.github/hooks/context-mode.json` и `.vscode/mcp.json` в TMZD зеркалят shared `.agents` consumer contract (`PreToolUse/PostToolUse/PreCompact/SessionStart` + `npx -y context-mode`), но не становятся владельцем Telegram broker bridge; для broker ownership читать `.agents/docs/CONTEXT_MODE_TELEGRAM_BASELINE.md`, а внутри TMZD считать эти два файла support-surface, не gameplay runtime.
@@ -65,7 +74,7 @@
 - `game.js`: `getHangarMasterThresholds()` читает achievement defs для config-driven hangar_master thresholds; `computeHangarMasterLevel()` использует их вместо hardcoded порогов; `applyBalScale()` не клампит на `1.35`, полное пропорциональное масштабирование; desktop cellW = `DESKTOP_CELL_BASE(42) * scale` вместо hardcoded `70`.
 - Underground hangar FSM: новый лупящий state `hover_idle` между `hover_start` и `hover_end`; `_isClosing` guard предотвращает double-anim при dismiss модалки; `draw()` применяет rounded rect clip перед sprite.
 - Tutorial runtime выбирает first available incomplete tutorial step и держит отдельный completion-gate для переходных UI-шагов; основной источник по ordering/activation/completion/pause — `docs/ai/SYSTEMS/tutorial-runtime.md`.
-- `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `12px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
+- `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `10px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в рабочий red `one_big_chip` уровня 1 с валидным `chipId`, отсортированным `sourceComboKey` и 3 уникальными base `modIds` (`1..9`).
 - `assets/zombies.json` держит явный числовой `Health` в каждом `types[]`; `ZombieSprites.load()` нормализует `Health/health` в `type.health`, а `makeZombie()` использует это значение раньше формулы из balance.
 - Achievements runtime: 12 семейств и 52 reward mappings в единой `REWARD_TABLE` внутри `src/mechanics/achievementRewards.js`; `early_capital` добавляет 5 current-balance tiers (`10K / 1M / 100M / 100B / 100T`) с reward ladder fragments/chips/damage/composite drones+upgradePoints; `stable_income` остаётся lifetime-income ladder, то есть `moneyEarned` и `currentBalance` теперь документированы как разные контракты прогресса.

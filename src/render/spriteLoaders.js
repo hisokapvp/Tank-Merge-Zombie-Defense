@@ -482,6 +482,12 @@
             if (!cannonCfg) throw new Error('tank_lvl' + lvl + ': invalid cannon.src/frame');
             var auraCfg = rawTank.aura ? normalizeSpriteBlock(rawTank.aura) : null;
             if (rawTank.aura && !auraCfg) throw new Error('tank_lvl' + lvl + ': invalid aura.src/frame');
+            var aura1Cfg = rawTank.aura1 ? normalizeSpriteBlock(rawTank.aura1) : null;
+            if (rawTank.aura1 && !aura1Cfg) throw new Error('tank_lvl' + lvl + ': invalid aura1.src/frame');
+            var aura2Cfg = rawTank.aura2 ? normalizeSpriteBlock(rawTank.aura2) : null;
+            if (rawTank.aura2 && !aura2Cfg) throw new Error('tank_lvl' + lvl + ': invalid aura2.src/frame');
+            var aura3Cfg = rawTank.aura3 ? normalizeSpriteBlock(rawTank.aura3) : null;
+            if (rawTank.aura3 && !aura3Cfg) throw new Error('tank_lvl' + lvl + ': invalid aura3.src/frame');
 
             var stats = rawTank.stats;
             var moveSpeed = Number(stats.moveSpeed);
@@ -500,6 +506,9 @@
               body: bodyCfg,
               cannon: cannonCfg,
               aura: auraCfg,
+              aura1: aura1Cfg,
+              aura2: aura2Cfg,
+              aura3: aura3Cfg,
               bulletId: typeof rawTank.bulletId === 'string' && rawTank.bulletId.length ? rawTank.bulletId : 'bullet_base',
               bulletLevel: Number.isFinite(rawTank.bulletLevel) ? Math.max(1, Math.floor(rawTank.bulletLevel)) : 1,
             };
@@ -508,6 +517,9 @@
             srcs.add('assets/' + bodyCfg.src);
             srcs.add('assets/' + cannonCfg.src);
             if (auraCfg && auraCfg.src) srcs.add('assets/' + auraCfg.src);
+            if (aura1Cfg && aura1Cfg.src) srcs.add('assets/' + aura1Cfg.src);
+            if (aura2Cfg && aura2Cfg.src) srcs.add('assets/' + aura2Cfg.src);
+            if (aura3Cfg && aura3Cfg.src) srcs.add('assets/' + aura3Cfg.src);
 
             maxLevel = Math.max(maxLevel, lvl);
             levelsFound++;
@@ -581,10 +593,11 @@
         if (!img) return null;
         return { img: img, cfg: cfg };
       },
-      pickAura: function (level) {
+      pickAura: function (level, variant) {
         var tankCfg = this.getTank(level);
-        if (!tankCfg || !tankCfg.aura) return null;
-        var cfg = tankCfg.aura;
+        if (!tankCfg) return null;
+        var key = typeof variant === 'number' && variant >= 1 && variant <= 3 ? 'aura' + variant : 'aura';
+        var cfg = tankCfg[key];
         if (!cfg || !cfg.src) return null;
         var full = 'assets/' + cfg.src;
         var img = this.cache.get(full);

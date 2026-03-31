@@ -64,6 +64,9 @@
     if (!_overlay) return null;
     const panel = _overlay.querySelector('.ughPanel');
     if (!panel) return null;
+    const headerActions = panel.querySelector('.ughPanel__headerActions') || panel.querySelector('.scModal__headerActions');
+    const actionLane = headerActions || panel;
+    const closeBtn = panel.querySelector('#undergroundHangarClose');
     if (!_helpBtn) {
       _helpBtn = document.createElement('button');
       _helpBtn.type = 'button';
@@ -75,12 +78,22 @@
         evt.stopPropagation();
         openHelpModal();
       });
-      panel.appendChild(_helpBtn);
+      if (closeBtn && closeBtn.parentNode === actionLane) {
+        actionLane.insertBefore(_helpBtn, closeBtn);
+      } else {
+        actionLane.appendChild(_helpBtn);
+      }
       if (global.Game && global.Game.ButtonBehavior && typeof global.Game.ButtonBehavior.decorateTree === 'function') {
         global.Game.ButtonBehavior.decorateTree(_helpBtn);
       }
-    } else if (_helpBtn.parentNode !== panel) {
-      panel.appendChild(_helpBtn);
+    } else if (_helpBtn.parentNode !== actionLane) {
+      if (closeBtn && closeBtn.parentNode === actionLane) {
+        actionLane.insertBefore(_helpBtn, closeBtn);
+      } else {
+        actionLane.appendChild(_helpBtn);
+      }
+    } else if (closeBtn && closeBtn.parentNode === actionLane && _helpBtn.nextSibling !== closeBtn) {
+      actionLane.insertBefore(_helpBtn, closeBtn);
     }
     syncHelpButtonCopy();
     return _helpBtn;

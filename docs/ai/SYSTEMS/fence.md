@@ -22,3 +22,8 @@
 	- проход внутрь периметра допускается только через активные проломы (сломанную геометрию fence).
 	- при разрушении одной side-секции каскадно ломаются ещё две смежные секции на той же стороне (`sideIndex-1` и `sideIndex+1`, если валидны).
 	- при разрушении corner-секции каскадно ломается по одной прилегающей side-секции с каждой стороны этого угла.
+
+## Corner / side seam geometry
+- `src/render/fenceLayout.js` владеет visual seam-contract между corner и side sprite slots: `resolveSeamOverlapPx()` возвращает базовый overlap `1px`, а при viewport `< 1400px` пропорционально добавляет перекрытие, чтобы на узких экранах не открывались gap'ы между углом и первой/последней side-секцией: [src/render/fenceLayout.js](../../../src/render/fenceLayout.js#L74-L86).
+- `buildSquareFenceSegments()` должен применять этот seam один раз на layout stage и сдвигать старт/конец side span, а не чинить gap поздними draw-time offset'ами. Если нужна правка cornerInset, проверять и standard no-gap path, и responsive overlap path: [src/render/fenceLayout.js](../../../src/render/fenceLayout.js#L90-L204).
+- Regression coverage: `FCS-2` подтверждает overlap при negative inset, а `FCS-3` закрепляет усиление overlap below `1400px` через сравнение `1400 / 1000 / 800` viewport widths: [Test/pack7/fenceCornerSlots.test.js](../../../Test/pack7/fenceCornerSlots.test.js#L104-L197).

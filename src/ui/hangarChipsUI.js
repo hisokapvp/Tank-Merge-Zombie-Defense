@@ -4107,6 +4107,10 @@
             ghostEl: ghost2,
             sourceEl: chipBtn
           };
+          /* Capture pointer so touch drag survives browser pan/scroll */
+          if (evt.pointerId !== undefined) {
+            try { overlay.setPointerCapture(evt.pointerId); } catch(e) { /* noop */ }
+          }
           return;
         }
 
@@ -4154,9 +4158,17 @@
           ghostEl: ghost,
           sourceEl: card
         };
+        /* Capture pointer so touch drag survives browser pan/scroll */
+        if (evt.pointerId !== undefined) {
+          try { overlay.setPointerCapture(evt.pointerId); } catch(e) { /* noop */ }
+        }
       });
 
       overlay.addEventListener('pointermove', function(evt) {
+        /* Prevent browser scroll/pan while dragging on touch devices */
+        if ((_slotDragging || _chipDragging) && evt.cancelable) {
+          evt.preventDefault();
+        }
         /* Handle slot-install drag */
         if (_slotDragging) {
           var sdx = evt.clientX - _slotDragging.startX;
@@ -4332,7 +4344,7 @@
         }
       });
 
-      overlay.addEventListener('pointerleave', function() {
+      function _cancelAllDrags() {
         if (_slotDragging) {
           if (_slotDragging.ghostEl && _slotDragging.ghostEl.parentNode) _slotDragging.ghostEl.parentNode.removeChild(_slotDragging.ghostEl);
           var allPolys3 = overlay.querySelectorAll('[data-slot-type]');
@@ -4354,6 +4366,16 @@
             allCards[i].classList.remove('chipUpgradeCard--dropTarget');
           }
           _chipDragging = null;
+        }
+      }
+
+      overlay.addEventListener('pointerleave', _cancelAllDrags);
+
+      /* Clean up on pointer cancel (touch drag interrupted by browser) */
+      overlay.addEventListener('pointercancel', function(evt) {
+        _cancelAllDrags();
+        if (evt.pointerId !== undefined) {
+          try { overlay.releasePointerCapture(evt.pointerId); } catch(e) { /* noop */ }
         }
       });
     }

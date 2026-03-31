@@ -1,6 +1,6 @@
 # hangarChipsUI.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-28.
+> Агент-ориентировано. Обновлён: 2026-03-30.
 > Файл большой (~4460 строк): используйте этот map перед чтением исходника.
 
 ## Что это
@@ -15,7 +15,7 @@
 - Хочешь править live-layout карточек `Открытие технологий` → [renderTechUnlockPanel()](../../src/ui/hangarChipsUI.js#L1100-L1190), [style.css](../../style.css#L5570-L5872).
 - Хочешь править rates, dust planner и итоговый summary ускорения технологий → [_getTechAccelRates()](../../src/ui/hangarChipsUI.js#L1074), [_getTechAccelSelectionState()](../../src/ui/hangarChipsUI.js#L2240), [_showTechAccelModal()](../../src/ui/hangarChipsUI.js#L2296), [_updateAccelPercentage()](../../src/ui/hangarChipsUI.js#L2386), [_applyTechAcceleration()](../../src/ui/hangarChipsUI.js#L2432).
 - Хочешь править split между assemble-panel и recycle-panel → [renderChipCraftPanel()](../../src/ui/hangarChipsUI.js#L2410-L2677), [_attachCraftPanelEvents()](../../src/ui/hangarChipsUI.js#L2679-L2789).
-- Хочешь править overlay wiring / tooltips / slot-drag → [init()](../../src/ui/hangarChipsUI.js#L3966-L4358).
+- Хочешь править overlay wiring / tooltips / touch-safe slot-drag / chip merge drag → [init()](../../src/ui/hangarChipsUI.js#L3966-L4395).
 
 ## Инварианты этого модуля ⚠️
 - Вкладки переключаются только через [switchHangarTab()](../../src/ui/hangarChipsUI.js#L845-L884), [switchWorkshopSubTab()](../../src/ui/hangarChipsUI.js#L886-L935) и [switchChipRecycleSubTab()](../../src/ui/hangarChipsUI.js#L937-L960): именно они синхронизируют `hidden`, `active`, `tabindex` и `aria-selected`.
@@ -34,6 +34,7 @@
 - Assemble preview всегда рендерит 3 ingredient-slots, отдельную колонку силовых линий и result-card; зелёная стрелка больше не используется. Пустые линии статичны, заполненные получают `chipCraftEnergyLine--filled`, а блок `chipCraftReagentRow` закреплён внизу drop-zone через `margin-top:auto`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2363-L2397), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2758-L2850), [style.css](../../style.css#L4814-L4879), [style.css](../../style.css#L5344-L5408).
 - Assemble craft перед шансом < 100% обязан показывать confirm modal, а после любого roll — result modal. При провале сжигается только один случайный выбранный фрагмент и reagent dust, если он был добавлен; остальные выбранные фрагменты остаются в инвентаре: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L1746-L1758), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2484-L2528), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3102-L3194), [style.css](../../style.css#L4310-L4379).
 - Авто-переключение craft-mode при клике/drag из инвентаря живёт только в `_addItemToSlot()`; reprogram-flow — единственное исключение, где fragment-click не должен переключать панель обратно в assemble, а должен только заполнить `_reprogramSourceFragmentId`: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2680-L2694).
+- `init()` — canonical owner touch-safe drag contract для мастерской: slot-install и chip-merge drags держат pointer capture на overlay, вызывают `_preventTouchDragDefault()` только для cancelable touch events и не считают drag начатым до порога `6px`; `pointercancel` handler явно очищает drag state и release pointer capture для корректного touch cleanup; до порога нельзя обновлять ghost/drop-target state, иначе tap по inventory превращается в ложный move на mobile: [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L4065-L4395).
 
 ## Оглавление файла
 
@@ -83,7 +84,7 @@
 ### Блок: init / drag-drop / persistence API
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) | Главная инициализация overlay, hover-tooltips, slot-drag, chip merge drag |
+| `init()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4395) | Главная инициализация overlay, hover-tooltips, touch-safe slot-drag и chip merge drag с pointer capture / 6px threshold / pointercancel cleanup |
 | `getCells()`, `setCells()`, `show()` | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3316-L3339) | Persisted hangar cells + safe-open overlay |
 | Debug/public API export | [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3341-L3441) | Экспорт в `Game.HangarChipsUI` |
 
@@ -92,7 +93,7 @@
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2296-L2432) — tech accel modal, dust planner, total-summary и apply flow.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2227-L2878) — chip-name pipeline, craft cards, силовые линии assemble-stage и result/confirm modal helpers.
 - [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L2880-L3194) — nested recycle-tab events, reagent footer, craft confirm/result flow и loss-policy.
-- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L3966-L4358) — overlay-level drag-drop/tooltips.
+- [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L4065-L4395) — overlay-level drag-drop/tooltips, touch `preventDefault`, pointer capture, `pointercancel` cleanup и threshold-gated ghost/target updates.
 - [style.css](../../style.css#L3749-L3756) — nested recycle subtabs.
 - [style.css](../../style.css#L4302-L4379) — tech modal shell + craft confirm/result modal skin.
 - [style.css](../../style.css#L4754-L4879) — assemble-stage, energy lines и ingredient/result spacing.

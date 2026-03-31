@@ -10,7 +10,7 @@
           "projectileKind": "ap",
           "bulletSprite": {
             "src": "bullet_atlas.png",
-            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 34 },
             "frames": 10,
             "frameRateFps": 20,
             "anchor": { "x": 0.5, "y": 0.5 },
@@ -31,7 +31,7 @@
           "projectileKind": "he",
           "bulletSprite": {
             "src": "bullet_atlas.png",
-            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 34 },
             "frames": 10,
             "frameRateFps": 20,
             "anchor": { "x": 0.5, "y": 0.5 },
@@ -52,7 +52,7 @@
           "projectileKind": "tesla",
           "bulletSprite": {
             "src": "bullet_atlas.png",
-            "frame": { "x": 0, "y": 82, "w": 129, "h": 36 },
+            "frame": { "x": 0, "y": 82, "w": 129, "h": 34 },
             "frames": 10,
             "frameRateFps": 20,
             "anchor": { "x": 0.5, "y": 0.5 },

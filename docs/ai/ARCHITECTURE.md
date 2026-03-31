@@ -1,6 +1,6 @@
 ﻿# Архитектура (кратко)
 
-> Обновлено: 2026-03-27.
+> Обновлено: 2026-03-30.
 > Главная навигация: `docs/ai/PROJECT_MAP.md` → нужный `SYSTEMS/*.md` → `*_MAP.md` для больших файлов.
 
 ## Документационные entrypoints
@@ -45,5 +45,5 @@
 - В `src/*` использовать IIFE + `'use strict'` + `global.Game.*`
 - Новая логика не должна раздувать `game.js`; монолит сохраняет bootstrap/fallback wiring
 - Горячий путь (`loop` / `draw` / `step*`) — без лишних аллокаций; `draw()` только рисует
-- Master UI scale контракт общий для hybrid seam: `resizeCanvas()` в `game.js` вычисляет `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` синхронизирует DOM shells, HUD, tutorial, canvas previews и Phaser overlay adapters. Close/help controls сохраняют минимум `44×44`, font floor остаётся `12px`, drag threshold остаётся `6px`.
+- Master UI scale контракт общий для hybrid seam: `resizeCanvas()` в `game.js` вычисляет `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` синхронизирует DOM shells, HUD, tutorial, canvas previews и Phaser overlay adapters. Root CSS token block держит shared narrow-shell widths для `level/sc/storage/talent`, единые header offsets с 50px top clearance и terminal collapse-gap path; `<1200px` override только ужимает terminal shell, снимает button `min-width` и форсирует 10px font contract без отдельного scale-path. Close/help controls сохраняют минимум `44×44`, font floor остаётся `10px`, drag threshold остаётся `6px`: [game.js](../../game.js#L2374-L2430), [style.css](../../style.css#L21-L30), [style.css](../../style.css#L73-L82), [style.css](../../style.css#L8166-L8318), [src/ui/fontFloor.js](../../src/ui/fontFloor.js#L23-L133).
 - JSON-конфиги с runtime-логикой (`assets/supercomputer.json`, `assets/chips.json`, `assets/tanks.json`, `assets/zombies.json`) считаются частью кода и проходят через loader/runtime normalizers

@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var MIN_FONT_PX = 12;
+  var MIN_FONT_PX = 10;
   var SKIP_SELECTOR = [
     '.levelModal__close',
     '.crateModal__close',

@@ -141,6 +141,65 @@ test('FCS-2: negative cornerInsetPx creates overlap and updates corner AABB posi
   assert(cornerTL.holeAabb.maxX > topFirst.holeAabb.minX, 'negative inset creates overlap with top side');
 });
 
+test('FCS-3: narrow viewport increases corner-side overlap proportionally below 1400px', () => {
+  const buildSquareFenceSegments = sandbox.window.Game
+    && sandbox.window.Game.FenceLayout
+    && sandbox.window.Game.FenceLayout.buildSquareFenceSegments;
+  assert(typeof buildSquareFenceSegments === 'function', 'buildSquareFenceSegments function found');
+
+  const spriteKeys = {
+    cornerTL: 'cornerTL',
+    cornerTR: 'cornerTR',
+    cornerBR: 'cornerBR',
+    cornerBL: 'cornerBL',
+    sideTop: 'sideTop',
+    sideRight: 'sideRight',
+    sideBottom: 'sideBottom',
+    sideLeft: 'sideLeft',
+  };
+
+  function getFrame() {
+    return { w: 128, h: 128, scale: 2, rotation: 0, anchor: { x: 0.5, y: 0.5 } };
+  }
+
+  const wideSegments = buildSquareFenceSegments({
+    halfSide: 100,
+    fenceWidth: 20,
+    spriteKeys,
+    viewportWidth: 1400,
+    getFrame,
+  });
+  const narrowSegments = buildSquareFenceSegments({
+    halfSide: 100,
+    fenceWidth: 20,
+    spriteKeys,
+    viewportWidth: 1000,
+    getFrame,
+  });
+  const veryNarrowSegments = buildSquareFenceSegments({
+    halfSide: 100,
+    fenceWidth: 20,
+    spriteKeys,
+    viewportWidth: 800,
+    getFrame,
+  });
+
+  function getTopBounds(segments) {
+    return segments
+      .filter(seg => seg.kind === 'sideTop')
+      .sort((a, b) => a.x - b.x);
+  }
+
+  const wideTop = getTopBounds(wideSegments);
+  const narrowTop = getTopBounds(narrowSegments);
+  const veryNarrowTop = getTopBounds(veryNarrowSegments);
+
+  assert(narrowTop[0].x < wideTop[0].x, 'narrow viewport moves first top segment toward left corner');
+  assert(narrowTop[narrowTop.length - 1].x > wideTop[wideTop.length - 1].x, 'narrow viewport moves last top segment toward right corner');
+  assert(veryNarrowTop[0].x < narrowTop[0].x, 'stronger narrowing increases left-side overlap');
+  assert(veryNarrowTop[veryNarrowTop.length - 1].x > narrowTop[narrowTop.length - 1].x, 'stronger narrowing increases right-side overlap');
+});
+
 console.log('\n═══════════════════════════');
 console.log('FenceCornerSlots: ' + passCount + ' passed, ' + failCount + ' failed');
 if (failures.length) {

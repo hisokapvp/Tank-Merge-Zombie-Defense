@@ -18,8 +18,7 @@
   let _dragPreviewEl = null;
   let _suppressClicksUntil = 0;
   const DRAG_THRESHOLD_PX = 6;
-  const EXPANDED_BREAKPOINT_PX = 1280;
-  const MOBILE_FIT_BREAKPOINT_PX = 1000;
+  const NARROW_SHELL_BREAKPOINT_PX = 1280;
 
   // ─── Init (call once after DOM ready) ──────────────────────
   function init(options) {
@@ -101,22 +100,18 @@
       coarsePointer = false;
     }
 
-    if (viewportWidth > 0 && viewportWidth < MOBILE_FIT_BREAKPOINT_PX) return 'mobile-fit';
-    if (coarsePointer || (viewportWidth > 0 && viewportWidth < EXPANDED_BREAKPOINT_PX)) return 'expanded';
+    if (coarsePointer || (viewportWidth > 0 && viewportWidth < NARROW_SHELL_BREAKPOINT_PX)) return 'expanded';
     return 'default';
   }
 
   function _syncResponsiveShellState() {
     const mode = _getResponsiveShellMode();
     const expanded = mode === 'expanded';
-    const mobileFit = mode === 'mobile-fit';
     if (_modalEl) {
       _modalEl.classList.toggle('plStorage--expanded', expanded);
-      _modalEl.classList.toggle('plStorage--mobileFit', mobileFit);
     }
     if (_panelEl) {
       _panelEl.classList.toggle('plStorage__panel--expanded', expanded);
-      _panelEl.classList.toggle('plStorage__panel--mobileFit', mobileFit);
     }
   }
 
@@ -193,6 +188,35 @@
     _dragPreviewEl = null;
   }
 
+  function _preventTouchPointerDefault(evt) {
+    if (!evt || evt.pointerType !== 'touch' || evt.cancelable !== true) return;
+    evt.preventDefault();
+  }
+
+  function _setDragPointerCapture(dragState) {
+    if (!dragState || dragState.pointerId == null) return;
+    const captureEl = dragState.captureEl;
+    if (!captureEl || typeof captureEl.setPointerCapture !== 'function') return;
+    try {
+      dragState.captureActive = true;
+      captureEl.setPointerCapture(dragState.pointerId);
+    } catch (_err) {
+      dragState.captureActive = false;
+    }
+  }
+
+  function _releaseDragPointerCapture(dragState) {
+    if (!dragState || dragState.pointerId == null || !dragState.captureActive) return;
+    const captureEl = dragState.captureEl;
+    if (!captureEl || typeof captureEl.releasePointerCapture !== 'function') return;
+    try {
+      if (typeof captureEl.hasPointerCapture !== 'function' || captureEl.hasPointerCapture(dragState.pointerId)) {
+        captureEl.releasePointerCapture(dragState.pointerId);
+      }
+    } catch (_err) {}
+    dragState.captureActive = false;
+  }
+
   function _ensureDragPreview() {
     if (_dragPreviewEl || !_dragState || !_dragState.sourceEl || !document.body) return;
     const previewEl = _dragState.sourceEl.cloneNode(true);
@@ -216,11 +240,13 @@
   }
 
   function _teardownDrag() {
+    const dragState = _dragState;
     _clearDragAffordances();
     _removeDragPreview();
     document.removeEventListener('pointermove', _handlePointerMove);
     document.removeEventListener('pointerup', _handlePointerUp);
     document.removeEventListener('pointercancel', _handlePointerCancel);
+    _releaseDragPointerCapture(dragState);
     _dragState = null;
   }
 
@@ -247,7 +273,9 @@
   function _startDrag(evt, boxIndex) {
     if (!_stateRef || !_stateRef.productionLine) return;
     if (evt.button != null && evt.button !== 0) return;
+    _preventTouchPointerDefault(evt);
     _teardownDrag();
+    const captureEl = evt.currentTarget || _panelEl || _modalEl || null;
     _dragState = {
       pointerId: evt.pointerId,
       sourceIndex: boxIndex,
@@ -255,15 +283,19 @@
       startY: evt.clientY,
       moved: false,
       sourceEl: evt.currentTarget,
+      captureEl: captureEl,
+      captureActive: false,
       targetIndex: -1,
     };
     document.addEventListener('pointermove', _handlePointerMove);
     document.addEventListener('pointerup', _handlePointerUp);
     document.addEventListener('pointercancel', _handlePointerCancel);
+    _setDragPointerCapture(_dragState);
   }
 
   function _handlePointerMove(evt) {
     if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    _preventTouchPointerDefault(evt);
     const dx = evt.clientX - _dragState.startX;
     const dy = evt.clientY - _dragState.startY;
     if (!_dragState.moved && (dx * dx + dy * dy) < (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) return;
@@ -274,6 +306,7 @@
 
   function _handlePointerUp(evt) {
     if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    _preventTouchPointerDefault(evt);
     const dragState = _dragState;
     if (dragState.moved) {
       _suppressClicksUntil = Date.now() + 180;
@@ -293,6 +326,7 @@
 
   function _handlePointerCancel(evt) {
     if (!_dragState || evt.pointerId !== _dragState.pointerId) return;
+    _preventTouchPointerDefault(evt);
     _teardownDrag();
   }
 

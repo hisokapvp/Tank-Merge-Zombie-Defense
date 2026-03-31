@@ -410,6 +410,7 @@
       rootBackdropCloseNeedsFreshPointerDown: false,
       rootBackdropPointerDownSinceOpen: false,
     };
+    var NARROW_SHELL_BREAKPOINT_PX = 1280;
 
     function isCoarsePointerViewport() {
       try {
@@ -421,7 +422,7 @@
 
     function shouldUseFullscreenShell() {
       var viewportWidth = Number(global.innerWidth) || 0;
-      return isCoarsePointerViewport() || (viewportWidth > 0 && viewportWidth < 1280);
+      return isCoarsePointerViewport() || (viewportWidth > 0 && viewportWidth < NARROW_SHELL_BREAKPOINT_PX);
     }
 
     function getEmbeddedTalentPanel() {

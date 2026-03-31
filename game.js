@@ -7817,6 +7817,23 @@ function stepZombies(dt){
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
 
+    // ── Unstick: nudge zombie toward target if it hasn't made radial progress ──
+    if (z.state !== 'dying' && !z.breached) {
+      if (!Number.isFinite(z._unstickTimer)) { z._unstickTimer = 0; z._unstickCheckR = z.r; }
+      z._unstickTimer += dt;
+      if (z._unstickTimer >= 4) {
+        const radialGain = z._unstickCheckR - z.r; // positive means got closer to center
+        if (radialGain < 2) {
+          // Zombie hasn't moved ≥2px closer in 4 sec — nudge toward fence
+          const fenceR = zombieFenceLimit(z);
+          const nudge = Math.min(8, Math.max(1, (z.r - fenceR) * 0.15));
+          z.r = Math.max(fenceR, z.r - nudge);
+        }
+        z._unstickTimer = 0;
+        z._unstickCheckR = z.r;
+      }
+    }
+
     const targetNow = shouldAttackTargets ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
@@ -13127,7 +13144,7 @@ function drawOrbitingTanks(){
     const statusY = pos.y + (trackRenderState ? trackRenderState.offsetY : 0);
     c.tank._statusWorldX = statusX;
     c.tank._statusWorldY = statusY;
-    drawTank(pos.x, pos.y, c.tank, false, pos.heading, false, false, trackRenderState);
+    drawTank(pos.x, pos.y, c.tank, false, pos.heading, false, false, trackRenderState, c.i);
   }
 }
 
@@ -13244,6 +13261,36 @@ function drawTankIconTo(targetCtx, x, y, level, mutedSlot=false, scaleMul=1, opt
     targetCtx.fillText(`${t('levelShort')}${level}`, fixedLabelX != null ? fixedLabelX : x, fixedLabelY != null ? fixedLabelY : (y + 10 * fallbackScale));
     targetCtx.restore();
   }
+}
+
+// Chip-count-based aura: 0 chips = none, 1 = aura1, 2 = aura2, 3 = aura3
+function getInstalledChipCountForCell(cellIndex) {
+  var HUI = window.Game && window.Game.HangarChipsUI;
+  if (!HUI || typeof HUI.getCells !== 'function') return 0;
+  var cells = HUI.getCells();
+  if (!cells || !cells[cellIndex]) return 0;
+  var cell = cells[cellIndex];
+  var count = 0;
+  if (cell.redSlots) {
+    if (cell.redSlots.slot1) count++;
+    if (cell.redSlots.slot2) count++;
+  }
+  if (cell.yellowSlots) {
+    if (cell.yellowSlots.slot1) count++;
+    if (cell.yellowSlots.slot2) count++;
+    if (cell.yellowSlots.slot3) count++;
+    if (cell.yellowSlots.slot4) count++;
+  }
+  return count;
+}
+
+function resolveTankAuraVisual(cellIndex, level) {
+  if (cellIndex == null || cellIndex < 0) return null;
+  var chipCount = getInstalledChipCountForCell(cellIndex);
+  if (chipCount <= 0) return null;
+  var variant = chipCount > 3 ? 3 : chipCount;
+  var auraSprite = TankSprites && TankSprites.pickAura ? TankSprites.pickAura(level, variant) : null;
+  return auraSprite;
 }
 
 // Aura: per-level auraVariant. If string — спрайт из auras; если number 1–6 — процедурная полоса; если null/false — нет ауры.
@@ -13366,7 +13413,7 @@ function drawTankAuraSprite(x, y, aura){
   ctx.restore();
 }
 
-function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPreview=false,renderOptions=null){
+function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPreview=false,renderOptions=null,cellIndex=null){
   const level = typeof tank === 'number' ? tank : tank?.level ?? 1;
   const renderState = renderOptions && typeof renderOptions === 'object' ? renderOptions : null;
   const renderOffsetX = renderState && Number.isFinite(renderState.offsetX) ? renderState.offsetX : 0;
@@ -13376,7 +13423,7 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   const drawX = x + renderOffsetX;
   const drawY = y + renderOffsetY;
   if (!isDragPreview){
-    const auraSprite = TankSprites?.pickAura?.(level);
+    const auraSprite = resolveTankAuraVisual(cellIndex, level);
     if (auraSprite) {
       drawTankAuraSprite(drawX, drawY, auraSprite);
     } else {
@@ -13599,10 +13646,22 @@ function drawProjectiles(){
       const frames = Math.max(1, Number.isFinite(bulletSprite.frames) ? Math.floor(bulletSprite.frames) : 1);
       const fps = Math.max(0.01, Number(bulletSprite.frameRateFps || bulletSprite.animSpeed || 12));
       const frameIndex = Math.floor((b.animTime || 0) * fps) % frames;
-      const sx = (bulletSprite.frame && Number.isFinite(bulletSprite.frame.x) ? bulletSprite.frame.x : 0) + frameIndex * bulletSprite.frame.w;
-      const sy = bulletSprite.frame && Number.isFinite(bulletSprite.frame.y) ? bulletSprite.frame.y : 0;
-      const sw = bulletSprite.frame.w;
-      const sh = bulletSprite.frame.h;
+      let sx = (bulletSprite.frame && Number.isFinite(bulletSprite.frame.x) ? bulletSprite.frame.x : 0) + frameIndex * bulletSprite.frame.w;
+      let sy = bulletSprite.frame && Number.isFinite(bulletSprite.frame.y) ? bulletSprite.frame.y : 0;
+      let sw = bulletSprite.frame.w;
+      let sh = bulletSprite.frame.h;
+      // Clamp source rect to atlas bounds to avoid silent drawImage failures
+      const imgW = bulletAtlasImg.naturalWidth || bulletAtlasImg.width || 0;
+      const imgH = bulletAtlasImg.naturalHeight || bulletAtlasImg.height || 0;
+      if (imgW > 0 && sx + sw > imgW) sw = Math.max(0, imgW - sx);
+      if (imgH > 0 && sy + sh > imgH) sh = Math.max(0, imgH - sy);
+      if (sw <= 0 || sh <= 0) { // frame completely outside atlas — fallback to circle
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+        continue;
+      }
       const anchor = bulletSprite.anchor || { x: 0.5, y: 0.5 };
       const baseScale = Number.isFinite(bulletSprite.scale) ? Math.max(0.05, bulletSprite.scale) : 1;
       const scale = baseScale * (b.effectIntensity ?? 1);

@@ -19,9 +19,8 @@
       return z.deathAnim === ZombieSprites.deathCommon;
     }
 
-    function resolveZombieAtlasImage(ZombieSprites, z) {
+    function resolveZombieAtlasImage(ZombieSprites, z, preferSharedAtlas) {
       if (!ZombieSprites) return null;
-      var preferSharedAtlas = isCommonDeathAnimation(z, ZombieSprites);
       if (typeof ZombieSprites.getAtlasImage === 'function') {
         return ZombieSprites.getAtlasImage(z && z.type, preferSharedAtlas) || ZombieSprites.atlasImg || null;
       }
@@ -45,14 +44,17 @@
       return deps.clamp(timeToRemove / fadeSec, 0, 1);
     }
 
-    function getZombieDeathScale(z) {
+    function getZombieDeathScale(z, usesCommonDeathAtlas) {
       var deathAnimScale = Number.isFinite(z && z.deathAnim && z.deathAnim.scale)
         ? z.deathAnim.scale
         : 1;
       var typeScale = Number.isFinite(z && z.type && z.type.scale)
         ? z.type.scale
         : 1;
-      return typeScale * deathAnimScale;
+      var commonDeathScale = Number.isFinite(z && z.type && z.type.commonDeathScale)
+        ? z.type.commonDeathScale
+        : 1;
+      return (usesCommonDeathAtlas ? commonDeathScale : typeScale) * deathAnimScale;
     }
 
     function getZombieShadowScale(z) {
@@ -63,17 +65,20 @@
 
     function drawZombieEntity(z, x, y) {
       var ZombieSprites = deps.getZombieSprites();
+      var usesCommonDeathAtlas = ZombieSprites.ready && z.type
+        ? isCommonDeathAnimation(z, ZombieSprites)
+        : false;
       var zombieAtlasImg = ZombieSprites.ready && z.type
-        ? resolveZombieAtlasImage(ZombieSprites, z)
+        ? resolveZombieAtlasImage(ZombieSprites, z, usesCommonDeathAtlas)
         : null;
       if (zombieAtlasImg) {
-        drawZombieSprite(x, y, z, zombieAtlasImg);
+        drawZombieSprite(x, y, z, zombieAtlasImg, usesCommonDeathAtlas);
       } else {
         drawZombieFallback(x, y, z);
       }
     }
 
-    function drawZombieSprite(x, y, z, img) {
+    function drawZombieSprite(x, y, z, img, usesCommonDeathAtlas) {
       var ctx = deps.getCtx();
       var ZombieSprites = deps.getZombieSprites();
       var BAL = deps.getBalance();
@@ -120,7 +125,7 @@
         fh = f.h;
       }
 
-      var scale = getZombieDeathScale(z) * BAL.zombieScaleMul * deps.zombieLevelScale(z);
+      var scale = getZombieDeathScale(z, usesCommonDeathAtlas) * BAL.zombieScaleMul * deps.zombieLevelScale(z);
       var shadowScale = getZombieShadowScale(z);
       var baseW = hasDeathAnim ? z.deathAnim.w : (hasAttackAnim ? t.attack.w : f.w);
       var baseH = hasDeathAnim ? z.deathAnim.h : (hasAttackAnim ? t.attack.h : f.h);

@@ -1,5 +1,24 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-03-31
+- **Документация: shared post-merge update для bullet atlas overflow fix, chip-count aura overhaul, zombie unstick, responsive hangar scaling и touch chip drag capture (`assets/bullet.json`, `game.js`, `assets/tanks.json`, `src/render/spriteLoaders.js`, `style.css`, `src/ui/hangarChipsUI.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/combat.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `assets/bullet.json` frame h `36→34` (atlas overflow fix); `drawProjectiles()` в `game.js` теперь clampит source rect к atlas bounds, fallback на круг при полном выходе за пределы.
+  - Зафиксированы: старые `normalizeAuraChipCount()` / `getInstalledChipCountForTank()` заменены на `getInstalledChipCountForCell(cellIndex)` + обновлён `resolveTankAuraVisual(cellIndex, level)`, который теперь посимвольно считает installed chip slots в ячейке.
+  - Зафиксированы: `assets/tanks.json` — все 60 `tank_lvlN` теперь несут `aura1/aura2/aura3` вместо старого `aura` (Green_Aura); `TankSprites.load()` нормализует все три варианта, а `pickAura(level, variant)` выбирает aura по variant `1..3`.
+  - Зафиксированы: zombie unstick в `stepZombies()` — per-zombie 4s timer, 2px radial threshold, scalar nudge к fence при застревании.
+  - Зафиксированы: `@media (max-width: 1279px)` в `style.css` теперь включает responsive hangar scaling block с var-driven `--modsHangarSlotWidth/Height` и column layout.
+  - Зафиксированы: `src/ui/hangarChipsUI.js` `init()` теперь использует `setPointerCapture` + cancelable `preventDefault` на `pointermove` + явный `pointercancel` handler для touch drag fix.
+
+## 2026-03-30
+- **Документация: shared post-merge update после join для terminal shell, underground hangar header actions, responsive fence seam, chip-count aura, projectile near-hit и touch-safe drag (`style.css`, `index.html`, `src/ui/undergroundHangarUI.js`, `src/render/fenceLayout.js`, `Test/pack7/fenceCornerSlots.test.js`, `game.js`, `src/mechanics/targeting.js`, `src/render/spriteLoaders.js`, `Test/pack6/projectileAimFallback.test.js`, `src/ui/productionLineUI.js`, `src/ui/hangarChipsUI.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/SYSTEMS/combat.md`, `docs/ai/SYSTEMS/input.md`, `docs/ai/SYSTEMS/fence.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: top-right terminal остаётся token-driven через `--ui-terminal-width` / `--ui-terminal-expand-size`, `<1200px` override ужимает shell и снимает `min-width` с terminal buttons, а `plStorage__confirmBox` документирован с token-driven width и fallback `width:auto; max-width:100%` при `<=1250px`.
+  - Зафиксированы: `ensureHelpButton()` в `src/ui/undergroundHangarUI.js` документирован как canonical owner underground header-action alignment; help CTA вставляется в `.ughPanel__headerActions` / `.scModal__headerActions` непосредственно перед close и тем самым сохраняет shared SC-family порядок `help -> close`.
+  - Зафиксированы: tank aura больше не описывается как high-level-only visual. Runtime считает installed chip count, активирует `aura1/aura2/aura3` по `1..3`, а `TankSprites.auraVariantLevels` оставлен как asset lookup `10/20/30`; `computeAuraBand()` теперь явно задокументирован как fallback-path.
+  - Зафиксированы: `src/mechanics/targeting.js` держит near-hit latch через `lastDistToTarget`, а `Test/pack6/projectileAimFallback.test.js` закрепляет позитивный и негативный сценарии fallback impact.
+  - Зафиксированы: canvas/storage/workshop drag paths синхронизированы по touch `preventDefault`, pointer capture и порогу `6px` без обновления drag-state до threshold, а `src/render/fenceLayout.js` ниже `1400px` усиливает corner-side overlap для устранения узкоэкранных gap'ов; `Test/pack7/fenceCornerSlots.test.js` закрепляет responsive seam scaling.
+
 ## 2026-03-29
 - **Документация: shared post-merge update после join для SC-family scroll containment, bounded Production Storage responsive shell, terminal downsizing и zombie death/shadow scale contract (`src/ui/supercomputerMenu.js`, `src/ui/productionLineUI.js`, `style.css`, `index.html`, `assets/zombies.json`, `src/render/spriteLoaders.js`, `src/render/zombieRender.js`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/render.md`, `docs/ai/CHANGELOG.md`.

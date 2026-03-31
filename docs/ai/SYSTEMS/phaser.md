@@ -1,6 +1,6 @@
 # Система: Phaser 3 runtime и hybrid seam
 
-> Обновлено: 2026-03-27.
+> Обновлено: 2026-03-30.
 > Master spec: `docs/migration/PHASER_MIGRATION.md`. Risk register: `docs/migration/RISK_REGISTER.md`.
 
 ## Статус
@@ -47,7 +47,7 @@
 - `resizeCanvas()` в `game.js` вычисляет master `--ui-scale` по формуле `max(0.4, min(displayW / 1920, displayH / 1080))`, пишет token в `:root` и сразу вызывает `syncHybridUiScale()`; это единственный source-of-truth для DOM shells, HUD, tutorial и Phaser overlays: [game.js](../../../game.js#L2374-L2430).
 - `Game.HudAdapter.refreshUiScale()` и `Game.ModalAdapter.refreshUiScale()` не считают scale локально, а читают его через `Game.getUiScale()`/переданный token и проталкивают дальше в HUD elements и modal overlay path: [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L46-L63), [src/phaser/hudAdapter.js](../../../src/phaser/hudAdapter.js#L251-L284), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L51-L55), [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js#L272-L306).
 - `Game.SceneOverlayManager` хранит `uiScale` per overlay, а scene side применяет scale через `setUiScale()` или event `ui-scale-changed`; scene modules не должны вводить второй независимый scale contract: [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L38-L64), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L107-L140), [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js#L228-L285).
-- UI scale seam обязан сохранять общие TMZD invariants: close/help controls остаются минимум `44×44`, font floor остаётся `12px`, pointer drag threshold — `6px`, а render z-order не меняется от того, что Phaser overlay получил новый scale: [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L22-L133), [src/phaser/inputAdapter.js](../../../src/phaser/inputAdapter.js), [game.js](../../../game.js#L11127-L11200).
+- UI scale seam обязан сохранять общие TMZD invariants: DOM shells продолжают брать narrow-width caps, shared header offsets и terminal collapse-gap из root token block, а `<1200px` terminal override остаётся частью того же master-scale path и не заводит второй layout contract для Phaser overlays. Close/help controls остаются минимум `44×44`, font floor остаётся `10px`, pointer drag threshold — `6px`, а render z-order не меняется от того, что Phaser overlay получил новый scale: [style.css](../../../style.css#L21-L30), [style.css](../../../style.css#L73-L82), [style.css](../../../style.css#L8166-L8318), [src/ui/fontFloor.js](../../../src/ui/fontFloor.js#L23-L133), [src/phaser/inputAdapter.js](../../../src/phaser/inputAdapter.js), [game.js](../../../game.js#L11127-L11200).
 
 ### Audio
 - `Game.AudioAdapter` — pool-based Phaser Web Audio bridge: [src/phaser/audioAdapter.js](../../../src/phaser/audioAdapter.js)

@@ -3,6 +3,7 @@
 
   var FENCE_DRAW_SCALE_MULT = 1.2;
   var FENCE_SEAM_OVERLAP_PX = 1;
+  var FENCE_RESPONSIVE_SEAM_BREAKPOINT_PX = 1400;
 
   function frameScale(frame) {
     return Number.isFinite(frame && frame.scale) ? frame.scale : 1;
@@ -75,6 +76,23 @@
 
   function positiveGap(a, b) {
     return Math.max(0, b - a);
+  }
+
+  function resolveViewportWidth(opts) {
+    var fromOptions = Number(opts && opts.viewportWidth);
+    if (Number.isFinite(fromOptions) && fromOptions > 0) return fromOptions;
+    var fromGlobal = Number(global && global.innerWidth);
+    if (Number.isFinite(fromGlobal) && fromGlobal > 0) return fromGlobal;
+    return 0;
+  }
+
+  function resolveSeamOverlapPx(viewportWidth, fenceWidth) {
+    if (!(viewportWidth > 0) || viewportWidth >= FENCE_RESPONSIVE_SEAM_BREAKPOINT_PX) {
+      return FENCE_SEAM_OVERLAP_PX;
+    }
+    var responsiveRatio = Math.min(1, Math.max(0, (FENCE_RESPONSIVE_SEAM_BREAKPOINT_PX - viewportWidth) / 600));
+    var maxExtraOverlap = Math.max(2, Math.min(4, (Number(fenceWidth) || 0) * 0.16));
+    return FENCE_SEAM_OVERLAP_PX + responsiveRatio * maxExtraOverlap;
   }
 
   function buildSquareFenceSegments(options) {
@@ -199,7 +217,7 @@
       cornerBL: frameWorldMetrics(cornerBLFrame, fenceWidth),
     };
 
-    var seamOverlap = FENCE_SEAM_OVERLAP_PX;
+    var seamOverlap = resolveSeamOverlapPx(resolveViewportWidth(opts), fenceWidth);
     var topStartEdge = cornerFinal.cornerTL.x + cornerMetrics.cornerTL.right - seamOverlap;
     var topEndEdge = cornerFinal.cornerTR.x - cornerMetrics.cornerTR.left + seamOverlap;
     var rightStartEdge = cornerFinal.cornerTR.y + cornerMetrics.cornerTR.down - seamOverlap;

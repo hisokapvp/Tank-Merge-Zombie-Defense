@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-29.
+> Обновлено: 2026-03-31.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -33,6 +33,9 @@
 - Edge-case: при `corpseDespawnSec = 0` труп удаляется сразу после завершения death-анимации.
 - `types[].Health` — canonical поле явного HP для конкретного типа зомби; legacy `health` остаётся допустимым alias только на входе normalizer'а. `ZombieSprites.load()` сначала читает `Health`, потом fallback'ится к `health`, записывает результат в `type.health`, а `makeZombie()` использует этот explicit HP раньше общей формулы `BAL.zombieHpBase * zombieHpMultiplier(...) * hpMul`: [assets/zombies.json](../../../assets/zombies.json#L101-L2939) _(строки приблизительные, повторяющийся `types[]` block)_, [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L296-L305), [game.js](../../../game.js#L5676-L5687).
 
+## `assets/bullet.json` (projectile sprites + atlas)
+- Top-level `atlas` указывает на `bullet_atlas.png`; каждый `bullets.<id>.levels[].bulletSprite.frame` описывает source rect в atlasе. Frame `h` для `bullet_base` теперь `34` (раньше `36` — atlas overflow fix). `drawProjectiles()` в `game.js` дополнительно clampит source rect к atlas bounds и fallbackится на circle при полном выходе за пределы: [assets/bullet.json](../../../assets/bullet.json#L12), [game.js](../../../game.js#L13635-L13670).
+
 ## `assets/tanks.json` (UI-параметры + печать танка)
 - Top-level `tankPrintDurationSec`:
 	- диапазон: `> 0`;
@@ -40,7 +43,8 @@
 	- назначение: единая длительность stamp-reveal в слоте и root-анимации `buildTank` у суперкомпьютера;
 	- нормализация: `src/render/spriteLoaders.js` (`TankSprites.config.tankPrintDurationSec`), затем чтение из `game.js` / `src/ui/supercomputerBuildTankFx.js`: [assets/tanks.json](../../../assets/tanks.json#L1-L6), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L381-L393), [game.js](../../../game.js#L2744-L2756), [src/ui/supercomputerBuildTankFx.js](../../../src/ui/supercomputerBuildTankFx.js#L22-L53).
 - Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
-- Каждый `tank_lvlN` теперь также считается частью modifiers-modal контракта: `upgradeDamagePointsCosts.{baseDamage,attackSpeed}` задаёт canonical стоимость stat-specific шага для expandable row в `Supercomputer -> Орудия`, а `game.js` суммирует эти шаги через `getCannonUpgradeTotalCost()` / `applyCannonUpgrade()`, не через CSS/DOM-derived числа: [assets/tanks.json](../../../assets/tanks.json#L117-L170), [game.js](../../../game.js#L878-L910), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1256).
+- Каждый `tank_lvlN` теперь несёт `aura1`, `aura2`, `aura3` вместо старого `aura` (Green_Aura). `TankSprites.load()` нормализует все три варианта через `normalizeSpriteBlock()`, `pickAura(level, variant)` выбирает по variant `1..3`, а `resolveTankAuraVisual(cellIndex, level)` в `game.js` считает реально установленные чипы без привязки к high-level gate: [assets/tanks.json](../../../assets/tanks.json#L7-L120), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L485-L525), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L596-L607), [game.js](../../../game.js#L13267-L13296).
+- Каждый `tank_lvlN` также считается частью modifiers-modal контракта: `upgradeDamagePointsCosts.{baseDamage,attackSpeed}` задаёт canonical стоимость stat-specific шага для expandable row в `Supercomputer -> Орудия`, а `game.js` суммирует эти шаги через `getCannonUpgradeTotalCost()` / `applyCannonUpgrade()`, не через CSS/DOM-derived числа: [assets/tanks.json](../../../assets/tanks.json#L117-L170), [game.js](../../../game.js#L878-L910), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1256).
 - Ключ `ui.onTrackIconOpacity`:
 	- диапазон: `0..1`;
 	- default: `0.45`;

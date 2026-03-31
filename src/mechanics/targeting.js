@@ -119,10 +119,47 @@
     projectile.toY = p.y;
   }
 
+  function getProjectileImpactRadius(projectile) {
+    var radius = projectile && Number.isFinite(projectile.r) ? projectile.r : 0;
+    return Math.max(10, radius * 2.2);
+  }
+
+  function getProjectileStepDistance(projectile, dt) {
+    var speed = projectile && Number.isFinite(projectile.speed) ? Math.max(0, projectile.speed) : 0;
+    var delta = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    return speed * delta;
+  }
+
+  function shouldLatchNearHitImpact(projectile, dist, impactRadius, stepDist) {
+    if (!projectile || !Number.isFinite(dist)) return false;
+    var prevDist = Number(projectile.lastDistToTarget);
+    if (!Number.isFinite(prevDist) || dist <= prevDist) return false;
+    return prevDist <= (impactRadius + stepDist);
+  }
+
+  function shouldProjectileImpact(projectile, dt) {
+    if (!projectile) return false;
+    var fromX = Number(projectile.x);
+    var fromY = Number(projectile.y);
+    var toX = Number(projectile.toX);
+    var toY = Number(projectile.toY);
+    if (!Number.isFinite(fromX) || !Number.isFinite(fromY) || !Number.isFinite(toX) || !Number.isFinite(toY)) {
+      return false;
+    }
+    var dist = Math.hypot(toX - fromX, toY - fromY);
+    var impactRadius = getProjectileImpactRadius(projectile);
+    if (dist <= impactRadius) return true;
+    var stepDist = getProjectileStepDistance(projectile, dt);
+    if (stepDist >= Math.max(0, dist - impactRadius)) return true;
+    return shouldLatchNearHitImpact(projectile, dist, impactRadius, stepDist);
+  }
+
   global.Game = global.Game || {};
   global.Game.Targeting = {
     pickBurstTargets: pickBurstTargets,
     pickBurstTargetsBySide: pickBurstTargetsBySide,
     updateProjectileAim: updateProjectileAim,
+    getProjectileImpactRadius: getProjectileImpactRadius,
+    shouldProjectileImpact: shouldProjectileImpact,
   };
 })(typeof window !== 'undefined' ? window : this);

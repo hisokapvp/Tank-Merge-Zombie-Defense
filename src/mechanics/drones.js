@@ -1255,6 +1255,12 @@
     return { handled: true, changed: false };
   }
 
+  function handlePointerCancel() {
+    if (!_slotDragState) return { handled: false, changed: false };
+    _slotDragState = null;
+    return { handled: true, changed: false };
+  }
+
   global.Game = global.Game || {};
   global.Game.Drones = {
     MODE_STANDBY: MODE_STANDBY,
@@ -1283,6 +1289,7 @@
     handlePointerDown: handlePointerDown,
     handlePointerMove: handlePointerMove,
     handlePointerUp: handlePointerUp,
+    handlePointerCancel: handlePointerCancel,
     mergeDroneSlots: mergeDroneSlots,
   };
 })(typeof window !== 'undefined' ? window : this);

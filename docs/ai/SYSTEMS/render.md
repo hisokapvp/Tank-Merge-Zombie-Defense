@@ -1,8 +1,18 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-29.
+> Обновлено: 2026-03-31.
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
 > Для Phaser layer/render migration: `docs/ai/SYSTEMS/phaser.md`.
+
+## Post-merge update (2026-03-31)
+- `drawProjectiles()` теперь clampит source rect (`sx+sw`, `sy+sh`) к atlas bounds (`naturalWidth`, `naturalHeight`); если frame полностью за пределами atlas, rendер fallbackится на circle. Это defensive fix для `assets/bullet.json` frame h `36→34`: [game.js](../../../game.js#L13635-L13670), [assets/bullet.json](../../../assets/bullet.json#L12).
+- `resolveTankAuraVisual(cellIndex, level)` теперь использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально занятых red/yellow слотов, вместо удалённых `normalizeAuraChipCount()` / `getInstalledChipCountForTank()`: [game.js](../../../game.js#L13267-L13296).
+- `drawTank()` теперь принимает `cellIndex` параметр для aura routing: [game.js](../../../game.js#L13416).
+- Zombie unstick mechanism: `stepZombies()` теперь держит per-zombie `_unstickTimer`/`_unstickCheckR`; если зомби не продвинулся ближе к центру на ≥2px за 4 сек, scalar nudge подталкивает его к fence: [game.js](../../../game.js#L7820-L7840).
+
+## Post-merge update (2026-03-30)
+- `resolveTankAuraVisual(cellIndex, level)` теперь документируется как реальный visual gate танковой ауры: runtime использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально занятых red/yellow слотов, активирует `aura1/aura2/aura3` по count `1..3`, а `computeAuraBand()` остаётся только fallback-path, если sprite-вариант не найден. В `src/render/spriteLoaders.js` `auraVariantLevels` продолжает быть asset-lookup mapping на `tank_lvl10/20/30`, а не high-level trigger сам по себе: [game.js](../../../game.js#L13267-L13310), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L441-L444), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L591-L610).
+- `src/render/fenceLayout.js` вводит responsive seam overlap below `1400px`: `resolveSeamOverlapPx()` на узких viewports двигает первые/последние side-сегменты ближе к углам, чтобы не открывались gap'ы между corner и side slot geometry. Это deliberate render contract, а не локальный test hack; regression закреплён в `Test/pack7/fenceCornerSlots.test.js`: [src/render/fenceLayout.js](../../../src/render/fenceLayout.js#L74-L86), [src/render/fenceLayout.js](../../../src/render/fenceLayout.js#L90-L204), [Test/pack7/fenceCornerSlots.test.js](../../../Test/pack7/fenceCornerSlots.test.js#L144-L197).
 
 ## Где править
 - Canvas root и layout: `src/render/canvasRoot.js`, `src/render/groundLayer.js`, `src/render/fenceLayout.js`

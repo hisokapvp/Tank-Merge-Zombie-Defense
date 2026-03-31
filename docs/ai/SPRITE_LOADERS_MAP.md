@@ -1,6 +1,6 @@
 # spriteLoaders.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-29.
+> Агент-ориентировано. Обновлён: 2026-03-31.
 > Файл большой (1350 строк); этот map покрывает реально прочитанные и grep-проверенные блоки.
 
 ## Что это
@@ -67,4 +67,11 @@
 - Используется в: `game.js`, `src/render/productionLineRender.js`, `src/ui/supercomputerMenu.js`.
 
 ## Известные ограничения / TODO
-- Средняя часть файла (`TankSprites`, `FenceSprites`, `DronSprites`, `BulletSprites`) не размечена столь же подробно; при точечной задаче дочитать целевой loader.
+- Средняя часть файла (`FenceSprites`, `DronSprites`, `BulletSprites`) не размечена столь же подробно; при точечной задаче дочитать целевой loader.
+
+### Блок: TankSprites (частично прочитан)
+| Функция / блок | Строки | Назначение |
+|---|---|---|
+| `TankSprites.load()` aura1/2/3 normalization | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L485-L525) | Нормализует `rawTank.aura1`, `aura2`, `aura3` через `normalizeSpriteBlock()`; каждый сохраняется в `tankCfg.aura1/aura2/aura3`; atlas src добавляются в preload set |
+| `pickAura(level, variant)` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L596-L607) | Выбирает aura sprite config по variant `1..3` (ключ `'aura' + variant`), fallback на legacy `aura`; возвращает `{ img, cfg }` или `null` |
+| `auraVariantLevels` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L441-L444) | Asset-lookup mapping на `tank_lvl10/20/30` для aura resolve; не runtime gate |

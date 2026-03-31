@@ -10,7 +10,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260329-branch1-sc-family-talents-storage-v1';
+      var token = '20260330-branch2-aura-projectile-terminal-v1';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -405,7 +405,9 @@
         <div class="levelModal hidden" id="undergroundHangarOverlay" aria-hidden="true">
           <div class="ughBackdrop" data-ugh-close="true"></div>
           <div class="ughPanel" role="dialog" aria-modal="true" aria-labelledby="undergroundHangarTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="undergroundHangarClose" type="button" aria-label="Close">×</button>
+            <div class="scModal__headerActions ughPanel__headerActions">
+              <button class="levelModal__close scModal__close" id="undergroundHangarClose" type="button" aria-label="Close">×</button>
+            </div>
             <div class="levelModal__title" id="undergroundHangarTitle" data-i18n="ughModalTitle">Подземный ангар</div>
             <div class="scModal__body" id="undergroundHangarBody"></div>
           </div>
@@ -629,7 +631,7 @@
   <script src="src/ui/mergePopup/mergePopupStats.js"></script>
   <script src="src/config/audioUi.js"></script>
   <script src="src/ui/buttonBehavior.js?v=20260328-branch1-debuff-header-mobile"></script>
-  <script src="src/ui/fontFloor.js"></script>
+  <script src="src/ui/fontFloor.js?v=20260330-branch2-terminal-font-floor-v1"></script>
   <script src="src/ui/mergePopup.js"></script>
   <script src="src/ui/zombieAnimPreview.js"></script>
   <script src="src/telemetry/telemetry.js"></script>
@@ -683,7 +685,7 @@
   <script src="src/mechanics/drones.js"></script>
   <script src="src/mechanics/autoMerge.js"></script>
   <script src="src/mechanics/undergroundHangar.js"></script>
-  <script src="src/ui/undergroundHangarUI.js?v=20260327-branch2-dom-preview-helper"></script>
+  <script src="src/ui/undergroundHangarUI.js?v=20260330-branch1-ugh-header-actions-v1"></script>
   <script src="src/mechanics/corpseDespawn.js"></script>
   <script src="src/ui/supercomputerBuildTankFx.js"></script>
   <!-- ── Phaser 3 migration layer ── -->
