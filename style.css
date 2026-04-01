@@ -3151,12 +3151,14 @@ input, select, textarea, button {
   color:var(--muted);
   font-size:11px;
 }
-@media (max-width: 1200px){
-  .scGunsTable__head,
-  .scGunsTable__row{
-    grid-template-columns:56px var(--scTableTileWidth, 128px) minmax(0, 1fr) minmax(0, 1fr) 120px 128px;
+@media (max-width: 1279px){
+  /* Отключаем clamp для modsHangarSlotWidth только в модалке улучшения ячеек ангара */
+  #modsHangarOverlay .scModal--fullscreenShell .hangarSlotViewWrap{
+    width:auto;
+    flex:0 1 100%;
+    min-width:140px;
+    max-width:100%;
   }
-  .scGunsTable_weapons .scGunsTable__head,
   .scGunsTable_weapons .scGunsTable__row{
     grid-template-columns:48px var(--scTableTileWidth, 128px) minmax(0, 1fr) minmax(0, 1fr) 120px 128px;
   }
@@ -4447,7 +4449,7 @@ button[data-tutorial-locked="true"]::after,
 .hangarChipsModal{
   /* Canonical source stays in resizeCanvas() -> --ui-scale. */
   --modsHangarScale: var(--ui-scale);
-  --chipLabelCardWidth: clamp(132px, calc(176px * var(--modsHangarScale)), 176px);
+  --chipLabelCardWidth: 176px;
   --chipLabelCardHeight: clamp(104px, calc(116px * var(--modsHangarScale)), 116px);
   --chipNameMaxLines: clamp(44px, calc(60px * var(--modsHangarScale)), 60px);
   --modsHangarGap: calc(14px * var(--modsHangarScale));
@@ -5490,13 +5492,13 @@ button.hangarChipInvItem{
 .chipUpgradeCard__name{
   width:100%;
   min-height:30px;
-  max-height:var(--chipNameMaxLines, 60px);
+  /* max-height:var(--chipNameMaxLines, 60px); */
   display:flex;
   flex-wrap:wrap;
   align-items:center;
   justify-content:center;
   gap:0 2px;
-  font-size:12px;
+  font-size:10px;
   line-height:1.15;
   color:rgba(255,255,255,.78);
   font-family:'Segoe UI', Arial, sans-serif;
@@ -6483,9 +6485,14 @@ button.hangarChipInvItem{
   display:flex;
   flex-direction:column;
   gap:calc(8px * var(--modsHangarScale, 1));
-  overflow-x:hidden;
+  overflow-x:hidden !important;
   overflow-y:auto;
   overscroll-behavior:contain;
+}
+.chipCraftInvGrid {
+  /* Запретить горизонтальный скролл и переносить содержимое */
+  overflow-x: hidden !important;
+  word-break: break-word;
 }
 .chipCraftInventory{
   flex:1 1 auto;
@@ -6567,7 +6574,7 @@ button.hangarChipInvItem{
   align-items:center;
   justify-content:center;
   gap:0 2px;
-  font-size:12px;
+  font-size:10px;
   line-height:1.15;
   color:rgba(255,255,255,.78);
   font-family:'Segoe UI', Arial, sans-serif;
@@ -6610,6 +6617,9 @@ button.hangarChipInvItem{
 }
 
 @media (max-width: 980px){
+  :root {
+    --chipLabelCardWidth: clamp(132px, calc(176px * var(--modsHangarScale)), 176px);
+  }
   #modsHangarOverlay .chipCraftLayout{
     flex-direction:column;
     flex-wrap:nowrap;
@@ -7020,7 +7030,7 @@ button.hangarChipInvItem{
   align-items:center;
   justify-content:center;
   gap:0 2px;
-  font-size:12px;
+  font-size:10px;
   line-height:1.15;
   color:rgba(255,255,255,.62);
   font-family:'Segoe UI', Arial, sans-serif;
@@ -7037,7 +7047,7 @@ button.hangarChipInvItem{
   white-space:normal;
 }
 .chipCraftSlotCard__badge{
-  position:absolute;
+  position:static;
   top:4px;
   right:4px;
   font-size:12px;
@@ -8426,7 +8436,7 @@ button.hangarChipInvItem{
 
   /* ─── Hangar chips modal responsive scaling (spec-item-7) ─── */
   .hangarChipsModal{
-    --modsHangarSlotWidth: clamp(140px, calc(420px * var(--modsHangarScale)), 420px);
+    --modsHangarSlotWidth: clamp(140px, calc(840px * var(--modsHangarScale)), 420px);
     --modsHangarSlotHeight: clamp(126px, calc(380px * var(--modsHangarScale)), 380px);
     --modsHangarLeftColWidth: clamp(145px, calc(220px * var(--modsHangarScale)), 220px);
     --modsHangarDropMinHeight: clamp(120px, calc(220px * var(--modsHangarScale)), 220px);
@@ -8544,41 +8554,49 @@ button.hangarChipInvItem{
     min-height:200px;
     height:200px;
   }
-  #modsHangarOverlay .hangarRow{
-    --branch1-hangar-half-gap:calc(8px * var(--modsHangarScale, 1));
-    gap:var(--branch1-hangar-half-gap);
+
+  /* Изменения для "Улучшение чипов" — максимум 4 плашки в строке, flex-wrap, 100% ширины, высота 200px, нет горизонтального скролла, scroll-y в workshopSubPanel */
+  #workshopPanelChipUpgrade .chipUpgradeGrid{
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    gap: 10px !important;
   }
-  #modsHangarOverlay .hangarSlotViewWrap,
-  #modsHangarOverlay .hangarRightCol{
-    width:calc((100% - var(--branch1-hangar-half-gap)) / 2);
-    max-width:calc((100% - var(--branch1-hangar-half-gap)) / 2);
-    min-width:0;
+  #workshopPanelChipUpgrade .chipUpgradeCard{
+    flex: 1 1 calc(25% - 10px);
+    max-width: calc(25% - 10px);
+    min-width: 0;
+    height: 200px !important;
+    min-height: 200px !important;
+    box-sizing: border-box;
   }
-  #modsHangarOverlay .hangarSlotViewWrap{
-    flex:0 0 calc((100% - var(--branch1-hangar-half-gap)) / 2);
+  #workshopPanelChipUpgrade .workshopSubPanel{
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: 70vh;
   }
-  #modsHangarOverlay .hangarRightCol{
-    flex:0 0 calc((100% - var(--branch1-hangar-half-gap)) / 2);
+  /* Убираем горизонтальный скролл */
+  #workshopPanelChipUpgrade .chipUpgradeGrid::-webkit-scrollbar {
+    display: none;
   }
-  #modsHangarOverlay .hangarSvg{
-    transform:scale(1.5);
-    transform-origin:center center;
+  #workshopPanelChipUpgrade .chipUpgradeGrid {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-  #modsHangarOverlay .hangarGridCell{
-    width:clamp(40px, calc(63px * var(--modsHangarScale, 1)), 63px);
-    height:clamp(40px, calc(63px * var(--modsHangarScale, 1)), 63px);
-    font-size:max(12px, calc(16px * var(--modsHangarScale, 1)));
-  }
-  #modsHangarOverlay .hangarGridCell__dotItem{
-    width:max(8px, calc(9px * var(--modsHangarScale, 1)));
-    height:max(8px, calc(9px * var(--modsHangarScale, 1)));
-  }
-  #modsHangarOverlay .hangarActiveModsTitle{
-    font-size:max(12px, calc(18px * var(--modsHangarScale, 1)));
-  }
-  #modsHangarOverlay .hangarActiveMods__row{
-    font-size:max(12px, calc(19.5px * var(--modsHangarScale, 1)));
-  }
+/* Минимальный размер шрифта и padding-top для всех всплывающих сообщений и модалок подтверждения */
+.centerNotification,
+.achievementToast,
+.plStorage__confirmBox,
+.criticalModal,
+.techModal__dialog,
+.levelModal__panel,
+.mergePopupModal__panel {
+  font-size: min(max(14px, 1em), 1.2em) !important;
+  padding-top: 50px !important;
+}
 }
 
 @media (max-width: 1500px) and (hover: none) and (pointer: coarse){

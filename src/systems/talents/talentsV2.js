@@ -3357,7 +3357,23 @@
     var runRt = ensureRunRt();
     var timeMs = toNumber(ctx.timeMs, runtime.nowMsFn());
 
-    var cost = Math.max(0, toNumber(ctx.baseCost, 0)) * Math.max(0, getModNumber(mods, 'repairCostMul', [], 1));
+    // Новая формула стоимости ремонта с учётом repairCount
+    var fenceLvl = 1;
+    var repairCount = 0;
+    var seg = ctx.segment || null;
+    if (seg && typeof seg === 'object') {
+      fenceLvl = Number.isFinite(seg.level) ? Math.max(1, Math.floor(seg.level)) : 1;
+      repairCount = Number.isFinite(seg.repairCount) ? seg.repairCount : 0;
+    }
+    // Получаем tankPrices из assets/tanks.json
+    var tankPrices = (global.Game && global.Game.TankPrices) ? global.Game.TankPrices : null;
+    var baseCost = 1;
+    if (tankPrices && tankPrices.length >= fenceLvl) {
+      baseCost = tankPrices[fenceLvl - 1];
+    }
+    var inflation = Math.max(1, Math.floor(baseCost * 0.01));
+    var cost = baseCost + inflation * repairCount;
+    cost *= Math.max(0, getModNumber(mods, 'repairCostMul', [], 1));
     var heal = Math.max(0, toNumber(ctx.baseHeal, 0));
     var repairEfficiencyMul = Math.max(0, getModNumber(mods, 'repairEfficiencyMul', [], 1));
     if (repairEfficiencyMul > 0) {
@@ -3367,11 +3383,32 @@
     var coupon = applyRepairDiscountCoupon(runRt, mods, timeMs, cost);
     cost = coupon.cost;
 
+    // Инкрементируем repairCount после успешного ремонта
+    if ((ctx.confirmed || ctx.success || ctx.committed) && seg && typeof seg === 'object') {
+      if (typeof seg.repairCount !== 'number' || !Number.isFinite(seg.repairCount)) seg.repairCount = 0;
+      seg.repairCount++;
+    }
+
     return {
       cost: finalizeRewardValue(cost),
       heal: heal,
       discountUsed: coupon.used,
     };
+    // Сброс repairCount при partial reset/new game
+    // Для этого экспортируем функцию resetFenceRepairCounts
+    function resetFenceRepairCounts(fenceSegments) {
+      if (!Array.isArray(fenceSegments)) return;
+      for (var i = 0; i < fenceSegments.length; i++) {
+        if (fenceSegments[i] && typeof fenceSegments[i] === 'object') {
+          fenceSegments[i].repairCount = 0;
+        }
+      }
+    }
+
+    // Экспортируем resetFenceRepairCounts в глобальный Game API
+    if (global.Game) {
+      global.Game.resetFenceRepairCounts = resetFenceRepairCounts;
+    }
   }
 
   function onBuyTank(payload) {

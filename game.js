@@ -4,6 +4,43 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
+
+// --- Fence repair: build TankPrices array from assets/tanks.json ---
+;(function loadTankPricesForFenceRepair() {
+  try {
+    var tankData = null;
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'assets/tanks.json', false);
+    xhr.overrideMimeType && xhr.overrideMimeType('application/json');
+    xhr.send(null);
+    if (xhr.status === 200) {
+      tankData = JSON.parse(xhr.responseText);
+    }
+    var prices = [];
+    if (tankData) {
+      for (var lvl = 1; lvl <= 60; lvl++) {
+        var key = 'tank_lvl' + lvl;
+        if (tankData[key] && typeof tankData[key] === 'object') {
+          // Для fence repair используем цену апгрейда baseDamage как baseCost
+          var cost = 0;
+          if (tankData[key].upgradeDamagePointsCosts && typeof tankData[key].upgradeDamagePointsCosts.baseDamage === 'number') {
+            cost = tankData[key].upgradeDamagePointsCosts.baseDamage;
+          } else if (tankData[key].stats && typeof tankData[key].stats.baseDamage === 'number') {
+            cost = tankData[key].stats.baseDamage;
+          } else {
+            cost = 1;
+          }
+          prices.push(cost);
+        } else {
+          prices.push(1);
+        }
+      }
+    }
+    GameApi.TankPrices = prices;
+  } catch (e) {
+    GameApi.TankPrices = Array(60).fill(1);
+  }
+})();
 const SeededRngApi = GameApi?.SeededRng ?? null;
 
 function getEntryAssetVersionToken(){
@@ -2403,6 +2440,11 @@ function getDefaultZombieTargetAlive(){
 
 function resetZombieAndAttackModeToDefaultAfterRestore(){
   resetWorldEventsRuntimeForNewGame();
+
+  // Сброс repairCount для всех fenceSegments
+  if (Array.isArray(state.fenceSegments) && typeof GameApi.resetFenceRepairCounts === 'function') {
+    GameApi.resetFenceRepairCounts(state.fenceSegments);
+  }
 
   const defaultTargetAlive = getDefaultZombieTargetAlive();
   BAL.zombieCountTarget = defaultTargetAlive;
@@ -13431,9 +13473,17 @@ function drawTankAuraSprite(x, y, aura){
   }
   const baseScale = (cfg.scale ?? 1) * 0.22 * balScale;
   const t = nowSec();
-  const pulseScale = 1 + 0.2 * Math.sin(t * 2.5);
-  const variantPulse = variantStyle ? 1 + variantStyle.pulseAmplitude * Math.sin(t * variantStyle.pulseSpeed) : 1;
-  const scale = baseScale * pulseScale * variantPulse * (variantStyle ? variantStyle.scaleMul : 1);
+  // --- Aura animation params ---
+  // Fallbacks: cfg → variantStyle → hardcoded legacy
+  const rotateSpeed = cfg.rotateSpeed ?? (variantStyle ? variantStyle.rotationSpeed : 0.8);
+  const pulseSpeed = cfg.pulseSpeed ?? (variantStyle ? variantStyle.pulseSpeed : 2.5);
+  const pulseMin = cfg.pulseMin ?? (variantStyle ? (1 - (variantStyle.pulseAmplitude ?? 0.2)) : 0.8);
+  const pulseMax = cfg.pulseMax ?? (variantStyle ? (1 + (variantStyle.pulseAmplitude ?? 0.2)) : 1.2);
+  // Пульсация: scale = base * lerp(pulseMin, pulseMax, sin)
+  const pulsePhase = Math.sin(t * pulseSpeed) * 0.5 + 0.5;
+  const pulseScale = pulseMin + (pulseMax - pulseMin) * pulsePhase;
+  const scaleMul = variantStyle ? variantStyle.scaleMul : 1;
+  const scale = baseScale * pulseScale * scaleMul;
   const drawW = w * scale;
   const drawH = h * scale;
   let spriteFilter = 'none';
@@ -13441,13 +13491,13 @@ function drawTankAuraSprite(x, y, aura){
     if (variantStyle.filter && variantStyle.filter !== 'none') {
       spriteFilter = variantStyle.filter;
     } else if (variantStyle.hueShiftFilters && variantStyle.hueShiftFilters.length > 0) {
-      const filterIndex = Math.floor(t * variantStyle.hueShiftSpeed) % variantStyle.hueShiftFilters.length;
+      const filterIndex = Math.floor(t * (variantStyle.hueShiftSpeed || 10)) % variantStyle.hueShiftFilters.length;
       spriteFilter = variantStyle.hueShiftFilters[filterIndex];
     }
   }
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(t * (variantStyle ? variantStyle.rotationSpeed : 0.8));
+  ctx.rotate(t * rotateSpeed);
   if (spriteFilter !== 'none' && typeof ctx.filter === 'string') {
     ctx.filter = spriteFilter;
   }

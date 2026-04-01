@@ -123,9 +123,13 @@
   }
 
   function shouldDisableCraftInventoryDrag() {
-    return _workshopSubTab === 'chipRecycle'
-      && _chipRecycleSubTab === 'disassemble'
-      && isCoarsePointerViewport();
+    // Отключить drag для disassemble и reprogram на мобильных (coarse pointer)
+    if (_workshopSubTab === 'chipRecycle' && isCoarsePointerViewport()) {
+      if (_chipRecycleSubTab === 'disassemble' || _chipRecycleSubTab === 'reprogram') {
+        return true;
+      }
+    }
+    return false;
   }
 
   function getHangarHelpSectionTitle(tabId) {
@@ -2310,7 +2314,7 @@
     var helpConfig = getActiveHangarHelpConfig();
     var closeLabel = t('menuClose', 'Закрыть');
     modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft techModal__dialog--help" role="dialog" aria-modal="true" aria-labelledby="techUnlockHelpTitle">' +
-      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + _escapeHtml(closeLabel) + '"></button>' +
+      '<button class="chipCraftSlotRemove uiButtonBehavior" data-craft-modal-close type="button" aria-label="' + _escapeHtml(closeLabel) + '" title="' + _escapeHtml(closeLabel) + '"><span class="chipCraftSlotRemove__icon" aria-hidden="true"></span></button>' +
       '<div class="techModal__title techModal__title--help" id="techUnlockHelpTitle">' + _escapeHtml(t('techUnlockHelpTitle', 'Справка')) + '</div>' +
       '<div class="techModal__subtitle techModal__subtitle--help">' + _escapeHtml(helpConfig.sectionTitle) + '</div>' +
       '<div class="techModal__text techModal__text--help">' + _renderHelpTextHtml(helpConfig.text) + '</div>' +
@@ -3016,7 +3020,7 @@
     var itemsHtml = '';
     for (var i = 0; i < items.length; i++) itemsHtml += _renderCraftOutcomeItemHtml(items[i]);
     modal.innerHTML = '<div class="techModal__dialog techModal__dialog--wide techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
-      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<button class="chipCraftSlotRemove uiButtonBehavior" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"><span class="chipCraftSlotRemove__icon" aria-hidden="true"></span></button>' +
       '<div class="' + titleClass + '" id="chipCraftModalTitle">' + title + '</div>' +
       '<div class="techModal__text techModal__text--compact">' + bodyText + '</div>' +
       '<div class="chipCraftOutcomeGrid">' + itemsHtml + '</div>' +
@@ -3039,7 +3043,7 @@
       .replace('{chance}', craftPayload.craftChancePct)
       .replace('{dustClause}', dustClause);
     modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
-      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<button class="chipCraftSlotRemove uiButtonBehavior" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"><span class="chipCraftSlotRemove__icon" aria-hidden="true"></span></button>' +
       '<div class="techModal__title techModal__title--warn" id="chipCraftModalTitle">' + t('chipCraftRiskTitle', 'Риск потери ресурсов') + '</div>' +
       '<div class="techModal__text">' + riskText + '</div>' +
       '<div class="techModal__btns">' +

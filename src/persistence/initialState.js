@@ -37,6 +37,17 @@
     var reason = opts.reason === 'new_game' ? 'new_game' : 'boot';
     var maxLevel = Number.isFinite(opts.maxLevel) ? Math.floor(opts.maxLevel) : 60;
 
+    // --- Fence segments с repairCount ---
+    var fenceSegments = [];
+    if (global.Game && global.Game.FenceLayout && typeof global.Game.FenceLayout.buildSquareFenceSegments === 'function') {
+      var segments = global.Game.FenceLayout.buildSquareFenceSegments({});
+      for (var i = 0; i < segments.length; i++) {
+        var seg = Object.assign({}, segments[i]);
+        seg.repairCount = 0;
+        fenceSegments.push(seg);
+      }
+    }
+    // ---
     return {
       coins: 40,
       kills: 0,
@@ -60,7 +71,7 @@
         decorSeed: null,
       },
       nextZombieRenderOrder: 1,
-      fenceSegments: [],
+      fenceSegments: fenceSegments,
       fenceSegmentsMeta: null,
       savedFenceState: null,
       crate: null,

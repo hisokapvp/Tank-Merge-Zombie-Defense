@@ -133,6 +133,10 @@
         "y": 0.5
       },
       "scale": 0.8
+      ,"rotateSpeed": 0.5
+      ,"pulseSpeed": 2.1
+      ,"pulseMin": 0.95
+      ,"pulseMax": 1.05
     },
     "aura2": {
       "src": "tanks/Aura2.png",
@@ -142,13 +146,17 @@
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 3,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
       "scale": 0.8
+      ,"rotateSpeed": -0.78
+      ,"pulseSpeed": 3.2
+      ,"pulseMin": 0.91
+      ,"pulseMax": 1.09
     },
     "aura3": {
       "src": "tanks/Aura3.png",
@@ -158,13 +166,17 @@
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 3,
+      "animSpeed": 10,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
       "scale": 0.8
+      ,"rotateSpeed": 1.12
+      ,"pulseSpeed": 4.1
+      ,"pulseMin": 0.87
+      ,"pulseMax": 1.13
     }
   },
   "tank_lvl2": {

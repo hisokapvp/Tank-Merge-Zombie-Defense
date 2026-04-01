@@ -208,6 +208,12 @@
         },
         scale: toPositiveNumber(raw.scale, 1),
         rotation: Number.isFinite(raw.rotation) ? raw.rotation : 0,
+        // Aura animation params
+        rotateSpeed: Number.isFinite(raw.rotateSpeed) ? raw.rotateSpeed : undefined,
+        pulseSpeed: Number.isFinite(raw.pulseSpeed) ? raw.pulseSpeed : undefined,
+        pulseMin: Number.isFinite(raw.pulseMin) ? raw.pulseMin : undefined,
+        pulseMax: Number.isFinite(raw.pulseMax) ? raw.pulseMax : undefined,
+        // legacy fields
         muzzle: raw.muzzle && typeof raw.muzzle === 'object'
           ? {
               x: Number.isFinite(raw.muzzle.x) ? raw.muzzle.x : 28,
