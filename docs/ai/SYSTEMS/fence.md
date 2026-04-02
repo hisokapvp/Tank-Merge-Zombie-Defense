@@ -7,12 +7,13 @@
 - Рендер/геометрия: `src/render/fenceLayout.js`
 
 ## Fence repair cost module (`Game.FenceRepair`)
-- Новый модуль `src/mechanics/fenceRepair.js` (подключён в `index.html` L602) экспортирует `Game.FenceRepair`: [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L1-L122).
-- `loadTankPrices()` заменяет sync XMLHttpRequest на async `fetch('assets/tanks.json')` и строит `Game.TankPrices[]`.
-- `computeRepairCost(fenceLevel, repairCount)`: `baseCost = buyTankCost(level) + repairCount × max(1, ceil(baseCost × 0.01))`; cumulative 1% surcharge за каждый предыдущий ремонт.
-- `getFenceRepairCostCoins(fenceLevel, repairCount)` — public getter, вызывается из `game.js` (`tryRepairFenceSegmentAt()`).
-- `init({ getFenceConfig })` — инъекция конфиг-провайдера из `game.js`.
-- `fenceRepairCount` живёт в `state`, seed'ится в `initialState.js` (L58), сериализуется в `storage.js` (L468), инкрементируется при ремонте (`game.js` L7523), сбрасывается при partial/full reset (`game.js` L2418).
+- Модуль `src/mechanics/fenceRepair.js` (подключён в `index.html` на отдельном script tag) экспортирует `Game.FenceRepair` и является единственным source of truth для runtime pricing: [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L1-L178), [index.html](../../../index.html#L602).
+- Boot path в `game.js` сначала ждёт `Game.FenceRepair.loadTankPrices()`, затем зовёт `Game.FenceRepair.init({ getFenceConfig })`; только после этого runtime должен полагаться на fence repair pricing helper'ы: [game.js](../../../game.js#L14824-L14833).
+- `loadTankPrices()` заменяет sync XMLHttpRequest на async `fetch('assets/tanks.json')` и строит lookup для legacy fallback `buyTankCost(level)`.
+- `getConfiguredRepairBaseCost(fenceLevel)` резолвит базовую цену ремонта в строгом порядке: `assets/fence.json -> repair.costCoinsByLevel[level]` → `levels[level-1].repairCostCoins` → `levels[level-1].repair.costCoins` → legacy `buyTankCost(level)`. Top-level `repair.costCoins` в текущем runtime не считается authoritative source и не должен документироваться как primary contract: [assets/fence.json](../../../assets/fence.json#L1573-L1578), [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L45-L74).
+- `computeRepairCost(fenceLevel, repairCount)` применяет cumulative surcharge `repairCount × max(1, ceil(baseCost × 0.01))` поверх уже резолвленного `baseCost`, а `getFenceRepairCostCoins(fenceLevel, repairCount)` остаётся публичным getter'ом для UI/gameplay wiring: [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L148-L165).
+- `game.js` теперь документируется только как delegator: [getFenceRepairCostCoins()](../../../game.js#L2278-L2285) маршрутизирует запрос в `window.Game.FenceRepair`, а [tryRepairFenceSegmentAt()](../../../game.js#L7500-L7516) списывает монеты, инкрементирует `state.fenceRepairCount` и не держит собственную формулу цены.
+- `fenceRepairCount` живёт в `state`, seed'ится в `initialState.js`, сериализуется в `storage.js`, инкрементируется при успешном ремонте и сбрасывается при partial/full reset. Это часть cumulative pricing contract, а не purely cosmetic counter.
 
 ## Правила
 - Изменения HP/repair проверять вместе с дронами и zombie targeting.

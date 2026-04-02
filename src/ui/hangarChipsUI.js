@@ -1584,6 +1584,10 @@
   /* ─── Generic game-styled tooltip (shared, reuses _chipUpgradeTooltipEl) ── */
 
   var _isTouchDevice = global.matchMedia && global.matchMedia('(hover:none) and (pointer:coarse)').matches;
+  var TOUCH_TOOLTIP_HOLD_MS = 450;
+  var TOUCH_TOOLTIP_MOVE_THRESHOLD_SQ = 36;
+  var _touchTooltipHold = null;
+  var _touchTooltipSuppressClickUntil = 0;
 
   function _ensureGameTooltip() {
     if (!_chipUpgradeTooltipEl) {
@@ -1601,9 +1605,19 @@
         });
         _chipUpgradeTooltipEl.appendChild(closeBtn);
       }
+      var contentEl = _doc.createElement('div');
+      contentEl.className = 'chipUpgradeTooltip__content';
+      _chipUpgradeTooltipEl.appendChild(contentEl);
+      _chipUpgradeTooltipEl._contentEl = contentEl;
       _doc.body.appendChild(_chipUpgradeTooltipEl);
     }
     return _chipUpgradeTooltipEl;
+  }
+
+  function _setTooltipHtml(tip, htmlContent) {
+    if (!tip) return;
+    var contentEl = tip._contentEl || tip;
+    contentEl.innerHTML = htmlContent;
   }
 
   function _positionTooltipElement(tip, left, top) {
@@ -1633,7 +1647,7 @@
 
   function _showGameTooltip(htmlContent, anchorEl) {
     var tip = _ensureGameTooltip();
-    tip.innerHTML = htmlContent;
+    _setTooltipHtml(tip, htmlContent);
     tip.style.display = 'block';
     var rect = anchorEl.getBoundingClientRect();
     _positionTooltipElement(tip, rect.right + 12, rect.top - 8);
@@ -1641,9 +1655,140 @@
 
   function _showGameTooltipAtPoint(htmlContent, clientX, clientY, tooltipEl) {
     var tip = tooltipEl || _ensureGameTooltip();
-    tip.innerHTML = htmlContent;
+    _setTooltipHtml(tip, htmlContent);
     tip.style.display = 'block';
     _positionTooltipElement(tip, clientX + 12, clientY + 16);
+  }
+
+  function hideAllGameTooltips() {
+    hideChipUpgradeTooltip();
+    _hideSlotChipTooltip();
+  }
+
+  function _resolveTooltipTrigger(target) {
+    if (!target || !target.closest) return null;
+    var card = target.closest('[data-chip-upgrade-id]');
+    if (card) return { kind: 'chipUpgrade', element: card };
+    var chipBtn = target.closest('.hangarChipInvItem[data-chip-id]');
+    if (chipBtn) return { kind: 'hangarChip', element: chipBtn };
+    var accelChip = target.closest('[data-accel-chip-id]');
+    if (accelChip) return { kind: 'accelChip', element: accelChip };
+    var craftItem = target.closest('.chipCraftInvItem');
+    if (craftItem) {
+      if (craftItem.getAttribute('data-craft-chip-id')) return { kind: 'craftInvChip', element: craftItem };
+      if (craftItem.getAttribute('data-craft-frag-id')) return { kind: 'craftInvFrag', element: craftItem };
+    }
+    var resultChip = target.closest('.chipCraftResultChip');
+    if (resultChip) return { kind: 'craftResult', element: resultChip };
+    var slotChip = target.closest('[data-hct-chip-id]');
+    if (slotChip) return { kind: 'craftSlotChip', element: slotChip };
+    var slotFrag = target.closest('[data-hct-frag-id]');
+    if (slotFrag) return { kind: 'craftSlotFrag', element: slotFrag };
+    var slotPoly = target.closest('[data-slot-type]');
+    if (slotPoly) return { kind: 'slotPoly', element: slotPoly };
+    return null;
+  }
+
+  function _showTooltipTrigger(trigger, evt) {
+    if (!trigger) {
+      hideAllGameTooltips();
+      return;
+    }
+    switch (trigger.kind) {
+      case 'chipUpgrade':
+        showChipUpgradeTooltip({ target: trigger.element });
+        return;
+      case 'hangarChip':
+        showHangarChipBtnTooltip(trigger.element);
+        return;
+      case 'accelChip':
+        showTechAccelChipTooltip(trigger.element);
+        return;
+      case 'craftInvChip':
+        showCraftInvChipTooltip(trigger.element);
+        return;
+      case 'craftInvFrag':
+        showCraftInvFragTooltip(trigger.element);
+        return;
+      case 'craftResult':
+        showCraftResultTooltip(trigger.element);
+        return;
+      case 'craftSlotChip':
+        showCraftSlotChipTooltip(trigger.element);
+        return;
+      case 'craftSlotFrag':
+        showCraftSlotFragTooltip(trigger.element);
+        return;
+      case 'slotPoly':
+        _showSlotChipTooltip(evt || { clientX: 0, clientY: 0 }, trigger.element);
+        return;
+      default:
+        hideAllGameTooltips();
+    }
+  }
+
+  function _clearTouchTooltipHold() {
+    if (!_touchTooltipHold) return;
+    if (_touchTooltipHold.timerId) global.clearTimeout(_touchTooltipHold.timerId);
+    _touchTooltipHold = null;
+  }
+
+  function _scheduleTouchTooltipHold(evt) {
+    if (!_isTouchDevice || !evt || evt.pointerType !== 'touch') return;
+    var trigger = _resolveTooltipTrigger(evt.target);
+    if (!trigger) return;
+    var pointerId = evt.pointerId;
+    var startX = evt.clientX;
+    var startY = evt.clientY;
+    _clearTouchTooltipHold();
+    _touchTooltipHold = {
+      pointerId: pointerId,
+      startX: startX,
+      startY: startY,
+      lastX: startX,
+      lastY: startY,
+      trigger: trigger,
+      opened: false,
+      timerId: global.setTimeout(function () {
+        var hold = _touchTooltipHold;
+        if (!hold || hold.pointerId !== pointerId) return;
+        hold.timerId = 0;
+        hold.opened = true;
+        _touchTooltipSuppressClickUntil = Date.now() + 750;
+        _showTooltipTrigger(hold.trigger, {
+          target: hold.trigger.element,
+          clientX: hold.lastX,
+          clientY: hold.lastY,
+        });
+      }, TOUCH_TOOLTIP_HOLD_MS),
+    };
+  }
+
+  function _updateTouchTooltipHold(evt) {
+    if (!_touchTooltipHold || !evt || _touchTooltipHold.pointerId !== evt.pointerId) return;
+    _touchTooltipHold.lastX = evt.clientX;
+    _touchTooltipHold.lastY = evt.clientY;
+    if (_touchTooltipHold.opened) return;
+    var dx = evt.clientX - _touchTooltipHold.startX;
+    var dy = evt.clientY - _touchTooltipHold.startY;
+    if ((dx * dx + dy * dy) >= TOUCH_TOOLTIP_MOVE_THRESHOLD_SQ) {
+      _clearTouchTooltipHold();
+    }
+  }
+
+  function _finishTouchTooltipHold(evt) {
+    if (!_touchTooltipHold || !evt || _touchTooltipHold.pointerId !== evt.pointerId) return;
+    if (_touchTooltipHold.opened) {
+      _touchTooltipHold = null;
+      return;
+    }
+    _clearTouchTooltipHold();
+  }
+
+  function _shouldSuppressTouchTooltipClick(evt) {
+    if (!_isTouchDevice || !evt) return false;
+    if (Date.now() >= _touchTooltipSuppressClickUntil) return false;
+    return !!_resolveTooltipTrigger(evt.target);
   }
 
   function _findPlayerChipEntry(chipId, level) {
@@ -2310,8 +2455,8 @@
 
   function _showTechCancelConfirm(modId) {
     var modal = _ensureTechModal();
-    var html = '<div class="techModal__dialog">' +
-      '<div class="techModal__text">' +
+    var html = '<div class="techModal__dialog techModal__dialog--confirm">' +
+      '<div class="techModal__text techModal__text--confirm">' +
       t('techCancelConfirmText', 'Если Вы отмените процесс обучения, то прогресс в открытии технологии будет утерян. Отменить процесс обучения?') +
       '</div>' +
       '<div class="techModal__btns">' +
@@ -3056,10 +3201,10 @@
     var riskText = t('chipCraftRiskText', 'Шанс успеха: {chance}%. При неудаче вы потеряете 1 случайный фрагмент{dustClause}. Продолжить?')
       .replace('{chance}', craftPayload.craftChancePct)
       .replace('{dustClause}', dustClause);
-    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft techModal__dialog--confirm" role="dialog" aria-modal="true" aria-labelledby="chipCraftModalTitle">' +
       '<button class="chipCraftSlotRemove uiButtonBehavior" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"><span class="chipCraftSlotRemove__icon" aria-hidden="true"></span></button>' +
       '<div class="techModal__title techModal__title--warn" id="chipCraftModalTitle">' + t('chipCraftRiskTitle', 'Риск потери ресурсов') + '</div>' +
-      '<div class="techModal__text">' + riskText + '</div>' +
+      '<div class="techModal__text techModal__text--confirm">' + riskText + '</div>' +
       '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-craft-risk-confirm type="button">' + continueLabel + '</button>' +
       '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
@@ -3075,10 +3220,10 @@
     var cancelLabel = t('chipCraftDustCancel', 'Отменить');
     var bodyText = t('chipRecycleConfirmText', 'Выбранные чипы ({count}) будут разобраны на составные элементы. Продолжить?')
       .replace('{count}', selectedCount);
-    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft" role="dialog" aria-modal="true" aria-labelledby="chipRecycleConfirmTitle">' +
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft techModal__dialog--confirm" role="dialog" aria-modal="true" aria-labelledby="chipRecycleConfirmTitle">' +
       '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
       '<div class="techModal__title techModal__title--warn" id="chipRecycleConfirmTitle">' + t('chipRecycleConfirmTitle', 'Подтвердить разборку') + '</div>' +
-      '<div class="techModal__text">' + bodyText + '</div>' +
+      '<div class="techModal__text techModal__text--confirm">' + bodyText + '</div>' +
       '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-craft-disassemble-confirm type="button">' + confirmLabel + '</button>' +
       '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
@@ -3356,7 +3501,9 @@
 
     html += '</div>'; // chipCraftInventory
 
-    /* ── Bottom bar outside inventory: dust controls + silicon dust display (dust view only) ── */
+    html += '</div>'; // chipCraftLeftCol
+
+    /* ── Dust bottom bar sits at the bottom of the single-column layout root. ── */
     if (isDustView) {
       html += '<div class="chipCraftBottomBar">';
       html += '<span class="chipCraftDustResource">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ': <b>' + _siliconDust + '</b></span>';
@@ -3370,8 +3517,6 @@
       html += '</div>';
       html += '</div>'; // chipCraftBottomBar
     }
-
-    html += '</div>'; // chipCraftLeftCol
 
     if (!isDustView) {
       /* ── Right column: Craft preview area ── */
@@ -4025,40 +4170,25 @@
     var overlay = el('modsHangarOverlay');
     if (overlay) {
       overlay.addEventListener('click', handleOverlayClick);
+      overlay.addEventListener('click', function (evt) {
+        if (!_shouldSuppressTouchTooltipClick(evt)) return;
+        _touchTooltipSuppressClickUntil = 0;
+        evt.preventDefault();
+        evt.stopImmediatePropagation();
+        evt.stopPropagation();
+      }, true);
       /* tooltip hover events for chip upgrade cards */
       overlay.addEventListener('mouseover', function(evt) {
-        var tgt = evt.target;
-        if (!tgt || !tgt.closest) return;
-        /* Chip upgrade grid cards */
-        var card = tgt.closest('[data-chip-upgrade-id]');
-        if (card) { showChipUpgradeTooltip(evt); return; }
-        /* Hangar inventory chip buttons (available chips list) */
-        var chipBtn = tgt.closest('.hangarChipInvItem[data-chip-id]');
-        if (chipBtn) { showHangarChipBtnTooltip(chipBtn); return; }
-        /* Tech acceleration modal whole-chip cards */
-        var accelChip = tgt.closest('[data-accel-chip-id]');
-        if (accelChip) { showTechAccelChipTooltip(accelChip); return; }
-        /* Craft panel inventory items */
-        var craftItem = tgt.closest('.chipCraftInvItem');
-        if (craftItem) {
-          if (craftItem.getAttribute('data-craft-chip-id')) { showCraftInvChipTooltip(craftItem); return; }
-          if (craftItem.getAttribute('data-craft-frag-id')) { showCraftInvFragTooltip(craftItem); return; }
+        if (_isTouchDevice) return;
+        var trigger = _resolveTooltipTrigger(evt.target);
+        if (trigger) {
+          _showTooltipTrigger(trigger, evt);
+          return;
         }
-        /* Craft preview result chip (assemble preview) */
-        var resultChip = tgt.closest('.chipCraftResultChip');
-        if (resultChip) { showCraftResultTooltip(resultChip); return; }
-        /* Craft drop zone slots */
-        var slotChip = tgt.closest('[data-hct-chip-id]');
-        if (slotChip) { showCraftSlotChipTooltip(slotChip); return; }
-        var slotFrag = tgt.closest('[data-hct-frag-id]');
-        if (slotFrag) { showCraftSlotFragTooltip(slotFrag); return; }
-        /* Task 5: tooltip for chips installed in SVG slot triangles */
-        var slotPoly = tgt.closest('[data-slot-type]');
-        if (slotPoly) { _showSlotChipTooltip(evt, slotPoly); return; }
-        /* Moved over non-trigger area — hide game tooltip */
-        hideChipUpgradeTooltip();
+        hideAllGameTooltips();
       });
       overlay.addEventListener('mousemove', function(evt) {
+        if (_isTouchDevice) return;
         /* Task 5: update tooltip position when moving over slot */
         if (_slotTooltipEl && _slotTooltipEl.style.display !== 'none') {
           var slotPoly = evt.target.closest ? evt.target.closest('[data-slot-type]') : null;
@@ -4068,6 +4198,7 @@
         }
       });
       overlay.addEventListener('mouseout', function(evt) {
+        if (_isTouchDevice) return;
         var tgt = evt.target;
         var rel = evt.relatedTarget;
         if (!tgt || !tgt.closest) return;
@@ -4102,6 +4233,16 @@
       var _slotDragging = null; // { chipId, level, chipColor, startX, startY, ghostEl, sourceEl }
 
       overlay.addEventListener('pointerdown', function(evt) {
+        if (_isTouchDevice && evt.pointerType === 'touch') {
+          if (evt.target.closest && evt.target.closest('.chipUpgradeTooltip')) return;
+          if (_resolveTooltipTrigger(evt.target)) {
+            hideAllGameTooltips();
+            _scheduleTouchTooltipHold(evt);
+          } else {
+            _clearTouchTooltipHold();
+            hideAllGameTooltips();
+          }
+        }
         /* Check for chip button in inventory (for slot installation) */
         var chipBtn = evt.target.closest ? evt.target.closest('[data-chip-id]') : null;
         if (chipBtn && !evt.target.closest('[data-drag-chip-id]')) {
@@ -4120,22 +4261,6 @@
 
           evt.preventDefault();
           var chipBtnRect = chipBtn.getBoundingClientRect();
-          var ghost2 = chipBtn.cloneNode(true);
-          ghost2.className = chipBtn.className + ' chipDragGhost';
-          ghost2.style.position = 'fixed';
-          ghost2.style.left = evt.clientX + 'px';
-          ghost2.style.top = evt.clientY + 'px';
-          ghost2.style.width = Math.ceil(chipBtnRect.width) + 'px';
-          ghost2.style.minHeight = Math.ceil(chipBtnRect.height) + 'px';
-          ghost2.style.height = Math.ceil(chipBtnRect.height) + 'px';
-          ghost2.style.boxSizing = 'border-box';
-          ghost2.style.pointerEvents = 'none';
-          ghost2.style.zIndex = '99999';
-          ghost2.style.opacity = '0.85';
-          ghost2.style.transform = 'translate(-50%, -50%)';
-          ghost2.setAttribute('aria-hidden', 'true');
-          _doc.body.appendChild(ghost2);
-
           _slotDragging = {
             chipId: sid,
             level: slvl,
@@ -4143,8 +4268,10 @@
             startX: evt.clientX,
             startY: evt.clientY,
             moved: false,
-            ghostEl: ghost2,
-            sourceEl: chipBtn
+            ghostEl: null,
+            sourceEl: chipBtn,
+            ghostWidth: Math.ceil(chipBtnRect.width),
+            ghostHeight: Math.ceil(chipBtnRect.height)
           };
           /* Capture pointer so touch drag survives browser pan/scroll */
           if (evt.pointerId !== undefined) {
@@ -4168,24 +4295,6 @@
 
         /* Create ghost element with the same footprint as the source card. */
         var rect = card.getBoundingClientRect();
-        var ghost = card.cloneNode(true);
-        ghost.className = card.className + ' chipDragGhost chipUpgradeCard--dragGhost';
-        ghost.style.position = 'fixed';
-        ghost.style.left = evt.clientX + 'px';
-        ghost.style.top = evt.clientY + 'px';
-        ghost.style.width = Math.ceil(rect.width) + 'px';
-        ghost.style.minHeight = Math.ceil(rect.height) + 'px';
-        ghost.style.height = Math.ceil(rect.height) + 'px';
-        ghost.style.boxSizing = 'border-box';
-        ghost.style.pointerEvents = 'none';
-        ghost.style.zIndex = '99999';
-        ghost.style.opacity = '0.85';
-        ghost.style.transform = 'translate(-50%, -50%)';
-        ghost.setAttribute('aria-hidden', 'true');
-        _doc.body.appendChild(ghost);
-
-        card.classList.add('chipUpgradeCard--dragging');
-
         _chipDragging = {
           chipId: chipId,
           level: level,
@@ -4194,8 +4303,10 @@
           x: evt.clientX,
           y: evt.clientY,
           moved: false,
-          ghostEl: ghost,
-          sourceEl: card
+          ghostEl: null,
+          sourceEl: card,
+          ghostWidth: Math.ceil(rect.width),
+          ghostHeight: Math.ceil(rect.height)
         };
         /* Capture pointer so touch drag survives browser pan/scroll */
         if (evt.pointerId !== undefined) {
@@ -4204,6 +4315,7 @@
       });
 
       overlay.addEventListener('pointermove', function(evt) {
+        _updateTouchTooltipHold(evt);
         /* Prevent browser scroll/pan while dragging on touch devices */
         if ((_slotDragging || _chipDragging) && evt.cancelable) {
           evt.preventDefault();
@@ -4212,7 +4324,27 @@
         if (_slotDragging) {
           var sdx = evt.clientX - _slotDragging.startX;
           var sdy = evt.clientY - _slotDragging.startY;
-          if (Math.abs(sdx) + Math.abs(sdy) > 6) _slotDragging.moved = true;
+          if (!_slotDragging.moved && (sdx * sdx + sdy * sdy) >= 36) {
+            _slotDragging.moved = true;
+            if (_slotDragging.sourceEl) {
+              var ghost2 = _slotDragging.sourceEl.cloneNode(true);
+              ghost2.className = _slotDragging.sourceEl.className + ' chipDragGhost';
+              ghost2.style.position = 'fixed';
+              ghost2.style.left = evt.clientX + 'px';
+              ghost2.style.top = evt.clientY + 'px';
+              ghost2.style.width = _slotDragging.ghostWidth + 'px';
+              ghost2.style.minHeight = _slotDragging.ghostHeight + 'px';
+              ghost2.style.height = _slotDragging.ghostHeight + 'px';
+              ghost2.style.boxSizing = 'border-box';
+              ghost2.style.pointerEvents = 'none';
+              ghost2.style.zIndex = '99999';
+              ghost2.style.opacity = '0.85';
+              ghost2.style.transform = 'translate(-50%, -50%)';
+              ghost2.setAttribute('aria-hidden', 'true');
+              _doc.body.appendChild(ghost2);
+              _slotDragging.ghostEl = ghost2;
+            }
+          }
           if (_slotDragging.ghostEl) {
             _slotDragging.ghostEl.style.left = evt.clientX + 'px';
             _slotDragging.ghostEl.style.top = evt.clientY + 'px';
@@ -4239,7 +4371,28 @@
         _chipDragging.y = evt.clientY;
         var dx = _chipDragging.x - _chipDragging.startX;
         var dy = _chipDragging.y - _chipDragging.startY;
-        if (Math.abs(dx) + Math.abs(dy) > 6) _chipDragging.moved = true;
+        if (!_chipDragging.moved && (dx * dx + dy * dy) >= 36) {
+          _chipDragging.moved = true;
+          if (_chipDragging.sourceEl) {
+            var ghost = _chipDragging.sourceEl.cloneNode(true);
+            ghost.className = _chipDragging.sourceEl.className + ' chipDragGhost chipUpgradeCard--dragGhost';
+            ghost.style.position = 'fixed';
+            ghost.style.left = evt.clientX + 'px';
+            ghost.style.top = evt.clientY + 'px';
+            ghost.style.width = _chipDragging.ghostWidth + 'px';
+            ghost.style.minHeight = _chipDragging.ghostHeight + 'px';
+            ghost.style.height = _chipDragging.ghostHeight + 'px';
+            ghost.style.boxSizing = 'border-box';
+            ghost.style.pointerEvents = 'none';
+            ghost.style.zIndex = '99999';
+            ghost.style.opacity = '0.85';
+            ghost.style.transform = 'translate(-50%, -50%)';
+            ghost.setAttribute('aria-hidden', 'true');
+            _doc.body.appendChild(ghost);
+            _chipDragging.ghostEl = ghost;
+            _chipDragging.sourceEl.classList.add('chipUpgradeCard--dragging');
+          }
+        }
         if (_chipDragging.ghostEl) {
           _chipDragging.ghostEl.style.left = evt.clientX + 'px';
           _chipDragging.ghostEl.style.top = evt.clientY + 'px';
@@ -4264,6 +4417,7 @@
       });
 
       overlay.addEventListener('pointerup', function(evt) {
+        _finishTouchTooltipHold(evt);
         /* Handle slot-install drop */
         if (_slotDragging) {
           var sd = _slotDragging;
@@ -4410,6 +4564,7 @@
 
       /* Clean up on pointer cancel (touch drag interrupted by browser) */
       overlay.addEventListener('pointercancel', function(evt) {
+        _clearTouchTooltipHold();
         _cancelAllDrags();
         if (evt.pointerId !== undefined) {
           try { overlay.releasePointerCapture(evt.pointerId); } catch(e) { /* noop */ }

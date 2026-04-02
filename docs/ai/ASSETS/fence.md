@@ -2,6 +2,8 @@ assets/fence.json
 
 Схема и правила для `assets/fence.json` (версия для разработчиков)
 
+Обновлено: 2026-04-02.
+
 Описание:
 - `atlas`: (строка) глобальный путь к изображению-атласу по умолчанию (например `fence_atlas.png`).
 - `cornerInsetPx`: (число|null) override для inset при рисовании углов.
@@ -14,6 +16,12 @@ assets/fence.json
   - `spriteKeys` (object, optional): позволяет переопределить id-ы кадров для ключевых частей забора на данном уровне. Ключи: `cornerTL`, `cornerTR`, `cornerBR`, `cornerBL`, `sideTop`, `sideRight`, `sideBottom`, `sideLeft`. Если указаны — движок валидирует что такие id есть в `frames`; при несовпадении происходит fallback на дефолт.
 
 - `frames`: глобальный список rect-ов (как раньше). Это единый список кадров — вне зависимости от `atlas`-а. Переопределение `atlas` меняет только картинку, а `frames` остаются глобальными именами и прямоугольниками.
+
+Repair pricing runtime contract:
+- Top-level `repair.costCoinsByLevel` — canonical карта базовой стоимости ремонта по уровням fence (`1..60`). Именно её первой читает `Game.FenceRepair.getConfiguredRepairBaseCost(level)`.
+- Если у уровня нет записи в `repair.costCoinsByLevel`, runtime fallback'ится к `levels[level-1].repairCostCoins`, затем к `levels[level-1].repair.costCoins`, и только потом — к legacy `buyTankCost(level)` из `assets/tanks.json`.
+- Top-level `repair.costCoins` допустим как legacy-поле данных, но текущий runtime не использует его как primary source of truth. Менять только это поле недостаточно, чтобы поменять фактическую цену ремонта.
+- Финальная цена ремонта считается как `baseCost + repairCount * max(1, ceil(baseCost * 0.01))`, где `baseCost` берётся из описанного выше config-first resolution order, а `repairCount` хранится в runtime/save state.
 
 Smoke overlay (опционально):
 - Поле `smoke` в `assets/fence.json` (если присутствует) — конфиг для эффекта дыма, который рисуется поверх сломанных (`broken`) сегментов.

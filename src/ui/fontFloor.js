@@ -2,6 +2,10 @@
   'use strict';
 
   var MIN_FONT_PX = 10;
+  var CLAMP_ATTR = 'data-font-floor-clamped';
+  var ORIGINAL_VALUE_ATTR = 'data-font-floor-original-font-size';
+  var ORIGINAL_PRIORITY_ATTR = 'data-font-floor-original-font-priority';
+  var INTERNAL_STYLE_MUTATIONS_KEY = '__fontFloorInternalStyleMutations';
   var SKIP_SELECTOR = [
     '.levelModal__close',
     '.crateModal__close',
@@ -44,8 +48,79 @@
     return !!node && node.nodeType === 1;
   }
 
+  function isClampedElement(element) {
+    return !!element && !!element.getAttribute && element.getAttribute(CLAMP_ATTR) === 'true';
+  }
+
   function shouldSkipElement(element) {
-    return !element || typeof element.matches !== 'function' || element.matches(SKIP_SELECTOR);
+    if (!element || typeof element.matches !== 'function') return true;
+    if (element.matches(SKIP_SELECTOR)) return true;
+    return typeof element.closest === 'function' && !!element.closest(SKIP_SELECTOR);
+  }
+
+  function rememberInlineFontState(element) {
+    if (!element || !element.style || isClampedElement(element)) return;
+    element.setAttribute(CLAMP_ATTR, 'true');
+    element.setAttribute(ORIGINAL_VALUE_ATTR, element.style.getPropertyValue('font-size') || '');
+    element.setAttribute(ORIGINAL_PRIORITY_ATTR, element.style.getPropertyPriority('font-size') || '');
+  }
+
+  function markInternalStyleMutation(element) {
+    if (!element) return;
+    var pending = Number(element[INTERNAL_STYLE_MUTATIONS_KEY]) || 0;
+    element[INTERNAL_STYLE_MUTATIONS_KEY] = pending + 1;
+  }
+
+  function consumeInternalStyleMutation(element) {
+    if (!element) return false;
+    var pending = Number(element[INTERNAL_STYLE_MUTATIONS_KEY]) || 0;
+    if (pending <= 0) return false;
+    if (pending === 1) {
+      try {
+        delete element[INTERNAL_STYLE_MUTATIONS_KEY];
+      } catch (err) {
+        element[INTERNAL_STYLE_MUTATIONS_KEY] = 0;
+      }
+      return true;
+    }
+    element[INTERNAL_STYLE_MUTATIONS_KEY] = pending - 1;
+    return true;
+  }
+
+  function setElementFontSize(element, value, priority) {
+    if (!element || !element.style) return;
+    markInternalStyleMutation(element);
+    element.style.setProperty('font-size', value, priority || '');
+  }
+
+  function removeElementFontSize(element) {
+    if (!element || !element.style) return;
+    markInternalStyleMutation(element);
+    element.style.removeProperty('font-size');
+  }
+
+  function restoreInlineFontState(element) {
+    if (!element || !element.style || !isClampedElement(element)) return;
+    var originalValue = element.getAttribute(ORIGINAL_VALUE_ATTR) || '';
+    var originalPriority = element.getAttribute(ORIGINAL_PRIORITY_ATTR) || '';
+    if (originalValue) {
+      setElementFontSize(element, originalValue, originalPriority);
+      return;
+    }
+    removeElementFontSize(element);
+  }
+
+  function clearClampMetadata(element) {
+    if (!element || !element.removeAttribute) return;
+    element.removeAttribute(CLAMP_ATTR);
+    element.removeAttribute(ORIGINAL_VALUE_ATTR);
+    element.removeAttribute(ORIGINAL_PRIORITY_ATTR);
+  }
+
+  function applyElementFloor(element) {
+    if (!element || !element.style) return;
+    rememberInlineFontState(element);
+    setElementFontSize(element, MIN_FONT_PX + 'px');
   }
 
   function getComputedFontPx(element) {
@@ -56,10 +131,27 @@
   }
 
   function enforceElementFloor(element) {
-    if (!isElementNode(element) || shouldSkipElement(element)) return;
+    if (!isElementNode(element)) return;
+    var hadClamp = isClampedElement(element);
+    if (shouldSkipElement(element)) {
+      if (hadClamp) {
+        restoreInlineFontState(element);
+        clearClampMetadata(element);
+      }
+      return;
+    }
+    if (hadClamp) restoreInlineFontState(element);
     var sizePx = getComputedFontPx(element);
     if (sizePx > 0 && sizePx < MIN_FONT_PX) {
-      element.style.fontSize = MIN_FONT_PX + 'px';
+      applyElementFloor(element);
+      return;
+    }
+    if (hadClamp) {
+      if (sizePx <= 0) {
+        applyElementFloor(element);
+        return;
+      }
+      clearClampMetadata(element);
     }
   }
 
@@ -111,6 +203,9 @@
             if (isElementNode(added)) schedule(added);
           }
         } else if (mutation.type === 'attributes' && isElementNode(mutation.target)) {
+          if (mutation.attributeName === 'style' && consumeInternalStyleMutation(mutation.target)) {
+            continue;
+          }
           schedule(mutation.target);
         }
       }

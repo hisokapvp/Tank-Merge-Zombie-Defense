@@ -1,5 +1,19 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-04-02
+- **Документация: one-shot shared post-merge update после join для fence repair runtime contract, mobile hangar/underground parity, focus-safe overlay hide и cache-bust wiring (`src/mechanics/fenceRepair.js`, `assets/fence.json`, `game.js`, `src/ui/hangarChipsUI.js`, `src/ui/undergroundHangarUI.js`, `src/ui/supercomputerMenu.js`, `src/ui/fontFloor.js`, `style.css`, `index.html`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/fence.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/ASSETS/fence.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/SUPERCOMPUTER_MENU_MAP.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Game.FenceRepair` теперь документирован как единственный source of truth для repair pricing; `game.js` только инициализирует модуль в boot и делегирует `getFenceRepairCostCoins()` / `tryRepairFenceSegmentAt()`, а config-first resolution order идёт через `assets/fence.json -> repair.costCoinsByLevel[level] -> levels[level-1].repairCostCoins / levels[level-1].repair.costCoins -> buyTankCost(level)`.
+  - Зафиксированы: `assets/fence.json` документирует `repair.costCoinsByLevel` как canonical per-level repair contract, тогда как top-level `repair.costCoins` не считается текущим authoritative runtime source.
+  - Зафиксированы: `src/ui/fontFloor.js` теперь явно описан с restore-on-skip и self-mutation guard против stale inline `10px`; `src/ui/hangarChipsUI.js` и `style.css` закрепляют mobile long-press tooltip contract (`450ms`, `6px`, interactive close shell, `max-width:min(92vw, 380px)`), а `src/ui/undergroundHangarUI.js` — touch-safe drag/drop parity через pointer capture / `pointercancel` cleanup / threshold-gated updates.
+  - Зафиксированы: `src/ui/supercomputerMenu.js` использует focus-safe overlay hide path через `resolveOverlayHideFocusTarget()` и `moveFocusOutsideOverlay()` перед `setOverlayOpen(false)`, а `index.html` держит локальный cache-bust token `20260402-fd1-mobile-hangar-fence-repair-v1` на изменённых HTML-loaded runtime scripts и entry helper path для `style.css`/`game.js`.
+
+- **Документация: one-shot shared post-merge update после join для FontFloor observer guard (`src/ui/fontFloor.js`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Game.FontFloor` сохраняет исходный inline `font-size`/priority в `data-font-floor-*`, восстанавливает его при переходе элемента в skip-path и не оставляет stale inline `10px` после выхода из clamp-сценария.
+  - Зафиксированы: DOM observer маркирует собственные `style`-мутации через `__fontFloorInternalStyleMutations` и игнорирует их в `MutationObserver`, поэтому runtime больше не пересамопланирует clamp/restore loop на собственных изменениях стиля, сохраняя batched `requestAnimationFrame`/`setTimeout` scheduler.
+  - Зафиксированы: глобальный floor `10px`, restore-on-skip поведение и skip-лист для unified close/remove controls остаются частью того же UI контракта.
+
 ## 2026-03-31
 - **Документация: one-shot shared post-merge update после join для hangar/workshop responsive shell, aura render contract и Balance Editor analytics (`style.css`, `src/ui/hangarChipsUI.js`, `game.js`, `tools/balance-editor.html`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/assets.md`, `docs/ai/SYSTEMS/balance-editor.md`, `docs/ai/CHANGELOG.md`.

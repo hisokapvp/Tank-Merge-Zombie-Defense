@@ -4720,6 +4720,9 @@ body.ugh-open::before{
   cursor:default;
   transition:border-color .15s, box-shadow .15s, transform .15s;
   overflow:hidden;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
 }
 .ughCell--occupied{
   border-color:rgba(74,246,38,.35);
@@ -4918,6 +4921,34 @@ body.ugh-open::before{
   cursor:default;
   transition:border-color .15s, box-shadow .15s, transform .15s;
   overflow:hidden;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.ughCell--dragSource,
+.ughDroneCell--dragSource{
+  opacity:.38;
+}
+.ughCell--dragHover,
+.ughDroneCell--dragHover{
+  transform:translateY(-1px);
+}
+.ughCell--dragHoverMove,
+.ughDroneCell--dragHoverMove{
+  box-shadow:0 0 0 2px rgba(95,192,255,.24), 0 0 12px rgba(95,192,255,.18);
+}
+.ughCell--dragHoverMerge,
+.ughDroneCell--dragHoverMerge{
+  box-shadow:0 0 0 2px rgba(255,208,112,.26), 0 0 12px rgba(255,208,112,.18);
+}
+.ughCell--dragGhost,
+.ughDroneCell--dragGhost{
+  position:fixed;
+  z-index:10000;
+  pointer-events:none;
+  opacity:.9;
+  transform:translate(-50%, -50%) scale(1.03);
+  box-shadow:0 0 18px rgba(0,0,0,.34);
 }
 .ughDroneCell--occupied{
   border-color:rgba(74,246,38,.3);
@@ -5565,15 +5596,15 @@ button.hangarChipInvItem{
   font-size:12px;
   color:rgba(235,255,226,.92);
   pointer-events:none;
-  max-width:280px;
+  max-width:var(--chipUpgradeTooltipMaxWidth, 280px);
   box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
   line-height:1.45;
 }
 /* Mobile tooltip: larger, interactive, with close button */
 @media (hover:none) and (pointer:coarse){
   .chipUpgradeTooltip{
+    --chipUpgradeTooltipMaxWidth:min(92vw, 380px);
     pointer-events:auto;
-    max-width:min(92vw, 380px);
     padding:44px 18px 16px;
     font-size:15px;
     border-radius:14px;
@@ -6524,16 +6555,33 @@ button.hangarChipInvItem{
   flex-wrap:nowrap;
   align-items:stretch;
 }
+.chipCraftLayout--singleCol{
+  flex-direction:column;
+  flex-wrap:nowrap;
+  align-items:stretch;
+}
 .chipCraftLayout--singleCol .chipCraftLeftCol{
   flex:1 1 auto;
-}
-/* Desktop: pin chipCraftBottomBar below scrollable inventory in dust view */
-#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftLeftCol{
-  overflow-y:hidden;
-}
-#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInventory{
-  flex:1 1 0;
+  width:100%;
+  max-width:100%;
   min-height:0;
+}
+#workshopPanelChipRecycle .chipCraftLayout--singleCol{
+  overflow:hidden;
+}
+/* Dust recycle path: inventory scrolls, bottom bar stays pinned as a layout child. */
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftLeftCol{
+  overflow:hidden;
+}
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInventory,
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInvGrid{
+  flex:1 1 auto;
+  min-height:0;
+}
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftBottomBar{
+  width:100%;
+  margin-top:auto;
+  flex:0 0 auto;
 }
 .chipCraftLeftCol{
   flex:0 1 var(--modsHangarLeftColWidth, 220px);
@@ -6731,12 +6779,13 @@ button.hangarChipInvItem{
     min-height:0;
   }
   #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInventory{
-    max-height:min(42vh, 360px);
+    flex:1 1 auto;
+    max-height:none;
   }
   #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftBottomBar{
-    position:sticky;
-    bottom:0;
-    z-index:1;
+    position:relative;
+    bottom:auto;
+    z-index:auto;
   }
   #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftDustActions,
   #workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftDustTotal{
@@ -8029,7 +8078,7 @@ button.hangarChipInvItem{
 .chipUpgradeTooltip{
   padding: calc(12px * var(--ui-scale)) calc(14px * var(--ui-scale));
   font-size: calc(12px * var(--ui-scale));
-  max-width: calc(280px * var(--ui-scale));
+  max-width: var(--chipUpgradeTooltipMaxWidth, calc(280px * var(--ui-scale)));
   border-radius: calc(10px * var(--ui-scale));
 }
 
@@ -8667,6 +8716,45 @@ button.hangarChipInvItem{
 .mergePopupModal__panel {
   font-size: max(14px, 1em) !important;
   padding-top: 50px !important;
+}
+
+/* Mobile popup / confirm shells need an explicit late 16px floor that beats stale font-floor inline styles. */
+@media (max-width: 1279px), (hover: none) and (pointer: coarse){
+  .centerNotification,
+  .achievementToast,
+  .mergePopupModal__panel,
+  .criticalModal,
+  .plStorage__confirmBox,
+  .techModal__dialog,
+  #dismantleModal .levelModal__panel,
+  #resetTalentsModal .levelModal__panel,
+  #talentResetCooldownModal .levelModal__panel{
+    font-size:16px !important;
+  }
+  .techModal__dialog .techModal__title,
+  .techModal__dialog .techModal__subtitle,
+  .techModal__dialog .techModal__rateLine,
+  .techModal__dialog .techModal__text,
+  .techModal__dialog .techModal__btns .btn,
+  .plStorage__confirmBox .levelModal__line,
+  .plStorage__confirmBox .plStorage__confirmActions .btn,
+  #dismantleModal .levelModal__title,
+  #dismantleModal .levelModal__line,
+  #dismantleModal .levelModal__actions .btn,
+  #resetTalentsModal .levelModal__title,
+  #resetTalentsModal .levelModal__contentWrap .btn,
+  #talentResetCooldownModal .levelModal__title,
+  #talentResetCooldownModal .levelModal__line,
+  #talentResetCooldownModal .levelModal__contentWrap .btn{
+    font-size:16px !important;
+  }
+  .techModal__dialog--confirm .techModal__text--confirm,
+  #plConfirmText,
+  #dismantleConfirmText,
+  #resetTalentsModalText,
+  #talentResetCooldownModalText{
+    padding-top:50px !important;
+  }
 }
 
 @media (max-width: 1500px) and (hover: none) and (pointer: coarse){

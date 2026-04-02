@@ -16,6 +16,60 @@
     }
   }
 
+  function getFenceConfig() {
+    return typeof _fenceConfigProvider === 'function' ? (_fenceConfigProvider() || {}) : {};
+  }
+
+  function normalizeFenceLevel(fenceLevel) {
+    return Number.isFinite(fenceLevel) ? Math.max(1, Math.floor(fenceLevel)) : 1;
+  }
+
+  function normalizeRepairCount(repairCount) {
+    return Number.isFinite(repairCount) ? Math.max(0, Math.floor(repairCount)) : 0;
+  }
+
+  function normalizeCostValue(value) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed)) return NaN;
+    return Math.max(0, Math.floor(parsed));
+  }
+
+  function readPerLevelMapCost(costMap, level) {
+    if (!costMap || typeof costMap !== 'object') return NaN;
+    if (Array.isArray(costMap)) {
+      return level <= costMap.length ? normalizeCostValue(costMap[level - 1]) : NaN;
+    }
+    return normalizeCostValue(costMap[String(level)]);
+  }
+
+  function getConfiguredRepairBaseCost(level) {
+    var cfg = getFenceConfig();
+    var repair = cfg && typeof cfg === 'object' ? (cfg.repair || {}) : {};
+    var configuredCost = readPerLevelMapCost(repair.costCoinsByLevel, level);
+    if (Number.isFinite(configuredCost)) return configuredCost;
+
+    var levels = Array.isArray(cfg.levels) ? cfg.levels : null;
+    var levelCfg = levels && levels[level - 1] && typeof levels[level - 1] === 'object'
+      ? levels[level - 1]
+      : null;
+    if (!levelCfg) return NaN;
+
+    configuredCost = normalizeCostValue(levelCfg.repairCostCoins);
+    if (Number.isFinite(configuredCost)) return configuredCost;
+    configuredCost = levelCfg.repair && typeof levelCfg.repair === 'object'
+      ? normalizeCostValue(levelCfg.repair.costCoins)
+      : NaN;
+    return configuredCost;
+  }
+
+  function resolveLegacyRepairBaseCost(level) {
+    var getBuyTankCost = global.Game && global.Game.buyTankCost;
+    if (typeof getBuyTankCost !== 'function') return FENCE_DEFAULT_REPAIR_COST;
+    var baseCost = getBuyTankCost(level);
+    if (!Number.isFinite(baseCost) || baseCost < 1) return FENCE_DEFAULT_REPAIR_COST;
+    return Math.max(1, Math.floor(baseCost));
+  }
+
   /**
    * Async replacement for the sync XMLHttpRequest IIFE.
    * Loads assets/tanks.json and builds Game.TankPrices array.
@@ -59,7 +113,7 @@
    * Cost is now computed dynamically via computeRepairCost.
    */
   function getFenceRepairConfig() {
-    var cfg = typeof _fenceConfigProvider === 'function' ? _fenceConfigProvider() : {};
+    var cfg = getFenceConfig();
     var repair = cfg.repair || {};
     return {
       enabled: repair.enabled !== false,
@@ -69,7 +123,13 @@
   /**
    * Compute fence segment repair cost.
    *
-   * Formula: buyTankCost(fenceLevel) + repairCount * max(1, ceil(buyTankCost(fenceLevel) * 0.01))
+  * Formula priority:
+  * 1. assets/fence.json -> repair.costCoinsByLevel[level]
+  * 2. assets/fence.json -> levels[level - 1].repairCostCoins / levels[level - 1].repair.costCoins
+  * 3. Legacy fallback: buyTankCost(fenceLevel)
+  *
+  * Final cost keeps the existing cumulative surcharge:
+  * baseCost + repairCount * max(1, ceil(baseCost * 0.01))
    *
    * Examples (fenceLevel 1 → base 50$):
    *   1st repair (count=0): 50$
@@ -86,12 +146,11 @@
    * @returns {number}
    */
   function computeRepairCost(fenceLevel, repairCount) {
-    var getBuyTankCost = global.Game && global.Game.buyTankCost;
-    if (typeof getBuyTankCost !== 'function') return FENCE_DEFAULT_REPAIR_COST;
-    var level = Number.isFinite(fenceLevel) ? Math.max(1, Math.floor(fenceLevel)) : 1;
-    var baseCost = getBuyTankCost(level);
-    if (!Number.isFinite(baseCost) || baseCost < 1) baseCost = FENCE_DEFAULT_REPAIR_COST;
-    var count = Number.isFinite(repairCount) ? Math.max(0, Math.floor(repairCount)) : 0;
+    var level = normalizeFenceLevel(fenceLevel);
+    var baseCost = getConfiguredRepairBaseCost(level);
+    if (!Number.isFinite(baseCost)) baseCost = resolveLegacyRepairBaseCost(level);
+    var count = normalizeRepairCount(repairCount);
+    if (baseCost <= 0) return 0;
     if (count <= 0) return baseCost;
     var perRepairSurcharge = Math.max(1, Math.ceil(baseCost * 0.01));
     return baseCost + count * perRepairSurcharge;

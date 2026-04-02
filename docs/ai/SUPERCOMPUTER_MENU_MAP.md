@@ -1,6 +1,6 @@
 # supercomputerMenu.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-29.
+> Агент-ориентировано. Обновлён: 2026-04-02.
 > Файл большой (~1.9k строк): перед правками модалок суперкомпьютера открой этот map.
 
 ## Что это
@@ -10,6 +10,7 @@
 
 ## Быстрый старт для агента
 - Shared help modal / accordion / help-button copy sync → [toggleSharedHelpSection()](../../src/ui/supercomputerMenu.js#L52-L60), [showSharedHelpModal()](../../src/ui/supercomputerMenu.js#L159-L185), [syncSharedHelpButtonCopy()](../../src/ui/supercomputerMenu.js#L150-L157), export в [global.Game.SupercomputerMenu](../../src/ui/supercomputerMenu.js#L2182-L2184).
+- Focus-safe overlay close / hide routing → [hideSharedHelpModal()](../../src/ui/supercomputerMenu.js#L143-L149), [resolveOverlayHideFocusTarget()](../../src/ui/supercomputerMenu.js#L219-L233), [moveFocusOutsideOverlay()](../../src/ui/supercomputerMenu.js#L235-L247), [setOverlayOpen()](../../src/ui/supercomputerMenu.js#L249-L260).
 - Responsive shell routing + talents close/help ownership → [shouldUseFullscreenShell()](../../src/ui/supercomputerMenu.js#L422-L469), [syncResponsiveShellState()](../../src/ui/supercomputerMenu.js#L461-L469), [ensureTalentsHeaderActions() / ensureTalentsShellCloseButton() / ensureTalentsShellHelpButton()](../../src/ui/supercomputerMenu.js#L553-L636), [applySharedTalentModalClass()](../../src/ui/supercomputerMenu.js#L620-L690).
 - Per-stat pending/reserve/apply seam → [CANNON_STAT_KEYS / DRON_STAT_KEYS / FENCE_STAT_KEYS + state](../../src/ui/supercomputerMenu.js#L319-L339), [pending helpers](../../src/ui/supercomputerMenu.js#L578-L739), [expanded row / stat-control / applyPendingStats](../../src/ui/supercomputerMenu.js#L755-L839).
 - Root-плитки и общая геометрия → [openRoot()](../../src/ui/supercomputerMenu.js#L1713-L1736), [normalizeRootTilesSize()](../../src/ui/supercomputerMenu.js#L1002-L1019), [refreshRootTilesLayout()](../../src/ui/supercomputerMenu.js#L1020-L1025).
@@ -19,6 +20,7 @@
 ## Инварианты этого модуля ⚠️
 - Scroll-lock модалок суперкомпьютера централизован в `setBodyScrollLock()`: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L362-L367), [style.css](../../style.css#L1195-L1204).
 - Shared help modal shell (`showSharedHelpModal` / `hideSharedHelpModal` / `syncSharedHelpButtonCopy`) — это public SC-family contract, а не talents-only helper: его переиспользуют talents shell, tank-wall help, underground hangar и production storage help, поэтому copy/DOM shell и accordion-toggle нельзя разносить по отдельным модалкам. См. [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L52-L185), export в [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L2182-L2184), consumer в [src/ui/productionLineUI.js](../../src/ui/productionLineUI.js#L134-L153).
+- Закрытие shared help и root/tank-wall overlay должно оставаться focus-safe: перед `setOverlayOpen(false)` runtime обязан вычислить внешний target через `resolveOverlayHideFocusTarget()` и увести фокус наружу через `moveFocusOutsideOverlay()`, иначе после hide activeElement может остаться внутри скрытого shell'а. Этот путь обязателен и для shared help modal, и для остальных SC-family overlay routes: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L143-L149), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L219-L260).
 - `shouldUseFullscreenShell()` — canonical gate для SC-family fullscreen shell under coarse-pointer / `< 1280px`; именно этот runtime ставит `levelModal--fullscreenShell`, `scModal--fullscreenShell` и `talentTreeModal--fullscreenShell` только для talents/hangar/tank-wall, а CSS уже реализует scroll/size contract. Для talents deliberate outer `scModal` / mount path держится в `overflow:hidden`, а реальный scroll живёт в `#supercomputerTalentsView` / `.talentTreeBody`; production storage сюда не входит и остаётся на отдельном centered bounded shell path. Не дублировать локальные mobile решения на уровнях отдельных overlays: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L422-L469), [style.css](../../style.css#L7995-L8210).
 - `applySharedTalentModalClass()` обязан держать shared right-side header-actions contract для talents shell: wrapper `#supercomputerTalentsHeaderActions` создаётся/реиспользуется как `scModal__headerActions`, а видимые help/close контролы принадлежат именно этому wrapper'у через `ensureTalentsShellHelpButton()` и `ensureTalentsShellCloseButton()`. Embedded `.modalClose` сохраняется как skin/hit-area parity слой, но ownership user-visible controls остаётся у header row `help -> close`: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L553-L636), [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L620-L690), [style.css](../../style.css#L2682-L2720).
 - `applySharedTalentModalClass()` обязан навешивать на `talentOverlay` не только `.scModal`, но и `scModal__close` + `data-font-floor-ignore="true"` на `.modalClose`, чтобы крестик дерева улучшений был визуально и по hit-area идентичен supercomputer modal, даже когда реальный close ownership смещён в header-actions wrapper: [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L620-L690), [style.css](../../style.css#L1863-L1957).
@@ -33,7 +35,7 @@
 ### Блок: controller bootstrap
 | Функция / блок | Строки | Назначение |
 |---|---|---|
-| `setOverlayOpen()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L187-L198) | Унифицированное open/close поведение overlay |
+| `setOverlayOpen()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L249-L260) | Унифицированное open/close поведение overlay; close-path предполагает focus-safe handoff через `resolveOverlayHideFocusTarget()` / `moveFocusOutsideOverlay()` |
 | `ensureSharedHelpModal()`, `showSharedHelpModal()`, `syncSharedHelpButtonCopy()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L121-L185) | Общий SC-style help dialog, accordion sections и tooltip/a11y copy для talents / tank-wall / underground hangar / production storage |
 | `createController()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L200-L339) | Сборка зависимостей, DOM refs и per-tab local state |
 | `shouldUseFullscreenShell()`, `syncResponsiveShellState()` | [src/ui/supercomputerMenu.js](../../src/ui/supercomputerMenu.js#L422-L469) | Канонический responsive/fullscreen routing для talents / hangar / tank-wall overlays |

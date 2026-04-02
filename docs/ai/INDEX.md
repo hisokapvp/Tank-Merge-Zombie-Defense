@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-04-01.
+> Обновлено: 2026-04-02.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -40,7 +40,15 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-04-01
+## Фокус документации на 2026-04-02
+- **Fence repair source of truth закреплён за `Game.FenceRepair`**: `game.js` больше документируется только как delegator для `getFenceRepairCostCoins()` / `tryRepairFenceSegmentAt()`, а сам runtime contract живёт в `src/mechanics/fenceRepair.js`: boot сначала ждёт `loadTankPrices()`, затем зовёт `init({ getFenceConfig })`; базовая цена ремонта резолвится по цепочке `assets/fence.json -> repair.costCoinsByLevel[level]` → `levels[level-1].repairCostCoins` / `levels[level-1].repair.costCoins` → legacy `buyTankCost(level)`, после чего применяется cumulative surcharge от `repairCount`.
+- **`assets/fence.json` получил явно задокументированный per-level repair contract**: top-level `repair.costCoinsByLevel` считается canonical конфигом цены ремонта по уровням, level-local overrides допускаются как fallback, а top-level `repair.costCoins` не рассматривается как текущий source of truth для runtime.
+- **FontFloor observer self-mutation guard + stale inline restore**: `src/ui/fontFloor.js` сохраняет исходный inline `font-size`/priority в `data-font-floor-*`, восстанавливает их при переходе элемента в skip-path и помечает собственные `style`-мутации через `__fontFloorInternalStyleMutations`, чтобы `MutationObserver` не пересоздавал очередь на собственных clamp/restore записях. Это сохраняет глобальный floor `10px`, но не оставляет stale inline `10px` на close/remove controls.
+- **Mobile hangar/workshop contract уточнён как tooltip + drag parity, а не как отдельные UX-ветки**: `src/ui/hangarChipsUI.js` держит long-press tooltip (`450ms`, тот же threshold `6px`, mobile close-кнопка в tooltip shell, CSS `max-width:min(92vw, 380px)`), а `src/ui/undergroundHangarUI.js` зеркалит touch-safe pointer capture / `pointercancel` cleanup / threshold-gated drag-update для modal drag-drop parity.
+- **SC overlay hide path теперь focus-safe**: `src/ui/supercomputerMenu.js` документирует `resolveOverlayHideFocusTarget()` + `moveFocusOutsideOverlay()` как обязательный путь перед `setOverlayOpen(false)`, чтобы shared help/modal shell не оставлял focus внутри скрытого overlay.
+- **HTML cache-bust contract расширен на изменённые runtime-модули**: кроме entry helper для `style.css` и `game.js`, `index.html` держит локальный query token `20260402-fd1-mobile-hangar-fence-repair-v1` на HTML-loaded runtime scripts (`fenceRepair.js`, `fontFloor.js`, `hangarChipsUI.js`, `supercomputerMenu.js`, `undergroundHangarUI.js`), когда меняется их wiring contract.
+
+### Предыдущий фокус (2026-04-01)
 - **Fence repair cost extraction + `Game.FenceRepair` module**: новый модуль `src/mechanics/fenceRepair.js` экспортирует `Game.FenceRepair` — вся логика fence repair cost (async `loadTankPrices()` через `fetch()` вместо sync XMLHttpRequest, `computeRepairCost(fenceLevel, repairCount)` с формулой `baseCost = buyTankCost(level) + repairCount × max(1, ceil(baseCost × 0.01))`) извлечена из `game.js`; `fenceRepairCount` добавлен в `state` persistence через `initialState.js` / `storage.js` serialize/restore/reset; `game.js` (`tryRepairFenceSegmentAt()`) инкрементирует `state.fenceRepairCount` и делегирует расчёт стоимости в `Game.FenceRepair.getFenceRepairCostCoins()`; partial reset сбрасывает `fenceRepairCount = 0`; `index.html` подключает модуль на строке 602.
 - **Mobile touch-drag underground hangar fix**: `src/ui/hangarChipsUI.js` `init()` добавляет `setPointerCapture` + cancelable `preventDefault` на touch `pointermove` + явный `pointercancel` handler для корректного chip drag на mobile; fragment drag отключён на мобильных в craft tab.
 - **Mobile chip tooltip + workshop UI polish**: мобильный chip tooltip увеличен и получил `scModal__close` close-кнопку; `workshopSubPanel` получил `overflow-y:auto` на всех разрешениях; `chipCraftSlotRemove` ресталирован под `scModal__close` green pattern; `font-size ≥ 14px` и `padding-top 50px` для confirmation modals на всех разрешениях; Dust panel (`chipRecycle`) получил flex layout с pinned bottom bar.

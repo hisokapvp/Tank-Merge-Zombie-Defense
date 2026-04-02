@@ -2277,10 +2277,11 @@ function getDronConfig(){
 
 function getFenceRepairCostCoins(){
   const FR = window.Game && window.Game.FenceRepair;
-  if (FR && typeof FR.getFenceRepairCostCoins === 'function') {
+  if (!FR) return 0;
+  if (typeof FR.getFenceRepairCostCoins === 'function') {
     return FR.getFenceRepairCostCoins(state.fenceLevel || 1, state.fenceRepairCount || 0);
   }
-  return 100;
+  return Number.isFinite(FR.FENCE_DEFAULT_REPAIR_COST) ? FR.FENCE_DEFAULT_REPAIR_COST : 0;
 }
 
 function getDronRuntimeConfig(){
@@ -6846,18 +6847,6 @@ function getFenceHealthBarConfig(){
   };
 }
 
-function getFenceRepairConfig(){
-  const FR = window.Game && window.Game.FenceRepair;
-  if (FR && typeof FR.getFenceRepairConfig === 'function') {
-    return FR.getFenceRepairConfig();
-  }
-  const cfg = getFenceConfig();
-  const repair = cfg.repair || {};
-  return {
-    enabled: repair.enabled !== false,
-  };
-}
-
 function mapBrokenKind(kind){
   if (!kind) return '';
   if (kind.indexOf('Broken') >= 0) return kind;
@@ -7509,8 +7498,10 @@ function pickFenceSegmentByPoint(px, py){
 }
 
 function tryRepairFenceSegmentAt(px, py){
-  const repair = getFenceRepairConfig();
-  if (!repair.enabled) return false;
+  const FR = window.Game && window.Game.FenceRepair;
+  if (!FR || typeof FR.getFenceRepairConfig !== 'function') return false;
+  const repair = FR.getFenceRepairConfig();
+  if (!repair || repair.enabled === false) return false;
   const seg = pickFenceSegmentByPoint(px, py);
   if (!seg || seg.hp >= seg.maxHp) return false;
   const costCoins = getFenceRepairCostCoins();

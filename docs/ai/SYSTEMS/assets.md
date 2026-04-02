@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-03-31.
+> Обновлено: 2026-04-02.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -61,6 +61,9 @@
 - `levels[]` по-прежнему описывают base tier fence (`segmentMaxHp`, `armorFlat`, `upgradeCostDamagePoints`, atlas/uiIcon), но для модалки `Стены` появился отдельный stat-level contract `upgradeDamagePointsCosts.{segmentMaxHp,armorFlat}`. Это canonical источник стоимости detail-card stepper'ов в `Supercomputer -> Стены`: [assets/fence.json](../../../assets/fence.json#L1-L120), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1482-L1708).
 - `upgradeCostDamagePoints` и `upgradeDamagePointsCosts` не эквивалентны: первое описывает tier-level fence progression, второе — stat-specific modifiers modal; `game.js` использует второе через `getFenceUpgradeTotalCost()` / `applyFenceUpgrade()`, включая clamp текущих segment HP после апгрейда `segmentMaxHp`: [game.js](../../../game.js#L912-L945).
 - Для UI preview стены приоритет `uiIcon` остаётся data-driven (`atlas`, `frame.id` или inline frame), поэтому docs/renderer рассматривают этот JSON как кодовый контракт, а не просто atlas listing: [assets/fence.json](../../../assets/fence.json#L10-L77), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1600-L1708).
+- Top-level `repair.costCoinsByLevel` — canonical per-level repair pricing contract для runtime `Game.FenceRepair`: ключ уровня читается как `1..60`, после чего `src/mechanics/fenceRepair.js` использует это значение как `baseCost` перед cumulative surcharge от `repairCount`. Если top-level map не содержит уровень, runtime fallback'ится к `levels[level-1].repairCostCoins` или `levels[level-1].repair.costCoins`: [assets/fence.json](../../../assets/fence.json#L1573-L1578), [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L45-L74).
+- Top-level `repair.costCoins` сейчас не является authoritative source of truth для расчёта ремонта. Если правится только это поле без `repair.costCoinsByLevel` или level-local overrides, runtime price path не изменится. Документировать его как primary repair knob нельзя.
+- Любое изменение `repair.costCoinsByLevel` нужно сверять с `game.js` boot wiring: `Game.FenceRepair.loadTankPrices()` + `init({ getFenceConfig })` выполняются до старта симуляции, а HTML cache-bust должен быть bumped, если меняется contract HTML-loaded `src/mechanics/fenceRepair.js`: [game.js](../../../game.js#L14824-L14833), [index.html](../../../index.html#L13), [index.html](../../../index.html#L602).
 
 ## `assets/supercomputer.json` (боевой рендер + production line)
 - Root-конфиг суперкомпьютера: [assets/supercomputer.json](../../../assets/supercomputer.json#L1-L123).

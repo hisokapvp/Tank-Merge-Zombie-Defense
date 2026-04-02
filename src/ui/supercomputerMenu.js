@@ -184,17 +184,87 @@
     if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
   }
 
+  function setOverlayInertState(overlay, isInert) {
+    if (!overlay) return;
+    if ('inert' in overlay) overlay.inert = !!isInert;
+    if (isInert) {
+      overlay.setAttribute('inert', '');
+      return;
+    }
+    overlay.removeAttribute('inert');
+  }
+
+  function isUsableFocusTarget(target, overlay) {
+    if (!target || target === overlay || (overlay && overlay.contains && overlay.contains(target))) return false;
+    if (target.disabled || (target.getAttribute && target.getAttribute('aria-hidden') === 'true')) return false;
+    if (target.hasAttribute && target.hasAttribute('inert')) return false;
+    return typeof target.focus === 'function';
+  }
+
+  function tryFocusElement(target) {
+    if (!target || typeof target.focus !== 'function') return false;
+    try {
+      target.focus({ preventScroll: true });
+    } catch (err) {
+      try {
+        target.focus();
+      } catch (ignoreErr) {
+        return false;
+      }
+    }
+    var documentObj = target.ownerDocument || (typeof document !== 'undefined' ? document : null);
+    return !!documentObj && documentObj.activeElement === target;
+  }
+
+  function resolveOverlayHideFocusTarget(overlay, options) {
+    if (!overlay) return null;
+    var documentObj = overlay.ownerDocument || (typeof document !== 'undefined' ? document : null);
+    if (!documentObj) return null;
+    var candidates = [
+      options && options.hideFocusTarget,
+      documentObj.querySelector('.supercomputerHudBtn'),
+      documentObj.body,
+      documentObj.documentElement,
+    ];
+    for (var i = 0; i < candidates.length; i++) {
+      if (isUsableFocusTarget(candidates[i], overlay)) return candidates[i];
+    }
+    return null;
+  }
+
+  function moveFocusOutsideOverlay(overlay, options) {
+    if (!overlay || !overlay.ownerDocument) return;
+    var documentObj = overlay.ownerDocument;
+    var active = documentObj.activeElement;
+    if (!active || !overlay.contains(active)) return;
+    var target = resolveOverlayHideFocusTarget(overlay, options || {});
+    if (target && tryFocusElement(target) && !overlay.contains(documentObj.activeElement)) return;
+    if (typeof active.blur === 'function') active.blur();
+    if (!overlay.contains(documentObj.activeElement)) return;
+    tryFocusElement(documentObj.body);
+    if (!overlay.contains(documentObj.activeElement)) return;
+    tryFocusElement(documentObj.documentElement);
+  }
+
   function setOverlayOpen(overlay, open, a11yOpen, a11yClose, options) {
     if (!overlay) return;
     var nextOpen = !!open;
     var wasOpen = !overlay.classList.contains('hidden') && overlay.getAttribute('aria-hidden') !== 'true';
-    overlay.classList.toggle('hidden', !nextOpen);
-    overlay.setAttribute('aria-hidden', (!nextOpen).toString());
     if (nextOpen) {
+      setOverlayInertState(overlay, false);
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden', 'false');
       if (!wasOpen && typeof a11yOpen === 'function') a11yOpen(overlay, options || {});
       return;
     }
-    if (wasOpen && typeof a11yClose === 'function') a11yClose(overlay);
+    if (wasOpen) {
+      moveFocusOutsideOverlay(overlay, options || {});
+      if (typeof a11yClose === 'function') a11yClose(overlay);
+      moveFocusOutsideOverlay(overlay, options || {});
+    }
+    setOverlayInertState(overlay, true);
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
   }
 
   function createController(options) {
@@ -212,6 +282,10 @@
     var talentsView = documentObj.getElementById('supercomputerTalentsView');
 
     if (!rootOverlay || !hangarOverlay || !tankWallOverlay) return null;
+
+    setOverlayInertState(rootOverlay, rootOverlay.getAttribute('aria-hidden') === 'true');
+    setOverlayInertState(hangarOverlay, hangarOverlay.getAttribute('aria-hidden') === 'true');
+    setOverlayInertState(tankWallOverlay, tankWallOverlay.getAttribute('aria-hidden') === 'true');
 
     var a11yOpen = opts.a11yOpen;
     var a11yClose = opts.a11yClose;

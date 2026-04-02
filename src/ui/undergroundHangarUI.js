@@ -11,10 +11,13 @@
   let _callbacks = null;
   let _helpBtn = null;
   let _selected = null; // { type: 'main'|'underground'|'drone', index: number }
+  let _dragState = null;
+  let _suppressClickUntil = 0;
   const MAIN_TYPES = { main: true, underground: true };
   const DRONE_TOP_SLOT_INDICES = [0, 1, 2];
   const DRONE_LEFT_SLOT_INDICES = [3, 4, 5];
   const DRONE_RIGHT_SLOT_INDICES = [6, 7, 8];
+  const DRAG_THRESHOLD_SQ = 36;
 
   function t(key, fallback) {
     if (global.Game && global.Game.I18n && typeof global.Game.I18n.t === 'function') {
@@ -259,6 +262,224 @@
     return { width: canvas ? canvas.width || 0 : 0, height: canvas ? canvas.height || 0 : 0 };
   }
 
+  function getBodyRoot() {
+    return el('undergroundHangarBody');
+  }
+
+  function resolveCellTarget(target) {
+    if (!target || !target.closest) return null;
+    const mainCell = target.closest('[data-ugh-main-cell]');
+    if (mainCell) {
+      const index = parseInt(mainCell.getAttribute('data-ugh-main-cell'), 10);
+      if (Number.isFinite(index)) return { type: 'main', index: index, element: mainCell };
+    }
+    const undergroundCell = target.closest('[data-ugh-cell]');
+    if (undergroundCell) {
+      const index = parseInt(undergroundCell.getAttribute('data-ugh-cell'), 10);
+      if (Number.isFinite(index)) return { type: 'underground', index: index, element: undergroundCell };
+    }
+    const droneCell = target.closest('[data-ugh-drone]');
+    if (droneCell) {
+      const index = parseInt(droneCell.getAttribute('data-ugh-drone'), 10);
+      if (Number.isFinite(index)) return { type: 'drone', index: index, element: droneCell };
+    }
+    return null;
+  }
+
+  function getCellElement(type, index) {
+    const body = getBodyRoot();
+    if (!body) return null;
+    if (type === 'main') return body.querySelector('[data-ugh-main-cell="' + index + '"]');
+    if (type === 'underground') return body.querySelector('[data-ugh-cell="' + index + '"]');
+    if (type === 'drone') return body.querySelector('[data-ugh-drone="' + index + '"]');
+    return null;
+  }
+
+  function clearDragHover() {
+    if (!_dragState || !_dragState.hoverEl) return;
+    _dragState.hoverEl.classList.remove(
+      'ughCell--dragHover',
+      'ughDroneCell--dragHover',
+      'ughCell--dragHoverMove',
+      'ughDroneCell--dragHoverMove',
+      'ughCell--dragHoverMerge',
+      'ughDroneCell--dragHoverMerge'
+    );
+    _dragState.hoverEl = null;
+    _dragState.hoverAffordance = '';
+  }
+
+  function setDragHoverTarget(targetInfo, affordance) {
+    clearDragHover();
+    if (!_dragState || !targetInfo || !targetInfo.element || !affordance) return;
+    const isDroneCell = targetInfo.element.classList.contains('ughDroneCell');
+    targetInfo.element.classList.add(isDroneCell ? 'ughDroneCell--dragHover' : 'ughCell--dragHover');
+    targetInfo.element.classList.add(isDroneCell
+      ? (affordance === 'merge' ? 'ughDroneCell--dragHoverMerge' : 'ughDroneCell--dragHoverMove')
+      : (affordance === 'merge' ? 'ughCell--dragHoverMerge' : 'ughCell--dragHoverMove'));
+    _dragState.hoverEl = targetInfo.element;
+    _dragState.hoverAffordance = affordance;
+  }
+
+  function createDragGhost(sourceEl, clientX, clientY) {
+    if (!sourceEl) return null;
+    const rect = sourceEl.getBoundingClientRect();
+    const ghost = sourceEl.cloneNode(true);
+    const isDroneCell = sourceEl.classList.contains('ughDroneCell');
+    ghost.classList.add(isDroneCell ? 'ughDroneCell--dragGhost' : 'ughCell--dragGhost');
+    ghost.style.left = clientX + 'px';
+    ghost.style.top = clientY + 'px';
+    ghost.style.width = Math.ceil(rect.width) + 'px';
+    ghost.style.height = Math.ceil(rect.height) + 'px';
+    ghost.style.minWidth = Math.ceil(rect.width) + 'px';
+    ghost.style.minHeight = Math.ceil(rect.height) + 'px';
+    ghost.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(ghost);
+    renderSpriteCanvases(ghost);
+    return ghost;
+  }
+
+  function updateDragGhostPosition(clientX, clientY) {
+    if (!_dragState || !_dragState.ghostEl) return;
+    _dragState.ghostEl.style.left = clientX + 'px';
+    _dragState.ghostEl.style.top = clientY + 'px';
+  }
+
+  function getDragDropAffordance(srcType, srcIdx, tgtType, tgtIdx) {
+    if (srcType === tgtType && srcIdx === tgtIdx) return '';
+    const sourceEntity = _getEntityAt(srcType, srcIdx);
+    const sourceKind = getEntityKindAt(srcType, srcIdx);
+    if (!sourceEntity || !sourceKind) return '';
+    const targetEntity = _getEntityAt(tgtType, tgtIdx);
+    if (!targetEntity) return canTypeAcceptKind(tgtType, sourceKind) ? 'move' : '';
+    const targetKind = getEntityKindAt(tgtType, tgtIdx);
+    if (sourceKind !== targetKind) return '';
+    return canMergeSelection(srcType, tgtType, sourceEntity, targetEntity, sourceKind) ? 'merge' : '';
+  }
+
+  function updateDragHoverFromPoint(clientX, clientY) {
+    if (!_dragState || !_dragState.moved) return;
+    const hitTarget = document.elementFromPoint(clientX, clientY);
+    const targetInfo = resolveCellTarget(hitTarget);
+    if (!targetInfo) {
+      clearDragHover();
+      return;
+    }
+    const affordance = getDragDropAffordance(_dragState.sourceType, _dragState.sourceIdx, targetInfo.type, targetInfo.index);
+    if (!affordance) {
+      clearDragHover();
+      return;
+    }
+    setDragHoverTarget(targetInfo, affordance);
+  }
+
+  function clearDragState(pointerId) {
+    if (!_dragState) return;
+    clearDragHover();
+    if (_dragState.sourceEl) {
+      _dragState.sourceEl.classList.remove('ughCell--dragSource', 'ughDroneCell--dragSource');
+    }
+    if (_dragState.ghostEl && _dragState.ghostEl.parentNode) {
+      _dragState.ghostEl.parentNode.removeChild(_dragState.ghostEl);
+    }
+    const body = getBodyRoot();
+    if (body && pointerId !== undefined && body.releasePointerCapture) {
+      try { body.releasePointerCapture(pointerId); } catch (err) { /* noop */ }
+    }
+    _dragState = null;
+  }
+
+  function executeDragDrop(srcType, srcIdx, tgtType, tgtIdx) {
+    const sourceEntity = _getEntityAt(srcType, srcIdx);
+    const sourceKind = getEntityKindAt(srcType, srcIdx);
+    if (!sourceEntity || !sourceKind) return false;
+    const targetEntity = _getEntityAt(tgtType, tgtIdx);
+    if (!targetEntity) {
+      if (!canTypeAcceptKind(tgtType, sourceKind)) return false;
+      const moved = _tryMove(srcType, srcIdx, tgtType, tgtIdx);
+      if (moved && _callbacks && typeof _callbacks.updateUI === 'function') _callbacks.updateUI();
+      return moved;
+    }
+    const targetKind = getEntityKindAt(tgtType, tgtIdx);
+    if (sourceKind !== targetKind) return false;
+    if (!canMergeSelection(srcType, tgtType, sourceEntity, targetEntity, sourceKind)) return false;
+    const merged = _tryMerge(srcType, srcIdx, tgtType, tgtIdx);
+    if (merged && _callbacks && typeof _callbacks.updateUI === 'function') _callbacks.updateUI();
+    return merged;
+  }
+
+  function handleBodyPointerDown(evt) {
+    if (!_isOpen) return;
+    if (evt.button !== undefined && evt.button !== 0) return;
+    if (evt.target.closest && evt.target.closest('[data-ugh-action], #undergroundHangarClose, [data-ugh-close]')) return;
+    const sourceInfo = resolveCellTarget(evt.target);
+    if (!sourceInfo) return;
+    if (!_getEntityAt(sourceInfo.type, sourceInfo.index)) return;
+    clearDragState();
+    _dragState = {
+      pointerId: evt.pointerId,
+      sourceType: sourceInfo.type,
+      sourceIdx: sourceInfo.index,
+      startX: evt.clientX,
+      startY: evt.clientY,
+      moved: false,
+      sourceEl: sourceInfo.element,
+      ghostEl: null,
+      hoverEl: null,
+      hoverAffordance: '',
+    };
+    const body = getBodyRoot();
+    if (body && evt.pointerId !== undefined && body.setPointerCapture) {
+      try { body.setPointerCapture(evt.pointerId); } catch (err) { /* noop */ }
+    }
+  }
+
+  function handleBodyPointerMove(evt) {
+    if (!_dragState || _dragState.pointerId !== evt.pointerId) return;
+    if (evt.cancelable) evt.preventDefault();
+    const dx = evt.clientX - _dragState.startX;
+    const dy = evt.clientY - _dragState.startY;
+    if (!_dragState.moved && (dx * dx + dy * dy) < DRAG_THRESHOLD_SQ) return;
+    if (!_dragState.moved) {
+      _dragState.moved = true;
+      _selected = { type: _dragState.sourceType, index: _dragState.sourceIdx };
+      render();
+      _dragState.sourceEl = getCellElement(_dragState.sourceType, _dragState.sourceIdx);
+      if (_dragState.sourceEl) {
+        _dragState.sourceEl.classList.add(_dragState.sourceEl.classList.contains('ughDroneCell') ? 'ughDroneCell--dragSource' : 'ughCell--dragSource');
+        _dragState.ghostEl = createDragGhost(_dragState.sourceEl, evt.clientX, evt.clientY);
+      }
+    }
+    updateDragGhostPosition(evt.clientX, evt.clientY);
+    updateDragHoverFromPoint(evt.clientX, evt.clientY);
+  }
+
+  function handleBodyPointerUp(evt) {
+    if (!_dragState || _dragState.pointerId !== evt.pointerId) return;
+    const dragMoved = _dragState.moved;
+    const sourceType = _dragState.sourceType;
+    const sourceIdx = _dragState.sourceIdx;
+    const targetInfo = dragMoved ? resolveCellTarget(document.elementFromPoint(evt.clientX, evt.clientY)) : null;
+    clearDragState(evt.pointerId);
+    if (!dragMoved) return;
+    _suppressClickUntil = Date.now() + 250;
+    _selected = null;
+    if (targetInfo) {
+      executeDragDrop(sourceType, sourceIdx, targetInfo.type, targetInfo.index);
+    }
+    render();
+  }
+
+  function handleBodyPointerCancel(evt) {
+    if (!_dragState || _dragState.pointerId !== evt.pointerId) return;
+    const hadMoved = _dragState.moved;
+    clearDragState(evt.pointerId);
+    if (hadMoved) {
+      _selected = null;
+      render();
+    }
+  }
+
   function drawTankSpriteCanvas(canvas, level) {
     if (!canvas) return;
     const targetCtx = canvas.getContext('2d');
@@ -403,7 +624,18 @@
     // Delegate clicks inside the modal
     const body = el('undergroundHangarBody');
     if (body) {
-      body.addEventListener('click', handleBodyClick);
+      body.addEventListener('click', function (evt) {
+        if (Date.now() < _suppressClickUntil) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          return;
+        }
+        handleBodyClick(evt);
+      });
+      body.addEventListener('pointerdown', handleBodyPointerDown);
+      body.addEventListener('pointermove', handleBodyPointerMove);
+      body.addEventListener('pointerup', handleBodyPointerUp);
+      body.addEventListener('pointercancel', handleBodyPointerCancel);
     }
   }
 
@@ -411,6 +643,7 @@
 
   function open(stateRef) {
     if (!_overlay) return;
+    clearDragState();
     _stateRef = stateRef;
 
     // Ensure underground hangar state exists
@@ -436,6 +669,7 @@
 
   function close() {
     if (!_overlay) return;
+    clearDragState();
     _overlay.classList.add('hidden');
     _overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('ugh-open');

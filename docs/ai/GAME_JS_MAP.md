@@ -51,7 +51,7 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-03-31.
+> Обновлено: 2026-04-02.
 > Текущая длина файла: ~11 880 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
 ## Что это
@@ -63,6 +63,7 @@
 - Нужен render order → [draw()](../../game.js#L11127-L11200)
 - Нужен zombie debuff overlay scale-path → [drawScaledDebuffExpiryOverlay()](../../game.js#L11561-L11586), [drawScaledZombieDebuffOverlays()](../../game.js#L11588-L11643), вызов из [draw()](../../game.js#L11714-L11723)
 - Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2374-L2387), [syncHybridUiScale()](../../game.js#L2389-L2403), [resizeCanvas()](../../game.js#L2407-L2437)
+- Нужен fence repair wiring / delegation → [getFenceRepairCostCoins()](../../game.js#L2278-L2285), [tryRepairFenceSegmentAt()](../../game.js#L7500-L7516), [boot() fence repair init](../../game.js#L14824-L14833)
 - Нужен chip-count aura routing / variant-specific sprite treatment / fallback visual band → [getInstalledChipCountForCell()](../../game.js#L13267-L13286), [resolveTankAuraVisual()](../../game.js#L13287-L13296), [drawTankAuraSprite()](../../game.js#L13421-L13532), [computeAuraBand()](../../game.js#L13297-L13310)
 - Нужен per-stat modifiers seam для weapons/drones/walls → [getCannonUpgradeTotalCost()](../../game.js#L878-L888), [applyCannonUpgrade()](../../game.js#L890-L910), [getFenceUpgradeTotalCost()](../../game.js#L912-L922), [applyFenceUpgrade()](../../game.js#L924-L945), [getDronUpgradeTotalCost()](../../game.js#L3282-L3292), [applyDronUpgrade()](../../game.js#L3294-L3313)
 - Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
@@ -80,6 +81,7 @@
 - Zombie debuff expiry overlay не имеет отдельного fixed-px render path: `drawScaledZombieDebuffOverlays()` вычисляет `iconSizePx/iconStepPx` из `debuffIconScale`, `drawScaledDebuffExpiryOverlay()` получает этот размер напрямую, а `draw()` прокидывает значения из локального `ZombieSprites`. Любая правка wedge/dot overlay должна сохранять этот shared scale contract: [game.js](../../game.js#L11561-L11643), [game.js](../../game.js#L11714-L11723).
 - Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
 - `game.js` — canonical apply/cost layer для supercomputer modifiers modal: UI передаёт `level + statKey + pendingCount`, а функции `applyCannonUpgrade` / `applyDronUpgrade` / `applyFenceUpgrade` сами нормализуют ключ, суммируют per-stat step cost и обновляют encoded applied arrays. Стоимость не дублируется в UI и не должна хардкодиться вне JSON/runtime helper'ов.
+- `game.js` больше не владеет формулой fence repair cost: boot обязан дождаться `Game.FenceRepair.loadTankPrices()` и `Game.FenceRepair.init({ getFenceConfig })`, а runtime-path ограничивается delegation через `getFenceRepairCostCoins()` и `tryRepairFenceSegmentAt()`. Config-first resolution order и cumulative surcharge живут в `src/mechanics/fenceRepair.js`, не в монолите.
 - Visual gate ауры танка живёт здесь, а не в sprite loader: `resolveTankAuraVisual(cellIndex, level)` использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально установленных чипов (red + yellow slots), активирует `aura1/aura2/aura3` по count `1..3`, а `drawTankAuraSprite()` даёт variant-specific runtime treatment поверх спрайта: `aura1` остаётся мягким pulse/glow, `aura2` добавляет более агрессивный scale+blue hue treatment, `aura3` включает strongest pulse и hue-cycling filter. `computeAuraBand()` используется только как fallback, если named variant недоступен. `drawTank()` принимает `cellIndex` параметр для aura routing. Не возвращать forced high-level aura selection в render layer: [game.js](../../game.js#L13267-L13548).
 - Canvas pointer path обязан оставаться touch-safe: `preventTouchPointerDefault()` вызывается только для cancelable touch events, pointer capture снимается через `releaseCanvasPointer()` на `up/cancel`, а drag-state не должен обновляться до общего порога `6px`, чтобы tap по canvas не превращался в ложный drag.
 
@@ -111,6 +113,7 @@
 | `readMasterUiScale()` | [game.js](../../game.js#L2374-L2387) | Читает `--ui-scale` из `:root`/computed styles и отдаёт runtime-friendly число |
 | `syncHybridUiScale(nextScale)` | [game.js](../../game.js#L2389-L2403) | Обновляет `HudAdapter`, `ModalAdapter` и `SceneOverlayManager` одним master scale token |
 | `resizeCanvas()` | [game.js](../../game.js#L2407-L2437) | Resize canvas + compute `--ui-scale = max(0.4, min(W/1920, H/1080))`, sync hybrid seam и `initBoard()` |
+| `getFenceRepairCostCoins(fenceLevel, repairCount)` | [game.js](../../game.js#L2278-L2285) | Delegation helper: отдаёт repair price из `window.Game.FenceRepair`, а не держит локальную формулу |
 
 ### Layout / world init
 | Функция | Строки | Назначение |
@@ -177,12 +180,13 @@
 |---|---|---|
 | `stepSupercomputer()` | [game.js](../../game.js#L11425-L11459) | Supercomputer state tick |
 | `loop()` | [game.js](../../game.js#L11460-L11713) | Step + draw + runtime sync |
-| `boot()` | [game.js](../../game.js#L11714-L11885) | Загрузка JSON, sprites, bootstrap controllers |
+| `boot()` | [game.js](../../game.js#L11714-L11885) | Загрузка JSON, sprites, bootstrap controllers; инициализирует `Game.FenceRepair` до старта симуляции |
 
 ## Горячие зоны от 2026-03-06
 - `SupercomputerSprites` → `ProductionLineRender` wiring: [game.js](../../game.js#L1869-L1875)
 - Layout sync production line к суперкомпьютеру: [game.js](../../game.js#L2314-L2328)
 - Talents v2 stage active icon resolution и HUD-slot wiring: [game.js](../../game.js#L3759-L3802), [game.js](../../game.js#L8688-L8838)
+- Fence repair delegation и boot-time module init: [game.js](../../game.js#L2278-L2285), [game.js](../../game.js#L7500-L7516), [game.js](../../game.js#L14824-L14833)
 - Installed-chip aura routing, variant-specific sprite treatment и fallback band selection: [game.js](../../game.js#L13267-L13548)
 - Purchase-driven `buildTank` FX window: [game.js](../../game.js#L3289-L3307), [game.js](../../game.js#L11374-L11382)
 - Kill-driven conveyor work trigger: [game.js](../../game.js#L5902-L5917)
