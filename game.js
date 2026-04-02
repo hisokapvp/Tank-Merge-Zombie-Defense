@@ -5,42 +5,8 @@ const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 const GameApi = (window.Game = window.Game || {});
 
-// --- Fence repair: build TankPrices array from assets/tanks.json ---
-;(function loadTankPricesForFenceRepair() {
-  try {
-    var tankData = null;
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'assets/tanks.json', false);
-    xhr.overrideMimeType && xhr.overrideMimeType('application/json');
-    xhr.send(null);
-    if (xhr.status === 200) {
-      tankData = JSON.parse(xhr.responseText);
-    }
-    var prices = [];
-    if (tankData) {
-      for (var lvl = 1; lvl <= 60; lvl++) {
-        var key = 'tank_lvl' + lvl;
-        if (tankData[key] && typeof tankData[key] === 'object') {
-          // Для fence repair используем цену апгрейда baseDamage как baseCost
-          var cost = 0;
-          if (tankData[key].upgradeDamagePointsCosts && typeof tankData[key].upgradeDamagePointsCosts.baseDamage === 'number') {
-            cost = tankData[key].upgradeDamagePointsCosts.baseDamage;
-          } else if (tankData[key].stats && typeof tankData[key].stats.baseDamage === 'number') {
-            cost = tankData[key].stats.baseDamage;
-          } else {
-            cost = 1;
-          }
-          prices.push(cost);
-        } else {
-          prices.push(1);
-        }
-      }
-    }
-    GameApi.TankPrices = prices;
-  } catch (e) {
-    GameApi.TankPrices = Array(60).fill(1);
-  }
-})();
+// --- Fence repair tank prices: loaded async via Game.FenceRepair.loadTankPrices() ---
+// (sync XMLHttpRequest removed — see src/mechanics/fenceRepair.js)
 const SeededRngApi = GameApi?.SeededRng ?? null;
 
 function getEntryAssetVersionToken(){
@@ -1180,7 +1146,7 @@ if (SupercomputerApi && typeof SupercomputerApi.createController === 'function')
 }
 const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
 const FENCE_DEFAULT_SEGMENT_HP = 200;
-const FENCE_DEFAULT_REPAIR_COST = 100;
+// FENCE_DEFAULT_REPAIR_COST extracted to src/mechanics/fenceRepair.js
 const ZOMBIE_DEFAULT_ATTACK_DAMAGE = 8;
 const ZOMBIE_DEFAULT_ATTACK_RANGE_PX = 24;
 const ZOMBIE_DEFAULT_ATTACK_COOLDOWN_SEC = 0.35;
@@ -2310,8 +2276,11 @@ function getDronConfig(){
 }
 
 function getFenceRepairCostCoins(){
-  const repair = getFenceRepairConfig();
-  return Number.isFinite(repair.costCoins) ? Math.max(0, repair.costCoins) : FENCE_DEFAULT_REPAIR_COST;
+  const FR = window.Game && window.Game.FenceRepair;
+  if (FR && typeof FR.getFenceRepairCostCoins === 'function') {
+    return FR.getFenceRepairCostCoins(state.fenceLevel || 1, state.fenceRepairCount || 0);
+  }
+  return 100;
 }
 
 function getDronRuntimeConfig(){
@@ -2445,6 +2414,8 @@ function resetZombieAndAttackModeToDefaultAfterRestore(){
   if (Array.isArray(state.fenceSegments) && typeof GameApi.resetFenceRepairCounts === 'function') {
     GameApi.resetFenceRepairCounts(state.fenceSegments);
   }
+  // Сброс глобального счётчика починок забора (cumulative session counter)
+  state.fenceRepairCount = 0;
 
   const defaultTargetAlive = getDefaultZombieTargetAlive();
   BAL.zombieCountTarget = defaultTargetAlive;
@@ -3481,6 +3452,7 @@ function buyTankCost(level){
   const buyCostMul = Number.isFinite(mods.tankBuyCostMul) ? Math.max(0, mods.tankBuyCostMul) : Math.max(0, mods.buyCostMul);
   return Math.max(1, Math.round(base * buyCostMul * expMul));
 }
+GameApi.buyTankCost = buyTankCost;
 
 function getBuyCostMul(){
   const mods = getMods();
@@ -5771,6 +5743,7 @@ function saveProgress(){
       zombieWaveHpMult: normalizeZombieWaveMultiplier(state.zombieWaveHpMult),
       damagePointsSpent: ensureDamagePointsSpentState(),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
+      fenceRepairCount: Number.isFinite(state.fenceRepairCount) ? Math.max(0, Math.floor(state.fenceRepairCount)) : 0,
       tutorial: state.tutorial,
       drones: Array.isArray(state.drones) ? state.drones : [],
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
@@ -5811,6 +5784,7 @@ function restoreFullState(saved){
   state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
   ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
+  state.fenceRepairCount = Number.isFinite(saved.fenceRepairCount) ? Math.max(0, Math.floor(saved.fenceRepairCount)) : 0;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
     var _scCurrent = getComputerState();
     var _scPrevX = _scCurrent.x;
@@ -6873,11 +6847,14 @@ function getFenceHealthBarConfig(){
 }
 
 function getFenceRepairConfig(){
+  const FR = window.Game && window.Game.FenceRepair;
+  if (FR && typeof FR.getFenceRepairConfig === 'function') {
+    return FR.getFenceRepairConfig();
+  }
   const cfg = getFenceConfig();
   const repair = cfg.repair || {};
   return {
     enabled: repair.enabled !== false,
-    costCoins: Number.isFinite(repair.costCoins) ? Math.max(0, repair.costCoins) : FENCE_DEFAULT_REPAIR_COST,
   };
 }
 
@@ -7536,11 +7513,14 @@ function tryRepairFenceSegmentAt(px, py){
   if (!repair.enabled) return false;
   const seg = pickFenceSegmentByPoint(px, py);
   if (!seg || seg.hp >= seg.maxHp) return false;
-  if (state.coins < repair.costCoins) {
+  const costCoins = getFenceRepairCostCoins();
+  if (state.coins < costCoins) {
     popText(px, py, t('fenceRepairNoCoins'), '#ff9c7a');
     return true;
   }
-  state.coins -= repair.costCoins;
+  state.coins -= costCoins;
+  if (!Number.isFinite(state.fenceRepairCount)) state.fenceRepairCount = 0;
+  state.fenceRepairCount++;
   const wasBroken = !!seg.broken;
   seg.hp = seg.maxHp;
   seg.broken = false;
@@ -11179,7 +11159,16 @@ function isLevelModalOpen(){
   return !!(ui.levelModal && !ui.levelModal.classList.contains('hidden'));
 }
 
+function preventTouchPointerDefault(e) {
+  if (e.pointerType === 'touch' && e.cancelable) e.preventDefault();
+}
+
+function releaseCanvasPointer(e) {
+  try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+}
+
 canvas.addEventListener('pointerdown', (e)=>{
+  preventTouchPointerDefault(e);
   if (isBigMenuOpen()) return;
   if (isLevelModalOpen()) return;
   const p = getPointerPos(e);
@@ -11294,6 +11283,7 @@ canvas.addEventListener('pointerdown', (e)=>{
 });
 
 canvas.addEventListener('pointermove', (e)=>{
+  preventTouchPointerDefault(e);
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
   {
@@ -11342,6 +11332,7 @@ canvas.addEventListener('pointermove', (e)=>{
 });
 
 canvas.addEventListener('pointerup', (e)=>{
+  releaseCanvasPointer(e);
   const p = getPointerPos(e);
   syncCrateHoverAt(p.x, p.y);
   {
@@ -11411,6 +11402,16 @@ canvas.addEventListener('pointerup', (e)=>{
   }
   state.dragging = null;
   updateDismantleButton();
+});
+
+canvas.addEventListener('pointercancel', (e)=>{
+  if (state.dragging) {
+    const from = state.cells[state.dragging.cellIndex];
+    if (from) from.tank = state.dragging.tank;
+    state.dragging = null;
+    updateDismantleButton();
+  }
+  releaseCanvasPointer(e);
 });
 
 canvas.addEventListener('pointerleave', ()=>{
@@ -14831,6 +14832,16 @@ function initEngineAdapterPhase1() {
 async function boot(){
   if (bootPromise) return bootPromise;
   bootPromise = (async function runBootFlow() {
+    // ── Fence repair: async tank prices + init ──
+    {
+      const FR = window.Game && window.Game.FenceRepair;
+      if (FR && typeof FR.loadTankPrices === 'function') {
+        await FR.loadTankPrices();
+      }
+      if (FR && typeof FR.init === 'function') {
+        FR.init({ getFenceConfig: getFenceConfig });
+      }
+    }
     try {
       const balRes = await fetch('assets/balance.json', { cache: 'no-store' });
       if (balRes.ok) {

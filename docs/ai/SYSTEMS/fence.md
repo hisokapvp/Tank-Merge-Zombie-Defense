@@ -3,7 +3,16 @@
 ## Где править
 - Конфиг: `assets/fence.json`
 - Механика: `src/mechanics/fenceSides.js`, `src/mechanics/drones.js`
+- Стоимость ремонта: `src/mechanics/fenceRepair.js` (`Game.FenceRepair`)
 - Рендер/геометрия: `src/render/fenceLayout.js`
+
+## Fence repair cost module (`Game.FenceRepair`)
+- Новый модуль `src/mechanics/fenceRepair.js` (подключён в `index.html` L602) экспортирует `Game.FenceRepair`: [src/mechanics/fenceRepair.js](../../../src/mechanics/fenceRepair.js#L1-L122).
+- `loadTankPrices()` заменяет sync XMLHttpRequest на async `fetch('assets/tanks.json')` и строит `Game.TankPrices[]`.
+- `computeRepairCost(fenceLevel, repairCount)`: `baseCost = buyTankCost(level) + repairCount × max(1, ceil(baseCost × 0.01))`; cumulative 1% surcharge за каждый предыдущий ремонт.
+- `getFenceRepairCostCoins(fenceLevel, repairCount)` — public getter, вызывается из `game.js` (`tryRepairFenceSegmentAt()`).
+- `init({ getFenceConfig })` — инъекция конфиг-провайдера из `game.js`.
+- `fenceRepairCount` живёт в `state`, seed'ится в `initialState.js` (L58), сериализуется в `storage.js` (L468), инкрементируется при ремонте (`game.js` L7523), сбрасывается при partial/full reset (`game.js` L2418).
 
 ## Правила
 - Изменения HP/repair проверять вместе с дронами и zombie targeting.

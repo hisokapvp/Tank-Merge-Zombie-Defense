@@ -55,6 +55,7 @@
       zombieWaveAtkMult: 1,
       damagePointsSpent: 0,
       fenceLevel: 1,
+      fenceRepairCount: 0,
       cells: [],
       boardRect: { x: 0, y: 0, w: 0, h: 0 },
       zombies: [],

@@ -1,6 +1,6 @@
 ﻿# Система: Save / Offline
 
-> Обновлено: 2026-03-23.
+> Обновлено: 2026-04-01.
 
 ## Где править
 - Хранилище: `src/persistence/storage.js`, `src/persistence/initialState.js`
@@ -38,6 +38,7 @@
 - В `onAfterRestore` обязательно сбрасывать `attackMode` к состоянию off/default: таймеры, ramp-мультипликатор `targetAlive`, погодные/event runtime флаги и связанные эффекты.
 - В `onAfterRestore` для partial restart обязательно фиксировать стены в base tier (`state.fenceLevel = 1`) с reinit fence-сегментов tier1.
 - В `onAfterRestore` обязательно сбрасывать накопленную инфляцию покупок в абсолютный старт (`buyCounts = {}`, `buyPrices = {}`), не затрагивая базовые формулы цены.
+- `fenceRepairCount` сериализуется через `serializeState()` в `storage.js` (L468), восстанавливается при load, seed'ится как `0` в `initialState.js` (L58) и сбрасывается на `0` при partial/full reset (`game.js` L2418); runtime инкремент через `tryRepairFenceSegmentAt()` (`game.js` L7523).
 
 ## Слоты и ключи localStorage (v1)
 - Метаданные слотов: `saveSlotsMeta_v1`.

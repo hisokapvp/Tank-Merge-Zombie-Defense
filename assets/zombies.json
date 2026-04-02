@@ -330,16 +330,16 @@
       "id": "zombie_lvl5",
       "frame": {
         "x": 0,
-        "y": 96,
+        "y": 0,
         "w": 96,
         "h": 96
       },
-      "frames": 8,
+      "frames": 7,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.7,
+      "scale": 0.6,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -348,19 +348,26 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 96,
+        "x": 1152,
+        "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 8,
+        "frames": 5,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 672,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
       "attackDamage": 50,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 10
@@ -378,7 +385,7 @@
       "id": "zombie_lvl6",
       "frame": {
         "x": 0,
-        "y": 192,
+        "y": 0,
         "w": 96,
         "h": 96
       },
@@ -387,7 +394,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.7,
+      "scale": 0.6,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -396,19 +403,26 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 192,
+        "x": 1152,
+        "y": 0,
         "w": 96,
         "h": 96,
-        "frames": 7,
+        "frames": 4,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 672,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
       "attackDamage": 60,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 10
@@ -427,15 +441,15 @@
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 96,
-        "h": 96
+        "w": 128,
+        "h": 128
       },
       "frames": 10,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.7,
+      "scale": 0.6,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -444,19 +458,26 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
+        "x": 1920,
         "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 10,
+        "w": 128,
+        "h": 128,
+        "frames": 5,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5
+      },
       "attackDamage": 70,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 10

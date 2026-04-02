@@ -1583,10 +1583,24 @@
 
   /* ─── Generic game-styled tooltip (shared, reuses _chipUpgradeTooltipEl) ── */
 
+  var _isTouchDevice = global.matchMedia && global.matchMedia('(hover:none) and (pointer:coarse)').matches;
+
   function _ensureGameTooltip() {
     if (!_chipUpgradeTooltipEl) {
       _chipUpgradeTooltipEl = _doc.createElement('div');
       _chipUpgradeTooltipEl.className = 'chipUpgradeTooltip';
+      /* Mobile close button */
+      if (_isTouchDevice) {
+        var closeBtn = _doc.createElement('button');
+        closeBtn.className = 'chipUpgradeTooltip__close scModal__close';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.type = 'button';
+        closeBtn.addEventListener('pointerdown', function(e) {
+          e.stopPropagation();
+          hideChipUpgradeTooltip();
+        });
+        _chipUpgradeTooltipEl.appendChild(closeBtn);
+      }
       _doc.body.appendChild(_chipUpgradeTooltipEl);
     }
     return _chipUpgradeTooltipEl;
@@ -3699,6 +3713,8 @@
             if (evt.target.tagName === 'INPUT') return;
             if (item.getAttribute('data-craft-disabled') === 'true') return;
             var srcType = item.getAttribute('data-craft-src');
+            /* Disable fragment drag on mobile (coarse pointer) — tap still works via click handler */
+            if (srcType === 'fragment' && isCoarsePointerViewport()) return;
             var startX = evt.clientX, startY = evt.clientY;
             var moved = false;
             var ghost = null;

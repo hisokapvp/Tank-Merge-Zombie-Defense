@@ -465,6 +465,7 @@
       zombieWaveAtkMult: Number.isFinite(state.zombieWaveAtkMult) ? Math.max(0, state.zombieWaveAtkMult) : 1,
       damagePointsSpent: normalizeDamagePointsSpent(state.damagePointsSpent),
       fenceLevel: Number.isFinite(state.fenceLevel) ? Math.max(1, Math.floor(state.fenceLevel)) : 1,
+      fenceRepairCount: Number.isFinite(state.fenceRepairCount) ? Math.max(0, Math.floor(state.fenceRepairCount)) : 0,
       cells: cells,
       supercomputer: state.supercomputer,
       player: state.player,

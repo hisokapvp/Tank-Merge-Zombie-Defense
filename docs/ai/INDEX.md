@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-03-31.
+> Обновлено: 2026-04-01.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -40,7 +40,13 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-03-31
+## Фокус документации на 2026-04-01
+- **Fence repair cost extraction + `Game.FenceRepair` module**: новый модуль `src/mechanics/fenceRepair.js` экспортирует `Game.FenceRepair` — вся логика fence repair cost (async `loadTankPrices()` через `fetch()` вместо sync XMLHttpRequest, `computeRepairCost(fenceLevel, repairCount)` с формулой `baseCost = buyTankCost(level) + repairCount × max(1, ceil(baseCost × 0.01))`) извлечена из `game.js`; `fenceRepairCount` добавлен в `state` persistence через `initialState.js` / `storage.js` serialize/restore/reset; `game.js` (`tryRepairFenceSegmentAt()`) инкрементирует `state.fenceRepairCount` и делегирует расчёт стоимости в `Game.FenceRepair.getFenceRepairCostCoins()`; partial reset сбрасывает `fenceRepairCount = 0`; `index.html` подключает модуль на строке 602.
+- **Mobile touch-drag underground hangar fix**: `src/ui/hangarChipsUI.js` `init()` добавляет `setPointerCapture` + cancelable `preventDefault` на touch `pointermove` + явный `pointercancel` handler для корректного chip drag на mobile; fragment drag отключён на мобильных в craft tab.
+- **Mobile chip tooltip + workshop UI polish**: мобильный chip tooltip увеличен и получил `scModal__close` close-кнопку; `workshopSubPanel` получил `overflow-y:auto` на всех разрешениях; `chipCraftSlotRemove` ресталирован под `scModal__close` green pattern; `font-size ≥ 14px` и `padding-top 50px` для confirmation modals на всех разрешениях; Dust panel (`chipRecycle`) получил flex layout с pinned bottom bar.
+- **Sync XHR → async fetch**: boot flow в `game.js` заменил sync `XMLHttpRequest` загрузку `tanks.json` на async `fetch()` через `Game.FenceRepair.loadTankPrices()`.
+
+### Предыдущий фокус (2026-03-31)
 - **Aura sprite treatment + hangar/workshop responsive shell refresh**: `game.js` держит chip-count routing через `getInstalledChipCountForCell()`/`resolveTankAuraVisual()`, но `drawTankAuraSprite()` теперь даёт variant-specific runtime glow/ring treatment для `aura1/aura2/aura3`; `src/ui/hangarChipsUI.js` сразу раскрывает rotate/remove actions через `activateInstalledSlotActions()` после успешной установки чипа; `style.css` убирает локальный `modsHangarScale` clamp, сохраняет `hangarSlotView + right column` side-by-side в narrow/fullscreen hangar, держит recycle mobile в side-by-side режиме для `Разобрать/Перепрограммировать` и sticky bottom bar для `Распылить`, а mobile SC/terminal path больше не опирается на старый title clamp/max-width fork и снимает `min-width` floor с terminal action buttons. `index.html` bump'ает entry token до `20260331-branch3-sc-shell-terminal-mobile-v1`.
 - **Balance Editor analytics tab + zombie HP comparison**: `tools/balance-editor.html` документирован как repo-local tuning tool без build step: damage-points tab считает именно `damage points / minute` через runtime формулу `shotDamage = (tank baseDamage + bullet addDamage) * attackDamageMul`, `shotsPerMinute = (0.85 + 0.075 × (lvl-1)) * attackSpeedMul * 60`, а график `Танки vs Зомби` сравнивает tank shot damage против zombie HP с приоритетом явного `types[].Health` из `assets/zombies.json` над fallback-формулой `hpMul`.
 - **Bullet atlas overflow fix + drawProjectiles defensive clamp**: `assets/bullet.json` frame h `36→34`; `drawProjectiles()` в `game.js` clampит source rect к atlas bounds и fallbackится на circle при полном overflow.

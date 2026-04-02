@@ -5396,6 +5396,10 @@ button.hangarChipInvItem{
   display: flex;
   flex-direction: column;
 }
+#workshopPanelChipUpgrade .workshopSubPanel{
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 .workshopSubPanel[hidden]{
   display: none;
 }
@@ -5564,6 +5568,52 @@ button.hangarChipInvItem{
   max-width:280px;
   box-shadow:0 0 16px rgba(0,0,0,.5), 3px 3px 0 rgba(0,0,0,.82);
   line-height:1.45;
+}
+/* Mobile tooltip: larger, interactive, with close button */
+@media (hover:none) and (pointer:coarse){
+  .chipUpgradeTooltip{
+    pointer-events:auto;
+    max-width:min(92vw, 380px);
+    padding:44px 18px 16px;
+    font-size:15px;
+    border-radius:14px;
+    border-width:2px;
+  }
+  .chipUpgradeTooltip__title{
+    font-size:16px;
+    margin-bottom:10px;
+  }
+  .chipUpgradeTooltip__modName{
+    font-size:14px;
+  }
+  .chipUpgradeTooltip__modDesc{
+    font-size:13px;
+  }
+  .chipUpgradeTooltip__meta,
+  .chipUpgradeTooltip__bonus{
+    font-size:14px;
+  }
+}
+.chipUpgradeTooltip__close{
+  display:none;
+}
+@media (hover:none) and (pointer:coarse){
+  .chipUpgradeTooltip__close{
+    display:flex;
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:44px;
+    height:44px;
+    min-width:44px;
+    min-height:44px;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    cursor:pointer;
+    padding:0;
+    z-index:1;
+  }
 }
 .chipUpgradeTooltip::before{
   content:'';
@@ -6477,6 +6527,14 @@ button.hangarChipInvItem{
 .chipCraftLayout--singleCol .chipCraftLeftCol{
   flex:1 1 auto;
 }
+/* Desktop: pin chipCraftBottomBar below scrollable inventory in dust view */
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftLeftCol{
+  overflow-y:hidden;
+}
+#workshopPanelChipRecycle .chipCraftLayout--singleCol .chipCraftInventory{
+  flex:1 1 0;
+  min-height:0;
+}
 .chipCraftLeftCol{
   flex:0 1 var(--modsHangarLeftColWidth, 220px);
   max-width:100%;
@@ -7061,59 +7119,72 @@ button.hangarChipInvItem{
 }
 .chipCraftSlotRemove{
   position:absolute;
-  top:-8px;
-  right:-8px;
-  width:28px;
-  height:28px;
-  border-radius:4px;
-  background:linear-gradient(180deg, rgba(76,54,44,.96) 0%, rgba(41,29,24,.98) 100%);
-  border:1px solid rgba(255,156,106,.45);
+  top:-10px;
+  right:-10px;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  border-radius:6px;
+  background:linear-gradient(180deg, rgba(15,23,13,.98) 0%, rgba(8,14,7,.98) 100%);
+  border:2px solid #4af626;
   cursor:pointer;
   padding:0;
   z-index:2;
   display:flex;
   align-items:center;
   justify-content:center;
-  box-shadow:2px 2px 0 rgba(0,0,0,.55);
-  transition:filter .12s ease, border-color .12s ease, box-shadow .12s ease, transform .12s ease;
+  box-shadow:0 0 14px rgba(74,246,38,.18), 2px 2px 0 #000;
+  transition:background .16s ease, border-color .16s ease, box-shadow .16s ease;
+  overflow:visible;
 }
 .chipCraftSlotRemove:hover{
-  border-color:rgba(255,181,143,.78);
-  filter:brightness(1.08);
-  box-shadow:0 0 8px rgba(229,57,53,.22), 2px 2px 0 rgba(0,0,0,.55);
+  background:linear-gradient(180deg, #57ff2d 0%, #39cf1d 100%);
+  border-color:#84ff68;
+  box-shadow:0 0 16px rgba(74,246,38,.38), 2px 2px 0 #000;
+  filter:none;
+  transform:none !important;
 }
 .chipCraftSlotRemove:active{
-  transform:translate(1px,1px);
-  box-shadow:1px 1px 0 rgba(0,0,0,.55);
+  box-shadow:1px 1px 0 #000;
 }
 .chipCraftSlotRemove:focus-visible{
-  outline:2px solid #4af626;
-  outline-offset:1px;
+  outline:none;
+  border-color:#a7ff92;
+  box-shadow:0 0 0 3px rgba(74,246,38,.22), 0 0 16px rgba(74,246,38,.32), 2px 2px 0 #000;
 }
 .chipCraftSlotRemove__icon{
   position:relative;
   display:block;
-  width:12px;
-  height:12px;
+  width:16px;
+  height:16px;
   pointer-events:none;
 }
 .chipCraftSlotRemove__icon::before,
 .chipCraftSlotRemove__icon::after{
   content:'';
   position:absolute;
-  left:5px;
-  top:-1px;
-  width:2px;
-  height:14px;
-  border-radius:1px;
-  background:linear-gradient(180deg, #ffd7a1 0%, #ff8c5a 100%);
-  box-shadow:0 0 4px rgba(255,140,90,.22);
+  left:50%;
+  top:50%;
+  width:4px;
+  height:24px;
+  border-radius:2px;
+  background:linear-gradient(180deg, #e6ffd7 0%, #4af626 100%);
+  box-shadow:0 0 10px rgba(74,246,38,.36);
+  transition:background .16s ease, box-shadow .16s ease;
 }
 .chipCraftSlotRemove__icon::before{
-  transform:rotate(45deg);
+  transform:translate(-50%,-50%) rotate(45deg);
 }
 .chipCraftSlotRemove__icon::after{
-  transform:rotate(-45deg);
+  transform:translate(-50%,-50%) rotate(-45deg);
+}
+.chipCraftSlotRemove:hover .chipCraftSlotRemove__icon::before,
+.chipCraftSlotRemove:hover .chipCraftSlotRemove__icon::after,
+.chipCraftSlotRemove:focus-visible .chipCraftSlotRemove__icon::before,
+.chipCraftSlotRemove:focus-visible .chipCraftSlotRemove__icon::after{
+  background:linear-gradient(180deg, #fff 0%, #0a2200 100%);
+  box-shadow:0 0 6px rgba(0,0,0,.5);
 }
 .chipCraftActionBtn{
   padding:10px 24px;
@@ -8574,8 +8645,6 @@ button.hangarChipInvItem{
     box-sizing: border-box;
   }
   #workshopPanelChipUpgrade .workshopSubPanel{
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
     max-height: 70vh;
   }
   /* Убираем горизонтальный скролл */
@@ -8586,7 +8655,9 @@ button.hangarChipInvItem{
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-/* Минимальный размер шрифта и padding-top для всех всплывающих сообщений и модалок подтверждения */
+}
+
+/* Минимальный размер шрифта и padding-top для всех всплывающих сообщений и модалок подтверждения — вне media query, применяется на ALL resolutions */
 .centerNotification,
 .achievementToast,
 .plStorage__confirmBox,
@@ -8594,9 +8665,8 @@ button.hangarChipInvItem{
 .techModal__dialog,
 .levelModal__panel,
 .mergePopupModal__panel {
-  font-size: min(max(14px, 1em), 1.2em) !important;
+  font-size: max(14px, 1em) !important;
   padding-top: 50px !important;
-}
 }
 
 @media (max-width: 1500px) and (hover: none) and (pointer: coarse){

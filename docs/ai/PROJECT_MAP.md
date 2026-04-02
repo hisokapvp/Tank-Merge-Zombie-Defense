@@ -1,6 +1,6 @@
 # Tank Merge Zombie Defense — Project Map
 
-> Документ для агентов. Обновлён: 2026-03-31.
+> Документ для агентов. Обновлён: 2026-04-01.
 > Навигация: раздел → файл документации → строки кода.
 
 ## О проекте
@@ -37,6 +37,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | Close-кнопки `crate/level/modal/lesson` и SC-overlay family используют единый 44×44 X-pattern: orange-ветка живёт в `.crateModal__close`, `.levelModal__close`, `.modalClose`, `.lessonProgress__close`, green-ветка — в `scModal__close`, `#talentOverlay .modalClose`, `.modalClose.scModal__close`; font floor не должен вмешиваться в эти селекторы, а storage modal по-прежнему включает `body.pl-storage-open` для CRT/grain overlay. | [src/ui/fontFloor.js](../../src/ui/fontFloor.js#L5-L11), [src/ui/productionLineUI.js](../../src/ui/productionLineUI.js#L44-L61), [style.css](../../style.css#L54-L68), [style.css](../../style.css#L1042-L1091), [style.css](../../style.css#L1337-L1423), [style.css](../../style.css#L1859-L1951), [style.css](../../style.css#L3116-L3164) |
 | Master UI scale контракт: `resizeCanvas()` вычисляет `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))`, пишет его в `:root`, а `syncHybridUiScale()` синхронизирует HUD/Modal/Phaser adapters; тот же root token block владеет `--ui-shell-narrow-{level,sc,storage,talent}-width`, shared header offsets, `--pl-storage-confirm-width-*` и terminal collapse-gap path. `<1200px` override ужимает terminal shell без fork'а scale, снимает `min-width` с terminal buttons и форсирует 10px font contract, а `@media (max-width: 1250px)` переводит `plStorage__confirmBox` в `width:auto; max-width:100%`. | [game.js](../../game.js#L2374-L2430), [game.js](../../game.js#L14673-L14675), [src/phaser/hudAdapter.js](../../src/phaser/hudAdapter.js#L46-L63), [src/phaser/modalAdapter.js](../../src/phaser/modalAdapter.js#L51-L55), [src/phaser/sceneOverlayManager.js](../../src/phaser/sceneOverlayManager.js#L38-L64), [style.css](../../style.css#L21-L30), [style.css](../../style.css#L53-L72), [style.css](../../style.css#L73-L82), [style.css](../../style.css#L7910-L7918), [style.css](../../style.css#L8166-L8318) |
 | Canvas/storage/workshop drag path обязан быть touch-safe и threshold-gated: touch `pointer*` вызывает `preventDefault()` только на cancelable touch events, pointer capture снимается на up/cancel, а drag state/ghost/target обновляются только после порога `6px`. Этот контракт общий для canvas tank drag, storage box drag и hangar chip drag; hangar chip drag дополнительно слушает `pointercancel` для cleanup. | [game.js](../../game.js#L11196-L11405), [src/ui/productionLineUI.js](../../src/ui/productionLineUI.js#L150-L257), [src/ui/hangarChipsUI.js](../../src/ui/hangarChipsUI.js#L4065-L4395) |
+| Fence repair cost формула живёт в `Game.FenceRepair.computeRepairCost(fenceLevel, repairCount)`: `baseCost = buyTankCost(level)`, cumulative surcharge `+repairCount × max(1, ceil(baseCost × 0.01))`; `fenceRepairCount` персистится через `initialState.js` / `storage.js` и сбрасывается на `0` при partial/full reset; tank prices загружаются async через `loadTankPrices()` (`fetch()` вместо sync XHR). | [src/mechanics/fenceRepair.js](../../src/mechanics/fenceRepair.js#L76-L99), [src/persistence/initialState.js](../../src/persistence/initialState.js#L58), [src/persistence/storage.js](../../src/persistence/storage.js#L468), [game.js](../../game.js#L7522-L7523), [game.js](../../game.js#L2418) |
 | Fence corner-side seam ниже `1400px` намеренно усиливает overlap: `resolveSeamOverlapPx()` масштабирует дополнительное перекрытие пропорционально narrowing viewport, чтобы у углов не открывались gap'ы на узких экранах; regression закреплён отдельным тестом FCS-3. | [src/render/fenceLayout.js](../../src/render/fenceLayout.js#L74-L86), [src/render/fenceLayout.js](../../src/render/fenceLayout.js#L90-L204), [Test/pack7/fenceCornerSlots.test.js](../../Test/pack7/fenceCornerSlots.test.js#L144-L197) |
 | Stage active slots в Talents v2 берут иконку ветки из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` остаётся только fallback'ом, а не primary source. | [game.js](../../game.js#L3759-L3802), [game.js](../../game.js#L8688-L8838), [style.css](../../style.css#L2395-L2406) |
 | Большая логика не добавляется в `game.js`, если уже есть модуль в `src/*`; `game.js` остаётся bootstrap/fallback-монолитом. | [ARCHITECTURE.md](ARCHITECTURE.md) |
@@ -57,6 +58,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | `Game.ProductionLineRender.syncState()` | [src/render/productionLineRender.js](../../src/render/productionLineRender.js#L265-L311) | 265–311 | Синхронизация conveyor/storage runtime с `state.productionLine` |
 | `Game.TalentsV2.init()` | [src/systems/talents/talentsV2.js](../../src/systems/talents/talentsV2.js#L2491-L2505) | 2491–2505 | Поднятие runtime талантов v2 |
 | `Game.I18n.pluralize()` | [src/i18n/pluralize.js](../../src/i18n/pluralize.js#L17-L33) | 17–33 | Russian/English number pluralization (mod10/mod100 логика); используется в `getTankWordKey()` и `getDismantleTankCountText()` |
+| `Game.FenceRepair` | [src/mechanics/fenceRepair.js](../../src/mechanics/fenceRepair.js#L1-L122) | 1–122 | Fence repair cost logic: async `loadTankPrices()` через `fetch()`, cumulative `computeRepairCost(fenceLevel, repairCount)`, public `getFenceRepairCostCoins()` |
 
 ## Разделы документации
 
@@ -124,6 +126,7 @@ graph TD
   A --> F[src/systems/talents/talentsV2.js]
   A --> G[src/mechanics/chipEffects.js]
   A --> P[src/i18n/pluralize.js]
+  A --> Q[src/mechanics/fenceRepair.js]
   C --> H[assets/supercomputer.json]
   E --> I[style.css]
   D --> I
