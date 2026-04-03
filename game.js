@@ -8203,8 +8203,9 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   }
   // Apply chip modifier sprite overrides (bulletSprite / impactSprite / impactSpriteNormal from chips.json)
   let bulletCfg = bulletCfgBase;
-  if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function' && typeof ChipFx.getActiveModIds === 'function') {
-    const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(ChipFx.getActiveModIds(cellIndex), chipShotMods || null);
+  if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function') {
+    const chipVisualSource = chipShotMods || (typeof ChipFx.getActiveModIds === 'function' ? ChipFx.getActiveModIds(cellIndex) : null);
+    const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(chipVisualSource, chipShotMods || null);
     if (chipBulletOverride) {
       bulletCfg = { bulletSprite: bulletCfgBase.bulletSprite, impactSprite: bulletCfgBase.impactSprite };
       if (chipBulletOverride.bulletSprite) bulletCfg.bulletSprite = chipBulletOverride.bulletSprite;
@@ -8305,8 +8306,9 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
     // Use chip-specific shoot SFX if configured, otherwise fallback to power-tier clip
     let shootClip = null;
-    if (ChipFx && typeof ChipFx.resolveChipShotSfx === 'function' && typeof ChipFx.getActiveModIds === 'function') {
-      shootClip = ChipFx.resolveChipShotSfx(ChipFx.getActiveModIds(cellIndex));
+    if (ChipFx && typeof ChipFx.resolveChipShotSfx === 'function') {
+      const chipShotSfxSource = chipShotMods || (typeof ChipFx.getActiveModIds === 'function' ? ChipFx.getActiveModIds(cellIndex) : null);
+      shootClip = ChipFx.resolveChipShotSfx(chipShotSfxSource);
     }
     if (!shootClip) {
       shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';

@@ -1,5 +1,14 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-04-03
+- **Документация: one-shot shared post-merge update после join для Arcade Chaos visual routing, reprogram dropdown shell, fixed reprogram card width и SC fullscreen breakpoint (`src/mechanics/chipEffects.js`, `game.js`, `src/ui/hangarChipsUI.js`, `style.css`, `src/ui/supercomputerMenu.js`, `index.html`)**
+  - Обновлён `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `Arcade Chaos` больше не берёт projectile/impact visuals из набора установленных модов ячейки; `game.js` и `src/mechanics/chipEffects.js` теперь резолвят bullet/impact overrides по фактическому `shotMods.activeModIds`, поэтому случайно выбранный подмод задаёт и полётный sprite, и sprite взрыва конкретного выстрела.
+  - Зафиксированы: nuclear visual fallback стал shot-aware и не форсирует nuke projectile atlas, если конкретный выстрел не перешёл в `isNuke`; normal-shot path остаётся на базовом bullet sprite с normal impact atlas.
+  - Зафиксированы: `Перепрограммировать` использует более выраженный TMZD-style select shell с pixel-font, green CRT-like glow, custom caret и hover/focus states вместо нейтрального browser-like поля.
+  - Зафиксированы: для mobile coarse-pointer path и desktop `<=980px` reprogram source/result cards больше не наследуют shrink-clamp `--chipLabelCardWidth`, а держат полный `176px` width contract внутри `chipCraftReprogramStage`.
+  - Зафиксированы: `shouldUseFullscreenShell()` в `src/ui/supercomputerMenu.js` поднят до desktop breakpoint `<=1501px`, поэтому `Модификации ангара`, `Модификации техники и стен` и embedded `Древо улучшений` открываются full-screen не только на mobile/coarse-pointer, но и на узком desktop path; `index.html` одновременно обновляет cache-bust token для `supercomputerMenu.js`.
+
 ## 2026-04-02
 - **Документация: one-shot shared post-merge update после join для FontFloor skip export/metrics, workshop dust confirm + energy geometry sync, mobile drag/contextmenu parity и cache-bust token refresh (`src/ui/fontFloor.js`, `src/ui/hangarChipsUI.js`, `style.css`, `src/ui/undergroundHangarUI.js`, `game.js`, `src/phaser/phaserBootstrap.js`, `index.html`, `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`)**
   - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/ui.md`, `docs/ai/SYSTEMS/input.md`, `docs/ai/SYSTEMS/phaser.md`, `docs/ai/HANGAR_CHIPS_UI_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/CHANGELOG.md`.

@@ -361,7 +361,7 @@
         "src": "Nuclear_Explosion.png",
         "frame": { "x": 0, "y": 0, "w": 136, "h": 136 },
         "frames": 10,
-        "frameRateFps": 20,
+        "frameRateFps": 10,
         "scale": 2
       },
       "impactSpriteNormal": {

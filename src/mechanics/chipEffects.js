@@ -181,6 +181,12 @@
     return cfg.sfx;
   }
 
+  function normalizeActiveModIds(source) {
+    if (Array.isArray(source)) return source;
+    if (source && Array.isArray(source.activeModIds)) return source.activeModIds;
+    return [];
+  }
+
   function resolveChipSfxKey(modId, sfxKind) {
     var sfxCfg = getModSfxConfig(modId);
     if (!sfxCfg) return null;
@@ -202,21 +208,31 @@
   }
 
   function resolveChipShotSfx(activeModIds) {
-    if (!activeModIds || !activeModIds.length) return null;
-    for (var i = 0; i < activeModIds.length; i++) {
-      var key = resolveChipSfxKey(activeModIds[i], 'shoot');
+    var resolvedModIds = normalizeActiveModIds(activeModIds);
+    if (!resolvedModIds.length) return null;
+    for (var i = 0; i < resolvedModIds.length; i++) {
+      var key = resolveChipSfxKey(resolvedModIds[i], 'shoot');
       if (key) return key;
     }
     return null;
   }
 
   function resolveChipImpactSfx(activeModIds) {
-    if (!activeModIds || !activeModIds.length) return null;
-    for (var i = 0; i < activeModIds.length; i++) {
-      var key = resolveChipSfxKey(activeModIds[i], 'impact');
+    var resolvedModIds = normalizeActiveModIds(activeModIds);
+    if (!resolvedModIds.length) return null;
+    for (var i = 0; i < resolvedModIds.length; i++) {
+      var key = resolveChipSfxKey(resolvedModIds[i], 'impact');
       if (key) return key;
     }
     return null;
+  }
+
+  function resolveBulletSpriteOverride(modId, shotMods) {
+    var usesNuclearImpact = modId === 8 || modId === 27 || modId === 28;
+    if (usesNuclearImpact && !(shotMods && shotMods.isNuke)) {
+      return null;
+    }
+    return getModBulletSprite(modId);
   }
 
   function resolveImpactSpriteOverride(modId, shotMods) {
@@ -228,12 +244,13 @@
   }
 
   function buildChipBulletCfgOverride(activeModIds, shotMods) {
-    if (!activeModIds || !activeModIds.length) return null;
+    var resolvedModIds = normalizeActiveModIds(activeModIds);
+    if (!resolvedModIds.length) return null;
     var bulletSprite = null;
     var impactSprite = null;
-    for (var i = 0; i < activeModIds.length; i++) {
-      if (!bulletSprite) bulletSprite = getModBulletSprite(activeModIds[i]);
-      if (!impactSprite) impactSprite = resolveImpactSpriteOverride(activeModIds[i], shotMods);
+    for (var i = 0; i < resolvedModIds.length; i++) {
+      if (!bulletSprite) bulletSprite = resolveBulletSpriteOverride(resolvedModIds[i], shotMods);
+      if (!impactSprite) impactSprite = resolveImpactSpriteOverride(resolvedModIds[i], shotMods);
       if (bulletSprite && impactSprite) break;
     }
     if (!bulletSprite && !impactSprite) return null;
