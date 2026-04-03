@@ -1593,18 +1593,6 @@
     if (!_chipUpgradeTooltipEl) {
       _chipUpgradeTooltipEl = _doc.createElement('div');
       _chipUpgradeTooltipEl.className = 'chipUpgradeTooltip';
-      /* Mobile close button */
-      if (_isTouchDevice) {
-        var closeBtn = _doc.createElement('button');
-        closeBtn.className = 'chipUpgradeTooltip__close scModal__close';
-        closeBtn.setAttribute('aria-label', 'Close');
-        closeBtn.type = 'button';
-        closeBtn.addEventListener('pointerdown', function(e) {
-          e.stopPropagation();
-          hideChipUpgradeTooltip();
-        });
-        _chipUpgradeTooltipEl.appendChild(closeBtn);
-      }
       var contentEl = _doc.createElement('div');
       contentEl.className = 'chipUpgradeTooltip__content';
       _chipUpgradeTooltipEl.appendChild(contentEl);
@@ -2288,6 +2276,13 @@
       return;
     }
 
+    var craftDustConfirm = tgt.closest ? tgt.closest('[data-craft-dust-confirm]') : null;
+    if (craftDustConfirm) {
+      _closeTechModal();
+      _executeDust({ skipConfirm: true });
+      return;
+    }
+
     /* tech accel confirm button */
     var techAccelConfirm = tgt.closest ? tgt.closest('[data-tech-accel-confirm]') : null;
     if (techAccelConfirm) {
@@ -2857,6 +2852,15 @@
     return total;
   }
 
+  function _getDustSelectedItemCount() {
+    var total = 0;
+    var keys = Object.keys(_dustSelected);
+    for (var i = 0; i < keys.length; i++) {
+      total += Math.max(0, Math.floor(_dustSelected[keys[i]] || 0));
+    }
+    return total;
+  }
+
   /** Toggle a single dust checkbox: update _dustSelected, total display, and card highlight */
   function _toggleDustCheckbox(cb) {
     var key = cb.getAttribute('data-dust-key');
@@ -3040,27 +3044,90 @@
   }
 
   function _renderCraftEnergyLines() {
-    /* Vertical fan: 3 start points at top (x=50,150,250) → single end at bottom center (x=150).
-       Lines start at y=-10 (inside slot card below, using svg overflow:visible)
-       and end at y=91 (inside result chip above). */
-    var slotXs = [50, 150, 250];
-    var endX = 150;
-    var startY = -10;
-    var endY = 91;
-    var html = '<svg class="chipCraftEnergySvg" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true">';
+    var html = '<svg class="chipCraftEnergySvg" preserveAspectRatio="none" aria-hidden="true">';
     for (var i = 0; i < 3; i++) {
       var lineClass = 'chipCraftEnergyLine chipCraftEnergyLine--' + (i + 1);
       if (_craftSlots[i] && _craftSlots[i].type === 'fragment') lineClass += ' chipCraftEnergyLine--filled';
-      var sx = slotXs[i];
-      var d = 'M' + sx + ' ' + startY + ' C' + sx + ' 30,' + endX + ' 55,' + endX + ' ' + endY;
-      html += '<g class="' + lineClass + '">';
-      html += '<path class="chipCraftEnergyLine__base" d="' + d + '"></path>';
-      html += '<path class="chipCraftEnergyLine__glow" d="' + d + '"></path>';
-      html += '<circle class="chipCraftEnergyLine__node" cx="' + endX + '" cy="' + endY + '" r="4"></circle>';
+      html += '<g class="' + lineClass + '" data-craft-energy-line="' + i + '">';
+      html += '<path class="chipCraftEnergyLine__base"></path>';
+      html += '<path class="chipCraftEnergyLine__glow"></path>';
+      html += '<circle class="chipCraftEnergyLine__node" r="4"></circle>';
       html += '</g>';
     }
     html += '</svg>';
     return html;
+  }
+
+  function _syncCraftEnergyLines(panel) {
+    if (!panel || !panel.querySelector) return;
+    var rail = panel.querySelector('.chipCraftEnergyRail');
+    var svg = rail ? rail.querySelector('.chipCraftEnergySvg') : null;
+    if (!rail || !svg) return;
+
+    var ingredientSlots = panel.querySelectorAll('.chipCraftIngredientRow .chipCraftSlot--assembleIngredient');
+    var resultHost = panel.querySelector('.chipCraftAssemblyResult .chipCraftResultChip, .chipCraftAssemblyResult .chipCraftSlot--resultSlot');
+    var lines = svg.querySelectorAll('[data-craft-energy-line]');
+    if (ingredientSlots.length < 3 || !resultHost || lines.length < 3) return;
+
+    var railRect = rail.getBoundingClientRect();
+    if (!railRect.width) return;
+
+    var resultAnchor = resultHost.querySelector('.chipCraftSlotCard') || resultHost;
+    var resultRect = resultAnchor.getBoundingClientRect();
+    var endX = resultRect.left + resultRect.width * 0.5 - railRect.left;
+    var endY = resultRect.top - railRect.top;
+    var minY = Math.min(0, endY);
+    var maxY = Math.max(railRect.height, endY);
+    var paths = [];
+
+    for (var i = 0; i < 3; i++) {
+      var ingredientAnchor = ingredientSlots[i] && (ingredientSlots[i].querySelector('.chipCraftSlotCard') || ingredientSlots[i]);
+      if (!ingredientAnchor) continue;
+      var ingredientRect = ingredientAnchor.getBoundingClientRect();
+      var startX = ingredientRect.left + ingredientRect.width * 0.5 - railRect.left;
+      var startY = ingredientRect.bottom - railRect.top;
+      minY = Math.min(minY, startY);
+      maxY = Math.max(maxY, startY);
+      paths.push({ startX: startX, startY: startY });
+    }
+
+    var viewBoxTop = Math.floor(minY - 6);
+    var viewBoxHeight = Math.max(1, Math.ceil(maxY - viewBoxTop + 8));
+    svg.setAttribute('viewBox', '0 ' + viewBoxTop + ' ' + Math.ceil(railRect.width) + ' ' + viewBoxHeight);
+
+    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      var geometry = paths[lineIndex];
+      if (!geometry) continue;
+      var deltaY = endY - geometry.startY;
+      var controlA = geometry.startY + Math.max(12, deltaY * 0.28);
+      var controlB = endY - Math.max(12, deltaY * 0.34);
+      var pathDef = 'M' + geometry.startX + ' ' + geometry.startY
+        + ' C' + geometry.startX + ' ' + controlA + ',' + endX + ' ' + controlB + ',' + endX + ' ' + endY;
+      var group = lines[lineIndex];
+      var base = group.querySelector('.chipCraftEnergyLine__base');
+      var glow = group.querySelector('.chipCraftEnergyLine__glow');
+      var node = group.querySelector('.chipCraftEnergyLine__node');
+      if (base) base.setAttribute('d', pathDef);
+      if (glow) glow.setAttribute('d', pathDef);
+      if (node) {
+        node.setAttribute('cx', endX);
+        node.setAttribute('cy', endY);
+      }
+    }
+  }
+
+  function _scheduleCraftEnergySync(panel) {
+    if (!panel || !panel.querySelector || !panel.querySelector('.chipCraftEnergySvg')) return;
+    if (typeof global.requestAnimationFrame !== 'function') {
+      _syncCraftEnergyLines(panel);
+      return;
+    }
+    global.requestAnimationFrame(function () {
+      _syncCraftEnergyLines(panel);
+      global.requestAnimationFrame(function () {
+        _syncCraftEnergyLines(panel);
+      });
+    });
   }
 
   function _getCraftChancePct() {
@@ -3226,6 +3293,26 @@
       '<div class="techModal__text techModal__text--confirm">' + bodyText + '</div>' +
       '<div class="techModal__btns">' +
       '<button class="btn scButton techModal__accelConfirmBtn" data-craft-disassemble-confirm type="button">' + confirmLabel + '</button>' +
+      '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
+      '</div>' +
+      '</div>';
+    modal.style.display = 'flex';
+  }
+
+  function _showDustConfirmModal(selectedCount, totalDust) {
+    var modal = _ensureTechModal();
+    var closeLabel = t('techAccelClose', 'Закрыть');
+    var confirmLabel = t('chipCraftDustConfirm', 'Подтвердить');
+    var cancelLabel = t('chipCraftDustCancel', 'Отменить');
+    var bodyText = t('chipCraftDustConfirmText', 'Выбранные чипы ({count}) будут распылены на {amount} "Кремниевой пыли". Продолжить?')
+      .replace('{count}', selectedCount)
+      .replace('{amount}', totalDust);
+    modal.innerHTML = '<div class="techModal__dialog techModal__dialog--craft techModal__dialog--confirm" role="dialog" aria-modal="true" aria-labelledby="chipDustConfirmTitle">' +
+      '<button class="modalClose scModal__close techModal__close" data-craft-modal-close type="button" aria-label="' + closeLabel + '" title="' + closeLabel + '"></button>' +
+      '<div class="techModal__title techModal__title--warn" id="chipDustConfirmTitle">' + t('chipCraftDustConfirmTitle', 'Подтвердить распыление') + '</div>' +
+      '<div class="techModal__text techModal__text--confirm">' + bodyText + '</div>' +
+      '<div class="techModal__btns">' +
+      '<button class="btn scButton techModal__accelConfirmBtn" data-craft-dust-confirm type="button">' + confirmLabel + '</button>' +
       '<button class="btn scButton techModal__noBtn" data-craft-modal-close type="button">' + cancelLabel + '</button>' +
       '</div>' +
       '</div>';
@@ -3971,16 +4058,23 @@
         renderChipCraftPanel();
       });
     }
+
+    _scheduleCraftEnergySync(panel);
   }
 
   /** Execute dust conversion: destroy selected items, gain silicon dust */
-  function _executeDust() {
+  function _executeDust(options) {
+    var opts = options || {};
     var keys = Object.keys(_dustSelected);
     if (!keys.length) {
       if (global.Game && global.Game.Toast) global.Game.Toast.show(t('chipCraftDustNoneSelected', 'Выберите хотя бы один элемент'), 1500);
       return;
     }
     var totalDust = _calcDustTotal();
+    if (!opts.skipConfirm) {
+      _showDustConfirmModal(_getDustSelectedItemCount(), totalDust);
+      return;
+    }
     for (var i = 0; i < keys.length; i++) {
       var k = keys[i];
       var cnt = _dustSelected[k];
@@ -4571,6 +4665,13 @@
         }
       });
     }
+
+    global.addEventListener('resize', function () {
+      if (_activeHangarTab !== 'workshop' || _workshopSubTab !== 'chipCraft') return;
+      var craftPanel = el('workshopPanelChipCraft');
+      if (!craftPanel || craftPanel.hidden) return;
+      _scheduleCraftEnergySync(craftPanel);
+    });
 
     ensureCells();
     render();

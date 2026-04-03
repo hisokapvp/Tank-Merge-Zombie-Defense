@@ -6,14 +6,16 @@
   var ORIGINAL_VALUE_ATTR = 'data-font-floor-original-font-size';
   var ORIGINAL_PRIORITY_ATTR = 'data-font-floor-original-font-priority';
   var INTERNAL_STYLE_MUTATIONS_KEY = '__fontFloorInternalStyleMutations';
-  var SKIP_SELECTOR = [
+  var SKIP_SELECTORS = [
     '.levelModal__close',
     '.crateModal__close',
     '.modalClose',
     '.chipCraftSlotRemove',
     '.lessonProgress__close',
     '[data-font-floor-ignore="true"]'
-  ].join(', ');
+  ];
+  var SKIP_SELECTOR = SKIP_SELECTORS.join(', ');
+  var _schedulerMetrics = null;
 
   function clampFontString(value) {
     var text = String(value || '');
@@ -164,20 +166,36 @@
     }
   }
 
+  function updateSchedulerQueueMetrics(metrics, queueLength) {
+    if (!metrics) return;
+    metrics.queueSize = queueLength;
+    if (queueLength > metrics.maxQueueSize) metrics.maxQueueSize = queueLength;
+  }
+
   function createScheduler() {
     var queued = [];
     var scheduled = false;
+    var metrics = {
+      queueSize: 0,
+      maxQueueSize: 0,
+      flushCount: 0,
+      lastFlushSize: 0
+    };
 
     function flush() {
       scheduled = false;
+      metrics.flushCount += 1;
+      metrics.lastFlushSize = queued.length;
       while (queued.length) {
         walkAndEnforce(queued.shift());
+        updateSchedulerQueueMetrics(metrics, queued.length);
       }
     }
 
-    return function schedule(root) {
+    function schedule(root) {
       if (!isElementNode(root)) return;
       queued.push(root);
+      updateSchedulerQueueMetrics(metrics, queued.length);
       if (scheduled) return;
       scheduled = true;
       if (typeof global.requestAnimationFrame === 'function') {
@@ -185,12 +203,33 @@
       } else {
         global.setTimeout(flush, 16);
       }
+    }
+
+    schedule.metrics = metrics;
+    return schedule;
+  }
+
+  function getSchedulerMetrics() {
+    if (!_schedulerMetrics) {
+      return {
+        queueSize: 0,
+        maxQueueSize: 0,
+        flushCount: 0,
+        lastFlushSize: 0
+      };
+    }
+    return {
+      queueSize: _schedulerMetrics.queueSize,
+      maxQueueSize: _schedulerMetrics.maxQueueSize,
+      flushCount: _schedulerMetrics.flushCount,
+      lastFlushSize: _schedulerMetrics.lastFlushSize
     };
   }
 
   function installDomFontFloor() {
     if (!global.document || !global.document.body) return;
     var schedule = createScheduler();
+    _schedulerMetrics = schedule.metrics;
     schedule(global.document.body);
 
     if (typeof global.MutationObserver === 'undefined') return;
@@ -225,7 +264,9 @@
   global.Game = global.Game || {};
   global.Game.FontFloor = {
     MIN_FONT_PX: MIN_FONT_PX,
+    SKIP_SELECTORS: SKIP_SELECTORS.slice(),
     clampFontString: clampFontString,
-    enforceElementFloor: enforceElementFloor
+    enforceElementFloor: enforceElementFloor,
+    getSchedulerMetrics: getSchedulerMetrics
   };
 })(typeof window !== 'undefined' ? window : this);

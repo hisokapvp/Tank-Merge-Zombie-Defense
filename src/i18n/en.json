@@ -585,6 +585,8 @@
   ,"chipCraftDustBtn": "Pulverize"
   ,"chipCraftDustConfirm": "Confirm"
   ,"chipCraftDustCancel": "Cancel"
+  ,"chipCraftDustConfirmTitle": "Confirm pulverizing"
+  ,"chipCraftDustConfirmText": "Selected chips ({count}) will be pulverized into {amount} silicon dust. Continue?"
   ,"chipCraftDustResult": "You will receive silicon dust: {amount}"
   ,"chipCraftDustNoneSelected": "Select at least one item"
   ,"chipCraftDustGained": "Silicon dust received: {amount}"

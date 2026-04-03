@@ -21,8 +21,23 @@
     mobileMode: { rollout: 0, description: 'Force mobile performance mode.' },
     mobileFxLite: { rollout: 0, description: 'Force lighter FX in mobile mode.' },
     mobileFxUltraLite: { rollout: 0, description: 'Force ultra-light FX in mobile mode.' },
-    usePhaser: { rollout: 0, description: 'Enable Phaser 3 runtime instead of legacy Canvas.' }
+    usePhaser: { rollout: 0, description: 'Enable Phaser 3 runtime instead of legacy Canvas.' },
+    tmzdAnalyticsEnabled: { rollout: 0, description: 'Enable remote TMZD analytics adapters.' },
+    tmzdAnalyticsLimitedEvents: { enabled: true, description: 'Keep TMZD analytics on the limited event taxonomy by default.' },
+    tmzdAnalyticsMatomoEnabled: { rollout: 0, description: 'Enable Matomo as the primary TMZD analytics sink.' },
+    tmzdAnalyticsPostHogEnabled: { rollout: 0, description: 'Enable PostHog as the secondary TMZD analytics sink.' },
+    tmzdAnalyticsCanary: { rollout: 0, description: 'Allow TMZD analytics canary rollout through experiments.' },
+    tmzdAnalyticsReadBack: { rollout: 0, description: 'Require TMZD analytics read-back verification signals.' }
   };
+
+  var TMZD_ANALYTICS_FLAG_NAMES = [
+    'tmzdAnalyticsEnabled',
+    'tmzdAnalyticsLimitedEvents',
+    'tmzdAnalyticsMatomoEnabled',
+    'tmzdAnalyticsPostHogEnabled',
+    'tmzdAnalyticsCanary',
+    'tmzdAnalyticsReadBack'
+  ];
 
   var flags = {};
   var overrides = {};
@@ -119,16 +134,32 @@
 
   function get(name) {
     if (!name) return false;
-    if (overrides && overrides.hasOwnProperty(name)) return !!overrides[name];
+    if (overrides && Object.prototype.hasOwnProperty.call(overrides, name)) return !!overrides[name];
     var cfg = flags[name];
     if (!cfg) return false;
     return computeValue(name, cfg);
   }
 
+  function getDetail(name) {
+    if (!name) return null;
+    var cfg = flags[name];
+    if (!cfg) return null;
+    var override = Object.prototype.hasOwnProperty.call(overrides, name) ? overrides[name] : null;
+    return {
+      name: name,
+      rollout: cfg.rollout,
+      enabled: cfg.enabled,
+      description: cfg.description,
+      override: override,
+      bucket: getBucket(name),
+      value: override != null ? override : computeValue(name, cfg)
+    };
+  }
+
   function setOverride(name, value) {
     if (!name) return;
     if (value === null || value === undefined) {
-      if (overrides && overrides.hasOwnProperty(name)) {
+      if (overrides && Object.prototype.hasOwnProperty.call(overrides, name)) {
         delete overrides[name];
         saveOverrides();
       }
@@ -148,21 +179,26 @@
     var names = Object.keys(flags).sort();
     for (var i = 0; i < names.length; i++) {
       var name = names[i];
-      var cfg = flags[name];
-      var override = overrides.hasOwnProperty(name) ? overrides[name] : null;
-      var bucket = getBucket(name);
-      var value = override != null ? override : computeValue(name, cfg);
-      out.push({
-        name: name,
-        rollout: cfg.rollout,
-        enabled: cfg.enabled,
-        description: cfg.description,
-        override: override,
-        bucket: bucket,
-        value: value
-      });
+      out.push(getDetail(name));
     }
     return out;
+  }
+
+  function getAnalyticsSnapshot() {
+    var details = {};
+    for (var i = 0; i < TMZD_ANALYTICS_FLAG_NAMES.length; i++) {
+      var flagName = TMZD_ANALYTICS_FLAG_NAMES[i];
+      details[flagName] = getDetail(flagName);
+    }
+    return {
+      enabled: get('tmzdAnalyticsEnabled'),
+      limitedEvents: get('tmzdAnalyticsLimitedEvents'),
+      matomoPrimary: get('tmzdAnalyticsMatomoEnabled'),
+      posthogSecondary: get('tmzdAnalyticsPostHogEnabled'),
+      canary: get('tmzdAnalyticsCanary'),
+      readBackVerification: get('tmzdAnalyticsReadBack'),
+      flags: details
+    };
   }
 
   function init(opts) {
@@ -183,12 +219,15 @@
     init: init,
     define: define,
     get: get,
+    getDetail: getDetail,
+    getAnalyticsSnapshot: getAnalyticsSnapshot,
     setOverride: setOverride,
     clearOverrides: clearOverrides,
     list: list,
     getUserId: function () { return userId; },
     STORAGE_OVERRIDE_KEY: STORAGE_OVERRIDE_KEY,
     STORAGE_USER_KEY: STORAGE_USER_KEY,
+    TMZD_ANALYTICS_FLAG_NAMES: TMZD_ANALYTICS_FLAG_NAMES.slice(),
     _hash: hashString,
     _bucket: getBucket,
   };

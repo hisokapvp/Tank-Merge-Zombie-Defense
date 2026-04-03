@@ -11150,6 +11150,13 @@ function isLevelModalOpen(){
   return !!(ui.levelModal && !ui.levelModal.classList.contains('hidden'));
 }
 
+if (!window.__tmzdContextMenuGuardInstalled) {
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+  }, true);
+  window.__tmzdContextMenuGuardInstalled = true;
+}
+
 function preventTouchPointerDefault(e) {
   if (e.pointerType === 'touch' && e.cancelable) e.preventDefault();
 }

@@ -586,6 +586,8 @@
   ,"chipCraftDustBtn": "Распылить"
   ,"chipCraftDustConfirm": "Подтвердить"
   ,"chipCraftDustCancel": "Отменить"
+  ,"chipCraftDustConfirmTitle": "Подтвердить распыление"
+  ,"chipCraftDustConfirmText": "Выбранные чипы ({count}) будут распылены на {amount} \"Кремниевой пыли\". Продолжить?"
   ,"chipCraftDustResult": "Получите кремниевой пыли: {amount}"
   ,"chipCraftDustNoneSelected": "Выберите хотя бы один элемент"
   ,"chipCraftDustGained": "Получено кремниевой пыли: {amount}"

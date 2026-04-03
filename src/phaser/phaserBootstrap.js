@@ -111,6 +111,7 @@
         keyboard: false,
         gamepad: false,
       },
+      disableContextMenu: true,
       fps: {
         target: 60,
         forceSetTimeOut: false,

@@ -29,6 +29,13 @@
       variants: ['control', 'lite'],
       weights: [50, 50],
       description: 'Combat FX load.'
+    },
+    tmzd_analytics_rollout: {
+      enabled: true,
+      rollout: 0,
+      variants: ['control', 'matomo_primary', 'dual_write'],
+      weights: [70, 20, 10],
+      description: 'TMZD analytics rollout: control, Matomo canary, dual-write canary.'
     }
   };
 
@@ -189,6 +196,51 @@
     return entry ? entry.variant : cfg.variants[0];
   }
 
+  function getAnalyticsRolloutState() {
+    if (!config || !Object.keys(config).length) init({});
+    var flags = global.Game && global.Game.Flags;
+    var analyticsFlags = flags && typeof flags.getAnalyticsSnapshot === 'function'
+      ? flags.getAnalyticsSnapshot()
+      : {
+        enabled: !!(flags && flags.get && flags.get('tmzdAnalyticsEnabled')),
+        limitedEvents: !(flags && flags.get && flags.get('tmzdAnalyticsLimitedEvents') === false),
+        matomoPrimary: !!(flags && flags.get && flags.get('tmzdAnalyticsMatomoEnabled')),
+        posthogSecondary: !!(flags && flags.get && flags.get('tmzdAnalyticsPostHogEnabled')),
+        canary: !!(flags && flags.get && flags.get('tmzdAnalyticsCanary')),
+        readBackVerification: !!(flags && flags.get && flags.get('tmzdAnalyticsReadBack')),
+        flags: {}
+      };
+    var variant = getVariant('tmzd_analytics_rollout');
+    var primaryAdapter = '';
+    var secondaryAdapter = '';
+
+    if (analyticsFlags.enabled) {
+      if (analyticsFlags.canary) {
+        if (variant === 'matomo_primary' || variant === 'dual_write') primaryAdapter = 'matomo';
+        if (variant === 'dual_write') secondaryAdapter = 'posthog';
+      } else {
+        if (analyticsFlags.matomoPrimary) primaryAdapter = 'matomo';
+        if (analyticsFlags.posthogSecondary) secondaryAdapter = 'posthog';
+      }
+    } else {
+      variant = 'control';
+    }
+
+    return {
+      id: 'tmzd_analytics_rollout',
+      enabled: !!analyticsFlags.enabled,
+      variant: variant,
+      canary: !!analyticsFlags.canary,
+      limitedEvents: analyticsFlags.limitedEvents !== false,
+      readBackEnabled: !!analyticsFlags.readBackVerification,
+      primaryAdapter: primaryAdapter,
+      secondaryAdapter: secondaryAdapter,
+      dualWrite: !!primaryAdapter && !!secondaryAdapter,
+      source: analyticsFlags.canary ? 'experiment' : 'flags',
+      flags: analyticsFlags.flags || {}
+    };
+  }
+
   function getAssignmentsMap() {
     var out = {};
     Object.keys(config).forEach(function (id) {
@@ -282,6 +334,7 @@
     init: init,
     list: list,
     getVariant: getVariant,
+    getAnalyticsRolloutState: getAnalyticsRolloutState,
     getAssignments: getAssignmentsMap,
     setExperiment: setExperiment,
     clearAssignments: clearAssignments,

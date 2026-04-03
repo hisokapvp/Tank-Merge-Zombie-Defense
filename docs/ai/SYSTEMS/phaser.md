@@ -1,6 +1,6 @@
 # Система: Phaser 3 runtime и hybrid seam
 
-> Обновлено: 2026-03-30.
+> Обновлено: 2026-04-02.
 > Master spec: `docs/migration/PHASER_MIGRATION.md`. Risk register: `docs/migration/RISK_REGISTER.md`.
 
 ## Статус
@@ -25,7 +25,7 @@
 - `Game.ClockAdapter` — now/pause/delta bridge: [src/phaser/clockAdapter.js](../../../src/phaser/clockAdapter.js)
 
 ### Bootstrap & scenes
-- `Game.PhaserBootstrap` — creates `Phaser.Game`, registers all scenes: [src/phaser/phaserBootstrap.js](../../../src/phaser/phaserBootstrap.js)
+- `Game.PhaserBootstrap` — creates `Phaser.Game`, registers all scenes и удерживает browser-input parity через `disableContextMenu:true`, чтобы Phaser-path не возвращал native context menu поверх игры: [src/phaser/phaserBootstrap.js](../../../src/phaser/phaserBootstrap.js#L106-L116)
 - 16 Phaser scenes: BootScene, GameScene, HudScene + 13 overlay/modal scenes в `src/phaser/scenes/`
 - `Game.SceneOverlayManager` — lifecycle coordinator для 14 overlay scenes: [src/phaser/sceneOverlayManager.js](../../../src/phaser/sceneOverlayManager.js)
 
@@ -37,6 +37,7 @@
 ### Input
 - `Game.InputAdapter` — coord transform, DPR, drag threshold, hit-testing: [src/phaser/inputAdapter.js](../../../src/phaser/inputAdapter.js)
 - `Game.InputComparisonHarness` — A/B legacy vs Phaser input comparison: [src/phaser/inputComparisonHarness.js](../../../src/phaser/inputComparisonHarness.js)
+- Browser gesture suppression считается частью этого же hybrid input seam: legacy `document`-guard в `game.js` и `disableContextMenu:true` в Phaser bootstrap обязаны оставаться в паре, иначе right-click/long-press parity между runtime-путями расходится раньше hit-testing/drag logic: [game.js](../../../game.js#L11153-L11157), [src/phaser/phaserBootstrap.js](../../../src/phaser/phaserBootstrap.js#L106-L116)
 
 ### UI bridge
 - `Game.ModalAdapter` — per-modal mode (dom/phaser/both), 13 modals: [src/phaser/modalAdapter.js](../../../src/phaser/modalAdapter.js)
@@ -92,4 +93,5 @@
 - Advancing to `phaser` phase blocked unless `ParityGate.runGate().pass === true`
 - Layer z-order в `draw()` сохраняется идентичным legacy pipeline
 - `clearBeforeRender: false` — Phaser не очищает Canvas, legacy 2D output сохраняется в hybrid mode
+- `disableContextMenu: true` остаётся включённым, чтобы Phaser-path не возвращал browser context menu/long-press overlay поверх gameplay canvas и совпадал с legacy document-level guard
 - DPR transform восстанавливается в начале `draw()` (Phaser renderer resets to identity)

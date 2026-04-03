@@ -358,11 +358,11 @@
         "scale": 1
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-        "frames": 9,
+        "src": "Explosion.png",
+        "frame": { "x": 0, "y": 0, "w": 110, "h": 110 },
+        "frames": 10,
         "frameRateFps": 20,
-        "scale": 0.5
+        "scale": 1
       },
       "effect": {
         "sprite": "nuke_shockwave",

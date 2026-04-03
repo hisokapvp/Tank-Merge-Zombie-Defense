@@ -415,6 +415,7 @@
     const sourceInfo = resolveCellTarget(evt.target);
     if (!sourceInfo) return;
     if (!_getEntityAt(sourceInfo.type, sourceInfo.index)) return;
+    if (evt.pointerType === 'touch' && evt.cancelable) evt.preventDefault();
     clearDragState();
     _dragState = {
       pointerId: evt.pointerId,
