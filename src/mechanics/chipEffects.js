@@ -83,6 +83,9 @@
       if (mod && mod.impactSprite && typeof mod.impactSprite.src === 'string' && mod.impactSprite.src) {
         srcs[mod.impactSprite.src] = true;
       }
+      if (mod && mod.impactSpriteNormal && typeof mod.impactSpriteNormal.src === 'string' && mod.impactSpriteNormal.src) {
+        srcs[mod.impactSpriteNormal.src] = true;
+      }
       if (mod && mod.effectSprite && typeof mod.effectSprite.src === 'string' && mod.effectSprite.src) {
         srcs[mod.effectSprite.src] = true;
       }
@@ -154,6 +157,15 @@
     return result;
   }
 
+  function getModImpactSpriteNormal(modId) {
+    var key = 'in' + modId;
+    if (key in _chipSpriteCache) return _chipSpriteCache[key];
+    var cfg = getModCfg(modId);
+    var result = cfg ? _normalizeCustomSprite(cfg.impactSpriteNormal) : null;
+    _chipSpriteCache[key] = result;
+    return result;
+  }
+
   function getModEffectSprite(modId) {
     var key = 'e' + modId;
     if (key in _chipSpriteCache) return _chipSpriteCache[key];
@@ -207,13 +219,21 @@
     return null;
   }
 
-  function buildChipBulletCfgOverride(activeModIds) {
+  function resolveImpactSpriteOverride(modId, shotMods) {
+    var usesNuclearImpact = modId === 8 || modId === 27 || modId === 28;
+    if (usesNuclearImpact && !(shotMods && shotMods.isNuke)) {
+      return getModImpactSpriteNormal(modId);
+    }
+    return getModImpactSprite(modId);
+  }
+
+  function buildChipBulletCfgOverride(activeModIds, shotMods) {
     if (!activeModIds || !activeModIds.length) return null;
     var bulletSprite = null;
     var impactSprite = null;
     for (var i = 0; i < activeModIds.length; i++) {
       if (!bulletSprite) bulletSprite = getModBulletSprite(activeModIds[i]);
-      if (!impactSprite) impactSprite = getModImpactSprite(activeModIds[i]);
+      if (!impactSprite) impactSprite = resolveImpactSpriteOverride(activeModIds[i], shotMods);
       if (bulletSprite && impactSprite) break;
     }
     if (!bulletSprite && !impactSprite) return null;
@@ -1325,6 +1345,7 @@
     getLaserMarks: getLaserMarks,
     getModBulletSprite: getModBulletSprite,
     getModImpactSprite: getModImpactSprite,
+    getModImpactSpriteNormal: getModImpactSpriteNormal,
     getModEffectSprite: getModEffectSprite,
     getModSfxConfig: getModSfxConfig,
     resolveChipSfxKey: resolveChipSfxKey,

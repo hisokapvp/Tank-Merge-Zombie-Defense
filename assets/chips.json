@@ -1,5 +1,5 @@
 {
-  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Optional effectSprite allows per-modifier lingering effect atlases.",
+  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Nuclear modifiers may also define impactSpriteNormal for their non-nuclear shots. Optional effectSprite allows per-modifier lingering effect atlases.",
   "atlas": "chip_effects_atlas.png",
   "modifiers": {
     "1": {
@@ -358,6 +358,13 @@
         "scale": 1
       },
       "impactSprite": {
+        "src": "Nuclear_Explosion.png",
+        "frame": { "x": 0, "y": 0, "w": 136, "h": 136 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "scale": 2
+      },
+      "impactSpriteNormal": {
         "src": "Explosion.png",
         "frame": { "x": 0, "y": 0, "w": 110, "h": 110 },
         "frames": 10,
@@ -780,7 +787,8 @@
       "projectileNormal": { "sprite": "bullet_base", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.0, "tint": null },
       "impact": { "sprite": "impact_nuke", "frameWidth": 128, "frameHeight": 128, "frames": 8, "animSpeed": 10, "scale": 2.2 },
       "bulletSprite": { "src": "chip_effects_atlas.png", "frame": { "x": 0, "y": 0, "w": 103, "h": 27 }, "frames": 10, "frameRateFps": 20, "anchor": { "x": 0.5, "y": 0.5 }, "scale": 1 },
-      "impactSprite": { "src": "bullet_atlas.png", "frame": { "x": 0, "y": 0, "w": 81, "h": 81 }, "frames": 9, "frameRateFps": 20, "scale": 0.5 },
+      "impactSprite": { "src": "Explosion.png", "frame": { "x": 0, "y": 0, "w": 110, "h": 110 }, "frames": 10, "frameRateFps": 20, "scale": 1.25 },
+      "impactSpriteNormal": { "src": "bullet_atlas.png", "frame": { "x": 0, "y": 0, "w": 81, "h": 81 }, "frames": 9, "frameRateFps": 20, "scale": 0.5 },
       "effect": { "sprite": "nuke_shockwave", "frameWidth": 128, "frameHeight": 128, "frames": 6, "animSpeed": 8, "color": "rgba(255,224,102,0.4)" },
       "sfx": { "shoot": "shootHeavy2", "shootNormal": "shootNormal", "impact": "impactNuke", "impactNormal": "impactNormal" }
     },
@@ -791,7 +799,8 @@
       "projectileNormal": { "sprite": "bullet_base", "frameWidth": 32, "frameHeight": 32, "frames": 1, "scale": 1.0, "tint": null },
       "impact": { "sprite": "impact_nuke", "frameWidth": 128, "frameHeight": 128, "frames": 8, "animSpeed": 10, "scale": 2.5 },
       "bulletSprite": { "src": "chip_effects_atlas.png", "frame": { "x": 0, "y": 0, "w": 103, "h": 27 }, "frames": 10, "frameRateFps": 20, "anchor": { "x": 0.5, "y": 0.5 }, "scale": 1 },
-      "impactSprite": { "src": "bullet_atlas.png", "frame": { "x": 0, "y": 0, "w": 81, "h": 81 }, "frames": 9, "frameRateFps": 20, "scale": 0.5 },
+      "impactSprite": { "src": "Explosion.png", "frame": { "x": 0, "y": 0, "w": 110, "h": 110 }, "frames": 10, "frameRateFps": 20, "scale": 1.45 },
+      "impactSpriteNormal": { "src": "bullet_atlas.png", "frame": { "x": 0, "y": 0, "w": 81, "h": 81 }, "frames": 9, "frameRateFps": 20, "scale": 0.5 },
       "effect": { "sprite": "nuke_shockwave", "frameWidth": 128, "frameHeight": 128, "frames": 6, "animSpeed": 8, "color": "rgba(255,253,225,0.4)" },
       "sfx": { "shoot": "shootHeavy2", "shootNormal": "shootNormal", "impact": "impactNuke", "impactNormal": "impactNormal" }
     },

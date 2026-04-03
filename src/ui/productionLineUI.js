@@ -189,6 +189,11 @@
   }
 
   function _preventTouchPointerDefault(evt) {
+    const inputGuards = global.Game && global.Game.InputGuards;
+    if (inputGuards && typeof inputGuards.preventTouchPointerDefault === 'function') {
+      inputGuards.preventTouchPointerDefault(evt);
+      return;
+    }
     if (!evt || evt.pointerType !== 'touch' || evt.cancelable !== true) return;
     evt.preventDefault();
   }
@@ -344,6 +349,10 @@
       cell.className = 'plStorage__cell';
       cell.type = 'button';
       cell.setAttribute('data-box-index', String(i));
+      const inputGuards = global.Game && global.Game.InputGuards;
+      if (inputGuards && typeof inputGuards.markTouchDragHost === 'function') {
+        inputGuards.markTouchDragHost(cell);
+      }
 
       if (i < pl.storage.length) {
         const box = pl.storage[i] || null;

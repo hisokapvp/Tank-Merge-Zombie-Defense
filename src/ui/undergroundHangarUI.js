@@ -40,6 +40,25 @@
     return api || null;
   }
 
+  function getInputGuards() {
+    return global.Game && global.Game.InputGuards ? global.Game.InputGuards : null;
+  }
+
+  function preventTouchPointerDefault(evt) {
+    const inputGuards = getInputGuards();
+    if (inputGuards && typeof inputGuards.preventTouchPointerDefault === 'function') {
+      inputGuards.preventTouchPointerDefault(evt);
+      return;
+    }
+    if (evt && evt.pointerType === 'touch' && evt.cancelable) evt.preventDefault();
+  }
+
+  function markRenderedDragHosts(root) {
+    const inputGuards = getInputGuards();
+    if (!inputGuards || typeof inputGuards.markTouchDragHosts !== 'function' || !root) return;
+    inputGuards.markTouchDragHosts(root, '.ughCell, .ughDroneCell, .ughCell__surface, .ughDroneCell__surface, .ughCell__spriteCanvas, .ughDroneCell__spriteCanvas');
+  }
+
   function syncHelpButtonCopy() {
     if (!_helpBtn) return;
     const sharedHelpApi = getSharedHelpApi();
@@ -415,7 +434,7 @@
     const sourceInfo = resolveCellTarget(evt.target);
     if (!sourceInfo) return;
     if (!_getEntityAt(sourceInfo.type, sourceInfo.index)) return;
-    if (evt.pointerType === 'touch' && evt.cancelable) evt.preventDefault();
+    preventTouchPointerDefault(evt);
     clearDragState();
     _dragState = {
       pointerId: evt.pointerId,
@@ -810,6 +829,7 @@
 
     body.innerHTML = html;
     renderSpriteCanvases(body);
+    markRenderedDragHosts(body);
   }
 
   // ─── Click delegation ───

@@ -8201,10 +8201,10 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     console.warn('[Combat] Bullet config is missing for tank level', tank.level, '(id=' + (stats?.bulletId || 'bullet_base') + ', level=' + (stats?.bulletLevel || 1) + '). Shot skipped.');
     return;
   }
-  // Apply chip modifier sprite overrides (bulletSprite / impactSprite from chips.json)
+  // Apply chip modifier sprite overrides (bulletSprite / impactSprite / impactSpriteNormal from chips.json)
   let bulletCfg = bulletCfgBase;
   if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function' && typeof ChipFx.getActiveModIds === 'function') {
-    const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(ChipFx.getActiveModIds(cellIndex));
+    const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(ChipFx.getActiveModIds(cellIndex), chipShotMods || null);
     if (chipBulletOverride) {
       bulletCfg = { bulletSprite: bulletCfgBase.bulletSprite, impactSprite: bulletCfgBase.impactSprite };
       if (chipBulletOverride.bulletSprite) bulletCfg.bulletSprite = chipBulletOverride.bulletSprite;
@@ -11150,14 +11150,27 @@ function isLevelModalOpen(){
   return !!(ui.levelModal && !ui.levelModal.classList.contains('hidden'));
 }
 
-if (!window.__tmzdContextMenuGuardInstalled) {
-  document.addEventListener('contextmenu', function (e) {
-    e.preventDefault();
-  }, true);
-  window.__tmzdContextMenuGuardInstalled = true;
+{
+  const inputGuards = window.Game && window.Game.InputGuards;
+  if (inputGuards && typeof inputGuards.installDocumentContextMenuGuard === 'function') {
+    inputGuards.installDocumentContextMenuGuard(document);
+  } else if (!window.__tmzdContextMenuGuardInstalled) {
+    document.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+    }, true);
+    window.__tmzdContextMenuGuardInstalled = true;
+  }
+  if (inputGuards && typeof inputGuards.markTouchDragHost === 'function') {
+    inputGuards.markTouchDragHost(canvas);
+  }
 }
 
 function preventTouchPointerDefault(e) {
+  const inputGuards = window.Game && window.Game.InputGuards;
+  if (inputGuards && typeof inputGuards.preventTouchPointerDefault === 'function') {
+    inputGuards.preventTouchPointerDefault(e);
+    return;
+  }
   if (e.pointerType === 'touch' && e.cancelable) e.preventDefault();
 }
 

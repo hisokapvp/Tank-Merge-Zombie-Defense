@@ -776,15 +776,19 @@ test('TUT-8W: restore plus recalculation unlocks track cleanup IV-V once and pre
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
   assert(aiIndexMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'AI index links to dedicated tutorial runtime map');
   assert(uiSystemMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'UI system doc links to dedicated tutorial runtime map');
+  assert(uiSystemMd.indexOf('Tooltip dismiss contract') !== -1, 'UI system doc records the tooltip dismiss contract near close/remove patterns');
+  assert(uiSystemMd.indexOf('data-input-drag-host="true"') !== -1, 'UI system doc records the shared drag-host input guard attribute');
   assert(tutorialRuntimeMd.indexOf('getPreferredPendingStepId') !== -1, 'tutorial runtime map documents first-available step selection');
   assert(tutorialRuntimeMd.indexOf('supercomputer_damage_apply_level1_weapon_upgrade') !== -1, 'tutorial runtime map documents the supercomputer damage lesson invariant');
 });
 
 test('TUT-8E: tutorial bubble CSS wraps long text and keeps controls visible on small screens', () => {
   assert(styleCss.indexOf('width:clamp(332px, 34vw, 460px);') !== -1, 'tutorial bubble uses a fixed-width desktop shell');
+  assert(styleCss.indexOf('--ui-scale:1;') !== -1, 'tutorial bubble locally overrides ui scale instead of inheriting the master shell scale');
   assert(styleCss.indexOf('overflow-wrap:break-word;') !== -1, 'tutorial message wraps long text by words');
   assert(styleCss.indexOf('flex-wrap:wrap;') !== -1, 'tutorial actions can wrap instead of clipping');
   assert(styleCss.indexOf('min-width:100%;') !== -1, 'tutorial actions stack to full width on narrow viewports');
+  assert(styleCss.indexOf('[data-input-drag-host="true"]') !== -1, 'shared drag-host selector owns the touch-action contract for modal drag surfaces');
 });
 
 test('TUT-8L: production storage modal pause hook is wired through game bootstrap and tutorial targets the first filled slot', () => {

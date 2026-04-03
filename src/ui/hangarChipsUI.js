@@ -3060,60 +3060,43 @@
 
   function _syncCraftEnergyLines(panel) {
     if (!panel || !panel.querySelector) return;
-    var rail = panel.querySelector('.chipCraftEnergyRail');
-    var svg = rail ? rail.querySelector('.chipCraftEnergySvg') : null;
-    if (!rail || !svg) return;
+    var svg = panel.querySelector('.chipCraftEnergySvg');
+    if (!svg) return;
 
-    var ingredientSlots = panel.querySelectorAll('.chipCraftIngredientRow .chipCraftSlot--assembleIngredient');
-    var resultHost = panel.querySelector('.chipCraftAssemblyResult .chipCraftResultChip, .chipCraftAssemblyResult .chipCraftSlot--resultSlot');
+    var layoutApi = global.Game && global.Game.ChipCraftLayout;
+    var layout = layoutApi && typeof layoutApi.buildEnergyRailLayout === 'function'
+      ? layoutApi.buildEnergyRailLayout(panel)
+      : null;
+    if (!layout || !layout.lines || !layout.lines.length) return;
+
     var lines = svg.querySelectorAll('[data-craft-energy-line]');
-    if (ingredientSlots.length < 3 || !resultHost || lines.length < 3) return;
+    if (!lines.length) return;
 
-    var railRect = rail.getBoundingClientRect();
-    if (!railRect.width) return;
-
-    var resultAnchor = resultHost.querySelector('.chipCraftSlotCard') || resultHost;
-    var resultRect = resultAnchor.getBoundingClientRect();
-    var endX = resultRect.left + resultRect.width * 0.5 - railRect.left;
-    var endY = resultRect.top - railRect.top;
-    var minY = Math.min(0, endY);
-    var maxY = Math.max(railRect.height, endY);
-    var paths = [];
-
-    for (var i = 0; i < 3; i++) {
-      var ingredientAnchor = ingredientSlots[i] && (ingredientSlots[i].querySelector('.chipCraftSlotCard') || ingredientSlots[i]);
-      if (!ingredientAnchor) continue;
-      var ingredientRect = ingredientAnchor.getBoundingClientRect();
-      var startX = ingredientRect.left + ingredientRect.width * 0.5 - railRect.left;
-      var startY = ingredientRect.bottom - railRect.top;
-      minY = Math.min(minY, startY);
-      maxY = Math.max(maxY, startY);
-      paths.push({ startX: startX, startY: startY });
-    }
-
-    var viewBoxTop = Math.floor(minY - 6);
-    var viewBoxHeight = Math.max(1, Math.ceil(maxY - viewBoxTop + 8));
-    svg.setAttribute('viewBox', '0 ' + viewBoxTop + ' ' + Math.ceil(railRect.width) + ' ' + viewBoxHeight);
+    svg.setAttribute('viewBox', '0 ' + layout.viewBoxTop + ' ' + layout.railWidth + ' ' + layout.viewBoxHeight);
 
     for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      var geometry = paths[lineIndex];
+      var geometry = layout.lines[lineIndex];
       if (!geometry) continue;
-      var deltaY = endY - geometry.startY;
-      var controlA = geometry.startY + Math.max(12, deltaY * 0.28);
-      var controlB = endY - Math.max(12, deltaY * 0.34);
-      var pathDef = 'M' + geometry.startX + ' ' + geometry.startY
-        + ' C' + geometry.startX + ' ' + controlA + ',' + endX + ' ' + controlB + ',' + endX + ' ' + endY;
       var group = lines[lineIndex];
       var base = group.querySelector('.chipCraftEnergyLine__base');
       var glow = group.querySelector('.chipCraftEnergyLine__glow');
       var node = group.querySelector('.chipCraftEnergyLine__node');
-      if (base) base.setAttribute('d', pathDef);
-      if (glow) glow.setAttribute('d', pathDef);
+      if (base) base.setAttribute('d', geometry.pathDef);
+      if (glow) glow.setAttribute('d', geometry.pathDef);
       if (node) {
-        node.setAttribute('cx', endX);
-        node.setAttribute('cy', endY);
+        node.setAttribute('cx', geometry.endX);
+        node.setAttribute('cy', geometry.endY);
       }
     }
+  }
+
+  function _preventTouchDragDefault(evt) {
+    var inputGuards = global.Game && global.Game.InputGuards;
+    if (inputGuards && typeof inputGuards.preventTouchPointerDefault === 'function') {
+      inputGuards.preventTouchPointerDefault(evt);
+      return;
+    }
+    if (evt && evt.pointerType === 'touch' && evt.cancelable) evt.preventDefault();
   }
 
   function _scheduleCraftEnergySync(panel) {
@@ -4411,8 +4394,8 @@
       overlay.addEventListener('pointermove', function(evt) {
         _updateTouchTooltipHold(evt);
         /* Prevent browser scroll/pan while dragging on touch devices */
-        if ((_slotDragging || _chipDragging) && evt.cancelable) {
-          evt.preventDefault();
+        if (_slotDragging || _chipDragging) {
+          _preventTouchDragDefault(evt);
         }
         /* Handle slot-install drag */
         if (_slotDragging) {
