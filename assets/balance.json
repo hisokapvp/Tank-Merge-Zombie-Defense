@@ -1,29 +1,27 @@
 {
   "_readme": "=== БАЛАНСИРОВКА (balance.json) === speedMul — множитель скорости движения (1.0 = по умолчанию). attackSpeedMul — множитель скорости атаки; влияет на frameRate анимации (2.0 = x2). attackDamageMul — множитель силы атаки. Для зомби: ключи в zombieOverrides = id типа из zombies.json (zombie_lvl1 .. zombie_lvl21). Для танков: ключи в tankOverrides = level_N (level_1 .. level_60).",
-
   "zombie": {
-    "speedMul": 1.0,
-    "attackSpeedMul": 1.0,
-    "attackDamageMul": 1.0
+    "speedMul": 1,
+    "attackSpeedMul": 1.1,
+    "attackDamageMul": 1.15
   },
   "zombieOverrides": {
     "zombie_lvl1": {
-      "speedMul": 1.0,
-      "attackSpeedMul": 1.0,
-      "attackDamageMul": 1.0
+      "speedMul": 1,
+      "attackSpeedMul": 1,
+      "attackDamageMul": 1
     }
   },
-
   "tank": {
-    "speedMul": 1.0,
-    "attackSpeedMul": 1.0,
-    "attackDamageMul": 1.0
+    "speedMul": 1,
+    "attackSpeedMul": 1,
+    "attackDamageMul": 2.5
   },
   "tankOverrides": {
     "level_1": {
-      "speedMul": 1.0,
-      "attackSpeedMul": 1.0,
-      "attackDamageMul": 1.0
+      "speedMul": 1,
+      "attackSpeedMul": 1,
+      "attackDamageMul": 1
     }
   }
 }

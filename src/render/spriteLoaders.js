@@ -845,6 +845,25 @@
             }
           }
 
+          var rawSpawnWeights = Array.isArray(data.spawnWeights) ? data.spawnWeights : [];
+          var parsedSpawnWeights = [];
+          for (var k = 0; k < rawSpawnWeights.length; k++) {
+            var rawRule = rawSpawnWeights[k];
+            var selector = '';
+            var weight = NaN;
+            if (rawRule && typeof rawRule === 'object') {
+              if (typeof rawRule.selector === 'string') selector = rawRule.selector.trim();
+              else if (typeof rawRule.id === 'string') selector = rawRule.id.trim();
+              else if (typeof rawRule.prefix === 'string' && rawRule.prefix.trim()) selector = rawRule.prefix.trim() + '*';
+              weight = Number(rawRule.weight);
+            } else if (typeof rawRule === 'string') {
+              selector = rawRule.trim();
+              weight = 1;
+            }
+            if (!selector || !Number.isFinite(weight) || weight < 0) continue;
+            parsedSpawnWeights.push({ selector: selector, weight: weight });
+          }
+
           var idsFromConfig = Array.isArray(data.spriteIds) ? data.spriteIds.filter(function (id) {
             return typeof id === 'string' && id.length > 0;
           }) : [];
@@ -864,6 +883,10 @@
             count: Number.isFinite(data.count) ? Math.max(0, Math.floor(data.count)) : null,
             spriteIds: spriteIds,
             wallSpriteIds: wallIds,
+            spawnWeights: parsedSpawnWeights,
+            spawnWeightFallback: Number.isFinite(data.spawnWeightFallback)
+              ? Math.max(0, data.spawnWeightFallback)
+              : 1,
             noSpawnZones: parsedZones,
             placementMaxAttempts: Number.isFinite(data.placementMaxAttempts)
               ? Math.max(1, Math.floor(data.placementMaxAttempts))

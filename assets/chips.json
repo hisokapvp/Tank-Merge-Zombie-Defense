@@ -1,5 +1,5 @@
 {
-  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Nuclear modifiers may also define impactSpriteNormal for their non-nuclear shots. Optional effectSprite allows per-modifier lingering effect atlases.",
+  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Nuclear modifiers may also define impactSpriteNormal for their non-nuclear shots. Optional effectSprite exposes lingering-effect art overrides independently from gameplay. Secondary lingering effects may be disabled via effect.enabled=false without removing effectSprite config.",
   "atlas": "chip_effects_atlas.png",
   "modifiers": {
     "1": {
@@ -22,16 +22,16 @@
         "scale": 1.0
       },
       "bulletSprite": {
-        "src": "chip_effects_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "src": "bullet_double.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 29 },
         "frames": 10,
         "frameRateFps": 20,
         "anchor": { "x": 0.5, "y": 0.5 },
-        "scale": 1
+        "scale": 0.5
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "src": "impact_double.png",
+        "frame": { "x": 0, "y": 0, "w": 121, "h": 121 },
         "frames": 9,
         "frameRateFps": 20,
         "scale": 0.5
@@ -62,19 +62,19 @@
         "scale": 1.0
       },
       "bulletSprite": {
-        "src": "chip_effects_atlas.png",
+        "src": "bullet_chain.png",
         "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
         "frames": 10,
         "frameRateFps": 20,
         "anchor": { "x": 0.5, "y": 0.5 },
-        "scale": 1
+        "scale": 0.5
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
+        "src": "impact_chain.png",
         "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
         "frames": 9,
         "frameRateFps": 20,
-        "scale": 0.5
+        "scale": 0.6
       },
       "effect": {
         "sprite": "chain_bolt",
@@ -118,16 +118,16 @@
         "scale": 1.2
       },
       "bulletSprite": {
-        "src": "chip_effects_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "src": "bullet_matryoshka.png",
+        "frame": { "x": 0, "y": 0, "w": 102, "h": 75 },
         "frames": 10,
         "frameRateFps": 20,
         "anchor": { "x": 0.5, "y": 0.5 },
-        "scale": 1
+        "scale": 0.15
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "src": "impact_matryoshka.png",
+        "frame": { "x": 0, "y": 0, "w": 121, "h": 121 },
         "frames": 9,
         "frameRateFps": 20,
         "scale": 0.5
@@ -159,19 +159,19 @@
         "scale": 1.2
       },
       "bulletSprite": {
-        "src": "chip_effects_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "src": "bullet_repulse.png",
+        "frame": { "x": 0, "y": 0, "w": 45, "h": 90 },
         "frames": 10,
         "frameRateFps": 20,
         "anchor": { "x": 0.5, "y": 0.5 },
-        "scale": 1
+        "scale": 0.15
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "src": "impact_repulse.png",
+        "frame": { "x": 0, "y": 0, "w": 121, "h": 121 },
         "frames": 9,
         "frameRateFps": 20,
-        "scale": 0.5
+        "scale": 0.7
       },
       "effect": {
         "sprite": "wave_repulse",
@@ -206,19 +206,19 @@
         "scale": 1.2
       },
       "bulletSprite": {
-        "src": "chip_effects_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "src": "bullet_vacuum.png",
+        "frame": { "x": 0, "y": 0, "w": 90, "h": 60 },
         "frames": 10,
         "frameRateFps": 20,
         "anchor": { "x": 0.5, "y": 0.5 },
-        "scale": 1
+        "scale": 0.15
       },
       "impactSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "src": "impact_vacuum.png",
+        "frame": { "x": 0, "y": 0, "w": 121, "h": 121 },
         "frames": 9,
         "frameRateFps": 20,
-        "scale": 0.5
+        "scale": 0.7
       },
       "effect": {
         "sprite": "wave_vacuum",
@@ -461,12 +461,13 @@
         "loop": true
       },
       "effect": {
+        "enabled": true,
         "sprite": "pool_fire",
         "frameWidth": 96,
         "frameHeight": 96,
         "frames": 6,
         "animSpeed": 8,
-        "color": "rgba(0,0,0,0.0)",
+        "color": "rgba(10,10,10,1.0)",
         "poolLife": 4.0,
         "poolDpsMul": 0.30,
         "poolRadius": 40
@@ -505,6 +506,7 @@
         "loop": true
       },
       "effect": {
+        "enabled": true,
         "sprite": "pool_ice",
         "frameWidth": 96,
         "frameHeight": 96,
@@ -541,20 +543,21 @@
         "scale": 1.2
       },
       "effectSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-        "frames": 9,
-        "frameRateFps": 20,
-        "scale": 0.7,
+        "src": "impact_electro.png",
+        "frame": { "x": 0, "y": 0, "w": 128, "h": 128 },
+        "frames": 10,
+        "frameRateFps": 10,
+        "scale": 1,
         "loop": true
       },
       "effect": {
+        "enabled": true,
         "sprite": "node_electro",
         "frameWidth": 48,
         "frameHeight": 48,
         "frames": 4,
         "animSpeed": 10,
-        "color": "rgba(236,204,104,0.3)",
+        "color": "rgba(0,0,0,0)",
         "nodeLife": 5.0,
         "nodeInterval": 0.8,
         "nodeRange": 60,
@@ -594,6 +597,7 @@
         "loop": true
       },
       "effect": {
+        "enabled": true,
         "sprite": "mark_laser",
         "frameWidth": 32,
         "frameHeight": 32,
@@ -630,20 +634,21 @@
         "scale": 1.2
       },
       "effectSprite": {
-        "src": "impact_fire.png",
-        "frame": { "x": 0, "y": 0, "w": 90, "h": 90 },
-        "frames": 6,
-        "frameRateFps": 6,
-        "scale": 0.95,
+        "src": "impact_acid.png",
+        "frame": { "x": 0, "y": 0, "w": 120, "h": 120 },
+        "frames": 10,
+        "frameRateFps": 10,
+        "scale": 1,
         "loop": true
       },
       "effect": {
+        "enabled": true,
         "sprite": "pool_acid",
         "frameWidth": 96,
         "frameHeight": 96,
         "frames": 5,
         "animSpeed": 7,
-        "color": "rgba(184,255,59,0.2)",
+        "color": "rgba(10,10,10,1)",
         "poolLife": 3.5,
         "poolDpsMul": 0.15,
         "slowFactor": 0.15,

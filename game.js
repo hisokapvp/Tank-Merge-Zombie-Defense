@@ -416,8 +416,8 @@ const BAL = {
 
   dmgBase: 7,
   dmgMultPerLevel: 1.48,
-  fireRateBase: 0.85,
-  fireRateAddPerLevel: 0.075,
+  fireRateBase: 0.3,
+  fireRateAddPerLevel: 0.035,
   rangeBase: 315,
   rangePerLevel: 10,
 
@@ -2851,6 +2851,8 @@ function initDecors(){
   const rawCount = hasBalCount ? BAL.decorCount : cfgCount;
   const count = Math.min(Math.max(0, rawCount || 0), 200);
   if (!ids.length || count <= 0) return;
+  const weightRules = Array.isArray(decorCfg?.spawnWeights) ? decorCfg.spawnWeights : [];
+  const weightFallback = Number.isFinite(decorCfg?.spawnWeightFallback) ? Math.max(0, decorCfg.spawnWeightFallback) : 1;
   const blockRadiusK = Number.isFinite(decorCfg?.blockRadiusK) ? clamp(decorCfg.blockRadiusK, 0.1, 0.6) : 0.35;
   const blockRadiusMin = Number.isFinite(decorCfg?.blockRadiusMin) ? Math.max(1, decorCfg.blockRadiusMin) : 8;
   const zones = hasBalZones ? BAL.decorNoSpawnZones : cfgZones;
@@ -2879,6 +2881,88 @@ function initDecors(){
   for (let s = 0; s < stageCount; s++) {
     const t = (s + 1) / stageCount;
     stageOuterR[s] = firstStageOuterR + (maxMapRadius - firstStageOuterR) * t;
+  }
+
+  function normalizeDecorIdList(list){
+    const seen = new Set();
+    const result = [];
+    for (let i = 0; i < list.length; i++) {
+      const spriteId = typeof list[i] === 'string' ? list[i] : '';
+      if (!spriteId || seen.has(spriteId)) continue;
+      seen.add(spriteId);
+      result.push(spriteId);
+    }
+    return result;
+  }
+
+  function resolveDecorWeight(spriteId){
+    if (!weightRules.length) return 1;
+    let exactWeight = null;
+    let wildcardWeight = null;
+    let wildcardSpecificity = -1;
+    for (let i = 0; i < weightRules.length; i++) {
+      const rule = weightRules[i];
+      const selector = typeof rule?.selector === 'string' ? rule.selector : '';
+      const weight = Number(rule?.weight);
+      if (!selector || !Number.isFinite(weight) || weight < 0) continue;
+      if (selector === spriteId) {
+        exactWeight = (exactWeight === null ? 0 : exactWeight) + weight;
+        continue;
+      }
+      if (selector === '*') {
+        if (wildcardSpecificity < 0) {
+          wildcardSpecificity = 0;
+          wildcardWeight = 0;
+        }
+        wildcardWeight += weight;
+        continue;
+      }
+      if (selector.endsWith('*')) {
+        const prefix = selector.slice(0, -1);
+        if (prefix && spriteId.indexOf(prefix) === 0) {
+          if (prefix.length > wildcardSpecificity) {
+            wildcardSpecificity = prefix.length;
+            wildcardWeight = weight;
+          } else if (prefix.length === wildcardSpecificity) {
+            wildcardWeight += weight;
+          }
+        }
+      }
+    }
+    if (exactWeight !== null) return exactWeight;
+    if (wildcardWeight !== null) return wildcardWeight;
+    return weightFallback;
+  }
+
+  function buildWeightedDecorPool(spriteIds){
+    const entries = [];
+    let total = 0;
+    for (let i = 0; i < spriteIds.length; i++) {
+      const spriteId = spriteIds[i];
+      const weight = resolveDecorWeight(spriteId);
+      if (!(weight > 0)) continue;
+      total += weight;
+      entries.push({ id: spriteId, cumulative: total });
+    }
+    if (!entries.length) {
+      for (let i = 0; i < spriteIds.length; i++) {
+        total += 1;
+        entries.push({ id: spriteIds[i], cumulative: total });
+      }
+    }
+    return { entries, total };
+  }
+
+  const uniqueIds = normalizeDecorIdList(ids);
+  const weightedDecorPool = buildWeightedDecorPool(uniqueIds);
+
+  function pickDecorSpriteId(){
+    if (!weightedDecorPool.entries.length) return null;
+    const roll = rng.nextFloat01() * weightedDecorPool.total;
+    for (let i = 0; i < weightedDecorPool.entries.length; i++) {
+      if (roll < weightedDecorPool.entries[i].cumulative) return weightedDecorPool.entries[i].id;
+    }
+    return weightedDecorPool.entries[weightedDecorPool.entries.length - 1].id;
   }
 
   function isInsideMapWithPadding(x, y, pad){
@@ -2952,7 +3036,7 @@ function initDecors(){
       const outerR = stageOuterR[stage];
       for (let attempt = 0; attempt < maxAttemptsPerStage; attempt++) {
         const p = sampleAnnulusPoint(decorIndex, stage, attempt, outerR);
-        const spriteId = ids[rng.nextInt(0, ids.length - 1)];
+        const spriteId = pickDecorSpriteId();
         if (tryCommitDecor(p.x, p.y, spriteId)) return true;
       }
     }
@@ -2963,12 +3047,11 @@ function initDecors(){
     const gridStep = Math.max(8, Math.floor(blockRadiusMin * 1.5));
     const offsetX = rng.nextInt(0, Math.max(0, gridStep - 1));
     const offsetY = rng.nextInt(0, Math.max(0, gridStep - 1));
-    const startSpriteOffset = ids.length > 1 ? rng.nextInt(0, ids.length - 1) : 0;
     for (let y = offsetY; y <= viewSize.h; y += gridStep) {
       for (let x = offsetX; x <= viewSize.w; x += gridStep) {
-        for (let si = 0; si < ids.length; si++) {
-          const spriteId = ids[(startSpriteOffset + si) % ids.length];
-          if (tryCommitDecor(x, y, spriteId)) return true;
+        for (let si = 0; si < uniqueIds.length; si++) {
+          const spriteId = pickDecorSpriteId();
+          if (spriteId && tryCommitDecor(x, y, spriteId)) return true;
         }
       }
     }
@@ -2980,8 +3063,8 @@ function initDecors(){
     for (let attempt = 0; attempt < hardAttempts; attempt++) {
       const x = rng.nextFloat01() * viewSize.w;
       const y = rng.nextFloat01() * viewSize.h;
-      const spriteId = ids[rng.nextInt(0, ids.length - 1)];
-      if (tryCommitDecor(x, y, spriteId)) return true;
+      const spriteId = pickDecorSpriteId();
+      if (spriteId && tryCommitDecor(x, y, spriteId)) return true;
     }
     return false;
   }

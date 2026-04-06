@@ -24,6 +24,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const Shared = require('./balance-shared.js');
+const Registry = require('./balance-registry.js');
+const Optimizer = require('./balance-optimizer.js');
 
 /* ======== Config Loading ======== */
 const ROOT = path.resolve(__dirname, '..');
@@ -49,23 +52,44 @@ try {
 }
 
 /* ======== BAL Constants (mirror game.js) ======== */
-const BAL = {
-  dmgBase: 7,
-  dmgMultPerLevel: 1.48,
-  fireRateBase: 0.85,
-  fireRateAddPerLevel: 0.075,
-  rangeBase: 315,
-  rangePerLevel: 10,
-  zombieHpBase: 44,
-  zombieHpVar: 0.22,
-  zombieHpExtraPerLevel: 0.12,
-  zombieLevelOmegaMul: 0.08,
-};
+const BAL = Shared.DEFAULT_RUNTIME_CONSTANTS;
 
 /* ======== Helpers ======== */
 function round2(v) { return Math.round(v * 100) / 100; }
 function round3(v) { return Math.round(v * 1000) / 1000; }
 function round4(v) { return Math.round(v * 10000) / 10000; }
+
+function buildDataBundle(runtimeOverride) {
+  return {
+    tanks: tanks,
+    zombies: zombies,
+    fence: fence,
+    dron: dron,
+    bullet: bullet,
+    balance: balance,
+    cannon: cannon,
+    talents: talentTree,
+    chips: chips,
+    runtimeConstants: Object.assign({}, BAL, runtimeOverride || {}),
+  };
+}
+
+function buildScenario(levels, simOpts) {
+  var band = Shared.getBandForLevel(levels.zombieLevel || levels.tankLevel || 1);
+  return Shared.ensureScenarioShape(buildDataBundle(), {
+    bandId: band.id,
+    profileKey: 'manual',
+    tankLevel: levels.tankLevel || 1,
+    zombieLevel: levels.zombieLevel || levels.tankLevel || 1,
+    wallLevel: levels.wallLevel || 1,
+    droneLevel: levels.droneLevel || 1,
+    zombieCount: levels.zombieCount || 1,
+    attackWindowSec: levels.attackWindowSec || 12,
+    chipModId: simOpts && simOpts.chipModId ? simOpts.chipModId : null,
+    talents: simOpts && simOpts.talentRanks ? simOpts.talentRanks : Shared.createEmptyTalentRanks(),
+    modifiers: Shared.createIdentityModifiers(),
+  }, band.id, 'manual');
+}
 
 /* ======== Talent System ======== */
 
@@ -94,72 +118,7 @@ function parseTalentSpec(spec) {
  * Returns an object like { damageMul, fireRateMul, aoeMul, ... }
  */
 function computeTalentMods(talentRanks) {
-  const mods = {
-    damageMul: 1,
-    fireRateMul: 1,
-    rangeMul: 1,
-    aoeMul: 1,
-    orbitSpeedMul: 1,
-    doubleShotChance: 0,
-    tripleShotChance: 0,
-    tankBuyCostMul: 1,
-    coinsKillMul: 1,
-    coinsShotMul: 1,
-    xpMul: 1,
-    wallHpMul: 1,
-    wallArmorFlat: 0,
-  };
-
-  if (!talentTree || !talentTree.talents) return mods;
-
-  const branchTalents = {};
-  for (const t of talentTree.talents) {
-    const branch = t.branch;
-    if (!branchTalents[branch]) branchTalents[branch] = [];
-    branchTalents[branch].push(t);
-  }
-
-  for (const [branch, talents] of Object.entries(branchTalents)) {
-    const allocatedRanks = talentRanks[branch] || [];
-    for (let i = 0; i < talents.length && i < allocatedRanks.length; i++) {
-      const talent = talents[i];
-      const rank = Math.min(allocatedRanks[i] || 0, talent.maxRank || 0);
-      if (rank <= 0 || !talent.effects) continue;
-
-      for (const eff of talent.effects) {
-        if (eff.type === 'stat_mul' && eff.stat && eff.perRank) {
-          if (mods[eff.stat] !== undefined) {
-            mods[eff.stat] += eff.perRank * rank;
-          }
-        } else if (eff.type === 'stat_add' && eff.stat && eff.perRank) {
-          if (mods[eff.stat] !== undefined) {
-            mods[eff.stat] += eff.perRank * rank;
-          }
-        } else if (eff.type === 'param' && eff.key) {
-          const fromRank = eff.fromRank || 1;
-          if (rank < fromRank) continue;
-          if (eff.perRank !== undefined) {
-            const effectiveRank = rank - fromRank + 1;
-            let val = (eff.base || 0) + eff.perRank * effectiveRank;
-            if (eff.min !== undefined) val = Math.max(val, eff.min);
-            if (eff.max !== undefined) val = Math.min(val, eff.max);
-            if (mods[eff.key] !== undefined) mods[eff.key] = val;
-          } else if (eff.value !== undefined) {
-            if (mods[eff.key] !== undefined) mods[eff.key] = eff.value;
-          }
-        }
-      }
-    }
-  }
-
-  // Apply caps
-  if (talentTree.caps) {
-    if (talentTree.caps.doubleShotChance !== undefined) {
-      mods.doubleShotChance = Math.min(mods.doubleShotChance, talentTree.caps.doubleShotChance);
-    }
-  }
-
-  return mods;
+  return Shared.computeTalentMods(talentTree, talentRanks);
 }
 
 /* ======== Chip Effects Model ======== */
@@ -174,39 +133,7 @@ function computeTalentMods(talentRanks) {
  *   Average DPS = (3*1 + 1*N*comboDmgMul) / 4.
  */
 function computeChipEffect(modId) {
-  const effects = {
-    1:  { dpsMultiplier: 2.0,  desc: 'Double Shot — 2 projectiles per barrel' },
-    2:  { dpsMultiplier: 1.5,  desc: 'Double Chain — chain to 2 targets' },
-    3:  { dpsMultiplier: 2.0,  desc: 'Double Matryoshka — x2 dmg big shot + child' },
-    4:  { dpsMultiplier: 1.5,  desc: 'Small Repulse — x1.5 dmg + push' },
-    5:  { dpsMultiplier: 1.5,  desc: 'Small Vacuum — x1.5 dmg + pull' },
-    6:  { dpsMultiplier: round3((3 + 3 * 1.25) / 4), desc: 'Small Combo — shots 1-3: 1 normal; shot 4: 3x1.25 burst (avg x' + round3((3 + 3 * 1.25) / 4) + ')' },
-    7:  { dpsMultiplier: 1.5,  desc: 'Arcade Chaos — random mod each shot (avg x1.5)' },
-    8:  { dpsMultiplier: 1.0,  desc: 'Small Nuke — x3 dmg every 30s (burst, not sustained)' },
-    9:  { dpsMultiplier: 1.0,  desc: 'Small Calming — stun, no dmg bonus' },
-    10: { dpsMultiplier: 1.3,  desc: 'Fire Pool — x0.30 DPS ground zone' },
-    11: { dpsMultiplier: 1.0,  desc: 'Ice Zone — slow, no direct dmg' },
-    12: { dpsMultiplier: 1.35, desc: 'Electro Node — periodic zap x0.35 dmg' },
-    13: { dpsMultiplier: 1.5,  desc: 'Laser Mark — marked targets take x2 dmg' },
-    14: { dpsMultiplier: 1.15, desc: 'Acid Pool — x0.15 DPS + slow' },
-    15: { dpsMultiplier: 3.0,  desc: 'Triple Shot — 3 projectiles' },
-    16: { dpsMultiplier: 6.0,  desc: 'Hex Shot — 6 projectiles' },
-    17: { dpsMultiplier: 2.0,  desc: 'Triple Chain — chain to 3 targets' },
-    18: { dpsMultiplier: 3.5,  desc: 'Hex Chain — chain to 6 targets' },
-    19: { dpsMultiplier: 3.0,  desc: 'Triple Matryoshka — 3-tier children' },
-    20: { dpsMultiplier: 4.0,  desc: 'Quad Matryoshka — 4-tier children' },
-    21: { dpsMultiplier: 1.75, desc: 'Medium Repulse — x1.75 dmg + push' },
-    22: { dpsMultiplier: 2.0,  desc: 'Large Repulse — x2 dmg + push' },
-    23: { dpsMultiplier: 1.75, desc: 'Medium Vacuum — x1.75 dmg + pull' },
-    24: { dpsMultiplier: 2.0,  desc: 'Large Vacuum — x2 dmg + pull' },
-    25: { dpsMultiplier: round3((3 + 3 * 1.5) / 4), desc: 'Medium Combo — shots 1-3: 1 normal; shot 4: 3x1.5 burst (avg x' + round3((3 + 3 * 1.5) / 4) + ')' },
-    26: { dpsMultiplier: round3((3 + 4 * 2.0) / 4), desc: 'Large Combo — shots 1-3: 1 normal; shot 4: 4x2.0 burst (avg x' + round3((3 + 4 * 2.0) / 4) + ')' },
-    27: { dpsMultiplier: 1.0,  desc: 'Medium Nuke — x4 dmg every 30s (burst)' },
-    28: { dpsMultiplier: 1.0,  desc: 'Large Nuke — x5 dmg every 30s (burst)' },
-    29: { dpsMultiplier: 1.0,  desc: 'Medium Calming — stun, no dmg bonus' },
-    30: { dpsMultiplier: 1.0,  desc: 'Large Calming — stun, no dmg bonus' },
-  };
-  return effects[modId] || { dpsMultiplier: 1.0, desc: 'Unknown mod ' + modId };
+  return Shared.computeChipEffect(modId);
 }
 
 /* ======== Data Extraction ======== */
@@ -218,149 +145,98 @@ function computeChipEffect(modId) {
  *   return dmgScale * extra
  */
 function zombieHpMultiplier(level) {
-  const lvl = Math.max(1, level);
-  const dmgScale = Math.pow(BAL.dmgMultPerLevel, lvl - 1);
-  const extra = 1 + BAL.zombieHpExtraPerLevel * Math.max(0, lvl - 1);
-  return dmgScale * extra;
+  return Shared.zombieHpMultiplier(level, BAL);
 }
 
 function getTankStats(level, opts) {
   opts = opts || {};
-  const k = 'tank_lvl' + level;
-  const t = tanks[k];
-  if (!t) return null;
-  const s = t.stats;
-  const bLevel = t.bulletLevel || 1;
-  const bulletData = bullet.bullets.bullet_base.levels[bLevel - 1] || bullet.bullets.bullet_base.levels[0];
-  const addDmg = bulletData.addDamage || 0;
-  const aoe = bulletData.aoe || 1;
-
-  // Apply global balance multipliers
-  const balTank = balance.tank || {};
-  const dmgMul = balTank.attackDamageMul || 1;
-  const atkSpdMul = balTank.attackSpeedMul || 1;
-
-  // Override per level
-  const ovr = balance.tankOverrides && balance.tankOverrides['level_' + level] || {};
-  let finalDmgMul = dmgMul * (ovr.attackDamageMul || 1);
-  let finalAtkSpdMul = atkSpdMul * (ovr.attackSpeedMul || 1);
-
-  // cannon upgrades: row=[lvl, maxUpgrades, appliedDefault, dmgPerUpgrade, spdPerUpgrade, cost]
-  const cannonRow = cannon[level - 1];
-  const cannonApplied = cannonRow ? (cannonRow[2] || 0) : 0;
-  const cannonDmgPerUpgrade = cannonRow ? (cannonRow[3] || 0) : 0;
-  const cannonSpdPerUpgrade = cannonRow ? (cannonRow[4] || 0) : 0;
-  finalDmgMul *= (1 + cannonApplied * cannonDmgPerUpgrade);
-  finalAtkSpdMul *= (1 + cannonApplied * cannonSpdPerUpgrade);
-
-  // Talent modifiers
-  const tMods = opts.talentMods || {};
-  const talentDmgMul = tMods.damageMul || 1;
-  const talentFireRateMul = tMods.fireRateMul || 1;
-  const talentAoeMul = tMods.aoeMul || 1;
-  const doubleShotChance = tMods.doubleShotChance || 0;
-  const tripleShotChance = tMods.tripleShotChance || 0;
-
-  // Average projectiles per shot from talents
-  const avgProjectiles = 1 + doubleShotChance + tripleShotChance * 2;
-
-  // Chip modifier
-  const chipMod = opts.chipModId ? computeChipEffect(opts.chipModId) : null;
-  const chipDpsMul = chipMod ? chipMod.dpsMultiplier : 1;
-
-  const baseDamage = (s.baseDamage + addDmg) * finalDmgMul * talentDmgMul;
-  const fireRate = (BAL.fireRateBase + BAL.fireRateAddPerLevel * (level - 1)) * finalAtkSpdMul * talentFireRateMul;
-  const fireRateSec = 1 / fireRate;
-  const dpsBase = baseDamage * fireRate;
-  const dps = dpsBase * avgProjectiles * chipDpsMul;
-
+  if (!tanks['tank_lvl' + level]) return null;
+  const scenario = buildScenario({ tankLevel: level, zombieLevel: level, wallLevel: opts.wallLevel || 1, droneLevel: opts.droneLevel || 1, zombieCount: opts.zombieCount || 1 }, opts);
+  const stats = Shared.getTankStats(buildDataBundle(opts.runtimeConstants), scenario);
   return {
-    level: level,
-    baseDamage: round2(baseDamage),
-    fireRate: round3(fireRate),
-    fireRateSec: round3(fireRateSec),
-    dpsBase: round2(dpsBase),
-    dps: round2(dps),
-    aoe: round3(aoe * talentAoeMul),
-    bulletLevel: bLevel,
-    avgProjectiles: round3(avgProjectiles),
-    chipDpsMul: round3(chipDpsMul),
-    chipDesc: chipMod ? chipMod.desc : null,
-    talentDmgMul: round3(talentDmgMul),
-    talentFireRateMul: round3(talentFireRateMul),
+    level: stats.level,
+    baseDamage: round2(stats.shotDamage),
+    fireRate: round3(stats.shotsPerSec),
+    fireRateSec: round3(1 / Math.max(0.0001, stats.shotsPerSec)),
+    dpsBase: round2(stats.shotDamage * stats.shotsPerSec),
+    dps: round2(stats.dps),
+    aoe: round3(Shared.safeNumber(getNestedValueFromBullet(stats.bulletLevel, 'aoe'), 1)),
+    bulletLevel: stats.bulletLevel,
+    avgProjectiles: round3(stats.avgProjectiles),
+    chipDpsMul: round3(stats.chipDpsMul),
+    chipDesc: stats.chipDesc,
+    talentDmgMul: round3(Shared.computeTalentMods(talentTree, scenario.talents).damageMul),
+    talentFireRateMul: round3(Shared.computeTalentMods(talentTree, scenario.talents).fireRateMul),
   };
 }
 
 function getZombieStats(level) {
-  const idx = level - 1;
-  const z = zombies.types[idx];
-  if (!z) return null;
-
-  const balZ = balance.zombie || {};
-  const dmgMul = balZ.attackDamageMul || 1;
-  const spdMul = balZ.speedMul || 1;
-  const atkSpdMul = balZ.attackSpeedMul || 1;
-
-  const ovr = balance.zombieOverrides && balance.zombieOverrides[z.id] || {};
-  const finalDmgMul = dmgMul * (ovr.attackDamageMul || 1);
-  const finalSpdMul = spdMul * (ovr.speedMul || 1);
-  const finalAtkSpdMul = atkSpdMul * (ovr.attackSpeedMul || 1);
-
-  // Real HP formula from game.js:
-  // baseHp = zombieHpBase * zombieHpMultiplier(level)   (no random variance for deterministic sim)
-  // hp = baseHp * hpMul
-  const levelHpMul = zombieHpMultiplier(level);
-  const baseHp = BAL.zombieHpBase * levelHpMul;
-  const hp = baseHp * (z.hpMul || 1);
-
-  const attackDamage = (z.attackDamage || 8) * finalDmgMul;
-  const atkCooldown = (z.attack && z.attack.attackCooldownSec || 0.35) / finalAtkSpdMul;
-  const zombieDps = attackDamage / atkCooldown;
-  const moveSpeed = (z.omegaMul || 1) * finalSpdMul;
-
-  return {
-    level: level,
-    id: z.id,
-    hp: round2(hp),
-    hpMul: z.hpMul || 1,
-    levelHpMul: round2(levelHpMul),
-    attackDamage: round2(attackDamage),
-    attackCooldownSec: round3(atkCooldown),
-    dps: round2(zombieDps),
-    moveSpeed: moveSpeed,
-    weight: z.weight || 1,
-    rewardMul: z.rewardMul || 1
-  };
+  if (!zombies.types[level - 1]) return null;
+  return Shared.getZombieStats(buildDataBundle(), buildScenario({ tankLevel: level, zombieLevel: level, wallLevel: 1, zombieCount: 1 }, {}));
 }
 
 function getWallStats(level, opts) {
-  const idx = level - 1;
-  const w = fence.levels[idx];
-  if (!w) return null;
-  const tMods = (opts && opts.talentMods) || {};
-  const wallHpMul = tMods.wallHpMul || 1;
-  const wallArmorAdd = tMods.wallArmorFlat || 0;
-  const hp = w.segmentMaxHp * wallHpMul;
-  const armor = w.armorFlat + wallArmorAdd;
+  opts = opts || {};
+  if (!fence.levels[level - 1]) return null;
+  const stats = Shared.getWallStats(buildDataBundle(), buildScenario({ tankLevel: 1, zombieLevel: opts.zombieLevel || 1, wallLevel: level, zombieCount: opts.zombieCount || 1 }, opts));
   return {
-    level: level,
-    segmentMaxHp: round2(hp),
-    armorFlat: armor,
-    upgradeCost: w.upgradeCostDamagePoints,
-    effectiveHp: round2(hp * (1 + armor / 100))
+    level: stats.level,
+    segmentMaxHp: round2(stats.segmentMaxHp),
+    armorFlat: stats.armorFlat,
+    upgradeCost: stats.upgradeCostDamagePoints,
+    effectiveHp: round2(stats.segmentMaxHp * (1 + stats.armorFlat / 100))
   };
 }
 
 function getDronStats(level) {
-  const d = dron.levels[String(level)];
-  if (!d) return null;
+  if (!dron.levels[String(level)]) return null;
+  const stats = Shared.getDroneStats(buildDataBundle(), buildScenario({ tankLevel: 1, zombieLevel: 1, wallLevel: 1, droneLevel: level, zombieCount: 1 }, {}));
   return {
-    level: level,
-    moveSpeedPxSec: d.moveSpeedPxSec,
-    repairSpeedMult: d.repairSpeedMult,
-    costMult: d.costMult,
-    effectiveRepairPerSec: round4((1 / dron.baseRepairSec) * d.repairSpeedMult)
+    level: stats.level,
+    moveSpeedPxSec: stats.moveSpeedPxSec,
+    repairSpeedMult: stats.repairSpeedMult,
+    costMult: stats.costMult,
+    effectiveRepairPerSec: round4((1 / dron.baseRepairSec) * stats.repairSpeedMult)
   };
+}
+
+function getNestedValueFromBullet(level, key) {
+  const levels = bullet.bullets.bullet_base.levels || [];
+  const cfg = levels[Math.max(0, level - 1)] || levels[0] || {};
+  return cfg[key];
+}
+
+function reportScenarioMatrix() {
+  const data = buildDataBundle();
+  const profiles = Shared.createDefaultProfiles(data);
+  const goals = Shared.createDefaultGoals(data, profiles);
+  return Shared.evaluateMatrix(data, profiles, goals, {});
+}
+
+function reportOptimizer(opts) {
+  const data = buildDataBundle();
+  const profiles = Shared.createDefaultProfiles(data);
+  const goals = Shared.createDefaultGoals(data, profiles);
+  const runtimeContext = {
+    runtimeGame: Object.assign({}, BAL),
+    runtimeLocked: {},
+  };
+  const registry = Registry.createRegistry();
+  const tunableState = Registry.createTunableState(registry, { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked });
+  const selectedIds = opts.tunables
+    ? opts.tunables.split(',').map(function (id) { return id.trim(); }).filter(Boolean)
+    : ['balance.tank.attackDamageMul', 'balance.zombie.attackDamageMul', 'series.zombie.hpMul', 'series.fence.segmentMaxHp'];
+  selectedIds.forEach(function (id) {
+    if (tunableState[id]) tunableState[id].enabled = true;
+  });
+  return Optimizer.optimize({
+    data: data,
+    profiles: profiles,
+    goals: goals,
+    registry: registry,
+    tunableState: tunableState,
+    context: runtimeContext,
+  });
 }
 
 /* ======== Simulation ======== */
@@ -605,6 +481,37 @@ function printZombieHpProgression() {
   printTable(['Lvl', 'HP', 'LevelHpMul', 'hpMul', 'AtkDmg', 'DPS'], rows);
 }
 
+function printScenarioMatrix(rows) {
+  console.log('\n== BALANCE MATRIX (default profiles/goals) ==\n');
+  printTable(
+    ['Band', 'Profile', 'ZombieTTK', 'PackTTK', 'FenceSurv', 'Pressure', 'Score'],
+    rows.map(function (row) {
+      return [
+        Shared.getBandById(row.scenario.bandId).label,
+        Shared.PROFILE_LABELS[row.scenario.profileKey],
+        row.metrics.singleZombieTtk,
+        row.metrics.packTtk,
+        row.metrics.fenceSurvivalSec,
+        row.metrics.progressionPressure,
+        row.evaluation.score,
+      ];
+    })
+  );
+}
+
+function printOptimizerSummary(result) {
+  console.log('\n== OPTIMIZER SUMMARY ==\n');
+  console.log('Score: ' + result.scoreBefore + ' -> ' + result.scoreAfter);
+  console.log('Coverage: ' + result.coverageBefore + ' -> ' + result.coverageAfter);
+  console.log('Risk: ' + result.risk);
+  printTable(
+    ['Group', 'Tunable', 'From', 'To'],
+    result.changedTunables.map(function (change) {
+      return [change.group, change.label, change.from, change.to];
+    })
+  );
+}
+
 /* ======== CLI ======== */
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -624,6 +531,9 @@ function parseArgs() {
     else if (a === '--summary') opts.summary = true;
     else if (a === '--talents') opts.talents = args[++i];
     else if (a === '--chips' || a === '--chip') opts.chipModId = parseInt(args[++i]);
+    else if (a === '--matrix') opts.matrix = true;
+    else if (a === '--optimize') opts.optimize = true;
+    else if (a === '--tunables') opts.tunables = args[++i];
     else if (a === '--chip-list') opts.chipList = true;
     else if (a === '--zombie-hp') opts.zombieHp = true;
   }
@@ -652,6 +562,9 @@ function showHelp() {
     '  --wall N            Wall level for breakpoint analysis (default: 1)',
     '  --wall-survival     Wall survival analysis (wall vs zombie groups)',
     '  --summary           Full summary report (all systems)',
+    '  --matrix            Evaluate default band/profile matrix via shared balance kernel',
+    '  --optimize          Run default optimizer pass via shared registry/tunables',
+    '  --tunables IDS      Comma-separated registry ids for --optimize',
     '',
     '  --talents SPEC      Apply talent ranks (e.g. "OFF:5,3,2;DEF:1,1;ECO:2,0")',
     '  --chip N            Apply chip modifier N to tank DPS calculation',
@@ -671,6 +584,8 @@ function showHelp() {
     '  node tools/balance-sim.js --tank 30 --zombie 25 --count 10',
     '  node tools/balance-sim.js --breakpoint --wall 15',
     '  node tools/balance-sim.js --curve --json',
+    '  node tools/balance-sim.js --matrix',
+    '  node tools/balance-sim.js --optimize --tunables balance.tank.attackDamageMul,series.zombie.hpMul',
     '  node tools/balance-sim.js --chip-list',
     '  node tools/balance-sim.js --zombie-hp',
     '  node tools/balance-sim.js --summary --json',
@@ -686,24 +601,31 @@ function main() {
     return;
   }
 
-  console.log('Balance Simulator -- Tank Merge Zombie Defense');
-  console.log('='.repeat(50));
+  if (!opts.json) {
+    console.log('Balance Simulator -- Tank Merge Zombie Defense');
+    console.log('='.repeat(50));
+  }
 
   // Build simulation options from CLI flags
   const simOpts = {};
   if (opts.talents) {
     const talentRanks = parseTalentSpec(opts.talents);
+    simOpts.talentRanks = talentRanks;
     simOpts.talentMods = computeTalentMods(talentRanks);
-    console.log('\nTalents applied: dmgMul=' + round3(simOpts.talentMods.damageMul) +
-      ' fireRateMul=' + round3(simOpts.talentMods.fireRateMul) +
-      ' aoeMul=' + round3(simOpts.talentMods.aoeMul) +
-      ' rangeMul=' + round3(simOpts.talentMods.rangeMul) +
-      ' doubleShotChance=' + round3(simOpts.talentMods.doubleShotChance));
+      if (!opts.json) {
+        console.log('\nTalents applied: dmgMul=' + round3(simOpts.talentMods.damageMul) +
+          ' fireRateMul=' + round3(simOpts.talentMods.fireRateMul) +
+          ' aoeMul=' + round3(simOpts.talentMods.aoeMul) +
+          ' rangeMul=' + round3(simOpts.talentMods.rangeMul) +
+          ' doubleShotChance=' + round3(simOpts.talentMods.doubleShotChance));
+      }
   }
   if (opts.chipModId) {
     simOpts.chipModId = opts.chipModId;
     const chip = computeChipEffect(opts.chipModId);
-    console.log('\nChip applied: mod' + opts.chipModId + ' -- ' + chip.desc);
+      if (!opts.json) {
+        console.log('\nChip applied: mod' + opts.chipModId + ' -- ' + chip.desc);
+      }
   }
 
   // Chip list
@@ -729,6 +651,26 @@ function main() {
       console.log(JSON.stringify(rows, null, 2));
     } else {
       printZombieHpProgression();
+    }
+    return;
+  }
+
+  if (opts.matrix) {
+    const matrix = reportScenarioMatrix();
+    if (opts.json) {
+      console.log(JSON.stringify(matrix, null, 2));
+    } else {
+      printScenarioMatrix(matrix);
+    }
+    return;
+  }
+
+  if (opts.optimize) {
+    const result = reportOptimizer(opts);
+    if (opts.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      printOptimizerSummary(result);
     }
     return;
   }

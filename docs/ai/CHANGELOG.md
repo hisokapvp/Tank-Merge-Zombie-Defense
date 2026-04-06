@@ -1,6 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-04-03
+- **Документация: one-shot shared post-merge update после join для Balance Lab auto-balance tooling (`tools/balance-editor.html`, `tools/balance-lab.js`, `tools/balance-shared.js`, `tools/balance-registry.js`, `tools/balance-optimizer.js`, `tools/balance-sim.js`, `Test/pack8/balanceToolParity.test.js`, `Test/pack8/balanceOptimizerLocks.test.js`, `ci/run_tests.sh`)**
+  - Обновлены `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/SYSTEMS/balance-editor.md`, `docs/ai/CHANGELOG.md`.
+  - Зафиксированы: `tools/balance-editor.html` больше не описывается как analytics-only surface; host экспортирует `window.BalanceEditorApp`, публикует `balance-editor:state-changed`, а `tools/balance-lab.js` поднимает root tabs для profiles/goals/tunables/optimize/diff-write поверх существующего editor shell.
+  - Зафиксированы: canonical formulas и surrogate matrix evaluation живут в `tools/balance-shared.js`, поэтому browser analytics, optimizer и CLI `tools/balance-sim.js` используют единый kernel для tank shot damage, zombie HP, fence survival, progression pressure и score/coverage evaluation.
+  - Зафиксированы: `tools/balance-registry.js` документирован как allowlisted registry/runtime lock layer; direct write path может менять только JSON-конфиги и ограниченный набор runtime-констант из `game.js`, тогда как `attackMode.idleWave.betweenWavesSec` и safe-wave multipliers из world-events surfaces остаются visible-only locked constraints.
+  - Зафиксированы: write-back требует явного выбора корня репозитория через File System Access API и всегда строится через preview diff/manifest; при отсутствии API tool остаётся в export-only fallback path вместо скрытой записи.
+
 - **Документация: one-shot shared post-merge update после join для Arcade Chaos visual routing, reprogram dropdown shell, fixed reprogram card width и SC fullscreen breakpoint (`src/mechanics/chipEffects.js`, `game.js`, `src/ui/hangarChipsUI.js`, `style.css`, `src/ui/supercomputerMenu.js`, `index.html`)**
   - Обновлён `docs/ai/CHANGELOG.md`.
   - Зафиксированы: `Arcade Chaos` больше не берёт projectile/impact visuals из набора установленных модов ячейки; `game.js` и `src/mechanics/chipEffects.js` теперь резолвят bullet/impact overrides по фактическому `shotMods.activeModIds`, поэтому случайно выбранный подмод задаёт и полётный sprite, и sprite взрыва конкретного выстрела.

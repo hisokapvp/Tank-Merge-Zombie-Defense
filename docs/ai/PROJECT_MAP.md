@@ -104,7 +104,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | i18n / pluralization | `src/i18n/pluralize.js`, `src/i18n/ru.json`, `src/i18n/en.json` | |
 | Chip effects runtime | [CHIP_EFFECTS_MAP.md](CHIP_EFFECTS_MAP.md) | |
 | Talents v2 runtime | [TALENTS_V2_MAP.md](TALENTS_V2_MAP.md) | |
-| Balance Editor analytics tool | [SYSTEMS/balance-editor.md](SYSTEMS/balance-editor.md) | |
+| Balance Lab / balance tooling | [SYSTEMS/balance-editor.md](SYSTEMS/balance-editor.md) | |
 | Save / offline / restore | [SYSTEMS/save.md](SYSTEMS/save.md) | [HOT] |
 | Input / pointer / drag | [SYSTEMS/input.md](SYSTEMS/input.md) | |
 | World events / attack mode | [SYSTEMS/worldEvents.md](SYSTEMS/worldEvents.md) | |
@@ -142,7 +142,7 @@ graph TD
 
 ## Что НЕ документировано
 - `dist/release/staging/*` — release mirror, неканоничный источник.
-- Прочие `tools/*` и внешние balance-dashboard'ы — вне текущей agent-doc surface; исключение: [SYSTEMS/balance-editor.md](SYSTEMS/balance-editor.md) документирует `tools/balance-editor.html` как repo-local analytics tool.
+- Прочие `tools/*` и внешние balance-dashboard'ы — вне текущей agent-doc surface; исключение: [SYSTEMS/balance-editor.md](SYSTEMS/balance-editor.md) документирует Balance Lab stack вокруг `tools/balance-editor.html`, `tools/balance-lab.js`, `tools/balance-shared.js`, `tools/balance-registry.js`, `tools/balance-optimizer.js` и `tools/balance-sim.js` как repo-local balance workbench.
 - `DataBase/` — вне игрового runtime проекта.
 - `c:\Users\hisok\.agents\.github\skills\spec-refiner\SKILL.md` — внешний skill вне game repo; его update про разумные дефолты сознательно не включён в docs/ai этого репозитория.
 - Непрочитанные хвосты больших data-файлов (`assets/tanks.json`, `assets/dron.json`, `assets/fence.json`, `assets/zombies.json`) пока описаны на уровне контрактов в [SYSTEMS/assets.md](SYSTEMS/assets.md), без отдельных map-файлов.

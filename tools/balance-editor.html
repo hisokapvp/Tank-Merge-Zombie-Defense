@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Balance Editor — Tank Merge Zombie Defense</title>
+<title>Лаборатория баланса — Tank Merge Zombie Defense</title>
 <style>
 :root {
   --bg: #1a1a2e;
@@ -74,11 +74,11 @@ table.data-table input.changed { background: var(--changed); }
 <body>
 
 <header>
-  <h1>⚙ Balance Editor</h1>
+  <h1>⚙ Лаборатория баланса</h1>
   <span id="changeCount" style="font-size:13px; color:var(--muted)">0 изменений</span>
   <div class="actions">
     <button class="btn btn-secondary" onclick="resetAll()">↻ Сбросить</button>
-    <button class="btn btn-primary" onclick="showDiff()">📋 Diff</button>
+    <button class="btn btn-primary" onclick="showDiff()">📋 Дифф</button>
     <button class="btn btn-success" onclick="exportAll()">⬇ Скачать JSON</button>
   </div>
 </header>
@@ -94,7 +94,7 @@ table.data-table input.changed { background: var(--changed); }
   <button data-tab="talents">🌟 Таланты</button>
   <button data-tab="chips">🔧 Чипы</button>
   <button data-tab="cannon">📐 Орудия (кривые)</button>
-  <button data-tab="diff">📊 Diff / Export</button>
+  <button data-tab="diff">📊 Дифф / Экспорт</button>
 </nav>
 
 <main>
@@ -247,7 +247,7 @@ table.data-table input.changed { background: var(--changed); }
   <!-- DIFF -->
   <div id="tab-diff" class="tab-content">
     <h3 class="section-title">Предпросмотр изменений</h3>
-    <pre id="exportDiffPre">Нажмите "📋 Diff" для генерации или переключитесь на эту вкладку.</pre>
+    <pre id="exportDiffPre">Нажмите "📋 Дифф" для генерации или переключитесь на эту вкладку.</pre>
     <div style="margin-top:12px">
       <button class="btn btn-success" onclick="exportAll()">⬇ Скачать все изменённые JSON</button>
     </div>
@@ -259,21 +259,96 @@ table.data-table input.changed { background: var(--changed); }
   <span id="statusText"></span>
 </div>
 
+<script src="./balance-shared.js?v=20260405-5"></script>
+<script src="./balance-registry.js?v=20260405-5"></script>
+<script src="./balance-optimizer.js?v=20260405-5"></script>
+<script src="./balance-lab.js?v=20260405-5"></script>
 <script>
 'use strict';
 /* ======== STATE ======== */
 const DATA = {};       // original loaded data
 const EDIT = {};       // working copies
 let changeCounter = 0;
+let runtimeGameState = null;
 const BASE_PATH = '../assets/';
 const ANALYTICS_RUNTIME = {
-  tankFireRateBase: 0.85,
+  tankFireRateBase: 0.79,
   tankFireRateAddPerLevel: 0.075,
   zombieHpBase: 44,
   tankDamagePointDivisor: 10000,
   zombieHpExtraPerLevel: 0.12,
   dmgMultPerLevel: 1.48,
 };
+
+function getEditorDataBundle() {
+  return {
+    tanks: EDIT.tanks,
+    zombies: EDIT.zombies,
+    fence: EDIT.fence,
+    dron: EDIT.dron,
+    bullet: EDIT.bullet,
+    balance: EDIT.balance,
+    chips: EDIT.chips,
+    cannon: EDIT.cannon,
+    talents: EDIT.talents,
+    runtimeConstants: runtimeGameState ? Object.assign({}, runtimeGameState) : null,
+  };
+}
+
+function getSharedAnalyticsScenario(level) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (!Shared) return null;
+  const band = Shared.getBandForLevel(level);
+  return Shared.ensureScenarioShape(getEditorDataBundle(), {
+    bandId: band.id,
+    profileKey: 'manual',
+    tankLevel: level,
+    zombieLevel: level,
+    wallLevel: Math.max(1, Math.round(level * 0.7)),
+    droneLevel: Math.max(1, Math.round(level / 6)),
+    zombieCount: 1,
+    attackWindowSec: 12,
+    chipModId: null,
+    talents: Shared.createEmptyTalentRanks(),
+    modifiers: Shared.createIdentityModifiers(),
+  }, band.id, 'manual');
+}
+
+function publishAppApi(reason) {
+  if (typeof window === 'undefined') return;
+  window.BalanceEditorApp = {
+    DATA: DATA,
+    EDIT: EDIT,
+    runtimeGame: runtimeGameState ? Object.assign({}, runtimeGameState) : null,
+    renderAll: renderAll,
+    refreshAnalytics: refreshAnalytics,
+    renderTanks: renderTanks,
+    renderDamagePoints: renderDamagePoints,
+    renderZombies: renderZombies,
+    showDiff: showDiff,
+    exportAll: exportAll,
+    resetAll: resetAll,
+    setStatus: setStatus,
+    updateChangeCount: updateChangeCount,
+    parsePath: parsePath,
+    getNestedValue: getNestedValue,
+    setNestedValue: setNestedValue,
+    drawLineChart: drawLineChart,
+    buildDataBundle: getEditorDataBundle,
+    setRuntimeGame: function (nextRuntimeGame) {
+      runtimeGameState = nextRuntimeGame ? Object.assign({}, nextRuntimeGame) : null;
+      refreshAnalytics();
+      publishAppApi('runtime-game-updated');
+    },
+  };
+  if (typeof window.CustomEvent === 'function') {
+    try {
+      window.dispatchEvent(new CustomEvent('balance-editor:state-changed', { detail: { reason: reason || 'updated' } }));
+    } catch (e) {
+      // ignore dispatch failures in unsupported hosts
+    }
+  }
+}
 
 /* ======== LOAD ======== */
 async function loadJSON(path) {
@@ -317,6 +392,7 @@ async function boot() {
 
     renderAll();
     setStatus('Все конфиги загружены');
+    publishAppApi('boot-complete');
   } catch (e) {
     document.querySelector('main').innerHTML = '<div class="info-box" style="color:var(--red)">Ошибка загрузки: ' + e.message + '<br>Убедитесь, что файл открыт из корня проекта (папка с assets/).</div>';
   }
@@ -381,6 +457,10 @@ function drawTankChart(levels) {
 }
 
 function getTankBalanceMultiplier(level, key) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    return Shared.getTankBalanceMultiplier(EDIT.balance || {}, level, key);
+  }
   const balance = EDIT.balance || {};
   const base = Number.isFinite(balance.tank && balance.tank[key]) ? balance.tank[key] : 1;
   const overrides = balance.tankOverrides && balance.tankOverrides['level_' + level];
@@ -388,6 +468,10 @@ function getTankBalanceMultiplier(level, key) {
 }
 
 function getBulletConfigForTankLevel(level) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    return Shared.getBulletConfigForTankLevel(getEditorDataBundle(), level);
+  }
   const tankCfg = EDIT.tanks['tank_lvl' + level] || {};
   const bulletId = tankCfg.bulletId || 'bullet_base';
   const bulletLevel = Number.isFinite(tankCfg.bulletLevel) ? Math.max(1, Math.floor(tankCfg.bulletLevel)) : 1;
@@ -401,6 +485,11 @@ function getBulletConfigForTankLevel(level) {
 }
 
 function getTankShotDamage(level) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
+    return stats.shotDamage;
+  }
   const bulletInfo = getBulletConfigForTankLevel(level);
   const tankBaseDamage = Number.isFinite(bulletInfo.tankCfg && bulletInfo.tankCfg.stats && bulletInfo.tankCfg.stats.baseDamage)
     ? bulletInfo.tankCfg.stats.baseDamage
@@ -412,11 +501,29 @@ function getTankShotDamage(level) {
 }
 
 function getTankShotsPerMinute(level) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
+    return stats.shotsPerMinute;
+  }
   const fireRate = ANALYTICS_RUNTIME.tankFireRateBase + ANALYTICS_RUNTIME.tankFireRateAddPerLevel * Math.max(0, level - 1);
   return Math.max(0, fireRate * getTankBalanceMultiplier(level, 'attackSpeedMul') * 60);
 }
 
 function getTankDamagePointMetrics() {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    return getTankLevels().map(function (tank) {
+      const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(tank.level));
+      return {
+        level: tank.level,
+        shotDamage: stats.shotDamage,
+        shotsPerMinute: stats.shotsPerMinute,
+        rawDamagePerMinute: stats.rawDamagePerMinute,
+        damagePointsPerMinute: stats.damagePointsPerMinute,
+      };
+    });
+  }
   return getTankLevels().map(function (tank) {
     const shotDamage = getTankShotDamage(tank.level);
     const shotsPerMinute = getTankShotsPerMinute(tank.level);
@@ -479,6 +586,11 @@ function getZombieTypes() {
 }
 
 function getZombieHpForChart(zombieType, level) {
+  const Shared = window.BalanceLab && window.BalanceLab.Shared;
+  if (Shared) {
+    const stats = Shared.getZombieStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
+    return stats.hp;
+  }
   if (Number.isFinite(zombieType && zombieType.Health) && zombieType.Health > 0) return zombieType.Health;
   if (Number.isFinite(zombieType && zombieType.health) && zombieType.health > 0) return zombieType.health;
   const hpMul = Number.isFinite(zombieType && zombieType.hpMul) ? zombieType.hpMul : 1;
@@ -905,6 +1017,7 @@ function updateChangeCount() {
   });
   document.getElementById('changeCount').textContent = count > 0 ? count + ' файл(ов) изменено' : '0 изменений';
   document.getElementById('changeCount').style.color = count > 0 ? 'var(--yellow)' : 'var(--muted)';
+  publishAppApi('change-count-updated');
 }
 
 /* ======== DIFF ======== */
@@ -967,8 +1080,9 @@ function exportAll() {
     downloadJSON(name, configs[name]);
   });
   // fallback: always download all if nothing changed
-  let anyChanged = false;
-  Object.keys(configs).forEach(function () { anyChanged = true; });
+  let anyChanged = Object.keys(configs).some(function (name) {
+    return JSON.stringify(DATA[name.replace('cannonUpgrades', 'cannon').replace('talentTree_v2', 'talents')] || {}) !== JSON.stringify(configs[name]);
+  });
   if (!anyChanged) {
     Object.keys(configs).forEach(function (name) { downloadJSON(name, configs[name]); });
   }

@@ -107,6 +107,17 @@
 
   function getChipsCfg() { return _chipsCfg; }
   function getModCfg(modId) { return _chipsCfg && _chipsCfg.modifiers ? _chipsCfg.modifiers[String(modId)] : null; }
+  function getModEffectConfig(modId) {
+    var cfg = getModCfg(modId);
+    return cfg && cfg.effect && typeof cfg.effect === 'object' ? cfg.effect : null;
+  }
+  function isModEffectEnabled(modId) {
+    var effectCfg = getModEffectConfig(modId);
+    return !effectCfg || effectCfg.enabled !== false;
+  }
+  function resolveModEffectColor(modId, fallbackColor, explicitColor) {
+    return explicitColor || fallbackColor;
+  }
 
   /* ────────── per-modifier sprite / sfx helpers ────────── */
   var _chipSpriteCache = {};
@@ -169,6 +180,10 @@
   function getModEffectSprite(modId) {
     var key = 'e' + modId;
     if (key in _chipSpriteCache) return _chipSpriteCache[key];
+    if (!getModEffectConfig(modId)) {
+      _chipSpriteCache[key] = null;
+      return null;
+    }
     var cfg = getModCfg(modId);
     var result = cfg ? _normalizeCustomSprite(cfg.effectSprite) : null;
     _chipSpriteCache[key] = result;
@@ -893,84 +908,89 @@
 
     /* ─── Mod 10: Fire Pool ─── */
     if (sm.firePool && opts.addDecal) {
-      var fireCfg = getModCfg(10);
-      var eff = fireCfg && fireCfg.effect;
-      opts.addDecal({
-        kind: 'chipPool', subKind: 'fire', x: x, y: y,
-        r: eff ? eff.poolRadius : 40,
-        life: eff ? eff.poolLife : 4.0,
-        dps: b.dmg * (eff ? eff.poolDpsMul : 0.30),
-        color: eff ? eff.color : 'rgba(255,99,72,0.25)',
-        effectSprite: getModEffectSprite(10),
-        chipModId: 10
-      });
+      var eff = getModEffectConfig(10);
+      if (eff && isModEffectEnabled(10)) {
+        opts.addDecal({
+          kind: 'chipPool', subKind: 'fire', x: x, y: y,
+          r: eff.poolRadius,
+          life: eff.poolLife,
+          dps: b.dmg * eff.poolDpsMul,
+          color: resolveModEffectColor(10, 'rgba(255,99,72,0.25)', eff.color),
+          effectSprite: getModEffectSprite(10),
+          chipModId: 10
+        });
+      }
     }
 
     /* ─── Mod 11: Ice Zone ─── */
     if (sm.iceZone && opts.addDecal) {
-      var iceCfg = getModCfg(11);
-      var iceEff = iceCfg && iceCfg.effect;
-      opts.addDecal({
-        kind: 'chipPool', subKind: 'ice', x: x, y: y,
-        r: iceEff ? iceEff.poolRadius : 45,
-        life: iceEff ? iceEff.poolLife : 4.5,
-        dps: 0,
-        slowFactor: iceEff ? iceEff.slowFactor : 0.35,
-        color: iceEff ? iceEff.color : 'rgba(112,161,255,0.2)',
-        effectSprite: getModEffectSprite(11),
-        chipModId: 11
-      });
+      var iceEff = getModEffectConfig(11);
+      if (iceEff && isModEffectEnabled(11)) {
+        opts.addDecal({
+          kind: 'chipPool', subKind: 'ice', x: x, y: y,
+          r: iceEff.poolRadius,
+          life: iceEff.poolLife,
+          dps: 0,
+          slowFactor: iceEff.slowFactor,
+          color: resolveModEffectColor(11, 'rgba(112,161,255,0.2)', iceEff.color),
+          effectSprite: getModEffectSprite(11),
+          chipModId: 11
+        });
+      }
     }
 
     /* ─── Mod 12: Electro Node ─── */
     if (sm.electroNode) {
-      var elCfg = getModCfg(12);
-      var elEff = elCfg && elCfg.effect;
-      _electroNodes.push({
-        x: x, y: y,
-        life: elEff ? elEff.nodeLife : 5.0,
-        maxLife: elEff ? elEff.nodeLife : 5.0,
-        interval: elEff ? elEff.nodeInterval : 0.8,
-        range: elEff ? elEff.nodeRange : 60,
-        dmg: b.dmg * (elEff ? elEff.nodeDmgMul : 0.35),
-        timer: 0,
-        color: elEff ? elEff.color : 'rgba(236,204,104,0.3)',
-        effectSprite: getModEffectSprite(12),
-        chipModId: 12
-      });
+      var elEff = getModEffectConfig(12);
+      if (elEff && isModEffectEnabled(12)) {
+        _electroNodes.push({
+          x: x, y: y,
+          life: elEff.nodeLife,
+          maxLife: elEff.nodeLife,
+          interval: elEff.nodeInterval,
+          range: elEff.nodeRange,
+          dmg: b.dmg * elEff.nodeDmgMul,
+          timer: 0,
+          color: resolveModEffectColor(12, 'rgba(236,204,104,0.3)', elEff.color),
+          effectSprite: getModEffectSprite(12),
+          chipModId: 12
+        });
+      }
     }
 
     /* ─── Mod 13: Laser Mark ─── */
     if (sm.laserMark) {
-      var laCfg = getModCfg(13);
-      var laEff = laCfg && laCfg.effect;
-      _laserMarks.push({
-        x: x, y: y,
-        life: laEff ? laEff.markLife : 3.0,
-        maxLife: laEff ? laEff.markLife : 3.0,
-        damageMul: laEff ? laEff.damageMul : 2.0,
-        aoeMul: laEff ? laEff.aoeMul : 2.0,
-        r: 18,
-        color: laEff ? laEff.color : 'rgba(255,71,87,0.35)',
-        effectSprite: getModEffectSprite(13),
-        chipModId: 13
-      });
+      var laEff = getModEffectConfig(13);
+      if (laEff && isModEffectEnabled(13)) {
+        _laserMarks.push({
+          x: x, y: y,
+          life: laEff.markLife,
+          maxLife: laEff.markLife,
+          damageMul: laEff.damageMul,
+          aoeMul: laEff.aoeMul,
+          r: 18,
+          color: resolveModEffectColor(13, 'rgba(255,71,87,0.35)', laEff.color),
+          effectSprite: getModEffectSprite(13),
+          chipModId: 13
+        });
+      }
     }
 
     /* ─── Mod 14: Acid Pool ─── */
     if (sm.acidPool && opts.addDecal) {
-      var acidCfg = getModCfg(14);
-      var acidEff = acidCfg && acidCfg.effect;
-      opts.addDecal({
-        kind: 'chipPool', subKind: 'acid', x: x, y: y,
-        r: acidEff ? acidEff.poolRadius : 38,
-        life: acidEff ? acidEff.poolLife : 3.5,
-        dps: b.dmg * (acidEff ? acidEff.poolDpsMul : 0.15),
-        slowFactor: acidEff ? acidEff.slowFactor : 0.15,
-        color: acidEff ? acidEff.color : 'rgba(184,255,59,0.2)',
-        effectSprite: getModEffectSprite(14),
-        chipModId: 14
-      });
+      var acidEff = getModEffectConfig(14);
+      if (acidEff && isModEffectEnabled(14)) {
+        opts.addDecal({
+          kind: 'chipPool', subKind: 'acid', x: x, y: y,
+          r: acidEff.poolRadius,
+          life: acidEff.poolLife,
+          dps: b.dmg * acidEff.poolDpsMul,
+          slowFactor: acidEff.slowFactor,
+          color: resolveModEffectColor(14, 'rgba(184,255,59,0.18)', acidEff.color),
+          effectSprite: getModEffectSprite(14),
+          chipModId: 14
+        });
+      }
     }
 
     /* ─── CASCADE SPAWNING ───
@@ -1349,6 +1369,7 @@
     loadChipsCfg: loadChipsCfg,
     getChipsCfg: getChipsCfg,
     getModCfg: getModCfg,
+    getModEffectConfig: getModEffectConfig,
     getActiveChipMods: getActiveChipMods,
     hasChipMod: hasChipMod,
     getActiveModIds: getActiveModIds,

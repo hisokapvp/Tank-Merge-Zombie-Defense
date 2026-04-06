@@ -141,7 +141,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 10,
+      "attackDamage": 14,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -156,7 +156,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 44
+      "Health": 38
     },
     {
       "id": "zombie_lvl2",
@@ -197,7 +197,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 20,
+      "attackDamage": 27,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -212,7 +212,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 73
+      "Health": 63
     },
     {
       "id": "zombie_lvl3",
@@ -253,7 +253,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 30,
+      "attackDamage": 41,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -268,7 +268,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 120
+      "Health": 103
     },
     {
       "id": "zombie_lvl4",
@@ -309,7 +309,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 40,
+      "attackDamage": 54,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -324,7 +324,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 194
+      "Health": 166
     },
     {
       "id": "zombie_lvl5",
@@ -340,6 +340,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -364,7 +365,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 50,
+      "attackDamage": 68,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -379,7 +380,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 312
+      "Health": 267
     },
     {
       "id": "zombie_lvl6",
@@ -395,6 +396,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -419,7 +421,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 60,
+      "attackDamage": 81,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -434,7 +436,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 500
+      "Health": 429
     },
     {
       "id": "zombie_lvl7",
@@ -450,6 +452,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -474,7 +477,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 70,
+      "attackDamage": 95,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -489,7 +492,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 795
+      "Health": 682
     },
     {
       "id": "zombie_lvl8",
@@ -505,6 +508,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -529,7 +533,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 80,
+      "attackDamage": 108,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -544,7 +548,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1259
+      "Health": 1079
     },
     {
       "id": "zombie_lvl9",
@@ -560,6 +564,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -584,7 +589,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 90,
+      "attackDamage": 122,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -599,7 +604,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1985
+      "Health": 1702
     },
     {
       "id": "zombie_lvl10",
@@ -615,6 +620,7 @@
         "y": 0.75
       },
       "scale": 0.6,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -639,7 +645,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 100,
+      "attackDamage": 135,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -654,22 +660,23 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3118
+      "Health": 25
     },
     {
       "id": "zombie_lvl11",
       "frame": {
         "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96
+        "y": 0,
+        "w": 32,
+        "h": 32
       },
       "frames": 8,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 1,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -678,19 +685,26 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96,
-        "frames": 8,
+        "x": 448,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 110,
+      "death": {
+        "x": 256,
+        "y": 0,
+        "w": 32,
+        "h": 32,
+        "frames": 6
+      },
+      "attackDamage": 149,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 50
         },
         "attack": {
           "frameRateFps": 10
@@ -702,7 +716,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4881
+      "Health": 4185
     },
     {
       "id": "zombie_lvl12",
@@ -735,7 +749,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 120,
+      "attackDamage": 162,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -750,7 +764,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 7618
+      "Health": 6531
     },
     {
       "id": "zombie_lvl13",
@@ -783,7 +797,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 130,
+      "attackDamage": 176,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -798,7 +812,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 11857
+      "Health": 10165
     },
     {
       "id": "zombie_lvl14",
@@ -831,7 +845,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 140,
+      "attackDamage": 189,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -846,7 +860,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 18412
+      "Health": 15785
     },
     {
       "id": "zombie_lvl15",
@@ -879,7 +893,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 150,
+      "attackDamage": 203,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -894,7 +908,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 28527
+      "Health": 24456
     },
     {
       "id": "zombie_lvl16",
@@ -927,7 +941,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 160,
+      "attackDamage": 216,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -942,298 +956,10 @@
           "frameRateFps": 10
         }
       },
-      "Health": 44110
+      "Health": 37816
     },
     {
       "id": "zombie_lvl17",
-      "frame": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 8,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96,
-        "frames": 8,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 170,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 68081
-    },
-    {
-      "id": "zombie_lvl18",
-      "frame": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 7,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96,
-        "frames": 7,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 180,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 104900
-    },
-    {
-      "id": "zombie_lvl19",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 190,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 161380
-    },
-    {
-      "id": "zombie_lvl20",
-      "frame": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 8,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96,
-        "frames": 8,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 200,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 247913
-    },
-    {
-      "id": "zombie_lvl21",
-      "frame": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 7,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96,
-        "frames": 7,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 210,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 380335
-    },
-    {
-      "id": "zombie_lvl22",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "attackDamage": 220,
-      "animations": {
-        "walk": {
-          "frameRateFps": 10
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 582762
-    },
-    {
-      "id": "zombie_lvl23",
       "frame": {
         "x": 0,
         "y": 96,
@@ -1278,7 +1004,295 @@
           "frameRateFps": 10
         }
       },
-      "Health": 891891
+      "Health": 58366
+    },
+    {
+      "id": "zombie_lvl18",
+      "frame": {
+        "x": 0,
+        "y": 192,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 192,
+        "w": 96,
+        "h": 96,
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 243,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 89931
+    },
+    {
+      "id": "zombie_lvl19",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 257,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 138352
+    },
+    {
+      "id": "zombie_lvl20",
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 96,
+        "w": 96,
+        "h": 96,
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 270,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 1950
+    },
+    {
+      "id": "zombie_lvl21",
+      "frame": {
+        "x": 0,
+        "y": 192,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 192,
+        "w": 96,
+        "h": 96,
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 284,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 326063
+    },
+    {
+      "id": "zombie_lvl22",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 297,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 499605
+    },
+    {
+      "id": "zombie_lvl23",
+      "frame": {
+        "x": 0,
+        "y": 96,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 0,
+        "y": 96,
+        "w": 96,
+        "h": 96,
+        "frames": 8,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "attackDamage": 311,
+      "animations": {
+        "walk": {
+          "frameRateFps": 10
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 764623
     },
     {
       "id": "zombie_lvl24",
@@ -1311,7 +1325,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 240,
+      "attackDamage": 324,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1326,7 +1340,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1363515
+      "Health": 1168949
     },
     {
       "id": "zombie_lvl25",
@@ -1359,7 +1373,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 250,
+      "attackDamage": 338,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1374,7 +1388,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 2082407
+      "Health": 1785259
     },
     {
       "id": "zombie_lvl26",
@@ -1407,7 +1421,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 260,
+      "attackDamage": 351,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1422,7 +1436,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3177280
+      "Health": 2723899
     },
     {
       "id": "zombie_lvl27",
@@ -1455,7 +1469,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 270,
+      "attackDamage": 365,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1470,7 +1484,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4843446
+      "Health": 4152312
     },
     {
       "id": "zombie_lvl28",
@@ -1503,7 +1517,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 280,
+      "attackDamage": 378,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1518,7 +1532,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 7377086
+      "Health": 6324416
     },
     {
       "id": "zombie_lvl29",
@@ -1551,7 +1565,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 290,
+      "attackDamage": 392,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1566,7 +1580,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 11227090
+      "Health": 9625045
     },
     {
       "id": "zombie_lvl30",
@@ -1599,7 +1613,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 300,
+      "attackDamage": 405,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1614,7 +1628,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 17073417
+      "Health": 134326
     },
     {
       "id": "zombie_lvl31",
@@ -1647,7 +1661,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 310,
+      "attackDamage": 419,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1662,7 +1676,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 25945496
+      "Health": 22243214
     },
     {
       "id": "zombie_lvl32",
@@ -1695,7 +1709,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 320,
+      "attackDamage": 432,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1710,7 +1724,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 39401055
+      "Health": 33778737
     },
     {
       "id": "zombie_lvl33",
@@ -1743,7 +1757,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 330,
+      "attackDamage": 446,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1758,7 +1772,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 59796110
+      "Health": 51263527
     },
     {
       "id": "zombie_lvl34",
@@ -1791,7 +1805,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 340,
+      "attackDamage": 459,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1806,7 +1820,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 90692414
+      "Health": 77751095
     },
     {
       "id": "zombie_lvl35",
@@ -1839,7 +1853,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 350,
+      "attackDamage": 473,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1854,7 +1868,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 137472146
+      "Health": 117855612
     },
     {
       "id": "zombie_lvl36",
@@ -1887,7 +1901,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 360,
+      "attackDamage": 486,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1902,7 +1916,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 208264889
+      "Health": 178546612
     },
     {
       "id": "zombie_lvl37",
@@ -1935,7 +1949,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 370,
+      "attackDamage": 500,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1950,7 +1964,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 315345083
+      "Health": 270347039
     },
     {
       "id": "zombie_lvl38",
@@ -1983,7 +1997,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 380,
+      "attackDamage": 513,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -1998,7 +2012,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 477238032
+      "Health": 409138737
     },
     {
       "id": "zombie_lvl39",
@@ -2031,7 +2045,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 390,
+      "attackDamage": 527,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2046,7 +2060,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 721892705
+      "Health": 618882507
     },
     {
       "id": "zombie_lvl40",
@@ -2079,7 +2093,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 400,
+      "attackDamage": 540,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2094,7 +2108,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1091460222
+      "Health": 8587140
     },
     {
       "id": "zombie_lvl41",
@@ -2127,7 +2141,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 410,
+      "attackDamage": 554,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2142,7 +2156,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1649488476
+      "Health": 1414115360
     },
     {
       "id": "zombie_lvl42",
@@ -2175,7 +2189,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 420,
+      "attackDamage": 567,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2190,7 +2204,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 2491751420
+      "Health": 2136191922
     },
     {
       "id": "zombie_lvl43",
@@ -2223,7 +2237,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 430,
+      "attackDamage": 581,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2238,7 +2252,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3762544644
+      "Health": 3225649801
     },
     {
       "id": "zombie_lvl44",
@@ -2271,7 +2285,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 440,
+      "attackDamage": 594,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2286,7 +2300,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 5679199836
+      "Health": 4868808627
     },
     {
       "id": "zombie_lvl45",
@@ -2319,7 +2333,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 450,
+      "attackDamage": 608,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2334,7 +2348,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 8568953727
+      "Health": 7346210212
     },
     {
       "id": "zombie_lvl46",
@@ -2367,7 +2381,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 460,
+      "attackDamage": 621,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2382,7 +2396,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 12924383710
+      "Health": 11080143810
     },
     {
       "id": "zombie_lvl47",
@@ -2415,7 +2429,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 470,
+      "attackDamage": 635,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2430,7 +2444,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 19486739539
+      "Health": 16706086830
     },
     {
       "id": "zombie_lvl48",
@@ -2463,7 +2477,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 480,
+      "attackDamage": 648,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2478,7 +2492,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 29371178957
+      "Health": 25180070015
     },
     {
       "id": "zombie_lvl49",
@@ -2511,7 +2525,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 490,
+      "attackDamage": 662,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2526,7 +2540,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 44254935426
+      "Health": 37939994651
     },
     {
       "id": "zombie_lvl50",
@@ -2559,7 +2573,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 500,
+      "attackDamage": 675,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2574,7 +2588,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 66659978473
+      "Health": 524452038
     },
     {
       "id": "zombie_lvl51",
@@ -2607,7 +2621,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 510,
+      "attackDamage": 689,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2622,7 +2636,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 100377525724
+      "Health": 10699181906
     },
     {
       "id": "zombie_lvl52",
@@ -2655,7 +2669,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 520,
+      "attackDamage": 702,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2670,7 +2684,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 151105459295
+      "Health": 16106242750
     },
     {
       "id": "zombie_lvl53",
@@ -2703,7 +2717,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 530,
+      "attackDamage": 716,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2718,7 +2732,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 227405227169
+      "Health": 24238990494
     },
     {
       "id": "zombie_lvl54",
@@ -2751,7 +2765,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 540,
+      "attackDamage": 729,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2766,7 +2780,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 342138074379
+      "Health": 36468297742
     },
     {
       "id": "zombie_lvl55",
@@ -2799,7 +2813,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 550,
+      "attackDamage": 743,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2814,7 +2828,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 514620290572
+      "Health": 54853076539
     },
     {
       "id": "zombie_lvl56",
@@ -2847,7 +2861,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 560,
+      "attackDamage": 756,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2862,7 +2876,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 773856821972
+      "Health": 82484947180
     },
     {
       "id": "zombie_lvl57",
@@ -2895,7 +2909,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 570,
+      "attackDamage": 770,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2910,7 +2924,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1163391908569
+      "Health": 124005264803
     },
     {
       "id": "zombie_lvl58",
@@ -2943,7 +2957,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 580,
+      "attackDamage": 783,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -2958,7 +2972,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1748584066516
+      "Health": 186380555513
     },
     {
       "id": "zombie_lvl59",
@@ -2991,7 +3005,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 590,
+      "attackDamage": 797,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -3006,7 +3020,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 2627515200359
+      "Health": 280065312294
     },
     {
       "id": "zombie_lvl60",
@@ -3039,7 +3053,7 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
-      "attackDamage": 600,
+      "attackDamage": 810,
       "animations": {
         "walk": {
           "frameRateFps": 10
@@ -3054,7 +3068,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3947346453765
+      "Health": 78676
     }
   ]
 }
