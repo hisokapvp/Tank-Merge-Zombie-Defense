@@ -31,6 +31,16 @@
     };
   }
 
+  function clampNonDecreasingAnchorValue(options, edit, level, nextValue) {
+    var clampedValue = nextValue;
+    var previousValue = level > 1 ? options.read(edit, level - 1) : null;
+
+    if (Number.isFinite(previousValue) && previousValue > 0) {
+      clampedValue = Math.max(clampedValue, previousValue);
+    }
+    return clampedValue;
+  }
+
   function createBandAnchorScaler(options) {
     return function (ctx, nextValue, config) {
       var factor = Shared.safeNumber(nextValue, 1);
@@ -39,11 +49,16 @@
         var band = Shared.getBandById(bandId);
         var level;
         var currentValue;
+        var targetValue;
         if (!band) return;
         level = Math.min(options.maxLevel || band.maxLevel, band.maxLevel);
         currentValue = options.read(ctx.edit, level);
         if (!Number.isFinite(currentValue)) return;
-        options.write(ctx.edit, level, Shared.round(currentValue * factor, options.digits || 4));
+        targetValue = Shared.round(currentValue * factor, options.digits || 4);
+        if (typeof options.normalize === 'function') {
+          targetValue = options.normalize(ctx.edit, level, targetValue, options);
+        }
+        options.write(ctx.edit, level, targetValue);
       });
     };
   }
@@ -159,6 +174,9 @@
           digits: 0,
           read: function (edit, level) { return Shared.getNestedValue(edit.tanks, 'tank_lvl' + level + '.stats.baseDamage'); },
           write: function (edit, level, value) { Shared.setNestedValue(edit.tanks, 'tank_lvl' + level + '.stats.baseDamage', Math.max(1, Math.round(value))); },
+          normalize: function (edit, level, value, options) {
+            return clampNonDecreasingAnchorValue(options, edit, level, value);
+          },
         }),
       },
       {
@@ -342,6 +360,9 @@
             }
             Shared.setNestedValue(edit.zombies, explicitPath, nextValue);
           },
+          normalize: function (edit, level, value, options) {
+            return clampNonDecreasingAnchorValue(options, edit, level, value);
+          },
         }),
       },
       {
@@ -470,83 +491,68 @@
       },
       {
         id: 'runtime.dmgMultPerLevel',
-        label: 'BAL: множитель урона за уровень',
+        label: 'Заблокировано: BAL.dmgMultPerLevel = 1',
         group: 'Константы runtime',
         metricFamily: 'runtime-кривая',
         sourceFile: 'game.js',
         mode: 'absolute',
-        min: 1.05,
-        max: 2.2,
-        step: 0.01,
-        directionBias: 'up',
+        locked: true,
+        lockedReason: 'runtime.dmgMultPerLevel зафиксирован в game.js как x1 и не должен попадать в solver/write-path.',
         bands: ALL_BANDS,
         profiles: ALL_PROFILES,
         readCurrent: function (ctx) { return ctx.runtimeGame.dmgMultPerLevel; },
-        apply: createJsRuntimeWriter('runtime.dmgMultPerLevel', 'dmgMultPerLevel'),
       },
       {
         id: 'runtime.fireRateBase',
-        label: 'BAL: базовая скорострельность',
+        label: 'Заблокировано: BAL.fireRateBase = 1',
         group: 'Константы runtime',
         metricFamily: 'runtime-кривая',
         sourceFile: 'game.js',
         mode: 'absolute',
-        min: 0.3,
-        max: 2,
-        step: 0.01,
-        directionBias: 'up',
+        locked: true,
+        lockedReason: 'runtime.fireRateBase зафиксирован в game.js как x1 и не должен попадать в solver/write-path.',
         bands: ALL_BANDS,
         profiles: ALL_PROFILES,
         readCurrent: function (ctx) { return ctx.runtimeGame.fireRateBase; },
-        apply: createJsRuntimeWriter('runtime.fireRateBase', 'fireRateBase'),
       },
       {
         id: 'runtime.fireRateAddPerLevel',
-        label: 'BAL: прирост скорострельности за уровень',
+        label: 'Заблокировано: BAL.fireRateAddPerLevel = 1',
         group: 'Константы runtime',
         metricFamily: 'runtime-кривая',
         sourceFile: 'game.js',
         mode: 'absolute',
-        min: 0.01,
-        max: 0.25,
-        step: 0.005,
-        directionBias: 'up',
+        locked: true,
+        lockedReason: 'runtime.fireRateAddPerLevel зафиксирован в game.js как x1 и не должен попадать в solver/write-path.',
         bands: ALL_BANDS,
         profiles: ALL_PROFILES,
         readCurrent: function (ctx) { return ctx.runtimeGame.fireRateAddPerLevel; },
-        apply: createJsRuntimeWriter('runtime.fireRateAddPerLevel', 'fireRateAddPerLevel'),
       },
       {
         id: 'runtime.zombieHpBase',
-        label: 'BAL: базовое HP зомби',
+        label: 'Заблокировано: BAL.zombieHpBase = 1',
         group: 'Константы runtime',
         metricFamily: 'runtime-кривая',
         sourceFile: 'game.js',
         mode: 'absolute',
-        min: 10,
-        max: 120,
-        step: 1,
-        directionBias: 'down',
+        locked: true,
+        lockedReason: 'runtime.zombieHpBase зафиксирован в game.js как x1 и не должен попадать в solver/write-path.',
         bands: ALL_BANDS,
         profiles: ALL_PROFILES,
         readCurrent: function (ctx) { return ctx.runtimeGame.zombieHpBase; },
-        apply: createJsRuntimeWriter('runtime.zombieHpBase', 'zombieHpBase'),
       },
       {
         id: 'runtime.zombieHpExtraPerLevel',
-        label: 'BAL: доп. HP зомби за уровень',
+        label: 'Заблокировано: BAL.zombieHpExtraPerLevel = 1',
         group: 'Константы runtime',
         metricFamily: 'runtime-кривая',
         sourceFile: 'game.js',
         mode: 'absolute',
-        min: 0,
-        max: 0.5,
-        step: 0.01,
-        directionBias: 'down',
+        locked: true,
+        lockedReason: 'runtime.zombieHpExtraPerLevel зафиксирован в game.js как x1 и не должен попадать в solver/write-path.',
         bands: ALL_BANDS,
         profiles: ALL_PROFILES,
         readCurrent: function (ctx) { return ctx.runtimeGame.zombieHpExtraPerLevel; },
-        apply: createJsRuntimeWriter('runtime.zombieHpExtraPerLevel', 'zombieHpExtraPerLevel'),
       },
       {
         id: 'locked.worldEvents.idleWave.betweenWavesSec',

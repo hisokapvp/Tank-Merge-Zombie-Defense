@@ -253,6 +253,17 @@
     // render loop continues from merge phase
   }
 
+  function getTankStatsSnapshot(level) {
+    var tankCfg = global.TankSprites && typeof global.TankSprites.getTank === 'function'
+      ? global.TankSprites.getTank(level)
+      : null;
+    var statsCfg = tankCfg && tankCfg.stats ? tankCfg.stats : null;
+    return {
+      damage: Number.isFinite(statsCfg && statsCfg.baseDamage) ? statsCfg.baseDamage : null,
+      attackSpeed: Number.isFinite(statsCfg && statsCfg.attackSpeed) && statsCfg.attackSpeed > 0 ? statsCfg.attackSpeed : null,
+    };
+  }
+
   /* ═══════════════ Stats display ═══════════════ */
   function updateStats(level) {
     if (!statsEl) return;
@@ -263,8 +274,9 @@
     }
 
     var BAL = global.BAL || {};
-    var dmg = (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1.48, level - 1);
-    var fr  = (BAL.fireRateBase || 0.85) + (BAL.fireRateAddPerLevel || 0.075) * (level - 1);
+  var tankStats = getTankStatsSnapshot(level);
+  var dmg = tankStats.damage != null ? tankStats.damage : (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1, level - 1);
+  var fr  = tankStats.attackSpeed != null ? tankStats.attackSpeed : (BAL.fireRateBase || 1);
     var range = 315;
     var N = level <= 5 ? 1 : level <= 10 ? 2 : 3;
     var fmt = function (n) { return n < 10 ? n.toFixed(1) : Math.round(n).toString(); };
@@ -291,10 +303,8 @@
   }
 
   function startFireLoop() {
-    var BAL = global.BAL || {};
-    var fireRateBase = BAL.fireRateBase || 0.85;
-    var fireRateAdd  = BAL.fireRateAddPerLevel || 0.075;
-    var fireRate = fireRateBase + fireRateAdd * (currentLevel - 1);
+    var tankStats = getTankStatsSnapshot(currentLevel);
+    var fireRate = tankStats.attackSpeed != null ? tankStats.attackSpeed : ((global.BAL && global.BAL.fireRateBase) || 1);
     var cooldownMs = Math.max(80, 1000 / fireRate);
 
     fireShotEffect(currentLevel);

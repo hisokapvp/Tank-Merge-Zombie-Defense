@@ -289,6 +289,132 @@
     return 'high';
   }
 
+  function cloneTunableState(tunableState) {
+    var nextState = {};
+    Object.keys(tunableState || {}).forEach(function (id) {
+      nextState[id] = Object.assign({}, tunableState[id], {
+        bands: Array.isArray(tunableState[id] && tunableState[id].bands) ? tunableState[id].bands.slice() : [],
+      });
+    });
+    return nextState;
+  }
+
+  function enforceStrictlyIncreasingSeries(edit, readValue, writeValue, maxLevel) {
+    var previousValue = null;
+    var level;
+    var currentValue;
+    var nextValue;
+
+    for (level = 1; level <= maxLevel; level++) {
+      currentValue = readValue(edit, level);
+      if (!Number.isFinite(currentValue)) continue;
+      if (previousValue == null) {
+        previousValue = currentValue;
+        continue;
+      }
+      nextValue = currentValue > previousValue ? currentValue : previousValue + 1;
+      if (nextValue !== currentValue) {
+        writeValue(edit, level, nextValue);
+      }
+      previousValue = nextValue;
+    }
+  }
+
+  function normalizeAutoBandCurves(edit, tunableState, focusedTunableIds) {
+    var focusIds = Array.isArray(focusedTunableIds) && focusedTunableIds.length ? focusedTunableIds : [];
+
+    function shouldNormalize(id) {
+      var config = tunableState && tunableState[id];
+      if (!config || !config.enabled) return false;
+      return !focusIds.length || focusIds.indexOf(id) !== -1;
+    }
+
+    if (shouldNormalize('series.tank.baseDamage')) {
+      enforceStrictlyIncreasingSeries(
+        edit,
+        function (nextEdit, level) {
+          return Shared.getNestedValue(nextEdit.tanks, 'tank_lvl' + level + '.stats.baseDamage');
+        },
+        function (nextEdit, level, value) {
+          Shared.setNestedValue(nextEdit.tanks, 'tank_lvl' + level + '.stats.baseDamage', Math.max(1, Math.round(value)));
+        },
+        60
+      );
+    }
+
+    if (shouldNormalize('series.zombie.health')) {
+      enforceStrictlyIncreasingSeries(
+        edit,
+        function (nextEdit, level) {
+          var explicitHealth = Shared.getNestedValue(nextEdit.zombies, 'types[' + (level - 1) + '].Health');
+          if (Number.isFinite(explicitHealth) && explicitHealth > 0) return explicitHealth;
+          var legacyHealth = Shared.getNestedValue(nextEdit.zombies, 'types[' + (level - 1) + '].health');
+          return Number.isFinite(legacyHealth) && legacyHealth > 0 ? legacyHealth : null;
+        },
+        function (nextEdit, level, value) {
+          var explicitPath = 'types[' + (level - 1) + '].Health';
+          var legacyPath = 'types[' + (level - 1) + '].health';
+          var roundedValue = Math.max(1, Math.round(value));
+          var explicitHealth = Shared.getNestedValue(nextEdit.zombies, explicitPath);
+          var legacyHealth = Shared.getNestedValue(nextEdit.zombies, legacyPath);
+          if (Number.isFinite(explicitHealth) && explicitHealth > 0) {
+            Shared.setNestedValue(nextEdit.zombies, explicitPath, roundedValue);
+            return;
+          }
+          if (Number.isFinite(legacyHealth) && legacyHealth > 0) {
+            Shared.setNestedValue(nextEdit.zombies, legacyPath, roundedValue);
+            return;
+          }
+          Shared.setNestedValue(nextEdit.zombies, explicitPath, roundedValue);
+        },
+        60
+      );
+    }
+  }
+
+  function buildBandScopedTunableState(tunableState, bandId, focusedTunableIds) {
+    var nextState = cloneTunableState(tunableState);
+    var focusIds = Array.isArray(focusedTunableIds) && focusedTunableIds.length ? focusedTunableIds : Object.keys(nextState);
+
+    focusIds.forEach(function (id) {
+      var config = nextState[id];
+      if (!config || !config.enabled) return;
+      if (Array.isArray(config.bands) && config.bands.length && config.bands.indexOf(bandId) === -1) {
+        config.enabled = false;
+        return;
+      }
+      config.bands = [bandId];
+    });
+    return nextState;
+  }
+
+  function getBandPriorityOrder(rows) {
+    var scoreByBand = {};
+    rows.forEach(function (row) {
+      scoreByBand[row.scenario.bandId] = (scoreByBand[row.scenario.bandId] || 0) + Shared.safeNumber(row.evaluation && row.evaluation.score, 0);
+    });
+    return Object.keys(scoreByBand).sort(function (left, right) {
+      return scoreByBand[right] - scoreByBand[left];
+    });
+  }
+
+  function getBandScenarioIds(profiles, bandId, selectedScenarioIds) {
+    return Shared.getScenarioList(profiles).filter(function (scenario) {
+      return scenario.bandId === bandId && (!selectedScenarioIds || selectedScenarioIds.indexOf(scenario.id) !== -1);
+    }).map(function (scenario) {
+      return scenario.id;
+    });
+  }
+
+  function collectRuntimePendingValues(originalRuntimeGame, currentRuntimeGame) {
+    var pending = {};
+    Object.keys(currentRuntimeGame || {}).forEach(function (key) {
+      if (currentRuntimeGame[key] === originalRuntimeGame[key]) return;
+      pending['runtime.' + key] = currentRuntimeGame[key];
+    });
+    return pending;
+  }
+
   function optimize(options) {
     var registry = options.registry || Registry.createRegistry();
     var tunableState = options.tunableState || {};
@@ -348,7 +474,92 @@
     };
   }
 
+  function optimizeByBands(options) {
+    var registry = options.registry || Registry.createRegistry();
+    var tunableState = options.tunableState || {};
+    var context = Object.assign({ edit: options.data, runtimeGame: {}, runtimeLocked: {} }, options.context || {});
+    var runtimeGame = Object.assign({}, context.runtimeGame || {});
+    var selectedScenarioIds = options.selectedScenarioIds || null;
+    var focusedTunableIds = Array.isArray(options.focusTunableIds) && options.focusTunableIds.length
+      ? options.focusTunableIds.slice()
+      : Registry.getEnabledItems(registry, tunableState).map(function (item) { return item.id; });
+    var baselineAssignments = getBaselineAssignments(registry, tunableState, context);
+    var baselineResult = evaluateAssignments(options.data, runtimeGame, registry, tunableState, options.profiles, options.goals, selectedScenarioIds, baselineAssignments);
+    var currentData = Shared.deepClone(options.data);
+    var currentRuntimeGame = Object.assign({}, runtimeGame);
+    var changedTunables = [];
+    var bandPasses = [];
+    var totalIterations = 0;
+
+    getBandPriorityOrder(baselineResult.rows).forEach(function (bandId) {
+      var scopedTunableState = buildBandScopedTunableState(tunableState, bandId, focusedTunableIds);
+      var bandScenarioIds = getBandScenarioIds(options.profiles, bandId, selectedScenarioIds);
+      var bandResult;
+
+      if (!bandScenarioIds.length || !Registry.getEnabledItems(registry, scopedTunableState).length) return;
+
+      bandResult = optimize({
+        data: currentData,
+        profiles: options.profiles,
+        goals: options.goals,
+        registry: registry,
+        tunableState: scopedTunableState,
+        context: {
+          edit: currentData,
+          runtimeGame: currentRuntimeGame,
+          runtimeLocked: context.runtimeLocked,
+        },
+        selectedScenarioIds: bandScenarioIds,
+      });
+
+      if (!(bandResult.scoreAfter + 0.000001 < bandResult.scoreBefore) || !bandResult.changedTunables.length) return;
+
+      currentData = bandResult.edit;
+      currentRuntimeGame = Object.assign({}, bandResult.runtimeGame);
+      totalIterations += bandResult.iterations;
+      Array.prototype.push.apply(changedTunables, bandResult.changedTunables);
+      bandPasses.push({
+        bandId: bandId,
+        label: (Shared.getBandById(bandId) || {}).label || bandId,
+        scoreBefore: bandResult.scoreBefore,
+        scoreAfter: bandResult.scoreAfter,
+        changedTunables: bandResult.changedTunables,
+      });
+    });
+
+    normalizeAutoBandCurves(currentData, tunableState, focusedTunableIds);
+
+    var finalContext = {
+      edit: currentData,
+      runtimeGame: currentRuntimeGame,
+      runtimeLocked: context.runtimeLocked,
+    };
+    var finalAssignments = getBaselineAssignments(registry, tunableState, finalContext);
+    var finalResult = evaluateAssignments(currentData, currentRuntimeGame, registry, tunableState, options.profiles, options.goals, selectedScenarioIds, finalAssignments);
+
+    return {
+      scoreBefore: baselineResult.summary.score,
+      scoreAfter: finalResult.summary.score,
+      coverageBefore: baselineResult.summary.coverage,
+      coverageAfter: finalResult.summary.coverage,
+      summaryBefore: baselineResult.summary,
+      summaryAfter: finalResult.summary,
+      beforeRows: baselineResult.rows,
+      afterRows: finalResult.rows,
+      changedTunables: changedTunables,
+      explanations: buildExplanations(changedTunables, baselineResult.rows, finalResult.rows),
+      risk: inferRiskSummary(baselineResult.summary, finalResult.summary, changedTunables),
+      edit: currentData,
+      runtimeGame: currentRuntimeGame,
+      runtimePending: collectRuntimePendingValues(runtimeGame, currentRuntimeGame),
+      assignments: finalAssignments,
+      iterations: totalIterations,
+      bandPasses: bandPasses,
+    };
+  }
+
   return {
     optimize: optimize,
+    optimizeByBands: optimizeByBands,
   };
 }));

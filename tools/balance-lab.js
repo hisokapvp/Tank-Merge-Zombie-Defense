@@ -165,13 +165,33 @@
     };
   }
 
+  function getVisibleProfileKeys() {
+    return ['base'];
+  }
+
+  function getVisibleScenarioList() {
+    if (!state.labState) return [];
+    return getModules().Shared.getScenarioList(state.labState.profiles).filter(function (scenario) {
+      return getVisibleProfileKeys().indexOf(scenario.profileKey) !== -1;
+    });
+  }
+
   function getScenarioIdList() {
-    if (Array.isArray(state.selectedScenarioIds) && state.selectedScenarioIds.length) return state.selectedScenarioIds.slice();
-    return getModules().Shared.getScenarioList(state.labState.profiles).map(function (scenario) { return scenario.id; });
+    var visibleScenarioIds = getVisibleScenarioList().map(function (scenario) { return scenario.id; });
+    var selectedVisibleIds;
+
+    if (!visibleScenarioIds.length) return [];
+    if (Array.isArray(state.selectedScenarioIds) && state.selectedScenarioIds.length) {
+      selectedVisibleIds = state.selectedScenarioIds.filter(function (scenarioId) {
+        return visibleScenarioIds.indexOf(scenarioId) !== -1;
+      });
+      if (selectedVisibleIds.length) return selectedVisibleIds;
+    }
+    return visibleScenarioIds;
   }
 
   function getRecommendedTunableIds() {
-    return ['series.tank.baseDamage', 'series.tank.baseDamage.anchor', 'series.zombie.health', 'series.zombie.health.anchor', 'series.bullet.addDamage'];
+    return ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'];
   }
 
   function ensureRecommendedTunablesEnabled() {
@@ -205,6 +225,13 @@
       tunable.bands = [worstRow.scenario.bandId];
     });
     return band ? band.label : worstRow.scenario.bandId;
+  }
+
+  function describeBandPasses(result) {
+    if (!result || !Array.isArray(result.bandPasses) || !result.bandPasses.length) return '';
+    return ' Авто-режим прошёл диапазоны: ' + result.bandPasses.map(function (pass) {
+      return pass.label || pass.bandId;
+    }).join(', ') + '.';
   }
 
   function getRepresentativeBandLevel(bands) {
@@ -310,18 +337,22 @@
 
   function getGoalTuning() {
     var modules = getModules();
-    if (!modules) return { desiredTtk: 50, zombiePressure: 50, progressionPressure: 50 };
+    if (!modules) return { desiredTtk: 5, zombiePressure: 50, progressionPressure: 50 };
     if (!state.labState.goalTuning) state.labState.goalTuning = modules.Shared.createDefaultGoalTuning();
     return state.labState.goalTuning;
   }
 
   function describeGoalTuningValue(field, value) {
-    var safeValue = Math.max(0, Math.min(100, Math.round(value)));
+    var modules = getModules();
+    var shared = modules && modules.Shared ? modules.Shared : null;
     if (field === 'desiredTtk') {
-      if (safeValue >= 75) return 'Долгие бои и высокий TTK';
-      if (safeValue <= 25) return 'Быстрые убийства и низкий TTK';
+      var desiredTtk = shared ? shared.safeNumber(value, 5) : Number(value);
+      if (!(desiredTtk > 0)) desiredTtk = 5;
+      if (desiredTtk >= 8) return 'Долгие бои и высокий TTK';
+      if (desiredTtk <= 3) return 'Быстрые убийства и низкий TTK';
       return 'Сбалансированное время убийства';
     }
+    var safeValue = Math.max(0, Math.min(100, Math.round(shared ? shared.safeNumber(value, 50) : Number(value) || 50)));
     if (field === 'zombiePressure') {
       if (safeValue >= 75) return 'Зомби чаще продавливают ограду';
       if (safeValue <= 25) return 'Игрок чаще держит волну без риска';
@@ -334,7 +365,7 @@
 
   function buildGoalTuningSummary(goalTuning) {
     return [
-      'TTK ' + goalTuning.desiredTtk,
+      'TTK ' + goalTuning.desiredTtk + ' c',
       'давление зомби ' + goalTuning.zombiePressure,
       'прогрессия ' + goalTuning.progressionPressure
     ].join(' / ');
@@ -356,7 +387,7 @@
     var panel = document.getElementById('balanceLabPanelProfiles');
     var rowsHtml = '';
     Shared.LEVEL_BANDS.forEach(function (band) {
-      Shared.PROFILE_KEYS.forEach(function (profileKey) {
+      getVisibleProfileKeys().forEach(function (profileKey) {
         var scenario = state.labState.profiles[band.id][profileKey];
         rowsHtml += '<tr>' +
           '<td>' + band.label + '</td>' +
@@ -380,7 +411,7 @@
       });
     });
     panel.innerHTML = [
-      '<div class="balanceLabCard balanceLabHelp">Профили моделируют surrogate-прогрессию по диапазонам уровней. Здесь задаются состояния танка, ограды и дрона, таланты, чип и ключевые множители, которые потом используются и в matrix evaluation, и в optimizer.</div>',
+      '<div class="balanceLabCard balanceLabHelp">Для live balance settings оставлен только профиль «База». Здесь задаются состояния танка, ограды и дрона, таланты, чип и ключевые множители именно для базового сценария каждого диапазона; surrogate-профили «Средний», «Пик» и «Ручной» больше не участвуют в browser optimizer surface.</div>',
       '<div class="balanceLabCard"><div class="balanceLabTableWrap"><table class="balanceLabTable"><thead><tr><th>Диапазон</th><th>Профиль</th><th>Танк</th><th>Зомби</th><th>Ограда</th><th>Дрон</th><th>Кол-во</th><th>Окно</th><th>Чип</th><th>OFF</th><th>DEF</th><th>ECO</th><th>TankMul</th><th>FRMul</th><th>ZHpMul</th><th>ZAtkMul</th><th>WallHpMul</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
     ].join('');
   }
@@ -390,6 +421,13 @@
     var panel = document.getElementById('balanceLabPanelGoals');
     var goalTuning = getGoalTuning();
     function buildGoalTuningCard(field, title) {
+      if (field === 'desiredTtk') {
+        return '<div class="balanceLabGoalTuningCard">' +
+          '<div class="balanceLabGoalTuningLabel"><span>' + title + '</span><span class="balanceLabGoalTuningValue">' + goalTuning[field] + ' c</span></div>' +
+          '<input type="number" min="0.01" step="0.01" data-goal-tuning="' + field + '" value="' + goalTuning[field] + '">' +
+          '<div class="balanceLabGoalTuningHint">' + describeGoalTuningValue(field, goalTuning[field]) + '</div>' +
+        '</div>';
+      }
       return '<div class="balanceLabGoalTuningCard">' +
         '<div class="balanceLabGoalTuningLabel"><span>' + title + '</span><span class="balanceLabGoalTuningValue">' + goalTuning[field] + '/100</span></div>' +
         '<input type="range" min="0" max="100" step="1" data-goal-tuning="' + field + '" value="' + goalTuning[field] + '">' +
@@ -398,7 +436,7 @@
     }
     var rowsHtml = '';
     Shared.LEVEL_BANDS.forEach(function (band) {
-      Shared.PROFILE_KEYS.forEach(function (profileKey) {
+      getVisibleProfileKeys().forEach(function (profileKey) {
         var goals = state.labState.goals[band.id][profileKey];
         rowsHtml += '<tr>' +
           '<td>' + band.label + '</td>' +
@@ -418,12 +456,12 @@
       });
     });
     panel.innerHTML = [
-      '<div class="balanceLabCard"><div class="balanceLabHelp">Ползунки управляют high-level целью optimizer: через них можно быстро выбрать длинный TTK, более опасных зомби или более мягкую прогрессию. Пресеты меняют только slider-state; таблица целей ниже и optimizer обновляются только после явного применения. Текущий профиль: ' + buildGoalTuningSummary(goalTuning) + '.</div><div class="balanceLabGoalTuningGrid">' +
+      '<div class="balanceLabCard"><div class="balanceLabHelp">Ползунки управляют high-level целью optimizer: через них можно быстро выбрать длинный TTK, более опасных зомби или более мягкую прогрессию. Пресеты меняют только slider-state; таблица целей ниже и optimizer обновляются только после явного применения. Browser surface теперь считает только по профилю «База», чтобы goal tuning не конфликтовал с surrogate-профилями. Текущий профиль: ' + buildGoalTuningSummary(goalTuning) + '.</div><div class="balanceLabGoalTuningGrid">' +
         buildGoalTuningCard('desiredTtk', 'Желаемый TTK') +
         buildGoalTuningCard('zombiePressure', 'Шанс зомби продавить игрока') +
         buildGoalTuningCard('progressionPressure', 'Давление прогрессии') +
       '</div><div class="balanceLabActions"><button type="button" class="secondary" data-goal-preset="balanced">Сбалансировано</button><button type="button" class="secondary" data-goal-preset="longTtk">Долгий TTK</button><button type="button" class="secondary" data-goal-preset="zombieThreat">Опасные зомби</button><button type="button" class="secondary" data-goal-preset="softEconomy">Мягкая прогрессия</button><button type="button" id="balanceLabApplyGoalTuningBtn">Применить к таблице целей</button><button type="button" class="secondary" id="balanceLabResetGoalTuningBtn">Сбросить к baseline</button></div></div>',
-      '<div class="balanceLabCard balanceLabHelp">Таблица целей задаёт целевые диапазоны для TTK по зомби, TTK по пачке, давления на ограду, окна выживания и давления прогрессии. decadeJumpScore штрафует слишком плоскую кривую между десятками уровней. После ручных правок таблицы optimizer использует именно эти значения, пока вы снова не примените slider-профиль.</div>',
+      '<div class="balanceLabCard balanceLabHelp">Таблица целей задаёт целевые диапазоны для TTK по зомби, TTK по пачке, давления на ограду, окна выживания и давления прогрессии для базового сценария каждого диапазона. decadeJumpScore штрафует слишком плоскую кривую между десятками уровней. После ручных правок таблицы optimizer использует именно эти значения, пока вы снова не примените slider-профиль.</div>',
       '<div class="balanceLabCard"><div class="balanceLabTableWrap"><table class="balanceLabTable"><thead><tr><th>Диапазон</th><th>Профиль</th><th>ZombieTTK min</th><th>ZombieTTK max</th><th>PackTTK min</th><th>PackTTK max</th><th>FenceDmg min</th><th>FenceDmg max</th><th>FenceSurvival min</th><th>FenceSurvival max</th><th>Pressure min</th><th>Pressure max</th><th>Jump</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
     ].join('');
   }
@@ -456,7 +494,7 @@
         '</tr>';
     });
     panel.innerHTML = [
-      '<div class="balanceLabCard balanceLabHelp">Реестр объединяет JSON-параметры, band-scoped curve scalers и allowlisted runtime-константы. locked world-events поверхности отображаются только для видимости и никогда не попадают в solver/write-path. Для TTK обычно имеет смысл начать с «Кривая базового урона танков», «Кривая явного HP зомби» и при необходимости «Кривая доп. урона снарядов».</div>',
+      '<div class="balanceLabCard balanceLabHelp">Реестр объединяет JSON-параметры, band-scoped curve scalers и allowlisted runtime-константы. locked world-events поверхности отображаются только для видимости и никогда не попадают в solver/write-path. Для TTK обычно имеет смысл начать с «Кривая базового урона танков», «Кривая явного HP зомби» и при необходимости «Кривая доп. урона снарядов». Anchor-поверхности оставлены для ручного ремонта единичных выбросов и больше не считаются safe auto-default для широкого прогрева диапазонов.</div>',
       '<div class="balanceLabCard"><div class="balanceLabTableWrap"><table class="balanceLabTable"><thead><tr><th>Вкл</th><th>Параметр</th><th>Группа</th><th>Источник</th><th>Текущее</th><th>Min</th><th>Max</th><th>Step</th><th>Bias</th><th>Диапазоны</th><th>Статус</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div></div>'
     ].join('');
   }
@@ -470,7 +508,7 @@
     var result = state.labState.optimizerResult;
     var concreteChanges = collectConcreteOptimizerChanges();
     var panel = document.getElementById('balanceLabPanelOptimize');
-    var scenarioOptions = Shared.getScenarioList(state.labState.profiles).map(function (scenario) {
+    var scenarioOptions = getVisibleScenarioList().map(function (scenario) {
       var checked = getScenarioIdList().indexOf(scenario.id) !== -1 ? ' checked' : '';
       return '<label><input type="checkbox" data-scenario-select="' + scenario.id + '"' + checked + '> ' + Shared.getBandById(scenario.bandId).label + ' / ' + Shared.PROFILE_LABELS[scenario.profileKey] + '</label>';
     }).join('');
@@ -511,7 +549,7 @@
       '<div class="balanceLabMetric"><span>Включённые параметры</span><strong>' + enabledTunablesCount + '</strong><div class="balanceLabSmall">отключённые параметры не меняются</div></div>',
       '<div class="balanceLabMetric"><span>Последний прогон</span><strong>' + (result ? result.scoreAfter : '—') + '</strong><div class="balanceLabSmall">риск ' + (result ? result.risk : 'н/д') + '</div></div>',
       '</div>',
-      '<div class="balanceLabCard"><div class="balanceLabHelp">Оценка матрицы проходит по выбранным сценариям диапазонов и профилей, сравнивает метрики с целями и отдельно штрафует слишком плоские скачки между десятками уровней. Активный high-level goal profile: ' + buildGoalTuningSummary(goalTuning) + '. Оптимизация использует только включённые параметры и не трогает заблокированные поверхности.' + (enabledTunablesCount ? '' : ' Сначала включите хотя бы один параметр во вкладке «Параметры», иначе оптимизация ничего не сможет изменить. Если не хотите разбираться вручную, используйте кнопку авто-режима: она включит базовые TTK-поверхности, выполнит solver и сразу откроет запись с готовым diff.') + '</div><div class="balanceLabTableWrap" style="margin-top:12px"><table class="balanceLabTable"><thead><tr><th>Использовать</th></tr></thead><tbody><tr><td><div class="balanceLabBandChecks">' + scenarioOptions + '</div></td></tr></tbody></table></div><div class="balanceLabActions"><button id="balanceLabEvaluateBtn" class="secondary">Оценить матрицу</button><button id="balanceLabOptimizeBtn"' + (enabledTunablesCount ? '' : ' disabled') + '>Запустить оптимизацию</button><button id="balanceLabAutoOptimizeBtn">Автооптимизировать и открыть запись</button><button id="balanceLabResetOptimizeBtn" class="warn">Откатить прогон</button></div></div>',
+      '<div class="balanceLabCard"><div class="balanceLabHelp">Оценка матрицы проходит по выбранным базовым сценариям диапазонов, сравнивает метрики с целями и отдельно штрафует слишком плоские скачки между десятками уровней. Активный high-level goal profile: ' + buildGoalTuningSummary(goalTuning) + '. Оптимизация использует только включённые параметры и не трогает заблокированные поверхности.' + (enabledTunablesCount ? '' : ' Сначала включите хотя бы один параметр во вкладке «Параметры», иначе оптимизация ничего не сможет изменить. Если не хотите разбираться вручную, используйте кнопку авто-режима: она включит серийные TTK-поверхности, прогонит их по диапазонам и сразу откроет запись с готовым diff.') + '</div><div class="balanceLabTableWrap" style="margin-top:12px"><table class="balanceLabTable"><thead><tr><th>Использовать</th></tr></thead><tbody><tr><td><div class="balanceLabBandChecks">' + scenarioOptions + '</div></td></tr></tbody></table></div><div class="balanceLabActions"><button id="balanceLabEvaluateBtn" class="secondary">Оценить матрицу</button><button id="balanceLabOptimizeBtn"' + (enabledTunablesCount ? '' : ' disabled') + '>Запустить оптимизацию</button><button id="balanceLabAutoOptimizeBtn">Автооптимизировать и открыть запись</button><button id="balanceLabResetOptimizeBtn" class="warn">Откатить прогон</button></div></div>',
       '<div class="balanceLabCard"><div class="balanceLabGrid"><div><canvas id="balanceLabChartTtk" class="chart"></canvas></div><div><canvas id="balanceLabChartFence" class="chart"></canvas></div></div></div>',
       '<div class="balanceLabCard"><h3 style="margin-bottom:8px">Покрытие и объяснимость</h3>' + explanationList + '<div class="balanceLabTableWrap" style="margin-top:12px"><table class="balanceLabTable"><thead><tr><th>Диапазон</th><th>Профиль</th><th>TTK зомби</th><th>TTK пачки</th><th>Выживание ограды</th><th>Давление</th><th>Результат</th><th>Проблемы</th></tr></thead><tbody>' + resultTable + '</tbody></table></div></div>',
       '<div class="balanceLabCard"><h3 style="margin-bottom:8px">Что реально изменится в файлах</h3>' + concreteChangeList + '</div>'
@@ -656,7 +694,7 @@
     var modules = getModules();
     var enabledTunables = modules.Registry.getEnabledItems(state.registry, state.tunables);
     var autoEnabled = [];
-    var autoBandLabel = null;
+    var autoBandSummary = '';
     var result;
     var concreteChanges;
     var summaryText;
@@ -664,7 +702,6 @@
     options = options || {};
     if (!enabledTunables.length && options.autoSeedRecommended) {
       autoEnabled = ensureRecommendedTunablesEnabled();
-      autoBandLabel = scopeTunablesToWorstBand(getRecommendedTunableIds());
       enabledTunables = modules.Registry.getEnabledItems(state.registry, state.tunables);
     }
     if (!enabledTunables.length) {
@@ -677,24 +714,36 @@
       edit: modules.Shared.deepClone(getDataBundle()),
       runtimeGame: Object.assign({}, state.runtimeCurrent.runtimeGame),
     };
-    state.labState.optimizerResult = modules.Optimizer.optimize({
-      data: getDataBundle(),
-      profiles: state.labState.profiles,
-      goals: state.labState.goals,
-      registry: state.registry,
-      tunableState: state.tunables,
-      context: buildOptimizerContext(),
-      selectedScenarioIds: getScenarioIdList(),
-    });
+    state.labState.optimizerResult = options.autoSeedRecommended
+      ? modules.Optimizer.optimizeByBands({
+          data: getDataBundle(),
+          profiles: state.labState.profiles,
+          goals: state.labState.goals,
+          registry: state.registry,
+          tunableState: state.tunables,
+          context: buildOptimizerContext(),
+          selectedScenarioIds: getScenarioIdList(),
+          focusTunableIds: autoEnabled.length ? getRecommendedTunableIds() : null,
+        })
+      : modules.Optimizer.optimize({
+          data: getDataBundle(),
+          profiles: state.labState.profiles,
+          goals: state.labState.goals,
+          registry: state.registry,
+          tunableState: state.tunables,
+          context: buildOptimizerContext(),
+          selectedScenarioIds: getScenarioIdList(),
+        });
     replaceEditState(state.labState.optimizerResult.edit);
     state.runtimeCurrent.runtimeGame = Object.assign({}, state.labState.optimizerResult.runtimeGame);
     state.app.setRuntimeGame(state.runtimeCurrent.runtimeGame);
     renderAllPanels();
 
     result = state.labState.optimizerResult;
+    autoBandSummary = options.autoSeedRecommended ? describeBandPasses(result) : '';
     if (!result.changedTunables.length) {
       setActiveRootTab('optimize');
-      state.app.setStatus('Оптимизатор завершён, но не нашёл улучшений для выбранных параметров и сценариев.' + (autoEnabled.length ? ' Автовключены core-поверхности: ' + autoEnabled.join(', ') + '.' : '') + (autoBandLabel ? ' Авто-режим ограничил их band ' + autoBandLabel + '.' : ''));
+      state.app.setStatus('Оптимизатор завершён, но не нашёл улучшений для выбранных параметров и сценариев.' + (autoEnabled.length ? ' Автовключены core-поверхности: ' + autoEnabled.join(', ') + '.' : '') + autoBandSummary);
       return result;
     }
 
@@ -703,7 +752,7 @@
       return item.label + ' ' + item.before + ' → ' + item.after;
     }).join('; ');
     if (options.openWriteTab) setActiveRootTab('write');
-    state.app.setStatus('Оптимизация завершена. Score: ' + result.scoreBefore + ' → ' + result.scoreAfter + '.' + (autoEnabled.length ? ' Автовключены core-поверхности: ' + autoEnabled.join(', ') + '.' : '') + (autoBandLabel ? ' Авто-режим ограничил их band ' + autoBandLabel + '.' : '') + (summaryText ? ' Конкретные изменения: ' + summaryText + '.' : '') + (options.openWriteTab ? ' Открыл вкладку записи с готовым diff.' : ''));
+    state.app.setStatus('Оптимизация завершена. Score: ' + result.scoreBefore + ' → ' + result.scoreAfter + '.' + (autoEnabled.length ? ' Автовключены core-поверхности: ' + autoEnabled.join(', ') + '.' : '') + autoBandSummary + (summaryText ? ' Конкретные изменения: ' + summaryText + '.' : '') + (options.openWriteTab ? ' Открыл вкладку записи с готовым diff.' : ''));
     return result;
   }
 
@@ -829,7 +878,11 @@
     var profileKey = target.getAttribute('data-profile-key');
     var field = target.getAttribute('data-goal-edit');
     if (tuningField) {
-      state.labState.goalTuning[tuningField] = Math.max(0, Math.min(100, Math.round(getModules().Shared.safeNumber(target.value, state.labState.goalTuning[tuningField]))));
+      if (tuningField === 'desiredTtk') {
+        state.labState.goalTuning[tuningField] = Math.max(0.1, getModules().Shared.safeNumber(target.value, state.labState.goalTuning[tuningField]));
+      } else {
+        state.labState.goalTuning[tuningField] = Math.max(0, Math.min(100, Math.round(getModules().Shared.safeNumber(target.value, state.labState.goalTuning[tuningField]))));
+      }
       renderGoalsPanel();
       return;
     }
@@ -933,7 +986,7 @@
         runtimeGame: state.runtimeCurrent.runtimeGame,
         runtimeLocked: state.runtimeCurrent.runtimeLocked,
       });
-      state.selectedScenarioIds = modules.Shared.getScenarioList(state.labState.profiles).map(function (scenario) { return scenario.id; });
+      state.selectedScenarioIds = getVisibleScenarioList().map(function (scenario) { return scenario.id; });
       renderAllPanels();
       wirePanelDelegation();
       state.initialized = true;

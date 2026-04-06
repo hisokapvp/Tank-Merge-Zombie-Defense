@@ -24,20 +24,20 @@
     manual: 'Ручной',
   };
   var GOAL_TUNING_PRESETS = {
-    balanced: { desiredTtk: 50, zombiePressure: 50, progressionPressure: 50 },
-    longTtk: { desiredTtk: 85, zombiePressure: 60, progressionPressure: 50 },
-    zombieThreat: { desiredTtk: 65, zombiePressure: 85, progressionPressure: 60 },
-    softEconomy: { desiredTtk: 55, zombiePressure: 45, progressionPressure: 25 },
+    balanced: { desiredTtk: 5, zombiePressure: 50, progressionPressure: 50 },
+    longTtk: { desiredTtk: 8.5, zombiePressure: 60, progressionPressure: 50 },
+    zombieThreat: { desiredTtk: 6.5, zombiePressure: 85, progressionPressure: 60 },
+    softEconomy: { desiredTtk: 5.5, zombiePressure: 45, progressionPressure: 25 },
   };
   var DEFAULT_RUNTIME_CONSTANTS = {
     dmgBase: 7,
-    dmgMultPerLevel: 1.48,
-    fireRateBase: 0.79,
-    fireRateAddPerLevel: 0.075,
+    dmgMultPerLevel: 1,
+    fireRateBase: 1,
+    fireRateAddPerLevel: 1,
     rangeBase: 315,
     rangePerLevel: 10,
-    zombieHpBase: 44,
-    zombieHpExtraPerLevel: 0.12,
+    zombieHpBase: 1,
+    zombieHpExtraPerLevel: 1,
     zombieLevelOmegaMul: 0.08,
   };
   var CHIP_EFFECTS = {
@@ -184,6 +184,12 @@
     return clamp(Math.round(safeNumber(value, fallback)), 0, 100);
   }
 
+  function normalizeDesiredTtk(value, fallback) {
+    var safeFallback = safeNumber(fallback, GOAL_TUNING_PRESETS.balanced.desiredTtk);
+    var desiredTtk = safeNumber(value, safeFallback);
+    return desiredTtk > 0 ? desiredTtk : safeFallback;
+  }
+
   function createDefaultGoalTuning() {
     return deepClone(GOAL_TUNING_PRESETS.balanced);
   }
@@ -191,7 +197,7 @@
   function normalizeGoalTuning(goalTuning) {
     var source = goalTuning || {};
     return {
-      desiredTtk: clampPercent(source.desiredTtk, GOAL_TUNING_PRESETS.balanced.desiredTtk),
+      desiredTtk: normalizeDesiredTtk(source.desiredTtk, GOAL_TUNING_PRESETS.balanced.desiredTtk),
       zombiePressure: clampPercent(source.zombiePressure, GOAL_TUNING_PRESETS.balanced.zombiePressure),
       progressionPressure: clampPercent(source.progressionPressure, GOAL_TUNING_PRESETS.balanced.progressionPressure),
     };
@@ -456,11 +462,15 @@
     var bulletInfo = getBulletConfigForTankLevel(data, level);
     var tankCfg = bulletInfo.tankCfg || {};
     var bulletCfg = bulletInfo.bulletCfg || {};
+    var tankCfgStats = tankCfg && tankCfg.stats ? tankCfg.stats : null;
     var balanceDamageMul = getTankBalanceMultiplier(data && data.balance, level, 'attackDamageMul');
     var balanceFireRateMul = getTankBalanceMultiplier(data && data.balance, level, 'attackSpeedMul');
     var tankBaseDamage = Number.isFinite(getNestedValue(tankCfg, 'stats.baseDamage'))
       ? getNestedValue(tankCfg, 'stats.baseDamage')
       : runtime.dmgBase * Math.pow(runtime.dmgMultPerLevel, level - 1);
+    var tankAttackSpeed = Number.isFinite(getNestedValue(tankCfgStats, 'attackSpeed')) && getNestedValue(tankCfgStats, 'attackSpeed') > 0
+      ? getNestedValue(tankCfgStats, 'attackSpeed')
+      : 1;
     var bulletAddDamage = safeNumber(bulletCfg.addDamage, 0);
     var cannonRow = Array.isArray(data && data.cannon) ? data.cannon[level - 1] : null;
     var cannonApplied = safeNumber(cannonRow && cannonRow[2], 0);
@@ -475,7 +485,7 @@
       * (1 + cannonApplied * cannonDamagePerUpgrade)
       * safeNumber(talentMods.damageMul, 1)
       * safeNumber(modifiers.tankDamageMul, 1);
-    var shotsPerSec = (runtime.fireRateBase + runtime.fireRateAddPerLevel * (level - 1))
+    var shotsPerSec = tankAttackSpeed
       * balanceFireRateMul
       * (1 + cannonApplied * cannonFireRatePerUpgrade)
       * safeNumber(talentMods.fireRateMul, 1)
@@ -598,12 +608,15 @@
     var tuning = normalizeGoalTuning(goalTuning);
     var pressureMul = profileKey === 'peak' ? 1.12 : (profileKey === 'average' ? 1.06 : 1);
     var toleranceMul = profileKey === 'manual' ? 0.25 : 0.18;
-    var desiredTtkScale = scaleAroundDefault(tuning.desiredTtk, 0.55, 2.4);
+    var desiredSingleTtkSec = normalizeDesiredTtk(tuning.desiredTtk, GOAL_TUNING_PRESETS.balanced.desiredTtk) * pressureMul;
+    var packRatio = metrics.singleZombieTtk > 0
+      ? Math.max(1, metrics.packTtk / metrics.singleZombieTtk)
+      : Math.max(1, safeNumber(metrics.zombieCount, 1));
     var zombiePressureScale = scaleAroundDefault(tuning.zombiePressure, 0.7, 1.9);
     var fenceSurvivalScale = scaleAroundDefault(100 - tuning.zombiePressure, 0.6, 1.8);
     var progressionScale = scaleAroundDefault(tuning.progressionPressure, 0.6, 1.8);
-    var zombieTtkBase = metrics.singleZombieTtk * pressureMul * desiredTtkScale;
-    var packTtkBase = metrics.packTtk * pressureMul * desiredTtkScale;
+    var zombieTtkBase = desiredSingleTtkSec;
+    var packTtkBase = desiredSingleTtkSec * packRatio;
     var fenceDamageBase = metrics.fenceDamagePerAttackWindow * pressureMul * zombiePressureScale;
     var fenceSurvivalBase = metrics.fenceSurvivalSec / pressureMul * fenceSurvivalScale;
     var progressionBase = metrics.progressionPressure * progressionScale;
@@ -725,6 +738,11 @@
       if (jump < goals.decadeJumpScore) {
         failures.push({ key: 'decadeJump', reason: 'flat', value: jump, min: goals.decadeJumpScore, max: null });
         score += (goals.decadeJumpScore - jump) * 4;
+      }
+      var jumpSpikeCap = Math.max(goals.decadeJumpScore * 6, 0.75);
+      if (jump > jumpSpikeCap) {
+        failures.push({ key: 'decadeJump', reason: 'spike', value: jump, min: null, max: jumpSpikeCap });
+        score += Math.max(jump - jumpSpikeCap, computeRangeGap(jump, jumpSpikeCap)) * 2.5;
       }
     }
     if (metrics.fenceDamagePerAttackWindow <= 0) {

@@ -24,6 +24,18 @@
     ZOMBIE_KILL_XP_MUL: 0.5,
   };
 
+  function getTankConfig(level) {
+    return global.TankSprites && typeof global.TankSprites.getTank === 'function'
+      ? global.TankSprites.getTank(level)
+      : null;
+  }
+
+  function getZombieType(level) {
+    var zombieSprites = global.ZombieSprites || (global.Game && global.Game.ZombieSprites) || null;
+    var types = zombieSprites && Array.isArray(zombieSprites.types) ? zombieSprites.types : null;
+    return types && types[level - 1] ? types[level - 1] : null;
+  }
+
   function fallbackCoinsForShot(level) {
     if (level == null || level < 1) return 0;
     var L = Math.max(1, Math.floor(level));
@@ -66,17 +78,29 @@
 
     function fireRatePerSec(level) {
       var lvl = Math.max(1, Math.floor(level || 1));
+      var tankCfg = getTankConfig(lvl);
+      var attackSpeed = Number(tankCfg && tankCfg.stats && tankCfg.stats.attackSpeed);
+      if (Number.isFinite(attackSpeed) && attackSpeed > 0) return attackSpeed;
       return fireRateBase + fireRateAdd * (lvl - 1);
     }
 
     function tankDps(level) {
       var lvl = Math.max(1, Math.floor(level || 1));
-      var dmg = dmgBase * Math.pow(dmgMult, lvl - 1);
+      var tankCfg = getTankConfig(lvl);
+      var dmg = Number(tankCfg && tankCfg.stats && tankCfg.stats.baseDamage);
+      if (!(Number.isFinite(dmg) && dmg > 0)) {
+        dmg = dmgBase * Math.pow(dmgMult, lvl - 1);
+      }
       return dmg * fireRatePerSec(lvl);
     }
 
     function zombieHp(level) {
       var lvl = Math.max(1, Math.floor(level || 1));
+      var zombieType = getZombieType(lvl);
+      var explicitHealth = Number.isFinite(zombieType && zombieType.health) && zombieType.health > 0
+        ? zombieType.health
+        : (Number.isFinite(zombieType && zombieType.Health) && zombieType.Health > 0 ? zombieType.Health : NaN);
+      if (Number.isFinite(explicitHealth) && explicitHealth > 0) return explicitHealth;
       var dmgScale = Math.pow(dmgMult, lvl - 1);
       var extra = 1 + zombieHpExtra * Math.max(0, lvl - 1);
       return zombieHpBase * dmgScale * extra;

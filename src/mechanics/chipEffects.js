@@ -909,7 +909,7 @@
     /* ─── Mod 10: Fire Pool ─── */
     if (sm.firePool && opts.addDecal) {
       var eff = getModEffectConfig(10);
-      if (eff && isModEffectEnabled(10)) {
+      if (eff) {
         opts.addDecal({
           kind: 'chipPool', subKind: 'fire', x: x, y: y,
           r: eff.poolRadius,
@@ -917,7 +917,8 @@
           dps: b.dmg * eff.poolDpsMul,
           color: resolveModEffectColor(10, 'rgba(255,99,72,0.25)', eff.color),
           effectSprite: getModEffectSprite(10),
-          chipModId: 10
+          chipModId: 10,
+          codeVisualEnabled: isModEffectEnabled(10)
         });
       }
     }
@@ -925,7 +926,7 @@
     /* ─── Mod 11: Ice Zone ─── */
     if (sm.iceZone && opts.addDecal) {
       var iceEff = getModEffectConfig(11);
-      if (iceEff && isModEffectEnabled(11)) {
+      if (iceEff) {
         opts.addDecal({
           kind: 'chipPool', subKind: 'ice', x: x, y: y,
           r: iceEff.poolRadius,
@@ -934,7 +935,8 @@
           slowFactor: iceEff.slowFactor,
           color: resolveModEffectColor(11, 'rgba(112,161,255,0.2)', iceEff.color),
           effectSprite: getModEffectSprite(11),
-          chipModId: 11
+          chipModId: 11,
+          codeVisualEnabled: isModEffectEnabled(11)
         });
       }
     }
@@ -942,7 +944,7 @@
     /* ─── Mod 12: Electro Node ─── */
     if (sm.electroNode) {
       var elEff = getModEffectConfig(12);
-      if (elEff && isModEffectEnabled(12)) {
+      if (elEff) {
         _electroNodes.push({
           x: x, y: y,
           life: elEff.nodeLife,
@@ -953,7 +955,8 @@
           timer: 0,
           color: resolveModEffectColor(12, 'rgba(236,204,104,0.3)', elEff.color),
           effectSprite: getModEffectSprite(12),
-          chipModId: 12
+          chipModId: 12,
+          codeVisualEnabled: isModEffectEnabled(12)
         });
       }
     }
@@ -961,7 +964,7 @@
     /* ─── Mod 13: Laser Mark ─── */
     if (sm.laserMark) {
       var laEff = getModEffectConfig(13);
-      if (laEff && isModEffectEnabled(13)) {
+      if (laEff) {
         _laserMarks.push({
           x: x, y: y,
           life: laEff.markLife,
@@ -971,7 +974,8 @@
           r: 18,
           color: resolveModEffectColor(13, 'rgba(255,71,87,0.35)', laEff.color),
           effectSprite: getModEffectSprite(13),
-          chipModId: 13
+          chipModId: 13,
+          codeVisualEnabled: isModEffectEnabled(13)
         });
       }
     }
@@ -979,7 +983,7 @@
     /* ─── Mod 14: Acid Pool ─── */
     if (sm.acidPool && opts.addDecal) {
       var acidEff = getModEffectConfig(14);
-      if (acidEff && isModEffectEnabled(14)) {
+      if (acidEff) {
         opts.addDecal({
           kind: 'chipPool', subKind: 'acid', x: x, y: y,
           r: acidEff.poolRadius,
@@ -988,7 +992,8 @@
           slowFactor: acidEff.slowFactor,
           color: resolveModEffectColor(14, 'rgba(184,255,59,0.18)', acidEff.color),
           effectSprite: getModEffectSprite(14),
-          chipModId: 14
+          chipModId: 14,
+          codeVisualEnabled: isModEffectEnabled(14)
         });
       }
     }

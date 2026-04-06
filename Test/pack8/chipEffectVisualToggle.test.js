@@ -65,7 +65,7 @@ function createChipEffectsApi(config) {
 
 console.log('\n── Pack 8: Chip effect visual toggle ──');
 
-test('CFX-1: effect.enabled=false disables lingering acid gameplay but keeps effectSprite lookup intact', () => {
+test('CFX-1: effect.enabled=false disables only code visual overlay while acid gameplay and effectSprite stay active', () => {
   const cfg = deepClone(chipsConfig);
   cfg.modifiers['14'].effect.enabled = false;
   const api = createChipEffectsApi(cfg);
@@ -80,7 +80,11 @@ test('CFX-1: effect.enabled=false disables lingering acid gameplay but keeps eff
     addDecal: function (decal) { decals.push(decal); },
   });
 
-  assertEqual(decals.length, 0, 'acid pool decal is not created when effect.enabled=false');
+  assertEqual(decals.length, 1, 'acid pool gameplay decal is still created when effect.enabled=false');
+  assertEqual(decals[0].codeVisualEnabled, false, 'code-driven visual overlay is disabled on the created decal');
+  assertEqual(decals[0].r, cfg.modifiers['14'].effect.poolRadius, 'gameplay radius still comes from effect config');
+  assertEqual(decals[0].life, cfg.modifiers['14'].effect.poolLife, 'gameplay lifetime still comes from effect config');
+  assertEqual(decals[0].dps, 200 * cfg.modifiers['14'].effect.poolDpsMul, 'gameplay DPS still comes from effect config');
   assert(api.getModEffectSprite(14) && api.getModEffectSprite(14).src, 'effectSprite override remains available even when lingering effect is disabled');
 });
 
@@ -101,6 +105,7 @@ test('CFX-2: effect.enabled=true keeps lingering acid visuals available', () => 
 
   assertEqual(decals.length, 1, 'acid pool decal is created');
   assert(decals[0].effectSprite && decals[0].effectSprite.src, 'visual sprite stays available when effect.enabled=true');
+  assertEqual(decals[0].codeVisualEnabled, true, 'code-driven overlay stays enabled when effect.enabled=true');
   assertEqual(decals[0].color, cfg.modifiers['14'].effect.color, 'configured visual color stays active');
   assertEqual(decals[0].r, cfg.modifiers['14'].effect.poolRadius, 'gameplay radius still comes from effect config');
   assertEqual(decals[0].life, cfg.modifiers['14'].effect.poolLife, 'gameplay lifetime still comes from effect config');

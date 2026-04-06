@@ -88,7 +88,7 @@ console.log('\n── Pack 8: Balance Lab optimizer locks ──');
 
 test('BOL-1: registry exposes required locked world-events surfaces', () => {
   const registry = Registry.createRegistry();
-  ['locked.worldEvents.idleWave.betweenWavesSec', 'locked.worldEvents.waveAttackMul', 'locked.worldEvents.waveHpMul'].forEach((id) => {
+  ['runtime.dmgMultPerLevel', 'runtime.fireRateBase', 'runtime.fireRateAddPerLevel', 'runtime.zombieHpBase', 'runtime.zombieHpExtraPerLevel', 'locked.worldEvents.idleWave.betweenWavesSec', 'locked.worldEvents.waveAttackMul', 'locked.worldEvents.waveHpMul'].forEach((id) => {
     const item = Registry.getItemById(registry, id);
     assert(item, 'registry contains ' + id);
     assert(item.locked, id + ' is flagged as locked');
@@ -141,17 +141,15 @@ test('BOL-3: unchecked tunables remain unchanged when only zombie hpMul is eligi
   assertEqual(Object.keys(result.runtimePending).length, 0, 'no JS runtime writes for JSON-only tuning');
 });
 
-test('BOL-4: runtime source patch touches only allowlisted game.js constants', () => {
+test('BOL-4: locked runtime BAL constants are excluded from game.js source patching', () => {
   const registry = Registry.createRegistry();
   const runtimeContext = Registry.createRuntimeContext(sources);
-  const expectedFireRateBase = Shared.formatNumber(runtimeContext.runtimeGame.fireRateBase + 0.1, 6).replace('.', '\\.');
   const updatedSources = Registry.applyRuntimeValuesToSources(sources, registry, runtimeContext, {
     'runtime.fireRateBase': runtimeContext.runtimeGame.fireRateBase + 0.1,
   });
-  assert(updatedSources['game.js'] !== sources['game.js'], 'game.js changes when allowlisted runtime constant changes');
+  assertEqual(updatedSources['game.js'], sources['game.js'], 'game.js remains unchanged when runtime surface is locked');
   assertEqual(updatedSources['src/config/worldEvents.js'], sources['src/config/worldEvents.js'], 'worldEvents config source remains untouched');
   assertEqual(updatedSources['src/systems/worldEventsRuntime.js'], sources['src/systems/worldEventsRuntime.js'], 'worldEvents runtime source remains untouched');
-  assert(new RegExp('fireRateBase:\\s*' + expectedFireRateBase).test(updatedSources['game.js']), 'patched source contains the updated fireRateBase');
 });
 
 test('BOL-5: absolute tunables read the live working-copy value instead of stale tunable snapshot', () => {
@@ -226,17 +224,17 @@ test('BOL-7: optimizer explanations stay specific for Russian registry groups', 
   const runtimeContext = Registry.createRuntimeContext(sources);
   const tunableState = Registry.createTunableState(registry, { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked });
   tunableState['balance.tank.attackDamageMul'].enabled = true;
-  tunableState['balance.tank.attackDamageMul'].min = data.balance.tank.attackDamageMul;
-  tunableState['balance.tank.attackDamageMul'].max = 2.6;
+  tunableState['balance.tank.attackDamageMul'].min = 0.5;
+  tunableState['balance.tank.attackDamageMul'].max = data.balance.tank.attackDamageMul;
   tunableState['balance.tank.attackDamageMul'].step = 0.01;
-  tunableState['balance.tank.attackDamageMul'].directionBias = 'up';
+  tunableState['balance.tank.attackDamageMul'].directionBias = 'down';
   const profiles = Shared.createDefaultProfiles(data);
   const goals = Shared.createDefaultGoals(data, profiles);
   const goal = goals['band-1-10'].base;
-  goal.zombieTtkMin *= 0.55;
-  goal.zombieTtkMax *= 0.7;
-  goal.packTtkMin *= 0.55;
-  goal.packTtkMax *= 0.7;
+  goal.zombieTtkMin *= 2.2;
+  goal.zombieTtkMax *= 2.8;
+  goal.packTtkMin *= 2.2;
+  goal.packTtkMax *= 2.8;
   const scenario = profiles['band-1-10'].base;
   const result = Optimizer.optimize({
     data: data,
@@ -267,12 +265,14 @@ test('BOL-9: goal tuning presets reshape default goals before expert-table overr
   assert(zombieThreat.fenceSurvivalMaxSec < baseline.fenceSurvivalMaxSec, 'zombie threat preset lowers target fence survival window');
 });
 
-test('BOL-10: optimizer no longer ignores catastrophic manual top-band tank damage outlier', () => {
+test('BOL-10: optimizer can repair catastrophic top-band tank damage collapse with the band-wide series surface', () => {
   const data = buildData();
   const registry = Registry.createRegistry();
   const runtimeContext = Registry.createRuntimeContext(sources);
   const tunableState = Registry.createTunableState(registry, { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked });
-  data.tanks.tank_lvl60.stats.baseDamage = 61000000000;
+  for (let level = 51; level <= 60; level++) {
+    data.tanks['tank_lvl' + level].stats.baseDamage = Math.max(1, Math.round(data.tanks['tank_lvl' + level].stats.baseDamage * 0.01));
+  }
   tunableState['series.tank.baseDamage'].enabled = true;
   tunableState['series.tank.baseDamage'].bands = ['band-51-60'];
   const profiles = Shared.createDefaultProfiles(data);
@@ -288,9 +288,10 @@ test('BOL-10: optimizer no longer ignores catastrophic manual top-band tank dama
     selectedScenarioIds: [manual.id],
   });
   const change = result.changedTunables.find((item) => item.id === 'series.tank.baseDamage');
-  assert(result.scoreAfter < result.scoreBefore, 'optimizer should find a better score for the broken level-60 scenario');
-  assert(change, 'optimizer should choose the tank base damage series when it is the enabled repair surface');
-  assert(change.to < change.from, 'optimizer should push the tank damage curve downward for the catastrophic outlier');
+  assert(result.scoreAfter < result.scoreBefore, 'optimizer should find a better score for the collapsed top-band scenario');
+  assert(change, 'optimizer should choose the tank base damage series when the whole band is broken');
+  assert(change.to > change.from, 'optimizer should push the tank damage curve upward for the collapsed band');
+  assert(result.edit.tanks.tank_lvl60.stats.baseDamage > data.tanks.tank_lvl60.stats.baseDamage, 'series surface should raise level-60 baseDamage after collapse');
 });
 
 test('BOL-11: optimizer can repair catastrophic manual top-band zombie explicit Health outlier', () => {
@@ -372,6 +373,105 @@ test('BOL-13: anchor zombie Health surface can normalize a catastrophic level-60
   assert(result.scoreAfter < result.scoreBefore, 'anchor zombie-health surface should improve the broken level-60 scenario');
   assert(result.edit.zombies.types[59].Health < 10000000, 'anchor surface should bring level-60 explicit Health back to a sane numeric range');
   assertEqual(result.edit.zombies.types[58].Health, data.zombies.types[58].Health, 'anchor surface must not rescale neighboring zombie levels in the band');
+});
+
+test('BOL-14: low-band anchor surfaces keep tank and zombie seams monotonic', () => {
+  const data = buildData();
+  const registry = Registry.createRegistry();
+  const tankAnchor = Registry.getItemById(registry, 'series.tank.baseDamage.anchor');
+  const zombieAnchor = Registry.getItemById(registry, 'series.zombie.health.anchor');
+  const ctx = { edit: data };
+
+  Registry.applyTunable(ctx, tankAnchor, 0.1, { bands: ['band-1-10'] });
+  Registry.applyTunable(ctx, zombieAnchor, 0.1, { bands: ['band-1-10'] });
+
+  assert(data.tanks.tank_lvl10.stats.baseDamage >= data.tanks.tank_lvl9.stats.baseDamage, 'tank level-10 anchor must not fall below level 9');
+  assert(data.zombies.types[9].Health >= data.zombies.types[8].Health, 'zombie level-10 anchor must not fall below level 9');
+});
+
+test('BOL-15: banded optimizer covers multiple ranges and still improves extreme TTK goals', () => {
+  const data = buildData();
+  const registry = Registry.createRegistry();
+  const runtimeContext = Registry.createRuntimeContext(sources);
+  const tunableState = Registry.createTunableState(registry, { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked });
+  ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'].forEach((id) => {
+    tunableState[id].enabled = true;
+  });
+  const profiles = Shared.createDefaultProfiles(data);
+  const goals = Shared.createDefaultGoals(data, profiles, { desiredTtk: 0.1, zombiePressure: 50, progressionPressure: 50 });
+  const singlePass = Optimizer.optimize({
+    data: data,
+    profiles: profiles,
+    goals: goals,
+    registry: registry,
+    tunableState: tunableState,
+    context: { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked },
+  });
+  const banded = Optimizer.optimizeByBands({
+    data: data,
+    profiles: profiles,
+    goals: goals,
+    registry: registry,
+    tunableState: tunableState,
+    context: { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked },
+    focusTunableIds: ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'],
+  });
+  const touchedBands = new Set();
+  banded.changedTunables.forEach((change) => {
+    (change.bands || []).forEach((bandId) => touchedBands.add(bandId));
+  });
+  for (let level = 2; level <= 60; level++) {
+    assert(
+      banded.edit.tanks['tank_lvl' + level].stats.baseDamage >= banded.edit.tanks['tank_lvl' + (level - 1)].stats.baseDamage,
+      'banded auto-mode must keep tank baseDamage monotonic at level ' + level
+    );
+    assert(
+      banded.edit.zombies.types[level - 1].Health >= banded.edit.zombies.types[level - 2].Health,
+      'banded auto-mode must keep zombie Health monotonic at level ' + level
+    );
+  }
+
+  assert(singlePass.scoreAfter < singlePass.scoreBefore, 'single-pass auto-mode should still improve the extreme-goal baseline');
+  assert(banded.scoreAfter < banded.scoreBefore, 'banded auto-mode should still improve the extreme-goal score against the repaired baseline');
+  assert(touchedBands.size > 1, 'banded auto-mode should touch more than one level range');
+  assert((banded.bandPasses || []).length > 1, 'banded auto-mode should record more than one band pass');
+});
+
+test('BOL-16: base-only scenario selection avoids surrogate-profile conflicts for desired TTK auto-mode', () => {
+  const data = buildData();
+  const registry = Registry.createRegistry();
+  const runtimeContext = Registry.createRuntimeContext(sources);
+  const tunableState = Registry.createTunableState(registry, { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked });
+  ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'].forEach((id) => {
+    tunableState[id].enabled = true;
+  });
+  const profiles = Shared.createDefaultProfiles(data);
+  const goals = Shared.createDefaultGoals(data, profiles, { desiredTtk: 0.1, zombiePressure: 50, progressionPressure: 50 });
+  const baseScenarioIds = Shared.getScenarioList(profiles)
+    .filter((scenario) => scenario.profileKey === 'base')
+    .map((scenario) => scenario.id);
+  const mixedProfiles = Optimizer.optimizeByBands({
+    data: data,
+    profiles: profiles,
+    goals: goals,
+    registry: registry,
+    tunableState: tunableState,
+    context: { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked },
+    focusTunableIds: ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'],
+  });
+  const baseOnly = Optimizer.optimizeByBands({
+    data: data,
+    profiles: profiles,
+    goals: goals,
+    registry: registry,
+    tunableState: tunableState,
+    context: { edit: data, runtimeGame: runtimeContext.runtimeGame, runtimeLocked: runtimeContext.runtimeLocked },
+    selectedScenarioIds: baseScenarioIds,
+    focusTunableIds: ['series.tank.baseDamage', 'series.zombie.health', 'series.bullet.addDamage'],
+  });
+
+  assert(baseOnly.afterRows.every((row) => row.scenario.profileKey === 'base'), 'base-only path should evaluate only base rows');
+  assert(baseOnly.scoreAfter < mixedProfiles.scoreAfter, 'base-only auto-mode should fit desired TTK better than mixed surrogate profiles');
 });
 
 test('BOL-8: balance-sim --json mode returns clean parseable JSON for matrix and optimizer', () => {

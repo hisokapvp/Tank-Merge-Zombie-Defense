@@ -415,9 +415,9 @@ const BAL = {
   buyCostLv1: 50,
 
   dmgBase: 7,
-  dmgMultPerLevel: 1.48,
-  fireRateBase: 0.3,
-  fireRateAddPerLevel: 0.035,
+  dmgMultPerLevel: 1,
+  fireRateBase: 1,
+  fireRateAddPerLevel: 1,
   rangeBase: 315,
   rangePerLevel: 10,
 
@@ -437,7 +437,7 @@ const BAL = {
   zombiePerSideTarget: 38,
   zombiePerSideTolerance: 5,
   corpseMaxCount: 150,
-  zombieHpBase: 44,
+  zombieHpBase: 1,
   zombieHpVar: 0.22,
   omegaBase: 0.72,
   omegaVar: 0.18,
@@ -451,7 +451,7 @@ const BAL = {
   zombieShadowH: 5,
   zombieShadowY: 8,
   zombieGroundOffset: 6,
-  zombieHpExtraPerLevel: 0.12,
+  zombieHpExtraPerLevel: 1,
   zombieLevelOmegaMul: 0.08,
 
   edgeSpawnRadius: 520,
@@ -5049,14 +5049,18 @@ function tankStats(level){
   const balAtkSpeedMul = getTankBalanceMul(level, 'attackSpeedMul');
   const fallbackBaseDamage = BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level-1);
   const bulletInfo = getBulletConfigForTankLevel(level);
+  const tankCfgStats = bulletInfo.tankCfg && bulletInfo.tankCfg.stats ? bulletInfo.tankCfg.stats : null;
   const tankBaseDamage = bulletInfo.tankCfg && bulletInfo.tankCfg.stats && Number.isFinite(bulletInfo.tankCfg.stats.baseDamage)
     ? bulletInfo.tankCfg.stats.baseDamage
     : fallbackBaseDamage;
+  const tankAttackSpeed = Number.isFinite(tankCfgStats && tankCfgStats.attackSpeed) && tankCfgStats.attackSpeed > 0
+    ? tankCfgStats.attackSpeed
+    : 1;
   const bulletAddDamage = bulletInfo.bulletCfg && Number.isFinite(bulletInfo.bulletCfg.addDamage)
     ? bulletInfo.bulletCfg.addDamage
     : 0;
   const shotBaseDamage = Math.max(0, tankBaseDamage + bulletAddDamage);
-  const fr = BAL.fireRateBase + BAL.fireRateAddPerLevel*(level-1);
+  const fr = tankAttackSpeed;
   const Combat = window.Game && window.Game.Combat;
   const range = Combat ? Combat.getShootRange({ level }, state) : (BAL.rangeBase + BAL.rangePerLevel*(level-1));
   const prof = projectileProfile(level, bulletInfo.bulletCfg);
@@ -6498,6 +6502,7 @@ function nextZombieRenderOrder(){
 function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
   const level = pickZombieLevel();
   const t = ZombieSprites.pickTypeByLevel ? ZombieSprites.pickTypeByLevel(level) : ZombieSprites.pickType();
+  const spawnedAtSec = nowSec();
 
   const theta = Number.isFinite(slotIndex)
     ? zombieSlotTheta(slotIndex, slotCount)
@@ -6553,6 +6558,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     attackFrameRateFps: animCfg.attackFps,
     deathFrameRateFps: animCfg.deathFps,
     deathCommonFrameRateFps: animCfg.deathCommonFps,
+    spawnTimeSec: spawnedAtSec,
+    failSafeTeleported: false,
     breached: false,
   };
 
@@ -6722,6 +6729,59 @@ function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
   }
 
   return { x: nextX, y: nextY };
+}
+
+function isZombieDecorBlockedAt(z, x, y){
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return true;
+  const walls = Array.isArray(state.wallDecors) ? state.wallDecors : null;
+  if (!walls || !walls.length) return false;
+  const zR = zombieCollisionRadius(z);
+  for (let i = 0; i < walls.length; i++) {
+    const wall = walls[i];
+    if (!wall || !wall.isWall) continue;
+    const wallR = Number.isFinite(wall.blockR) ? Math.max(0, wall.blockR) : 0;
+    if (wallR <= 0) continue;
+    const dx = x - wall.x;
+    const dy = y - wall.y;
+    const minDist = wallR + zR;
+    if (dx * dx + dy * dy < minDist * minDist) return true;
+  }
+  return false;
+}
+
+function findZombieFenceFailSafeTeleport(z){
+  const fenceLimit = zombieFenceLimit(z);
+  const baseTheta = Number.isFinite(z.anchorTheta) ? z.anchorTheta : (Number.isFinite(z.theta) ? z.theta : 0);
+  const thetaStep = Math.PI / 24;
+  const thetaOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+  for (let i = 0; i < thetaOffsets.length; i++) {
+    const theta = baseTheta + thetaOffsets[i] * thetaStep;
+    const offset = 20 + Math.random() * 10;
+    const r = fenceLimit + offset;
+    const x = center.x + Math.cos(theta) * r;
+    const y = center.y + Math.sin(theta) * r;
+    if (isZombieDecorBlockedAt(z, x, y)) continue;
+    return { theta: theta, r: r };
+  }
+  return { theta: baseTheta, r: fenceLimit + 25 };
+}
+
+function maybeTeleportZombieNearFence(z, now){
+  if (!z || z.state === 'dying' || z.breached || z.failSafeTeleported) return false;
+  if (!Number.isFinite(z.spawnTimeSec) || now - z.spawnTimeSec < 20) return false;
+  const fenceLimit = zombieFenceLimit(z);
+  if (z.r <= fenceLimit + 20) return false;
+  const candidate = findZombieFenceFailSafeTeleport(z);
+  if (!candidate) return false;
+  z.theta = candidate.theta;
+  z.anchorTheta = candidate.theta;
+  z.r = Math.max(fenceLimit + 20, candidate.r);
+  z.targetR = z.r;
+  z.side = getSideByPosition(center.x + Math.cos(z.theta) * z.r, center.y + Math.sin(z.theta) * z.r);
+  z.failSafeTeleported = true;
+  z._unstickTimer = 0;
+  z._unstickCheckR = z.r;
+  return true;
 }
 
 // All zombies use fixed visual size (no scaling by level).
@@ -7627,23 +7687,26 @@ function zombieFenceLimit(z){
   const localY = dy * (z.r || 0);
   const worldX = center.x + localX;
   const worldY = center.y + localY;
-  const sideAtPoint = getSideByPosition(worldX, worldY);
+  const sideAtPoint = typeof getSideByPosition === 'function' ? getSideByPosition(worldX, worldY) : sideKey;
   const breachPad = Math.max(2, zombieCollisionRadius(z) * 0.45);
-  const activeBreach = getActiveBreachAtPoint(sideAtPoint, localX, localY, breachPad);
+  const activeBreach = typeof getActiveBreachAtPoint === 'function'
+    ? getActiveBreachAtPoint(sideAtPoint, localX, localY, breachPad)
+    : null;
   if (activeBreach) {
     z.breached = true;
     z.breachSegmentId = activeBreach.segmentId;
-    return getFenceInnerLimit(z);
+    return typeof getFenceInnerLimit === 'function' ? getFenceInnerLimit(z) : outerLimit;
   }
 
-  const segByPoint = pickFenceSegmentByPoint(worldX, worldY);
+  const segByPoint = typeof pickFenceSegmentByPoint === 'function' ? pickFenceSegmentByPoint(worldX, worldY) : null;
   const segByPointBrokenAtPoint = !!(
     segByPoint
     && segByPoint.broken
     && segByPoint.holeAabb
+    && typeof pointInAabb === 'function'
     && pointInAabb(localX, localY, segByPoint.holeAabb, Math.max(1, zombieCollisionRadius(z) * 0.2))
   );
-  const segByTheta = getFenceSegmentForTheta(z.theta);
+  const segByTheta = typeof getFenceSegmentForTheta === 'function' ? getFenceSegmentForTheta(z.theta) : null;
   const seg = segByPointBrokenAtPoint ? segByPoint : segByTheta;
   if (seg && seg.broken && !z.breached && z.r <= outerLimit + Math.max(2, BAL.fenceWidth * 0.15)) {
     z.breached = true;
@@ -7651,11 +7714,11 @@ function zombieFenceLimit(z){
   }
   if (z.breached) {
     // Zombie is at an active breach point — allow passage
-    if (activeBreach) return getFenceInnerLimit(z);
+    if (activeBreach) return typeof getFenceInnerLimit === 'function' ? getFenceInnerLimit(z) : outerLimit;
     // Current segment is broken — allow passage
-    if (segByPointBrokenAtPoint) return getFenceInnerLimit(z);
+    if (segByPointBrokenAtPoint) return typeof getFenceInnerLimit === 'function' ? getFenceInnerLimit(z) : outerLimit;
     // Zombie is deep inside (past the fence) — don't push back out
-    const innerLimit = getFenceInnerLimit(z);
+    const innerLimit = typeof getFenceInnerLimit === 'function' ? getFenceInnerLimit(z) : outerLimit;
     const deepThreshold = innerLimit + Math.max(2, BAL.fenceWidth * 0.2);
     if (z.r <= deepThreshold) return innerLimit;
     // Zombie is at an intact segment near fence edge — reset breach status
@@ -7761,7 +7824,8 @@ function startZombieDying(z){
 }
 
 function stepZombies(dt){
-  const slow = (state.empUntil && nowSec() < state.empUntil) ? 0.5 : 1;
+  const now = nowSec();
+  const slow = (state.empUntil && now < state.empUntil) ? 0.5 : 1;
   const attackMult = getZombieAttackMultipliers();
   const speedMul = attackMult.speedMult;
   const attackActive = isZombieAttackModeActive();
@@ -7808,7 +7872,7 @@ function stepZombies(dt){
     const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
 
     // ── Chip: slow from ice/acid pools (mods 11, 14) ──
-    if (z.chipSlowUntil && (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000) < z.chipSlowUntil) {
+    if (z.chipSlowUntil && now < z.chipSlowUntil) {
       balSpeedMul *= Math.max(0.05, z.chipSlowFactor || 1);
     } else {
       z.chipSlowFactor = 1; // reset
@@ -7930,11 +7994,13 @@ function stepZombies(dt){
       }
     }
 
+    maybeTeleportZombieNearFence(z, now);
+
     const targetNow = shouldAttackTargets ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
     // ── Chip: calming effect (mod 9) — suppress attacks ──
-    const isCalmed = z.calmUntil && (typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000) < z.calmUntil;
+    const isCalmed = z.calmUntil && now < z.calmUntil;
 
     if (!shouldAttackTargets || isCalmed) {
       z.attackState = 'walk';
@@ -8745,6 +8811,7 @@ function addDecal(d){
     chipModId: d.chipModId || 0,
     effectSprite: d.effectSprite || null,
     color: d.color || 'rgba(125,255,178,.14)',
+    codeVisualEnabled: d.codeVisualEnabled !== false,
   });
 }
 
@@ -14086,13 +14153,15 @@ function drawDecals(){
   for (const d of state.decals){
     const t = d.life / d.max;
     const elapsed = Math.max(0, (d.max || 0) - (d.life || 0));
-    ctx.save();
-    ctx.globalAlpha = 0.8 * t;
-    ctx.fillStyle = d.color;
-    ctx.beginPath();
-    ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
+    if (d.codeVisualEnabled !== false) {
+      ctx.save();
+      ctx.globalAlpha = 0.8 * t;
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
     drawChipEffectSprite(d.effectSprite, d.x, d.y, elapsed, 0.9 * t);
   }
 
@@ -14105,6 +14174,7 @@ function drawDecals(){
     const t = maxLife > 0 ? node.life / maxLife : 1;
     const elapsed = Math.max(0, maxLife - node.life);
     if (drawChipEffectSprite(node.effectSprite, node.x, node.y, elapsed, 0.95 * t)) continue;
+    if (node.codeVisualEnabled === false) continue;
     ctx.save();
     ctx.globalAlpha = 0.8 * t;
     ctx.fillStyle = node.color || 'rgba(236,204,104,.3)';
@@ -14119,6 +14189,7 @@ function drawDecals(){
     const t = maxLife > 0 ? mark.life / maxLife : 1;
     const elapsed = Math.max(0, maxLife - mark.life);
     if (drawChipEffectSprite(mark.effectSprite, mark.x, mark.y, elapsed, 0.95 * t)) continue;
+    if (mark.codeVisualEnabled === false) continue;
     ctx.save();
     ctx.globalAlpha = 0.85 * t;
     ctx.strokeStyle = mark.color || 'rgba(255,71,87,.35)';

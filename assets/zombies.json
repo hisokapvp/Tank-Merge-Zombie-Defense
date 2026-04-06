@@ -156,7 +156,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 38
+      "Health": 1337
     },
     {
       "id": "zombie_lvl2",
@@ -212,7 +212,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 63
+      "Health": 1364
     },
     {
       "id": "zombie_lvl3",
@@ -268,7 +268,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 103
+      "Health": 1390
     },
     {
       "id": "zombie_lvl4",
@@ -324,7 +324,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 166
+      "Health": 1416
     },
     {
       "id": "zombie_lvl5",
@@ -380,7 +380,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 267
+      "Health": 1667
     },
     {
       "id": "zombie_lvl6",
@@ -436,7 +436,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 429
+      "Health": 1955
     },
     {
       "id": "zombie_lvl7",
@@ -492,7 +492,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 682
+      "Health": 2243
     },
     {
       "id": "zombie_lvl8",
@@ -548,7 +548,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1079
+      "Health": 2536
     },
     {
       "id": "zombie_lvl9",
@@ -604,7 +604,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1702
+      "Health": 2829
     },
     {
       "id": "zombie_lvl10",
@@ -660,7 +660,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 25
+      "Health": 3123
     },
     {
       "id": "zombie_lvl11",
@@ -716,7 +716,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4185
+      "Health": 3320
     },
     {
       "id": "zombie_lvl12",
@@ -764,7 +764,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6531
+      "Health": 3353
     },
     {
       "id": "zombie_lvl13",
@@ -812,7 +812,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 10165
+      "Health": 3385
     },
     {
       "id": "zombie_lvl14",
@@ -860,7 +860,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 15785
+      "Health": 3464
     },
     {
       "id": "zombie_lvl15",
@@ -908,7 +908,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 24456
+      "Health": 3499
     },
     {
       "id": "zombie_lvl16",
@@ -956,7 +956,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 37816
+      "Health": 3618
     },
     {
       "id": "zombie_lvl17",
@@ -1004,7 +1004,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 58366
+      "Health": 3908
     },
     {
       "id": "zombie_lvl18",
@@ -1052,7 +1052,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 89931
+      "Health": 4148
     },
     {
       "id": "zombie_lvl19",
@@ -1100,7 +1100,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 138352
+      "Health": 4359
     },
     {
       "id": "zombie_lvl20",
@@ -1148,7 +1148,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1950
+      "Health": 6443
     },
     {
       "id": "zombie_lvl21",
@@ -1196,7 +1196,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 326063
+      "Health": 7827
     },
     {
       "id": "zombie_lvl22",
@@ -1244,7 +1244,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 499605
+      "Health": 8192
     },
     {
       "id": "zombie_lvl23",
@@ -1292,7 +1292,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 764623
+      "Health": 8726
     },
     {
       "id": "zombie_lvl24",
@@ -1340,7 +1340,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1168949
+      "Health": 9070
     },
     {
       "id": "zombie_lvl25",
@@ -1388,7 +1388,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1785259
+      "Health": 9480
     },
     {
       "id": "zombie_lvl26",
@@ -1436,7 +1436,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 2723899
+      "Health": 10054
     },
     {
       "id": "zombie_lvl27",
@@ -1484,7 +1484,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4152312
+      "Health": 10444
     },
     {
       "id": "zombie_lvl28",
@@ -1532,7 +1532,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6324416
+      "Health": 10837
     },
     {
       "id": "zombie_lvl29",
@@ -1580,7 +1580,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 9625045
+      "Health": 11421
     },
     {
       "id": "zombie_lvl30",
@@ -1628,7 +1628,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 134326
+      "Health": 11488
     },
     {
       "id": "zombie_lvl31",
@@ -1676,7 +1676,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 22243214
+      "Health": 12447
     },
     {
       "id": "zombie_lvl32",
@@ -1724,7 +1724,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 33778737
+      "Health": 13067
     },
     {
       "id": "zombie_lvl33",
@@ -1772,7 +1772,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 51263527
+      "Health": 13515
     },
     {
       "id": "zombie_lvl34",
@@ -1820,7 +1820,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 77751095
+      "Health": 13966
     },
     {
       "id": "zombie_lvl35",
@@ -1868,7 +1868,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 117855612
+      "Health": 14674
     },
     {
       "id": "zombie_lvl36",
@@ -1916,7 +1916,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 178546612
+      "Health": 15103
     },
     {
       "id": "zombie_lvl37",
@@ -1964,7 +1964,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 270347039
+      "Health": 15573
     },
     {
       "id": "zombie_lvl38",
@@ -2012,7 +2012,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 409138737
+      "Health": 16335
     },
     {
       "id": "zombie_lvl39",
@@ -2060,7 +2060,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 618882507
+      "Health": 16822
     },
     {
       "id": "zombie_lvl40",
@@ -2108,7 +2108,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 8587140
+      "Health": 17274
     },
     {
       "id": "zombie_lvl41",
@@ -2156,7 +2156,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1414115360
+      "Health": 17471
     },
     {
       "id": "zombie_lvl42",
@@ -2204,7 +2204,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 2136191922
+      "Health": 17963
     },
     {
       "id": "zombie_lvl43",
@@ -2252,7 +2252,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3225649801
+      "Health": 18457
     },
     {
       "id": "zombie_lvl44",
@@ -2300,7 +2300,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4868808627
+      "Health": 19267
     },
     {
       "id": "zombie_lvl45",
@@ -2348,7 +2348,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 7346210212
+      "Health": 19781
     },
     {
       "id": "zombie_lvl46",
@@ -2396,7 +2396,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 11080143810
+      "Health": 20299
     },
     {
       "id": "zombie_lvl47",
@@ -2444,7 +2444,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16706086830
+      "Health": 21210
     },
     {
       "id": "zombie_lvl48",
@@ -2492,7 +2492,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 25180070015
+      "Health": 21706
     },
     {
       "id": "zombie_lvl49",
@@ -2540,7 +2540,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 37939994651
+      "Health": 22247
     },
     {
       "id": "zombie_lvl50",
@@ -2588,7 +2588,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 524452038
+      "Health": 23223
     },
     {
       "id": "zombie_lvl51",
@@ -2636,7 +2636,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 10699181906
+      "Health": 23385
     },
     {
       "id": "zombie_lvl52",
@@ -2684,7 +2684,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16106242750
+      "Health": 23899
     },
     {
       "id": "zombie_lvl53",
@@ -2732,7 +2732,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 24238990494
+      "Health": 24926
     },
     {
       "id": "zombie_lvl54",
@@ -2780,7 +2780,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 36468297742
+      "Health": 25505
     },
     {
       "id": "zombie_lvl55",
@@ -2828,7 +2828,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 54853076539
+      "Health": 26088
     },
     {
       "id": "zombie_lvl56",
@@ -2876,7 +2876,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 82484947180
+      "Health": 27141
     },
     {
       "id": "zombie_lvl57",
@@ -2924,7 +2924,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 124005264803
+      "Health": 27747
     },
     {
       "id": "zombie_lvl58",
@@ -2972,7 +2972,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 186380555513
+      "Health": 28357
     },
     {
       "id": "zombie_lvl59",
@@ -3020,7 +3020,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 280065312294
+      "Health": 29529
     },
     {
       "id": "zombie_lvl60",
@@ -3068,7 +3068,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 78676
+      "Health": 30117
     }
   ]
 }

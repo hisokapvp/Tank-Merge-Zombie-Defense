@@ -461,7 +461,7 @@
         "loop": true
       },
       "effect": {
-        "enabled": true,
+        "enabled": false,
         "sprite": "pool_fire",
         "frameWidth": 96,
         "frameHeight": 96,

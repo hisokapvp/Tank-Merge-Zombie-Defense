@@ -5,10 +5,22 @@
     return value < 10 ? value.toFixed(1) : Math.round(value).toString();
   }
 
+  function getTankConfig(level) {
+    return global.TankSprites && typeof global.TankSprites.getTank === 'function'
+      ? global.TankSprites.getTank(level)
+      : null;
+  }
+
   function compute(level, bal) {
     var cfg = bal || global.BAL || {};
-    var dmg = (cfg.dmgBase || 7) * Math.pow(cfg.dmgMultPerLevel || 1.48, level - 1);
-    var fireRate = (cfg.fireRateBase || 0.85) + (cfg.fireRateAddPerLevel || 0.075) * (level - 1);
+    var tankCfg = getTankConfig(level);
+    var statsCfg = tankCfg && tankCfg.stats ? tankCfg.stats : null;
+    var dmg = Number.isFinite(statsCfg && statsCfg.baseDamage)
+      ? statsCfg.baseDamage
+      : (cfg.dmgBase || 7) * Math.pow(cfg.dmgMultPerLevel || 1, level - 1);
+    var fireRate = Number.isFinite(statsCfg && statsCfg.attackSpeed) && statsCfg.attackSpeed > 0
+      ? statsCfg.attackSpeed
+      : (cfg.fireRateBase || 1);
     var range = 315;
     var barrels = level <= 5 ? 1 : level <= 10 ? 2 : 3;
     return {

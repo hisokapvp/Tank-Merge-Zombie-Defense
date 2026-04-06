@@ -1,5 +1,7 @@
 ﻿# Система: Combat
 
+> Обновлено: 2026-04-06.
+
 ## Где править
 - Бой и урон: `src/mechanics/combat.js`, `src/mechanics/combatProfiles.js`
 - Наведение/цели: `src/mechanics/targeting.js`
@@ -13,8 +15,16 @@
 - Не ломать интеграцию с `worldEvents`, `supercomputer`, `fence`.
 - Чип-модификаторы: эффекты реализованы в `chipEffects.js`, визуал/звуки настраиваются через `assets/chips.json`.
 
+## Asset-driven combat stats
+- `tankStats()` теперь читает `stats.baseDamage` и `stats.attackSpeed` из `assets/tanks.json`, добавляет `bullet.addDamage` из bullet config и только затем применяет runtime/balance modifiers. Старая fire-rate curve больше не является live source-of-truth для скорострельности: [game.js](../../../game.js#L5046-L5078), [assets/tanks.json](../../../assets/tanks.json#L1-L220).
+- Balance Lab shared kernel и editor analytics fallback используют тот же cadence-contract: `getTankStats()` и `getTankShotsPerMinute()` читают `stats.attackSpeed`, а explicit zombie `Health` остаётся каноническим HP surface для живой балансировки: [tools/balance-shared.js](../../../tools/balance-shared.js#L459-L487), [tools/balance-editor.html](../../../tools/balance-editor.html#L503-L513), [assets/zombies.json](../../../assets/zombies.json#L1-L220).
+
+## Lingering chip visual gate
+- Для lingering чипов `10..14` флаг `effect.enabled` больше не отключает gameplay. `applyImpactEffects()` всегда создаёт pool/node/mark runtime-object, если effect config существует; при этом `codeVisualEnabled` лишь гасит code-drawn fallback в `drawDecals()`, а `effectSprite` продолжает рендериться как отдельный visual path: [src/mechanics/chipEffects.js](../../../src/mechanics/chipEffects.js#L876-L1015), [game.js](../../../game.js#L8799-L8812), [game.js](../../../game.js#L14151-L14186).
+
 ## Zombie unstick mechanism
 - `stepZombies()` держит per-zombie `_unstickTimer` / `_unstickCheckR`: если зомби не продвинулся ≥ 2px к центру за 4 сек, scalar nudge `min(8, max(1, (r - fenceR)*0.15))` подталкивает его к fence. Не срабатывает для dying/breached зомби: [game.js](../../../game.js#L7820-L7840).
+- Поверх обычного unstick-path есть hard fail-safe: если decor блокирует зомби и через 20 секунд после спавна он всё ещё не дошёл до fence, `maybeTeleportZombieNearFence()` один раз телепортирует его к внешней стороне ограды на 20–30 px отступа и пробует повернуть landing point, пока не найдёт позицию вне decor. Это страхует soft-lock без телепорта за fence: [game.js](../../../game.js#L6734-L6778), [game.js](../../../game.js#L7826-L7997).
 
 ## Мини-проверка
 - Урон, cooldown и target selection предсказуемы.

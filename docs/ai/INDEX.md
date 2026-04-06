@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-04-02.
+> Обновлено: 2026-04-06.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -40,7 +40,10 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-04-03
+## Фокус документации на 2026-04-06
+- **Combat/balance source of truth теперь полностью asset-driven**: live runtime и Balance Lab читают `assets/tanks.json.stats.baseDamage/attackSpeed` и explicit `assets/zombies.json.types[].Health`, `desiredTtk` трактуется как абсолютные секунды, legacy runtime-кривые урона/скорострельности/HP зафиксированы на `x1` и исключены из optimizer/write-path, lingering chip mods `10..14` сохраняют gameplay + `effectSprite` даже при `effect.enabled=false`, а `stepZombies()` держит 20-секундный decor fail-safe teleport к внешней стороне fence. Читать: `docs/ai/SYSTEMS/balance-editor.md`, `docs/ai/SYSTEMS/combat.md`, `docs/ai/CHIP_EFFECTS_MAP.md`, `docs/ai/SYSTEMS/save.md`.
+
+### Предыдущий фокус (2026-04-03)
 - **Balance Lab стал каноническим repo-local balance workbench**: `tools/balance-editor.html` теперь документируется как host shell с публичным `window.BalanceEditorApp` seam, а `tools/balance-lab.js` поверх него поднимает profiles/goals/tunables/optimizer/diff-write workflow. Общие формулы вынесены в `tools/balance-shared.js`, registry/lock contract — в `tools/balance-registry.js`, а bounded solver — в `tools/balance-optimizer.js`; CLI parity живёт в `tools/balance-sim.js` через `--matrix`, `--optimize` и `--tunables`.
 - **Fence repair source of truth закреплён за `Game.FenceRepair`**: `game.js` больше документируется только как delegator для `getFenceRepairCostCoins()` / `tryRepairFenceSegmentAt()`, а сам runtime contract живёт в `src/mechanics/fenceRepair.js`: boot сначала ждёт `loadTankPrices()`, затем зовёт `init({ getFenceConfig })`; базовая цена ремонта резолвится по цепочке `assets/fence.json -> repair.costCoinsByLevel[level]` → `levels[level-1].repairCostCoins` / `levels[level-1].repair.costCoins` → legacy `buyTankCost(level)`, после чего применяется cumulative surcharge от `repairCount`.
 - **`assets/fence.json` получил явно задокументированный per-level repair contract**: top-level `repair.costCoinsByLevel` считается canonical конфигом цены ремонта по уровням, level-local overrides допускаются как fallback, а top-level `repair.costCoins` не рассматривается как текущий source of truth для runtime.

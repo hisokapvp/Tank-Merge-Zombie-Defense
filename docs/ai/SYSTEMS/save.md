@@ -1,6 +1,6 @@
 ﻿# Система: Save / Offline
 
-> Обновлено: 2026-04-01.
+> Обновлено: 2026-04-06.
 
 ## Где править
 - Хранилище: `src/persistence/storage.js`, `src/persistence/initialState.js`
@@ -14,6 +14,10 @@
 - Для офлайн-наград сохранять цепочку `offlineProgress -> offlineModal -> continueFlow`.
 - Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression, drones progression.
 - Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset, затем в `onAfterRestore` выполняется обязательное доведение runtime.
+
+## Offline combat snapshot contract
+- `Game.OfflineProgress` теперь в первую очередь читает `TankSprites.getTank(level).stats.baseDamage/attackSpeed` и `ZombieSprites.types[level-1].health|Health`. Legacy формулы `FIRE_RATE_BASE/FIRE_RATE_ADD_PER_LEVEL/DMG_MULT_PER_LEVEL/ZOMBIE_HP_*` остаются только fallback-path, если asset loader ещё не поднят. Это держит offline rewards в паритете с repaired `assets/tanks.json` / `assets/zombies.json`, а не со старыми runtime-кривыми: [src/persistence/offlineProgress.js](../../../src/persistence/offlineProgress.js#L1-L150), [assets/tanks.json](../../../assets/tanks.json#L1-L220), [assets/zombies.json](../../../assets/zombies.json#L1-L220).
+- Merge popup stats и showcase fire-loop зеркалят тот же asset snapshot: `mergePopupStats.js` и `mergePopup.js` больше не выводят damage/fire rate из legacy BAL curve, а берут `baseDamage/attackSpeed` прямо из `TankSprites`. Это важно для пользовательской parity между offline modal, merge preview и live combat: [src/ui/mergePopup/mergePopupStats.js](../../../src/ui/mergePopup/mergePopupStats.js#L9-L22), [src/ui/mergePopup.js](../../../src/ui/mergePopup.js#L256-L307).
 
 ## Achievement persistence contract
 - `createInitialState()` обязан seed'ить `achievements.rewarded`, `achievements.totalManualFenceRepairs`, `achievements.totalModifierTechUnlocks`, `achievements.totalDroneAcquisitions`, `achievements.totalNoRepairAttackWaveStreak`, `achievements.completedModifierTechs` и mirrored `stats.manualFenceRepairsCount/modifierTechUnlocksCount/droneAcquisitionsCount/noRepairAttackWaveStreakCount`; эти поля не должны появляться лениво уже после первого gameplay-события: [src/persistence/initialState.js](../../../src/persistence/initialState.js)

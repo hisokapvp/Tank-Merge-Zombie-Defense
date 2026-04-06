@@ -272,12 +272,12 @@ let changeCounter = 0;
 let runtimeGameState = null;
 const BASE_PATH = '../assets/';
 const ANALYTICS_RUNTIME = {
-  tankFireRateBase: 0.79,
-  tankFireRateAddPerLevel: 0.075,
-  zombieHpBase: 44,
+  tankFireRateBase: 1,
+  tankFireRateAddPerLevel: 1,
+  zombieHpBase: 1,
   tankDamagePointDivisor: 10000,
-  zombieHpExtraPerLevel: 0.12,
-  dmgMultPerLevel: 1.48,
+  zombieHpExtraPerLevel: 1,
+  dmgMultPerLevel: 1,
 };
 
 function getEditorDataBundle() {
@@ -506,7 +506,10 @@ function getTankShotsPerMinute(level) {
     const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
     return stats.shotsPerMinute;
   }
-  const fireRate = ANALYTICS_RUNTIME.tankFireRateBase + ANALYTICS_RUNTIME.tankFireRateAddPerLevel * Math.max(0, level - 1);
+  const tankCfg = EDIT.tanks['tank_lvl' + level] || {};
+  const fireRate = Number.isFinite(tankCfg && tankCfg.stats && tankCfg.stats.attackSpeed) && tankCfg.stats.attackSpeed > 0
+    ? tankCfg.stats.attackSpeed
+    : ANALYTICS_RUNTIME.tankFireRateBase;
   return Math.max(0, fireRate * getTankBalanceMultiplier(level, 'attackSpeedMul') * 60);
 }
 

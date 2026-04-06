@@ -28,6 +28,23 @@ global.Game = {};
 // ── Load modules ──
 const fs = require('fs');
 const path = require('path');
+const root = path.resolve(__dirname, '../..');
+
+function loadJSON(relPath) {
+  return JSON.parse(fs.readFileSync(path.join(root, 'assets', relPath), 'utf8'));
+}
+
+const tanksData = loadJSON('tanks.json');
+const zombiesData = loadJSON('zombies.json');
+
+global.TankSprites = {
+  getTank(level) {
+    return tanksData['tank_lvl' + level] || null;
+  },
+};
+global.Game.TankSprites = global.TankSprites;
+global.ZombieSprites = { types: zombiesData.types.map((type) => Object.assign({}, type, { health: Number.isFinite(type.Health) ? type.Health : type.health })) };
+global.Game.ZombieSprites = global.ZombieSprites;
 
 function loadModule(relPath) {
   const code = fs.readFileSync(path.resolve(__dirname, '../..', relPath), 'utf-8');
@@ -44,16 +61,15 @@ const OfflineProgress = global.Game.OfflineProgress;
 const RewardModel = global.Game.OfflineRewardModel;
 
 function fireRate(level) {
-  return 0.85 + 0.075 * (level - 1);
+  return tanksData['tank_lvl' + level].stats.attackSpeed;
 }
 function tankDps(level) {
-  const dmg = 7 * Math.pow(1.48, level - 1);
+  const dmg = tanksData['tank_lvl' + level].stats.baseDamage;
   return dmg * fireRate(level);
 }
 function zombieHp(level) {
-  const dmgScale = Math.pow(1.48, level - 1);
-  const extra = 1 + 0.12 * Math.max(0, level - 1);
-  return 44 * dmgScale * extra;
+  const type = zombiesData.types[level - 1];
+  return Number.isFinite(type.Health) ? type.Health : type.health;
 }
 function coinsPerShot(level) {
   const max = Math.pow(2, 20);

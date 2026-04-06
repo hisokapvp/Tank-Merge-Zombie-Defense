@@ -114,6 +114,29 @@ test('BLP-2: shared tank stats follow the runtime shot-damage contract for level
   assertApprox(stats.shotDamage, expectedShotDamage, 0.001, 'shared tank shot damage');
 });
 
+test('BLP-2b: shared tank fire rate follows tanks.json attackSpeed instead of legacy BAL curve', () => {
+  const scenario = Shared.ensureScenarioShape(data, {
+    bandId: Shared.getBandForLevel(10).id,
+    profileKey: 'manual',
+    tankLevel: 10,
+    zombieLevel: 10,
+    wallLevel: 7,
+    droneLevel: 2,
+    zombieCount: 1,
+    attackWindowSec: 12,
+    chipModId: null,
+    talents: Shared.createEmptyTalentRanks(),
+    modifiers: Shared.createIdentityModifiers(),
+  }, Shared.getBandForLevel(10).id, 'manual');
+  const stats = Shared.getTankStats(data, scenario);
+  const tankCfg = data.tanks.tank_lvl10;
+  const cannonRow = data.cannon[9];
+  const expectedShotsPerSec = tankCfg.stats.attackSpeed
+    * Shared.getTankBalanceMultiplier(data.balance, 10, 'attackSpeedMul')
+    * (1 + cannonRow[2] * cannonRow[4]);
+  assertApprox(stats.shotsPerSec, expectedShotsPerSec, 0.0001, 'shared shots/sec comes from tanks.json attackSpeed');
+});
+
 test('BLP-3: shared zombie stats use explicit Health from assets when it exists', () => {
   const zombieType = data.zombies.types[9];
   const scenario = Shared.ensureScenarioShape(data, {
@@ -141,6 +164,23 @@ test('BLP-4: shared fence repair cost matches Game.FenceRepair for level 4 and t
 
 test('BLP-5: shared coinsForShot parity matches Game.Economy base formula', () => {
   assertEqual(Shared.coinsForShot(10), globalRef.Game.Economy.coinsForShot(10), 'coinsForShot parity');
+});
+
+test('BLP-6: absolute desiredTtk goals stay stable even when source metrics drift', () => {
+  const profiles = Shared.createDefaultProfiles(data);
+  const tuning = { desiredTtk: 7, zombiePressure: 50, progressionPressure: 50 };
+  const baselineGoals = Shared.createDefaultGoals(data, profiles, tuning);
+  const mutatedData = Shared.deepClone(data);
+  mutatedData.zombies.types.forEach((type) => {
+    if (Number.isFinite(type.Health)) type.Health *= 1000;
+  });
+  const mutatedGoals = Shared.createDefaultGoals(mutatedData, profiles, tuning);
+  const baseline = baselineGoals['band-21-30'].average;
+  const mutated = mutatedGoals['band-21-30'].average;
+  const baselineMid = (baseline.zombieTtkMin + baseline.zombieTtkMax) * 0.5;
+  const mutatedMid = (mutated.zombieTtkMin + mutated.zombieTtkMax) * 0.5;
+  assertApprox(baselineMid, 7 * 1.06, 0.0001, 'goal midpoint uses absolute desiredTtk seconds');
+  assertApprox(mutatedMid, baselineMid, 0.0001, 'goal midpoint is not re-seeded from current broken ttk values');
 });
 
 console.log('\n═══════════════════════════');
