@@ -25,15 +25,15 @@
           }
         },
         {
-          "addDamage": 12,
-          "aoe": 1.08,
+          "addDamage": 0,
+          "aoe": 1,
           "sfx": "shootHeavy",
           "projectileKind": "he",
           "bulletSprite": {
             "src": "bullet_atlas.png",
-            "frame": { "x": 0, "y": 82, "w": 129, "h": 34 },
+            "frame": { "x": 0, "y": 117, "w": 32, "h": 32 },
             "frames": 10,
-            "frameRateFps": 20,
+            "frameRateFps": 10,
             "anchor": { "x": 0.5, "y": 0.5 },
             "scale": 1
           },

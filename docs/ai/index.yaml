@@ -1,5 +1,5 @@
 version: 2
-updated_at: 2026-03-06
+updated_at: 2026-04-12
 project_map: docs/ai/PROJECT_MAP.md
 maps:
   - docs/ai/GAME_JS_MAP.md
@@ -7,6 +7,7 @@ maps:
   - docs/ai/HANGAR_CHIPS_UI_MAP.md
   - docs/ai/SUPERCOMPUTER_MENU_MAP.md
   - docs/ai/SPRITE_LOADERS_MAP.md
+  - docs/ai/PRODUCTION_LINE_RENDER_MAP.md
   - docs/ai/CHIP_EFFECTS_MAP.md
   - docs/ai/TALENTS_V2_MAP.md
 entrypoints:
@@ -20,6 +21,13 @@ entrypoints:
     file: game.js
     symbol: draw
 systems:
+  phaser:
+    doc: docs/ai/SYSTEMS/phaser.md
+    tags: [phaser, hybrid, rollout, scenes]
+    files:
+      - src/phaser
+      - game.js
+      - index.html
   render:
     doc: docs/ai/SYSTEMS/render.md
     tags: [render, canvas, fps]
@@ -83,6 +91,31 @@ systems:
       - src/mechanics/garage.js
       - src/mechanics/levelFlow.js
       - game.js
+  achievements:
+    doc: docs/ai/SYSTEMS/achievements.md
+    tags: [achievements, rewards, progression]
+    files:
+      - src/mechanics/achievements.js
+      - src/mechanics/achievementRewards.js
+      - game.js
+  balance:
+    doc: docs/ai/SYSTEMS/balance-editor.md
+    tags: [balance, tooling, optimizer]
+    files:
+      - tools/balance-editor.html
+      - tools/balance-lab.js
+      - tools/balance-shared.js
+      - tools/balance-registry.js
+      - tools/balance-optimizer.js
+      - tools/balance-sim.js
+  fence:
+    doc: docs/ai/SYSTEMS/fence.md
+    tags: [fence, repair, layout]
+    files:
+      - src/mechanics/fenceRepair.js
+      - src/render/fenceLayout.js
+      - assets/fence.json
+      - game.js
   save:
     doc: docs/ai/SYSTEMS/save.md
     tags: [save, offline, persistence, continue-flow]
@@ -123,6 +156,13 @@ systems:
       - src/perf/mobileMode.js
       - src/perf/objectPool.js
       - src/perf/profiler.js
+  tutorial:
+    doc: docs/ai/SYSTEMS/tutorial-runtime.md
+    tags: [tutorial, onboarding, modal-pause]
+    files:
+      - src/config/tutorialSteps.js
+      - src/ui/tutorialRuntime.js
+      - src/persistence/initialState.js
 playbooks:
   - docs/ai/PLAYBOOKS/add-ui-widget.md
   - docs/ai/PLAYBOOKS/change-input-control.md

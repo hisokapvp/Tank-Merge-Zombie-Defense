@@ -11,7 +11,7 @@
 - Встроенная логика в `game.js` оставлена как fallback (поведение не зависит жёстко от порядка/наличия runtime-скриптов).
 - Talents v2 UI layout в `getTalentNodeLayoutV2(...)` берётся из `node.layout` (из `Game.TalentsV2.getTalentsByBranch(...)`) с fallback на legacy `TALENT_LAYOUT`.
 - Визуал ангара: `drawTankSlot(...)` использует stamp-reveal (`drawTankIconWithStampReveal`) на `10` полос; длительность берётся из `assets/tanks.json -> tankPrintDurationSec` (fallback `1.5s`); при restore сейва stamp отключён (`makeTank(..., { enableStamp:false })`).
-- Critical restart (`HP <= 5%`): snapshot сохраняет Talents v2 (`player.talentsV2.ranksById/freePoints` + `freeTalentPointsV2`) и post-restore выполняет reset fence runtime до L1 с последующим force-resync tier по сохранённому `maxTankLevelAchieved`.
+- Critical restart (`HP <= 5%`): snapshot сохраняет Talents v2 / дронов / прогресс суперкомпьютера, но retry-normalization возвращает purchase baseline той же симуляции: `buyCounts = {}`, `buyPrices = {}`, `maxTankLevelAchieved = 1`, `runtimeMaxTankLevelAchieved = 1`, `fenceLevel = 1`.
 
 ---
 
@@ -155,7 +155,7 @@
 | `setBigMenuOpen()` | [game.js](../../game.js#L7107-L7462) | Big menu open/close wiring |
 | `initBigMainMenu()` | [game.js](../../game.js#L7463-L7741) | Root menu event wiring |
 | `restartSimulationPartial()` | [game.js](../../game.js#L7742-L7760) | Partial restart orchestration |
-| `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization |
+| `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization, включая reset purchase baseline |
 | `resetGameState()` | [game.js](../../game.js#L7875-L7952) | Full reset; `new_game` path даёт baseline `computerLevel=0`, `xpToNext=50`, free talent points = `0` |
 | `updateTalentAbilitySlotsV2()` / `updateStageAbilitySlots()` | [game.js](../../game.js#L8688-L8838) | Runtime icon wiring, charge badges, cooldown fill и HUD slot delegation |
 | `updateTalentUI()` | [game.js](../../game.js#L8822-L9338) | Talents DOM refresh / HUD slots |

@@ -2509,9 +2509,10 @@ function finalizePartialRestartPostRestore(stateRef, options){
   const opts = options && typeof options === 'object' ? options : null;
   const preserveProgression = !!(opts && opts.preserveProgression);
   const forceFenceRuntimeReset = !!(opts && opts.forceFenceRuntimeReset);
+  const resetPurchaseProgress = !!(opts && opts.resetPurchaseProgress);
   if (targetState && typeof targetState === 'object') {
     targetState.savedFenceState = null;
-    if (!preserveProgression) {
+    if (!preserveProgression || resetPurchaseProgress) {
       targetState.buyCounts = {};
       targetState.buyPrices = {};
       targetState.maxTankLevelAchieved = 1;
@@ -6076,6 +6077,9 @@ function restoreFullState(saved){
   syncFenceTierWithMaxTankLevel(state, { force: true });
   if (forceFenceRuntimeResetOnLoad) {
     state.savedFenceState = null;
+    state.buyCounts = {};
+    state.buyPrices = {};
+    state.maxTankLevelAchieved = 1;
     state.runtimeMaxTankLevelAchieved = 1;
     state.currentFenceTierApplied = 1;
     state.fenceLevel = 1;
@@ -9507,7 +9511,7 @@ function cloneJsonSafe(value, fallback){
 
 function applyPreRetryRuntimeReset(targetState){
   if (!targetState || typeof targetState !== 'object') return;
-  targetState.coins = 120;
+  targetState.coins = 40;
   targetState.kills = 0;
   targetState.zombieWaveAtkMult = 1;
   targetState.zombieWaveHpMult = 1;
@@ -9577,12 +9581,6 @@ function buildPreRetryPayload(currentState){
   if (snapshot && WorldResetApi && typeof WorldResetApi.restoreProgressSnapshot === 'function') {
     WorldResetApi.restoreProgressSnapshot(payload, snapshot);
   }
-
-  payload.buyCounts = cloneJsonSafe(source.buyCounts, {});
-  payload.buyPrices = cloneJsonSafe(source.buyPrices, {});
-  payload.maxTankLevelAchieved = Number.isFinite(source.maxTankLevelAchieved)
-    ? Math.max(1, Math.floor(source.maxTankLevelAchieved))
-    : 1;
 
   applyPreRetryRuntimeReset(payload);
   // Defensive: ensure drones survive pre-retry reset
@@ -9744,7 +9742,7 @@ function applyCriticalRestartPostLoad(){
   clearAllTanksFromCells(state);
   spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
-  finalizePartialRestartPostRestore(state, { preserveProgression: true, forceFenceRuntimeReset: true });
+  finalizePartialRestartPostRestore(state, { preserveProgression: true, forceFenceRuntimeReset: true, resetPurchaseProgress: true });
   // Defensive: restore drones from pre-retry snapshot when current set is missing or downgraded
   var dronePayload = loadPreRetryPayloadFromAutoSlot();
   var fallbackDrones = null;

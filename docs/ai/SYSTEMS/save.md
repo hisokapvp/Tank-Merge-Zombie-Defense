@@ -82,7 +82,7 @@
 - `saveSlot()` обновляет meta только полем `lastSavedAt` (без передачи `name`), чтобы обычное сохранение не перетирало пользовательский rename.
 - Autosave `pre-retry` в слот `10` (`index 9`) выполняется на входе в critical-режим **один раз за critical-эпизод**.
 	- После выхода из critical-фазы флаг эпизода сбрасывается; при следующем входе autosave снова выполняется.
-	- Payload pre-retry: runtime сброшен (2 танка L1, стены L1, монеты 120), meta-прогресс сохранён (achievements, mods, talents, drones, damage points, cannon/fence upgrades).
+	- Payload pre-retry: runtime сброшен (1 стартовый танк L1 в ангаре, стены L1, монеты 40), meta-прогресс сохранён (achievements, mods, talents, drones, damage points, cannon/fence upgrades), а purchase-economy возвращена к baseline (`buyCounts = {}`, `buyPrices = {}`, `maxTankLevelAchieved = 1`).
 	- Ошибка autosave (quota/parse/доступ) не ломает critical flow: ставится runtime-флаг `preRetrySaveFailed`, показывается warning/toast.
 
 ## Critical modal и save/load сценарии

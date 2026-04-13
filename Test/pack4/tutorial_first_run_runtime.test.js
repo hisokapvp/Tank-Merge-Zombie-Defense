@@ -99,6 +99,34 @@ test('TUT-2: starter tank spawn and pre-retry reset keep the tank in hangar', ()
   assert(retryBlock.indexOf('makeTank(1, false)') !== -1, 'partial reset seeds hangar tank, not track tank');
 });
 
+test('TUT-2A: pre-retry payload does not preserve purchase inflation or buy-level progress', () => {
+  const retryIdx = gameJs.indexOf('function applyPreRetryRuntimeReset');
+  const retryEndIdx = gameJs.indexOf('function buildPreRetryPayload', retryIdx);
+  const retryBlock = retryIdx !== -1 && retryEndIdx !== -1 ? gameJs.slice(retryIdx, retryEndIdx) : '';
+  const payloadIdx = gameJs.indexOf('function buildPreRetryPayload');
+  const payloadEndIdx = gameJs.indexOf('function savePreRetryPayloadToAutoSlot', payloadIdx);
+  const payloadBlock = payloadIdx !== -1 && payloadEndIdx !== -1 ? gameJs.slice(payloadIdx, payloadEndIdx) : '';
+
+  assert(retryBlock.indexOf('targetState.coins = 40;') !== -1, 'pre-retry reset restores 40 starting coins');
+  assert(payloadBlock.indexOf('payload.buyCounts = cloneJsonSafe(source.buyCounts, {});') === -1, 'pre-retry payload no longer preserves buyCounts');
+  assert(payloadBlock.indexOf('payload.buyPrices = cloneJsonSafe(source.buyPrices, {});') === -1, 'pre-retry payload no longer preserves buyPrices');
+  assert(payloadBlock.indexOf('payload.maxTankLevelAchieved = Number.isFinite(source.maxTankLevelAchieved)') === -1, 'pre-retry payload no longer preserves maxTankLevelAchieved');
+});
+
+test('TUT-2B: critical restart normalization resets purchase progress for new and legacy retry payloads', () => {
+  const criticalIdx = gameJs.indexOf('function applyCriticalRestartPostLoad');
+  const criticalEndIdx = gameJs.indexOf('function performCriticalRestart', criticalIdx);
+  const criticalBlock = criticalIdx !== -1 && criticalEndIdx !== -1 ? gameJs.slice(criticalIdx, criticalEndIdx) : '';
+  assert(criticalBlock.indexOf('resetPurchaseProgress: true') !== -1, 'critical restart explicitly requests purchase-progress reset');
+
+  const restoreIdx = gameJs.indexOf('if (forceFenceRuntimeResetOnLoad) {');
+  const restoreEndIdx = gameJs.indexOf('// Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.', restoreIdx);
+  const restoreBlock = restoreIdx !== -1 && restoreEndIdx !== -1 ? gameJs.slice(restoreIdx, restoreEndIdx) : '';
+  assert(restoreBlock.indexOf('state.buyCounts = {};') !== -1, 'legacy retry payload load clears buyCounts');
+  assert(restoreBlock.indexOf('state.buyPrices = {};') !== -1, 'legacy retry payload load clears buyPrices');
+  assert(restoreBlock.indexOf('state.maxTankLevelAchieved = 1;') !== -1, 'legacy retry payload load clears maxTankLevelAchieved');
+});
+
 test('TUT-3: bootstrap seeds exactly one starter tank and initializes tutorial runtime', () => {
   assert(bootstrapJs.indexOf('opts.ensureStarterTanks(getState(), 1);') !== -1, 'bootstrap seeds one starter tank');
   assert(bootstrapJs.indexOf('windowObj.Game.TutorialRuntime.init({') !== -1, 'bootstrap initializes tutorial runtime');
