@@ -1,19 +1,20 @@
-        {
-          "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Nuclear modifiers may also define impactSpriteNormal for their non-nuclear shots. Optional effectSprite exposes lingering-effect art overrides independently from gameplay. Secondary lingering effects may be disabled via effect.enabled=false without removing effectSprite config.",
-          "atlas": "chip_effects_atlas.png",
-          "modifiers": {
-            "1": {
-              "name": "Мультивыстрел (I)",
-              "nameEn": "Multishot (I)",
-              "projectile": {
-                "sprite": "bullet_double",
-                "frameWidth": 103,
-                "frameHeight": 27,
-                "frames": 1,
-                "scale": 0.9,
-                "tint": "#ffd36b"
-              },
-              "impact": {
+{
+  "_comment": "Chip modifier sprite/sound configuration. Each key = modId. Optional bulletSprite / impactSprite allow per-modifier projectile and impact atlas overrides. Nuclear modifiers may also define impactSpriteNormal for their non-nuclear shots. Optional effectSprite exposes lingering-effect art overrides independently from gameplay. Secondary lingering effects may be disabled via effect.enabled=false without removing effectSprite config.",
+  "atlas": "chip_effects_atlas.png",
+  "modifiers": {
+    "1": {
+      "name": "Мультивыстрел (I)",
+      "nameEn": "Multishot (I)",
+      "projectile": {
+        "sprite": "bullet_double",
+        "frameWidth": 103,
+        "frameHeight": 27,
+        "frames": 1,
+        "scale": 0.9,
+        "tint": "#ffd36b"
+      },
+      "impact": {
+        "sprite": "impact_double",
         "frameWidth": 48,
         "frameHeight": 48,
         "frames": 4,
@@ -479,182 +480,53 @@
     },
     "11": {
       "name": "Ледяная зона",
-      "15": {
-        "name": "Мультивыстрел (II)",
-        "nameEn": "Multishot (II)",
-        "projectile": {
-          "sprite": "bullet_double",
-          "frameWidth": 32,
-          "frameHeight": 32,
-          "frames": 1,
-          "scale": 1.0,
-          "tint": "#ffe066"
-        },
-        "impact": {
-          "sprite": "impact_double",
-          "frameWidth": 48,
-          "frameHeight": 48,
-          "frames": 4,
-          "animSpeed": 12,
-          "scale": 1.0
-        },
-        "bulletSprite": {
-          "src": "chip_effects_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
-          "frames": 10,
-          "frameRateFps": 20,
-          "anchor": { "x": 0.5, "y": 0.5 },
-          "scale": 1
-        },
-        "impactSprite": {
-          "src": "bullet_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-          "frames": 9,
-          "frameRateFps": 20,
-          "scale": 0.5
-        },
-        "effect": null,
-        "sfx": {
-          "shoot": "shootNormal",
-          "impact": "impactNormal"
-        }
+      "nameEn": "Ice Zone",
+      "projectile": {
+        "sprite": "bullet_ice",
+        "frameWidth": 32,
+        "frameHeight": 32,
+        "frames": 2,
+        "scale": 1.0,
+        "tint": "#70a1ff"
       },
-      "16": {
-        "name": "Мультивыстрел (III)",
-        "nameEn": "Multishot (III)",
-        "projectile": {
-          "sprite": "bullet_double",
-          "frameWidth": 32,
-          "frameHeight": 32,
-          "frames": 1,
-          "scale": 1.1,
-          "tint": "#fff700"
-        },
-        "impact": {
-          "sprite": "impact_double",
-          "frameWidth": 48,
-          "frameHeight": 48,
-          "frames": 4,
-          "animSpeed": 12,
-          "scale": 1.1
-        },
-        "bulletSprite": {
-          "src": "chip_effects_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
-          "frames": 10,
-          "frameRateFps": 20,
-          "anchor": { "x": 0.5, "y": 0.5 },
-          "scale": 1
-        },
-        "impactSprite": {
-          "src": "bullet_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-          "frames": 9,
-          "frameRateFps": 20,
-          "scale": 0.5
-        },
-        "effect": null,
-        "sfx": {
-          "shoot": "shootNormal",
-          "impact": "impactNormal"
-        }
+      "impact": {
+        "sprite": "impact_ice",
+        "frameWidth": 64,
+        "frameHeight": 64,
+        "frames": 6,
+        "animSpeed": 12,
+        "scale": 1.3
       },
-      "17": {
-        "name": "Цепной заряд (II)",
-        "nameEn": "Chain Charge (II)",
-        "projectile": {
-          "sprite": "bullet_chain",
-          "frameWidth": 32,
-          "frameHeight": 32,
-          "frames": 2,
-          "scale": 1.1,
-          "tint": "#aee9ff"
-        },
-        "impact": {
-          "sprite": "impact_chain",
-          "frameWidth": 48,
-          "frameHeight": 48,
-          "frames": 5,
-          "animSpeed": 14,
-          "scale": 1.1
-        },
-        "bulletSprite": {
-          "src": "chip_effects_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
-          "frames": 10,
-          "frameRateFps": 20,
-          "anchor": { "x": 0.5, "y": 0.5 },
-          "scale": 1
-        },
-        "impactSprite": {
-          "src": "bullet_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-          "frames": 9,
-          "frameRateFps": 20,
-          "scale": 0.5
-        },
-        "effect": {
-          "sprite": "chain_bolt",
-          "frameWidth": 64,
-          "frameHeight": 16,
-          "frames": 3,
-          "animSpeed": 16,
-          "color": "#aee9ff"
-        },
-        "sfx": {
-          "shoot": "shootHeavy",
-          "impact": "impactChain",
-          "chain": "sfxChainJump"
-        }
+      "effectSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.9,
+        "loop": true
       },
-      "18": {
-        "name": "Цепной заряд (III)",
-        "nameEn": "Chain Charge (III)",
-        "projectile": {
-          "sprite": "bullet_chain",
-          "frameWidth": 32,
-          "frameHeight": 32,
-          "frames": 2,
-          "scale": 1.15,
-          "tint": "#e0f7fa"
-        },
-        "impact": {
-          "sprite": "impact_chain",
-          "frameWidth": 48,
-          "frameHeight": 48,
-          "frames": 5,
-          "animSpeed": 14,
-          "scale": 1.15
-        },
-        "bulletSprite": {
-          "src": "chip_effects_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
-          "frames": 10,
-          "frameRateFps": 20,
-          "anchor": { "x": 0.5, "y": 0.5 },
-          "scale": 1
-        },
-        "impactSprite": {
-          "src": "bullet_atlas.png",
-          "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-          "frames": 9,
-          "frameRateFps": 20,
-          "scale": 0.5
-        },
-        "effect": {
-          "sprite": "chain_bolt",
-          "frameWidth": 64,
-          "frameHeight": 16,
-          "frames": 3,
-          "animSpeed": 16,
-          "color": "#e0f7fa"
-        },
-        "sfx": {
-          "shoot": "shootHeavy",
-          "impact": "impactChain",
-          "chain": "sfxChainJump"
-        }
+      "effect": {
+        "enabled": false,
+        "sprite": "pool_ice",
+        "frameWidth": 96,
+        "frameHeight": 96,
+        "frames": 4,
+        "animSpeed": 6,
+        "color": "rgba(112,161,255,0.2)",
+        "poolLife": 4.5,
+        "slowFactor": 0.35,
+        "poolRadius": 45
       },
+      "sfx": {
+        "shoot": "shootNormal",
+        "impact": "impactIce",
+        "poolLoop": "sfxIceLoop"
+      }
+    },
+    "12": {
+      "name": "Электроузел",
+      "nameEn": "Electro Node",
+      "projectile": {
         "sprite": "bullet_electro",
         "frameWidth": 32,
         "frameHeight": 32,
@@ -800,11 +672,169 @@
         "tint": "#ffe066"
       },
       "impact": {
-        "sprite": "impact_double", "frameWidth": 48, "frameHeight": 48, "frames": 4, "animSpeed": 12, "scale": 1.0 },
-      "bulletSprite": { "src": "chip_effects_atlas.png", "frame": { "x": 0, "y": 0, "w": 103, "h": 27 }, "frames": 10, "frameRateFps": 20, "anchor": { "x": 0.5, "y": 0.5 }, "scale": 1 },
-      "impactSprite": { "src": "bullet_atlas.png", "frame": { "x": 0, "y": 0, "w": 81, "h": 81 }, "frames": 9, "frameRateFps": 20, "scale": 0.5 },
+        "sprite": "impact_double",
+        "frameWidth": 48,
+        "frameHeight": 48,
+        "frames": 4,
+        "animSpeed": 12,
+        "scale": 1.0
+      },
+      "bulletSprite": {
+        "src": "bullet_double.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.5
+      },
       "effect": null,
-      "sfx": { "shoot": "shootNormal", "impact": "impactNormal" }
+      "sfx": {
+        "shoot": "shootNormal",
+        "impact": "impactNormal"
+      }
+    },
+    "16": {
+      "name": "Мультивыстрел (III)",
+      "nameEn": "Multishot (III)",
+      "projectile": {
+        "sprite": "bullet_double",
+        "frameWidth": 32,
+        "frameHeight": 32,
+        "frames": 1,
+        "scale": 1.1,
+        "tint": "#fff700"
+      },
+      "impact": {
+        "sprite": "impact_double",
+        "frameWidth": 48,
+        "frameHeight": 48,
+        "frames": 4,
+        "animSpeed": 12,
+        "scale": 1.1
+      },
+      "bulletSprite": {
+        "src": "bullet_double.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.5
+      },
+      "effect": null,
+      "sfx": {
+        "shoot": "shootNormal",
+        "impact": "impactNormal"
+      }
+    },
+    "17": {
+      "name": "Цепной заряд (II)",
+      "nameEn": "Chain Charge (II)",
+      "projectile": {
+        "sprite": "bullet_chain",
+        "frameWidth": 32,
+        "frameHeight": 32,
+        "frames": 2,
+        "scale": 1.1,
+        "tint": "#aee9ff"
+      },
+      "impact": {
+        "sprite": "impact_chain",
+        "frameWidth": 48,
+        "frameHeight": 48,
+        "frames": 5,
+        "animSpeed": 14,
+        "scale": 1.1
+      },
+      "bulletSprite": {
+        "src": "chip_effects_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.5
+      },
+      "effect": {
+        "sprite": "chain_bolt",
+        "frameWidth": 64,
+        "frameHeight": 16,
+        "frames": 3,
+        "animSpeed": 16,
+        "color": "#aee9ff"
+      },
+      "sfx": {
+        "shoot": "shootHeavy",
+        "impact": "impactChain",
+        "chain": "sfxChainJump"
+      }
+    },
+    "18": {
+      "name": "Цепной заряд (III)",
+      "nameEn": "Chain Charge (III)",
+      "projectile": {
+        "sprite": "bullet_chain",
+        "frameWidth": 32,
+        "frameHeight": 32,
+        "frames": 2,
+        "scale": 1.15,
+        "tint": "#e0f7fa"
+      },
+      "impact": {
+        "sprite": "impact_chain",
+        "frameWidth": 48,
+        "frameHeight": 48,
+        "frames": 5,
+        "animSpeed": 14,
+        "scale": 1.15
+      },
+      "bulletSprite": {
+        "src": "chip_effects_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 103, "h": 27 },
+        "frames": 10,
+        "frameRateFps": 20,
+        "anchor": { "x": 0.5, "y": 0.5 },
+        "scale": 1
+      },
+      "impactSprite": {
+        "src": "bullet_atlas.png",
+        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
+        "frames": 9,
+        "frameRateFps": 20,
+        "scale": 0.5
+      },
+      "effect": {
+        "sprite": "chain_bolt",
+        "frameWidth": 64,
+        "frameHeight": 16,
+        "frames": 3,
+        "animSpeed": 16,
+        "color": "#e0f7fa"
+      },
+      "sfx": {
+        "shoot": "shootHeavy",
+        "impact": "impactChain",
+        "chain": "sfxChainJump"
+      }
     },
     "19": {
       "name": "Матрёшка (II)",
@@ -1413,3 +1443,4 @@
       }
     }
   }
+}
