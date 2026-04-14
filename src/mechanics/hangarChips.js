@@ -370,9 +370,19 @@
     if (!adj) return false;
     var redChip = cellState.redSlots[adj.redSlot];
     if (!redChip) return false;
-    var rp = normalizeRedPlacementRotated(redChip.modIds, redChip.rotation);
-    return yellowPlacement.innerA === rp[adj.innerAKey] &&
-      yellowPlacement.innerB === rp[adj.innerBKey];
+    var rpRaw = normalizeRedPlacementRotated(redChip.modIds, redChip.rotation);
+    var rp = {
+      A: resolveLatestTechModId(rpRaw.A),
+      B: resolveLatestTechModId(rpRaw.B),
+      C: resolveLatestTechModId(rpRaw.C)
+    };
+    var yp = {
+      innerA: resolveLatestTechModId(yellowPlacement.innerA),
+      innerB: resolveLatestTechModId(yellowPlacement.innerB),
+      X: resolveLatestTechModId(yellowPlacement.X)
+    };
+    return yp.innerA === rp[adj.innerAKey] &&
+      yp.innerB === rp[adj.innerBKey];
   }
 
   /* ── Active-modifier calculation ───────────────────────── */
@@ -385,8 +395,18 @@
     var red2 = cellState.redSlots.slot2;
 
     if (red1 && red2) {
-      var p1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
-      var p2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
+      var p1Raw = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
+      var p2Raw = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
+      var p1 = {
+        A: resolveLatestTechModId(p1Raw.A),
+        B: resolveLatestTechModId(p1Raw.B),
+        C: resolveLatestTechModId(p1Raw.C)
+      };
+      var p2 = {
+        A: resolveLatestTechModId(p2Raw.A),
+        B: resolveLatestTechModId(p2Raw.B),
+        C: resolveLatestTechModId(p2Raw.C)
+      };
       if (checkRedMatch(p1, p2)) {
         matchSuccess = true;
         mods.push({ modId: p1.A, source: 'red', vertex: 'A', order: 0 });
@@ -396,10 +416,20 @@
         // No match and both red chips installed — neither works
       }
     } else if (red1) {
-      var pr1 = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
+      var pr1Raw = normalizeRedPlacementRotated(red1.modIds, red1.rotation);
+      var pr1 = {
+        A: resolveLatestTechModId(pr1Raw.A),
+        B: resolveLatestTechModId(pr1Raw.B),
+        C: resolveLatestTechModId(pr1Raw.C)
+      };
       mods.push({ modId: pr1.A, source: 'red1', vertex: 'A', order: 0 });
     } else if (red2) {
-      var pr2 = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
+      var pr2Raw = normalizeRedPlacementRotated(red2.modIds, red2.rotation);
+      var pr2 = {
+        A: resolveLatestTechModId(pr2Raw.A),
+        B: resolveLatestTechModId(pr2Raw.B),
+        C: resolveLatestTechModId(pr2Raw.C)
+      };
       mods.push({ modId: pr2.A, source: 'red2', vertex: 'A', order: 0 });
     }
 
@@ -420,7 +450,12 @@
     }
 
     if (activeYellow) {
-      var yp = normalizeYellowPlacementRotated(activeYellow.modIds, activeYellow.rotation);
+      var ypRaw = normalizeYellowPlacementRotated(activeYellow.modIds, activeYellow.rotation);
+      var yp = {
+        innerA: resolveLatestTechModId(ypRaw.innerA),
+        innerB: resolveLatestTechModId(ypRaw.innerB),
+        X: resolveLatestTechModId(ypRaw.X)
+      };
       if (!isSpecialMod(yp.X)) {
         console.warn('[HangarChips] Yellow X vertex is not special: ' + yp.X);
       }

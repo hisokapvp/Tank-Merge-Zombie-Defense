@@ -6,6 +6,12 @@
     "y": 0.75
   },
   "renderScale": 0.85,
+  "hitbox": {
+    "w": 220,
+    "h": 110,
+    "offsetX": 0,
+    "offsetY": -20
+  },
   "hpBar": {
     "width": 92,
     "height": 8,
@@ -326,7 +332,7 @@
   },
   "stats": {
     "maxHp": {
-      "base": 800,
+      "base": 80000000,
       "perLevel": 120,
       "max": 24000
     },

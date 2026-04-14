@@ -11,7 +11,7 @@
  *  6  Small Combo       — every 4th shot fires 3 rapid shots at ×1.25 dmg; shots 1-3 fire 1 normal cascade projectile
  *  7  Arcade Chaos      — each shot randomly picks one pattern from group A (mods 1–9)
  *  8  Small Nuke        — once per 30s: nuclear shot with ×3 blast, 100px radius
- *  9  Small Calming     — hit zombies stop attacking for 0.5s; max once per zombie
+ *  9  Small Calming     — hit zombies stop attacking for 0.5s; after 10 successful calms target gains 30s immunity
  * 10  Fire Pool         — impact leaves burning ground zone (sprite-based)
  * 11  Ice Zone          — impact leaves heavy-slow zone (sprite-based)
  * 12  Electro Node      — creates a point that periodically zaps nearest enemy
@@ -33,8 +33,8 @@
  * 26  Large Combo       — every 4th shot: 4 rapid shots ×2 dmg; shots 1-3 fire 1 normal cascade projectile
  * 27  Medium Nuke       — once per 30s: ×4 dmg, 300px radius
  * 28  Large Nuke        — once per 30s: ×5 dmg, entire map radius
- * 29  Medium Calming    — 0.75s stun, max once per zombie
- * 30  Large Calming     — 1s stun, max once per zombie
+ * 29  Medium Calming    — 0.75s stun, 10-hit immunity cycle per zombie
+ * 30  Large Calming     — 1s stun, 10-hit immunity cycle per zombie
  */
 (function (global) {
   'use strict';
@@ -60,6 +60,8 @@
     medium: 60,    // mod 29 — Medium Calming
     large: 80     // mod 30 — Large Calming
   };
+  var CALM_HITS_PER_IMMUNITY = 10;
+  var CALM_IMMUNITY_SEC = 30;
 
   /* ────────── chip atlas image cache ────────── */
   var _chipAtlasImages = {};
@@ -243,10 +245,6 @@
   }
 
   function resolveBulletSpriteOverride(modId, shotMods) {
-    var usesNuclearImpact = modId === 8 || modId === 27 || modId === 28;
-    if (usesNuclearImpact && !(shotMods && shotMods.isNuke)) {
-      return null;
-    }
     return getModBulletSprite(modId);
   }
 
@@ -272,12 +270,23 @@
     return { bulletSprite: bulletSprite, impactSprite: impactSprite };
   }
 
+  function mergeBulletCfgOverride(baseBulletCfg, activeModIds, shotMods) {
+    if (!baseBulletCfg) return null;
+    var override = buildChipBulletCfgOverride(activeModIds, shotMods);
+    if (!override) return baseBulletCfg;
+    var merged = {
+      bulletSprite: baseBulletCfg.bulletSprite,
+      impactSprite: baseBulletCfg.impactSprite
+    };
+    if (override.bulletSprite) merged.bulletSprite = override.bulletSprite;
+    if (override.impactSprite) merged.impactSprite = override.impactSprite;
+    return merged;
+  }
+
   /* ────────── per-cell combo counter (mod 6) ────────── */
   var _comboCounters = {};       // cellIndex → shotCount
   /* ────────── per-cell nuke cooldown (mod 8) ────────── */
   var _nukeCooldowns = {};       // cellIndex → nextAllowedTimeSec
-  /* ────────── per-zombie calming set (mod 9) ────────── */
-  var _calmedZombieIds = {};     // zombieId → true
   /* ────────── active electro nodes (mod 12) ────────── */
   var _electroNodes = [];
   /* ────────── active laser marks (mod 13) ────────── */
@@ -304,10 +313,12 @@
   }
 
   function getActiveModIds(cellIndex) {
+      var calmStillActive = Number.isFinite(z.calmUntil) && now < z.calmUntil;
     var mods = getActiveChipMods(cellIndex);
-    var ids = [];
-    for (var i = 0; i < mods.length; i++) ids.push(mods[i].modId);
     return ids;
+      if (!calmStillActive) {
+        z.calmUntil = now + duration;
+      }
   }
 
   /* ─── group-A mods for Arcade Chaos (mod 7) ─── */
@@ -350,6 +361,60 @@
       pendingYellowMods: [],
       cellIndex: -1
     };
+  }
+
+  function _clonePendingMods(queue) {
+    if (!Array.isArray(queue) || !queue.length) return [];
+    var clone = [];
+    for (var i = 0; i < queue.length; i++) {
+      var entry = queue[i];
+      if (!entry || !Number.isFinite(entry.modId)) continue;
+      var next = { modId: Math.floor(entry.modId) };
+      if (entry._comboFired) next._comboFired = true;
+      if (Number.isFinite(entry._comboShots)) next._comboShots = entry._comboShots;
+      if (Number.isFinite(entry._comboDmgMul)) next._comboDmgMul = entry._comboDmgMul;
+      clone.push(next);
+    }
+    return clone;
+  }
+
+  function _hasChildCarryover(result) {
+    return !!(result && (
+      result.chainJumps > 0 ||
+      result.isMatryoshka ||
+      result.firePool ||
+      result.iceZone ||
+      result.electroNode ||
+      result.laserMark ||
+      result.acidPool ||
+      (result.pendingCascadeMods && result.pendingCascadeMods.length > 0) ||
+      (result.pendingYellowMods && result.pendingYellowMods.length > 0)
+    ));
+  }
+
+  function _buildChildImpactShotMods(source, overrides) {
+    var result = _buildEmptyResult();
+    if (source && typeof source === 'object') {
+      result.activeModIds = Array.isArray(source.activeModIds) ? source.activeModIds.slice() : [];
+      result.cellIndex = Number.isFinite(source.cellIndex) ? source.cellIndex : -1;
+      result.firePool = !!source.firePool;
+      result.iceZone = !!source.iceZone;
+      result.electroNode = !!source.electroNode;
+      result.laserMark = !!source.laserMark;
+      result.acidPool = !!source.acidPool;
+      result.pendingCascadeMods = _clonePendingMods(source.pendingCascadeMods);
+      result.pendingYellowMods = _clonePendingMods(source.pendingYellowMods);
+    }
+    if (overrides && typeof overrides === 'object') {
+      if (Number.isFinite(overrides.chainJumps)) result.chainJumps = Math.max(0, Math.floor(overrides.chainJumps));
+      if (typeof overrides.isMatryoshka === 'boolean') result.isMatryoshka = overrides.isMatryoshka;
+      if (Number.isFinite(overrides.matryoshkaDmgMul)) result.matryoshkaDmgMul = overrides.matryoshkaDmgMul;
+      if (Number.isFinite(overrides.matryoshkaSizeMul)) result.matryoshkaSizeMul = overrides.matryoshkaSizeMul;
+      if (Number.isFinite(overrides.matryoshkaDepth)) result.matryoshkaDepth = Math.max(0, Math.floor(overrides.matryoshkaDepth));
+      if (Array.isArray(overrides.matryoshkaChain)) result.matryoshkaChain = overrides.matryoshkaChain.slice();
+      if (Array.isArray(overrides.activeModIds)) result.activeModIds = overrides.activeModIds.slice();
+    }
+    return _hasChildCarryover(result) ? result : null;
   }
 
   /** Apply a single modId to an existing shotMods result object. */
@@ -395,7 +460,7 @@
         break;
       case 9: // Small Calming
         result.isCalming = true;
-        result.calmDuration = 1;
+        result.calmDuration = 0.5;
         result.calmRadius = CALM_RADIUS_BY_LEVEL.small;
         break;
       case 10: // Fire Pool
@@ -503,12 +568,12 @@
         break;
       case 29: // Medium Calming — 0.75s stun
         result.isCalming = true;
-        result.calmDuration = 2;
+        result.calmDuration = 0.75;
         result.calmRadius = CALM_RADIUS_BY_LEVEL.medium;
         break;
       case 30: // Large Calming — 1s stun
         result.isCalming = true;
-        result.calmDuration = 3;
+        result.calmDuration = 1.0;
         result.calmRadius = CALM_RADIUS_BY_LEVEL.large;
         break;
     }
@@ -536,22 +601,9 @@
     var chipMods = getActiveChipMods(cellIndex);
     if (!chipMods.length) return null;
 
-    /* Mod 7 — Arcade Chaos: replace active mods with one random from group A (no cascade) */
-    var hasArcadeChaos = false;
-    for (var ac = 0; ac < chipMods.length; ac++) {
-      if (chipMods[ac].modId === 7) { hasArcadeChaos = true; break; }
-    }
-    if (hasArcadeChaos) {
-      var pick = GROUP_A_MODS[Math.floor(Math.random() * GROUP_A_MODS.length)];
-      var result = _buildEmptyResult();
-      result.activeModIds = [pick];
-      result.cellIndex = cellIndex;
-      _applyModToResult(result, pick, cellIndex);
-      return result;
-    }
-
     /* Separate mods by cascade order */
     var level0Mods = [];
+    var preCascadeMods = [];
     var cascadeMods = [];
     var yellowMods = [];
 
@@ -560,6 +612,12 @@
       var order = cm.order !== undefined ? cm.order : 0;
       if (cm.source === 'yellow' || order === 2) {
         yellowMods.push({ modId: cm.modId });
+      } else if (cm.modId === 7) {
+        if (order <= 0) {
+          preCascadeMods.push({ modId: cm.modId });
+        } else {
+          cascadeMods.push({ modId: cm.modId });
+        }
       } else if (order >= 1) {
         cascadeMods.push({ modId: cm.modId });
       } else {
@@ -573,6 +631,9 @@
     for (var j = 0; j < level0Mods.length; j++) {
       result.activeModIds.push(level0Mods[j].modId);
       _applyModToResult(result, level0Mods[j].modId, cellIndex);
+    }
+    if (preCascadeMods.length > 0) {
+      cascadeMods = preCascadeMods.concat(cascadeMods);
     }
 
     /* If no cascade mods, yellow mods apply at this (first) level */
@@ -711,6 +772,38 @@
     }
   }
 
+  function _resolveCascadeMod(nextMod) {
+    if (!nextMod || !Number.isFinite(nextMod.modId)) return null;
+    if (nextMod.modId !== 7) return nextMod;
+    var resolvedModId = GROUP_A_MODS[Math.floor(Math.random() * GROUP_A_MODS.length)];
+    var hangarChips = global.Game && global.Game.HangarChips;
+    if (hangarChips && typeof hangarChips.resolveLatestTechModId === 'function') {
+      resolvedModId = hangarChips.resolveLatestTechModId(resolvedModId);
+    }
+    return {
+      modId: resolvedModId,
+      forceDirectComboBurst: resolvedModId === 6 || resolvedModId === 25 || resolvedModId === 26,
+      sourceModId: 7
+    };
+  }
+
+  function _applyForcedComboBurst(result, modId) {
+    switch (modId) {
+      case 6:
+        result.comboShots = 3;
+        result.comboDmgMul = 3.75;
+        break;
+      case 25:
+        result.comboShots = 3;
+        result.comboDmgMul = 4.5;
+        break;
+      case 26:
+        result.comboShots = 4;
+        result.comboDmgMul = 8.0;
+        break;
+    }
+  }
+
   /**
    * Spawn cascade projectiles from impact point when a higher-order mod
    * needs to fire. Each cascade projectile flies to a target 100–250px
@@ -719,29 +812,35 @@
   function _spawnCascadeProjectiles(x, y, b, nextMod, remainingCascade, yellowMods, opts) {
     if (!opts.spawnProjectile) return;
     var cellIndex = (b.chipShotMods && b.chipShotMods.cellIndex >= 0) ? b.chipShotMods.cellIndex : -1;
+    var resolvedNextMod = _resolveCascadeMod(nextMod);
+    if (!resolvedNextMod) return;
 
     /* Build shotMods for the cascade mod */
     var cascadeResult = _buildEmptyResult();
     cascadeResult.cellIndex = cellIndex;
-    cascadeResult.activeModIds = [nextMod.modId];
+    cascadeResult.activeModIds = resolvedNextMod.sourceModId === 7
+      ? [resolvedNextMod.modId, resolvedNextMod.sourceModId]
+      : [resolvedNextMod.modId];
 
     /* For combo counter mods: use pre-computed state from applyShotModifiers
        to avoid double-incrementing the counter.
        Counter was already advanced during applyShotModifiers, so we must
        NOT call _applyModToResult again for combo mods. */
     var COMBO_MODS_SET = {6: true, 25: true, 26: true};
-    if (COMBO_MODS_SET[nextMod.modId]) {
-      if (nextMod._comboFired) {
+    if (COMBO_MODS_SET[resolvedNextMod.modId]) {
+      if (resolvedNextMod.forceDirectComboBurst) {
+        _applyForcedComboBurst(cascadeResult, resolvedNextMod.modId);
+      } else if (resolvedNextMod._comboFired) {
         /* Shot 4: burst of comboShots projectiles at comboDmgMul */
-        cascadeResult.comboShots = nextMod._comboShots;
-        cascadeResult.comboDmgMul = nextMod._comboDmgMul;
+        cascadeResult.comboShots = resolvedNextMod._comboShots;
+        cascadeResult.comboDmgMul = resolvedNextMod._comboDmgMul;
       } else {
         /* Shots 1-3: spawn a single normal-damage cascade projectile */
         cascadeResult.comboShots = 1;
         cascadeResult.comboDmgMul = 1.0;
       }
     } else {
-      _applyModToResult(cascadeResult, nextMod.modId, cellIndex);
+      _applyModToResult(cascadeResult, resolvedNextMod.modId, cellIndex);
     }
 
     /* If this is the LAST cascade level, include yellow mods */
@@ -765,7 +864,7 @@
     cascadeResult.pendingYellowMods = remainingCascade.length > 0 ? yellowMods : [];
 
     /* Determine projectile count for this mod */
-    var projCount = _getCascadeProjectileCount(nextMod.modId, cascadeResult);
+    var projCount = _getCascadeProjectileCount(resolvedNextMod.modId, cascadeResult);
 
     /* Determine damage multipliers */
     var cascadeDmg = b.dmg;
@@ -786,7 +885,9 @@
 
     /* For combo mods that fired: stagger spawns with 150ms delay (like primary combo) */
     var COMBO_MODS_STAGGER = {6: true, 25: true, 26: true};
-    var useCascadeStagger = COMBO_MODS_STAGGER[nextMod.modId] && nextMod._comboFired && projCount > 1;
+    var useCascadeStagger = COMBO_MODS_STAGGER[resolvedNextMod.modId]
+      && (resolvedNextMod.forceDirectComboBurst || resolvedNextMod._comboFired)
+      && projCount > 1;
 
     if (useCascadeStagger) {
       /* Snapshot primitive values and stable references from b BEFORE the projectile
@@ -794,6 +895,7 @@
       var _level = b.level;
       var _prof = b.prof;
       var _bulletCfg = b.bulletCfg;
+      var _bulletCfgBase = b.bulletCfgBase || b.bulletCfg;
       var _effectIntensity = b.effectIntensity || 1;
       var _shotId = b.shotId || 0;
       var _tank = b.tank;
@@ -816,6 +918,7 @@
               aoe: _cascadeAoe,
               prof: _prof,
               bulletCfg: _bulletCfg,
+              bulletCfgBase: _bulletCfgBase,
               effectIntensity: _effectIntensity * _sizeMul,
               shotId: _shotId + 0.3 * _cascadeResult.cascadeLevel,
               isTankAttackingZombie: false,
@@ -838,6 +941,7 @@
           aoe: cascadeAoe,
           prof: b.prof,
           bulletCfg: b.bulletCfg,
+          bulletCfgBase: b.bulletCfgBase || b.bulletCfg,
           effectIntensity: (b.effectIntensity || 1) * sizeMul,
           shotId: (b.shotId || 0) + 0.3 * cascadeResult.cascadeLevel,
           isTankAttackingZombie: false,
@@ -878,6 +982,7 @@
     if (!sm) return;
     var x = opts.x, y = opts.y;
     var b = opts.b;
+    if (b && !b.chipShotMods) b.chipShotMods = sm;
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
 
@@ -1037,34 +1142,12 @@
       aoe: b.aoe,
       prof: b.prof,
       bulletCfg: b.bulletCfg,
+      bulletCfgBase: b.bulletCfgBase || b.bulletCfg,
       effectIntensity: (b.effectIntensity || 1) * 0.9,
       shotId: (b.shotId || 0) + 0.1,
       isTankAttackingZombie: false,
       tank: b.tank,
-      chipShotMods: jumps > 1 ? {
-        chainJumps: jumps - 1,
-        extraProjectiles: 0,
-        isMatryoshka: false,
-        matryoshkaDmgMul: 1,
-        matryoshkaSizeMul: 1,
-        pushDistance: 0,
-        pushExtraDmgMul: 0,
-        pullDistance: 0,
-        pullExtraDmgMul: 0,
-        comboShots: 0,
-        comboDmgMul: 1,
-        isNuke: false,
-        nukeDmgMul: 1,
-        nukeRadius: 0,
-        isCalming: false,
-        calmDuration: 0,
-        firePool: false,
-        iceZone: false,
-        electroNode: false,
-        laserMark: false,
-        acidPool: false,
-        activeModIds: [2]
-      } : null,
+      chipShotMods: _buildChildImpactShotMods(b.chipShotMods, jumps > 1 ? { chainJumps: jumps - 1 } : null),
       isChainChild: true
     });
   }
@@ -1095,28 +1178,13 @@
       var remainingChain = chain.slice(1);
       var baseDmg = b.dmg / (sm.matryoshkaDmgMul || 1); // get base dmg
       var childDmg = baseDmg * nextChild.dmgMul;
-      var childShotMods = null;
-      if (remainingChain.length > 0) {
-        childShotMods = {
-          isMatryoshka: true,
-          matryoshkaDmgMul: nextChild.dmgMul,
-          matryoshkaSizeMul: nextChild.sizeMul,
-          matryoshkaDepth: depth - 1,
-          matryoshkaChain: remainingChain,
-          /* carry through other properties as empty */
-          extraProjectiles: 0, chainJumps: 0,
-          pushDistance: 0, pushExtraDmgMul: 0,
-          pullDistance: 0, pullExtraDmgMul: 0,
-          comboShots: 0, comboDmgMul: 1,
-          isNuke: false, nukeDmgMul: 1, nukeRadius: 0,
-          isCalming: false, calmDuration: 0,
-          firePool: false, iceZone: false, electroNode: false,
-          laserMark: false, acidPool: false,
-          activeModIds: sm.activeModIds || [],
-          cascadeLevel: 0, pendingCascadeMods: [],
-          pendingYellowMods: [], cellIndex: sm.cellIndex || -1
-        };
-      }
+      var childShotMods = _buildChildImpactShotMods(sm, remainingChain.length > 0 ? {
+        isMatryoshka: true,
+        matryoshkaDmgMul: nextChild.dmgMul,
+        matryoshkaSizeMul: nextChild.sizeMul,
+        matryoshkaDepth: depth - 1,
+        matryoshkaChain: remainingChain
+      } : null);
       opts.spawnProjectile({
         fromX: x, fromY: y,
         toZombieId: best.id, toX: tp.x, toY: tp.y,
@@ -1125,6 +1193,7 @@
         aoe: b.aoe,
         prof: b.prof,
         bulletCfg: b.bulletCfg,
+        bulletCfgBase: b.bulletCfgBase || b.bulletCfg,
         effectIntensity: (b.effectIntensity || 1) * nextChild.sizeMul,
         shotId: (b.shotId || 0) + 0.5,
         isTankAttackingZombie: false,
@@ -1142,11 +1211,12 @@
         aoe: b.aoe,
         prof: b.prof,
         bulletCfg: b.bulletCfg,
+        bulletCfgBase: b.bulletCfgBase || b.bulletCfg,
         effectIntensity: (b.effectIntensity || 1) * 0.8,
         shotId: (b.shotId || 0) + 0.5,
         isTankAttackingZombie: false,
         tank: b.tank,
-        chipShotMods: null,
+        chipShotMods: _buildChildImpactShotMods(sm, null),
         isMatryoshkaChild: true
       });
     }
@@ -1236,13 +1306,20 @@
     for (var i = 0; i < zombies.length; i++) {
       var z = zombies[i];
       if (z.state === 'dying') continue;
+      if (z.attackState !== 'attack' && z.attackState !== 'cooldown') continue;
+      if (z.calmRecoveryPendingAttack) continue;
       var p = getPos(z);
       var d = Math.hypot(p.x - x, p.y - y);
       if (d > effectRadius) continue;
-      // max once per zombie per wave
-      if (_calmedZombieIds[z.id]) continue;
-      _calmedZombieIds[z.id] = true;
+      if (Number.isFinite(z.calmImmuneUntil) && now < z.calmImmuneUntil) continue;
+      if (!Number.isFinite(z.calmHitCount) || z.calmHitCount < 0) z.calmHitCount = 0;
+      z.calmRecoveryPendingAttack = true;
+      z.calmHitCount += 1;
       z.calmUntil = now + duration;
+      if (z.calmHitCount >= CALM_HITS_PER_IMMUNITY) {
+        z.calmHitCount = 0;
+        z.calmImmuneUntil = now + CALM_IMMUNITY_SEC;
+      }
     }
   }
 
@@ -1357,7 +1434,6 @@
   function reset() {
     _comboCounters = {};
     _nukeCooldowns = {};
-    _calmedZombieIds = {};
     _electroNodes = [];
     _laserMarks = [];
   }
@@ -1395,6 +1471,7 @@
     resolveChipShotSfx: resolveChipShotSfx,
     resolveChipImpactSfx: resolveChipImpactSfx,
     buildChipBulletCfgOverride: buildChipBulletCfgOverride,
+    mergeBulletCfgOverride: mergeBulletCfgOverride,
     getChipAtlasImage: getChipAtlasImage,
     GROUP_A_MODS: GROUP_A_MODS,
     /** Configurable min distance for Double Shot second-target selection */

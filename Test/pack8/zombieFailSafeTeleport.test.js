@@ -80,38 +80,79 @@ function createApi(options) {
 console.log('\n── Pack 8: Zombie fail-safe teleport ──');
 
 test('ZFT-1: teleport does not trigger before the 20-second timeout', () => {
-  const api = createApi({ wallDecors: [] });
+  const api = createApi({ wallDecors: [{ isWall: true, x: 150, y: 0, blockR: 20 }] });
   const zombie = {
     state: 'walk',
     breached: false,
     failSafeTeleported: false,
-    spawnTimeSec: 5,
     theta: 0,
     anchorTheta: 0,
     r: 170,
+    failSafeDecorSinceSec: 0,
+    failSafeDecorAnchorX: 170,
+    failSafeDecorAnchorY: 0,
   };
-  assertEqual(api.maybeTeleportZombieNearFence(zombie, 24), false, 'teleport stays disabled before timeout');
+  assertEqual(api.maybeTeleportZombieNearFence(zombie, 24), false, 'teleport stays disabled before the 25-second decor stall window');
   assertEqual(zombie.failSafeTeleported, false, 'zombie is not marked as teleported');
   assertEqual(zombie.r, 170, 'zombie radius stays unchanged');
 });
 
-test('ZFT-2: teleport moves a stuck zombie near the fence but keeps it outside by 20-30 px', () => {
+test('ZFT-2: teleport moves a decor-stuck zombie near the fence but keeps it outside by 20-30 px', () => {
+  const api = createApi({ wallDecors: [{ isWall: true, x: 150, y: 0, blockR: 20 }] });
+  const zombie = {
+    state: 'walk',
+    breached: false,
+    failSafeTeleported: false,
+    theta: 0,
+    anchorTheta: 0,
+    r: 180,
+    failSafeDecorSinceSec: 0,
+    failSafeDecorAnchorX: 180,
+    failSafeDecorAnchorY: 0,
+  };
+  assertEqual(api.maybeTeleportZombieNearFence(zombie, 25.1), true, 'teleport triggers after 25 seconds of decor-adjacent stagnation');
+  assertEqual(zombie.failSafeTeleported, true, 'zombie is marked as teleported');
+  assert(zombie.r >= 120 && zombie.r <= 130, 'teleport radius stays 20-30 px outside the fence');
+});
+
+test('ZFT-3: moving more than 5 px near decor resets the stuck timer instead of teleporting', () => {
+  const api = createApi({ wallDecors: [{ isWall: true, x: 160, y: 0, blockR: 20 }] });
+  const zombie = {
+    state: 'walk',
+    breached: false,
+    failSafeTeleported: false,
+    theta: 0,
+    anchorTheta: 0,
+    r: 186,
+    failSafeDecorSinceSec: 0,
+    failSafeDecorAnchorX: 180,
+    failSafeDecorAnchorY: 0,
+  };
+  assertEqual(api.maybeTeleportZombieNearFence(zombie, 26), false, 'timer resets when zombie meaningfully changes position');
+  assertEqual(zombie.failSafeTeleported, false, 'zombie is not teleported after making progress');
+  assertEqual(zombie.failSafeDecorSinceSec, 26, 'stuck timer restarts from the new near-decor sample');
+  assertEqual(zombie.failSafeDecorAnchorX, 186, 'anchor updates to the new x position');
+});
+
+test('ZFT-4: stall without nearby decor never arms the teleport fail-safe', () => {
   const api = createApi({ wallDecors: [] });
   const zombie = {
     state: 'walk',
     breached: false,
     failSafeTeleported: false,
-    spawnTimeSec: 0,
     theta: 0,
     anchorTheta: 0,
     r: 180,
+    failSafeDecorSinceSec: 0,
+    failSafeDecorAnchorX: 180,
+    failSafeDecorAnchorY: 0,
   };
-  assertEqual(api.maybeTeleportZombieNearFence(zombie, 21), true, 'teleport triggers after timeout');
-  assertEqual(zombie.failSafeTeleported, true, 'zombie is marked as teleported');
-  assert(zombie.r >= 120 && zombie.r <= 130, 'teleport radius stays 20-30 px outside the fence');
+  assertEqual(api.maybeTeleportZombieNearFence(zombie, 40), false, 'no decor means no teleport fail-safe arming');
+  assertEqual(zombie.failSafeTeleported, false, 'zombie stays untouched');
+  assert(Number.isNaN(zombie.failSafeDecorAnchorX), 'decor tracking anchor clears when no decor is nearby');
 });
 
-test('ZFT-3: blocked straight-line teleport rotates away from decor wall', () => {
+test('ZFT-5: blocked straight-line teleport rotates away from decor wall', () => {
   const api = createApi({
     wallDecors: [{ isWall: true, x: 125, y: 0, blockR: 20 }],
   });

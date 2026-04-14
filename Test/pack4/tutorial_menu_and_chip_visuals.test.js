@@ -92,7 +92,7 @@ test('TMC-3A: helper modules for drag guards and chip craft layout are wired int
   assert(undergroundHangarUiJs.indexOf('markRenderedDragHosts(body);') !== -1, 'underground hangar re-tags rendered drag hosts after each render');
 });
 
-test('TMC-4: ChipEffects keeps fallback behavior for plain shots and splits normal-vs-nuke impact sprites', () => {
+test('TMC-4: ChipEffects keeps nuclear bullet visuals on all shots and still splits normal-vs-nuke impact sprites', () => {
   const globalObj = globalThis;
   globalObj.window = globalObj;
   globalObj.Game = globalObj.Game || {};
@@ -120,9 +120,10 @@ test('TMC-4: ChipEffects keeps fallback behavior for plain shots and splits norm
   const mod27PlainImpact = chipEffects.getModImpactSpriteNormal(27);
 
   assert(mod1Override && mod1Override.bulletSprite && mod1Override.impactSprite, 'modifier 1 override resolves both custom sprites');
-  assert(mod8PlainOverride && mod8PlainOverride.impactSprite && mod8PlainOverride.impactSprite.src === 'bullet_atlas.png', 'modifier 8 uses the normal impact sprite when the shot is not nuclear');
-  assert(mod8NukeOverride && mod8NukeOverride.impactSprite && mod8NukeOverride.impactSprite.src === 'Explosion.png', 'modifier 8 keeps the explosion atlas for actual nuclear shots');
-  assert(mod27PlainImpact && mod27PlainImpact.src === 'bullet_atlas.png', 'modifier 27 exposes the normal-impact atlas through the dedicated getter');
+  assert(mod8PlainOverride && mod8PlainOverride.bulletSprite && mod8PlainOverride.bulletSprite.src === 'bullet_nuke.png', 'modifier 8 keeps the nuclear bullet sprite even when the shot is on normal cooldown');
+  assert(mod8PlainOverride && mod8PlainOverride.impactSprite && mod8PlainOverride.impactSprite.src === 'impact_nuke.png', 'modifier 8 still uses the normal impact sprite when the shot is not nuclear');
+  assert(mod8NukeOverride && mod8NukeOverride.impactSprite && mod8NukeOverride.impactSprite.src === 'Nuclear_Explosion.png', 'modifier 8 keeps the explosion atlas for actual nuclear shots');
+  assert(mod27PlainImpact && mod27PlainImpact.src === 'impact_nuke.png', 'modifier 27 exposes the normal-impact atlas through the dedicated getter');
   assertEqual(mod10Override, null, 'modifier 10 falls back to base projectile visuals when projectile overrides are absent');
   assertEqual(mod10Bullet, null, 'modifier 10 has no custom bullet override');
   assertEqual(mod10Impact, null, 'modifier 10 has no custom impact override');

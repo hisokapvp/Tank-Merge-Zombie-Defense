@@ -1,5 +1,6 @@
 {
   "_readme": "Новая схема: ключи tank_lvl1..tank_lvl60. Каждый уровень независим, без fallback-наследования.",
+  "_comment_projectileCount": "Опционально: stats.projectileCount задаёт количество базовых снарядов танка для конкретного tank_lvlN. Если поле не задано, runtime использует legacy level-based fallback.",
   "tankScale": 2.5,
   "maxLevel": 60,
   "tankPrintDurationSec": 0.75,
@@ -70,6 +71,7 @@
   },
   "tank_lvl1": {
     "stats": {
+      "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 520

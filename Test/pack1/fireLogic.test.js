@@ -155,6 +155,27 @@ test('FL-25: game.js checks cannonBarrels from tanks.json', () => {
   assert(gameJs.indexOf('cannonBarrels') !== -1, 'cannonBarrels check in game.js');
 });
 
+test('FL-26: game.js reads per-tank projectileCount from tank stats', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  assert(gameJs.indexOf('stats.projectileCount') !== -1, 'projectileCount is read from tank stats in game.js');
+});
+
+test('FL-27: sprite loader normalizes optional stats.projectileCount', () => {
+  const spriteLoadersJs = fs.readFileSync(path.resolve(__dirname, '../../src/render/spriteLoaders.js'), 'utf-8');
+  assert(spriteLoadersJs.indexOf('stats.projectileCount') !== -1, 'sprite loader validates projectileCount from tanks.json');
+});
+
+test('FL-28: spawnProjectile preserves bulletCfgBase for child visual recompute', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  assert(gameJs.indexOf('mergeBulletCfgOverride') !== -1, 'spawnProjectile reuses ChipEffects bullet cfg merge helper');
+  assert(gameJs.indexOf('bulletCfgBase') !== -1, 'spawnProjectile stores base bullet config for child projectiles');
+});
+
+test('FL-29: Arcade runtime resolves the latest unlocked tech tier before child spawn', () => {
+  const chipEffectsJs = fs.readFileSync(path.resolve(__dirname, '../../src/mechanics/chipEffects.js'), 'utf-8');
+  assert(chipEffectsJs.indexOf('resolveLatestTechModId') !== -1, 'Arcade cascade consults HangarChips tech-tier resolver');
+});
+
 // Summary
 console.log('\n═══════════════════════════');
 console.log('FireLogic: ' + passCount + ' passed, ' + failCount + ' failed');

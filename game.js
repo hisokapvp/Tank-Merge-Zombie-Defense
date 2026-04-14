@@ -5057,6 +5057,9 @@ function tankStats(level){
   const tankAttackSpeed = Number.isFinite(tankCfgStats && tankCfgStats.attackSpeed) && tankCfgStats.attackSpeed > 0
     ? tankCfgStats.attackSpeed
     : 1;
+  const tankProjectileCount = Number.isFinite(tankCfgStats && tankCfgStats.projectileCount) && tankCfgStats.projectileCount > 0
+    ? Math.max(1, Math.floor(tankCfgStats.projectileCount))
+    : null;
   const bulletAddDamage = bulletInfo.bulletCfg && Number.isFinite(bulletInfo.bulletCfg.addDamage)
     ? bulletInfo.bulletCfg.addDamage
     : 0;
@@ -5083,6 +5086,7 @@ function tankStats(level){
     bulletCfg: bulletInfo.bulletCfg,
     bulletId: bulletInfo.bulletId,
     bulletLevel: bulletInfo.bulletLevel,
+    projectileCount: tankProjectileCount,
   };
 }
 
@@ -6564,7 +6568,22 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     deathCommonFrameRateFps: animCfg.deathCommonFps,
     spawnTimeSec: spawnedAtSec,
     failSafeTeleported: false,
+    failSafeDecorSinceSec: 0,
+    failSafeDecorAnchorX: NaN,
+    failSafeDecorAnchorY: NaN,
     breached: false,
+    breachStrafePhase: Math.random() * Math.PI * 2,
+    breachStrafeBaseAngle: theta,
+    calmUntil: 0,
+    calmHitCount: 0,
+    calmImmuneUntil: 0,
+    calmSuppressionActive: false,
+    calmResumeState: '',
+    calmResumeAttackAnimTimeSec: 0,
+    calmResumeAttackCooldownTimerSec: 0,
+    calmResumeAttackDidHit: false,
+    calmResumeOverrideActive: false,
+    calmRecoveryPendingAttack: false,
   };
 
   const fenceLimit = zombieFenceLimit(z);
@@ -6735,11 +6754,12 @@ function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
   return { x: nextX, y: nextY };
 }
 
-function isZombieDecorBlockedAt(z, x, y){
+function isZombieDecorBlockedAt(z, x, y, extraPadding = 0){
   if (!Number.isFinite(x) || !Number.isFinite(y)) return true;
   const walls = Array.isArray(state.wallDecors) ? state.wallDecors : null;
   if (!walls || !walls.length) return false;
   const zR = zombieCollisionRadius(z);
+  const padding = Number.isFinite(extraPadding) ? Math.max(0, extraPadding) : 0;
   for (let i = 0; i < walls.length; i++) {
     const wall = walls[i];
     if (!wall || !wall.isWall) continue;
@@ -6747,10 +6767,120 @@ function isZombieDecorBlockedAt(z, x, y){
     if (wallR <= 0) continue;
     const dx = x - wall.x;
     const dy = y - wall.y;
-    const minDist = wallR + zR;
+    const minDist = wallR + zR + padding;
     if (dx * dx + dy * dy < minDist * minDist) return true;
   }
   return false;
+}
+
+function getBreachedSupercomputerMoveTarget(z, prevX, prevY, dt, speedMul, balSpeedMul, sc){
+  const attackWindowActive = arguments.length >= 8 ? !!arguments[7] : (z.attackState === 'attack' || z.attackState === 'cooldown');
+  const retreatOffsetPx = arguments.length >= 9 && Number.isFinite(arguments[8]) ? Math.max(0, arguments[8]) : 0;
+  const toScX = sc.x - prevX;
+  const toScY = sc.y - prevY;
+  const distToSc = Math.hypot(toScX, toScY);
+  const distToEdge = getDistanceToSupercomputerHitboxEdge(prevX, prevY, sc);
+  const joinSpeed = (z.joinSpeed ?? BAL.edgeJoinSpeed);
+  const blendToTarget = 1 - Math.exp(-dt * joinSpeed * speedMul * balSpeedMul);
+  const holdOffset = Math.max(18, Math.min(Math.max(z.attackRangePx - 4, 18), z.attackRangePx * 0.75));
+  const baseOffset = attackWindowActive
+    ? holdOffset
+    : (holdOffset + Math.max(14, retreatOffsetPx));
+  const lateralAmplitude = attackWindowActive
+    ? Math.max(4, Math.min(holdOffset * 0.22, 7))
+    : Math.max(8, Math.min(baseOffset * 0.28, Math.max(12, retreatOffsetPx * 0.45)));
+  const depthPulseAmplitude = attackWindowActive
+    ? Math.max(1, Math.min(holdOffset * 0.08, 2.5))
+    : Math.max(2.5, Math.min(baseOffset * 0.14, Math.max(6, retreatOffsetPx * 0.2)));
+  const baseAngle = distToSc > 1e-6
+    ? Math.atan2(prevY - sc.y, prevX - sc.x)
+    : (Number.isFinite(z.breachStrafeBaseAngle) ? z.breachStrafeBaseAngle : 0);
+  const strafeDir = ((Number.isFinite(z.renderOrder) ? z.renderOrder : 0) % 2 === 0) ? 1 : -1;
+  if (!Number.isFinite(z.breachStrafePhase)) z.breachStrafePhase = 0;
+  z.breachStrafePhase += dt * (attackWindowActive ? 0.55 : 0.32) * (1 + Math.max(0, Math.min(joinSpeed * 0.01, 0.45))) * strafeDir;
+  z.breachStrafeBaseAngle = baseAngle;
+
+  const retreatDirX = Math.cos(baseAngle);
+  const retreatDirY = Math.sin(baseAngle);
+  const tangentX = -retreatDirY;
+  const tangentY = retreatDirX;
+  const boundaryPoint = getSupercomputerHitboxBoundaryPoint(sc, baseAngle);
+  const lateralOffset = Math.sin(z.breachStrafePhase) * lateralAmplitude;
+  const depthPulse = Math.cos(z.breachStrafePhase * 0.65) * depthPulseAmplitude;
+  const anchorOffset = Math.max(6, baseOffset + depthPulse);
+  const swayX = boundaryPoint.x + retreatDirX * anchorOffset + tangentX * lateralOffset;
+  const swayY = boundaryPoint.y + retreatDirY * anchorOffset + tangentY * lateralOffset;
+  const clampedSway = clampPointOutsideSupercomputerHitbox(swayX, swayY, sc, zombieCollisionRadius(z) * 0.35, baseAngle);
+
+  return {
+    x: prevX + (clampedSway.x - prevX) * blendToTarget,
+    y: prevY + (clampedSway.y - prevY) * blendToTarget,
+  };
+}
+
+function resetZombieCalmSuppressionState(z){
+  z.calmSuppressionActive = false;
+  z.calmResumeState = '';
+  z.calmResumeAttackAnimTimeSec = 0;
+  z.calmResumeAttackCooldownTimerSec = 0;
+  z.calmResumeAttackDidHit = false;
+}
+
+function shouldZombieHoldPositionWhileCalmed(z, isCalmed){
+  return !!isCalmed && !!z.calmSuppressionActive;
+}
+
+function syncZombieCalmSuppressionState(z, isCalmed, targetNow){
+  if (typeof z.calmSuppressionActive !== 'boolean') z.calmSuppressionActive = false;
+  if (typeof z.calmResumeState !== 'string') z.calmResumeState = '';
+  if (!Number.isFinite(z.calmResumeAttackAnimTimeSec) || z.calmResumeAttackAnimTimeSec < 0) z.calmResumeAttackAnimTimeSec = 0;
+  if (!Number.isFinite(z.calmResumeAttackCooldownTimerSec) || z.calmResumeAttackCooldownTimerSec < 0) z.calmResumeAttackCooldownTimerSec = 0;
+  if (typeof z.calmResumeAttackDidHit !== 'boolean') z.calmResumeAttackDidHit = false;
+  if (typeof z.calmResumeOverrideActive !== 'boolean') z.calmResumeOverrideActive = false;
+  if (!Number.isFinite(z.calmUntil) || z.calmUntil < 0) z.calmUntil = 0;
+  if (!Number.isFinite(z.calmHitCount) || z.calmHitCount < 0) z.calmHitCount = 0;
+  if (!Number.isFinite(z.calmImmuneUntil) || z.calmImmuneUntil < 0) z.calmImmuneUntil = 0;
+
+  if (isCalmed) {
+    if (!z.calmSuppressionActive) {
+      const resumeState = (z.attackState === 'attack' || z.attackState === 'cooldown') ? z.attackState : '';
+      z.calmSuppressionActive = true;
+      z.calmResumeState = resumeState;
+      z.calmResumeAttackAnimTimeSec = Number.isFinite(z.attackAnimTimeSec) ? z.attackAnimTimeSec : 0;
+      z.calmResumeAttackCooldownTimerSec = Number.isFinite(z.attackCooldownTimerSec) ? z.attackCooldownTimerSec : 0;
+      z.calmResumeAttackDidHit = !!z.attackDidHit;
+    }
+    z.attackState = 'walk';
+    z.attackAnimTimeSec = 0;
+    z.attackCooldownTimerSec = 0;
+    z.attackDidHit = false;
+    z.attackTargetId = null;
+    z.calmResumeOverrideActive = false;
+    return false;
+  }
+
+  if (!z.calmSuppressionActive) return false;
+
+  const resumeState = z.calmResumeState;
+  const resumeAttackAnimTimeSec = z.calmResumeAttackAnimTimeSec;
+  const resumeAttackCooldownTimerSec = z.calmResumeAttackCooldownTimerSec;
+  const resumeAttackDidHit = !!z.calmResumeAttackDidHit;
+
+  resetZombieCalmSuppressionState(z);
+
+  if (!targetNow || (resumeState !== 'attack' && resumeState !== 'cooldown')) {
+    return false;
+  }
+
+  z.attackState = resumeState;
+  z.attackAnimTimeSec = resumeState === 'attack' ? resumeAttackAnimTimeSec : 0;
+  z.attackCooldownTimerSec = resumeState === 'cooldown' ? resumeAttackCooldownTimerSec : 0;
+  z.attackDidHit = resumeAttackDidHit;
+  z.calmResumeOverrideActive = true;
+  z.attackTargetId = targetNow.kind === 'fence'
+    ? (targetNow.seg && targetNow.seg.id ? targetNow.seg.id : null)
+    : 'supercomputer';
+  return true;
 }
 
 function findZombieFenceFailSafeTeleport(z){
@@ -6772,7 +6902,31 @@ function findZombieFenceFailSafeTeleport(z){
 
 function maybeTeleportZombieNearFence(z, now){
   if (!z || z.state === 'dying' || z.breached || z.failSafeTeleported) return false;
-  if (!Number.isFinite(z.spawnTimeSec) || now - z.spawnTimeSec < 20) return false;
+  const currentX = center.x + Math.cos(z.theta) * z.r;
+  const currentY = center.y + Math.sin(z.theta) * z.r;
+  if (!isZombieDecorBlockedAt(z, currentX, currentY, 20)) {
+    z.failSafeDecorSinceSec = 0;
+    z.failSafeDecorAnchorX = NaN;
+    z.failSafeDecorAnchorY = NaN;
+    return false;
+  }
+
+  if (!Number.isFinite(z.failSafeDecorSinceSec) ||
+      !Number.isFinite(z.failSafeDecorAnchorX) || !Number.isFinite(z.failSafeDecorAnchorY)) {
+    z.failSafeDecorSinceSec = now;
+    z.failSafeDecorAnchorX = currentX;
+    z.failSafeDecorAnchorY = currentY;
+    return false;
+  }
+
+  if (Math.abs(currentX - z.failSafeDecorAnchorX) > 5 || Math.abs(currentY - z.failSafeDecorAnchorY) > 5) {
+    z.failSafeDecorSinceSec = now;
+    z.failSafeDecorAnchorX = currentX;
+    z.failSafeDecorAnchorY = currentY;
+    return false;
+  }
+
+  if (now - z.failSafeDecorSinceSec < 25) return false;
   const fenceLimit = zombieFenceLimit(z);
   if (z.r <= fenceLimit + 20) return false;
   const candidate = findZombieFenceFailSafeTeleport(z);
@@ -6783,6 +6937,9 @@ function maybeTeleportZombieNearFence(z, now){
   z.targetR = z.r;
   z.side = getSideByPosition(center.x + Math.cos(z.theta) * z.r, center.y + Math.sin(z.theta) * z.r);
   z.failSafeTeleported = true;
+  z.failSafeDecorSinceSec = 0;
+  z.failSafeDecorAnchorX = NaN;
+  z.failSafeDecorAnchorY = NaN;
   z._unstickTimer = 0;
   z._unstickCheckR = z.r;
   return true;
@@ -7463,10 +7620,11 @@ function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer)
   const p = zombiePos(z);
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
+  const scHitbox = scCoordsValid ? resolveSupercomputerAttackHitbox(sc) : null;
   const scAlive = !!sc && Number.isFinite(sc.hp) && sc.hp > 0;
   const maxDist = Math.max(0, attackRangePx || 0);
-  if (allowSupercomputer && scCoordsValid && scAlive) {
-    const distToSc = Math.hypot(p.x - sc.x, p.y - sc.y);
+  if (allowSupercomputer && scHitbox && scAlive) {
+    const distToSc = getDistanceToSupercomputerHitboxEdge(p.x, p.y, scHitbox);
     if (Number.isFinite(distToSc) && distToSc <= maxDist) {
       return {
         kind: 'supercomputer',
@@ -7837,6 +7995,7 @@ function stepZombies(dt){
   const fenceAttackDamageMul = getZombieFenceAttackDamageMul();
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
+  const scTarget = scCoordsValid ? resolveSupercomputerAttackHitbox(sc) : null;
   const breachAwarenessRadiusPx = getFenceBreachAwarenessRadiusPx();
   for (const z of state.zombies){
     if (z.state === 'dying'){
@@ -7870,6 +8029,13 @@ function stepZombies(dt){
     if (!Number.isFinite(z.walkFrameRateFps) || z.walkFrameRateFps <= 0) z.walkFrameRateFps = getZombieAnimConfig(z).walkFps;
     if (!Number.isFinite(z.attackFrameRateFps) || z.attackFrameRateFps <= 0) z.attackFrameRateFps = getZombieAnimConfig(z).attackFps;
     if (!Number.isFinite(z.walkAnimFrame)) z.walkAnimFrame = 0;
+    const isCalmed = !!z.calmUntil && now < z.calmUntil;
+    const calmAttackWindowOverride = !!z.calmSuppressionActive || !!z.calmResumeOverrideActive;
+    const effectiveShouldAttackTargets = shouldAttackTargets || calmAttackWindowOverride;
+    const effectiveFenceAttackDamageMul = effectiveShouldAttackTargets
+      ? (shouldAttackTargets ? fenceAttackDamageMul : 1)
+      : 0;
+    const holdPositionWhileCalmed = shouldZombieHoldPositionWhileCalmed(z, isCalmed);
 
     const typeId = z.type?.id || '';
     let balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
@@ -7882,7 +8048,8 @@ function stepZombies(dt){
       z.chipSlowFactor = 1; // reset
     }
 
-    const shouldMove = !shouldAttackTargets || z.attackState !== 'attack';
+    const shouldMove = !holdPositionWhileCalmed
+      && (!effectiveShouldAttackTargets || z.attackState !== 'attack' || (!!z.breached && scCoordsValid));
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
     const prevY = center.y + Math.sin(prevTheta) * z.r;
@@ -7893,26 +8060,25 @@ function stepZombies(dt){
       ? null
       : getNearestKnownBreachForZombie(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
     z.knowsBreach = !!nearestBreach;
-    const allowSupercomputerTarget = !!z.breached && attackActive;
+    const allowSupercomputerTarget = !!z.breached && effectiveShouldAttackTargets;
+    const idleRetreatOffset = effectiveShouldAttackTargets ? 0 : getZombieIdleRetreatOffsetPx(z);
 
     let radialSpeed = 0;
     if (shouldMove) {
-      if (z.breached && scCoordsValid) {
-        const toScX = sc.x - prevX;
-        const toScY = sc.y - prevY;
-        const distToSc = Math.hypot(toScX, toScY);
-        const blendToSc = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
-        const desiredX = distToSc > 1e-6 ? (prevX + toScX * blendToSc) : prevX;
-        const desiredY = distToSc > 1e-6 ? (prevY + toScY * blendToSc) : prevY;
+      if (z.breached && scTarget) {
+        const scMoveTarget = getBreachedSupercomputerMoveTarget(z, prevX, prevY, dt, speedMul, balSpeedMul, scTarget, effectiveShouldAttackTargets, isCalmed ? 0 : idleRetreatOffset);
+        const desiredX = scMoveTarget.x;
+        const desiredY = scMoveTarget.y;
         const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
-        const relX = moved.x - center.x;
-        const relY = moved.y - center.y;
+        const clampedMove = clampPointOutsideSupercomputerHitbox(moved.x, moved.y, scTarget, zombieCollisionRadius(z) * 0.35, z.theta);
+        const relX = clampedMove.x - center.x;
+        const relY = clampedMove.y - center.y;
         const movedR = Math.hypot(relX, relY);
         if (Number.isFinite(movedR) && movedR > 0) {
           z.theta = Math.atan2(relY, relX);
           z.anchorTheta = z.theta;
           z.r = movedR;
-          z.targetR = Math.hypot(sc.x - center.x, sc.y - center.y);
+          z.targetR = Math.hypot(scTarget.x - center.x, scTarget.y - center.y);
         }
         // Push breached zombie off intact fence segments (bottom corners fix):
         // If the zombie's new position overlaps an intact fence segment,
@@ -7928,8 +8094,8 @@ function stepZombies(dt){
             z.r = innerR;
           }
         }
-        z.side = getSideByPosition(moved.x, moved.y);
-        radialSpeed = Math.hypot(moved.x - prevX, moved.y - prevY);
+        z.side = getSideByPosition(clampedMove.x, clampedMove.y);
+        radialSpeed = Math.hypot(clampedMove.x - prevX, clampedMove.y - prevY);
       } else {
         if (!z.breached && nearestBreach && nearestBreach.center) {
           const breachTheta = Math.atan2(nearestBreach.center.y, nearestBreach.center.x);
@@ -7944,10 +8110,10 @@ function stepZombies(dt){
 
         const blend = 1 - Math.exp(-dt * (z.joinSpeed ?? BAL.edgeJoinSpeed) * speedMul * balSpeedMul);
         const fenceLimit = zombieFenceLimit(z);
-        const retreatOffset = z.breached ? 0 : getZombieIdleRetreatOffsetPx(z);
+    const retreatOffset = (z.breached || isCalmed) ? 0 : idleRetreatOffset;
         z.targetR = fenceLimit + retreatOffset;
         let desiredR = z.r + (z.targetR - z.r) * blend;
-        if (!z.breached && shouldAttackTargets) desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
+      if (!z.breached && effectiveShouldAttackTargets) desiredR -= BAL.zombieFencePush * dt * speedMul * balSpeedMul;
 
         z.theta = desiredTheta;
         z.r = desiredR;
@@ -8000,18 +8166,21 @@ function stepZombies(dt){
 
     maybeTeleportZombieNearFence(z, now);
 
-    const targetNow = shouldAttackTargets ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget) : null;
+    const targetNow = effectiveShouldAttackTargets
+      ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget)
+      : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
-    // ── Chip: calming effect (mod 9) — suppress attacks ──
-    const isCalmed = z.calmUntil && now < z.calmUntil;
+    const resumedFromCalm = syncZombieCalmSuppressionState(z, isCalmed, targetNow);
 
-    if (!shouldAttackTargets || isCalmed) {
+    if (!effectiveShouldAttackTargets && !resumedFromCalm) {
       z.attackState = 'walk';
       z.attackAnimTimeSec = 0;
       z.attackCooldownTimerSec = 0;
       z.attackDidHit = false;
       z.attackTargetId = null;
+    } else if (isCalmed) {
+      // syncZombieCalmSuppressionState already forced a walk-state pause.
     } else if (z.attackState === 'walk') {
       if (targetNow) {
         z.attackState = 'attack';
@@ -8029,12 +8198,14 @@ function stepZombies(dt){
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
         const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget);
         if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
-          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, fenceAttackDamageMul));
+          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, effectiveFenceAttackDamageMul));
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
         } else if (hitTarget && hitTarget.kind === 'supercomputer') {
-          applySupercomputerDamage(getZombieFinalAttackDamage(z, fenceAttackDamageMul));
+          applySupercomputerDamage(getZombieFinalAttackDamage(z, effectiveFenceAttackDamageMul));
           z.attackTargetId = 'supercomputer';
         }
+        if (z.calmResumeOverrideActive) z.calmResumeOverrideActive = false;
+        z.calmRecoveryPendingAttack = false;
         z.attackDidHit = true;
       }
 
@@ -8056,6 +8227,7 @@ function stepZombies(dt){
         } else {
           z.attackState = 'walk';
           z.attackTargetId = null;
+          z.calmResumeOverrideActive = false;
         }
       }
     }
@@ -8217,6 +8389,7 @@ function resetProjectile(p){
   p.aoe = 0;
   p.level = 0;
   p.prof = null;
+  p.bulletCfgBase = null;
   p.bulletCfg = null;
   p.rotation = 0;
   p.animTime = 0;
@@ -8293,7 +8466,10 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
 
   // Multi-barrel: N projectiles with damage split (T3)
   const Combat = window.Game && window.Game.Combat;
-  const N = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
+  const legacyProjectileCount = Combat && Combat.getProjectileCount ? Combat.getProjectileCount(tank.level) : (tank.level <= 5 ? 1 : tank.level <= 10 ? 2 : 3);
+  const N = Number.isFinite(stats && stats.projectileCount) && stats.projectileCount > 0
+    ? Math.max(1, Math.floor(stats.projectileCount))
+    : legacyProjectileCount;
 
   // Mod 1 (Double Shot): extra projectile per barrel
   const chipExtraProj = chipShotMods && chipShotMods.extraProjectiles ? chipShotMods.extraProjectiles : 0;
@@ -8356,7 +8532,10 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   }
   // Apply chip modifier sprite overrides (bulletSprite / impactSprite / impactSpriteNormal from chips.json)
   let bulletCfg = bulletCfgBase;
-  if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function') {
+  if (ChipFx && typeof ChipFx.mergeBulletCfgOverride === 'function') {
+    const chipVisualSource = chipShotMods || (typeof ChipFx.getActiveModIds === 'function' ? ChipFx.getActiveModIds(cellIndex) : null);
+    bulletCfg = ChipFx.mergeBulletCfgOverride(bulletCfgBase, chipVisualSource, chipShotMods || null) || bulletCfgBase;
+  } else if (ChipFx && typeof ChipFx.buildChipBulletCfgOverride === 'function') {
     const chipVisualSource = chipShotMods || (typeof ChipFx.getActiveModIds === 'function' ? ChipFx.getActiveModIds(cellIndex) : null);
     const chipBulletOverride = ChipFx.buildChipBulletCfgOverride(chipVisualSource, chipShotMods || null);
     if (chipBulletOverride) {
@@ -8404,6 +8583,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
           level: tank.level, dmg: splitDmg,
           aoe: chipAoe, prof: stats.prof,
           bulletCfg,
+          bulletCfgBase,
           effectIntensity: effectIntensity * chipSizeMul, shotId,
           isTankAttackingZombie,
           tank,
@@ -8426,6 +8606,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
           level: tank.level, dmg: splitDmg,
           aoe: chipAoe, prof: stats.prof,
           bulletCfg,
+          bulletCfgBase,
           effectIntensity: effectIntensity * chipSizeMul, shotId,
           isTankAttackingZombie,
           tank,
@@ -8493,7 +8674,13 @@ function tankOrbitState(cell, timeSec){
 }
 
 function spawnProjectile(p){
-  if (!p || !p.prof || !p.bulletCfg) return;
+  if (!p || !p.prof || !(p.bulletCfgBase || p.bulletCfg)) return;
+  const ChipFx = window.Game && window.Game.ChipEffects;
+  const bulletCfgBase = p.bulletCfgBase || p.bulletCfg;
+  let bulletCfg = p.bulletCfg || bulletCfgBase;
+  if (ChipFx && typeof ChipFx.mergeBulletCfgOverride === 'function' && p.chipShotMods) {
+    bulletCfg = ChipFx.mergeBulletCfgOverride(bulletCfgBase, p.chipShotMods, p.chipShotMods) || bulletCfg;
+  }
   const b = projectilePool ? projectilePool.acquire() : {};
   b.x = p.fromX;
   b.y = p.fromY;
@@ -8510,7 +8697,8 @@ function spawnProjectile(p){
   b.aoe = p.aoe;
   b.level = p.level;
   b.prof = p.prof;
-  b.bulletCfg = p.bulletCfg;
+  b.bulletCfgBase = bulletCfgBase;
+  b.bulletCfg = bulletCfg;
   b.rotation = Math.atan2((p.toY ?? p.fromY) - p.fromY, (p.toX ?? p.fromX) - p.fromX);
   b.animTime = 0;
   b.effectIntensity = p.effectIntensity ?? 1;
@@ -8600,7 +8788,7 @@ function impactAt(x,y,b,opts){
 
   // ── Chip: Laser Mark boost (mod 13) ──
   const ChipFx = window.Game && window.Game.ChipEffects;
-  if (ChipFx && b.chipShotMods && !b.isMatryoshkaChild) {
+  if (ChipFx && b.chipShotMods) {
     const markBoost = ChipFx.checkLaserMarkBoost(x, y);
     if (markBoost) {
       b.dmg = b.dmg * markBoost.damageMul;
@@ -8690,8 +8878,8 @@ function impactAt(x,y,b,opts){
   }
 
   // ── Chip impact effects (mods 2–14) + cascade spawning ──
-  // Cascade children trigger their own effects; only matryoshka children are blocked.
-  if (b.chipShotMods && !b.isMatryoshkaChild) {
+  // Cascade, chain and matryoshka children reuse chipShotMods when present.
+  if (b.chipShotMods) {
     const ChipFxI = window.Game && window.Game.ChipEffects;
     if (ChipFxI && typeof ChipFxI.applyImpactEffects === 'function') {
       ChipFxI.applyImpactEffects({
@@ -11260,21 +11448,14 @@ function closeSupercomputerMenu(){
 function supercomputerHitTest(x, y){
   const sc = getComputerState();
   if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return false;
-  const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
-  const stateName = resolveSupercomputerVisualStateName(sc);
-  const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
-  const scale = resolveSupercomputerAnimationScale(config, anim);
-  let radius = 44 * balScale;
-
-  if (config && config.hitbox && Number.isFinite(config.hitbox.r) && config.hitbox.r > 0) {
-    radius = config.hitbox.r * scale;
-  } else if (anim && Number.isFinite(anim.w) && Number.isFinite(anim.h)) {
-    radius = Math.max(24 * balScale, Math.max(anim.w * scale, anim.h * scale) * 0.36);
+  const hitbox = resolveSupercomputerAttackHitbox(sc);
+  if (!hitbox) return false;
+  if (hitbox.shape === 'rect') {
+    return Math.abs(x - hitbox.x) <= hitbox.halfW && Math.abs(y - hitbox.y) <= hitbox.halfH;
   }
-
-  const dx = x - sc.x;
-  const dy = y - sc.y;
-  return (dx * dx + dy * dy) <= radius * radius;
+  const dx = x - hitbox.x;
+  const dy = y - hitbox.y;
+  return (dx * dx + dy * dy) <= hitbox.r * hitbox.r;
 }
 
 // ---------- Input ----------
@@ -12560,6 +12741,110 @@ function resolveSupercomputerSpriteMetrics(sc){
     height,
     halfW: width * 0.5,
     halfH: height * 0.5,
+  };
+}
+
+function resolveSupercomputerAttackHitbox(sc){
+  if (!sc || !Number.isFinite(sc.x) || !Number.isFinite(sc.y)) return null;
+  const config = SupercomputerSprites && SupercomputerSprites.config ? SupercomputerSprites.config : null;
+  const stateName = resolveSupercomputerVisualStateName(sc);
+  const anim = SupercomputerSprites && SupercomputerSprites.getAnimation ? SupercomputerSprites.getAnimation(stateName) : null;
+  const scale = resolveSupercomputerAnimationScale(config, anim);
+  const spriteMetrics = resolveSupercomputerSpriteMetrics(sc);
+  const hitbox = config && config.hitbox ? config.hitbox : null;
+  const offsetX = Number.isFinite(hitbox && hitbox.offsetX) ? hitbox.offsetX * scale : 0;
+  const offsetY = Number.isFinite(hitbox && hitbox.offsetY) ? hitbox.offsetY * scale : 0;
+  const baseRadius = hitbox && Number.isFinite(hitbox.r) && hitbox.r > 0
+    ? hitbox.r * scale
+    : Math.max(24 * balScale, Math.min(spriteMetrics.halfW, spriteMetrics.halfH) * 0.72);
+  const hasRectSize = hitbox
+    && Number.isFinite(hitbox.w) && hitbox.w > 0
+    && Number.isFinite(hitbox.h) && hitbox.h > 0;
+  const halfW = hasRectSize ? (hitbox.w * scale) * 0.5 : baseRadius;
+  const halfH = hasRectSize ? (hitbox.h * scale) * 0.5 : baseRadius;
+  return {
+    x: spriteMetrics.centerX + offsetX,
+    y: spriteMetrics.centerY + offsetY,
+    r: Math.max(baseRadius, halfW, halfH),
+    width: halfW * 2,
+    height: halfH * 2,
+    halfW: halfW,
+    halfH: halfH,
+    shape: hasRectSize ? 'rect' : 'circle',
+    spriteMetrics: spriteMetrics,
+  };
+}
+
+function getDistanceToSupercomputerHitboxEdge(x, y, hitbox){
+  if (!hitbox) return Infinity;
+  if (hitbox.shape === 'rect') {
+    const dx = Math.abs(x - hitbox.x) - hitbox.halfW;
+    const dy = Math.abs(y - hitbox.y) - hitbox.halfH;
+    if (dx <= 0 && dy <= 0) return 0;
+    return Math.hypot(Math.max(0, dx), Math.max(0, dy));
+  }
+  return Math.max(0, Math.hypot(x - hitbox.x, y - hitbox.y) - Math.max(0, hitbox.r || 0));
+}
+
+function getSupercomputerHitboxBoundaryPoint(hitbox, angle){
+  if (!hitbox) return { x: 0, y: 0 };
+  const dirX = Math.cos(angle || 0);
+  const dirY = Math.sin(angle || 0);
+  if (hitbox.shape === 'rect') {
+    const scaleX = Math.abs(dirX) > 1e-6 ? (Math.max(0, hitbox.halfW || 0) / Math.abs(dirX)) : Infinity;
+    const scaleY = Math.abs(dirY) > 1e-6 ? (Math.max(0, hitbox.halfH || 0) / Math.abs(dirY)) : Infinity;
+    const scale = Math.min(scaleX, scaleY);
+    const safeScale = Number.isFinite(scale) ? scale : 0;
+    return {
+      x: hitbox.x + dirX * safeScale,
+      y: hitbox.y + dirY * safeScale,
+    };
+  }
+  const radius = Math.max(0, hitbox.r || 0);
+  return {
+    x: hitbox.x + dirX * radius,
+    y: hitbox.y + dirY * radius,
+  };
+}
+
+function clampPointOutsideSupercomputerHitbox(x, y, hitbox, padding, fallbackAngle){
+  if (!hitbox) return { x: x, y: y };
+  const pad = Number.isFinite(padding) ? Math.max(0, padding) : 0;
+  if (hitbox.shape === 'rect') {
+    const minX = hitbox.x - Math.max(0, hitbox.halfW || 0) - pad;
+    const maxX = hitbox.x + Math.max(0, hitbox.halfW || 0) + pad;
+    const minY = hitbox.y - Math.max(0, hitbox.halfH || 0) - pad;
+    const maxY = hitbox.y + Math.max(0, hitbox.halfH || 0) + pad;
+    if (x < minX || x > maxX || y < minY || y > maxY) return { x: x, y: y };
+    const distances = [
+      { edge: 'left', value: Math.abs(x - minX) },
+      { edge: 'right', value: Math.abs(maxX - x) },
+      { edge: 'top', value: Math.abs(y - minY) },
+      { edge: 'bottom', value: Math.abs(maxY - y) },
+    ];
+    distances.sort(function(a, b){ return a.value - b.value; });
+    const nearest = distances[0] ? distances[0].edge : 'top';
+    if (nearest === 'left') return { x: minX, y: y };
+    if (nearest === 'right') return { x: maxX, y: y };
+    if (nearest === 'top') return { x: x, y: minY };
+    return { x: x, y: maxY };
+  }
+  const radius = Math.max(0, (hitbox.r || 0) + pad);
+  const dx = x - hitbox.x;
+  const dy = y - hitbox.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist >= radius || radius <= 0) return { x: x, y: y };
+  if (dist > 1e-6) {
+    const mul = radius / dist;
+    return {
+      x: hitbox.x + dx * mul,
+      y: hitbox.y + dy * mul,
+    };
+  }
+  const angle = Number.isFinite(fallbackAngle) ? fallbackAngle : 0;
+  return {
+    x: hitbox.x + Math.cos(angle) * radius,
+    y: hitbox.y + Math.sin(angle) * radius,
   };
 }
 

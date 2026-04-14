@@ -173,7 +173,7 @@
         "w": 27,
         "h": 27,
         "frames": 9,
-        "attackRangePx": 24,
+        "attackRangePx": 40,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
@@ -229,7 +229,7 @@
         "w": 30,
         "h": 24,
         "frames": 15,
-        "attackRangePx": 24,
+        "attackRangePx": 40,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },

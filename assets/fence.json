@@ -86,11 +86,11 @@
       "segmentMaxHp": 120627,
       "armorFlat": 17.1,
       "upgradeCostDamagePoints": 8,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_4.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_4.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl4",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -112,11 +112,11 @@
       "segmentMaxHp": 124169,
       "armorFlat": 19.95,
       "upgradeCostDamagePoints": 10,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_5.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_5.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl5",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -138,11 +138,11 @@
       "segmentMaxHp": 127711,
       "armorFlat": 22.8,
       "upgradeCostDamagePoints": 12,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_6.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_6.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl6",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -164,11 +164,11 @@
       "segmentMaxHp": 131254,
       "armorFlat": 25.65,
       "upgradeCostDamagePoints": 14,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_7.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_7.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl7",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -190,11 +190,11 @@
       "segmentMaxHp": 134796,
       "armorFlat": 28.5,
       "upgradeCostDamagePoints": 16,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_8.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_8.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl8",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -216,11 +216,11 @@
       "segmentMaxHp": 138339,
       "armorFlat": 31.35,
       "upgradeCostDamagePoints": 18,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_9.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_9.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl9",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -242,11 +242,11 @@
       "segmentMaxHp": 141881,
       "armorFlat": 34.2,
       "upgradeCostDamagePoints": 20,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_10.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_10.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl10",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -268,11 +268,11 @@
       "segmentMaxHp": 145423,
       "armorFlat": 37.05,
       "upgradeCostDamagePoints": 22,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_11.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_11.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl11",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -294,11 +294,11 @@
       "segmentMaxHp": 148966,
       "armorFlat": 39.9,
       "upgradeCostDamagePoints": 24,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_12.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_12.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl12",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -320,11 +320,11 @@
       "segmentMaxHp": 152508,
       "armorFlat": 42.75,
       "upgradeCostDamagePoints": 26,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_13.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_13.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl13",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -346,11 +346,11 @@
       "segmentMaxHp": 156052,
       "armorFlat": 45.6,
       "upgradeCostDamagePoints": 28,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_14.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_14.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl14",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -372,11 +372,11 @@
       "segmentMaxHp": 159594,
       "armorFlat": 48.45,
       "upgradeCostDamagePoints": 30,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_15.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_15.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl15",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -398,11 +398,11 @@
       "segmentMaxHp": 163137,
       "armorFlat": 51.3,
       "upgradeCostDamagePoints": 32,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_16.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_16.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl16",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -424,11 +424,11 @@
       "segmentMaxHp": 166679,
       "armorFlat": 54.15,
       "upgradeCostDamagePoints": 34,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_17.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_17.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl17",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -450,11 +450,11 @@
       "segmentMaxHp": 170221,
       "armorFlat": 57,
       "upgradeCostDamagePoints": 36,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_18.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_18.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl18",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -476,11 +476,11 @@
       "segmentMaxHp": 173764,
       "armorFlat": 59.85,
       "upgradeCostDamagePoints": 38,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_19.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_19.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl19",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -502,11 +502,11 @@
       "segmentMaxHp": 177306,
       "armorFlat": 62.7,
       "upgradeCostDamagePoints": 40,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_20.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_20.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl20",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -528,11 +528,11 @@
       "segmentMaxHp": 180849,
       "armorFlat": 65.55,
       "upgradeCostDamagePoints": 42,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_21.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_21.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl21",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -554,11 +554,11 @@
       "segmentMaxHp": 184391,
       "armorFlat": 68.4,
       "upgradeCostDamagePoints": 44,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_22.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_22.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl22",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -580,11 +580,11 @@
       "segmentMaxHp": 187933,
       "armorFlat": 71.25,
       "upgradeCostDamagePoints": 46,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_23.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_23.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl23",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -606,11 +606,11 @@
       "segmentMaxHp": 191476,
       "armorFlat": 74.1,
       "upgradeCostDamagePoints": 48,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_24.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_24.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl24",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -632,11 +632,11 @@
       "segmentMaxHp": 195018,
       "armorFlat": 76.95,
       "upgradeCostDamagePoints": 50,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_25.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_25.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl25",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -658,11 +658,11 @@
       "segmentMaxHp": 198561,
       "armorFlat": 79.8,
       "upgradeCostDamagePoints": 52,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_26.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_26.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl26",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -684,11 +684,11 @@
       "segmentMaxHp": 202103,
       "armorFlat": 82.65,
       "upgradeCostDamagePoints": 54,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_27.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_27.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl27",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -710,11 +710,11 @@
       "segmentMaxHp": 205646,
       "armorFlat": 85.5,
       "upgradeCostDamagePoints": 56,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_28.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_28.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl28",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -736,11 +736,11 @@
       "segmentMaxHp": 209188,
       "armorFlat": 88.35,
       "upgradeCostDamagePoints": 58,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_29.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_29.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl29",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -762,11 +762,11 @@
       "segmentMaxHp": 212730,
       "armorFlat": 91.2,
       "upgradeCostDamagePoints": 60,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_30.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_30.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl30",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -788,11 +788,11 @@
       "segmentMaxHp": 216273,
       "armorFlat": 94.05,
       "upgradeCostDamagePoints": 62,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_31.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_31.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl31",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -814,11 +814,11 @@
       "segmentMaxHp": 219815,
       "armorFlat": 96.9,
       "upgradeCostDamagePoints": 64,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_32.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_32.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl32",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -840,11 +840,11 @@
       "segmentMaxHp": 223358,
       "armorFlat": 99.75,
       "upgradeCostDamagePoints": 66,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_33.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_33.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl33",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -866,11 +866,11 @@
       "segmentMaxHp": 226900,
       "armorFlat": 102.6,
       "upgradeCostDamagePoints": 68,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_34.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_34.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl34",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -892,11 +892,11 @@
       "segmentMaxHp": 230443,
       "armorFlat": 105.45,
       "upgradeCostDamagePoints": 70,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_35.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_35.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl35",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -918,11 +918,11 @@
       "segmentMaxHp": 233985,
       "armorFlat": 108.3,
       "upgradeCostDamagePoints": 72,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_36.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_36.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl36",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -944,11 +944,11 @@
       "segmentMaxHp": 237527,
       "armorFlat": 111.15,
       "upgradeCostDamagePoints": 74,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_37.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_37.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl37",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -970,11 +970,11 @@
       "segmentMaxHp": 241071,
       "armorFlat": 114,
       "upgradeCostDamagePoints": 76,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_38.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_38.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl38",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -996,11 +996,11 @@
       "segmentMaxHp": 244613,
       "armorFlat": 116.85,
       "upgradeCostDamagePoints": 78,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_39.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_39.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl39",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1022,11 +1022,11 @@
       "segmentMaxHp": 248156,
       "armorFlat": 119.7,
       "upgradeCostDamagePoints": 80,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_40.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_40.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl40",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1048,11 +1048,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_41.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_41.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl41",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1074,11 +1074,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_42.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_42.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl42",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1100,11 +1100,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_43.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_43.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl43",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1126,11 +1126,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_44.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_44.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl44",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1152,11 +1152,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_45.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_45.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl45",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1178,11 +1178,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_46.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_46.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl46",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1204,11 +1204,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_47.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_47.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl47",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1230,11 +1230,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_48.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_48.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl48",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1256,11 +1256,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_49.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_49.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl49",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1282,11 +1282,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_50.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_50.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl50",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1308,11 +1308,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_51.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_51.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl51",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1334,11 +1334,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_52.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_52.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl52",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1360,11 +1360,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_53.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_53.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl53",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1386,11 +1386,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_54.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_54.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl54",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1412,11 +1412,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_55.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_55.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl55",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1438,11 +1438,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_56.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_56.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl56",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1464,11 +1464,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_57.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_57.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl57",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1490,11 +1490,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_58.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_58.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl58",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1516,11 +1516,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_59.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_59.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl59",
           "x": 0,
           "y": 0,
           "w": 128,
@@ -1542,11 +1542,11 @@
       "segmentMaxHp": 228816,
       "armorFlat": 129,
       "upgradeCostDamagePoints": 82,
-      "atlas": "fence_atlas_3.png",
+      "atlas": "fence_atlas_60.png",
       "uiIcon": {
-        "atlas": "fence_atlas_3.png",
+        "atlas": "fence_atlas_60.png",
         "frame": {
-          "id": "IconLvl3",
+          "id": "IconLvl60",
           "x": 0,
           "y": 0,
           "w": 128,

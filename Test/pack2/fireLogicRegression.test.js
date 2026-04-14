@@ -125,6 +125,11 @@ test('FLR-16: damage split sums to base for all projectile counts', () => {
   }
 });
 
+test('FLR-17: tanks.json documents optional stats.projectileCount contract', () => {
+  const tanksJson = fs.readFileSync(pathMod.resolve(__dirname, '../../assets/tanks.json'), 'utf-8');
+  assert(tanksJson.indexOf('_comment_projectileCount') !== -1, 'tanks.json exposes projectileCount guidance for per-level tuning');
+});
+
 // ── Summary ──
 console.log('\n═══════════════════════════');
 console.log('FireLogicRegression: ' + passCount + ' passed, ' + failCount + ' failed');

@@ -35,6 +35,7 @@
 ## assets/supercomputer.json
 
 - `animations.*.scale` — optional-множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
+- `hitbox` — optional runtime hitbox суперкомпьютера для gameplay/click targeting: `w`/`h` задают прямоугольник, `offsetX`/`offsetY` сдвигают hitbox относительно sprite center, а legacy `r` остаётся fallback для кругового режима. Attack-path и `supercomputerHitTest()` используют один и тот же resolve helper, поэтому смещение/размер в конфиге влияет и на зомби у суперкомпьютера, и на pointer-hit area.
 - `animations.*.effects` — optional-массив визуальных эффектов для конкретной анимации:
 	- строковый preset (`"float"`, `"pulse"`, `"sway"`, `"wobble"`, `"vibration"`, `"vibrationStrong"`),
 	- либо объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.

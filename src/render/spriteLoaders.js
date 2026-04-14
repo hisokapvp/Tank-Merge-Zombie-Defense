@@ -499,9 +499,17 @@
             var moveSpeed = Number(stats.moveSpeed);
             var attackSpeed = Number(stats.attackSpeed);
             var baseDamage = Number(stats.baseDamage);
+            var projectileCount = null;
             if (!Number.isFinite(moveSpeed) || moveSpeed <= 0) throw new Error('tank_lvl' + lvl + ': invalid stats.moveSpeed');
             if (!Number.isFinite(attackSpeed) || attackSpeed <= 0) throw new Error('tank_lvl' + lvl + ': invalid stats.attackSpeed');
             if (!Number.isFinite(baseDamage) || baseDamage < 0) throw new Error('tank_lvl' + lvl + ': invalid stats.baseDamage');
+            if (stats.projectileCount != null) {
+              projectileCount = Number(stats.projectileCount);
+              if (!Number.isFinite(projectileCount) || projectileCount <= 0) {
+                throw new Error('tank_lvl' + lvl + ': invalid stats.projectileCount');
+              }
+              projectileCount = Math.max(1, Math.floor(projectileCount));
+            }
 
             var tankCfg = {
               stats: {
@@ -518,6 +526,9 @@
               bulletId: typeof rawTank.bulletId === 'string' && rawTank.bulletId.length ? rawTank.bulletId : 'bullet_base',
               bulletLevel: Number.isFinite(rawTank.bulletLevel) ? Math.max(1, Math.floor(rawTank.bulletLevel)) : 1,
             };
+            if (projectileCount != null) {
+              tankCfg.stats.projectileCount = projectileCount;
+            }
             normalized[key] = tankCfg;
 
             srcs.add('assets/' + bodyCfg.src);
@@ -1052,6 +1063,15 @@
                 }
               : { x: 0.5, y: 0.75 },
             renderScale: Number.isFinite(data && data.renderScale) ? Math.max(0.1, data.renderScale) : 1,
+            hitbox: (data && data.hitbox && typeof data.hitbox === 'object')
+              ? {
+                  offsetX: Number.isFinite(data.hitbox.offsetX) ? data.hitbox.offsetX : 0,
+                  offsetY: Number.isFinite(data.hitbox.offsetY) ? data.hitbox.offsetY : 0,
+                  w: Number.isFinite(data.hitbox.w) && data.hitbox.w > 0 ? data.hitbox.w : null,
+                  h: Number.isFinite(data.hitbox.h) && data.hitbox.h > 0 ? data.hitbox.h : null,
+                  r: Number.isFinite(data.hitbox.r) && data.hitbox.r > 0 ? data.hitbox.r : null,
+                }
+              : null,
             hpBar: (data && data.hpBar && typeof data.hpBar === 'object')
               ? {
                   width: toPositiveNumber(data.hpBar.width, 92),
