@@ -132,6 +132,14 @@
       var w = baseW * scale;
       var h = baseH * scale;
 
+      // Anchor offset from default {0.5, 0.75}: uses walk frame for stable shadow/aura
+      var anchorOffsetX = (0.5 - a.x) * f.w * scale;
+      var anchorOffsetY = (0.75 - a.y) * f.h * scale;
+      // Per-type shadow tuning from anchor_shadow in zombies.json (sprite-pixel units, scaled)
+      var as = t.anchorShadow;
+      var shadowShiftX = (as ? as.x : 0) * scale;
+      var shadowShiftY = (as ? as.y : 0) * scale;
+
       var walkPhase = z.walkAnimFrame || z.anim || 0;
       var bobPhase = hasAttackAnim ? (z.attackAnimTimeSec || 0) * Math.max(0.01, z.attackFrameRateFps || deps.getZombieDefaultAttackFps()) : walkPhase;
       var bob = hasDeathAnim ? 0 : Math.sin(bobPhase) * BAL.zombieBobAmp;
@@ -148,7 +156,7 @@
       var qualityLow = deps.isQualityLow();
       if (!DISABLE_ZOMBIE_AURAS && state.endgameVisuals && !isDying) {
         ctx.save();
-        ctx.translate(x, y + bob + groundOffset);
+        ctx.translate(x + anchorOffsetX + shadowShiftX, y + bob + groundOffset + anchorOffsetY + shadowShiftY);
         ctx.globalAlpha = 0.2 + 0.08 * Math.sin(deps.nowSec() * 3);
         ctx.fillStyle = 'rgba(200,80,80,.35)';
         ctx.beginPath();
@@ -165,8 +173,8 @@
         ctx.fillStyle = 'rgba(0,0,0,.20)';
         ctx.beginPath();
         ctx.ellipse(
-          x,
-          y + BAL.zombieShadowY + groundOffset,
+          x + anchorOffsetX + shadowShiftX,
+          y + BAL.zombieShadowY + groundOffset + anchorOffsetY + shadowShiftY,
           BAL.zombieShadowW * scale * shadowScale,
           BAL.zombieShadowH * scale * shadowScale,
           0, 0, Math.PI * 2
@@ -195,7 +203,7 @@
         ctx.strokeStyle = 'rgba(185,139,255,' + (0.08 + ring * 0.02) + ')';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(x, y + bob + groundOffset, w * 0.36, 0, Math.PI * 2);
+        ctx.arc(x + anchorOffsetX + shadowShiftX, y + bob + groundOffset + anchorOffsetY + shadowShiftY, w * 0.36, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }

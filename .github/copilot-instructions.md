@@ -101,6 +101,7 @@ node Test/tests.js
 - После изменений кода, документации или config в full-task mode требуется ровно одно обновление `project-docs`.
 - В branch mode не запускай shared docs post-processing внутри ветки; вместо этого передай handoff, чтобы он выполнился один раз после merge.
 - После завершения задачи используй `Log-Writer` / `session-logger`.
+- При параллельной работе нескольких агентов обязательно соблюдать File Lock Protocol из `.agents/.github/agents/shared/SHARED_AGENT_STANDARD.md` §9.
 
 Не включай сюда dashboard operations, storage layouts, backup procedures, database maintenance или инструкции по RAG reindex.
 

@@ -348,6 +348,9 @@
               frames: t.frames != null ? t.frames : 1,
               animSpeed: t.animSpeed != null ? t.animSpeed : 1.0,
               anchor: t.anchor || { x: 0.5, y: 0.75 },
+              anchorShadow: t.anchor_shadow && typeof t.anchor_shadow === 'object'
+                ? { x: Number.isFinite(t.anchor_shadow.x) ? t.anchor_shadow.x : 0, y: Number.isFinite(t.anchor_shadow.y) ? t.anchor_shadow.y : 0 }
+                : { x: 0, y: 0 },
               scale: t.scale != null ? t.scale : 1.0,
               shadowScale: toPositiveNumber(t.shadowScale, 1),
               rotation: t.rotation != null ? t.rotation : 0,
