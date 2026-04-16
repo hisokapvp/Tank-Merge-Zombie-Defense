@@ -104,6 +104,12 @@
   "types": [
     {
       "id": "zombie_lvl1",
+      "fenceOffsetPxBySide": {
+        "top": 8,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -147,7 +153,7 @@
           "frameRateFps": 50
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 4
         },
         "death": {
           "frameRateFps": 10
@@ -160,6 +166,12 @@
     },
     {
       "id": "zombie_lvl2",
+      "fenceOffsetPxBySide": {
+        "top": 10,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -203,7 +215,7 @@
           "frameRateFps": 50
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 9
         },
         "death": {
           "frameRateFps": 10
@@ -216,6 +228,12 @@
     },
     {
       "id": "zombie_lvl3",
+      "fenceOffsetPxBySide": {
+        "top": 10,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -259,7 +277,7 @@
           "frameRateFps": 50
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 15
         },
         "death": {
           "frameRateFps": 10
@@ -272,6 +290,12 @@
     },
     {
       "id": "zombie_lvl4",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -315,7 +339,7 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 4
         },
         "death": {
           "frameRateFps": 10
@@ -328,6 +352,12 @@
     },
     {
       "id": "zombie_lvl5",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -339,7 +369,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -371,7 +401,7 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 5
         },
         "death": {
           "frameRateFps": 10
@@ -384,6 +414,12 @@
     },
     {
       "id": "zombie_lvl6",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -395,7 +431,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -427,7 +463,7 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 4
         },
         "death": {
           "frameRateFps": 10
@@ -440,6 +476,12 @@
     },
     {
       "id": "zombie_lvl7",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -451,7 +493,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -483,7 +525,7 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 5
         },
         "death": {
           "frameRateFps": 10
@@ -496,6 +538,12 @@
     },
     {
       "id": "zombie_lvl8",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -507,7 +555,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -539,7 +587,7 @@
           "frameRateFps": 100
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 5
         },
         "death": {
           "frameRateFps": 10
@@ -552,6 +600,12 @@
     },
     {
       "id": "zombie_lvl9",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -563,7 +617,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -595,7 +649,7 @@
           "frameRateFps": 100
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 4
         },
         "death": {
           "frameRateFps": 10
@@ -608,6 +662,12 @@
     },
     {
       "id": "zombie_lvl10",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -619,7 +679,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.5,
       "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
@@ -664,6 +724,12 @@
     },
     {
       "id": "zombie_lvl11",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -707,7 +773,7 @@
           "frameRateFps": 50
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 6
         },
         "death": {
           "frameRateFps": 10
@@ -720,18 +786,25 @@
     },
     {
       "id": "zombie_lvl12",
+      "fenceOffsetPxBySide": {
+        "top": 22,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96
+        "y": 0,
+        "w": 86,
+        "h": 105
       },
-      "frames": 7,
+      "frames": 10,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 0.35,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -740,22 +813,29 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96,
-        "frames": 7,
+        "x": 2360,
+        "y": 0,
+        "w": 86,
+        "h": 105,
+        "frames": 8,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 860,
+        "y": 0,
+        "w": 125,
+        "h": 105,
+        "frames": 12
+      },
       "attackDamage": 162,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 8
         },
         "death": {
           "frameRateFps": 10
@@ -768,18 +848,25 @@
     },
     {
       "id": "zombie_lvl13",
+      "fenceOffsetPxBySide": {
+        "top": 25,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 96,
-        "h": 96
+        "w": 104,
+        "h": 125
       },
       "frames": 10,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 0.3,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -788,22 +875,29 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
+        "x": 2672,
         "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 10,
+        "w": 104,
+        "h": 125,
+        "frames": 8,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 1040,
+        "y": 0,
+        "w": 136,
+        "h": 125,
+        "frames": 12
+      },
       "attackDamage": 176,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 8
         },
         "death": {
           "frameRateFps": 10
@@ -816,18 +910,25 @@
     },
     {
       "id": "zombie_lvl14",
+      "fenceOffsetPxBySide": {
+        "top": 25,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
       "frame": {
         "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96
+        "y": 0,
+        "w": 60,
+        "h": 97
       },
-      "frames": 8,
+      "frames": 10,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 0.35,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -836,25 +937,32 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96,
-        "frames": 8,
+        "x": 1665,
+        "y": 0,
+        "w": 111,
+        "h": 97,
+        "frames": 7,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 601,
+        "y": 0,
+        "w": 133,
+        "h": 97,
+        "frames": 8
+      },
       "attackDamage": 189,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 10
         },
         "death": {
-          "frameRateFps": 10
+          "frameRateFps": 7
         },
         "deathCommon": {
           "frameRateFps": 10
@@ -864,18 +972,25 @@
     },
     {
       "id": "zombie_lvl15",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 0,
+        "bottom": -5,
+        "left": 0
+      },
       "frame": {
         "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96
+        "y": 0,
+        "w": 48,
+        "h": 48
       },
-      "frames": 7,
+      "frames": 6,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 0.8,
+      "shadowScale": 0.4,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -884,22 +999,29 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 192,
-        "w": 96,
-        "h": 96,
-        "frames": 7,
+        "x": 576,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 288,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6
+      },
       "attackDamage": 203,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 6
         },
         "death": {
           "frameRateFps": 10
@@ -912,18 +1034,25 @@
     },
     {
       "id": "zombie_lvl16",
+      "fenceOffsetPxBySide": {
+        "top": 13,
+        "right": 0,
+        "bottom": -15,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 96,
-        "h": 96
+        "w": 32,
+        "h": 23
       },
       "frames": 10,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 1.6,
+      "shadowScale": 0.2,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -932,19 +1061,26 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
+        "x": 480,
         "y": 0,
-        "w": 96,
-        "h": 96,
+        "w": 32,
+        "h": 23,
         "frames": 10,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 320,
+        "y": 0,
+        "w": 32,
+        "h": 23,
+        "frames": 5
+      },
       "attackDamage": 216,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 10
@@ -960,18 +1096,25 @@
     },
     {
       "id": "zombie_lvl17",
+      "fenceOffsetPxBySide": {
+        "top": 13,
+        "right": 0,
+        "bottom": -15,
+        "left": 0
+      },
       "frame": {
         "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96
+        "y": 0,
+        "w": 16,
+        "h": 32
       },
-      "frames": 8,
+      "frames": 4,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.7,
+      "scale": 1.2,
+      "shadowScale": 0.3,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -980,22 +1123,29 @@
         "r": 18
       },
       "attack": {
-        "x": 0,
-        "y": 96,
-        "w": 96,
-        "h": 96,
-        "frames": 8,
+        "x": 160,
+        "y": 0,
+        "w": 16,
+        "h": 32,
+        "frames": 4,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 64,
+        "y": 0,
+        "w": 24,
+        "h": 32,
+        "frames": 4
+      },
       "attackDamage": 230,
       "animations": {
         "walk": {
-          "frameRateFps": 10
+          "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 4
         },
         "death": {
           "frameRateFps": 10
@@ -1008,6 +1158,12 @@
     },
     {
       "id": "zombie_lvl18",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1036,6 +1192,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 243,
       "animations": {
@@ -1056,6 +1219,12 @@
     },
     {
       "id": "zombie_lvl19",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1084,6 +1253,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 257,
       "animations": {
@@ -1104,6 +1280,12 @@
     },
     {
       "id": "zombie_lvl20",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1132,6 +1314,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 270,
       "animations": {
@@ -1152,6 +1341,12 @@
     },
     {
       "id": "zombie_lvl21",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1180,6 +1375,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 284,
       "animations": {
@@ -1200,6 +1402,12 @@
     },
     {
       "id": "zombie_lvl22",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1228,6 +1436,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 297,
       "animations": {
@@ -1248,6 +1463,12 @@
     },
     {
       "id": "zombie_lvl23",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1276,6 +1497,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 311,
       "animations": {
@@ -1296,6 +1524,12 @@
     },
     {
       "id": "zombie_lvl24",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1324,6 +1558,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 324,
       "animations": {
@@ -1344,6 +1585,12 @@
     },
     {
       "id": "zombie_lvl25",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1372,6 +1619,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 338,
       "animations": {
@@ -1392,6 +1646,12 @@
     },
     {
       "id": "zombie_lvl26",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1420,6 +1680,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 351,
       "animations": {
@@ -1440,6 +1707,12 @@
     },
     {
       "id": "zombie_lvl27",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1468,6 +1741,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 365,
       "animations": {
@@ -1488,6 +1768,12 @@
     },
     {
       "id": "zombie_lvl28",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1516,6 +1802,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 378,
       "animations": {
@@ -1536,6 +1829,12 @@
     },
     {
       "id": "zombie_lvl29",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1564,6 +1863,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 392,
       "animations": {
@@ -1584,6 +1890,12 @@
     },
     {
       "id": "zombie_lvl30",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1612,6 +1924,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 405,
       "animations": {
@@ -1632,6 +1951,12 @@
     },
     {
       "id": "zombie_lvl31",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1660,6 +1985,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 419,
       "animations": {
@@ -1680,6 +2012,12 @@
     },
     {
       "id": "zombie_lvl32",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1708,6 +2046,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 432,
       "animations": {
@@ -1728,6 +2073,12 @@
     },
     {
       "id": "zombie_lvl33",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1756,6 +2107,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 446,
       "animations": {
@@ -1776,6 +2134,12 @@
     },
     {
       "id": "zombie_lvl34",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1804,6 +2168,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 459,
       "animations": {
@@ -1824,6 +2195,12 @@
     },
     {
       "id": "zombie_lvl35",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1852,6 +2229,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 473,
       "animations": {
@@ -1872,6 +2256,12 @@
     },
     {
       "id": "zombie_lvl36",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -1900,6 +2290,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 486,
       "animations": {
@@ -1920,6 +2317,12 @@
     },
     {
       "id": "zombie_lvl37",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -1948,6 +2351,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 500,
       "animations": {
@@ -1968,6 +2378,12 @@
     },
     {
       "id": "zombie_lvl38",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -1996,6 +2412,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 513,
       "animations": {
@@ -2016,6 +2439,12 @@
     },
     {
       "id": "zombie_lvl39",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2044,6 +2473,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 527,
       "animations": {
@@ -2064,6 +2500,12 @@
     },
     {
       "id": "zombie_lvl40",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2092,6 +2534,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 540,
       "animations": {
@@ -2112,6 +2561,12 @@
     },
     {
       "id": "zombie_lvl41",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2140,6 +2595,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 554,
       "animations": {
@@ -2160,6 +2622,12 @@
     },
     {
       "id": "zombie_lvl42",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2188,6 +2656,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 567,
       "animations": {
@@ -2208,6 +2683,12 @@
     },
     {
       "id": "zombie_lvl43",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2236,6 +2717,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 581,
       "animations": {
@@ -2256,6 +2744,12 @@
     },
     {
       "id": "zombie_lvl44",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2284,6 +2778,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 594,
       "animations": {
@@ -2304,6 +2805,12 @@
     },
     {
       "id": "zombie_lvl45",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2332,6 +2839,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 608,
       "animations": {
@@ -2352,6 +2866,12 @@
     },
     {
       "id": "zombie_lvl46",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2380,6 +2900,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 621,
       "animations": {
@@ -2400,6 +2927,12 @@
     },
     {
       "id": "zombie_lvl47",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2428,6 +2961,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 635,
       "animations": {
@@ -2448,6 +2988,12 @@
     },
     {
       "id": "zombie_lvl48",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2476,6 +3022,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 648,
       "animations": {
@@ -2496,6 +3049,12 @@
     },
     {
       "id": "zombie_lvl49",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2524,6 +3083,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 662,
       "animations": {
@@ -2544,6 +3110,12 @@
     },
     {
       "id": "zombie_lvl50",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2572,6 +3144,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 675,
       "animations": {
@@ -2592,6 +3171,12 @@
     },
     {
       "id": "zombie_lvl51",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2620,6 +3205,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 689,
       "animations": {
@@ -2640,6 +3232,12 @@
     },
     {
       "id": "zombie_lvl52",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2668,6 +3266,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 702,
       "animations": {
@@ -2688,6 +3293,12 @@
     },
     {
       "id": "zombie_lvl53",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2716,6 +3327,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 716,
       "animations": {
@@ -2736,6 +3354,12 @@
     },
     {
       "id": "zombie_lvl54",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2764,6 +3388,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 729,
       "animations": {
@@ -2784,6 +3415,12 @@
     },
     {
       "id": "zombie_lvl55",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2812,6 +3449,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 743,
       "animations": {
@@ -2832,6 +3476,12 @@
     },
     {
       "id": "zombie_lvl56",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -2861,6 +3511,13 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
+      },
       "attackDamage": 756,
       "animations": {
         "walk": {
@@ -2880,6 +3537,12 @@
     },
     {
       "id": "zombie_lvl57",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -2909,6 +3572,13 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
+      },
       "attackDamage": 770,
       "animations": {
         "walk": {
@@ -2928,6 +3598,12 @@
     },
     {
       "id": "zombie_lvl58",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 0,
@@ -2957,6 +3633,13 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
+      },
       "attackDamage": 783,
       "animations": {
         "walk": {
@@ -2976,6 +3659,12 @@
     },
     {
       "id": "zombie_lvl59",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 96,
@@ -3005,6 +3694,13 @@
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
+      },
       "attackDamage": 797,
       "animations": {
         "walk": {
@@ -3024,6 +3720,12 @@
     },
     {
       "id": "zombie_lvl60",
+      "fenceOffsetPxBySide": {
+        "top": 5,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
       "frame": {
         "x": 0,
         "y": 192,
@@ -3052,6 +3754,13 @@
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 168,
+        "y": 0,
+        "w": 27,
+        "h": 27,
+        "frames": 7
       },
       "attackDamage": 810,
       "animations": {

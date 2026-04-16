@@ -7835,12 +7835,30 @@ function zombieFenceLimit(z){
   let outerFenceSide = BAL.fenceRadius + BAL.fenceWidth * 0.5;
   const dx = Math.cos(z.theta ?? 0);
   const dy = Math.sin(z.theta ?? 0);
+  // Per-type fenceOffsetPxBySide from zombies.json (priority), then global layoutTuning fallback
+  const typeOffset = z.type && z.type.fenceOffsetPxBySide;
   const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
-  const offsetBySide = layoutTuning.zombieFenceOffsetPxBySide || {};
+  const offsetBySide = (typeOffset && typeof typeOffset === 'object') ? typeOffset
+    : (layoutTuning.zombieFenceOffsetPxBySide || {});
   let sideKey = 'right';
   if (Math.abs(dy) > Math.abs(dx)) sideKey = dy >= 0 ? 'bottom' : 'top';
   else sideKey = dx >= 0 ? 'right' : 'left';
-  const sideOffset = Number.isFinite(offsetBySide[sideKey]) ? offsetBySide[sideKey] : 0;
+  let sideOffset = Number.isFinite(offsetBySide[sideKey]) ? offsetBySide[sideKey] : 0;
+
+  // Task 1: disable offset locally when the fence segment at this position is fully destroyed (HP=0)
+  if (sideOffset > 0) {
+    const localX = dx * (z.r || 0);
+    const localY = dy * (z.r || 0);
+    const worldXForOffset = center.x + localX;
+    const worldYForOffset = center.y + localY;
+    const segAtPoint = typeof pickFenceSegmentByPoint === 'function'
+      ? pickFenceSegmentByPoint(worldXForOffset, worldYForOffset)
+      : null;
+    if (segAtPoint && segAtPoint.broken && segAtPoint.hp <= 0) {
+      sideOffset = 0;
+    }
+  }
+
   outerFenceSide += sideOffset * balScale;
   const denom = Math.max(Math.abs(dx), Math.abs(dy)) || 1;
   const outerLimit = outerFenceSide / denom + zombieCollisionRadius(z);
@@ -8893,6 +8911,7 @@ function impactAt(x,y,b,opts){
         addDamageNumber,
         spawnProjectile,
         impacts: state.impacts,
+        nowSec: nowSec(),
       });
     }
     // Play chip-specific impact SFX if configured
@@ -9049,7 +9068,7 @@ function stepDecals(dt){
       }
       // Slow effect (ice, acid) — delegate to ChipEffects
       if (ChipFxD && typeof ChipFxD.stepChipDecal === 'function') {
-        ChipFxD.stepChipDecal(d, dt, { zombies: state.zombies, getZombiePos: zombiePos });
+        ChipFxD.stepChipDecal(d, dt, { zombies: state.zombies, getZombiePos: zombiePos, nowSec: nowSec() });
       }
     }
 
@@ -12080,6 +12099,8 @@ function draw(){
       _PLR.draw(ctx, state);
     }
   }
+  // ── Drone slots: below zombies so zombie sprites overlap the slot backgrounds ──
+  if (!_RR || _RR.isLegacy('drones')) drawDroneSlots();
   if (_RR && _RR.isPhaser('zombiesCorpses') && _PLM) _PLM.drawLayer('zombiesCorpses', ctx);
   if (!_RR || _RR.isLegacy('zombiesCorpses')) renderZombiesAndCorpses();
   if (_RR && _RR.isPhaser('fenceHpBars') && _PLM) {
@@ -12128,8 +12149,9 @@ function draw(){
   }
   if (_RR && _RR.isPhaser('projectilesEffects') && _PLM) _PLM.drawLayer('projectilesEffects', ctx);
   if (!_RR || _RR.isLegacy('projectilesEffects')) renderProjectilesAndEffects();
+  // ── Drone bodies: above projectiles, above zombies ──
   if (_RR && _RR.isPhaser('drones') && _PLM) _PLM.drawLayer('drones', ctx);
-  if (!_RR || _RR.isLegacy('drones')) drawDrones();
+  if (!_RR || _RR.isLegacy('drones')) drawDroneBodies();
   if (!_RR || _RR.isLegacy('crate')) drawCrate();
   if (!_RR || _RR.isLegacy('weather')) drawWeather();
   if (_RR && _RR.isPhaser('eveningDim') && _PLM) {
@@ -13141,6 +13163,29 @@ function drawDrones(){
     dronSprites: DronSprites,
     fenceRepairCost: getFenceRepairCostCoins(),
   });
+}
+
+function _droneDrawOpts(){
+  return {
+    state,
+    ctx,
+    nowSec: nowSec(),
+    balScale,
+    boardRect: state.boardRect,
+    dronConfig: getDronRuntimeConfig(),
+    dronSprites: DronSprites,
+    fenceRepairCost: getFenceRepairCostCoins(),
+  };
+}
+
+function drawDroneSlots(){
+  if (!(DronesApi && typeof DronesApi.drawSlots === 'function')) return;
+  DronesApi.drawSlots(_droneDrawOpts());
+}
+
+function drawDroneBodies(){
+  if (!(DronesApi && typeof DronesApi.drawBodies === 'function')) return;
+  DronesApi.drawBodies(_droneDrawOpts());
 }
 
 function renderFenceBase(){

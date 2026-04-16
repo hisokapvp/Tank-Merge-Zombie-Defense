@@ -379,6 +379,11 @@
                 deathCommon: normalizeAnimConfig(animations && animations.deathCommon, defaultAnimFps.deathCommon),
               },
               attackConfig: normalizeAttackConfig(attackTuning, defaultAttackConfig),
+              fenceOffsetPxBySide: (t.fenceOffsetPxBySide && typeof t.fenceOffsetPxBySide === 'object')
+                ? t.fenceOffsetPxBySide
+                : (data.fenceOffsetPxBySide && typeof data.fenceOffsetPxBySide === 'object'
+                  ? data.fenceOffsetPxBySide
+                  : null),
             };
           });
 

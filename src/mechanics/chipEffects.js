@@ -313,12 +313,10 @@
   }
 
   function getActiveModIds(cellIndex) {
-      var calmStillActive = Number.isFinite(z.calmUntil) && now < z.calmUntil;
     var mods = getActiveChipMods(cellIndex);
+    var ids = [];
+    for (var i = 0; i < mods.length; i++) ids.push(mods[i].modId);
     return ids;
-      if (!calmStillActive) {
-        z.calmUntil = now + duration;
-      }
   }
 
   /* ─── group-A mods for Arcade Chaos (mod 7) ─── */
@@ -390,6 +388,21 @@
       (result.pendingCascadeMods && result.pendingCascadeMods.length > 0) ||
       (result.pendingYellowMods && result.pendingYellowMods.length > 0)
     ));
+  }
+
+  /** Extract only mod IDs of a given kind from shotMods.activeModIds.
+   *  Used to isolate bullet sprites/scales for child projectiles (task 2). */
+  function _extractModIdsOfKind(shotMods, kindModIds) {
+    if (!shotMods || !Array.isArray(shotMods.activeModIds)) return kindModIds.slice(0, 1);
+    var result = [];
+    for (var i = 0; i < shotMods.activeModIds.length; i++) {
+      for (var k = 0; k < kindModIds.length; k++) {
+        if (shotMods.activeModIds[i] === kindModIds[k]) {
+          result.push(shotMods.activeModIds[i]);
+        }
+      }
+    }
+    return result.length > 0 ? result : kindModIds.slice(0, 1);
   }
 
   function _buildChildImpactShotMods(source, overrides) {
@@ -1132,6 +1145,9 @@
     }
     if (!best) return;
 
+    // Resolve chain-specific mod ID for visual isolation (task 2)
+    var chainVisualModIds = _extractModIdsOfKind(b.chipShotMods, [2, 17, 18]);
+
     var tp = getPos(best);
     // spawn chain projectile that flies to new target
     opts.spawnProjectile({
@@ -1147,7 +1163,9 @@
       shotId: (b.shotId || 0) + 0.1,
       isTankAttackingZombie: false,
       tank: b.tank,
-      chipShotMods: _buildChildImpactShotMods(b.chipShotMods, jumps > 1 ? { chainJumps: jumps - 1 } : null),
+      chipShotMods: _buildChildImpactShotMods(b.chipShotMods, jumps > 1
+        ? { chainJumps: jumps - 1, activeModIds: chainVisualModIds }
+        : { activeModIds: chainVisualModIds }),
       isChainChild: true
     });
   }
@@ -1172,6 +1190,9 @@
     var chain = sm && sm.matryoshkaChain;
     var depth = sm && sm.matryoshkaDepth;
 
+    // Resolve matryoshka-specific mod ID for visual isolation (task 2)
+    var matryoshkaVisualModIds = _extractModIdsOfKind(sm, [3, 19, 20]);
+
     if (chain && chain.length > 0 && depth > 0) {
       /* Advanced matryoshka (triple/quad): spawn next child in chain */
       var nextChild = chain[0];
@@ -1183,8 +1204,9 @@
         matryoshkaDmgMul: nextChild.dmgMul,
         matryoshkaSizeMul: nextChild.sizeMul,
         matryoshkaDepth: depth - 1,
-        matryoshkaChain: remainingChain
-      } : null);
+        matryoshkaChain: remainingChain,
+        activeModIds: matryoshkaVisualModIds
+      } : { activeModIds: matryoshkaVisualModIds });
       opts.spawnProjectile({
         fromX: x, fromY: y,
         toZombieId: best.id, toX: tp.x, toY: tp.y,
@@ -1216,7 +1238,7 @@
         shotId: (b.shotId || 0) + 0.5,
         isTankAttackingZombie: false,
         tank: b.tank,
-        chipShotMods: _buildChildImpactShotMods(sm, null),
+        chipShotMods: _buildChildImpactShotMods(sm, { activeModIds: matryoshkaVisualModIds }),
         isMatryoshkaChild: true
       });
     }
@@ -1300,7 +1322,7 @@
   function _applyCalming(x, y, b, duration, calmRadius, opts) {
     var zombies = opts.zombies;
     var getPos = opts.getZombiePos;
-    var now = _now();
+    var now = Number.isFinite(opts.nowSec) ? opts.nowSec : _now();
     var effectRadius = (calmRadius > 0) ? calmRadius : (b.aoe || 40);
 
     for (var i = 0; i < zombies.length; i++) {
@@ -1423,7 +1445,8 @@
 
       // slow from ice or acid
       if (d.slowFactor && d.slowFactor > 0) {
-        z.chipSlowUntil = _now() + 0.2; // re-apply each frame
+        var decalNow = Number.isFinite(opts.nowSec) ? opts.nowSec : _now();
+        z.chipSlowUntil = decalNow + 0.2; // re-apply each frame
         z.chipSlowFactor = Math.min(z.chipSlowFactor || 1, 1 - d.slowFactor);
       }
     }

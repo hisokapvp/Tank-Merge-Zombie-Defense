@@ -1,5 +1,12 @@
 # Copilot Instructions — Tank Merge Zombie Defense
 
+> **CRITICAL INSTRUCTION COMPLIANCE REQUIREMENT** (applies to ALL models including Claude Opus, Claude Sonnet, GPT-5):
+> You MUST read, load, and strictly follow EVERY instruction from this file, from agent `.md` files, and from SKILL.md files. This is NON-NEGOTIABLE.
+> - If an agent file exists for your current mode → load it via `read_file` and follow it completely.
+> - If a skill applies to the task → load its SKILL.md via `read_file` and follow it completely.
+> - Never skip, truncate, summarize, or selectively ignore any loaded instruction regardless of its length.
+> - Violation of these instructions degrades output quality and breaks the user's workflow.
+
 ## Область действия
 
 Этот файл применяется только к работе внутри `D:\Tank-Merge-Zombie-Defense`.

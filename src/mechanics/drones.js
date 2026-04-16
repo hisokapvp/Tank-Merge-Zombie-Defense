@@ -1074,7 +1074,7 @@
     drawDroneSpriteAt(ctx, drone.pos.x, drone.pos.y, modeAnimName, nowSec, balScale, dronSprites, null);
   }
 
-  function draw(options) {
+  function drawSlots(options) {
     var opts = options || {};
     var state = opts.state;
     var ctx = opts.ctx;
@@ -1093,6 +1093,16 @@
       }
       drawDroneSlot(ctx, slot, slotDrone, _slotDragState, balScale, nowSec, opts.dronSprites);
     }
+  }
+
+  function drawBodies(options) {
+    var opts = options || {};
+    var state = opts.state;
+    var ctx = opts.ctx;
+    if (!state || !Array.isArray(state.drones) || !ctx) return;
+
+    var balScale = Number.isFinite(opts.balScale) ? opts.balScale : 1;
+    var nowSec = Number.isFinite(opts.nowSec) ? opts.nowSec : 0;
 
     for (var i = 0; i < state.drones.length; i++) {
       var drone = state.drones[i];
@@ -1117,6 +1127,11 @@
         ctx.restore();
       }
     }
+  }
+
+  function draw(options) {
+    drawSlots(options);
+    drawBodies(options);
   }
 
   function hitRect(rect, x, y) {
@@ -1284,6 +1299,8 @@
     addDron: addDron,
     step: step,
     draw: draw,
+    drawSlots: drawSlots,
+    drawBodies: drawBodies,
     _resolveHangarDroneAnimName: resolveHangarDroneAnimName,
     _resolveWorldDroneAnimName: resolveWorldDroneAnimName,
     handlePointerDown: handlePointerDown,

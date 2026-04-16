@@ -45,7 +45,7 @@
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
       targetAliveMult: 5,
-      targetAliveRampSec: 5,
+      targetAliveRampSec: 3,
       speedMult: 1.5,
       damageMult: 1.5,
       fenceBreachAwarenessRadiusPx: 100,
