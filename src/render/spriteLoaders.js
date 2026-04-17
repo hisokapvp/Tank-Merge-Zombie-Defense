@@ -333,6 +333,13 @@
           this.debuffIconScale = Number.isFinite(data.debuffIconScale) ? Math.max(0.1, Math.min(3, data.debuffIconScale)) : 1.0;
           this.debuffIconOpacity = Number.isFinite(data.debuffIconOpacity) ? Math.max(0, Math.min(1, data.debuffIconOpacity)) : 1.0;
 
+          var defaultAnchor = (data.defaultAnchor && typeof data.defaultAnchor === 'object')
+            ? {
+                x: Number.isFinite(data.defaultAnchor.x) ? data.defaultAnchor.x : 0.5,
+                y: Number.isFinite(data.defaultAnchor.y) ? data.defaultAnchor.y : 0.75,
+              }
+            : { x: 0.5, y: 0.75 };
+
           this.types = (data.types || []).map(function (t) {
             var animations = t && typeof t.animations === 'object' ? t.animations : null;
             var attackTuning = t && t.attack && typeof t.attack === 'object' ? t.attack : null;
@@ -347,7 +354,7 @@
               frame: t.frame || { x: 0, y: 0, w: 64, h: 64 },
               frames: t.frames != null ? t.frames : 1,
               animSpeed: t.animSpeed != null ? t.animSpeed : 1.0,
-              anchor: t.anchor || { x: 0.5, y: 0.75 },
+              anchor: t.anchor || defaultAnchor,
               anchorShadow: t.anchor_shadow && typeof t.anchor_shadow === 'object'
                 ? { x: Number.isFinite(t.anchor_shadow.x) ? t.anchor_shadow.x : 0, y: Number.isFinite(t.anchor_shadow.y) ? t.anchor_shadow.y : 0 }
                 : { x: 0, y: 0 },

@@ -13,7 +13,7 @@
 
 ## Инварианты этого модуля ⚠️
 - Все runtime-конфиги проходят через normalizer'ы этого файла; render code не должен парсить raw JSON заново.
-- `ZombieSprites.load()` — canonical normalizer для `assets/zombies.json`: он приводит top-level `atlas`/`atlasesById`, `spawn.*`, corpse timing, `deathCommon[].scale`, per-type `Health/health` и `shadowScale` к безопасному runtime shape; downstream gameplay и render должны читать `type.atlasPath`, `ZombieSprites.atlasImages`, `ZombieSprites.spawnConfig`, normalized death variants, `type.health` и `type.shadowScale`, а не raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L222-L380).
+- `ZombieSprites.load()` — canonical normalizer для `assets/zombies.json`: он приводит top-level `atlas`/`atlasesById`, `defaultAnchor` (fallback `{0.5, 0.75}`), `spawn.*`, corpse timing, `deathCommon[].scale`, per-type `Health/health` и `shadowScale` к безопасному runtime shape; per-type `anchor` имеет приоритет над `defaultAnchor`; downstream gameplay и render должны читать `type.atlasPath`, `ZombieSprites.atlasImages`, `ZombieSprites.spawnConfig`, normalized death variants, `type.health` и `type.shadowScale`, а не raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L222-L380).
 - Shared death atlas остаётся deliberate contract even при per-type atlas map: `getAtlasImage(type, preferSharedAtlas)` обязан возвращать общий atlas для `deathCommon` path и type-specific atlas для walk/attack/default render, не смешивая эти два режима на уровне raw JSON: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L416-L426).
 - Для суперкомпьютера legacy `storage` остаётся допустимым alias для `storageCell`, а `box` — для `conveyorBox`: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L903-L928), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L995-L1030).
 - `conveyorBox` нормализует две стадии печати `printLow` / `printHigh` и понимает legacy alias-имена (`buildLow`, `buildHigh`, `under50`, `over50`, `lessThanHalf`, `moreThanHalf`): [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L118-L145).
@@ -37,7 +37,7 @@
 | Функция / блок | Строки | Назначение |
 |---|---|---|
 | `normalizeAtlasPath()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L222-L225) | Канонический normalizer `atlas` / `atlasesById` значений в `assets/...` paths |
-| `ZombieSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L228-L380) | Читает `assets/zombies.json`, preload'ит shared + per-type atlas map, normalizes `deathCommon` (включая variant `scale`), `spawn`, corpse timing и per-type `Health/health -> health`, `shadowScale` |
+| `ZombieSprites.load()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L228-L390) | Читает `assets/zombies.json`, парсит top-level `defaultAnchor` (fallback `{0.5, 0.75}`), preload'ит shared + per-type atlas map, normalizes `deathCommon` (включая variant `scale`), `spawn`, corpse timing и per-type `Health/health -> health`, `shadowScale`; per-type `anchor` имеет приоритет над `defaultAnchor` |
 | `pickType()` / `pickTypeByLevel()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L390-L415) | Runtime-selection по weight и deterministic `zombie_lvlN` lookup |
 | `getAtlasImage()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L416-L426) | Отдаёт общий или type-specific atlas image для render path |
 

@@ -2,6 +2,7 @@
 
 ## assets/zombies.json
 
+- `defaultAnchor` — top-level объект `{x, y}`, задающий anchor-точку для всех типов зомби по умолчанию. Если у конкретного type есть собственный `anchor`, он имеет приоритет. Если `defaultAnchor` отсутствует в JSON, используется fallback `{x: 0.5, y: 0.75}`.
 - `corpseDespawnSec` — время существования трупа **после** окончания death-анимации (сек).
 - `corpseFadeOutSec` — длительность fade-out в конце life-time трупа (сек).
 
