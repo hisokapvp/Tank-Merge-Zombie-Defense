@@ -3,6 +3,16 @@
   "atlas": "fence_atlas.png",
   "cornerInsetPx": 0,
   "segmentsPerSide": 7,
+  "shields": {
+    "_readme": "Task 10 (rework-cycle-2): отображается поверх каждого fence-сегмента пока активен Купол (defenseActive). atlas — путь относительно assets/. frameRate — кадров в секунду. scale — общий множитель размера, anchor — точка привязки в долях кадра. Кадры можно задать двумя способами: (а) массив frames:[{x,y,w,h}] — явно; (б) grid:{cols,rows,frameWidth?,frameHeight?} — автогенерация из атласа (если frameWidth/Height не заданы, используется naturalWidth/cols и naturalHeight/rows). Отключить: выставить visibleWhile в пустую строку или убрать frames и grid.",
+    "atlas": "shields.png",
+    "grid": { "cols": 12, "rows": 1 },
+    "frames": [],
+    "frameRate": 12,
+    "scale": 2.4,
+    "anchor": { "x": 0.5, "y": 0.5 },
+    "visibleWhile": "defenseActive"
+  },
   "levels": [
     {
       "segmentMaxHp": 110000,

@@ -49,3 +49,10 @@ Fallback-правила:
 - Если нужен smoke — добавить `smoke.frames` в `assets/fence.json` с id-ами, которые присутствуют в `frames`.
 
 Этого достаточно, чтобы движок автоматически подобрал атлас (если он задан) и начал корректно работать с апгрейдами и отрисовкой smoke.
+
+## Обновление 2026-04-21 — shields.png overlay (solo-pipeline-yandex-vk#1)
+
+- В `assets/fence.json` добавлен корневой объект `shields`: `atlas`, `frames[]`, `frameRate`, `scale`, `anchor{x,y}`, `visibleWhile: "defenseActive"`.
+- Рантайм: `ShieldSprites` (в `game.js`) грузит атлас в boot после `GroundSprites.load()`. Рендер выполняется в `renderFenceBase` поверх целого сегмента забора, только пока `TalentsV2.isDomeActive(nowMs)` возвращает true.
+- Sprite порядок сохранён: `fenceBase → zombies/corpses → fenceHpBars → projectiles/effects`. Shields рисуется внутри fenceBase-фазы, после основного кадра сегмента, но до HP-баров.
+- Анимация выбирается по `floor(now / (1000/frameRate)) % frames.length`; размер — через `BAL.fenceWidth` с scale из конфига.

@@ -176,6 +176,7 @@
       zombieAttackSpeedMul: 1,
       wallHpMul: 1,
       wallArmorFlat: 0,
+      wallArmorMul: 1,
       economyMul: 1,
     };
   }
@@ -238,6 +239,7 @@
       xpMul: 1,
       wallHpMul: 1,
       wallArmorFlat: 0,
+      wallArmorMul: 1,
     };
     var branchAliases = {
       offense: 'offense',
@@ -545,7 +547,7 @@
     var wallCfg = getNestedValue(data || {}, ['fence', 'levels', level - 1]) || {};
     var modifiers = Object.assign(createIdentityModifiers(), scenario && scenario.modifiers ? scenario.modifiers : {});
     var segmentMaxHp = safeNumber(wallCfg.segmentMaxHp, 1) * safeNumber(modifiers.wallHpMul, 1);
-    var armorFlat = safeNumber(wallCfg.armorFlat, 0) + safeNumber(modifiers.wallArmorFlat, 0);
+    var armorFlat = (safeNumber(wallCfg.armorFlat, 0) + safeNumber(modifiers.wallArmorFlat, 0)) * safeNumber(modifiers.wallArmorMul, 1);
     return {
       level: level,
       segmentMaxHp: round(segmentMaxHp, 3),

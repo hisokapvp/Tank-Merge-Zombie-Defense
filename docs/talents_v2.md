@@ -607,3 +607,10 @@ Runtime-поля сущностей (`_talentRt`, `_statusRt`, `_defRt`) не в
 - Прогон обязателен по секциям:
   - UI / Offense / Defense / Economy / Migration / FPS
 - Критичные расхождения фиксируются в `Known Issues` с явной пометкой зоны ответственности (TalentsV2 vs интеграция боёвки).
+
+
+## Обновление 2026-04-21 (solo-pipeline-yandex-vk#1)
+
+- `wallArmorFlat` → `wallArmorMul` для таланта "Композитная броня": теперь 2% за ранг (`stat_mul`, perRank:0.02). Итоговая броня в `getFenceArmorFlat` (`game.js`): `Math.round(base * wallArmorMul)`. Зеркалит `tools/balance-shared.js` L548.
+- Купол: применение множителя урона `defActiveDamageTakenMul` перенесено в единую точку `applyFenceSegmentDamage` (`game.js` L7716) через `window.Game.TalentsV2.getActiveDomeDamageMul(nowMs)`. Иммунно к "обновлению" зомби.
+- `getTalentNodeDescriptionV2` (`game.js` L10946): резолвит rank через `api.getRanks()+api.getPendingRanks()` если caller передал 0/undefined; поддерживает `ui.currentFormat = 'percent'|'flat'`. Это чинит "ТЕКУЩАЯ ПРИБАВКА - 0%" в модалке "Древо улучшений".

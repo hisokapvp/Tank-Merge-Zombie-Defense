@@ -162,6 +162,7 @@
     wallHpMul: 1,
     wallDrPct: 0,
     wallArmorFlat: 0,
+    wallArmorMul: 1,
     tankBuyCostMul: 1,
     repairCostMul: 1,
     upgradeCostMul_guns: 1,
@@ -3519,6 +3520,26 @@
     return null;
   }
 
+  function isDomeActive(nowMs) {
+    try {
+      var runRt = ensureRunRt();
+      var timeNow = normalizeEpochMs(nowMs, runtime.nowMsFn());
+      var defenseRt = runRt && runRt.actives && runRt.actives.defense;
+      if (!defenseRt) return false;
+      return timeNow < toNumber(defenseRt.untilMs, 0);
+    } catch (_) { return false; }
+  }
+
+  function getActiveDomeDamageMul(nowMs) {
+    try {
+      if (!isDomeActive(nowMs)) return 1;
+      var mods = getMods();
+      var mul = getModNumber(mods, 'defActiveDamageTakenMul', ['defenseActiveDamageTakenMul'], 1);
+      if (!Number.isFinite(mul) || mul < 0) return 1;
+      return mul;
+    } catch (_) { return 1; }
+  }
+
   function getActiveState(branchLike, nowMs) {
     var branchId = resolveBranchId(branchLike);
     var timeNow = normalizeEpochMs(nowMs, runtime.nowMsFn());
@@ -3983,6 +4004,8 @@
     getBranchSpent: getBranchSpent,
     getUnlockedTier: getUnlockedTier,
     getActiveState: getActiveState,
+    isDomeActive: isDomeActive,
+    getActiveDomeDamageMul: getActiveDomeDamageMul,
     canBuy: canBuy,
     canRespec: canRespec,
     queueRank: queueRank,

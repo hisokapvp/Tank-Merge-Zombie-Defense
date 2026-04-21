@@ -277,7 +277,7 @@
       "costPerRank": 1,
       "requires": [],
       "ui": { "nameKey": "talent_def_armor_flat_name", "descKey": "talent_def_armor_flat_desc", "icon": "armor" },
-      "effects": [{ "type": "stat_add", "stat": "wallArmorFlat", "perRank": 2 }]
+      "effects": [{ "type": "stat_mul", "stat": "wallArmorMul", "perRank": 0.02 }]
     },
     {
       "id": "def_repair_cost",

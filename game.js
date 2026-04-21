@@ -2191,6 +2191,77 @@ const DecorSprites = spriteLoaders && spriteLoaders.DecorSprites ? spriteLoaders
   pickFrame() { return null; },
 };
 
+// Task 10: shields.png overlay for active Купол (defenseActive).
+// Config is read lazily from FenceSprites.config.shields (fence.json -> root `shields`).
+const ShieldSprites = {
+  ready: false,
+  error: '',
+  img: null,
+  _framesCache: null,
+  _framesCacheKey: '',
+  async load() {
+    try {
+      if (typeof Image === 'undefined') { this.error = 'Image constructor unavailable'; return; }
+      const img = new Image();
+      const done = new Promise((resolve) => {
+        img.onload = () => { this.ready = true; this.img = img; resolve(); };
+        img.onerror = (e) => { this.error = 'failed to load assets/shields.png'; this.ready = false; resolve(); };
+      });
+      img.src = 'assets/shields.png';
+      await done;
+    } catch (e) { this.error = String(e && e.message || e); }
+  },
+  // Task 10 (rework-cycle-2): resolve effective frames. Priority:
+  // 1) explicit `frames: [{x,y,w,h}]` in config (legacy/manual);
+  // 2) `grid: {cols, rows, [frameWidth, frameHeight]}` — auto-generate frames from atlas naturalWidth/Height;
+  // 3) fallback to a single full-atlas frame.
+  getConfig() {
+    try {
+      const cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+      if (!cfg || !cfg.shields || typeof cfg.shields !== 'object') return null;
+      const base = cfg.shields;
+      const explicit = Array.isArray(base.frames) ? base.frames.filter((f) => f && Number.isFinite(f.w) && Number.isFinite(f.h)) : [];
+      if (explicit.length > 1) return base;
+      // Try grid auto-generation.
+      const grid = base.grid && typeof base.grid === 'object' ? base.grid : null;
+      const cols = grid && Number.isFinite(grid.cols) && grid.cols > 0 ? Math.floor(grid.cols) : 0;
+      const rows = grid && Number.isFinite(grid.rows) && grid.rows > 0 ? Math.floor(grid.rows) : 0;
+      if (cols > 0 && rows > 0 && this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+        const fw = Number.isFinite(grid.frameWidth) && grid.frameWidth > 0
+          ? Math.floor(grid.frameWidth)
+          : Math.floor(this.img.naturalWidth / cols);
+        const fh = Number.isFinite(grid.frameHeight) && grid.frameHeight > 0
+          ? Math.floor(grid.frameHeight)
+          : Math.floor(this.img.naturalHeight / rows);
+        const key = `${cols}x${rows}@${fw}x${fh}:${this.img.naturalWidth}x${this.img.naturalHeight}`;
+        if (this._framesCacheKey !== key || !Array.isArray(this._framesCache)) {
+          const arr = new Array(cols * rows);
+          let idx = 0;
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              arr[idx++] = { x: c * fw, y: r * fh, w: fw, h: fh };
+            }
+          }
+          this._framesCache = arr;
+          this._framesCacheKey = key;
+        }
+        // Return a shallow clone with generated frames (do not mutate source config).
+        return Object.assign({}, base, { frames: this._framesCache });
+      }
+      if (explicit.length === 1) return base;
+      // Fallback: derive one frame covering whole atlas.
+      if (this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+        return Object.assign({}, base, {
+          frames: [{ x: 0, y: 0, w: this.img.naturalWidth, h: this.img.naturalHeight }],
+        });
+      }
+      return base;
+    } catch (_) {}
+    return null;
+  },
+};
+if (typeof window !== 'undefined') { window.Game = window.Game || {}; window.Game.ShieldSprites = ShieldSprites; }
+
 const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoaders.GroundSprites : {
   ready: false,
   error: 'SpriteLoaders module is unavailable',
@@ -7063,8 +7134,17 @@ function getFenceArmorFlat(){
   const base = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
   const level = getFenceLevelIndex() + 1;
   const applied = getAppliedFenceUpgradeLevel(level, 'armorFlat');
-  const val = Math.round(base * Math.pow(FENCE_ARMOR_MUL, applied));
-  return Math.max(0, val);
+  let val = base * Math.pow(FENCE_ARMOR_MUL, applied);
+  // Task 9 (Композитная броня): apply wallArmorMul talent mod (% per rank) on top of base armor.
+  try {
+    const talentsApi = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.getMods === 'function') {
+      const mods = talentsApi.getMods() || {};
+      const mul = Number(mods.wallArmorMul);
+      if (Number.isFinite(mul) && mul > 0) val *= mul;
+    }
+  } catch (_) {}
+  return Math.max(0, Math.round(val));
 }
 
 function getFenceUpgradeCostDamagePoints(){
@@ -7718,7 +7798,18 @@ function applyFenceSegmentDamage(seg, amount){
   const incomingDamage = Math.max(0, amount || 0);
   if (incomingDamage <= 0) return false;
   const armorFlat = getFenceArmorFlat();
-  const finalDamage = Math.max(0, incomingDamage - armorFlat);
+  let finalDamage = Math.max(0, incomingDamage - armorFlat);
+  // Task 3 (Купол): apply active defense damage mul in the single zombie→fence damage path
+  // so that the effect is immune to zombie "refresh" — mul is read from talents mods, not per-zombie state.
+  try {
+    const talentsApi = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.getActiveDomeDamageMul === 'function') {
+      const domeMul = talentsApi.getActiveDomeDamageMul(Date.now());
+      if (Number.isFinite(domeMul) && domeMul >= 0 && domeMul !== 1) {
+        finalDamage = Math.max(0, finalDamage * domeMul);
+      }
+    }
+  } catch (_) {}
   if (finalDamage <= 0) return false;
   const wasBroken = !!seg.broken;
   seg.hp = clamp(seg.hp - finalDamage, 0, seg.maxHp);
@@ -10947,21 +11038,74 @@ function getTalentNodeDescriptionV2(node, rank){
   let descText = t(node.ui?.descKey || node.id);
   try {
     if (node && node.ui && node.ui.descKey) {
+      // Task 4: robustly resolve effective rank even if caller passed 0 / undefined.
+      let effectiveRank = Math.max(0, Math.floor(Number(rank) || 0));
+      if (effectiveRank <= 0) {
+        try {
+          const api = getTalentsV2Api();
+          if (api) {
+            const applied = typeof api.getRanks === 'function' ? (api.getRanks() || {}) : {};
+            const pending = typeof api.getPendingRanks === 'function' ? (api.getPendingRanks() || {}) : {};
+            const a = Math.max(0, Math.floor(Number(applied[node.id]) || 0));
+            const p = Math.max(0, Math.floor(Number(pending[node.id]) || 0));
+            effectiveRank = a + p;
+          }
+        } catch (_) {}
+      }
       const vars = {};
-      let currentPct = 0;
+      let currentDisplay = 0;
+      let currentResolved = false;
+      const uiMeta = node.ui || {};
+      const format = typeof uiMeta.currentFormat === 'string' ? uiMeta.currentFormat : 'percent';
+      const effectKey = typeof uiMeta.currentEffectKey === 'string' ? uiMeta.currentEffectKey : null;
       if (Array.isArray(node.effects) && node.effects.length > 0) {
+        let chosen = null;
         for (let i = 0; i < node.effects.length; i++) {
           const eff = node.effects[i];
-          if (eff && typeof eff.perRank === 'number') {
-            currentPct = Math.round(eff.perRank * 100 * rank);
-            vars.current = currentPct;
-            break;
+          if (!eff || typeof eff.perRank !== 'number') continue;
+          if (effectKey && (eff.stat === effectKey || eff.key === effectKey)) { chosen = eff; break; }
+          if (!chosen) chosen = eff;
+        }
+        if (chosen && typeof chosen.perRank === 'number') {
+          if (format === 'flat') {
+            currentDisplay = Math.round(chosen.perRank * effectiveRank);
+          } else {
+            // percent: perRank is a 0..1 ratio (e.g. 0.07 -> 7% per rank)
+            currentDisplay = Math.round(chosen.perRank * 100 * effectiveRank);
           }
+          vars.current = currentDisplay;
+          currentResolved = true;
         }
       }
+      // Task 4 (rework-cycle-2): defensive fallback — if effects[*].perRank is missing or stripped at
+      // runtime (e.g. talent api returns a shallow clone), parse "X%" / "X" from the localized description
+      // template itself. This guarantees ТЕКУЩАЯ ПРИБАВКА never sticks at 0 when rank > 0.
       descText = t(node.ui.descKey, vars);
+      if (!currentResolved && effectiveRank > 0) {
+        try {
+          const descTemplate = '' + descText;
+          let perRankParsed = NaN;
+          let parsedFormat = format;
+          const pctMatch = descTemplate.match(/(\d+(?:\.\d+)?)\s*%/);
+          if (pctMatch) {
+            perRankParsed = Number(pctMatch[1]);
+            parsedFormat = 'percent';
+          } else {
+            const flatMatch = descTemplate.match(/(?:на|by|\+)\s*(\d+(?:\.\d+)?)/i);
+            if (flatMatch) {
+              perRankParsed = Number(flatMatch[1]);
+              parsedFormat = 'flat';
+            }
+          }
+          if (Number.isFinite(perRankParsed) && perRankParsed > 0) {
+            currentDisplay = Math.round(perRankParsed * effectiveRank);
+            currentResolved = true;
+          }
+          void parsedFormat;
+        } catch (_) {}
+      }
       try {
-        descText = ('' + descText).replaceAll('{current}', String(currentPct));
+        descText = ('' + descText).replaceAll('{current}', String(currentDisplay));
       } catch (_) {}
     }
   } catch (_) {}
@@ -12149,6 +12293,8 @@ function draw(){
   }
   if (_RR && _RR.isPhaser('projectilesEffects') && _PLM) _PLM.drawLayer('projectilesEffects', ctx);
   if (!_RR || _RR.isLegacy('projectilesEffects')) renderProjectilesAndEffects();
+  // Task 10 (rework-cycle-2): shields drawn above zombies/corpses and projectiles but BELOW drone bodies.
+  drawFenceShields();
   // ── Drone bodies: above projectiles, above zombies ──
   if (_RR && _RR.isPhaser('drones') && _PLM) _PLM.drawLayer('drones', ctx);
   if (!_RR || _RR.isLegacy('drones')) drawDroneBodies();
@@ -13299,6 +13445,9 @@ function renderFenceBase(){
       );
       ctx.restore();
 
+      // Task 10 (rework-cycle-2): shield overlay moved to its own pass `drawFenceShields()` so it renders
+      // between zombies/corpses and drone bodies (z-order fix). Do NOT draw shields here.
+
       // smoke overlay for broken segments (optional)
       try {
         if (seg.broken && FenceSprites && FenceSprites.config && FenceSprites.config.smoke && Array.isArray(FenceSprites.config.smoke.frames) && FenceSprites.config.smoke.frames.length > 0) {
@@ -13351,6 +13500,48 @@ function renderFenceBase(){
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+// Task 10 (rework-cycle-2): shield overlay rendered as its own pass so it sits between
+// zombies/corpses (below) and drone bodies (above). Frame animation advances using
+// Date.now() and frameRate from fence.json shields config.
+function drawFenceShields(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+  if (!talentsApi || typeof talentsApi.isDomeActive !== 'function') return;
+  const nowMs = Date.now();
+  if (!talentsApi.isDomeActive(nowMs)) return;
+  if (!ShieldSprites.ready || !ShieldSprites.img) return;
+  const sCfg = ShieldSprites.getConfig();
+  if (!sCfg || !Array.isArray(sCfg.frames) || sCfg.frames.length === 0) return;
+  if (sCfg.visibleWhile && sCfg.visibleWhile !== 'defenseActive') return;
+  const frameRate = Number.isFinite(sCfg.frameRate) && sCfg.frameRate > 0 ? sCfg.frameRate : 8;
+  const frames = sCfg.frames;
+  const sFrameIdx = Math.floor(nowMs / (1000 / frameRate)) % frames.length;
+  const sFrame = frames[sFrameIdx];
+  if (!sFrame || !Number.isFinite(sFrame.w) || !Number.isFinite(sFrame.h)) return;
+  const sScale = Number.isFinite(sCfg.scale) && sCfg.scale > 0 ? sCfg.scale : 1.0;
+  const sAx = sCfg.anchor && Number.isFinite(sCfg.anchor.x) ? sCfg.anchor.x : 0.5;
+  const sAy = sCfg.anchor && Number.isFinite(sCfg.anchor.y) ? sCfg.anchor.y : 0.5;
+  const baseMul = (BAL.fenceWidth / Math.max(sFrame.w, sFrame.h)) * 1.2 * sScale;
+  const drawW = baseMul * sFrame.w;
+  const drawH = baseMul * sFrame.h;
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || seg.broken) continue;
+    ctx.save();
+    ctx.translate(seg.x, seg.y);
+    ctx.drawImage(
+      ShieldSprites.img,
+      sFrame.x || 0, sFrame.y || 0, sFrame.w, sFrame.h,
+      -drawW * sAx, -drawH * sAy,
+      drawW, drawH
+    );
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -15406,6 +15597,8 @@ async function boot(){
     } catch (e) { console.warn('levelreward.json load failed:', e); }
 
     await GroundSprites.load().catch(function () {});
+    // Task 10: preload shields.png on boot (non-blocking failure path)
+    try { await ShieldSprites.load(); } catch (_) {}
     rebuildGroundLayer();
     if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
       await BootstrapApi.runBoot({

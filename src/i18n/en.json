@@ -508,7 +508,7 @@
   ,"talent_def_wall_hp_name": "Wall Integrity"
   ,"talent_def_wall_hp_desc": "+6% wall HP per rank."
   ,"talent_def_armor_flat_name": "Composite Armor"
-  ,"talent_def_armor_flat_desc": "+2 flat armor per rank."
+  ,"talent_def_armor_flat_desc": "+2% wall armor per rank. Current bonus - {current}%"
   ,"talent_def_repair_cost_name": "Repair Logistics"
   ,"talent_def_repair_cost_desc": "Repair cost multiplier -6% per rank (runtime clamp applies)."
   ,"talent_def_resists_name": "Elemental Resists"

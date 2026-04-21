@@ -509,7 +509,7 @@
   ,"talent_def_wall_hp_name": "Прочность стен"
   ,"talent_def_wall_hp_desc": "+6% к HP стен за ранг."
   ,"talent_def_armor_flat_name": "Композитная броня"
-  ,"talent_def_armor_flat_desc": "+2 плоской брони за ранг."
+  ,"talent_def_armor_flat_desc": "Увеличивает броню стены на 2% за ранг. Текущая прибавка - {current}%"
   ,"talent_def_repair_cost_name": "Логистика ремонта"
   ,"talent_def_repair_cost_desc": "Множитель стоимости ремонта -6% за ранг (доп. clamp в runtime)."
   ,"talent_def_resists_name": "Сопротивления"
