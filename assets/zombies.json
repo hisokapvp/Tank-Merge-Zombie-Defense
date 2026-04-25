@@ -108,7 +108,6 @@
       "frameRateFps": 10,
       "scale": 1
     }
-    
   ],
   "spawn": {
     "targetAlive": 240,
@@ -120,7 +119,10 @@
   "corpseFadeOutSec": 0.8,
   "debuffIconScale": 0.5,
   "debuffIconOpacity": 0.8,
-  "defaultAnchor": { "x": 0.5, "y": 0.75 },
+  "defaultAnchor": {
+    "x": 0.5,
+    "y": 0.75
+  },
   "types": [
     {
       "id": "zombie_lvl1",
@@ -182,7 +184,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1337,
+      "Health": 6685,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -190,6 +192,72 @@
     },
     {
       "id": "zombie_lvl2",
+      "fenceOffsetPxBySide": {
+        "top": 3,
+        "right": 3,
+        "bottom": -5,
+        "left": 3
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 35
+      },
+      "frames": 8,
+      "attack": {
+        "x": 1088,
+        "y": 0,
+        "w": 64,
+        "h": 35,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 512,
+        "y": 0,
+        "w": 64,
+        "h": 35,
+        "frames": 9
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 1.1,
+      "shadowScale": 0.3,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attackDamage": 27,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 6820,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -10
+      }
+    },
+    {
+      "id": "zombie_lvl3",
       "fenceOffsetPxBySide": {
         "top": 10,
         "right": 10,
@@ -224,7 +292,7 @@
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 1.15,
+      "scale": 1.25,
       "shadowScale": 0.3,
       "hpMul": 1,
       "omegaMul": 1,
@@ -233,7 +301,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 27,
+      "attackDamage": 41,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -248,14 +316,80 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1364,
+      "Health": 6950,
       "anchor_shadow": {
         "x": 0,
         "y": -3
       }
     },
     {
-      "id": "zombie_lvl3",
+      "id": "zombie_lvl4",
+      "fenceOffsetPxBySide": {
+        "top": 3,
+        "right": 3,
+        "bottom": -5,
+        "left": 3
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 35
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 1.1,
+      "shadowScale": 0.3,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 960,
+        "y": 0,
+        "w": 64,
+        "h": 35,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 384,
+        "y": 0,
+        "w": 64,
+        "h": 35,
+        "frames": 9
+      },
+      "attackDamage": 54,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 7080,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -10
+      }
+    },
+    {
+      "id": "zombie_lvl5",
       "fenceOffsetPxBySide": {
         "top": 10,
         "right": 0,
@@ -269,6 +403,19 @@
         "h": 24
       },
       "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1.15,
+      "shadowScale": 0.3,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
       "attack": {
         "x": 360,
         "y": 0,
@@ -286,20 +433,7 @@
         "h": 24,
         "frames": 8
       },
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 1.15,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attackDamage": 41,
+      "attackDamage": 68,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -314,165 +448,33 @@
           "frameRateFps": 10
         }
       },
-      "Health": 1390,
+      "Health": 8335,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl4",
-      "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.6,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1440,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 960,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 5
-      },
-      "attackDamage": 54,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 1416,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 5
-      }
-    },
-    {
-      "id": "zombie_lvl5",
-      "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "frames": 7,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1152,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 672,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 5
-      },
-      "attackDamage": 68,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 1667,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 5
-      }
-    },
-    {
       "id": "zombie_lvl6",
       "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
+        "top": 3,
+        "right": 3,
+        "bottom": -5,
+        "left": 3
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 96,
-        "h": 96
+        "w": 64,
+        "h": 37
       },
-      "frames": 7,
+      "frames": 8,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.5,
-      "shadowScale": 0.4,
+      "scale": 1.1,
+      "shadowScale": 0.3,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -481,290 +483,26 @@
         "r": 18
       },
       "attack": {
-        "x": 1152,
+        "x": 1088,
         "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 672,
-        "y": 0,
-        "w": 96,
-        "h": 96,
-        "frames": 5
-      },
-      "attackDamage": 81,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 1955,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 5
-      }
-    },
-    {
-      "id": "zombie_lvl7",
-      "fenceOffsetPxBySide": {
-        "top": 20,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 128
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1920,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1280,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5
-      },
-      "attackDamage": 95,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 2243,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 10
-      }
-    },
-    {
-      "id": "zombie_lvl8",
-      "fenceOffsetPxBySide": {
-        "top": 20,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 128
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1920,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1280,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5
-      },
-      "attackDamage": 108,
-      "animations": {
-        "walk": {
-          "frameRateFps": 100
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 2536,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 9
-      }
-    },
-    {
-      "id": "zombie_lvl9",
-      "fenceOffsetPxBySide": {
-        "top": 20,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 128
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1920,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1280,
-        "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5
-      },
-      "attackDamage": 122,
-      "animations": {
-        "walk": {
-          "frameRateFps": 100
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 2829,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 10
-      }
-    },
-    {
-      "id": "zombie_lvl10",
-      "fenceOffsetPxBySide": {
-        "top": 20,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 128
-      },
-      "frames": 12,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.4,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 2176,
-        "y": 0,
-        "w": 128,
-        "h": 128,
+        "w": 64,
+        "h": 37,
         "frames": 10,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1536,
+        "x": 512,
         "y": 0,
-        "w": 128,
-        "h": 128,
-        "frames": 5
+        "w": 64,
+        "h": 37,
+        "frames": 9
       },
-      "attackDamage": 135,
+      "attackDamage": 81,
       "animations": {
         "walk": {
-          "frameRateFps": 100
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 20
@@ -776,14 +514,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3123,
+      "Health": 9775,
       "anchor_shadow": {
         "x": 0,
-        "y": 10
+        "y": -10
       }
     },
     {
-      "id": "zombie_lvl11",
+      "id": "zombie_lvl7",
       "fenceOffsetPxBySide": {
         "top": 15,
         "right": 5,
@@ -827,7 +565,7 @@
         "h": 32,
         "frames": 6
       },
-      "attackDamage": 149,
+      "attackDamage": 95,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -842,10 +580,274 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3320,
+      "Health": 11215,
       "anchor_shadow": {
         "x": 0,
         "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl8",
+      "fenceOffsetPxBySide": {
+        "top": 10,
+        "right": -20,
+        "bottom": -5,
+        "left": -20
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 32
+      },
+      "frames": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 1.1,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 2048,
+        "y": 0,
+        "w": 128,
+        "h": 32,
+        "frames": 18,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 512,
+        "y": 0,
+        "w": 128,
+        "h": 32,
+        "frames": 12
+      },
+      "attackDamage": 108,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 36
+        },
+        "death": {
+          "frameRateFps": 12
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 12680,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl9",
+      "fenceOffsetPxBySide": {
+        "top": 11,
+        "right": 10,
+        "bottom": -5,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 34
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.85,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1024,
+        "y": 0,
+        "w": 128,
+        "h": 34,
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 768,
+        "y": 0,
+        "w": 128,
+        "h": 34,
+        "frames": 2
+      },
+      "attackDamage": 122,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 14
+        },
+        "death": {
+          "frameRateFps": 4
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 14145,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl10",
+      "fenceOffsetPxBySide": {
+        "top": 12,
+        "right": 5,
+        "bottom": 0,
+        "left": 5
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 72,
+        "h": 40
+      },
+      "frames": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 576,
+        "y": 0,
+        "w": 72,
+        "h": 40,
+        "frames": 6,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 288,
+        "y": 0,
+        "w": 72,
+        "h": 40,
+        "frames": 4
+      },
+      "attackDamage": 135,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 12
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 15615,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl11",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 0,
+        "bottom": -10,
+        "left": 0
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 0.8,
+      "shadowScale": 0.3,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 576,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 288,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6
+      },
+      "attackDamage": 149,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 12
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 16600,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -2
       }
     },
     {
@@ -908,7 +910,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 3353,
+      "Health": 16765,
       "anchor_shadow": {
         "x": 0,
         "y": -7
@@ -916,336 +918,6 @@
     },
     {
       "id": "zombie_lvl13",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 0,
-        "bottom": -5,
-        "left": 0
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 72,
-        "h": 66
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "shadowScale": 0.01,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 864,
-        "y": 0,
-        "w": 72,
-        "h": 66,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 432,
-        "y": 0,
-        "w": 72,
-        "h": 66,
-        "frames": 6
-      },
-      "attackDamage": 176,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 3385,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl14",
-      "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 8,
-        "bottom": -5,
-        "left": 8
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 44
-      },
-      "frames": 5,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 0.8,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1024,
-        "y": 0,
-        "w": 128,
-        "h": 44,
-        "frames": 7,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 640,
-        "y": 0,
-        "w": 64,
-        "h": 44,
-        "frames": 6
-      },
-      "attackDamage": 189,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 14
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 3464,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -3
-      }
-    },
-    {
-      "id": "zombie_lvl15",
-      "fenceOffsetPxBySide": {
-        "top": 20,
-        "right": 0,
-        "bottom": -10,
-        "left": 0
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 48,
-        "h": 48
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 0.8,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 576,
-        "y": 0,
-        "w": 48,
-        "h": 48,
-        "frames": 6,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 288,
-        "y": 0,
-        "w": 48,
-        "h": 48,
-        "frames": 6
-      },
-      "attackDamage": 203,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 12
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 3499,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -2
-      }
-    },
-    {
-      "id": "zombie_lvl16",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 13,
-        "bottom": 0,
-        "left": 13
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 59
-      },
-      "frames": 5,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.6,
-      "shadowScale": 0.6,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1280,
-        "y": 0,
-        "w": 128,
-        "h": 59,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 640,
-        "y": 0,
-        "w": 128,
-        "h": 59,
-        "frames": 5
-      },
-      "attackDamage": 216,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 3618,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl17",
-      "fenceOffsetPxBySide": {
-        "top": 13,
-        "right": 0,
-        "bottom": -15,
-        "left": 0
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 16,
-        "h": 32
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 1.2,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 160,
-        "y": 0,
-        "w": 16,
-        "h": 32,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 64,
-        "y": 0,
-        "w": 24,
-        "h": 32,
-        "frames": 4
-      },
-      "attackDamage": 230,
-      "animations": {
-        "walk": {
-          "frameRateFps": 50
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 3908,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl18",
       "fenceOffsetPxBySide": {
         "top": 10,
         "right": 5,
@@ -1289,7 +961,7 @@
         "h": 32,
         "frames": 7
       },
-      "attackDamage": 243,
+      "attackDamage": 176,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -1304,14 +976,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4148,
+      "Health": 16925,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl19",
+      "id": "zombie_lvl14",
       "fenceOffsetPxBySide": {
         "top": 13,
         "right": 5,
@@ -1355,7 +1027,7 @@
         "h": 48,
         "frames": 2
       },
-      "attackDamage": 257,
+      "attackDamage": 189,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1370,14 +1042,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 4359,
+      "Health": 17320,
       "anchor_shadow": {
         "x": 0,
         "y": 0
       }
     },
     {
-      "id": "zombie_lvl20",
+      "id": "zombie_lvl15",
       "fenceOffsetPxBySide": {
         "top": 18,
         "right": 0,
@@ -1421,7 +1093,7 @@
         "h": 64,
         "frames": 9
       },
-      "attackDamage": 270,
+      "attackDamage": 203,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1436,146 +1108,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6443,
+      "Health": 17495,
       "anchor_shadow": {
         "x": 0,
         "y": -12
       }
     },
     {
-      "id": "zombie_lvl21",
-      "fenceOffsetPxBySide": {
-        "top": 10,
-        "right": 10,
-        "bottom": -5,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 80,
-        "h": 36
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.9,
-      "shadowScale": 0.01,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1120,
-        "y": 0,
-        "w": 80,
-        "h": 36,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 320,
-        "y": 0,
-        "w": 80,
-        "h": 36,
-        "frames": 10
-      },
-      "attackDamage": 284,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 20
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 7827,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl22",
-      "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 10,
-        "bottom": 5,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 81
-      },
-      "frames": 9,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.5,
-      "shadowScale": 0.7,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1408,
-        "y": 0,
-        "w": 128,
-        "h": 81,
-        "frames": 7,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1152,
-        "y": 0,
-        "w": 128,
-        "h": 81,
-        "frames": 2
-      },
-      "attackDamage": 297,
-      "animations": {
-        "walk": {
-          "frameRateFps": 100
-        },
-        "attack": {
-          "frameRateFps": 14
-        },
-        "death": {
-          "frameRateFps": 4
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 8192,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl23",
+      "id": "zombie_lvl16",
       "fenceOffsetPxBySide": {
         "top": 10,
         "right": 0,
@@ -1619,7 +1159,7 @@
         "h": 32,
         "frames": 4
       },
-      "attackDamage": 311,
+      "attackDamage": 216,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1634,344 +1174,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 8726,
+      "Health": 18090,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl24",
-      "fenceOffsetPxBySide": {
-        "top": 10,
-        "right": 5,
-        "bottom": -5,
-        "left": 5
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 29
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.9,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 576,
-        "y": 0,
-        "w": 64,
-        "h": 29,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 256,
-        "y": 0,
-        "w": 64,
-        "h": 29,
-        "frames": 5
-      },
-      "attackDamage": 324,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 10
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 9070,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -8
-      }
-    },
-    {
-      "id": "zombie_lvl25",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 5,
-        "bottom": -5,
-        "left": 5
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 59
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 832,
-        "y": 0,
-        "w": 64,
-        "h": 59,
-        "frames": 6,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 384,
-        "y": 0,
-        "w": 64,
-        "h": 59,
-        "frames": 7
-      },
-      "attackDamage": 338,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 12
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 9480,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl26",
-      "fenceOffsetPxBySide": {
-        "top": 10,
-        "right": -20,
-        "bottom": -5,
-        "left": -20
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 32
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 1.1,
-      "shadowScale": 0.01,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 2048,
-        "y": 0,
-        "w": 128,
-        "h": 32,
-        "frames": 18,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 512,
-        "y": 0,
-        "w": 128,
-        "h": 32,
-        "frames": 12
-      },
-      "attackDamage": 351,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 36
-        },
-        "death": {
-          "frameRateFps": 12
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 10054,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl27",
-      "fenceOffsetPxBySide": {
-        "top": 5,
-        "right": -5,
-        "bottom": -10,
-        "left": -5
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 16,
-        "h": 16
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 1.75,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 129,
-        "y": 0,
-        "w": 16,
-        "h": 16,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 65,
-        "y": 0,
-        "w": 16,
-        "h": 16,
-        "frames": 4
-      },
-      "attackDamage": 365,
-      "animations": {
-        "walk": {
-          "frameRateFps": 60
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 10444,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl28",
-      "fenceOffsetPxBySide": {
-        "top": 5,
-        "right": -5,
-        "bottom": -10,
-        "left": -5
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 16,
-        "h": 16
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 1.75,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 129,
-        "y": 0,
-        "w": 16,
-        "h": 16,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 69,
-        "y": 0,
-        "w": 16,
-        "h": 16,
-        "frames": 4
-      },
-      "attackDamage": 378,
-      "animations": {
-        "walk": {
-          "frameRateFps": 60
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 10837,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl29",
+      "id": "zombie_lvl17",
       "fenceOffsetPxBySide": {
         "top": 20,
         "right": 2,
@@ -2015,7 +1225,7 @@
         "h": 48,
         "frames": 6
       },
-      "attackDamage": 392,
+      "attackDamage": 230,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2030,80 +1240,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 11421,
+      "Health": 19540,
       "anchor_shadow": {
         "x": 0,
         "y": 0
       }
     },
     {
-      "id": "zombie_lvl30",
-      "fenceOffsetPxBySide": {
-        "top": 13,
-        "right": 0,
-        "bottom": -8,
-        "left": 0
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 48,
-        "h": 48
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.9,
-      "shadowScale": 0.01,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 576,
-        "y": 0,
-        "w": 48,
-        "h": 48,
-        "frames": 6,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 288,
-        "y": 0,
-        "w": 48,
-        "h": 48,
-        "frames": 6
-      },
-      "attackDamage": 405,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 12
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 11488,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl31",
+      "id": "zombie_lvl18",
       "fenceOffsetPxBySide": {
         "top": 22,
         "right": 8,
@@ -2147,7 +1291,7 @@
         "h": 69,
         "frames": 6
       },
-      "attackDamage": 419,
+      "attackDamage": 243,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2162,14 +1306,608 @@
           "frameRateFps": 10
         }
       },
-      "Health": 12447,
+      "Health": 20740,
       "anchor_shadow": {
         "x": 0,
         "y": 0
       }
     },
     {
-      "id": "zombie_lvl32",
+      "id": "zombie_lvl19",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 13,
+        "bottom": 0,
+        "left": 13
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 59
+      },
+      "frames": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.6,
+      "shadowScale": 0.6,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 59,
+        "frames": 5,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 640,
+        "y": 0,
+        "w": 128,
+        "h": 59,
+        "frames": 5
+      },
+      "attackDamage": 257,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 21795,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl20",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 10,
+        "bottom": -5,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 60
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1280,
+        "y": 0,
+        "w": 80,
+        "h": 60,
+        "frames": 18,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 800,
+        "y": 0,
+        "w": 80,
+        "h": 60,
+        "frames": 5
+      },
+      "attackDamage": 270,
+      "animations": {
+        "walk": {
+          "frameRateFps": 100
+        },
+        "attack": {
+          "frameRateFps": 36
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 32215,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl21",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1920,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5
+      },
+      "attackDamage": 284,
+      "animations": {
+        "walk": {
+          "frameRateFps": 100
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 39135,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "id": "zombie_lvl22",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 12,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 2176,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1536,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5
+      },
+      "attackDamage": 297,
+      "animations": {
+        "walk": {
+          "frameRateFps": 100
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 40960,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "id": "zombie_lvl23",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.6,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1440,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 960,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
+      "attackDamage": 311,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 43630,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "id": "zombie_lvl24",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1920,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5
+      },
+      "attackDamage": 324,
+      "animations": {
+        "walk": {
+          "frameRateFps": 100
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 45350,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "id": "zombie_lvl25",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1152,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 672,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
+      "attackDamage": 338,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 47400,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "id": "zombie_lvl26",
+      "fenceOffsetPxBySide": {
+        "top": 20,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1920,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 128,
+        "frames": 5
+      },
+      "attackDamage": 351,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 50270,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 10
+      }
+    },
+    {
+      "id": "zombie_lvl27",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "frames": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.4,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1152,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 672,
+        "y": 0,
+        "w": 96,
+        "h": 96,
+        "frames": 5
+      },
+      "attackDamage": 365,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 52220,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 5
+      }
+    },
+    {
+      "id": "zombie_lvl28",
       "fenceOffsetPxBySide": {
         "top": 18,
         "right": 8,
@@ -2180,7 +1918,7 @@
         "x": 0,
         "y": 0,
         "w": 128,
-        "h": 63
+        "h": 62
       },
       "frames": 8,
       "anchor": {
@@ -2197,10 +1935,10 @@
         "r": 18
       },
       "attack": {
-        "x": 1664,
+        "x": 1536,
         "y": 0,
         "w": 128,
-        "h": 63,
+        "h": 62,
         "frames": 4,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
@@ -2210,10 +1948,10 @@
         "x": 1024,
         "y": 0,
         "w": 128,
-        "h": 63,
-        "frames": 5
+        "h": 62,
+        "frames": 4
       },
-      "attackDamage": 432,
+      "attackDamage": 378,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2228,14 +1966,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13067,
+      "Health": 54185,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl33",
+      "id": "zombie_lvl29",
       "fenceOffsetPxBySide": {
         "top": 18,
         "right": 8,
@@ -2279,7 +2017,7 @@
         "h": 65,
         "frames": 4
       },
-      "attackDamage": 446,
+      "attackDamage": 392,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2294,32 +2032,32 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13515,
+      "Health": 57105,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl34",
+      "id": "zombie_lvl30",
       "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 8,
+        "top": 12,
+        "right": 10,
         "bottom": 0,
-        "left": 8
+        "left": 10
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 128,
-        "h": 62
+        "w": 64,
+        "h": 46
       },
-      "frames": 8,
+      "frames": 6,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.5,
+      "scale": 1,
       "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
@@ -2329,20 +2067,284 @@
         "r": 18
       },
       "attack": {
-        "x": 1536,
+        "x": 1088,
+        "y": 0,
+        "w": 64,
+        "h": 46,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 384,
+        "y": 0,
+        "w": 64,
+        "h": 46,
+        "frames": 11
+      },
+      "attackDamage": 405,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 11
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 57440,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl31",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 10,
+        "bottom": 5,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
         "y": 0,
         "w": 128,
-        "h": 62,
+        "h": 81
+      },
+      "frames": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.7,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1408,
+        "y": 0,
+        "w": 128,
+        "h": 81,
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1152,
+        "y": 0,
+        "w": 128,
+        "h": 81,
+        "frames": 2
+      },
+      "attackDamage": 419,
+      "animations": {
+        "walk": {
+          "frameRateFps": 100
+        },
+        "attack": {
+          "frameRateFps": 14
+        },
+        "death": {
+          "frameRateFps": 4
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 62235,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl32",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 5,
+        "bottom": -5,
+        "left": 5
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 59
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.8,
+      "shadowScale": 0.3,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 832,
+        "y": 0,
+        "w": 64,
+        "h": 59,
+        "frames": 6,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 384,
+        "y": 0,
+        "w": 64,
+        "h": 59,
+        "frames": 7
+      },
+      "attackDamage": 432,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 12
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 65335,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl33",
+      "fenceOffsetPxBySide": {
+        "top": 13,
+        "right": 0,
+        "bottom": -8,
+        "left": 0
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 48
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.9,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 576,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 288,
+        "y": 0,
+        "w": 48,
+        "h": 48,
+        "frames": 6
+      },
+      "attackDamage": 446,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 12
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 67575,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl34",
+      "fenceOffsetPxBySide": {
+        "top": 11,
+        "right": 0,
+        "bottom": -5,
+        "left": 0
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 42,
+        "h": 42
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.85,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 420,
+        "y": 0,
+        "w": 42,
+        "h": 42,
         "frames": 4,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1024,
+        "x": 252,
         "y": 0,
-        "w": 128,
-        "h": 62,
+        "w": 42,
+        "h": 42,
         "frames": 4
       },
       "attackDamage": 459,
@@ -2360,16 +2362,82 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13966,
+      "Health": 69830,
       "anchor_shadow": {
         "x": 0,
-        "y": -5
+        "y": -2
       }
     },
     {
       "id": "zombie_lvl35",
       "fenceOffsetPxBySide": {
-        "top": 18,
+        "top": 10,
+        "right": 10,
+        "bottom": -5,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 36
+      },
+      "frames": 4,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.9,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1120,
+        "y": 0,
+        "w": 80,
+        "h": 36,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 320,
+        "y": 0,
+        "w": 80,
+        "h": 36,
+        "frames": 10
+      },
+      "attackDamage": 473,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 73370,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl36",
+      "fenceOffsetPxBySide": {
+        "top": 15,
         "right": 8,
         "bottom": 0,
         "left": 8
@@ -2378,7 +2446,7 @@
         "x": 0,
         "y": 0,
         "w": 128,
-        "h": 78
+        "h": 63
       },
       "frames": 9,
       "anchor": {
@@ -2395,10 +2463,10 @@
         "r": 18
       },
       "attack": {
-        "x": 1792,
+        "x": 1664,
         "y": 0,
         "w": 128,
-        "h": 78,
+        "h": 63,
         "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
@@ -2408,74 +2476,8 @@
         "x": 1152,
         "y": 0,
         "w": 128,
-        "h": 78,
-        "frames": 5
-      },
-      "attackDamage": 473,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 12
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 14674,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl36",
-      "fenceOffsetPxBySide": {
-        "top": 18,
-        "right": 8,
-        "bottom": 0,
-        "left": 8
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 74
-      },
-      "frames": 7,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.6,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1664,
-        "y": 0,
-        "w": 128,
-        "h": 74,
-        "frames": 14,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 896,
-        "y": 0,
-        "w": 128,
-        "h": 74,
-        "frames": 6
+        "h": 63,
+        "frames": 4
       },
       "attackDamage": 486,
       "animations": {
@@ -2483,7 +2485,7 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 28
+          "frameRateFps": 12
         },
         "death": {
           "frameRateFps": 10
@@ -2492,32 +2494,32 @@
           "frameRateFps": 10
         }
       },
-      "Health": 15103,
+      "Health": 75515,
       "anchor_shadow": {
         "x": 0,
-        "y": 0
+        "y": -5
       }
     },
     {
       "id": "zombie_lvl37",
       "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 8,
-        "bottom": 0,
-        "left": 8
+        "top": 13,
+        "right": 5,
+        "bottom": -5,
+        "left": 5
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 128,
-        "h": 62
+        "w": 42,
+        "h": 42
       },
-      "frames": 8,
+      "frames": 6,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.6,
+      "scale": 0.8,
       "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
@@ -2527,23 +2529,89 @@
         "r": 18
       },
       "attack": {
-        "x": 1792,
+        "x": 420,
         "y": 0,
-        "w": 128,
-        "h": 62,
+        "w": 42,
+        "h": 42,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 252,
+        "y": 0,
+        "w": 42,
+        "h": 42,
+        "frames": 4
+      },
+      "attackDamage": 500,
+      "animations": {
+        "walk": {
+          "frameRateFps": 60
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 77865,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -2
+      }
+    },
+    {
+      "id": "zombie_lvl38",
+      "fenceOffsetPxBySide": {
+        "top": 12,
+        "right": 0,
+        "bottom": -5,
+        "left": 0
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 48,
+        "h": 37
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.8,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 576,
+        "y": 0,
+        "w": 48,
+        "h": 37,
         "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1024,
+        "x": 288,
         "y": 0,
-        "w": 128,
-        "h": 62,
+        "w": 48,
+        "h": 37,
         "frames": 6
       },
-      "attackDamage": 500,
+      "attackDamage": 513,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2558,98 +2626,32 @@
           "frameRateFps": 10
         }
       },
-      "Health": 15573,
+      "Health": 81675,
       "anchor_shadow": {
         "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl38",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 8,
-        "bottom": 0,
-        "left": 8
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 65
-      },
-      "frames": 8,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.55,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1536,
-        "y": 0,
-        "w": 128,
-        "h": 65,
-        "frames": 7,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1024,
-        "y": 0,
-        "w": 128,
-        "h": 65,
-        "frames": 4
-      },
-      "attackDamage": 513,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 14
-        },
-        "death": {
-          "frameRateFps": 8
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 16335,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
+        "y": 0
       }
     },
     {
       "id": "zombie_lvl39",
       "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 8,
-        "bottom": 0,
-        "left": 8
+        "top": 21,
+        "right": 9,
+        "bottom": -10,
+        "left": 9
       },
       "frame": {
         "x": 0,
         "y": 0,
         "w": 128,
-        "h": 65
+        "h": 73
       },
-      "frames": 9,
+      "frames": 10,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.55,
+      "scale": 0.5,
       "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
@@ -2659,21 +2661,21 @@
         "r": 18
       },
       "attack": {
-        "x": 1792,
+        "x": 2688,
         "y": 0,
         "w": 128,
-        "h": 65,
-        "frames": 5,
+        "h": 73,
+        "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1152,
+        "x": 1280,
         "y": 0,
         "w": 128,
-        "h": 65,
-        "frames": 5
+        "h": 73,
+        "frames": 11
       },
       "attackDamage": 527,
       "animations": {
@@ -2681,16 +2683,16 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 12
         },
         "death": {
-          "frameRateFps": 10
+          "frameRateFps": 11
         },
         "deathCommon": {
           "frameRateFps": 10
         }
       },
-      "Health": 16822,
+      "Health": 84110,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2700,6 +2702,72 @@
       "id": "zombie_lvl40",
       "fenceOffsetPxBySide": {
         "top": 15,
+        "right": 5,
+        "bottom": 0,
+        "left": 5
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 80,
+        "h": 53
+      },
+      "frames": 6,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.7,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1280,
+        "y": 0,
+        "w": 80,
+        "h": 53,
+        "frames": 10,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 480,
+        "y": 0,
+        "w": 80,
+        "h": 53,
+        "frames": 10
+      },
+      "attackDamage": 1536,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 20
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 86370,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl41",
+      "fenceOffsetPxBySide": {
+        "top": 18,
         "right": 8,
         "bottom": 0,
         "left": 8
@@ -2715,7 +2783,7 @@
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.55,
+      "scale": 0.5,
       "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
@@ -2725,7 +2793,7 @@
         "r": 18
       },
       "attack": {
-        "x": 1536,
+        "x": 1664,
         "y": 0,
         "w": 128,
         "h": 63,
@@ -2739,72 +2807,6 @@
         "y": 0,
         "w": 128,
         "h": 63,
-        "frames": 4
-      },
-      "attackDamage": 1536,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 8
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 17274,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl41",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 8,
-        "bottom": 0,
-        "left": 8
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 70
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.55,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1920,
-        "y": 0,
-        "w": 128,
-        "h": 70,
-        "frames": 4,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1280,
-        "y": 0,
-        "w": 128,
-        "h": 70,
         "frames": 5
       },
       "attackDamage": 554,
@@ -2822,7 +2824,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 17471,
+      "Health": 87355,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2888,7 +2890,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 17963,
+      "Health": 89815,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -2896,6 +2898,270 @@
     },
     {
       "id": "zombie_lvl43",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 63
+      },
+      "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.55,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1536,
+        "y": 0,
+        "w": 128,
+        "h": 63,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1024,
+        "y": 0,
+        "w": 128,
+        "h": 63,
+        "frames": 4
+      },
+      "attackDamage": 581,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 92285,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl44",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 65
+      },
+      "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.55,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1536,
+        "y": 0,
+        "w": 128,
+        "h": 65,
+        "frames": 7,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1024,
+        "y": 0,
+        "w": 128,
+        "h": 65,
+        "frames": 4
+      },
+      "attackDamage": 594,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 14
+        },
+        "death": {
+          "frameRateFps": 8
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 96335,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl45",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 65
+      },
+      "frames": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.55,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1792,
+        "y": 0,
+        "w": 128,
+        "h": 65,
+        "frames": 5,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1152,
+        "y": 0,
+        "w": 128,
+        "h": 65,
+        "frames": 5
+      },
+      "attackDamage": 608,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 10
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 98905,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl46",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 62
+      },
+      "frames": 8,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.6,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1792,
+        "y": 0,
+        "w": 128,
+        "h": 62,
+        "frames": 6,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1024,
+        "y": 0,
+        "w": 128,
+        "h": 62,
+        "frames": 6
+      },
+      "attackDamage": 621,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 12
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 101495,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl47",
       "fenceOffsetPxBySide": {
         "top": 15,
         "right": 8,
@@ -2939,7 +3205,7 @@
         "h": 71,
         "frames": 5
       },
-      "attackDamage": 581,
+      "attackDamage": 635,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2954,14 +3220,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 18457,
+      "Health": 106050,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl44",
+      "id": "zombie_lvl48",
       "fenceOffsetPxBySide": {
         "top": 15,
         "right": 8,
@@ -2972,7 +3238,139 @@
         "x": 0,
         "y": 0,
         "w": 128,
-        "h": 63
+        "h": 70
+      },
+      "frames": 10,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.55,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1920,
+        "y": 0,
+        "w": 128,
+        "h": 70,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 1280,
+        "y": 0,
+        "w": 128,
+        "h": 70,
+        "frames": 5
+      },
+      "attackDamage": 648,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 108530,
+      "anchor_shadow": {
+        "x": 0,
+        "y": -5
+      }
+    },
+    {
+      "id": "zombie_lvl49",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 74
+      },
+      "frames": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.6,
+      "shadowScale": 0.5,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 1664,
+        "y": 0,
+        "w": 128,
+        "h": 74,
+        "frames": 14,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 896,
+        "y": 0,
+        "w": 128,
+        "h": 74,
+        "frames": 6
+      },
+      "attackDamage": 662,
+      "animations": {
+        "walk": {
+          "frameRateFps": 70
+        },
+        "attack": {
+          "frameRateFps": 28
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 111235,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "zombie_lvl50",
+      "fenceOffsetPxBySide": {
+        "top": 18,
+        "right": 8,
+        "bottom": 0,
+        "left": 8
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 78
       },
       "frames": 9,
       "anchor": {
@@ -2989,10 +3387,10 @@
         "r": 18
       },
       "attack": {
-        "x": 1664,
+        "x": 1792,
         "y": 0,
         "w": 128,
-        "h": 63,
+        "h": 78,
         "frames": 6,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
@@ -3002,13 +3400,13 @@
         "x": 1152,
         "y": 0,
         "w": 128,
-        "h": 63,
-        "frames": 4
+        "h": 78,
+        "frames": 5
       },
-      "attackDamage": 594,
+      "attackDamage": 675,
       "animations": {
         "walk": {
-          "frameRateFps":70
+          "frameRateFps": 70
         },
         "attack": {
           "frameRateFps": 12
@@ -3020,230 +3418,32 @@
           "frameRateFps": 10
         }
       },
-      "Health": 19267,
+      "Health": 116115,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl45",
+      "id": "zombie_lvl51",
       "fenceOffsetPxBySide": {
-        "top": 3,
-        "right": 3,
+        "top": 10,
+        "right": 5,
         "bottom": -5,
-        "left": 3
+        "left": 5
       },
       "frame": {
         "x": 0,
         "y": 0,
         "w": 64,
-        "h": 35
+        "h": 29
       },
-      "frames": 8,
+      "frames": 4,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 1.1,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1088,
-        "y": 0,
-        "w": 64,
-        "h": 35,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 512,
-        "y": 0,
-        "w": 64,
-        "h": 35,
-        "frames": 9
-      },
-      "attackDamage": 608,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 20
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 19781,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -10
-      }
-    },
-    {
-      "id": "zombie_lvl46",
-      "fenceOffsetPxBySide": {
-        "top": 3,
-        "right": 3,
-        "bottom": -5,
-        "left": 3
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 35
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 1.1,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 960,
-        "y": 0,
-        "w": 64,
-        "h": 35,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 384,
-        "y": 0,
-        "w": 64,
-        "h": 35,
-        "frames": 9
-      },
-      "attackDamage": 621,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 20
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 20299,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -10
-      }
-    },
-    {
-      "id": "zombie_lvl47",
-      "fenceOffsetPxBySide": {
-        "top": 3,
-        "right": 3,
-        "bottom": -5,
-        "left": 3
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 64,
-        "h": 37
-      },
-      "frames": 8,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 1.1,
-      "shadowScale": 0.3,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1088,
-        "y": 0,
-        "w": 64,
-        "h": 37,
-        "frames": 10,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 512,
-        "y": 0,
-        "w": 64,
-        "h": 37,
-        "frames": 9
-      },
-      "attackDamage": 635,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 20
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 21210,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -10
-      }
-    },
-    {
-      "id": "zombie_lvl48",
-      "fenceOffsetPxBySide": {
-        "top": 21,
-        "right": 9,
-        "bottom": -10,
-        "left": 9
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 128,
-        "h": 73
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 0.5,
+      "scale": 0.9,
       "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
@@ -3253,45 +3453,45 @@
         "r": 18
       },
       "attack": {
-        "x": 2688,
+        "x": 576,
         "y": 0,
-        "w": 128,
-        "h": 73,
-        "frames": 6,
+        "w": 64,
+        "h": 29,
+        "frames": 5,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1280,
+        "x": 256,
         "y": 0,
-        "w": 128,
-        "h": 73,
-        "frames": 11
+        "w": 64,
+        "h": 29,
+        "frames": 5
       },
-      "attackDamage": 648,
+      "attackDamage": 689,
       "animations": {
         "walk": {
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 12
+          "frameRateFps": 10
         },
         "death": {
-          "frameRateFps": 11
+          "frameRateFps": 10
         },
         "deathCommon": {
           "frameRateFps": 10
         }
       },
-      "Health": 21706,
+      "Health": 116925,
       "anchor_shadow": {
         "x": 0,
-        "y": -5
+        "y": -8
       }
     },
     {
-      "id": "zombie_lvl49",
+      "id": "zombie_lvl52",
       "fenceOffsetPxBySide": {
         "top": 21,
         "right": 9,
@@ -3335,7 +3535,7 @@
         "h": 71,
         "frames": 12
       },
-      "attackDamage": 662,
+      "attackDamage": 702,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3350,33 +3550,33 @@
           "frameRateFps": 10
         }
       },
-      "Health": 22247,
+      "Health": 119495,
       "anchor_shadow": {
         "x": 0,
         "y": -5
       }
     },
     {
-      "id": "zombie_lvl50",
+      "id": "zombie_lvl53",
       "fenceOffsetPxBySide": {
-        "top": 16,
-        "right": -5,
+        "top": 18,
+        "right": 8,
         "bottom": -5,
-        "left": -5
+        "left": 8
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 140,
-        "h": 86
+        "w": 128,
+        "h": 44
       },
-      "frames": 8,
+      "frames": 5,
       "anchor": {
         "x": 0.5,
-        "y": 0.75
+        "y": 0.5
       },
-      "scale": 0.6,
-      "shadowScale": 0.01,
+      "scale": 0.8,
+      "shadowScale": 0.5,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -3385,161 +3585,29 @@
         "r": 18
       },
       "attack": {
-        "x": 2520,
+        "x": 1024,
         "y": 0,
-        "w": 140,
-        "h": 86,
-        "frames": 10,
+        "w": 128,
+        "h": 44,
+        "frames": 7,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 1120,
+        "x": 640,
         "y": 0,
-        "w": 140,
-        "h": 86,
-        "frames": 10
-      },
-      "attackDamage": 675,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 20
-        },
-        "death": {
-          "frameRateFps": 20
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 23223,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl51",
-      "fenceOffsetPxBySide": {
-        "top": 22,
-        "right": 13,
-        "bottom": 0,
-        "left": 13
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 256,
-        "h": 164
-      },
-      "frames": 8,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.4,
-      "shadowScale": 0.6,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 4096,
-        "y": 0,
-        "w": 256,
-        "h": 164,
-        "frames": 8,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 2048,
-        "y": 0,
-        "w": 256,
-        "h": 164,
-        "frames": 8
-      },
-      "attackDamage": 689,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 16
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 23385,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 10
-      }
-    },
-    {
-      "id": "zombie_lvl52",
-      "fenceOffsetPxBySide": {
-        "top": 21,
-        "right": 12,
-        "bottom": 0,
-        "left": 12
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 200,
-        "h": 176
-      },
-      "frames": 6,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.25,
-      "shadowScale": 1,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 2400,
-        "y": 0,
-        "w": 200,
-        "h": 176,
-        "frames": 5,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 1200,
-        "y": 0,
-        "w": 200,
-        "h": 176,
+        "w": 64,
+        "h": 44,
         "frames": 6
       },
-      "attackDamage": 702,
+      "attackDamage": 716,
       "animations": {
         "walk": {
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 10
+          "frameRateFps": 14
         },
         "death": {
           "frameRateFps": 10
@@ -3548,14 +3616,14 @@
           "frameRateFps": 10
         }
       },
-      "Health": 23899,
+      "Health": 124630,
       "anchor_shadow": {
         "x": 0,
-        "y": 5
+        "y": -3
       }
     },
     {
-      "id": "zombie_lvl53",
+      "id": "zombie_lvl54",
       "fenceOffsetPxBySide": {
         "top": 8,
         "right": -25,
@@ -3599,7 +3667,7 @@
         "h": 32,
         "frames": 9
       },
-      "attackDamage": 716,
+      "attackDamage": 729,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -3614,73 +3682,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 24926,
-      "anchor_shadow": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "id": "zombie_lvl54",
-      "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 10,
-        "bottom": -5,
-        "left": 10
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 80,
-        "h": 60
-      },
-      "frames": 10,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 1280,
-        "y": 0,
-        "w": 80,
-        "h": 60,
-        "frames": 18,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 800,
-        "y": 0,
-        "w": 80,
-        "h": 60,
-        "frames": 5
-      },
-      "attackDamage": 729,
-      "animations": {
-        "walk": {
-          "frameRateFps": 100
-        },
-        "attack": {
-          "frameRateFps": 36
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 25505,
+      "Health": 127525,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3688,72 +3690,6 @@
     },
     {
       "id": "zombie_lvl55",
-      "fenceOffsetPxBySide": {
-        "top": 12,
-        "right": 5,
-        "bottom": 0,
-        "left": 5
-      },
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 72,
-        "h": 40
-      },
-      "frames": 4,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.75
-      },
-      "scale": 0.7,
-      "shadowScale": 0.5,
-      "hpMul": 1,
-      "omegaMul": 1,
-      "rewardMul": 1,
-      "weight": 1,
-      "hitbox": {
-        "r": 18
-      },
-      "attack": {
-        "x": 576,
-        "y": 0,
-        "w": 72,
-        "h": 40,
-        "frames": 6,
-        "attackRangePx": 24,
-        "attackCooldownSec": 0.35,
-        "attackHitAt": 0.5
-      },
-      "death": {
-        "x": 288,
-        "y": 0,
-        "w": 72,
-        "h": 40,
-        "frames": 4
-      },
-      "attackDamage": 743,
-      "animations": {
-        "walk": {
-          "frameRateFps": 70
-        },
-        "attack": {
-          "frameRateFps": 12
-        },
-        "death": {
-          "frameRateFps": 10
-        },
-        "deathCommon": {
-          "frameRateFps": 10
-        }
-      },
-      "Health": 26088,
-      "anchor_shadow": {
-        "x": 0,
-        "y": -5
-      }
-    },
-    {
-      "id": "zombie_lvl56",
       "fenceOffsetPxBySide": {
         "top": 14,
         "right": 6,
@@ -3797,7 +3733,7 @@
         "h": 50,
         "frames": 4
       },
-      "attackDamage": 756,
+      "attackDamage": 743,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3812,10 +3748,76 @@
           "frameRateFps": 8
         }
       },
-      "Health": 27141,
+      "Health": 130440,
       "anchor_shadow": {
         "x": 0,
         "y": -3
+      }
+    },
+    {
+      "id": "zombie_lvl56",
+      "fenceOffsetPxBySide": {
+        "top": 15,
+        "right": 10,
+        "bottom": 0,
+        "left": 10
+      },
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 57
+      },
+      "frames": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.75
+      },
+      "scale": 0.5,
+      "shadowScale": 0.01,
+      "hpMul": 1,
+      "omegaMul": 1,
+      "rewardMul": 1,
+      "weight": 1,
+      "hitbox": {
+        "r": 18
+      },
+      "attack": {
+        "x": 576,
+        "y": 0,
+        "w": 64,
+        "h": 57,
+        "frames": 4,
+        "attackRangePx": 24,
+        "attackCooldownSec": 0.35,
+        "attackHitAt": 0.5
+      },
+      "death": {
+        "x": 192,
+        "y": 0,
+        "w": 64,
+        "h": 57,
+        "frames": 5
+      },
+      "attackDamage": 756,
+      "animations": {
+        "walk": {
+          "frameRateFps": 90
+        },
+        "attack": {
+          "frameRateFps": 8
+        },
+        "death": {
+          "frameRateFps": 10
+        },
+        "deathCommon": {
+          "frameRateFps": 10
+        }
+      },
+      "Health": 135705,
+      "anchor_shadow": {
+        "x": 0,
+        "y": 0
       }
     },
     {
@@ -3878,7 +3880,7 @@
           "frameRateFps": 20
         }
       },
-      "Health": 27747,
+      "Health": 138735,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3887,24 +3889,24 @@
     {
       "id": "zombie_lvl58",
       "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 5,
-        "bottom": 0,
-        "left": 5
+        "top": 16,
+        "right": -5,
+        "bottom": -5,
+        "left": -5
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 80,
-        "h": 53
+        "w": 140,
+        "h": 86
       },
-      "frames": 6,
+      "frames": 8,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.7,
-      "shadowScale": 0.5,
+      "scale": 0.6,
+      "shadowScale": 0.01,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -3913,20 +3915,20 @@
         "r": 18
       },
       "attack": {
-        "x": 1280,
+        "x": 2520,
         "y": 0,
-        "w": 80,
-        "h": 53,
+        "w": 140,
+        "h": 86,
         "frames": 10,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 480,
+        "x": 1120,
         "y": 0,
-        "w": 80,
-        "h": 53,
+        "w": 140,
+        "h": 86,
         "frames": 10
       },
       "attackDamage": 783,
@@ -3938,13 +3940,13 @@
           "frameRateFps": 20
         },
         "death": {
-          "frameRateFps": 10
+          "frameRateFps": 20
         },
         "deathCommon": {
           "frameRateFps": 10
         }
       },
-      "Health": 28357,
+      "Health": 141785,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3953,24 +3955,24 @@
     {
       "id": "zombie_lvl59",
       "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 10,
+        "top": 21,
+        "right": 12,
         "bottom": 0,
-        "left": 10
+        "left": 12
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 46
+        "w": 200,
+        "h": 176
       },
       "frames": 6,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 1,
-      "shadowScale": 0.5,
+      "scale": 0.25,
+      "shadowScale": 1,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -3979,21 +3981,21 @@
         "r": 18
       },
       "attack": {
-        "x": 1088,
+        "x": 2400,
         "y": 0,
-        "w": 64,
-        "h": 46,
-        "frames": 10,
+        "w": 200,
+        "h": 176,
+        "frames": 5,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 384,
+        "x": 1200,
         "y": 0,
-        "w": 64,
-        "h": 46,
-        "frames": 11
+        "w": 200,
+        "h": 176,
+        "frames": 6
       },
       "attackDamage": 797,
       "animations": {
@@ -4001,42 +4003,42 @@
           "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 20
+          "frameRateFps": 10
         },
         "death": {
-          "frameRateFps": 11
+          "frameRateFps": 10
         },
         "deathCommon": {
           "frameRateFps": 10
         }
       },
-      "Health": 29529,
+      "Health": 147645,
       "anchor_shadow": {
         "x": 0,
-        "y": 0
+        "y": 5
       }
     },
     {
       "id": "zombie_lvl60",
       "fenceOffsetPxBySide": {
-        "top": 15,
-        "right": 10,
+        "top": 22,
+        "right": 13,
         "bottom": 0,
-        "left": 10
+        "left": 13
       },
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 64,
-        "h": 57
+        "w": 256,
+        "h": 164
       },
-      "frames": 3,
+      "frames": 8,
       "anchor": {
         "x": 0.5,
         "y": 0.75
       },
-      "scale": 0.5,
-      "shadowScale": 0.01,
+      "scale": 0.4,
+      "shadowScale": 0.6,
       "hpMul": 1,
       "omegaMul": 1,
       "rewardMul": 1,
@@ -4045,29 +4047,29 @@
         "r": 18
       },
       "attack": {
-        "x": 576,
+        "x": 4096,
         "y": 0,
-        "w": 64,
-        "h": 57,
-        "frames": 4,
+        "w": 256,
+        "h": 164,
+        "frames": 8,
         "attackRangePx": 24,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
       "death": {
-        "x": 192,
+        "x": 2048,
         "y": 0,
-        "w": 64,
-        "h": 57,
-        "frames": 5
+        "w": 256,
+        "h": 164,
+        "frames": 8
       },
       "attackDamage": 810,
       "animations": {
         "walk": {
-          "frameRateFps": 90
+          "frameRateFps": 70
         },
         "attack": {
-          "frameRateFps": 8
+          "frameRateFps": 16
         },
         "death": {
           "frameRateFps": 10
@@ -4076,10 +4078,10 @@
           "frameRateFps": 10
         }
       },
-      "Health": 30117,
+      "Health": 150585,
       "anchor_shadow": {
         "x": 0,
-        "y": 0
+        "y": 10
       }
     }
   ]

@@ -174,7 +174,7 @@
 | `renderFenceHpBars()` | [game.js](../../game.js#L10331-L10350) | Fence HP bars поверх зомби/трупов |
 | `drawBoard()` | [game.js](../../game.js#L10460-L10520) | Hangar cells / board |
 | `drawTankSlot()` / `drawTankIconWithStampReveal()` | [game.js](../../game.js#L10521-L10585) | Hangar slot visuals |
-| `drawProjectiles()` | [game.js](../../game.js#L13635-L13700) | Projectiles; atlas source rect clamped to bounds, fallback to circle |
+| `drawProjectiles()` | [game.js](../../game.js#L14532-L14620) | Projectiles; atlas source rect clamped to bounds, fallback to circle; `bulletSprite.bulletSizeConstant` (default `true`) декuплирует визуальный scale снаряда от `b.effectIntensity` — размер = `baseScale` без множителя. Damage / burst / impact logic продолжают читать `effectIntensity` независимо. См. [game.js](../../game.js#L14565-L14568) |
 | `drawDrones()` | [game.js](../../game.js#L10152-L10330) | Drone render |
 
 ### Loop / boot

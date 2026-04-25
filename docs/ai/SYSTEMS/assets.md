@@ -1,6 +1,6 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-04-02.
+> Обновлено: 2026-04-22.
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -31,6 +31,7 @@
 
 ## `assets/zombies.json` (spawn, corpse lifecycle, atlas routing, explicit Health)
 - Top-level `atlas` остаётся shared fallback/shared-death atlas, а `atlasesById` мапит `types[].id` на отдельные atlas PNG (`assets/zombie_lvl{1..60}_atlas.png` в текущем наборе данных). Loader также понимает optional `types[].atlas` override, поэтому `id` становится authoring key не только для pick-by-level, но и для atlas routing: [assets/zombies.json](../../../assets/zombies.json#L1-L63), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L222-L267), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L333-L339).
+- Когда внешний порядок zombie sprite sheets меняется без переименования самих `zombie_lvlN_atlas.png`, remap делается внутри `types[]`: переносятся только sprite-owned поля `fenceOffsetPxBySide`, `frame`, `frames`, `anchor`, `scale`, `shadowScale`, `hpMul`, `omegaMul`, `rewardMul`, `weight`, `hitbox`, `attack`, `death`, `animations`, `anchor_shadow` и их вложенные значения. `attackDamage` и `Health/health` остаются привязаны к destination `types[].id`, чтобы visual remap не менял combat balance; `atlasesById` при таком переносе не трогается, пока не меняется сам file-routing atlas'ов: [assets/zombies.json](../../../assets/zombies.json#L101-L4085) _(строки приблизительные, повторяющийся `types[]` block)_, [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L296-L347), [game.js](../../../game.js#L5676-L5687).
 - Top-level `deathCommon[]` variants теперь несут и visual size contract: optional `scale` у каждого shared-death clip нормализуется через `toPositiveNumber(..., 1)`, после чего render складывает его с `types[].scale` только на death/corpse path. Это позволяет править размер shared death atlas отдельно от live walk/attack sprites: [assets/zombies.json](../../../assets/zombies.json#L65-L84), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L283-L299), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L48-L56), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L123-L131).
 - Top-level `spawn` — часть runtime-контракта, а не просто баланс-данные: `ZombieSprites.load()` нормализует `targetAlive/sideCount/perSideTarget/perSideTolerance` в `ZombieSprites.spawnConfig`, а `game.js` читает этот объект в `getDefaultZombieTargetAlive()` и в spawn-planner'е attack-mode/alive-target логики: [assets/zombies.json](../../../assets/zombies.json#L91-L101), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L270-L278), [game.js](../../../game.js#L2173-L2190), [game.js](../../../game.js#L5608-L5626).
 - `ZombieSprites.load()` нормализует для каждого типа `atlas` / `atlasPath`, preload'ит per-type images в `atlasImages` и сохраняет fallback на shared `assets/zombie_atlas.png`, если mapping отсутствует или конкретный atlas не загрузился. Render-path обязан брать image через `getAtlasImage(...)`, а не строить URL заново в draw code: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L243-L380), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L416-L426), [src/render/zombieRender.js](../../../src/render/zombieRender.js#L22-L29).
@@ -119,8 +120,12 @@
 	- `gold.perLevel`: объект `{ "level": amount }` для per-level override (приоритет над формулой);
 	- `upgradePoints.basePerLevel`: базовые upgrade points за каждый уровень (default `1`);
 	- `upgradePoints.milestones`: объект `{ "level": bonusPoints }` для дополнительных upgrade points на milestone-уровнях;
-	- `damagePoints`: объект `{ "level": points }` для damage point rewards (default `{ "2": 5 }`).
+	- `damagePoints`: объект `{ "level": points }` для damage point rewards (default `{ "2": 5 }`);
+	- `coinsPerShot.formula`: `"default"` (runtime `min(2^(level-1), 2^20)`) или `"fixed"` (legacy `BAL.coinsPerShotBase/Mul`);
+	- `coinsPerShot.perLevel`: объект `{ "level": coins }` с явным per-level override базовой награды за выстрел (приоритет над formula; отсутствие уровня → dev-warning + fallback к default).
 - Resolver-функции в [src/mechanics/levelFlow.js](../../../src/mechanics/levelFlow.js#L17-L65): `resolveMilestones()`, `resolveDamagePointRewards()`, `resolveBaseUpgradePoints()` валидируют и нормализуют config, возвращая fallback при отсутствии или невалидных значениях.
+- `coinsPerShot` — canonical economy contract для базы монет за выстрел. Runtime читает его через [src/mechanics/progression.js](../../../src/mechanics/progression.js#L46-L84) (`coinsPerShotDefault(level)` + `coinsPerShot(level, bal, cfg)`), а `Game.Economy.coinsForShot` делегирует в `ProgressionApi.coinsPerShot(level, BAL, LevelRewardConfig)` с приоритетом `perLevel` → `formula=default` → `formula=fixed` bal params → default. Runtime-множители `coinsShotMul × incomeMult × activeMul` применяются поверх resolved базы; safety-net cap `2^20` срабатывает только когда `perLevel` override для уровня отсутствует: [game.js](../../../game.js#L5100-L5120), [src/mechanics/progression.js](../../../src/mechanics/progression.js#L46-L95).
+- Balance Editor earnings-tab в [tools/balance-lab.js](../../../tools/balance-lab.js#L854-L1000) читает тот же JSON (fetch `../assets/levelreward.json`) и строит таблицу доходов на 60 уровней (coinsPerShot × fireRate × cellCount, default `cellCount=15`). Изменения `coinsPerShot.perLevel` должны сверяться с этой вкладкой, чтобы docs / runtime / dev tool не расходились.
 - При отсутствии `levelreward.json` или ошибке fetch все resolvers возвращают hardcoded fallback, поведение полностью backward-compatible.
 
 ## `assets/balance/cannonUpgrades.json`

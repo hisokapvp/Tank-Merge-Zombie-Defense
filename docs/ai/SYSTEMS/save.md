@@ -1,6 +1,6 @@
 ﻿# Система: Save / Offline
 
-> Обновлено: 2026-04-06.
+> Обновлено: 2026-04-24.
 
 ## Где править
 - Хранилище: `src/persistence/storage.js`, `src/persistence/initialState.js`
@@ -18,6 +18,108 @@
 ## Offline combat snapshot contract
 - `Game.OfflineProgress` теперь в первую очередь читает `TankSprites.getTank(level).stats.baseDamage/attackSpeed` и `ZombieSprites.types[level-1].health|Health`. Legacy формулы `FIRE_RATE_BASE/FIRE_RATE_ADD_PER_LEVEL/DMG_MULT_PER_LEVEL/ZOMBIE_HP_*` остаются только fallback-path, если asset loader ещё не поднят. Это держит offline rewards в паритете с repaired `assets/tanks.json` / `assets/zombies.json`, а не со старыми runtime-кривыми: [src/persistence/offlineProgress.js](../../../src/persistence/offlineProgress.js#L1-L150), [assets/tanks.json](../../../assets/tanks.json#L1-L220), [assets/zombies.json](../../../assets/zombies.json#L1-L220).
 - Merge popup stats и showcase fire-loop зеркалят тот же asset snapshot: `mergePopupStats.js` и `mergePopup.js` больше не выводят damage/fire rate из legacy BAL curve, а берут `baseDamage/attackSpeed` прямо из `TankSprites`. Это важно для пользовательской parity между offline modal, merge preview и live combat: [src/ui/mergePopup/mergePopupStats.js](../../../src/ui/mergePopup/mergePopupStats.js#L9-L22), [src/ui/mergePopup.js](../../../src/ui/mergePopup.js#L256-L307).
+
+## Payload Contract Map
+
+> Эта карта — **design intent**, а не автодамп `serializeState()`. При добавлении нового поля в `serializeState()` / `createInitialState()` / `restoreFullState()` / `applySavedProgress()` обязательно обновить таблицу ДО merge. Автодамп runtime-полей запрещён: если поле `runtime-derived`, оно не попадает ни в save payload, ни в эту таблицу.
+
+### Ownership tags
+
+- `core` — базовые валюты, прогрессия игрока, счётчики, которые определяют identity сейва.
+- `hangar` — инвентарь чипов/фрагментов мастерской, технологии, прогресс ангара.
+- `progression` — достижения, апгрейды, talents v2, supercomputer, drones, cannon/fence upgrades.
+- `economy` — purchase tracking (`buyCounts`, `buyPrices`) и связанные инфляционные счётчики.
+- `world` — состояние мира, мапы, сиды, fence runtime, attack-mode runtime.
+- `runtime-derived` — не сохраняется; восстанавливается из других полей или пересоздаётся.
+
+### Таблица полей `serializeState()` → payload v1
+
+Все ссылки даны на canonical источники записи и чтения. Если писатель добавляется в новом модуле, его путь тоже должен быть задокументирован здесь.
+
+| Поле payload | Owner tag | Canonical writer | Writer источник | Load fallback / нормализация |
+|---|---|---|---|---|
+| `coins` | core | `state.coins` | [game.js](../../../game.js), покупки/награды | `0` если не Number.isFinite |
+| `kills` | core | `state.kills` | [game.js](../../../game.js), combat flow | `0` |
+| `totalDamageDealtRaw` | core | `state.totalDamageDealtRaw` | [game.js](../../../game.js) | `0`, normalize через `normalizeTotalDamageDealtRaw` |
+| `damagePointsSpent` | core | `state.damagePointsSpent` | [game.js](../../../game.js) | `0`, normalize через `normalizeDamagePointsSpent` |
+| `player` | progression | `state.player` | [src/persistence/initialState.js](../../../src/persistence/initialState.js), [game.js](../../../game.js) (`cannonUpgradesApplied`, `damagePoints`) | object merge с `createInitialState().player` |
+| `cells` | core | `state.cells` | [game.js](../../../game.js) hangar cells | массив фиксированной длины |
+| `productionLine` | hangar | `state.productionLine` | [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js) `serialize()`/`deserialize()` | `null` → `createInitialState().productionLine` |
+| `playerChips` | hangar | `state.playerChips` (canonical owner) | [game.js](../../../game.js) `Game.State.setPlayerChips()` + [src/persistence/storage.js](../../../src/persistence/storage.js#L485) | `[]` если отсутствует или не массив; HangarChipsUI — derived view |
+| `playerFragments` | hangar | `Game.HangarChipsUI.getPlayerFragments()` | [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `[]` + `normalizeFragmentsInventory()` |
+| `techStudying` | hangar | `Game.HangarChipsUI.getTechStudying()` | [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `null`, таймер пересоздаётся |
+| `drones` | progression | `state.drones` | [src/mechanics/drones.js](../../../src/mechanics/drones.js), [src/persistence/dronesPersist.js](../../../src/persistence/dronesPersist.js) | `[]` через `DronesApi.restoreSavedDrones` |
+| `achievements` | progression | `state.achievements` | [src/mechanics/achievements.js](../../../src/mechanics/achievements.js), [game.js](../../../game.js) | merge с `createInitialState().achievements`; `rewarded`, `totalManualFenceRepairs`, `totalModifierTechUnlocks`, `totalDroneAcquisitions`, `totalNoRepairAttackWaveStreak`, `completedModifierTechs` seed'ятся |
+| `stats` | progression | `state.stats` | [game.js](../../../game.js) (`manualFenceRepairsCount`, `modifierTechUnlocksCount`, `droneAcquisitionsCount`, `noRepairAttackWaveStreakCount`) | `stats.*Count` canonical, `achievements.total*` — legacy fallback |
+| `talentsV2` / `talentsApplied` | progression | V2 — собственный store; legacy `talentsApplied` только для migration V1→V2 | [src/systems/talents/talentsV2.js](../../../src/systems/talents/talentsV2.js) | V1 `talentsPending` / `activeCooldowns` deprecated, больше не сохраняются |
+| `supercomputer` | progression | `state.supercomputer` | [game.js](../../../game.js) supercomputer flow | `computerLevel = 0` baseline для new game |
+| `boostUntil`, `activeEffects` | world | `state.boostUntil`, `state.activeEffects` | [game.js](../../../game.js) | `0` / `[]` |
+| `fenceState` | world | `state.savedFenceState` | [game.js](../../../game.js) restore path | `{ segmentsPerSide: null, hpById: {} }` |
+| `fenceRepairCount` | progression | `state.fenceRepairCount` | [game.js](../../../game.js) `tryRepairFenceSegmentAt()` | `0`; сбрасывается на partial/full reset |
+| `nextCrateAt`, `boostUntil`, `mapSeeds` | world | `state.*` | [game.js](../../../game.js), world init | сохраняются если присутствуют |
+| `maxTankLevelAchieved` | progression | `state.maxTankLevelAchieved` | [game.js](../../../game.js) | `1` baseline |
+| `zombieWaveAtkMult`, `zombieWaveHpMult` | world | `state.zombieWave*` | [game.js](../../../game.js) | `normalizeZombieWaveMultiplier()` |
+| `forceFenceRuntimeResetOnLoad` | runtime-derived | transient flag в payload для cross-session triggers | [game.js](../../../game.js) | `false` |
+| `payload.version` | meta | `serializeState()` обёртка | [src/persistence/storage.js](../../../src/persistence/storage.js) | `SAVE_VERSION = 2` (текущая версия save shape; см. [src/persistence/storage.js](../../../src/persistence/storage.js#L8)) |
+
+### Канонический schema typedef
+
+- Канонический JSDoc для payload — `@typedef SerializedState` в [src/persistence/serializedStateTypes.js](../../../src/persistence/serializedStateTypes.js). `serializeState()` помечен `@returns {import('./serializedStateTypes').SerializedState}` (см. [src/persistence/storage.js](../../../src/persistence/storage.js#L370)). Любое новое поле сначала добавляется в typedef, затем в эту таблицу, затем в writer.
+- Schema-version поле — `payload.version` (= `SAVE_VERSION`); отдельного `schema_version` нет. `preserve-unknown = false` для unknown top-level keys: на restore они игнорируются и логируются через `Game.Diagnostics.reportUnknownPayloadKeys` (dev-only diagnostic, runtime safe).
+- Save payload не содержит PII / persona-specific identifiers; всё, что в нём лежит — gameplay state.
+
+### Rubric: type / default / restore-reset / reset-scope
+
+Для каждой строки таблицы payload выше канонический rubric:
+
+- **type** — JS shape поля (определён в `SerializedState` typedef): `number`, `string`, `boolean`, `Array<...>`, `Object<...>`, `null`.
+- **default** — значение, которое writer кладёт в payload, если runtime не задал ничего (источник — `createInitialState()` либо normalize-функция в `restoreFullState`/`applySavedProgress`).
+- **restore-reset** — что делает loader, если поле отсутствует или невалидно: `default-on-missing` (берёт seed из `createInitialState()`), `normalized` (прогоняет через normalize-функцию), `null-allowed` (legitimate `null`), `legacy-fallback` (пробует устаревший alias из старых save).
+- **reset-scope** — поведение поля при `restartSimulationPartial()`:
+	- `partial-preserve` — поле сохраняется через `takeProgressSnapshot()` и восстанавливается в `restoreProgressSnapshot()` (talents, upgrades, drones, achievements, supercomputer progression, damage points, cannon/fence upgrades, mods, playerChips, playerFragments, techStudying);
+	- `partial-reset` — поле обнуляется до `createInitialState()` baseline (walls L1, `buyCounts={}`, `buyPrices={}`, `maxTankLevelAchieved=1`, `attackMode` off, `fenceRepairCount=0`, `boostUntil=0`, `activeEffects=[]`, `nextCrateAt`, `mapSeeds`, `cells`, `coins=40`, `kills`, `zombieWave*` mults);
+	- `partial-reseed` — поле получает специальный baseline (например, 1 стартовый танк L1 в hangar `cells`).
+- **last-modified** — write-side источник: вписывайте дату коммита (ISO `YYYY-MM-DD`), который последним менял writer / shape поля. Используется review-агентом для поиска просроченных записей.
+
+Правила заполнения:
+
+1. Новое поле обязано иметь **все** rubric-значения **до** merge — partial rubric блокирует review.
+2. Если поле не сериализуется (`runtime-derived`), оно остаётся в таблице как `runtime-derived` без `reset-scope` (runtime сам пересоздаст).
+3. Поле с `reset-scope = partial-preserve` должно появиться в `takeProgressSnapshot()`/`restoreProgressSnapshot()` в [src/core/worldReset.js](../../../src/core/worldReset.js); противоречие между этой таблицей и `worldReset.js` — failure-visible баг.
+4. Поле с `reset-scope = partial-reset` должно явно очищаться в `onAfterRestore` либо по контракту `createInitialState()`. Тихая утечка в partial-restart — баг.
+
+### TUT-8R..TUT-8W — regression pack anchor
+
+Полный регрессионный набор для save/restore/partial-reset инвариантов лежит в:
+
+- [Test/pack4/tutorial_first_run_runtime.test.js](../../../Test/pack4/tutorial_first_run_runtime.test.js) — кейсы `TUT-8R` (rewarded map persistence), `TUT-8S` (drone acquisition totals), `TUT-8T` (no-repair streak restore), `TUT-8U` (retroactive recalc), `TUT-8V` (reward dedup after load), `TUT-8W` (apply-after-load reconcile).
+
+При добавлении нового поля с нетривиальным `restore-reset`/`reset-scope` обязательно добавлять кейс в этот pack под следующим свободным `TUT-8X` slot. PR без regression case на новое поле — failure-visible.
+
+### Deprecation policy
+
+Поле помечается deprecated при следующих условиях:
+
+1. Writer удалён (или явно превратился в no-op);
+2. Loader продолжает читать поле как `legacy-fallback` минимум один SAVE_VERSION-цикл, чтобы старые save не теряли данные;
+3. Срок жизни fallback фиксируется в подсекции `## V1 talents save fields (deprecated)` (или аналогичной для нового поля) с явным указанием версии bump'а, в которой fallback будет удалён;
+4. После удаления fallback соответствующая строка таблицы либо удаляется, либо переезжает в подсекцию `Removed fields` с last-modified датой удаления.
+
+Запрещено: тихо удалять поле из writer без записи в таблицу; оставлять deprecated-поле без явного fallback-окна; реюзать освободившийся ключ под новую семантику.
+
+### Migration policy
+
+- **`playerChips`**: слот без поля `playerChips` или с не-массивом → нормализуется в `[]` на load (см. `storage.js` L485 и restore paths в `game.js`). Это уже реализованный контракт — фиксируем, чтобы новые fields следовали тому же шаблону.
+- **Новое hangar-поле**: добавить seed в `createInitialState()` с пустым дефолтом → добавить писателя в `serializeState()` → добавить нормализацию в `restoreFullState()` и `applySavedProgress()` → добавить строку в эту таблицу с owner tag `hangar`.
+- **Runtime-derived поля** (таймеры `setInterval`, кешированные производные): не сериализовать. Восстанавливать из canonical writer'а через post-restore hooks, а не из payload.
+
+### Контракт "не автодамп"
+
+Запрещено:
+- генерировать таблицу из `Object.keys(serializeState())` — это reflection runtime, не design intent;
+- добавлять поле в `serializeState()` без соответствующей строки в таблице и owner tag;
+- использовать эту карту как runtime API — она только документация для merge review.
+
 
 ## Achievement persistence contract
 - `createInitialState()` обязан seed'ить `achievements.rewarded`, `achievements.totalManualFenceRepairs`, `achievements.totalModifierTechUnlocks`, `achievements.totalDroneAcquisitions`, `achievements.totalNoRepairAttackWaveStreak`, `achievements.completedModifierTechs` и mirrored `stats.manualFenceRepairsCount/modifierTechUnlocksCount/droneAcquisitionsCount/noRepairAttackWaveStreakCount`; эти поля не должны появляться лениво уже после первого gameplay-события: [src/persistence/initialState.js](../../../src/persistence/initialState.js)
@@ -107,10 +209,12 @@
 - Постоянное состояние апгрейдов орудий хранится в `state.player.cannonUpgradesApplied`.
 
 ## Player Chips (инвентарь чипов мастерской)
-- Runtime-источник: `Game.HangarChipsUI.getPlayerChips()` / `.setPlayerChips(arr)`.
+- **Canonical owner**: `state.playerChips` в [game.js](../../../game.js) (инициализация около `let state = createInitialState();`, API `window.Game.State.getPlayerChips()` / `.setPlayerChips(arr)`).
+- **Derived view**: `Game.HangarChipsUI.getPlayerChips()` / `.setPlayerChips(arr)` делегируют в canonical owner; внутренний кеш в `HangarChipsUI` удалён. Читатели всегда получают актуальный массив из `state.playerChips`, writers всегда пишут в `state.playerChips`. Двунаправленная синхронизация запрещена (см. postmortem solo-pipeline-yandex-vk#1 / avoid).
+- **Bootstrap fallback**: `_playerChipsFallback` в `hangarChipsUI.js` используется только если `window.Game.State.getPlayerChips` ещё не определён на момент обращения (защитный bootstrap). При первом успешном `setPlayerChips` через canonical API fallback обнуляется.
 - Формат: массив `{ chipId, chipColor, modIds, sourceComboKey, level, count }`.
-- Сериализуется в `serializeState()` как `playerChips` (fallback `[]`).
-- Восстанавливается в `restoreFullState` и `applySavedProgress` с синхронизацией `HangarChipsUI.setPlayerChips`.
+- Сериализуется в `serializeState()` как `playerChips` (fallback `[]`): [src/persistence/storage.js](../../../src/persistence/storage.js#L485).
+- Восстанавливается в `restoreFullState` и `applySavedProgress`: `state.playerChips = saved.playerChips;` + `HangarChipsUI.setPlayerChips(saved.playerChips)` (оба writer'а теперь идут в canonical owner; вызов HangarChipsUI — идемпотентный sync).
 - Backward compatibility: старые save без `playerChips` → пустой массив, игра не падает.
 - Используется в `getChipLevelDmgMul(cellIndex)` для расчёта бонуса урона (+10% за каждый уровень чипа).
 - Гарантированная награда первой `new_game` коробки не вводит отдельный save-shape: в инвентарь попадает тот же объект `{ chipId, chipColor, modIds, sourceComboKey, level, count }`, что и для обычных больших чипов: [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L88-L122), [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js#L241-L246).

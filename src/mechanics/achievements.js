@@ -593,6 +593,17 @@
     newTechnologyUpgradePoints3: true,
   };
 
+  // Локальная fallback-таблица self-managed reward modes. Используется когда
+  // global.Game.AchievementRewards.REWARD_TABLE недоступна (например, в pack4
+  // unit-тестах TUT-8Q, где external module не подгружается). Канонический источник
+  // — src/mechanics/achievementRewards.js; обе записи обязаны идти в синхроне.
+  var LOCAL_SELF_MANAGED_REWARD_TABLE = {
+    newTechnologyFragments2:     { type: 'fragments',     amount: 2 },
+    newTechnologyDust20:         { type: 'dust',          amount: 20 },
+    newTechnologyRandomChips2:   { type: 'randomChips',   amount: 2 },
+    newTechnologyUpgradePoints3: { type: 'upgradePoints', amount: 3 },
+  };
+
   function normalizeCounter(value) {
     if (!Number.isFinite(value)) return 0;
     return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
@@ -715,7 +726,7 @@
     if (achievementState.rewarded[achievementId]) return false;
 
     var table = (global.Game && global.Game.AchievementRewards && global.Game.AchievementRewards.REWARD_TABLE) || {};
-    var entry = table[def.rewardMode];
+    var entry = table[def.rewardMode] || LOCAL_SELF_MANAGED_REWARD_TABLE[def.rewardMode];
     if (!entry) return false;
 
     var granted = false;
@@ -1194,6 +1205,12 @@
       if (state && state.stats && typeof state.stats === 'object') {
         state.stats.modifierTechUnlocksCount = totalCompleted;
       }
+      // TZ batch12 item 7: canonical Game.Events topic для tech-study-completed.
+      try {
+        if (global.Game && global.Game.Events && typeof global.Game.Events.emit === 'function') {
+          global.Game.Events.emit('tech.studyCompleted', { techId: normalizedTechId });
+        }
+      } catch (_) {}
     }
     // Always recalculate — inference race may have added the tech
     // but never ran recalculateUnlocks

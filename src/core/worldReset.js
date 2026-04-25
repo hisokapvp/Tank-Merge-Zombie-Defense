@@ -76,6 +76,8 @@
       },
       drones: cloneObject(src.drones, []),
       productionLine: cloneObject(src.productionLine, null),
+      // Item 11: big chips inventory (playerChips) must survive partial reset ("Перезагрузка симуляции").
+      playerChips: cloneArray(src.playerChips),
     };
   }
 
@@ -141,6 +143,11 @@
 
     if (src.productionLine) {
       target.productionLine = cloneObject(src.productionLine, target.productionLine || null);
+    }
+
+    // Item 11: restore big chips inventory after partial reset.
+    if (Array.isArray(src.playerChips)) {
+      target.playerChips = cloneArray(src.playerChips);
     }
   }
 

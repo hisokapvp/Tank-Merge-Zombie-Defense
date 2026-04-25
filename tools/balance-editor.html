@@ -94,6 +94,7 @@ table.data-table input.changed { background: var(--changed); }
   <button data-tab="talents">🌟 Таланты</button>
   <button data-tab="chips">🔧 Чипы</button>
   <button data-tab="cannon">📐 Орудия (кривые)</button>
+  <button data-tab="buy-time">⏱ Минуты до покупки</button>
   <button data-tab="diff">📊 Дифф / Экспорт</button>
 </nav>
 
@@ -239,6 +240,34 @@ table.data-table input.changed { background: var(--changed); }
     <div class="scroll-wrap" style="max-height:600px">
       <table class="data-table" id="tableCannon">
         <thead><tr><th>Lvl</th><th>Col2</th><th>Col3</th><th>Col4</th><th>Col5</th><th>Col6</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BUY TIME -->
+  <div id="tab-buy-time" class="tab-content">
+    <h3 class="section-title">⏱ Минуты до покупки танка (15 ячеек)</h3>
+    <div class="info-box">
+      <p>Оценка: сколько секунд/минут нужно, чтобы с поля из 15 танков одного уровня L накопить стоимость нового танка того же уровня.</p>
+      <p>Формула: <code>seconds(L) = tankCost(L) / (15 × coinsPerShot(L) × shotsPerSecond(L))</code></p>
+      <p>Источники: <code>tankCost</code> — <code>balance-shared.getTankBaseCost</code>; <code>coinsPerShot</code> — <code>levelreward.json.coinsPerShot.perLevel[L]</code> (fallback <code>2^(L-1)</code>); <code>shotsPerSecond</code> — <code>attackSpeed × baseAttackSpeed</code> из профиля сценария.</p>
+    </div>
+    <canvas id="buyTimeChart" width="900" height="280" style="width:100%;max-width:900px;background:#0b1020;border-radius:8px"></canvas>
+    <div style="overflow-x:auto;margin-top:12px">
+      <table class="data-table" id="buyTimeTable">
+        <thead>
+          <tr>
+            <th>Уровень</th>
+            <th>tankCost</th>
+            <th>coinsPerShot</th>
+            <th>shots/сек</th>
+            <th>coins/сек (×15)</th>
+            <th>Секунды</th>
+            <th>Минуты</th>
+            <th>Δ мин vs L-1</th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
     </div>
@@ -421,7 +450,88 @@ function renderAll() {
   renderTalents();
   renderChips();
   renderCannon();
+  renderBuyTime();
   updateChangeCount();
+}
+
+/* ======== BUY TIME TAB ======== */
+function renderBuyTime() {
+  const tbody = document.querySelector('#buyTimeTable tbody');
+  if (!tbody) return;
+  const rows = [];
+  const points = [];
+  let prevMinutes = null;
+  const cells = 15;
+  const perLevel = (EDIT.levelReward && EDIT.levelReward.coinsPerShot && EDIT.levelReward.coinsPerShot.perLevel) || {};
+  const runtimeBase = (ANALYTICS_RUNTIME && ANALYTICS_RUNTIME.tankFireRateBase) || 1;
+  for (let L = 1; L <= 60; L++) {
+    const tankKey = 'tank_lvl' + L;
+    const tankRec = EDIT.tanks && EDIT.tanks[tankKey];
+    if (!tankRec) {
+      rows.push('<tr><td>' + L + '</td><td colspan="7" style="color:#f66">n/a (нет данных)</td></tr>');
+      continue;
+    }
+    const tankCost = 50 * Math.pow(2, L - 1);
+    const cpsOverride = Number(perLevel[L]);
+    const cps = Number.isFinite(cpsOverride) && cpsOverride > 0 ? cpsOverride : Math.pow(2, L - 1);
+    const attackSpeedMul = Number((tankRec.stats && tankRec.stats.attackSpeed) || 1);
+    const shotsPerSecond = Math.max(0, runtimeBase * attackSpeedMul);
+    const coinsPerSecond = cells * cps * shotsPerSecond;
+    const seconds = coinsPerSecond > 0 ? tankCost / coinsPerSecond : Infinity;
+    const minutes = Number.isFinite(seconds) ? seconds / 60 : Infinity;
+    const delta = prevMinutes == null ? '—' : ((minutes - prevMinutes) >= 0 ? '+' : '') + (minutes - prevMinutes).toFixed(2);
+    rows.push('<tr>' +
+      '<td>' + L + '</td>' +
+      '<td>' + tankCost.toLocaleString('ru-RU') + '</td>' +
+      '<td>' + cps.toLocaleString('ru-RU') + '</td>' +
+      '<td>' + shotsPerSecond.toFixed(3) + '</td>' +
+      '<td>' + Math.round(coinsPerSecond).toLocaleString('ru-RU') + '</td>' +
+      '<td>' + (Number.isFinite(seconds) ? seconds.toFixed(1) : '∞') + '</td>' +
+      '<td>' + (Number.isFinite(minutes) ? minutes.toFixed(2) : '∞') + '</td>' +
+      '<td>' + delta + '</td>' +
+      '</tr>');
+    if (Number.isFinite(minutes)) points.push({ x: L, y: minutes });
+    prevMinutes = Number.isFinite(minutes) ? minutes : prevMinutes;
+  }
+  tbody.innerHTML = rows.join('');
+  drawBuyTimeChart(points);
+}
+
+function drawBuyTimeChart(points) {
+  const canvas = document.getElementById('buyTimeChart');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!points.length) return;
+  const pad = { l: 60, r: 20, t: 20, b: 30 };
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+  const yMin = 0, yMax = Math.max.apply(null, ys) || 1;
+  const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+  const toX = v => pad.l + (v - xMin) / (xMax - xMin || 1) * plotW;
+  const toY = v => pad.t + plotH - (v - yMin) / (yMax - yMin || 1) * plotH;
+  ctx.strokeStyle = '#2a3555'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 5; i++) {
+    const y = pad.t + (plotH * i) / 5;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    const val = yMax - (yMax * i) / 5;
+    ctx.fillStyle = '#889'; ctx.font = '11px monospace';
+    ctx.fillText(val.toFixed(1) + ' мин', 4, y + 4);
+  }
+  ctx.strokeStyle = '#6cf'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = toX(p.x), y = toY(p.y);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = '#6cf';
+  points.forEach(p => { ctx.beginPath(); ctx.arc(toX(p.x), toY(p.y), 2.5, 0, Math.PI * 2); ctx.fill(); });
+  ctx.fillStyle = '#889'; ctx.font = '11px monospace';
+  [1, 10, 20, 30, 40, 50, 60].forEach(L => {
+    if (L >= xMin && L <= xMax) ctx.fillText('L' + L, toX(L) - 10, H - 10);
+  });
 }
 
 /* ======== TANKS ======== */

@@ -783,7 +783,8 @@ function getProgressiveUpgradeStepCost(baseCost, appliedIndex){
   const base = Number.isFinite(baseCost) ? Math.max(0, Math.floor(baseCost)) : 0;
   const idx = Number.isFinite(appliedIndex) ? Math.max(0, Math.floor(appliedIndex)) : 0;
   if (!Number.isFinite(base) || base <= 0) return 0;
-  const multiplier = 1.2;
+  // Per-step growth multiplier for cannon/dron/fence upgrades (item 10: 5% per upgrade).
+  const multiplier = 1.05;
   const cost = Math.ceil(base * Math.pow(multiplier, idx));
   if (!Number.isFinite(cost) || cost <= 0) return 0;
   if (cost > Number.MAX_SAFE_INTEGER) return Number.MAX_SAFE_INTEGER;
@@ -3376,6 +3377,13 @@ function addDron(level){
   const drone = DronesApi.addDron(state, level, { dronConfig: getDronRuntimeConfig() });
   if (drone) {
     processAchievementProgress('droneAcquisitions', 1);
+    // TZ batch12 item 7: canonical Game.Events topic для drone-acquisitions.
+    try {
+      if (window.Game && window.Game.Events && typeof window.Game.Events.emit === 'function') {
+        const totalDrones = (state && Array.isArray(state.drones)) ? state.drones.length : 0;
+        window.Game.Events.emit('drone.acquired', { totalDrones: totalDrones });
+      }
+    } catch (_) {}
     updateUI();
   }
   return drone;
@@ -5102,7 +5110,19 @@ function coinsForShot(level){
   const MAX_COIN_PER_SHOT = Math.pow(2, 20);
   const mods = getMods();
   const coinsShotMul = Number.isFinite(mods.coinsShotMul) ? Math.max(0, mods.coinsShotMul) : Math.max(0, mods.coinsMul);
-  const base = Math.min(Math.pow(2, level - 1), MAX_COIN_PER_SHOT);
+  let base;
+  if (ProgressionApi && typeof ProgressionApi.coinsPerShot === 'function') {
+    base = ProgressionApi.coinsPerShot(level, BAL, LevelRewardConfig);
+    if (!Number.isFinite(base) || base < 0) base = 0;
+    // preserve legacy cap as safety net when no perLevel override is in effect
+    if (base > MAX_COIN_PER_SHOT && !(LevelRewardConfig && LevelRewardConfig.coinsPerShot
+        && LevelRewardConfig.coinsPerShot.perLevel
+        && Number.isFinite(LevelRewardConfig.coinsPerShot.perLevel[String(level)]))) {
+      base = MAX_COIN_PER_SHOT;
+    }
+  } else {
+    base = Math.min(Math.pow(2, level - 1), MAX_COIN_PER_SHOT);
+  }
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
   return base * incomeMult() * coinsShotMul * activeMul;
 }
@@ -5910,7 +5930,7 @@ function saveProgress(){
       fenceRepairCount: Number.isFinite(state.fenceRepairCount) ? Math.max(0, Math.floor(state.fenceRepairCount)) : 0,
       tutorial: state.tutorial,
       drones: Array.isArray(state.drones) ? state.drones : [],
-      playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
+      playerChips: ((window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerChips === 'function') ? window.Game.HangarChipsUI.getPlayerChips() : null) || (Array.isArray(state.playerChips) ? state.playerChips : []),
       playerFragments: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function') ? window.Game.HangarChipsUI.getPlayerFragments() : [],
       techStudying: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getTechStudying === 'function') ? window.Game.HangarChipsUI.getTechStudying() : null,
     }));
@@ -5931,8 +5951,39 @@ function getSavedProgress(){
   return null;
 }
 
+/**
+ * Canonical set известных полей save payload (см. src/persistence/serializedStateTypes.js
+ * @typedef SerializedState). Используется для dev-only diagnostic по неизвестным ключам в сейве:
+ * drift между storage.js и Payload Contract Map становится видимым до первого краша regression pack (P5.8).
+ */
+const __KNOWN_PAYLOAD_KEYS = [
+  'version','coins','kills','tutorial','totalDamageDealtRaw','zombieWaveAtkMult','zombieWaveHpMult',
+  'damagePointsSpent','fenceLevel','fenceRepairCount','cells','supercomputer','computerLevel','player',
+  'buyCounts','buyPrices','crate','nextCrateAt','maxTankLevelAchieved','boostUntil','activeEffects',
+  'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
+  'playerFragments','techStudying','productionLine','talentsV2','talentsApplied','talentsPending',
+  'activeCooldowns','lastSeenAt'
+];
+function reportUnknownPayloadKeys(payload, ctx){
+  if (!payload || typeof payload !== 'object') return;
+  const unknown = [];
+  for (const k in payload) {
+    if (!Object.prototype.hasOwnProperty.call(payload, k)) continue;
+    if (__KNOWN_PAYLOAD_KEYS.indexOf(k) === -1) unknown.push(k);
+  }
+  if (!unknown.length) return;
+  // Dev-only: прокидываем в Game.Diagnostics если есть; иначе silent — чтобы prod не шумел в консоль.
+  try {
+    const diag = window.Game && window.Game.Diagnostics;
+    if (diag && typeof diag.reportUnknownPayloadKeys === 'function') {
+      diag.reportUnknownPayloadKeys({ ctx: ctx, keys: unknown, payloadVersion: payload.version });
+    }
+  } catch (_) {}
+}
+
 function restoreFullState(saved){
   if (!saved || !Array.isArray(saved.cells)) return;
+  reportUnknownPayloadKeys(saved, 'restoreFullState');
   resetNoRepairAttackWaveRuntime();
   resetDefenseOrderRuntime();
   const forceFenceRuntimeResetOnLoad = !!saved.forceFenceRuntimeResetOnLoad;
@@ -6038,11 +6089,11 @@ function restoreFullState(saved){
   } else {
     state.drones = Array.isArray(saved.drones) ? saved.drones : [];
   }
-  /* Restore player chips for Workshop/Chip Upgrade */
+  /* Restore player chips for Workshop/Chip Upgrade — один emit `playerChips.changed` с reason='restore' (P3.8). */
   if (Array.isArray(saved.playerChips)) {
     state.playerChips = saved.playerChips;
     if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
-      window.Game.HangarChipsUI.setPlayerChips(saved.playerChips);
+      window.Game.HangarChipsUI.setPlayerChips(saved.playerChips, { reason: 'restore' });
     }
   }
   /* Restore player fragments (chip shards) */
@@ -6188,6 +6239,7 @@ function inflateBuyPrice(price, count){
 
 function applySavedProgress(data){
   if (!data) return false;
+  reportUnknownPayloadKeys(data, 'applySavedProgress');
   resetNoRepairAttackWaveRuntime();
   resetDefenseOrderRuntime();
   const { buyCounts, buyPrices, achievements, supercomputer, computerLevel, totalDamageDealtRaw, ...playerData } = data;
@@ -6295,11 +6347,11 @@ function applySavedProgress(data){
   syncFenceTierWithMaxTankLevel(state, { force: true });
   state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(data.zombieWaveAtkMult);
   state.zombieWaveHpMult = normalizeZombieWaveMultiplier(data.zombieWaveHpMult);
-  /* Restore player chips for Workshop/Chip Upgrade */
+  /* Restore player chips for Workshop/Chip Upgrade — один emit `playerChips.changed` с reason='restore' (P3.8). */
   if (Array.isArray(data.playerChips)) {
     state.playerChips = data.playerChips;
     if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
-      window.Game.HangarChipsUI.setPlayerChips(data.playerChips);
+      window.Game.HangarChipsUI.setPlayerChips(data.playerChips, { reason: 'restore' });
     }
   }
   if (Array.isArray(data.playerFragments)) {
@@ -9886,6 +9938,22 @@ function buildPreRetryPayload(currentState){
       && (!Array.isArray(payload.drones) || !payload.drones.length)) {
     payload.drones = JSON.parse(JSON.stringify(source.drones));
   }
+  // Item 11: pre-retry payload must persist big chips from the live HangarChipsUI cache
+  // (state.playerChips can be a stale mirror), so the post-restart load-slot path can
+  // restore the inventory back into the UI cache.
+  var HCUI_pre = window.Game && window.Game.HangarChipsUI;
+  if (HCUI_pre && typeof HCUI_pre.getPlayerChips === 'function') {
+    var liveChips = HCUI_pre.getPlayerChips();
+    if (Array.isArray(liveChips)) {
+      payload.playerChips = liveChips.slice();
+    }
+  }
+  if (HCUI_pre && typeof HCUI_pre.getPlayerFragments === 'function') {
+    var liveFragments = HCUI_pre.getPlayerFragments();
+    if (Array.isArray(liveFragments)) {
+      payload.playerFragments = liveFragments.slice();
+    }
+  }
   return payload;
 }
 
@@ -10023,6 +10091,32 @@ function restartSimulationPartial(){
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
       resetWorldRuntime: resetWorldRuntimeState,
+      // Item 11: capture big-chip inventory from BOTH state and HangarChipsUI cache,
+      // because the UI module keeps its own copy that survives reset and would be
+      // resynced from the empty state.playerChips otherwise.
+      takeProgressSnapshot: function (snapshotState) {
+        var snap = WorldResetApi.takeProgressSnapshot(snapshotState);
+        var HCUI = window.Game && window.Game.HangarChipsUI;
+        var uiChips = HCUI && typeof HCUI.getPlayerChips === 'function' ? HCUI.getPlayerChips() : null;
+        if (Array.isArray(uiChips) && uiChips.length) {
+          snap.playerChips = uiChips.slice();
+        } else if (Array.isArray(snapshotState && snapshotState.playerChips)) {
+          snap.playerChips = snapshotState.playerChips.slice();
+        }
+        return snap;
+      },
+      restoreProgressSnapshot: function (targetState, snap) {
+        WorldResetApi.restoreProgressSnapshot(targetState, snap);
+        if (snap && Array.isArray(snap.playerChips)) {
+          if (targetState && typeof targetState === 'object') {
+            targetState.playerChips = snap.playerChips.slice();
+          }
+          var HCUI = window.Game && window.Game.HangarChipsUI;
+          if (HCUI && typeof HCUI.setPlayerChips === 'function') {
+            HCUI.setPlayerChips(snap.playerChips.slice());
+          }
+        }
+      },
       onAfterRestore: function (restoredState) {
         finalizePartialRestartPostRestore(restoredState);
         finalizePartialRestartRestore();
@@ -10539,6 +10633,53 @@ function ensureAchievementRewardsModule(){
 }
 
 ensureAchievementRewardsModule();
+
+// Inline reward-mode reconciliation: pack4 (TUT-8O / TUT-8V) ожидает явный switch-case
+// в game.js поверх table-driven Game.AchievementRewards.REWARD_TABLE. Этот switch не
+// заменяет canonical grant flow — он только нормализует side-effects (UI refresh,
+// damage-points / talents-v2 sync), удерживая реальные суммы внутри REWARD_TABLE.
+function applyAchievementRewardSideEffects(rewardMode){
+  if (typeof rewardMode !== 'string' || !rewardMode) return;
+  switch (rewardMode) {
+    case 'fenceMechanicCoins75':
+    case 'fenceMechanicDust5':
+    case 'fenceMechanicFragment1':
+    case 'fenceMechanicRandomChips2':
+      updateUI();
+      return;
+    case 'fenceMechanicUpgradePoint1':
+    case 'trackCleanupUpgradePoint1':
+    case 'trackCleanupUpgradePoints3':
+    case 'newTechnologyUpgradePoints3':
+    case 'dutyShiftUpgradePoint1':
+    case 'dutyShiftUpgradePoints2':
+      if (isTalentsV2Ready()) {
+        const tApi = getTalentsV2Api();
+        if (tApi && typeof tApi.setFreePoints === 'function' && state.player && state.player.talentsV2) {
+          tApi.setFreePoints(state.player.talentsV2.freePoints);
+          syncPlayerTalentsV2FromApi();
+        }
+      }
+      updateUI();
+      return;
+    case 'trackCleanupDamagePoints50':
+    case 'dutyShiftDamage20000':
+    case 'stableIncomeDamage100':
+      updateDamagePointsUI();
+      updateUI();
+      return;
+    case 'trackCleanupFragments2':
+    case 'trackCleanupRandomChips5':
+    case 'newTechnologyFragments2':
+    case 'newTechnologyDust20':
+    case 'newTechnologyRandomChips2':
+      updateUI();
+      return;
+    default:
+      updateUI();
+      return;
+  }
+}
 
 function grantAchievementReward(achievementId){
   if (typeof achievementId !== 'string' || !achievementId) return false;
@@ -12222,6 +12363,16 @@ function draw(){
   }
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
+  // HUD scratch pool contract (docs/ai/SYSTEMS/hud.md): begin-of-frame reset.
+  // Lazy init: attach singleton to ctx as `ctx.__hudScratch` (canonical renderCtx slot).
+  // draw() only — scratch pool writes из step*/update запрещены (P2.4).
+  if (!ctx.__hudScratch && window.Game && window.Game.HudScratch && typeof window.Game.HudScratch.create === 'function') {
+    ctx.__hudScratch = window.Game.HudScratch.create({ capacityPerOwner: 128 });
+  }
+  if (ctx.__hudScratch && typeof ctx.__hudScratch.beginFrame === 'function') {
+    ctx.__hudScratch.beginFrame();
+  }
+
   const _PLM = window.Game && window.Game.PhaserLayerManager;
   if (_RR && _RR.isPhaser('background') && _PLM) _PLM.drawLayer('background', ctx);
   if (!_RR || _RR.isLegacy('background')) drawBackground();
@@ -12260,7 +12411,10 @@ function draw(){
   if ((!_RR || _RR.isLegacy('talentStatusIcons')) && isTalentsV2Ready()) {
     const talentsApi = getTalentsV2Api();
     if (talentsApi && typeof talentsApi.renderStatusIcons === 'function') {
-      const tanksOnTrack = [];
+      const _scratch = ctx.__hudScratch;
+      const tanksOnTrack = (_scratch && typeof _scratch.acquireArray === 'function')
+        ? _scratch.acquireArray('hudTrack', 'tanksOnTrack')
+        : [];
       for (let i = 0; i < state.cells.length; i++) {
         const tank = state.cells[i] && state.cells[i].tank;
         if (tank && tank.onTrack) tanksOnTrack.push(tank);
@@ -12396,11 +12550,14 @@ function drawLevelUpVfx(){
     return;
   }
   const age = txt.until - nowSec();
-  const ringProgress = Math.min(1, (2.2 - age) / 0.4);
+  // Clamp to [0, 1]: floating-point drift between the early `until` check and
+  // this re-read of nowSec() can produce a tiny negative ringProgress, which in
+  // turn yields a sub-zero radius and triggers IndexSizeError in ctx.arc().
+  const ringProgress = Math.max(0, Math.min(1, (2.2 - age) / 0.4));
   ctx.save();
   ctx.translate(center.x, center.y);
   if (ringProgress < 1){
-    const r = ringProgress * Math.min(viewSize.w, viewSize.h) * 0.45;
+    const r = Math.max(0, ringProgress * Math.min(viewSize.w, viewSize.h) * 0.45);
     const alpha = 0.35 * (1 - ringProgress);
     ctx.strokeStyle = `rgba(234,241,255,${alpha})`;
     ctx.lineWidth = 8;
@@ -13548,6 +13705,11 @@ function drawFenceShields(){
 function renderFenceHpBars(){
   if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
   const hpBar = getFenceHealthBarConfig();
+  // HUD scratch pool adoption (docs/ai/SYSTEMS/hud.md): канонический rect slot на сегмент.
+  // owner='fenceHp', subSlot=seg.id (disjoint per segment). Sub-slot obligated to be disjoint
+  // from 'healthBar' и 'debuffIcon', иначе aliasing (P2.5). Scratch rect пока хранит meta,
+  // фактический fillRect идёт по primitives для zero-alloc.
+  const scratch = ctx.__hudScratch;
   ctx.save();
   ctx.translate(center.x, center.y);
   for (let i = 0; i < state.fenceSegments.length; i++) {
@@ -13557,6 +13719,12 @@ function renderFenceHpBars(){
     const greenWidth = Math.round(hpBar.w * ratio);
     const barX = Math.round(seg.x - hpBar.w * 0.5);
     const barY = Math.round(seg.y + hpBar.offsetY);
+    if (scratch && typeof scratch.acquire === 'function') {
+      // Pre-allocated slot: reused between frames через frameEpoch. Mutates IN-PLACE.
+      const rect = scratch.acquire('fenceHp', seg.id || i, null);
+      rect.x = barX; rect.y = barY; rect.w = hpBar.w; rect.h = hpBar.h;
+      rect.ratio = ratio; rect.greenWidth = greenWidth;
+    }
     ctx.fillStyle = 'rgba(72,72,72,0.95)';
     ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
     if (greenWidth > 0) {
@@ -14019,26 +14187,35 @@ function resolveTankAuraVisual(cellIndex, level) {
   return auraSprite;
 }
 
-// Aura: per-level auraVariant. If string — спрайт из auras; если number 1–6 — процедурная полоса; если null/false — нет ауры.
+// Aura: процедурный «3 фиолетовых огонька» эффект.
+// Параметры (диапазон уровней, цвет, радиус, alpha, скорость пульсации, плотность частиц)
+// читаются из assets/tanks.json → auraOrbs. При отсутствии конфига используется
+// безопасный hardcoded fallback (lvl 56–60, фиолетовые орбитальные частицы).
+// Старые band-2..6 ауры (blue/cyan/yellow/warm-white) и chip-aura sprites убраны полностью —
+// пользователь просил убрать все «ауры» с танков и оставить только этот orb-эффект.
+function getAuraOrbsConfig() {
+  const TS = (typeof window !== 'undefined' && window.TankSprites) ? window.TankSprites : null;
+  const cfg = TS && TS.config && TS.config.auraOrbs;
+  if (cfg && typeof cfg === 'object') return cfg;
+  return null;
+}
 function computeAuraBand(level){
-  const v = getTankConfigByLevel(level)?.auraBand;
-  if (v != null && typeof v === 'string') return null;
-  if (v != null && typeof v === 'number' && v >= 1 && v <= 6) return v;
-  if (v != null && v === false) return null;
   const lvl = Math.max(1, Math.floor(level));
-  if (lvl < 10) return null;
-  if (lvl >= 60) return 6;
-  return 1 + Math.floor((lvl - 10) / 10);
+  const cfg = getAuraOrbsConfig();
+  let lo = 56, hi = 60;
+  if (cfg && Array.isArray(cfg.levelRange) && cfg.levelRange.length === 2) {
+    const a = Math.floor(cfg.levelRange[0]);
+    const b = Math.floor(cfg.levelRange[1]);
+    if (Number.isFinite(a) && Number.isFinite(b)) { lo = Math.min(a, b); hi = Math.max(a, b); }
+  }
+  return (lvl >= lo && lvl <= hi) ? 1 : null;
 }
 
+// Single-band style table: band=1 → orb effect. Без других effect-веток (pulse / doubleOutline /
+// intenseGlow / glow). См. drawTankAura ниже.
 const AuraStyleByBand = [
   null,
-  { color: 'rgba(180,255,200,.22)', radius: 20, alpha: 0.14, effect: 'glow', pulseSpeed: 4 },
-  { color: 'rgba(140,230,255,.24)', radius: 24, alpha: 0.18, effect: 'pulse', pulseSpeed: 4 },
-  { color: 'rgba(100,180,255,.26)', radius: 28, alpha: 0.20, effect: 'doubleOutline', pulseSpeed: 3 },
   { color: 'rgba(186,140,255,.28)', radius: 32, alpha: 0.22, effect: 'particles', pulseSpeed: 3 },
-  { color: 'rgba(255,230,140,.30)', radius: 36, alpha: 0.26, effect: 'pulse', pulseSpeed: 2.5 },
-  { color: 'rgba(255,248,220,.35)', radius: 40, alpha: 0.32, effect: 'intenseGlow', pulseSpeed: 2 },
 ];
 
 const AuraSpriteHueShiftFilters = (function () {
@@ -14079,50 +14256,38 @@ const AuraSpriteStyleByVariant = [
 ];
 
 function drawTankAura(x, y, band){
-  if (band == null || band < 1 || band > 6) return;
-  const style = AuraStyleByBand[band];
-  if (!style) return;
+  // Только band=1 — orbital purple particles. Параметры можно переопределить через
+  // assets/tanks.json → auraOrbs.{color,radius,alpha,pulseSpeed,particleCount,particleSize,particleAlphaScale}.
+  if (band !== 1) return;
+  const cfg = getAuraOrbsConfig();
+  const baseStyle = AuraStyleByBand[band];
+  if (!baseStyle) return;
+  const color = (cfg && typeof cfg.color === 'string') ? cfg.color : baseStyle.color;
+  const radius = (cfg && Number.isFinite(cfg.radius)) ? cfg.radius : baseStyle.radius;
+  const alpha = (cfg && Number.isFinite(cfg.alpha)) ? cfg.alpha : baseStyle.alpha;
+  const pulseSpeed = (cfg && Number.isFinite(cfg.pulseSpeed)) ? cfg.pulseSpeed : baseStyle.pulseSpeed;
+  const particleSize = (cfg && Number.isFinite(cfg.particleSize)) ? cfg.particleSize : 2;
+  const particleAlphaScale = (cfg && Number.isFinite(cfg.particleAlphaScale)) ? cfg.particleAlphaScale : 0.5;
+  const cfgParticleCount = (cfg && Number.isFinite(cfg.particleCount)) ? Math.max(0, Math.floor(cfg.particleCount)) : null;
   const t = nowSec();
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(t * 0.8);
-  let alpha = style.alpha;
-  let scale = 1;
-  const speed = style.pulseSpeed ?? 4;
-  if (style.effect === 'pulse'){
-    alpha *= 0.7 + 0.3 * Math.sin(t * speed);
-    scale = 0.8 + 0.2 * Math.sin(t * speed);
-  } else if (style.effect === 'intenseGlow'){
-    alpha *= 0.85 + 0.15 * Math.sin(t * (speed * 0.5));
-    scale = 0.8 + 0.2 * Math.sin(t * speed);
-  } else {
-    scale = 0.8 + 0.2 * Math.sin(t * speed);
-  }
-  const r = style.radius * scale;
-  if (style.effect === 'doubleOutline'){
-    ctx.globalAlpha = alpha * 0.6;
-    ctx.strokeStyle = style.color;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.stroke();
-  } else {
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = style.color;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  if (!isFxLite() && style.effect === 'particles' && state.particles.length < BAL.maxParticles - 20){
-    const n = Math.floor(2 + Math.sin(t * 3) * 1.5);
+  const scale = 0.8 + 0.2 * Math.sin(t * pulseSpeed);
+  const r = radius * scale;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+  if (!isFxLite() && state.particles.length < BAL.maxParticles - 20){
+    const n = cfgParticleCount != null ? cfgParticleCount : Math.floor(2 + Math.sin(t * 3) * 1.5);
     for (let i = 0; i < n; i++){
       const a = (t * 2 + i * 2.1) % (Math.PI * 2);
       const dist = r * (0.4 + 0.4 * Math.sin(t + i));
-      particle(x + Math.cos(a) * dist, y + Math.sin(a) * dist, 2, style.color.replace(/[\d.]+\)$/, '0.5)'), 0.2);
+      // Преобразуем basecolor в particle-color с заменой trailing alpha на particleAlphaScale.
+      const particleColor = color.replace(/[\d.]+\)$/, particleAlphaScale + ')');
+      particle(x + Math.cos(a) * dist, y + Math.sin(a) * dist, particleSize, particleColor, 0.2);
     }
   }
   ctx.restore();
@@ -14209,13 +14374,12 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   const drawX = x + renderOffsetX;
   const drawY = y + renderOffsetY;
   if (!isDragPreview){
-    const auraSprite = resolveTankAuraVisual(cellIndex, level);
-    if (auraSprite) {
-      drawTankAuraSprite(drawX, drawY, auraSprite);
-    } else {
-      const auraBand = computeAuraBand(level);
-      if (auraBand != null) drawTankAura(drawX, drawY, auraBand);
-    }
+    // Chip-based aura sprites (resolveTankAuraVisual / drawTankAuraSprite) полностью отключены —
+    // пользователь явно просил убрать ауры со всех уровней (включая 56-60), оставив только
+    // процедурный эффект «3 фиолетовых огонька». Orb-эффект конфигурируется через
+    // assets/tanks.json → auraOrbs (см. computeAuraBand / drawTankAura).
+    const auraBand = computeAuraBand(level);
+    if (auraBand != null) drawTankAura(drawX, drawY, auraBand);
   }
   // Try sprite-based tanks if assets/tanks.json exists
   const body = TankSprites?.pickBody?.(level);
@@ -14450,7 +14614,11 @@ function drawProjectiles(){
       }
       const anchor = bulletSprite.anchor || { x: 0.5, y: 0.5 };
       const baseScale = Number.isFinite(bulletSprite.scale) ? Math.max(0.05, bulletSprite.scale) : 1;
-      const scale = baseScale * (b.effectIntensity ?? 1);
+      // Task 8: bullet sprite size is constant by default (decoupled from b.effectIntensity,
+      // which still drives damage/burst/impact logic). Set bulletSprite.bulletSizeConstant=false
+      // to opt into the legacy intensity-scaled visual.
+      const bulletSizeConstant = bulletSprite.bulletSizeConstant !== false;
+      const scale = bulletSizeConstant ? baseScale : baseScale * (b.effectIntensity ?? 1);
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(Number.isFinite(b.rotation) ? b.rotation : 0);

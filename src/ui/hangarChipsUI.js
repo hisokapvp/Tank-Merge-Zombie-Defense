@@ -1287,18 +1287,35 @@
 
   /* ─── Player chip inventory (with levels) ──────────────── */
 
-  /* _playerChips: array of { chipId, chipColor, modIds, sourceComboKey, level, count }
-     Chips with same chipId and same level are grouped together. */
-  var _playerChips = null;
+  /* Canonical owner: `state.playerChips` in game.js, exposed via
+   * `window.Game.State.getPlayerChips()` / `.setPlayerChips(arr)`.
+   * HangarChipsUI is a derived view — it never holds its own mirror array.
+   *
+   * `_playerChipsFallback` is used only if the canonical API is not yet
+   * available at module load (defensive bootstrap). As soon as Game.State
+   * exposes getPlayerChips, every read/write routes through it. If the
+   * fallback accumulated any chips before the canonical API appeared,
+   * they are flushed into state on the first setPlayerChips call.
+   *
+   * Chips with same chipId and same level are grouped together.
+   */
+  var _playerChipsFallback = null;
 
   /* _playerFragments: array of { fragmentId (=modId), count }
      Each fragment is one of the 30 possible modifier properties. */
   var _playerFragments = null;
 
+  function _canonicalPlayerChipsApi() {
+    var gs = global.Game && global.Game.State;
+    if (gs && typeof gs.getPlayerChips === 'function' && typeof gs.setPlayerChips === 'function') return gs;
+    return null;
+  }
+
   function ensurePlayerChips() {
-    if (_playerChips) return _playerChips;
-    _playerChips = [];
-    return _playerChips;
+    var api = _canonicalPlayerChipsApi();
+    if (api) return api.getPlayerChips();
+    if (!_playerChipsFallback) _playerChipsFallback = [];
+    return _playerChipsFallback;
   }
 
   function ensurePlayerFragments() {
@@ -1371,9 +1388,75 @@
 
   function getPlayerChips() { return ensurePlayerChips(); }
 
-  function setPlayerChips(chips) {
-    _playerChips = Array.isArray(chips) ? chips : [];
+  /**
+   * Canonical write-path для playerChips. Все мутации инвентаря чипов обязаны идти через этот setter,
+   * иначе drift между canonical owner (`Game.State`) и HangarChipsUI-derived view, а также пропуск
+   * `Game.Events.playerChips.changed` event (P3.3).
+   *
+   * @param {Array} chips — новый snapshot инвентаря (ownership transfer — НЕ шарим mutable ссылку дальше).
+   * @param {{reason?: string, changedIds?: Array, prevSnapshot?: Array}} [meta]
+   */
+  function setPlayerChips(chips, meta) {
+    var next = Array.isArray(chips) ? chips : [];
+    var prevForEvent = null;
+    try {
+      var prev = ensurePlayerChips();
+      if (Array.isArray(prev)) prevForEvent = prev.slice();
+    } catch (_) {}
+
+    var api = _canonicalPlayerChipsApi();
+    if (api) {
+      api.setPlayerChips(next);
+      _playerChipsFallback = null; // canonical owner now authoritative
+    } else {
+      _playerChipsFallback = next;
+    }
+
+    // Один canonical emit на успешный setter — coalesced через rAF (P3.2).
+    try {
+      if (global.Game && global.Game.Events && typeof global.Game.Events.emit === 'function') {
+        var reason = (meta && typeof meta.reason === 'string') ? meta.reason : 'mutate';
+        var changedIds = (meta && Array.isArray(meta.changedIds)) ? meta.changedIds.slice() : null;
+        global.Game.Events.emit('playerChips.changed', {
+          reason: reason,
+          changedIds: changedIds,
+          prevSnapshot: (meta && meta.prevSnapshot === false) ? null : prevForEvent,
+        });
+        // P3.x: дополнительный canonical topic для craft-успехов (TZ batch12 item 7).
+        if (reason === 'craft') {
+          global.Game.Events.emit('chips.crafted', {
+            changedIds: changedIds,
+          });
+        }
+      }
+    } catch (_) {}
   }
+
+  /* ─── Lazy repaint on playerChips.changed (P3.3, P3.7) ───
+   * Listener подписывается один раз на module-init. Visibility guard заменяет
+   * per-open attach/detach: render() вызывается только если overlay реально показан.
+   * rAF-coalescing уже сделан внутри Game.Events.emit, поэтому повторные mutations
+   * в одном кадре дают один render-вызов. Render безопасен (он сам читает canonical
+   * playerChips и не вызывает setPlayerChips), цикл невозможен.
+   */
+  function _isHangarOverlayVisible() {
+    try {
+      var overlay = el('modsHangarOverlay');
+      if (!overlay) return false;
+      if (overlay.classList && overlay.classList.contains('hidden')) return false;
+      if (overlay.style && overlay.style.display === 'none') return false;
+      return true;
+    } catch (_) { return false; }
+  }
+  function _scheduleLazyRepaint(/* payload */) {
+    if (!_isHangarOverlayVisible()) return;
+    try { render(); } catch (_) {}
+  }
+  try {
+    if (global.Game && global.Game.Events && typeof global.Game.Events.on === 'function') {
+      global.Game.Events.on('playerChips.changed', _scheduleLazyRepaint);
+    }
+  } catch (_) {}
 
   function getChipEntryCount(entry) {
     var raw = Number(entry && entry.count);

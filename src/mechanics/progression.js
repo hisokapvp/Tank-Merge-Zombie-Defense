@@ -40,11 +40,55 @@
     return Math.max(0, Math.round(50 * Math.pow(2, lvl - 1)));
   }
 
+  var COINS_PER_SHOT_MAX_EXP = 20; /* matches Game.Economy MAX_COIN_PER_SHOT = 2^20 */
+  var COINS_PER_SHOT_WARNED = {};
+
+  function coinsPerShotDefault(level) {
+    var lvl = Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+    return Math.min(Math.pow(2, lvl - 1), Math.pow(2, COINS_PER_SHOT_MAX_EXP));
+  }
+
+  /**
+   * Базовое число монет за выстрел танка (до runtime-множителей).
+   * Приоритет: cfg.coinsPerShot.perLevel[level] → formula='default' (runtime) → formula='fixed' (bal params) → default.
+   * Safe-integer clamp включён.
+   */
+  function coinsPerShot(level, bal, levelRewardCfg) {
+    var lvl = Math.max(1, Math.floor(Number.isFinite(level) ? level : 1));
+    if (lvl <= 0) return 0;
+    var cfg = levelRewardCfg && typeof levelRewardCfg === 'object' ? levelRewardCfg : null;
+    var block = cfg && cfg.coinsPerShot && typeof cfg.coinsPerShot === 'object' ? cfg.coinsPerShot : null;
+    var perLevel = block && block.perLevel && typeof block.perLevel === 'object' ? block.perLevel : null;
+
+    if (perLevel) {
+      var override = perLevel[String(lvl)];
+      if (Number.isFinite(override) && override >= 0) {
+        return Math.min(Math.max(0, override), Number.MAX_SAFE_INTEGER);
+      }
+    }
+
+    var formula = block && typeof block.formula === 'string' ? block.formula : 'default';
+    if (formula === 'fixed') {
+      if (!perLevel && !COINS_PER_SHOT_WARNED[lvl] && typeof console !== 'undefined' && console.warn) {
+        console.warn('[ProgressionApi.coinsPerShot] formula=fixed but perLevel[' + lvl + '] missing; falling back to bal params');
+        COINS_PER_SHOT_WARNED[lvl] = true;
+      }
+      if (bal) {
+        var base = Number(bal.coinsPerShotBase) || 0;
+        var mul = Number(bal.coinsPerShotLevelMul) || 0;
+        var fixedVal = base + mul * Math.max(0, lvl - 1);
+        return Math.min(Math.max(0, fixedVal), Number.MAX_SAFE_INTEGER);
+      }
+    }
+    return Math.min(coinsPerShotDefault(lvl), Number.MAX_SAFE_INTEGER);
+  }
+
   global.Game = global.Game || {};
   global.Game.Progression = {
     POWER_TIER_THRESHOLDS: POWER_TIER_THRESHOLDS,
     computePowerTier: computePowerTier,
     xpNeededForLevel: xpNeededForLevel,
     levelGoldReward: levelGoldReward,
+    coinsPerShot: coinsPerShot,
   };
 })(typeof window !== 'undefined' ? window : this);

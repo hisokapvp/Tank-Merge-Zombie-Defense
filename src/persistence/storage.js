@@ -364,8 +364,21 @@
 
   /**
    * Сериализуем только то, что нужно для восстановления и офлайн-расчёта.
+   *
+   * Canonical payload shape задокументирован в JSDoc-схеме
+   * `import('./serializedStateTypes').SerializedState` (см.
+   * [src/persistence/serializedStateTypes.js](./serializedStateTypes.js)).
+   * Вторая авторитетная поверхность — Payload Contract Map в
+   * [docs/ai/SYSTEMS/save.md](../../docs/ai/SYSTEMS/save.md); при добавлении нового поля
+   * обязательно синхронизировать ОБЕ (иначе drift виден на review).
+   *
+   * Текущее значение `version` = `SAVE_VERSION` (2). При bump'е обязана миграция в
+   * `loadGame()` / `restoreFullState()`. Неизвестные ключи при deserialize дропаются;
+   * `restoreFullState()` подставляет defaults для отсутствующих полей legacy сейвов.
+   * В payload НЕ пишется PII / user-identifiable data.
+   *
    * @param {object} state
-   * @returns {object}
+   * @returns {import('./serializedStateTypes').SerializedState}
    */
   function serializeState(state) {
     if (!state) return {};
@@ -501,6 +514,17 @@
       if (!data || typeof data !== 'object') return null;
       if (Array.isArray(data.cells)) {
         data.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(data.totalDamageDealtRaw);
+        // Fail-soft schema validation: never block load, only warn in console.
+        try {
+          var validator = global.Game && global.Game.SaveSchemaValidator;
+          var schema = global.Game && global.Game.SaveSchema;
+          if (validator && schema && typeof validator.validatePayload === 'function') {
+            var res = validator.validatePayload(data, schema);
+            if (res && !res.ok && global.console && global.console.warn) {
+              global.console.warn('[saveSchema] payload mismatch (load continues):', res.errors);
+            }
+          }
+        } catch (_) { /* fail-soft: ignore validator errors */ }
         return { state: data, meta: { lastSeenAt: data.lastSeenAt, version: data.version } };
       }
       return { state: null, meta: {}, legacyProgress: data };

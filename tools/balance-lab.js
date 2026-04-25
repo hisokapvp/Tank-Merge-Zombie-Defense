@@ -100,6 +100,7 @@
       '<button data-root-tab="profiles">Профили</button>',
       '<button data-root-tab="goals">Цели</button>',
       '<button data-root-tab="tunables">Параметры</button>',
+      '<button data-root-tab="earnings">Заработок</button>',
       '<button data-root-tab="optimize">Оптимизация</button>',
       '<button data-root-tab="write">Дифф / запись</button>'
     ].join('');
@@ -112,7 +113,7 @@
     assetsPanel.appendChild(tabs);
     assetsPanel.appendChild(main);
 
-    ['profiles', 'goals', 'tunables', 'optimize', 'write'].forEach(function (panelKey) {
+    ['profiles', 'goals', 'tunables', 'earnings', 'optimize', 'write'].forEach(function (panelKey) {
       var panel = document.createElement('section');
       panel.id = 'balanceLabPanel' + panelKey.charAt(0).toUpperCase() + panelKey.slice(1);
       panel.className = 'balanceLabPanel';
@@ -138,6 +139,7 @@
     var activePanel = document.getElementById('balanceLabPanel' + tabKey.charAt(0).toUpperCase() + tabKey.slice(1));
     if (activePanel) activePanel.classList.add('is-active');
     if (tabKey === 'optimize') renderOptimizeCharts();
+    if (tabKey === 'earnings') renderEarningsPanel();
   }
 
   function getApp() {
@@ -847,6 +849,156 @@
     renderTunablesPanel();
     renderOptimizePanel();
     renderWritePanel();
+  }
+
+  var earningsState = {
+    levelRewardConfig: null,
+    cellCount: 15,
+    renderTimer: null,
+    loadPromise: null,
+  };
+
+  function loadLevelRewardConfigForEarnings() {
+    if (earningsState.levelRewardConfig) return Promise.resolve(earningsState.levelRewardConfig);
+    if (earningsState.loadPromise) return earningsState.loadPromise;
+    earningsState.loadPromise = fetch('../assets/levelreward.json', { cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; })
+      .then(function (cfg) {
+        earningsState.levelRewardConfig = cfg || {};
+        earningsState.loadPromise = null;
+        return earningsState.levelRewardConfig;
+      });
+    return earningsState.loadPromise;
+  }
+
+  function earningsCoinsPerShot(level) {
+    var lvl = Math.max(1, Math.floor(level));
+    var cfg = earningsState.levelRewardConfig;
+    var block = cfg && cfg.coinsPerShot;
+    if (block && block.perLevel) {
+      var override = block.perLevel[String(lvl)];
+      if (Number.isFinite(override) && override >= 0) return override;
+    }
+    return Math.min(Math.pow(2, lvl - 1), Math.pow(2, 20));
+  }
+
+  function earningsFireRate(level) {
+    var lvl = Math.max(1, Math.floor(level));
+    var tanksEdit = state.app && state.app.EDIT && state.app.EDIT.tanks;
+    var tankCfg = tanksEdit && tanksEdit['tank_lvl' + lvl];
+    var attackSpeed = tankCfg && tankCfg.stats && Number(tankCfg.stats.attackSpeed);
+    if (Number.isFinite(attackSpeed) && attackSpeed > 0) return attackSpeed;
+    return 0.85 + 0.075 * (lvl - 1);
+  }
+
+  function formatEarningsNumber(value) {
+    if (!Number.isFinite(value)) return '—';
+    if (Math.abs(value) >= 1e12) return value.toExponential(3);
+    return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  }
+
+  function renderEarningsPanel() {
+    var panel = document.getElementById('balanceLabPanelEarnings');
+    if (!panel) return;
+    if (!earningsState.levelRewardConfig) {
+      panel.innerHTML = '<div class="balanceLabCard balanceLabHelp">Загрузка levelreward.json…</div>';
+    }
+    loadLevelRewardConfigForEarnings().then(function () {
+      if (!panel.isConnected) return;
+      drawEarningsTable(panel);
+    });
+    if (earningsState.levelRewardConfig) drawEarningsTable(panel);
+  }
+
+  function drawEarningsTable(panel) {
+    var cellCount = Math.max(1, Math.floor(earningsState.cellCount) || 1);
+    var perLevelOverride = earningsState.levelRewardConfig
+      && earningsState.levelRewardConfig.coinsPerShot
+      && earningsState.levelRewardConfig.coinsPerShot.perLevel;
+    var formula = (earningsState.levelRewardConfig
+      && earningsState.levelRewardConfig.coinsPerShot
+      && earningsState.levelRewardConfig.coinsPerShot.formula) || 'default';
+    var rows = [];
+    var totalAllLevels = 0;
+    for (var lvl = 1; lvl <= 60; lvl++) {
+      var cps = earningsCoinsPerShot(lvl);
+      var fr = earningsFireRate(lvl);
+      var perTankMin = cps * fr * 60;
+      var totalPerMin = perTankMin * cellCount;
+      totalAllLevels += totalPerMin;
+      var overrideFlag = perLevelOverride && Number.isFinite(perLevelOverride[String(lvl)])
+        ? '<span class="balanceLabBadge">override</span>' : '';
+      rows.push('<tr>' +
+        '<td>' + lvl + ' ' + overrideFlag + '</td>' +
+        '<td>' + formatEarningsNumber(cps) + '</td>' +
+        '<td>' + fr.toFixed(3) + '</td>' +
+        '<td>' + formatEarningsNumber(perTankMin) + '</td>' +
+        '<td>' + formatEarningsNumber(totalPerMin) + '</td>' +
+        '</tr>');
+    }
+    panel.innerHTML = [
+      '<div class="balanceLabCard balanceLabHelp">',
+        '<div><strong>Формула:</strong> $/min = coinsPerShot(L) × fireRate(L) × 60 × количество_ячеек.</div>',
+        '<div class="balanceLabSmall">coinsPerShot читается из <code>assets/levelreward.json → coinsPerShot.perLevel[L]</code>; ',
+        'при отсутствии override применяется default формула <code>min(2^(L-1), 2^20)</code> — та же, что в runtime <code>Game.Economy.coinsForShot</code> до множителей. ',
+        'fireRate берётся из <code>tank_lvlL.stats.attackSpeed</code> текущего EDIT-состояния, либо fallback <code>0.85 + 0.075·(L-1)</code>. ',
+        'Активный formula: <strong>' + formula + '</strong>. Пример в ТЗ «L1=1000, L2=2000» — ожидаемый выход после заполнения <code>perLevel</code>, не hard-coded таблица.</div>',
+        '<div class="balanceLabSmall">Вкладка read-only. Для правок используйте <code>assets/levelreward.json</code> напрямую или вкладку «Дифф / запись».</div>',
+      '</div>',
+      '<div class="balanceLabCard">',
+        '<div class="balanceLabActions">',
+          '<label style="display:inline-flex;gap:6px;align-items:center;color:#cfe0ff;font-size:12px;">Ячеек на уровень: ',
+            '<input type="number" min="1" max="200" step="1" value="' + cellCount + '" data-earnings-cells="1" style="width:72px;">',
+          '</label>',
+          '<button type="button" class="secondary" data-earnings-refresh="1">Обновить</button>',
+          '<button type="button" class="secondary" data-earnings-export="1">Экспорт CSV</button>',
+          '<span class="balanceLabSmall">Итого по 60 уровням: <strong>' + formatEarningsNumber(totalAllLevels) + '</strong> $/min</span>',
+        '</div>',
+        '<div class="balanceLabTableWrap"><table class="balanceLabTable"><thead><tr>',
+          '<th>Уровень</th><th>coinsPerShot</th><th>fireRate (в/c)</th><th>$/min на 1 ячейку</th><th>$/min × ' + cellCount + ' ячеек</th>',
+        '</tr></thead><tbody>', rows.join(''), '</tbody></table></div>',
+      '</div>'
+    ].join('');
+    wireEarningsActions(panel);
+  }
+
+  function wireEarningsActions(panel) {
+    var cellsInput = panel.querySelector('[data-earnings-cells]');
+    var refreshBtn = panel.querySelector('[data-earnings-refresh]');
+    var exportBtn = panel.querySelector('[data-earnings-export]');
+    if (cellsInput) {
+      cellsInput.addEventListener('input', function () {
+        var next = parseInt(cellsInput.value, 10);
+        if (Number.isFinite(next) && next >= 1) {
+          earningsState.cellCount = next;
+          if (earningsState.renderTimer) clearTimeout(earningsState.renderTimer);
+          earningsState.renderTimer = setTimeout(function () {
+            earningsState.renderTimer = null;
+            drawEarningsTable(panel);
+          }, 500);
+        }
+      });
+    }
+    if (refreshBtn) {
+      refreshBtn.onclick = function () {
+        earningsState.levelRewardConfig = null;
+        renderEarningsPanel();
+      };
+    }
+    if (exportBtn) {
+      exportBtn.onclick = function () {
+        var lines = ['level,coinsPerShot,fireRate,perCellMin,perGridMin'];
+        for (var lvl = 1; lvl <= 60; lvl++) {
+          var cps = earningsCoinsPerShot(lvl);
+          var fr = earningsFireRate(lvl);
+          var perCell = cps * fr * 60;
+          var perGrid = perCell * earningsState.cellCount;
+          lines.push([lvl, cps, fr.toFixed(4), perCell.toFixed(2), perGrid.toFixed(2)].join(','));
+        }
+        downloadText('balance-lab-earnings.csv', lines.join('\n'), 'text/csv;charset=utf-8');
+      };
+    }
   }
 
   function onProfilesChange(event) {

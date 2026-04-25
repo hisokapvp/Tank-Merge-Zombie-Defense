@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-04-06.
+> Обновлено: 2026-04-24.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -28,7 +28,8 @@
 - Assets/JSON: `docs/ai/SYSTEMS/assets.md`
 - Balance Lab / config optimization: `docs/ai/SYSTEMS/balance-editor.md`
 - Combat: `docs/ai/SYSTEMS/combat.md`
-- Save/Offline: `docs/ai/SYSTEMS/save.md`
+- Save/Offline: `docs/ai/SYSTEMS/save.md` (last-updated: 2026-04-24)
+- HUD render / scratch pool: `docs/ai/SYSTEMS/hud.md` (last-updated: 2026-04-24)
 - Achievements: `docs/ai/SYSTEMS/achievements.md`
 - World Events: `docs/ai/SYSTEMS/worldEvents.md`
 - Fence: `docs/ai/SYSTEMS/fence.md`

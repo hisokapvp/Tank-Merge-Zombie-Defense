@@ -367,6 +367,7 @@
       counters: {
         shotCalls: 0,
         hitCalls: 0,
+        directHitCalls: 0,
       },
       lastSeen: {
         tank: null,
@@ -2701,11 +2702,23 @@
     var tankRt = ensureTankRt(tank);
     var zRt = ensureZombieRt(zombie);
     runtime._debug.counters.hitCalls += 1;
+    if (!isAoe && !isRicochetSource) {
+      runtime._debug.counters.directHitCalls += 1;
+    }
     runtime._debug.lastSeen.tank = tank || runtime._debug.lastSeen.tank;
     runtime._debug.lastSeen.zombie = zombie || runtime._debug.lastSeen.zombie;
-    if (DEV_MODE && runtime._debug.counters.shotCalls > 0 && runtime._debug.counters.hitCalls > runtime._debug.counters.shotCalls * 15 + 20) {
-      warnWithCooldown('missing_onShotFired', '[TalentsV2] onHit count significantly exceeds onShotFired count. Check integration hooks.', {
-        onHit: runtime._debug.counters.hitCalls,
+    // Compare only direct (non-AoE / non-ricochet) hits against shot count: AoE
+    // explosions and ricochets legitimately produce many hit calls per shot
+    // (especially during the supercomputer "critical state" mass-procs), and
+    // the previous all-hits comparison flooded the console and dragged FPS.
+    if (
+      DEV_MODE &&
+      runtime._debug.counters.shotCalls > 200 &&
+      runtime._debug.counters.directHitCalls > runtime._debug.counters.shotCalls * 4 + 50
+    ) {
+      warnWithCooldown('missing_onShotFired', '[TalentsV2] direct onHit count exceeds onShotFired count. Check integration hooks.', {
+        directHits: runtime._debug.counters.directHitCalls,
+        totalHits: runtime._debug.counters.hitCalls,
         onShotFired: runtime._debug.counters.shotCalls,
       });
     }

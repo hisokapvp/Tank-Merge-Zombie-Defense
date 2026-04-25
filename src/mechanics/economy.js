@@ -29,15 +29,19 @@
   }
 
   /**
-   * Монеты за выстрел по уровню танка: 2^(level-1), cap = 2^20.
+   * Монеты за выстрел по уровню танка: 2^(level-1) без cap на уровнях 22-60
+   * (см. assets/levelreward.json coinsPerShot._formulaHelp и ci/check_coinspershot.py).
+   * batch solo-pipeline-yandex-vk#1 (item 3, P2, P5): cap 2^20 убран, кривая расширена на все 60 уровней.
+   * Значения clamp-ятся к Number.MAX_SAFE_INTEGER.
    * @param {number} level — уровень танка (>= 1)
    * @returns {number}
    */
-  var MAX_COIN_PER_SHOT = Math.pow(2, 20);
+  var MAX_COIN_PER_SHOT = Number.MAX_SAFE_INTEGER;
   function coinsForShot(level) {
     if (level == null || level < 1) return 0;
     var L = Math.max(1, Math.floor(level));
-    return Math.min(Math.pow(2, L - 1), MAX_COIN_PER_SHOT);
+    var v = Math.pow(2, L - 1);
+    return v >= MAX_COIN_PER_SHOT ? MAX_COIN_PER_SHOT : v;
   }
 
   // Максимальный уровень покупаемого танка

@@ -172,3 +172,9 @@ Search results can flood context. Use `ctx_execute(language: "shell", code: "gre
 | `ctx stats` | Call the `ctx_stats` MCP tool and display the full output verbatim |
 | `ctx doctor` | Call the `ctx_doctor` MCP tool, run the returned shell command, display as checklist |
 | `ctx upgrade` | Call the `ctx_upgrade` MCP tool, run the returned shell command, display as checklist |
+
+
+## ReasoningBank Memory Authoring
+
+See `SHARED_AGENT_STANDARD.md` §15 for canonical reasoning item contract (schema metadata-v3, distiller, workspace scoping, kill-switches, rollback). Do not duplicate the contract locally — reference §15.
+

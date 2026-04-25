@@ -310,6 +310,38 @@
     return Math.min(Math.pow(2, Math.max(1, Math.floor(level)) - 1), Math.pow(2, 20));
   }
 
+  /**
+   * Estimate buy-time для танка уровня L при условии, что все N ячеек заняты танками того же уровня.
+   * Формула: seconds = tankCost(L) / (cells * coinsPerShot(L) * shotsPerSecond(L)).
+   * Читает coinsPerShot из data.levelReward.coinsPerShot.perLevel[L] если задано, иначе fallback к runtime-формуле coinsForShot(L).
+   * shotsPerSecond берётся из getTankStats(data, scenario).shotsPerMinute / 60 для полного reuse существующей runtime-совместимой математики.
+   * @param {object} data — editor data bundle ({ tanks, balance, runtimeConstants, levelReward, ... })
+   * @param {object} scenario — shared analytics scenario (level, modifiers, ...)
+   * @param {number} [cells=15] — количество ячеек в гараже, заполненных танками уровня L
+   * @returns {{ level: number, cells: number, tankCost: number, coinsPerShot: number, shotsPerSecond: number, coinsPerSecond: number, seconds: number, minutes: number }}
+   */
+  function estimateBuyTime(data, scenario, cells) {
+    var safeLevel = Math.max(1, Math.floor(safeNumber(scenario && scenario.level, 1)));
+    var cellCount = Math.max(1, Math.floor(safeNumber(cells, 15)));
+    var tankCost = getTankBaseCost(safeLevel);
+    var coinsOverride = getNestedValue(data || {}, ['levelReward', 'coinsPerShot', 'perLevel', String(safeLevel)]);
+    var cps = Number.isFinite(coinsOverride) && coinsOverride > 0 ? coinsOverride : coinsForShot(safeLevel);
+    var tankStats = getTankStats(data, scenario);
+    var shotsPerSecond = Math.max(0, safeNumber(tankStats && tankStats.shotsPerMinute, 0) / 60);
+    var coinsPerSecond = cellCount * cps * shotsPerSecond;
+    var seconds = coinsPerSecond > 0 ? tankCost / coinsPerSecond : Infinity;
+    return {
+      level: safeLevel,
+      cells: cellCount,
+      tankCost: tankCost,
+      coinsPerShot: cps,
+      shotsPerSecond: shotsPerSecond,
+      coinsPerSecond: coinsPerSecond,
+      seconds: seconds,
+      minutes: Number.isFinite(seconds) ? seconds / 60 : Infinity,
+    };
+  }
+
   function getRuntimeConstants(data) {
     return Object.assign({}, DEFAULT_RUNTIME_CONSTANTS, data && data.runtimeConstants ? data.runtimeConstants : {});
   }
@@ -849,6 +881,7 @@
     computeChipEffect: computeChipEffect,
     getTankBaseCost: getTankBaseCost,
     coinsForShot: coinsForShot,
+    estimateBuyTime: estimateBuyTime,
     getRuntimeConstants: getRuntimeConstants,
     getTankBalanceMultiplier: getTankBalanceMultiplier,
     getZombieBalanceMultiplier: getZombieBalanceMultiplier,
