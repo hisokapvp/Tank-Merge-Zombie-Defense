@@ -258,9 +258,30 @@
     function checkPowerMomentEvents(level) {
       var computer = getComputer();
       if (!computer) return;
-      if (level >= 40 && !computer.eventShown40) {
-        computer.eventShown40 = true;
-        showCenterNotification(t('powerMoment40'));
+      // batch solo-pipeline-yandex-vk#2 (item 7): «Открыты активные способности» теперь срабатывает,
+      // когда у игрока стало >= 31 очка талантов суммарно (свободные + потраченные), а не от уровня.
+      // Уровень-параметр сохранён только как back-compat сигнал для late-bind level >= 50/60.
+      if (!computer.eventShown40) {
+        var freePoints = 0;
+        if (state.player) {
+          if (state.player.talentsV2 && Number.isFinite(state.player.talentsV2.freePoints)) {
+            freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints));
+          } else if (Number.isFinite(state.player.freeTalentPointsV2)) {
+            freePoints = Math.max(0, Math.floor(state.player.freeTalentPointsV2));
+          }
+        }
+        var spentPoints = 0;
+        var TV2 = windowObj && windowObj.Game && windowObj.Game.TalentsV2;
+        if (TV2 && typeof TV2.getBranchSpent === 'function') {
+          var branches = ['offense', 'defense', 'economy'];
+          for (var bi = 0; bi < branches.length; bi++) {
+            spentPoints += Math.max(0, Math.floor(TV2.getBranchSpent(branches[bi]) || 0));
+          }
+        }
+        if ((freePoints + spentPoints) >= 31) {
+          computer.eventShown40 = true;
+          showCenterNotification(t('powerMoment40'));
+        }
       }
       if (level >= 50) computer.eventShown50 = true;
       if (level >= 60) {

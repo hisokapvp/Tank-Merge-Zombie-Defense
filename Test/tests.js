@@ -78,9 +78,9 @@ loadModule('src/render/groundLayer.js');
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...
 // ═══════════════════════════════════════════════
-// T1: computeBuyTankLevel (max-5, cap=50)
+// T1: computeBuyTankLevel (max-5, cap=55) — solo-pipeline-yandex-vk#2 item 4
 // ═══════════════════════════════════════════════
-console.log('\n── T1: computeBuyTankLevel (max-5, cap=50) ──');
+console.log('\n── T1: computeBuyTankLevel (max-5, cap=55) ──');
 
 const { computeBuyTankLevel, MAX_BUY_TANK_LEVEL } = Game.Economy;
 const { computePowerTier, xpNeededForLevel } = Game.Progression;
@@ -92,8 +92,8 @@ test('T1-1: max=6 → 1', () => {
 test('T1-2: max=7 → 2', () => {
   assertEqual(computeBuyTankLevel(7), 2);
 });
-test('T1-3: max=60 → 50', () => {
-  assertEqual(computeBuyTankLevel(60), 50);
+test('T1-3: max=60 → 55 (cap raised)', () => {
+  assertEqual(computeBuyTankLevel(60), 55);
 });
 test('T1-4: max=1 → 1', () => {
   assertEqual(computeBuyTankLevel(1), 1);
@@ -104,12 +104,15 @@ test('T1-5: max=0 → 1', () => {
 test('T1-6: max=55 → 50', () => {
   assertEqual(computeBuyTankLevel(55), 50);
 });
+test('T1-7: MAX_BUY_TANK_LEVEL constant = 55', () => {
+  assertEqual(MAX_BUY_TANK_LEVEL, 55);
+});
 
-test('T1-7: xpNeededForLevel(0) → 50', () => {
+test('T1-8: xpNeededForLevel(0) → 50', () => {
   assertEqual(xpNeededForLevel(0), 50);
 });
 
-test('T1-8: computePowerTier(0) → 0', () => {
+test('T1-9: computePowerTier(0) → 0', () => {
   assertEqual(computePowerTier(0), 0);
 });
 

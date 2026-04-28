@@ -787,9 +787,12 @@
     // Buy tank button
     const buyLevel = _callbacks && typeof _callbacks.getBuyLevel === 'function' ? _callbacks.getBuyLevel() : 1;
     const buyCost = _callbacks && typeof _callbacks.getBuyCost === 'function' ? _callbacks.getBuyCost(buyLevel) : 0;
+    // batch solo-pipeline-yandex-vk#2 (item 5): сокращаем цену через formatShortNumber, чтобы 3.2e20 не вылезал из кнопки.
+    const _NF = (typeof window !== 'undefined') && window.Game && window.Game.NumberFormat;
+    const _fmtCost = _NF && typeof _NF.formatShortNumber === 'function' ? _NF.formatShortNumber : function (n) { return String(n); };
     const buyLabel = t('ughBuyTank', 'Создать танк {level} уровня - {cost}$')
       .replace('{level}', String(buyLevel))
-      .replace('{cost}', String(buyCost));
+      .replace('{cost}', _fmtCost(buyCost));
     html += '<button class="btn scButton ughActions__btn" data-ugh-action="buy" type="button">'
       + _escHtml(buyLabel)
       + '</button>';

@@ -98,3 +98,11 @@
 - `renderStatusIcons(...)`: после отрисовки танков/зомби, до overlay UI.
 - `getActiveState(...)` для HUD/модалки: в UI update тике (кадр или polling 100-200ms).
 - После покупки таланта: сразу обновить disabled state и reason tooltip/toast.
+
+## 6) Active abilities unlock notification
+
+- Уведомление `powerMoment40` (`Открыты активные способности`) теперь триггерится не от `level >= 40`, а от суммы `freePoints + spentPoints >= 31` по всем веткам TalentsV2 (`offense/defense/economy`). См. [src/mechanics/levelFlow.js](../src/mechanics/levelFlow.js) `checkPowerMomentEvents()`.
+- Источники свободных очков: `state.player.talentsV2.freePoints` (canonical) либо `state.player.freeTalentPointsV2` (fallback при отсутствии namespace).
+- Источник потраченных: `Game.TalentsV2.getBranchSpent(branchId)` суммируется по `['offense', 'defense', 'economy']`.
+- Триггер однократный: `computer.eventShown40` после первого срабатывания не позволяет показать тост повторно. Уровень-параметр `level` остаётся для back-compat сигналов `level >= 50` / `level >= 60`.
+- batch reference: solo-pipeline-yandex-vk#2 item 7.

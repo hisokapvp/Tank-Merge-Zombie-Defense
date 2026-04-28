@@ -1,6 +1,6 @@
 # spriteLoaders.js — карта файла
 
-> Агент-ориентировано. Обновлён: 2026-03-31.
+> Агент-ориентировано. Обновлён: 2026-04-25.
 > Файл большой (1350 строк); этот map покрывает реально прочитанные и grep-проверенные блоки.
 
 ## Что это
@@ -18,6 +18,7 @@
 - Для суперкомпьютера legacy `storage` остаётся допустимым alias для `storageCell`, а `box` — для `conveyorBox`: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L903-L928), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L995-L1030).
 - `conveyorBox` нормализует две стадии печати `printLow` / `printHigh` и понимает legacy alias-имена (`buildLow`, `buildHigh`, `under50`, `over50`, `lessThanHalf`, `moreThanHalf`): [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L118-L145).
 - Если atlas части совпадает с главным atlas, loader переиспользует одно и то же `Image`, не создавая дубль: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L914-L928).
+- `assets/tanks.json -> auraOrbs` нормализуется только в loader'е через `normalizeAuraOrbsConfig()` и хранится в `TankSprites.config.auraOrbs`; render code читает cached config, а не raw JSON. `TankSprites.refreshConfig()` / `reloadConfig()` explicit re-fetch'ит `assets/tanks.json` с last-good rollback на ошибке: [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L233-L258), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L617-L644).
 
 ## Оглавление файла
 
@@ -32,6 +33,7 @@
 | `normalizeSupercomputerPart()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L83-L116) | Нормализация `conveyor` / `storageCell` part config |
 | `normalizeSupercomputerBoxPart()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L118-L145) | Нормализация `conveyorBox` с двухстадийной печатью |
 | `collectAnimationFrameIds()`, `parseTankLevelKey()`, `normalizeSpriteBlock()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L147-L177) | Frame-id recovery и normalizer sprite blocks |
+| `normalizeAuraOrbsConfig()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L233-L258) | Нормализует `assets/tanks.json -> auraOrbs` в safe cached shape (`levelRange`, color/radius/alpha/pulse/particles, `particleColor`) |
 
 ### Блок: ZombieSprites (прочитан)
 | Функция / блок | Строки | Назначение |
@@ -74,4 +76,6 @@
 |---|---|---|
 | `TankSprites.load()` aura1/2/3 normalization | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L485-L525) | Нормализует `rawTank.aura1`, `aura2`, `aura3` через `normalizeSpriteBlock()`; каждый сохраняется в `tankCfg.aura1/aura2/aura3`; atlas src добавляются в preload set |
 | `pickAura(level, variant)` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L596-L607) | Выбирает aura sprite config по variant `1..3` (ключ `'aura' + variant`), fallback на legacy `aura`; возвращает `{ img, cfg }` или `null` |
+| `refreshConfig()` / `reloadConfig()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L617-L644) | Explicit re-fetch `assets/tanks.json`; при ошибке сохраняет last-good `config/cache/maxLevel`, чтобы tank rendering не blank'ался |
+| `getAuraOrbsConfig()` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L642-L644) | Возвращает live cached `config.auraOrbs` для `drawTankAura()` без raw JSON parsing в render hot path |
 | `auraVariantLevels` | [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L441-L444) | Asset-lookup mapping на `tank_lvl10/20/30` для aura resolve; не runtime gate |

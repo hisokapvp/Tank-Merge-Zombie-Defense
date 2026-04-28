@@ -733,4 +733,6 @@
   ,"ughHelpText": "In this section, you can store and merge tanks and / or drones if you run out of free slots in the main hangar."
   ,"ughDismantle": "Dismantle tank"
   ,"ughDronesTitle": "Drones"
+  ,"productionStorageProgressLabel": "Printing box"
+  ,"productionStorageProgressTooltip": "Next-box printing progress over the storage. Fills as zombies are killed."
 }

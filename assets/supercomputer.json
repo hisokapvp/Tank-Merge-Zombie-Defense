@@ -210,29 +210,29 @@
   "conveyor": {
     "atlas": "Conveyor_atlas.png",
     "offset": {
-      "x": -122,
-      "y": -25
+      "x": -100,
+      "y": 0
     },
     "animations": {
       "idle": {
         "x": 0,
         "y": 0,
-        "w": 49,
-        "h": 15,
-        "frames": 1,
-        "frameRateFps": 1,
+        "w": 149,
+        "h": 108,
+        "frames": 4,
+        "frameRateFps": 8,
         "loop": true,
-        "scale": 1.5
+        "scale": 0.35
       },
       "work": {
         "x": 0,
         "y": 0,
-        "w": 49,
-        "h": 15,
-        "frames": 3,
-        "frameRateFps": 3,
+        "w": 149,
+        "h": 108,
+        "frames": 4,
+        "frameRateFps": 8,
         "loop": true,
-        "scale": 1.5
+        "scale": 0.35
       }
     }
   },
@@ -332,14 +332,14 @@
   },
   "stats": {
     "maxHp": {
-      "base": 80000000,
-      "perLevel": 120,
-      "max": 24000
+      "base": 2000000,
+      "perLevel": 250000,
+      "max": 4800000000
     },
     "armorFlat": {
-      "base": 2,
-      "perLevel": 1,
-      "max": 80
+      "base": 0,
+      "perLevel": 0,
+      "max": 0
     }
   },
   "button": {

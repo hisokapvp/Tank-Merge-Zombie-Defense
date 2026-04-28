@@ -23,5 +23,32 @@
       "attackSpeedMul": 1,
       "attackDamageMul": 1
     }
+  },
+  "merge": {
+    "_readme": "=== MERGE (item 6 — solo-pipeline-yandex-vk#2) === maxMergeTier — танки уровня >= maxMergeTier исключены из auto-merge: парных кандидатов и счётчика 'Объединить N танков'. По умолчанию 60 = max tank level из tanks.json. Если когда-нибудь maxLevel поднимется, измени тут.",
+    "maxMergeTier": 60
+  },
+  "production": {
+    "_readme": "=== PRODUCTION LINE (item 6 — solo-pipeline-yandex-vk#1) === featureFlags гасят visual conveyor + moving box, не меняя kill→box логику в src/mechanics/productionLine.js. Чтобы вернуть старое поведение — выставьте оба true. storageProgressBar рисуется НАД спрайтом склада и заполняется как productionLine.progress (killsTracked / killCostForBox). Меняйте только цифры/цвета.",
+    "featureFlags": {
+      "conveyorEnabled": false,
+      "movingBoxEnabled": false,
+      "storageProgressBarEnabled": true
+    },
+    "storageProgressBar": {
+      "width": 36,
+      "height": 5,
+      "offsetY": -10,
+      "borderRadius": 2,
+      "borderColor": "rgba(8,12,22,0.85)",
+      "borderWidth": 1,
+      "trackColor": "rgba(20,28,40,0.85)",
+      "fillColor": "rgba(124,236,170,0.95)",
+      "fillFullColor": "rgba(255,196,90,0.95)",
+      "showLabel": true,
+      "labelColor": "rgba(234,241,255,0.95)",
+      "labelFont": "10px system-ui, -apple-system, Segoe UI, Roboto, Arial",
+      "labelOffsetY": -2
+    }
   }
 }

@@ -6,14 +6,17 @@
   "tankPrintDurationSec": 0.75,
   "_comment_auraOrbs": "Параметры процедурного эффекта «3 фиолетовых огонька» вокруг танка. Все остальные ауры удалены. levelRange — [min,max] уровней (включительно), на которых эффект включён. color — RGBA-строка базового цвета круга и частиц. radius — радиус орбиты в px. alpha — прозрачность фонового круга (0..1). pulseSpeed — скорость пульсации радиуса. particleCount — фиксированное число частиц (если null — динамическое 2..4). particleSize — px радиус частицы. particleAlphaScale — alpha trailing-канала для частицы (0..1).",
   "auraOrbs": {
-    "levelRange": [56, 60],
+    "levelRange": [
+      56,
+      60
+    ],
     "color": "rgba(186,140,255,0.99)",
-    "radius": 32,
+    "radius": 50,
     "alpha": 0,
-    "pulseSpeed": 30,
+    "pulseSpeed": 0,
     "particleCount": null,
-    "particleSize": 5,
-    "particleAlphaScale": 0.99
+    "particleSize": 3,
+    "particleAlphaScale": 0.5
   },
   "ui": {
     "onTrackIconOpacity": 0.35
@@ -83,10 +86,9 @@
   "tank_lvl1": {
     "stats": {
       "projectileCount": 1,
-      "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 520
+      "baseDamage": 2600
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -198,7 +200,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 530
+      "baseDamage": 2650
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -310,7 +312,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 540
+      "baseDamage": 2700
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -422,7 +424,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 550
+      "baseDamage": 2750
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -534,7 +536,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 640
+      "baseDamage": 3200
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -643,10 +645,10 @@
   },
   "tank_lvl6": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 750
+      "baseDamage": 3750
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -743,10 +745,10 @@
   },
   "tank_lvl7": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 860
+      "baseDamage": 4300
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -855,10 +857,10 @@
   },
   "tank_lvl8": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 960
+      "baseDamage": 4800
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -967,10 +969,10 @@
   },
   "tank_lvl9": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1070
+      "baseDamage": 5350
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1079,10 +1081,10 @@
   },
   "tank_lvl10": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1180
+      "baseDamage": 5900
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1191,10 +1193,10 @@
   },
   "tank_lvl11": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1190
+      "baseDamage": 5950
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1303,10 +1305,10 @@
   },
   "tank_lvl12": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1200
+      "baseDamage": 6000
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1415,10 +1417,10 @@
   },
   "tank_lvl13": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1210
+      "baseDamage": 6050
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1527,10 +1529,10 @@
   },
   "tank_lvl14": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1220
+      "baseDamage": 6100
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1639,10 +1641,10 @@
   },
   "tank_lvl15": {
     "stats": {
-      "projectileCount": 1,
+      "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1230
+      "baseDamage": 6150
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1754,7 +1756,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1270
+      "baseDamage": 6350
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1866,7 +1868,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1350
+      "baseDamage": 6750
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -1978,7 +1980,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1430
+      "baseDamage": 7150
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2090,7 +2092,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 1500
+      "baseDamage": 7500
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2202,7 +2204,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2180
+      "baseDamage": 10900
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2314,7 +2316,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2480
+      "baseDamage": 12400
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2426,7 +2428,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2590
+      "baseDamage": 12950
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2538,7 +2540,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2710
+      "baseDamage": 13550
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2650,7 +2652,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2810
+      "baseDamage": 14050
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2762,7 +2764,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 2930
+      "baseDamage": 14650
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2874,7 +2876,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3050
+      "baseDamage": 15250
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2986,7 +2988,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3160
+      "baseDamage": 15800
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3098,7 +3100,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3270
+      "baseDamage": 16350
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3210,7 +3212,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3380
+      "baseDamage": 16900
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3322,7 +3324,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3390
+      "baseDamage": 16950
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3434,7 +3436,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3440
+      "baseDamage": 17200
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3546,7 +3548,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3540
+      "baseDamage": 17700
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3658,7 +3660,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3650
+      "baseDamage": 18250
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3770,7 +3772,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3760
+      "baseDamage": 18800
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3882,7 +3884,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3870
+      "baseDamage": 19350
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -3994,7 +3996,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 3970
+      "baseDamage": 19850
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4106,7 +4108,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4080
+      "baseDamage": 20400
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4218,7 +4220,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4190
+      "baseDamage": 20950
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4330,7 +4332,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4300
+      "baseDamage": 21500
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4442,7 +4444,7 @@
       "projectileCount": 1,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4400
+      "baseDamage": 22000
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4554,7 +4556,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4405
+      "baseDamage": 22025
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4666,7 +4668,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4410
+      "baseDamage": 22050
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4778,7 +4780,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4415
+      "baseDamage": 22075
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -4890,7 +4892,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4420
+      "baseDamage": 22100
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5002,7 +5004,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4445
+      "baseDamage": 22225
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5114,7 +5116,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4545
+      "baseDamage": 22725
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5226,7 +5228,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4645
+      "baseDamage": 23225
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5338,7 +5340,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4735
+      "baseDamage": 23675
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5450,7 +5452,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4835
+      "baseDamage": 24175
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5562,7 +5564,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4930
+      "baseDamage": 24650
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5674,7 +5676,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4931
+      "baseDamage": 24655
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5786,7 +5788,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4932
+      "baseDamage": 24660
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -5898,7 +5900,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4933
+      "baseDamage": 24665
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6010,7 +6012,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4934
+      "baseDamage": 24670
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6122,7 +6124,7 @@
       "projectileCount": 3,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4935
+      "baseDamage": 24675
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6234,7 +6236,7 @@
       "projectileCount": 4,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4938
+      "baseDamage": 24690
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6346,7 +6348,7 @@
       "projectileCount": 4,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4943
+      "baseDamage": 24715
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6458,7 +6460,7 @@
       "projectileCount": 4,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4948
+      "baseDamage": 24740
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6570,7 +6572,7 @@
       "projectileCount": 4,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4953
+      "baseDamage": 24765
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6682,7 +6684,7 @@
       "projectileCount": 4,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4958
+      "baseDamage": 24790
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -6736,45 +6738,57 @@
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 9,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 0.8
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
     },
     "aura2": {
-      "src": "tanks/Aura2.png",
+      "src": "tanks/Aura1.png",
       "frame": {
         "x": 0,
         "y": 0,
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 9,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 0.8
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
     },
     "aura3": {
-      "src": "tanks/Aura3.png",
+      "src": "tanks/Aura1.png",
       "frame": {
         "x": 0,
         "y": 0,
         "w": 333,
         "h": 333
       },
-      "frames": 1,
-      "animSpeed": 1,
+      "frames": 9,
+      "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 0.8
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
     }
   }
 }

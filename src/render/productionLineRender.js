@@ -44,6 +44,28 @@
   const _conveyorBounds = { x: 0, y: 0, w: CONVEYOR_W, h: CONVEYOR_H };
   const _storageBounds = { x: 0, y: 0, w: STORAGE_SIZE, h: STORAGE_SIZE };
 
+  // Item 6 (solo-pipeline-yandex-vk#1) — production feature config (set from
+  // game.js boot via setProductionConfig). Defaults preserve historical
+  // behaviour (conveyor + moving box ON, progress bar OFF).
+  let _productionFlags = { conveyorEnabled: true, movingBoxEnabled: true, storageProgressBarEnabled: false };
+  let _progressBarCfg = null;
+  function setProductionConfig(cfg) {
+    if (!cfg || typeof cfg !== 'object') return;
+    if (cfg.featureFlags && typeof cfg.featureFlags === 'object') {
+      _productionFlags = {
+        conveyorEnabled: cfg.featureFlags.conveyorEnabled !== false,
+        movingBoxEnabled: cfg.featureFlags.movingBoxEnabled !== false,
+        storageProgressBarEnabled: cfg.featureFlags.storageProgressBarEnabled === true,
+      };
+    }
+    if (cfg.storageProgressBar && typeof cfg.storageProgressBar === 'object') {
+      _progressBarCfg = cfg.storageProgressBar;
+    }
+  }
+  function isConveyorEnabled() { return _productionFlags.conveyorEnabled !== false; }
+  function isMovingBoxEnabled() { return _productionFlags.movingBoxEnabled !== false; }
+  function isStorageProgressBarEnabled() { return _productionFlags.storageProgressBarEnabled === true; }
+
   const PART_EFFECT_PRESETS = {
     float: { kind: 'float', amplitudeY: 0.2, frequencyHz: 1.2 },
     pulse: { kind: 'pulse', scaleMul: 0.03, frequencyHz: 3 },
@@ -217,6 +239,8 @@
   }
 
   function triggerConveyorWork() {
+    // Item 6: skip work-anim trigger entirely when conveyor disabled.
+    if (!isConveyorEnabled()) return false;
     if (_conveyorState === 'work' && _conveyorWorkTimerSec > 0) return false;
     const workAnim = getPartAnimation('conveyor', 'work');
     const duration = getClipDuration(workAnim);
@@ -521,9 +545,88 @@
     if (!state || !state.productionLine) return;
     const pl = state.productionLine;
 
-    drawConveyor(ctx, pl.conveyorAnimTime);
-    drawBoxOnConveyor(ctx, pl.progress);
+    if (isConveyorEnabled()) {
+      drawConveyor(ctx, pl.conveyorAnimTime);
+    }
+    if (isMovingBoxEnabled()) {
+      drawBoxOnConveyor(ctx, pl.progress);
+    }
     drawStorageCell(ctx, pl.storage.length, pl.storageSlots);
+    if (isStorageProgressBarEnabled()) {
+      drawStorageProgressBar(ctx, pl);
+    }
+  }
+
+  // ─── Storage progress bar (item 6) ─────────────────────────
+  // Pre-allocated tmp string buffer reused via cached toFixed output (see below).
+  function drawStorageProgressBar(ctx, pl) {
+    if (!_layoutReady || !pl) return;
+    const cfg = _progressBarCfg || {};
+    const w = Number.isFinite(cfg.width) && cfg.width > 0 ? cfg.width : 36;
+    const h = Number.isFinite(cfg.height) && cfg.height > 0 ? cfg.height : 5;
+    const offsetY = Number.isFinite(cfg.offsetY) ? cfg.offsetY : -10;
+    const radius = Number.isFinite(cfg.borderRadius) ? cfg.borderRadius : 2;
+    const borderColor = typeof cfg.borderColor === 'string' ? cfg.borderColor : 'rgba(8,12,22,0.85)';
+    const trackColor = typeof cfg.trackColor === 'string' ? cfg.trackColor : 'rgba(20,28,40,0.85)';
+    const fillColor = typeof cfg.fillColor === 'string' ? cfg.fillColor : 'rgba(124,236,170,0.95)';
+    const fillFullColor = typeof cfg.fillFullColor === 'string' ? cfg.fillFullColor : fillColor;
+    const labelColor = typeof cfg.labelColor === 'string' ? cfg.labelColor : 'rgba(234,241,255,0.95)';
+    const labelFont = typeof cfg.labelFont === 'string' ? cfg.labelFont : '10px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    const labelOffsetY = Number.isFinite(cfg.labelOffsetY) ? cfg.labelOffsetY : -2;
+    const showLabel = cfg.showLabel !== false;
+    const progress = clamp01(pl && Number.isFinite(pl.progress) ? pl.progress : 0);
+
+    const cx = _sx;
+    const baseY = _sy - STORAGE_SIZE / 2;
+    const x = cx - w / 2;
+    const y = baseY + offsetY;
+
+    ctx.save();
+    // Track + border
+    ctx.fillStyle = trackColor;
+    drawRoundedRect(ctx, x, y, w, h, radius);
+    ctx.fill();
+    if (cfg.borderWidth !== 0) {
+      ctx.lineWidth = Number.isFinite(cfg.borderWidth) ? cfg.borderWidth : 1;
+      ctx.strokeStyle = borderColor;
+      drawRoundedRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
+    }
+    // Fill
+    if (progress > 0) {
+      const fillW = w * progress;
+      ctx.fillStyle = progress >= 1 ? fillFullColor : fillColor;
+      drawRoundedRect(ctx, x, y, fillW, h, radius);
+      ctx.fill();
+    }
+    // Label
+    if (showLabel) {
+      ctx.fillStyle = labelColor;
+      ctx.font = labelFont;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      // Avoid heap allocs: use simple integer percent.
+      const pct = Math.round(progress * 100);
+      ctx.fillText(pct + '%', cx, y + labelOffsetY);
+    }
+    ctx.restore();
+  }
+
+  // Reusable rounded-rect path helper — no allocations.
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    if (w <= 0 || h <= 0) { ctx.beginPath(); return; }
+    const rr = Math.max(0, Math.min(r || 0, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.lineTo(x + w - rr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+    ctx.lineTo(x + w, y + h - rr);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+    ctx.lineTo(x + rr, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+    ctx.lineTo(x, y + rr);
+    ctx.quadraticCurveTo(x, y, x + rr, y);
+    ctx.closePath();
   }
 
   // ─── Hit-test for storage cell click ───────────────────────
@@ -560,6 +663,10 @@
     setConveyorAtlas: setConveyorAtlas,
     setBoxAtlas: setBoxAtlas,
     setStorageAtlas: setStorageAtlas,
+    setProductionConfig: setProductionConfig,
+    isConveyorEnabled: isConveyorEnabled,
+    isMovingBoxEnabled: isMovingBoxEnabled,
+    isStorageProgressBarEnabled: isStorageProgressBarEnabled,
     // expose for tests
     CONVEYOR_W: CONVEYOR_W,
     CONVEYOR_H: CONVEYOR_H,

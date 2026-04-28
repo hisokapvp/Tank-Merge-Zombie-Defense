@@ -1,6 +1,11 @@
 ﻿# Система: Assets
 
-> Обновлено: 2026-04-22.
+> Обновлено: 2026-04-26.
+
+## Post-merge update (2026-04-26)
+- `assets/fence.json` `repair` секция: canonical ключ стоимости ремонта переименован в `perLevel` (60 значений по уровням, аналог `gold.perLevel` в `levelreward.json`). Устаревший ключ `costCoinsByLevel` удалён. `src/mechanics/fenceRepair.js` `getConfiguredRepairBaseCost()` читает `repair.perLevel` как primary, `repair.costCoinsByLevel` остался как legacy fallback для совместимости при отсутствии perLevel.
+- `assets/tanks.json`: `stats.baseDamage` всех 60 уровней умножен на 5 (lvl1: 520 → 2600, lvl60: 4958 → 24790).
+- `assets/fence.json`: `segmentMaxHp` всех 60 уровней умножен на 10 (lvl1: 110 000 → 1 100 000).
 
 ## Основные источники
 - `assets/tanks.json`, `assets/zombies.json`, `assets/bullet.json`
@@ -57,6 +62,8 @@
 - Раздел `ui` хранит UI-тюнинг, используемый рендером и HUD.
 - Top-level `_comment_projectileCount` фиксирует новый authoring-contract: optional `stats.projectileCount` у конкретного `tank_lvlN` задаёт количество базовых снарядов именно для этого уровня. Loader валидирует поле как положительное целое, `tankStats()` пробрасывает его в runtime stats, а `fireTankProjectile()` делит базовый урон по этому count раньше legacy level-based fallback. Если поле отсутствует, поведение остаётся backward-compatible: [assets/tanks.json](../../../assets/tanks.json#L1-L3), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L498-L530), [game.js](../../../game.js#L5047-L5089), [game.js](../../../game.js#L8284-L8303).
 - Каждый `tank_lvlN` теперь несёт `aura1`, `aura2`, `aura3` вместо старого `aura` (Green_Aura). `TankSprites.load()` нормализует все три варианта через `normalizeSpriteBlock()`, `pickAura(level, variant)` выбирает по variant `1..3`, а `resolveTankAuraVisual(cellIndex, level)` в `game.js` считает реально установленные чипы без привязки к high-level gate: [assets/tanks.json](../../../assets/tanks.json#L7-L120), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L485-L525), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L596-L607), [game.js](../../../game.js#L13267-L13296).
+- Top-level `auraOrbs` — source-of-truth процедурного эффекта «3 фиолетовых огонька» в `drawTankAura()`: `levelRange`, `color`, `radius`, `alpha`, `pulseSpeed`, `particleCount`, `particleSize`, `particleAlphaScale`. Loader нормализует этот блок через `normalizeAuraOrbsConfig()` в `TankSprites.config.auraOrbs`, включая safe defaults для отсутствующих/некорректных значений и precomputed `particleColor`, чтобы render hot path только читал cached config: [assets/tanks.json](../../../assets/tanks.json#L1-L17), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L233-L258), [game.js](../../../game.js#L14199-L14297).
+- Freshness boundary: изменения `assets/tanks.json -> auraOrbs` подхватываются через явный runtime re-fetch `TankSprites.refreshConfig()` / `TankSprites.reloadConfig()` вне `draw()`. Refresh вызывает тот же loader/normalizer, атомарно оставляет last-good config при ошибке и не выполняет fetch/JSON parsing внутри `drawTankAura()`: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L617-L644), [game.js](../../../game.js#L14199-L14297).
 - Каждый `tank_lvlN` также считается частью modifiers-modal контракта: `upgradeDamagePointsCosts.{baseDamage,attackSpeed}` задаёт canonical стоимость stat-specific шага для expandable row в `Supercomputer -> Орудия`, а `game.js` суммирует эти шаги через `getCannonUpgradeTotalCost()` / `applyCannonUpgrade()`, не через CSS/DOM-derived числа: [assets/tanks.json](../../../assets/tanks.json#L117-L170), [game.js](../../../game.js#L878-L910), [src/ui/supercomputerMenu.js](../../../src/ui/supercomputerMenu.js#L1044-L1256).
 - Ключ `ui.onTrackIconOpacity`:
 	- диапазон: `0..1`;

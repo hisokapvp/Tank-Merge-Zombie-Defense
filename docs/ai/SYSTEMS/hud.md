@@ -1,10 +1,11 @@
 # Система: HUD render
 
-> Обновлено: 2026-04-24.
+> Обновлено: 2026-04-25.
 
 ## Где править
 - Канонический рендер HUD: `game.js` (`draw()`, `renderFenceHpBars`, talents `renderStatusIcons` call site, `drawScaledZombieDebuffOverlays`).
 - Scratch-pool модуль: [src/render/hudScratch.js](../../../src/render/hudScratch.js).
+- Детальный contract `acquireArray(ownerTag, subSlot)`: [docs/ai/SYSTEMS/hud_scratch.md](hud_scratch.md).
 - Phaser overlay parity: [src/render/phaserOverlayBridge.js](../../../src/render/phaserOverlayBridge.js) (если включён `usePhaser`).
 
 ## Базовые правила
@@ -26,7 +27,8 @@
 - `acquire(ownerTag, subSlot, shape)` — возвращает persistent slot-объект для пары `(ownerTag, subSlot)`. `shape` либо `null` (пустой объект для произвольной mutation), либо канонический литерал-prototype для shape-stability check (dev-warn при drift). Slot живёт между кадрами; writer обязан перезаписать **все** свои поля каждый кадр.
 - `getMetrics()` — возвращает `{ acquireCount, overflow, byOwner: { [tag]: count } }` для текущего кадра. Используется test-writer и FailDetector verification.
 - `onDevicePixelRatioChanged()` — invalidate scaled cache. Должен вызываться из единственного DPR-listener (см. `src/core/runtimeTasks.js`).
-- `OWNER_TAGS` — exported tuple `['healthBar', 'debuffIcon', 'fenceHp', 'drone', 'misc']`. Расширение списка требует обновления этой страницы.
+- `OWNER_TAGS` — exported tuple `['healthBar', 'debuffIcon', 'fenceHp', 'drone', 'hudTrack', 'talentsHud', 'misc']`. Расширение списка требует обновления этой страницы и [docs/ai/SYSTEMS/hud_scratch.md](hud_scratch.md).
+- `acquireArray(ownerTag, subSlot)` — возвращает stable per-frame array lease. Повторный вызов с той же парой `(ownerTag, subSlot)` в одном frame возвращает тот же массив, уже пригодный для re-entry без allocation; frame boundary очищает `length`, а не создаёт новый backing store.
 
 ### Контракт читателя
 
@@ -58,7 +60,7 @@
 
 - `draw()` в [game.js](../../../game.js) — lazy init `ctx.__hudScratch` + `beginFrame()` после `ctx.clearRect`.
 - `renderFenceHpBars(ctx)` в [game.js](../../../game.js) — per-segment `acquire('fenceHp', seg.id || index, null)` для rect mutation; primitive `fillRect` path преcerved.
-- Talent status icons (`talentsApi.renderStatusIcons`) и `drawScaledZombieDebuffOverlays` — owner tag `debuffIcon` зарезервирован; per-frame `tanksOnTrack` array остаётся локальным module-level cached буфером (см. P2.5 disjoint sub-slice / P2.6 no mixed layout): scratch pool API возвращает object slots, а не arrays, поэтому для коллекций `tank.onTrack` рекомендуется отдельный module-level `_tanksOnTrackBuffer.length = 0` reuse-pattern; миграция этого site под scratch pool требует расширения API `acquireArray()` и не является частью текущего контракта.
+- Talent status icons (`talentsApi.renderStatusIcons`) используют `ctx.__hudScratch.acquireArray('hudTrack', 'tanksOnTrack')` для per-frame списка танков на треке. `acquireArray` идемпотентен per frame и допускает re-entry без allocation; consumer не хранит массив между кадрами и не превращает scratch buffer в gameplay state. `drawScaledZombieDebuffOverlays` продолжает использовать отдельный `debuffIcon` owner/slot path, чтобы не смешивать layouts.
 
 ## Phaser parity
 

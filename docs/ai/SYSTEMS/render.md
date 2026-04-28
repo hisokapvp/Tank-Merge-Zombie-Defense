@@ -1,8 +1,25 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-03-31.
+> Обновлено: 2026-04-28.
+
+## Post-merge update (2026-04-28, rework #1 — corner tower non-interrupt anim)
+- `Game.CornerTowers.notifyZombieKill()` больше **не перезапускает** `work` анимацию, если она уже играет: текущий цикл всегда доигрывает до конца, после чего вышка возвращается в `idle` (через `animations.work.returnTo`). Mid-play kills по умолчанию игнорируются.
+- Новый флаг [assets/fence.json](../../../assets/fence.json) `cornerTowers.queueRetrigger` (default `false`): если выставить `true`, вышка запоминает ровно одно убийство, прилетевшее во время `work`, и автоматически проигрывает `work` ещё раз сразу после завершения текущего цикла. Несколько mid-play kills сворачиваются в один queued retrigger (флаг очищается на retrigger / на возврат в idle / на `reset()`). При `false` поведение строго non-interrupt без накопления.
+- Реализация: per-tower поле `pendingKill` (preallocated, без heap allocations в hot path), early-return в `notifyZombieKill` при `animState === 'work'`, ветка завершения non-loop анимации в `update()` использует `pendingKill` только при `_config.queueRetrigger === true`. Файл: [src/render/cornerTowers.js](../../../src/render/cornerTowers.js).
+
+## Post-merge update (2026-04-28)
+- Добавлен модуль `src/render/cornerTowers.js` (`Game.CornerTowers`): 4 предварительно аллоцированные башни в углах забора, atlas-driven анимации `idle`/`work`, kill-radius проигрывание `work` при смерти зомби рядом. Hot-path без heap allocations (scratch rect, squared-distance), graceful no-render при отсутствии атласа. Z-order: между drone slots и `zombiesCorpses`. Конфиг — секция `cornerTowers` в [assets/fence.json](../../../assets/fence.json) (atlas, scale, anchor, killRadiusPx, killTriggerCooldownSec, frame, animations.idle/work, offsets/anchors per угол tl/tr/bl/br). Wiring в `game.js`: `_CT.init()` после FenceRepair, `_CT.update(dt)` после `stepZombies`, `_CT.draw(ctx,{translateToCenter:true})` в render-цепочке, `_CT.notifyZombieKill(p.x-center.x, p.y-center.y)` после `burst()` в zombie-kill handler. Скрипт подключён в [index.html](../../../index.html).
+- Production line: добавлены `production.featureFlags` (`conveyorEnabled`, `movingBoxEnabled`, `storageProgressBarEnabled`) и `production.storageProgressBar` (geometry/colors/label) в [assets/balance.json](../../../assets/balance.json). `Game.ProductionLineRender.setProductionConfig(production)` гейтит `drawConveyor`/`drawBoxOnConveyor` и `triggerConveyorWork()` по флагам, и рисует новый `drawStorageProgressBar(ctx, pl)` поверх storage cell, читая прогресс из `state.productionLine.progress` (kills/killCostForBox). Helper `drawRoundedRect()` без аллокаций. i18n keys `productionStorageProgressLabel`/`productionStorageProgressTooltip` добавлены в `src/i18n/{ru,en}.json`.
+
+## Post-merge update (2026-04-25)
 > Для больших файлов сначала откройте: `docs/ai/GAME_JS_MAP.md`, `docs/ai/SPRITE_LOADERS_MAP.md`, `docs/ai/PRODUCTION_LINE_RENDER_MAP.md`, `docs/ai/STYLE_CSS_MAP.md`.
 > Для Phaser layer/render migration: `docs/ai/SYSTEMS/phaser.md`.
+
+## Post-merge update (2026-04-26)
+- `drawTank()` в `game.js`: chip-based aura sprites (`resolveTankAuraVisual` / `drawTankAuraSprite`) восстановлены. При `cellIndex != null` и наличии установленных чипов рендерится соответствующий спрайт `aura1/aura2/aura3` из `assets/tanks.json`. Orb-эффект (`computeAuraBand` / `drawTankAura`) сохранён для высоких уровней и вызывается после chip-aura путём: [game.js](../../../game.js#L14379-L14388).
+
+## Post-merge update (2026-04-25)
+- `drawTankAura()` читает procedural orb params из live cached `TankSprites.config.auraOrbs`, который нормализуется в `src/render/spriteLoaders.js`. Freshness идёт через explicit `TankSprites.refreshConfig()` / `reloadConfig()` вне render hot path; `drawTankAura()` не fetch'ит JSON, не нормализует raw config и не мутирует state. Некорректные `auraOrbs` значения откатываются к safe defaults в loader'е: [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L233-L258), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L617-L644), [game.js](../../../game.js#L14199-L14297).
 
 ## Post-merge update (2026-03-31)
 - `drawProjectiles()` теперь clampит source rect (`sx+sw`, `sy+sh`) к atlas bounds (`naturalWidth`, `naturalHeight`); если frame полностью за пределами atlas, rendер fallbackится на circle. Это defensive fix для `assets/bullet.json` frame h `36→34`: [game.js](../../../game.js#L13635-L13670), [assets/bullet.json](../../../assets/bullet.json#L12).

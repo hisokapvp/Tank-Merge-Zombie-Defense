@@ -45,7 +45,11 @@
   function getConfiguredRepairBaseCost(level) {
     var cfg = getFenceConfig();
     var repair = cfg && typeof cfg === 'object' ? (cfg.repair || {}) : {};
-    var configuredCost = readPerLevelMapCost(repair.costCoinsByLevel, level);
+    // Primary: repair.perLevel (canonical key, added batch solo-pipeline-yandex-vk#1 item 2)
+    var configuredCost = readPerLevelMapCost(repair.perLevel, level);
+    if (Number.isFinite(configuredCost)) return configuredCost;
+    // Legacy fallback: repair.costCoinsByLevel
+    configuredCost = readPerLevelMapCost(repair.costCoinsByLevel, level);
     if (Number.isFinite(configuredCost)) return configuredCost;
 
     var levels = Array.isArray(cfg.levels) ? cfg.levels : null;

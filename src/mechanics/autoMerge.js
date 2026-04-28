@@ -60,6 +60,14 @@
     var excludeAdBox = opts.excludeAdBox !== false;
     if (!state || !Array.isArray(state.cells) || maxPairs === 0) return [];
 
+    // batch solo-pipeline-yandex-vk#2 (item 6): танки уровня >= maxMergeTier исключаются из счётчика
+    // и пар, иначе кнопка пишет «Объединить N танков», где N — все tier-60 танки, которым уже некуда расти.
+    var maxMergeTier = 60;
+    var balMerge = global.Game && global.Game.Balance && global.Game.Balance.merge;
+    if (balMerge && Number.isFinite(balMerge.maxMergeTier)) {
+      maxMergeTier = Math.floor(balMerge.maxMergeTier);
+    }
+
     var buckets = Object.create(null);
     var levels = [];
     var seq = 0;
@@ -75,6 +83,7 @@
       if (!Number.isFinite(tank.level)) continue;
 
       var level = Math.floor(tank.level);
+      if (level >= maxMergeTier) continue;
       if (!buckets[level]) {
         buckets[level] = [];
         levels.push(level);

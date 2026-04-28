@@ -483,9 +483,12 @@
       // Buy button
       var buyLevel = (typeof _callbacks.getBuyLevel === 'function') ? _callbacks.getBuyLevel() : 1;
       var buyCost = (typeof _callbacks.getBuyCost === 'function') ? _callbacks.getBuyCost(buyLevel) : 0;
+      // batch solo-pipeline-yandex-vk#2 (item 5): сокращаем цену через formatShortNumber, чтобы число не выползало за пределы кнопки.
+      var _NF = (typeof window !== 'undefined') && window.Game && window.Game.NumberFormat;
+      var _fmtCost = _NF && typeof _NF.formatShortNumber === 'function' ? _NF.formatShortNumber : function (n) { return String(n); };
       var buyLabel = (t('ughBuyTank') || 'Buy Lv{level} - ${cost}')
         .replace('{level}', String(buyLevel))
-        .replace('{cost}', String(buyCost));
+        .replace('{cost}', _fmtCost(buyCost));
       if (_buyBtnText) _buyBtnText.setText(buyLabel);
 
       // Bulk buy

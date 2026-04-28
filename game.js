@@ -4976,6 +4976,15 @@ function collectUndergroundHangarAutoMergePairs(maxPairs){
   const UH = window.Game && window.Game.UndergroundHangar;
   if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
 
+  // batch solo-pipeline-yandex-vk#2 (item 6, rework): underground-hangar collector тоже должен
+  // исключать tier-60 танки, иначе кнопка «Объединить N танков» в подземном ангаре считает
+  // уже-максимальные танки, которым некуда расти.
+  let mergeMaxTier = 60;
+  const _balMerge = (window.Game && window.Game.Balance && window.Game.Balance.merge) || null;
+  if (_balMerge && Number.isFinite(_balMerge.maxMergeTier)) {
+    mergeMaxTier = Math.floor(_balMerge.maxMergeTier);
+  }
+
   const buckets = Object.create(null);
   const levels = [];
   const mainCells = Array.isArray(state.cells) ? state.cells : [];
@@ -4986,6 +4995,7 @@ function collectUndergroundHangarAutoMergePairs(maxPairs){
   function pushCandidate(level, type, index, tank){
     if (!Number.isFinite(level) || !tank || isTankPrinting(tank)) return;
     const normalizedLevel = Math.max(1, Math.floor(level));
+    if (normalizedLevel >= mergeMaxTier) return;
     if (!buckets[normalizedLevel]) {
       buckets[normalizedLevel] = [];
       levels.push(normalizedLevel);
@@ -8144,6 +8154,13 @@ function startZombieDying(z){
   }
   const p = zombiePos(z);
   burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
+  // CornerTowers (item 3): notify with coords relative to center (как у fenceSegments).
+  {
+    const _CT = window.Game && window.Game.CornerTowers;
+    if (_CT && typeof _CT.notifyZombieKill === 'function') {
+      _CT.notifyZombieKill(p.x - center.x, p.y - center.y);
+    }
+  }
 }
 
 function stepZombies(dt){
@@ -12396,6 +12413,12 @@ function draw(){
   }
   // ── Drone slots: below zombies so zombie sprites overlap the slot backgrounds ──
   if (!_RR || _RR.isLegacy('drones')) drawDroneSlots();
+  // ── Corner towers (item 3 — solo-pipeline-yandex-vk#1): между fenceBase/board и zombies/corpses.
+  //    Координаты вышек хранятся относительно center (как и fenceSegments), поэтому translateToCenter=true.
+  {
+    const _CT = window.Game && window.Game.CornerTowers;
+    if (_CT && typeof _CT.draw === 'function') _CT.draw(ctx, { translateToCenter: true });
+  }
   if (_RR && _RR.isPhaser('zombiesCorpses') && _PLM) _PLM.drawLayer('zombiesCorpses', ctx);
   if (!_RR || _RR.isLegacy('zombiesCorpses')) renderZombiesAndCorpses();
   if (_RR && _RR.isPhaser('fenceHpBars') && _PLM) {
@@ -15173,6 +15196,10 @@ function loop(now){
     ensureZombieCount();
     maybeSpawnCrate();
     stepZombies(effDt);
+    {
+      const _CT = window.Game && window.Game.CornerTowers;
+      if (_CT && typeof _CT.update === 'function') _CT.update(effDt);
+    }
     if (isTalentsV2Ready()) {
       const talentsApi = getTalentsV2Api();
       const nowMs = Date.now();
@@ -15696,6 +15723,18 @@ async function boot(){
         FR.init({ getFenceConfig: getFenceConfig });
       }
     }
+    {
+      // CornerTowers (item 3 — solo-pipeline-yandex-vk#1): init после FenceRepair,
+      // чтобы FenceSprites.config уже был загружен через тот же init-pipeline.
+      const _CT = window.Game && window.Game.CornerTowers;
+      if (_CT && typeof _CT.init === 'function') {
+        _CT.init({
+          getFenceConfig: getFenceConfig,
+          getState: () => state,
+          getCenter: () => center,
+        });
+      }
+    }
     try {
       const balRes = await fetch('assets/balance.json', { cache: 'no-store' });
       if (balRes.ok) {
@@ -15705,7 +15744,17 @@ async function boot(){
           zombieOverrides: balData.zombieOverrides || {},
           tank: balData.tank || {},
           tankOverrides: balData.tankOverrides || {},
+          merge: balData.merge || {},
         };
+        // Item 6 (solo-pipeline-yandex-vk#2): прокинуть merge-конфиг (maxMergeTier) в Game.Balance,
+        // чтобы autoMerge.findMergePairs мог фильтровать tier-60 танки.
+        GameApi.Balance = GameApi.Balance || {};
+        GameApi.Balance.merge = BalanceConfig.merge;
+        // Item 6 (solo-pipeline-yandex-vk#1): прокинуть production-конфиг в renderer.
+        const _PLR = window.Game && window.Game.ProductionLineRender;
+        if (_PLR && typeof _PLR.setProductionConfig === 'function' && balData.production) {
+          _PLR.setProductionConfig(balData.production);
+        }
       }
     } catch (e) { console.warn('balance.json load failed:', e); }
 

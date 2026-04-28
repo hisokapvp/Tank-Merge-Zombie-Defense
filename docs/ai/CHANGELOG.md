@@ -1,5 +1,25 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-04-28
+- **Render + production line: solo-pipeline-yandex-vk batch #2 items 3, 6 — corner towers + storage progress bar (`assets/fence.json`, `src/render/cornerTowers.js`, `assets/balance.json`, `src/render/productionLineRender.js`, `game.js`, `index.html`, `src/i18n/{ru,en}.json`)**
+  - Item 3 (corner towers): новый модуль `src/render/cornerTowers.js` (`Game.CornerTowers`) — 4 предварительно аллоцированные башни в углах забора, atlas-driven анимации `idle`/`work`, kill-radius detection (squared-distance, hot-path без heap), graceful no-render при отсутствии атласа. Конфиг — секция `cornerTowers` в `assets/fence.json` (atlas `tower_atlas.png`, scale, anchor, killRadiusPx, killTriggerCooldownSec, frame, animations.idle/work с grid+frames+frameRate+loop+returnTo, offsets/anchors per угол tl/tr/bl/br) — все цифры внешние, runtime их только читает. Z-order: между drone slots и `zombiesCorpses`. Wiring в `game.js`: init после FenceRepair, `update(dt)` после `stepZombies`, `draw(ctx,{translateToCenter:true})` в render-цепочке, `notifyZombieKill(p.x-center.x, p.y-center.y)` после `burst()` в zombie-kill handler. Скрипт подключён в `index.html` с cache-bust `v=20260428-solo-pipeline-yandex-vk-b1-v1`.
+  - Item 6 (production line): добавлены `production.featureFlags` (`conveyorEnabled:false`, `movingBoxEnabled:false`, `storageProgressBarEnabled:true`) и `production.storageProgressBar` (width/height/offsetY/colors/label) в `assets/balance.json`. `Game.ProductionLineRender.setProductionConfig(production)` гейтит `drawConveyor`/`drawBoxOnConveyor` и `triggerConveyorWork()` по флагам; новый `drawStorageProgressBar(ctx, pl)` рисует track + fill + опциональный процент-label поверх storage cell, читая прогресс из `state.productionLine.progress`. Helper `drawRoundedRect()` без аллокаций. i18n keys `productionStorageProgressLabel`/`productionStorageProgressTooltip` добавлены в обе локали.
+
+## 2026-04-26
+- **Runtime + balance: solo-pipeline-yandex-vk batch #1 items 1–4 — chip-aura re-enabled, fence repair perLevel, tank damage × 5, fence HP × 10 (`game.js`, `assets/tanks.json`, `assets/fence.json`, `src/mechanics/fenceRepair.js`)**
+  - `game.js` `drawTank()`: chip-based aura sprites (`resolveTankAuraVisual` / `drawTankAuraSprite`) восстановлены — при наличии установленных чипов рендерится aura1/aura2/aura3 спрайт из `assets/tanks.json`. Orb-эффект для высоких уровней (`computeAuraBand` / `drawTankAura`) сохранён параллельно.
+  - `assets/fence.json` `repair`: добавлен canonical ключ `perLevel` (60 значений по уровням), совместимый с паттерном `levelreward.json`. Устаревший ключ `costCoinsByLevel` удалён. `src/mechanics/fenceRepair.js` `getConfiguredRepairBaseCost()` теперь читает `repair.perLevel` как primary, `repair.costCoinsByLevel` остался как legacy fallback.
+  - `assets/tanks.json`: `stats.baseDamage` всех 60 уровней умножен на 5 (lvl1: 520 → 2600).
+  - `assets/fence.json`: `segmentMaxHp` всех 60 уровней умножен на 10 (lvl1: 110 000 → 1 100 000).
+
+## 2026-04-25
+- **Документация и runtime: solo-pipeline-yandex-vk batch 1 — Game.Events contract, HUD scratch `acquireArray`, `auraOrbs` freshness (`docs/ai/SYSTEMS/events.md`, `docs/events.md`, `docs/ai/SYSTEMS/hud_scratch.md`, `src/render/spriteLoaders.js`, `game.js`, `index.html`)**
+  - Добавлен canonical `docs/ai/SYSTEMS/events.md` и alias `docs/events.md`: зафиксированы payload-by-id contract, async rAF-coalescing semantics, fallback scheduler через `setTimeout`, owner-boundary `EventBus` vs UI subscribers и known overlap `playerChips.changed reason='craft'` + `chips.crafted` с subscriber-side dedup policy.
+  - `docs/ai/INDEX.md` и `docs/ai/PROJECT_MAP.md` теперь ведут к event-contract через обычный маршрут чтения; `Game.Events` описан как async in-proc EventBus, а не DOM event surface.
+  - Добавлен `docs/ai/SYSTEMS/hud_scratch.md`, а `docs/ai/SYSTEMS/hud.md` синхронизирован с текущим API: `acquireArray(ownerTag, subSlot)` идемпотентен per frame, допускает re-entry без allocation и не является unbounded allocator.
+  - `src/render/spriteLoaders.js` нормализует `assets/tanks.json -> auraOrbs` в `TankSprites.config.auraOrbs`, добавляет `TankSprites.refreshConfig()` / `reloadConfig()` с last-good rollback и `getAuraOrbsConfig()` для render read path.
+  - `game.js` читает procedural aura params через live cached `TankSprites` accessor; `drawTankAura()` не выполняет fetch/JSON parsing и не мутирует state. `index.html` bump'ает entry token и cache-bust для `spriteLoaders.js`.
+
 ## 2026-04-24
 - **Документация: solo-pipeline-yandex-vk batch 2 — data-driven coinsPerShot, earnings tab в balance-lab, bulletSizeConstant render flag (`assets/levelreward.json`, `src/mechanics/progression.js`, `game.js`, `tools/balance-lab.js`)**
   - Обновлены `docs/ai/SYSTEMS/assets.md`, `docs/ai/GAME_JS_MAP.md`.

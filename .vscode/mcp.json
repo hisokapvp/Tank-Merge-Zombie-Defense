@@ -1,9 +1,10 @@
 {
   "servers": {
     "context-mode": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "C:/Users/hisok/AppData/Roaming/npm/node_modules/context-mode/cli.bundle.mjs"
+        "-y",
+        "context-mode"
       ]
     }
   }

@@ -225,6 +225,34 @@
       };
     }
 
+    function deriveAuraParticleColor(color, particleAlphaScale) {
+      if (typeof color !== 'string' || !color) return 'rgba(186,140,255,0.5)';
+      return color.replace(/([\d.]+)\)$/, String(clamp01(particleAlphaScale, 0.5)) + ')');
+    }
+
+    function normalizeAuraOrbsConfig(raw) {
+      var src = raw && typeof raw === 'object' ? raw : {};
+      var range = Array.isArray(src.levelRange) && src.levelRange.length === 2 ? src.levelRange : [56, 60];
+      var a = Math.floor(Number(range[0]));
+      var b = Math.floor(Number(range[1]));
+      if (!Number.isFinite(a) || !Number.isFinite(b)) { a = 56; b = 60; }
+      var color = typeof src.color === 'string' && src.color ? src.color : 'rgba(186,140,255,.28)';
+      var particleAlphaScale = clamp01(src.particleAlphaScale, 0.5);
+      var rawParticleCount = src.particleCount;
+      var particleCount = Number(rawParticleCount);
+      return {
+        levelRange: [Math.min(a, b), Math.max(a, b)],
+        color: color,
+        radius: toPositiveNumber(Number(src.radius), 32),
+        alpha: clamp01(src.alpha, 0.22),
+        pulseSpeed: toPositiveNumber(Number(src.pulseSpeed), 3),
+        particleCount: rawParticleCount == null ? null : (Number.isFinite(particleCount) ? Math.max(0, Math.floor(particleCount)) : null),
+        particleSize: toPositiveNumber(Number(src.particleSize), 2),
+        particleAlphaScale: particleAlphaScale,
+        particleColor: deriveAuraParticleColor(color, particleAlphaScale),
+      };
+    }
+
     function normalizeAtlasPath(value, fallbackPath) {
       if (typeof value !== 'string' || !value) return fallbackPath;
       return value.indexOf('assets/') === 0 ? value : ('assets/' + value);
@@ -470,6 +498,7 @@
             _readme: rawCfg && rawCfg._readme ? rawCfg._readme : '',
             tankScale: Number.isFinite(rawCfg && rawCfg.tankScale) ? rawCfg.tankScale : 1,
             tankPrintDurationSec: toPositiveNumber(Number(rawCfg && rawCfg.tankPrintDurationSec), 1.5),
+            auraOrbs: normalizeAuraOrbsConfig(rawCfg && rawCfg.auraOrbs),
             ui: {
               onTrackIconOpacity: clamp01(rawCfg && rawCfg.ui && rawCfg.ui.onTrackIconOpacity, 0.45),
             },
@@ -585,6 +614,34 @@
             console.error('[TankSprites] load failed:', this.error);
           }
         }
+      },
+      refreshConfig: async function () {
+        var prevReady = this.ready;
+        var prevError = this.error;
+        var prevConfig = this.config;
+        var prevCache = new Map(this.cache);
+        var prevMaxLevel = this.maxLevel;
+        var prevWarnedMissing = new Set(this.warnedMissingLevels);
+        var prevWarnedClamp = new Set(this.warnedClampLevels);
+        await this.load();
+        if (this.ready && this.config) return true;
+        this.ready = prevReady;
+        this.error = prevError;
+        this.config = prevConfig;
+        this.cache = prevCache;
+        this.maxLevel = prevMaxLevel;
+        this.warnedMissingLevels = prevWarnedMissing;
+        this.warnedClampLevels = prevWarnedClamp;
+        if (typeof console !== 'undefined' && console.warn) {
+          try { console.warn('[TankSprites] refreshConfig failed; keeping previous config'); } catch (_) {}
+        }
+        return false;
+      },
+      reloadConfig: async function () {
+        return this.refreshConfig();
+      },
+      getAuraOrbsConfig: function () {
+        return this.config && this.config.auraOrbs ? this.config.auraOrbs : null;
       },
       getTank: function (level) {
         if (!this.ready || !this.config) return null;
