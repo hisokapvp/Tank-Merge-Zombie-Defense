@@ -319,7 +319,7 @@
         "h": 32,
         "frames": 4,
         "frameRateFps": 8,
-        "loop": true,
+        "loop": false,
         "scale": 1
       }
     }

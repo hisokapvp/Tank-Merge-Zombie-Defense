@@ -7718,38 +7718,71 @@ function compareFenceTargetTie(a, b){
 function selectZombieFenceTarget(zombieCenterX, zombieCenterY, attackRangePx){
   if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return null;
   const maxDist = Math.max(0, attackRangePx || 0);
-  let best = null;
+  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1 rework): single-pass best
+  // tracking via inline vars instead of `const candidate = {...}` allocation
+  // per segment per zombie. With 200 zombies × ~40 segs in attack mode this
+  // saves ~8000 throwaway objects per frame. Behavior 1:1: same primary key
+  // (min distance), same isCorner preference, same compareFenceTargetTie
+  // tiebreaker. Only the final winner is wrapped in a candidate object.
+  let bestSeg = null;
+  let bestIndex = -1;
+  let bestDistance = Infinity;
+  let bestIsCorner = false;
   const EPS = 1e-6;
-  for (let i = 0; i < state.fenceSegments.length; i++) {
-    const seg = state.fenceSegments[i];
+  const segs = state.fenceSegments;
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i];
     if (!seg || seg.broken || !Number.isFinite(seg.hp) || seg.hp <= 0 || !seg.holeAabb) continue;
     const distance = distancePointAabb(zombieCenterX, zombieCenterY, seg.holeAabb);
     if (!Number.isFinite(distance) || distance > maxDist) continue;
-    const candidate = {
-      seg,
-      index: i,
-      distance,
-      isCorner: !!seg.isCorner,
-    };
-    if (!best) {
-      best = candidate;
+    const isCorner = !!seg.isCorner;
+    if (!bestSeg) {
+      bestSeg = seg;
+      bestIndex = i;
+      bestDistance = distance;
+      bestIsCorner = isCorner;
       continue;
     }
-    if (distance < best.distance - EPS) {
-      best = candidate;
+    if (distance < bestDistance - EPS) {
+      bestSeg = seg;
+      bestIndex = i;
+      bestDistance = distance;
+      bestIsCorner = isCorner;
       continue;
     }
-    if (Math.abs(distance - best.distance) <= EPS) {
-      if (candidate.isCorner && !best.isCorner) {
-        best = candidate;
+    if (Math.abs(distance - bestDistance) <= EPS) {
+      if (isCorner && !bestIsCorner) {
+        bestSeg = seg;
+        bestIndex = i;
+        bestDistance = distance;
+        bestIsCorner = isCorner;
         continue;
       }
-      if (candidate.isCorner === best.isCorner && compareFenceTargetTie(candidate, best) < 0) {
-        best = candidate;
+      if (isCorner === bestIsCorner) {
+        // Replicate compareFenceTargetTie inline without allocating the
+        // candidate-shape objects that compareFenceTargetTie expects.
+        const ida = (bestSeg && bestSeg.id != null) ? String(bestSeg.id) : '';
+        const idb = (seg && seg.id != null) ? String(seg.id) : '';
+        let cmp = 0;
+        if (ida && idb) {
+          if (idb < ida) cmp = -1;
+          else if (idb > ida) cmp = 1;
+        }
+        if (cmp === 0) {
+          if (i < bestIndex) cmp = -1;
+          else if (i > bestIndex) cmp = 1;
+        }
+        if (cmp < 0) {
+          bestSeg = seg;
+          bestIndex = i;
+          bestDistance = distance;
+          bestIsCorner = isCorner;
+        }
       }
     }
   }
-  return best;
+  if (!bestSeg) return null;
+  return { seg: bestSeg, index: bestIndex, distance: bestDistance, isCorner: bestIsCorner };
 }
 
 function selectZombieFenceTargetForZombie(z, attackRangePx){
@@ -7759,14 +7792,17 @@ function selectZombieFenceTargetForZombie(z, attackRangePx){
 }
 
 function selectZombieAttackTargetForZombie(z, attackRangePx, allowSupercomputer){
-  const p = zombiePos(z);
+  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1 rework): inline zombiePos
+  // to avoid {x,y} object allocation per zombie per frame in attack mode.
+  const _px = center.x + Math.cos(z.theta) * z.r;
+  const _py = center.y + Math.sin(z.theta) * z.r;
   const sc = getComputerState();
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
   const scHitbox = scCoordsValid ? resolveSupercomputerAttackHitbox(sc) : null;
   const scAlive = !!sc && Number.isFinite(sc.hp) && sc.hp > 0;
   const maxDist = Math.max(0, attackRangePx || 0);
   if (allowSupercomputer && scHitbox && scAlive) {
-    const distToSc = getDistanceToSupercomputerHitboxEdge(p.x, p.y, scHitbox);
+    const distToSc = getDistanceToSupercomputerHitboxEdge(_px, _py, scHitbox);
     if (Number.isFinite(distToSc) && distToSc <= maxDist) {
       return {
         kind: 'supercomputer',
@@ -7939,16 +7975,21 @@ function pickFenceSegmentByPoint(px, py){
   const lx = px - center.x;
   const ly = py - center.y;
   let best = null;
-  let bestDist = Infinity;
+  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1 rework): squared-distance
+  // comparison — avoids Math.hypot per segment per breached zombie per frame.
+  let bestDistSq = Infinity;
   const pad = Math.max(10, BAL.fenceWidth * 0.8);
-  for (let i = 0; i < state.fenceSegments.length; i++) {
-    const seg = state.fenceSegments[i];
+  const segs = state.fenceSegments;
+  for (let i = 0; i < segs.length; i++) {
+    const seg = segs[i];
     if (!seg || !seg.holeAabb) continue;
     const a = seg.holeAabb;
     if (lx < a.minX - pad || lx > a.maxX + pad || ly < a.minY - pad || ly > a.maxY + pad) continue;
-    const d = Math.hypot(lx - seg.x, ly - seg.y);
-    if (d < bestDist) {
-      bestDist = d;
+    const _ddx = lx - seg.x;
+    const _ddy = ly - seg.y;
+    const _dSq = _ddx * _ddx + _ddy * _ddy;
+    if (_dSq < bestDistSq) {
+      bestDistSq = _dSq;
       best = seg;
     }
   }
@@ -8478,25 +8519,42 @@ function stepTanks(dt){
     const fwdY = Math.sin(pos.heading);
     const forwardMin = 0;
 
-    const candidates = [];
-    for (const z of state.zombies){
-      if (z.state === 'dying') continue;
-      const p = zombiePos(z);
-      const dx = p.x - sx;
-      const dy = p.y - sy;
-      const d = Math.hypot(dx, dy);
-      if (!d || d > s.range) continue;
+    // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): single-pass best-target
+    // selection without per-tank `candidates` array, `.sort()`, or `.map()`.
+    // Tiebreaker preserved 1:1: max forwardDist, ties → min sideDist (squared).
+    // Range check uses squared distance (no Math.hypot in skip path).
+    // Inlines zombiePos to avoid {x,y} object allocation per zombie per tank.
+    const _targetPool = _stepTanksTargetPool;
+    _targetPool.length = 0;
+    const _rangeSq = s.range * s.range;
+    const _cx = center.x;
+    const _cy = center.y;
+    let best = null;
+    let _bestForward = -Infinity;
+    let _bestSideSq = Infinity;
+    const _zs = state.zombies;
+    for (let _zi = 0; _zi < _zs.length; _zi++){
+      const z = _zs[_zi];
+      if (!z || z.state === 'dying') continue;
+      const _px = _cx + Math.cos(z.theta) * z.r;
+      const _py = _cy + Math.sin(z.theta) * z.r;
+      const dx = _px - sx;
+      const dy = _py - sy;
+      const _distSq = dx * dx + dy * dy;
+      if (!_distSq || _distSq > _rangeSq) continue;
       const forwardDist = dx * fwdX + dy * fwdY;
       if (forwardDist <= forwardMin) continue;
-      const sideDist = Math.hypot(dx - fwdX * forwardDist, dy - fwdY * forwardDist);
-      candidates.push({ z, d, forwardDist, sideDist });
+      const _perpX = dx - fwdX * forwardDist;
+      const _perpY = dy - fwdY * forwardDist;
+      const _sideSq = _perpX * _perpX + _perpY * _perpY;
+      _targetPool.push(z);
+      if (forwardDist > _bestForward || (forwardDist === _bestForward && _sideSq < _bestSideSq)){
+        best = z;
+        _bestForward = forwardDist;
+        _bestSideSq = _sideSq;
+      }
     }
-    candidates.sort((a, b) => {
-      if (b.forwardDist !== a.forwardDist) return b.forwardDist - a.forwardDist;
-      return a.sideDist - b.sideDist;
-    });
-    const best = candidates.length ? candidates[0].z : null;
-    const targetPool = candidates.map(c => c.z);
+    const targetPool = _targetPool;
 
     if (hasSpriteConfig){
       const cannon = TankSprites.pickCannon(tank.level);
@@ -8550,6 +8608,101 @@ const MAX_BURST_PARTICLES = 14;
 const MAX_TRAIL_ALPHA = 0.45;
 let _nextShotId = 1;
 let projectilesNext = [];
+
+// Perf (solo-pipeline-yandex-vk#3 / item bonus-1): module-scope scratch reused
+// between frames in stepTanks/stepProjectiles to avoid heap churn in hot path.
+// Invariants preserved: zero-allocation per-frame, no behavior change.
+const _stepTanksTargetPool = [];
+const _projectileZmap = new Map();
+
+// Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): uniform grid for
+// projectile↔zombie / impactAt collision queries. Built once per stepProjectiles
+// frame, reused across all impactAt invocations within that frame.
+//   Cell size 96px ≈ typical AOE radius, queries ~9 cells (3x3) instead of N.
+//   Key encoding: cellY * 100003 + cellX (integer Map key — faster than string).
+//   Bucket arrays are reused across frames (length=0 reset, no churn).
+//   Dying zombies remain in grid until rebuild; consumers already filter by
+//   `z.state === 'dying'`, so behavior 1:1.
+const _ZOMBIE_GRID_CELL_PX = 96;
+const _zombieCollisionGrid = new Map();
+const _zombieGridBucketPool = [];
+let _zombieGridBucketPoolUsed = 0;
+const _zombieGridQueryScratch = [];
+// Snapshot of grid query results inside impactAt; isolates iteration from
+// re-entrant queries that may occur via talents/chip onHit callbacks.
+const _impactAoeIndices = [];
+
+function _acquireZombieGridBucket(){
+  if (_zombieGridBucketPoolUsed < _zombieGridBucketPool.length) {
+    const bucket = _zombieGridBucketPool[_zombieGridBucketPoolUsed++];
+    bucket.length = 0;
+    return bucket;
+  }
+  const bucket = [];
+  _zombieGridBucketPool.push(bucket);
+  _zombieGridBucketPoolUsed++;
+  return bucket;
+}
+
+function rebuildZombieCollisionGrid(){
+  _zombieGridBucketPoolUsed = 0;
+  _zombieCollisionGrid.clear();
+  const zs = state.zombies;
+  if (!zs || !zs.length) return;
+  const cx = center.x;
+  const cy = center.y;
+  const cell = _ZOMBIE_GRID_CELL_PX;
+  for (let i = 0; i < zs.length; i++){
+    const z = zs[i];
+    if (!z) continue;
+    // Inline zombiePos to avoid {x,y} allocation per zombie.
+    const px = cx + Math.cos(z.theta) * z.r;
+    const py = cy + Math.sin(z.theta) * z.r;
+    const gx = Math.floor(px / cell);
+    const gy = Math.floor(py / cell);
+    const key = gy * 100003 + gx;
+    let bucket = _zombieCollisionGrid.get(key);
+    if (!bucket) {
+      bucket = _acquireZombieGridBucket();
+      _zombieCollisionGrid.set(key, bucket);
+    }
+    bucket.push(i);
+  }
+}
+
+// Fills `_zombieGridQueryScratch` with zombie indices (state.zombies order)
+// whose cell overlaps the AABB [cx-r, cx+r] × [cy-r, cy+r]. Caller must use the
+// returned array immediately — it is reused on the next call.
+function queryZombieIndicesInRadius(cx, cy, r){
+  const out = _zombieGridQueryScratch;
+  out.length = 0;
+  const cell = _ZOMBIE_GRID_CELL_PX;
+  const minGx = Math.floor((cx - r) / cell);
+  const maxGx = Math.floor((cx + r) / cell);
+  const minGy = Math.floor((cy - r) / cell);
+  const maxGy = Math.floor((cy + r) / cell);
+  // Common fast path: 1 cell (point queries with r ≤ cell/2 spanning a single cell).
+  if (minGx === maxGx && minGy === maxGy) {
+    const bucket = _zombieCollisionGrid.get(minGy * 100003 + minGx);
+    if (bucket) {
+      for (let i = 0; i < bucket.length; i++) out.push(bucket[i]);
+    }
+    return out;
+  }
+  for (let gy = minGy; gy <= maxGy; gy++){
+    const rowBase = gy * 100003;
+    for (let gx = minGx; gx <= maxGx; gx++){
+      const bucket = _zombieCollisionGrid.get(rowBase + gx);
+      if (!bucket) continue;
+      for (let i = 0; i < bucket.length; i++) out.push(bucket[i]);
+    }
+  }
+  // Sort ascending so consumers iterate in the same order as `state.zombies`.
+  // Buckets are pushed row-major, so ordering across cells differs from array
+  // order — explicit sort preserves behavior 1:1 with the legacy full-scan loops.
+  out.sort((a, b) => a - b);
+  return out;
+}
 
 function resetProjectile(p){
   p.x = 0;
@@ -8892,7 +9045,22 @@ function spawnProjectile(p){
 }
 
 function stepProjectiles(dt){
-  const zmap = new Map(state.zombies.map(z => [z.id, z]));
+  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): reuse module-scope Map
+  // across frames instead of `new Map(state.zombies.map(...))` per frame.
+  // Eliminates per-frame allocation of N pairs + Map instance.
+  const zmap = _projectileZmap;
+  zmap.clear();
+  const _zsP = state.zombies;
+  for (let _zpi = 0; _zpi < _zsP.length; _zpi++){
+    const _zp = _zsP[_zpi];
+    if (_zp) zmap.set(_zp.id, _zp);
+  }
+  // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): build the uniform
+  // collision grid once per frame so impactAt() can query O(1) cells instead
+  // of scanning all zombies. Rebuild here (after zmap fill) — impactAt is only
+  // called downstream from this function and from stepZombies (which runs
+  // immediately after stepProjectiles in the canonical loop order).
+  rebuildZombieCollisionGrid();
   const prev = state.projectiles;
   const next = projectilesNext;
   next.length = 0;
@@ -8935,7 +9103,18 @@ function stepProjectiles(dt){
       const ei = b.effectIntensity ?? 1;
       const trailR = Math.min(4, Math.max(1.5, b.r * 0.55 * ei));
       const trailAlpha = Math.min(MAX_TRAIL_ALPHA, 0.25 * (0.9 + 0.1 * ei));
-      const trailColorAdj = trailColor.replace(/,\s*[\d.]+\)\s*$/, `,${trailAlpha})`);
+      // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): substitute alpha via
+      // lastIndexOf(',') instead of regex.replace per projectile per frame.
+      // Behavior 1:1 for canonical 'rgba(R,G,B,A)' inputs.
+      let trailColorAdj;
+      if (typeof trailColor === 'string') {
+        const _ci = trailColor.lastIndexOf(',');
+        trailColorAdj = _ci >= 0
+          ? trailColor.substring(0, _ci + 1) + trailAlpha + ')'
+          : trailColor;
+      } else {
+        trailColorAdj = trailColor;
+      }
       particle(b.x - vx*8, b.y - vy*8, trailR, trailColorAdj, 0.25);
     }
 
@@ -8976,18 +9155,50 @@ function impactAt(x,y,b,opts){
 
   const talentsApi = isTalentsV2Ready() ? getTalentsV2Api() : null;
   const hasTalentsHit = !!(talentsApi && typeof talentsApi.onHit === 'function');
-  const aoeVictimsCount = state.zombies.reduce((acc, z) => {
-    if (!z || z.state === 'dying') return acc;
-    const p = zombiePos(z);
-    return Math.hypot(p.x - x, p.y - y) <= b.aoe ? acc + 1 : acc;
-  }, 0);
+  // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): spatial-hash query
+  // narrows the AOE candidate list to ~9 cells instead of N zombies. The grid
+  // is rebuilt once per frame in stepProjectiles; consumers below filter dying
+  // zombies and re-check exact distance, so behavior is 1:1.
+  const _aoeSq = b.aoe * b.aoe;
+  const _ax = center.x;
+  const _ay = center.y;
+  const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe);
+  // Snapshot indices into a local array so subsequent grid queries (e.g. from
+  // talents callbacks) cannot clobber `_zombieGridQueryScratch` mid-iteration.
+  // Behavior 1:1: same indices, same iteration order.
+  const _aoeCount = _aoeCandidates.length;
+  if (_impactAoeIndices.length < _aoeCount) _impactAoeIndices.length = _aoeCount;
+  for (let _ci = 0; _ci < _aoeCount; _ci++) _impactAoeIndices[_ci] = _aoeCandidates[_ci];
+  let aoeVictimsCount = 0;
+  {
+    const _aZs = state.zombies;
+    for (let _ci = 0; _ci < _aoeCount; _ci++){
+      const _ai = _impactAoeIndices[_ci];
+      const _az = _aZs[_ai];
+      if (!_az || _az.state === 'dying') continue;
+      const _apx = _ax + Math.cos(_az.theta) * _az.r;
+      const _apy = _ay + Math.sin(_az.theta) * _az.r;
+      const _adx = _apx - x;
+      const _ady = _apy - y;
+      if (_adx * _adx + _ady * _ady <= _aoeSq) aoeVictimsCount++;
+    }
+  }
   const tankLevel = b.level ?? 1;
   const critChance = critChanceFromTankLevel(tankLevel);
-  for (const z of state.zombies){
-    if (z.state === 'dying') continue;
+  const _zArr = state.zombies;
+  for (let _ci = 0; _ci < _aoeCount; _ci++){
+    const _zi = _impactAoeIndices[_ci];
+    const z = _zArr[_zi];
+    if (!z || z.state === 'dying') continue;
     const p = zombiePos(z);
-    const d = Math.hypot(p.x-x, p.y-y);
-    if (d <= b.aoe){
+    // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): squared-distance skip
+    // before the full sqrt — Math.hypot only when zombie is actually within AOE.
+    const _dxZ = p.x - x;
+    const _dyZ = p.y - y;
+    const _dSqZ = _dxZ * _dxZ + _dyZ * _dyZ;
+    if (_dSqZ > _aoeSq) continue;
+    const d = Math.sqrt(_dSqZ);
+    {
       const falloff = 0.55 + 0.45*(1 - d/b.aoe);
       const baseDmg = b.dmg * falloff;
       const isCrit = Math.random() < critChance;
@@ -9345,21 +9556,26 @@ function popText(x,y,text,color){
 }
 
 function stepParticles(dt){
-  const next = [];
-  for (const p of state.particles){
+  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): in-place compaction via
+  // write-index pattern — avoids `const next = []` allocation per frame
+  // (up to ~1600 entries with maxParticles cap). Behavior 1:1.
+  const arr = state.particles;
+  let _w = 0;
+  for (let _r = 0; _r < arr.length; _r++){
+    const p = arr[_r];
     p.life -= dt;
     if (p.life <= 0) continue;
     if (p.kind === 'text'){
       p.y += (p.vy||-20)*dt;
-      next.push(p);
+      arr[_w++] = p;
       continue;
     }
     p.x += p.vx*dt;
     p.y += p.vy*dt;
     p.r *= 0.985;
-    next.push(p);
+    arr[_w++] = p;
   }
-  state.particles = next;
+  arr.length = _w;
 }
 
 function setMenuOpen(open){
@@ -10377,33 +10593,39 @@ function updateUI(){
   const cost = buyTankCost(level);
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   syncCurrentBalanceAchievements();
+  // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): DOM HUD diff-update.
+  // Cache last assigned text on the element (`__lastHudText`) and skip the
+  // textContent setter when value is unchanged. Eliminates layout thrash on
+  // hot-loop calls (60Hz) where most HUD strings change only on events.
+  // Behavior 1:1: when value differs, plain textContent assignment is used.
   const _hud = window.Game && window.Game.HudAdapter;
   if (_hud && _hud.isInitialized()) {
     _hud.updateText('coins', fmt(state.coins));
     _hud.updateText('zcount', String(state.kills));
   } else {
-    ui.coins.textContent = fmt(state.coins);
-    ui.zcount.textContent = state.kills;
+    _setHudText(ui.coins, fmt(state.coins));
+    _setHudText(ui.zcount, String(state.kills));
   }
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
-  if (buyLabel) buyLabel.textContent = t('buyTank', {level});
-  ui.buyCost.textContent = fmt(cost);
+  if (buyLabel) _setHudText(buyLabel, t('buyTank', {level}));
+  _setHudText(ui.buyCost, fmt(cost));
 
   const hasFree = hasAvailableTankSlot();
-  ui.buy.disabled = state.coins < cost || !hasFree;
+  const _buyDisabled = state.coins < cost || !hasFree;
+  if (ui.buy.disabled !== _buyDisabled) ui.buy.disabled = _buyDisabled;
 
   if (ui.buyBulk) {
     const mode = buyBulkMode();
     const plan = getBulkBuyPlanByMode(mode);
     if (!plan.visible) {
-      ui.buyBulk.classList.add('hidden');
-      ui.buyBulk.style.display = 'none';
-      ui.buyBulk.disabled = true;
+      if (!ui.buyBulk.classList.contains('hidden')) ui.buyBulk.classList.add('hidden');
+      if (ui.buyBulk.style.display !== 'none') ui.buyBulk.style.display = 'none';
+      if (ui.buyBulk.disabled !== true) ui.buyBulk.disabled = true;
     } else {
-      ui.buyBulk.classList.remove('hidden');
-      ui.buyBulk.style.display = '';
-      ui.buyBulk.textContent = plan.label || bulkBuyLabel(plan.count, plan.totalCost);
-      ui.buyBulk.disabled = plan.disabled;
+      if (ui.buyBulk.classList.contains('hidden')) ui.buyBulk.classList.remove('hidden');
+      if (ui.buyBulk.style.display !== '') ui.buyBulk.style.display = '';
+      _setHudText(ui.buyBulk, plan.label || bulkBuyLabel(plan.count, plan.totalCost));
+      if (ui.buyBulk.disabled !== plan.disabled) ui.buyBulk.disabled = plan.disabled;
     }
   }
 
@@ -10421,6 +10643,16 @@ function updateUI(){
   if (DebugPanelEnabled && state.debug?.refreshZombieCounts) state.debug.refreshZombieCounts();
 }
 
+// Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): shared HUD text diff
+// helper. Skips DOM textContent writes when value matches the cached last
+// value, eliminating per-frame layout thrash for static HUD elements.
+function _setHudText(el, value){
+  if (!el) return;
+  if (el.__lastHudText === value) return;
+  el.__lastHudText = value;
+  el.textContent = value;
+}
+
 function refreshAutoMergeButton(){
   if (!ui.autoMergeBtn) return;
   if (!AutoMergeApi || typeof AutoMergeApi.getAutoMergeButtonModel !== 'function') {
@@ -10436,8 +10668,9 @@ function refreshAutoMergeButton(){
 
   mountAutoMergeButton();
   ui.autoMergeBtn.classList.remove('hidden');
-  ui.autoMergeBtn.textContent = model.label || t('autoMerge2');
-  ui.autoMergeBtn.disabled = isAutoMergeBusy || !model.enabled;
+  _setHudText(ui.autoMergeBtn, model.label || t('autoMerge2'));
+  const _amDisabled = isAutoMergeBusy || !model.enabled;
+  if (ui.autoMergeBtn.disabled !== _amDisabled) ui.autoMergeBtn.disabled = _amDisabled;
 }
 
 function runAutoMergeClick(){
@@ -10476,8 +10709,8 @@ function runAutoMergeClick(){
 
 function updateDismantleButton(){
   if (!ui.dismantleBtn) return;
-  ui.dismantleBtn.disabled = false;
-  ui.dismantleBtn.textContent = state.isDismantleMode ? t('dismantleBtnConfirm') : t('dismantleBtn');
+  if (ui.dismantleBtn.disabled !== false) ui.dismantleBtn.disabled = false;
+  _setHudText(ui.dismantleBtn, state.isDismantleMode ? t('dismantleBtnConfirm') : t('dismantleBtn'));
 }
 
 function openDismantleModal(){
@@ -12351,6 +12584,11 @@ function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffI
     if (!count) continue;
     const pos = zombiePos(zombie);
     if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) continue;
+    // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): off-screen culling for
+    // debuff overlays — skip ctx.save / drawImage when zombie is outside viewport
+    // (with margin covering full row of icons centered above zombie head).
+    // Margin 96px covers up to ~5 icons across (5 * iconStepPx ≈ 80px) + headroom.
+    if (pos.x < -96 || pos.x > viewSize.w + 96 || pos.y < -96 || pos.y > viewSize.h + 96) continue;
     if (iconOpacity < 1) {
       ctx.save();
       ctx.globalAlpha = iconOpacity;
@@ -12633,6 +12871,16 @@ function drawDecorSpriteAt(d){
 
 function drawDecorZombieLayer(){
   const items = [];
+  // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): off-screen culling.
+  // Viewport AABB with margin covering zombie sprite half + debuff icons (~96px).
+  // Skip BOTH push to items[] (saves sort cost) and drawZombieEntity (saves drawImage).
+  // Behavior 1:1: zombies whose sprite center lies outside [viewport ± 96px] are
+  // never visible on the canvas anyway. Decor not culled (fixed map positions).
+  const _camCullMargin = 96;
+  const _camMinX = -_camCullMargin;
+  const _camMaxX = viewSize.w + _camCullMargin;
+  const _camMinY = -_camCullMargin;
+  const _camMaxY = viewSize.h + _camCullMargin;
   if (state.decors && state.decors.length) {
     for (let i = 0; i < state.decors.length; i++) {
       const d = state.decors[i];
@@ -12646,6 +12894,8 @@ function drawDecorZombieLayer(){
       const z = state.zombies[i];
       if (!Number.isFinite(z.renderOrder)) z.renderOrder = state.nextZombieRenderOrder++;
       const p = zombiePos(z);
+      // Culling AABB: skip zombies fully outside viewport (live + dying both).
+      if (p.x < _camMinX || p.x > _camMaxX || p.y < _camMinY || p.y > _camMaxY) continue;
       items.push({ kind: 'zombie', y: p.y, order: z.renderOrder, id: z.id || String(z.renderOrder), ref: z, x: p.x, zY: p.y });
     }
   }
