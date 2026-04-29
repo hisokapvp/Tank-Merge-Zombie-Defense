@@ -1474,6 +1474,7 @@ const DEFAULT_RAIN_LOOP_SOURCES = ['assets/sfx/rain_loop.ogg', 'assets/sfx/rain_
 const SFX_CHANNELS = {
   shootNormal: 'gameplay',
   shootHeavy: 'gameplay',
+  shootHeavy1: 'gameplay',
   shootHeavy2: 'gameplay',
   trackLoop: 'gameplay',
   tankToTrack: 'gameplay',
@@ -1985,6 +1986,7 @@ function syncTrackLoopSfxState(paused){
 const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
   shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+  shootHeavy1: 'assets/sfx/shoot_heavy1.ogg',
   shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
   uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
   uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
@@ -12912,6 +12914,15 @@ function drawDecorSpriteAt(d){
 }
 
 function drawDecorZombieLayer(){
+  // Solo-pipeline-yandex-vk#2 / item 7: Profiler markers around the zombie
+  // render loop boundary. Phase name 'drawZombies' matches the budget seeded
+  // from balance.json → perf.profilerBudgetsMs. Markers are DEBUG-guarded so
+  // that release-mirror (Game.DEBUG !== true) pays zero overhead. try/finally
+  // guarantees Profiler.end() is called even on early-return paths inside
+  // sort or sprite resolve.
+  const _profDZL = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  if (_profDZL) _profDZL.start('drawZombies');
+  try {
   const items = [];
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): off-screen culling.
   // Viewport AABB with margin covering zombie sprite half + debuff icons (~96px).
@@ -12956,6 +12967,9 @@ function drawDecorZombieLayer(){
     const item = sorted[i];
     if (item.kind === 'decor') drawDecorSpriteAt(item.ref);
     else if (item.kind === 'zombie') drawZombieEntity(item.ref, item.x, item.zY);
+  }
+  } finally {
+    if (_profDZL) _profDZL.end('drawZombies');
   }
 }
 
@@ -14348,6 +14362,15 @@ function drawTankIconWithStampReveal(cell, cx, cy, options = null){
 }
 
 function drawOrbitingTanks(){
+  // Solo-pipeline-yandex-vk#2 / item 7: Profiler markers around the tank
+  // render loop boundary. Phase name 'drawTank' matches the budget seeded
+  // from balance.json → perf.profilerBudgetsMs. Markers are DEBUG-guarded
+  // so that release-mirror (Game.DEBUG !== true) pays zero overhead.
+  // try/finally guarantees Profiler.end() is called even on early-return
+  // paths inside drawTank / orbit math.
+  const _profDOT = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  if (_profDOT) _profDOT.start('drawTank');
+  try {
   const t = nowSec();
   for (const c of state.cells){
     if (!c.tank || !c.tank.onTrack) continue;
@@ -14361,6 +14384,9 @@ function drawOrbitingTanks(){
     c.tank._statusWorldX = statusX;
     c.tank._statusWorldY = statusY;
     drawTank(pos.x, pos.y, c.tank, false, pos.heading, false, false, trackRenderState, c.i);
+  }
+  } finally {
+    if (_profDOT) _profDOT.end('drawTank');
   }
 }
 
@@ -14705,8 +14731,34 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
     if (auraBand != null) drawTankAura(drawX, drawY, auraBand);
   }
   // Try sprite-based tanks if assets/tanks.json exists
-  const body = TankSprites?.pickBody?.(level);
-  const cannon = TankSprites?.pickCannon?.(level);
+  // Solo-pipeline-yandex-vk#2 / item 6 (consumer integration of
+  // Game.Sprites.getCachedFrameRef): TankSprites.pickBody/pickCannon are
+  // called per-frame per-tank and walk a level→sprite mapping every call.
+  // We cache the resolved {img, cfg} pair directly on the tank object,
+  // gated by atlasVersion (bumped on worldReset / atlas hot-swap) and the
+  // tank.level scalar. Inline cache (no closure) preserves the hot-path
+  // zero-alloc invariant. Drag-preview / number-typed `tank` skips the
+  // cache entirely (transient render with no stable slot).
+  let body = null;
+  let cannon = null;
+  const _tankSlot = (tank && typeof tank === 'object') ? tank : null;
+  const _SpritesNs = window.Game && window.Game.Sprites;
+  const _atlasVer = _SpritesNs && typeof _SpritesNs.getAtlasVersion === 'function'
+    ? _SpritesNs.getAtlasVersion()
+    : 0;
+  if (_tankSlot && _tankSlot._spriteVer === _atlasVer && _tankSlot._spriteLevel === level) {
+    body = _tankSlot._spriteBody;
+    cannon = _tankSlot._spriteCannon;
+  } else {
+    body = TankSprites?.pickBody?.(level) ?? null;
+    cannon = TankSprites?.pickCannon?.(level) ?? null;
+    if (_tankSlot) {
+      _tankSlot._spriteBody = body;
+      _tankSlot._spriteCannon = cannon;
+      _tankSlot._spriteVer = _atlasVer;
+      _tankSlot._spriteLevel = level;
+    }
+  }
   if (body && cannon){
     ctx.save();
     ctx.translate(drawX,y + renderOffsetY);

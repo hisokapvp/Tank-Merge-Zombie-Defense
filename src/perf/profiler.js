@@ -27,6 +27,21 @@
   // for that phase without unsetting the entry.
   var budgets = Object.create(null);
 
+  // Solo-pipeline-yandex-vk#2 / item 8: per-phase emit-rate throttle for
+  // `perf.budget.exceeded`. A budget regression is typically systematic —
+  // if drawZombies overruns 3.0ms once, it overruns every frame at 60Hz
+  // (≈ 60 emits/sec per phase). With ~5 hot phases that is hundreds of
+  // events/sec hitting Game.Events listeners, console, and any telemetry
+  // sink. We therefore emit at most one `perf.budget.exceeded` per phase
+  // per `_BUDGET_EMIT_THROTTLE_MS` window. Signal fidelity is preserved
+  // (regressions still surface within 1s on every reproduction) while
+  // worst-case noise is bounded to N_phases events/sec. Choice of 1000ms:
+  // ≥ 60× cheaper than per-frame emit at 60Hz, still well under typical
+  // human reaction time so a tester sees the alert as "live" feedback,
+  // and matches the resolution of typical telemetry rollups.
+  var _BUDGET_EMIT_THROTTLE_MS = 1000;
+  var _lastBudgetEmitMs = Object.create(null);
+
   function ensureStat(name) {
     if (!stats[name]) {
       stats[name] = { count: 0, totalMs: 0, minMs: Infinity, maxMs: 0, lastMs: 0 };
@@ -44,16 +59,27 @@
     if (duration > stat.maxMs) stat.maxMs = duration;
     // Budget threshold check (postmortem item 11): emit on Game.Events so
     // on-device diagnostics can surface a real signal instead of noise.
+    // Solo-pipeline-yandex-vk#2 / item 8: throttle emits per-phase to avoid
+    // flooding listeners when a regression repeats every frame at 60Hz.
     var budget = budgets[name];
     if (budget != null && Number.isFinite(budget) && duration >= budget) {
-      var bus = global.Game && global.Game.Events;
-      if (bus && typeof bus.emit === 'function') {
-        bus.emit('perf.budget.exceeded', {
-          phase: name,
-          ms: duration,
-          budget: budget,
-          count: stat.count
-        });
+      var nowMs = nowFn();
+      var lastMs = _lastBudgetEmitMs[name];
+      // First overrun for this phase always emits; subsequent overruns are
+      // throttled to one per `_BUDGET_EMIT_THROTTLE_MS` window. We use
+      // null-check (not `|| 0`) so that a small `nowFn()` value early after
+      // process start does not accidentally suppress the very first emit.
+      if (lastMs == null || nowMs - lastMs >= _BUDGET_EMIT_THROTTLE_MS) {
+        _lastBudgetEmitMs[name] = nowMs;
+        var bus = global.Game && global.Game.Events;
+        if (bus && typeof bus.emit === 'function') {
+          bus.emit('perf.budget.exceeded', {
+            phase: name,
+            ms: duration,
+            budget: budget,
+            count: stat.count
+          });
+        }
       }
     }
   }
@@ -136,6 +162,10 @@
   function reset() {
     stats = {};
     active = {};
+    // Solo-pipeline-yandex-vk#2 / item 8: clear emit-throttle window so
+    // tests / regression checks that call reset() observe deterministic
+    // emit behavior on the very first overrun after reset.
+    _lastBudgetEmitMs = Object.create(null);
   }
 
   function report() {

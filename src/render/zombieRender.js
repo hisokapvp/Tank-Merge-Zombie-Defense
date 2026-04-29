@@ -68,9 +68,38 @@
       var usesCommonDeathAtlas = ZombieSprites.ready && z.type
         ? isCommonDeathAnimation(z, ZombieSprites)
         : false;
-      var zombieAtlasImg = ZombieSprites.ready && z.type
-        ? resolveZombieAtlasImage(ZombieSprites, z, usesCommonDeathAtlas)
-        : null;
+      // Solo-pipeline-yandex-vk#2 / item 6 (consumer integration of
+      // Game.Sprites.getCachedFrameRef): resolveZombieAtlasImage walks
+      // ZombieSprites.getAtlasImage(z.type, preferSharedAtlas) for every
+      // zombie every frame. With N zombies × 60 Hz that is 2 namespace
+      // hops + a property chain N×60 times per second. We cache the
+      // resolved ref directly on the zombie slot, gated by atlasVersion
+      // (bumped from worldReset / atlas hot-swap via Game.Sprites.bumpAtlasVersion)
+      // and a 1-bit mode flag (type-atlas vs shared death-common atlas).
+      // The pattern is inlined instead of calling Game.Sprites.getCachedFrameRef
+      // with a closure to keep the hot-path zero-alloc (drawZombieEntity is
+      // a render hot-path and TMZD invariant forbids per-frame heap allocs).
+      // The cache fields use the same `_atlasFrameRef` / `_atlasFrameVer`
+      // naming as the canonical helper so that tooling / postmortems stay
+      // consistent across consumers.
+      var zombieAtlasImg = null;
+      if (ZombieSprites.ready && z.type) {
+        var SpritesNs = global.Game && global.Game.Sprites;
+        var atlasVer = SpritesNs && typeof SpritesNs.getAtlasVersion === 'function'
+          ? SpritesNs.getAtlasVersion()
+          : 0;
+        var atlasMode = usesCommonDeathAtlas ? 1 : 0;
+        if (z._atlasFrameVer === atlasVer && z._atlasFrameMode === atlasMode && z._atlasFrameRef) {
+          zombieAtlasImg = z._atlasFrameRef;
+        } else {
+          zombieAtlasImg = resolveZombieAtlasImage(ZombieSprites, z, usesCommonDeathAtlas);
+          if (zombieAtlasImg && typeof zombieAtlasImg === 'object') {
+            z._atlasFrameRef = zombieAtlasImg;
+            z._atlasFrameVer = atlasVer;
+            z._atlasFrameMode = atlasMode;
+          }
+        }
+      }
       if (zombieAtlasImg) {
         drawZombieSprite(x, y, z, zombieAtlasImg, usesCommonDeathAtlas);
       } else {

@@ -13,6 +13,7 @@
   var SFX_SOURCES = {
     shootNormal: 'assets/sfx/shoot_normal.ogg',
     shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+    shootHeavy1: 'assets/sfx/shoot_heavy1.ogg',
     shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
     levelUp: 'assets/sfx/level_up.ogg',
     applyTalents: 'assets/sfx/apply_talents.ogg',

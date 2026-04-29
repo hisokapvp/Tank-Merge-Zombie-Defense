@@ -152,7 +152,8 @@ graph TD
 | Артефакт | Файл | Назначение |
 |---|---|---|
 | Release builder shell | [ci/build_release.sh](../../ci/build_release.sh) | bash-обёртка над node-хелпером: timestamped output `dist/release/<UTC>/`, опциональный `--yandex`, опциональный `--no-zip`; REFUSE-guard на `dist/release/staging/`. |
-| Release builder core | [ci/build_release.mjs](../../ci/build_release.mjs) | Whitelist-копия (`index.html`, `game.js`, `style.css`, `README.md`, `src/**`, `assets/**`, `vendor/**`), SHA-256 manifest, cache-bust `?v=<sha8>` только в копии `index.html`, optional Yandex SDK seam, audit relative `fetch()`. |
+| Release builder PowerShell | [ci/build_release.ps1](../../ci/build_release.ps1) | Windows PowerShell 5.1 wrapper, зеркалит контракт `.sh` (`-Yandex`, `-NoZip`, `OUT_TS`/`OUT_ROOT`); REFUSE-guard на staging; `Compress-Archive` вместо `zip`. |
+| Release builder core | [ci/build_release.mjs](../../ci/build_release.mjs) | Whitelist-копия (`index.html`, `game.js`, `style.css`, `README.md`, `src/**`, `assets/**`, `vendor/**`), SHA-256 manifest с `audit_relative_fetch[]: {file, url}`, cache-bust `?v=<sha8>` только в копии `index.html`, optional Yandex SDK seam, audit relative `fetch()`. |
 | Release playbook | [docs/ai/PLAYBOOKS/release-yandex.md](PLAYBOOKS/release-yandex.md) | Manual checklist + invariants: generic-host билд default, Yandex SDK opt-in `--yandex`, no minify / no source maps, `dist/release/staging/` неприкасаем. |
 
 ## Что НЕ документировано

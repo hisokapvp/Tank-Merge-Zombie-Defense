@@ -17,6 +17,7 @@
     var SFX_CHANNELS = {
       shootNormal: 'gameplay',
       shootHeavy: 'gameplay',
+      shootHeavy1: 'gameplay',
       shootHeavy2: 'gameplay',
       trackLoop: 'gameplay',
       tankToTrack: 'gameplay',
@@ -36,6 +37,7 @@
     var SFX_SOURCES = {
       shootNormal: 'assets/sfx/shoot_normal.ogg',
       shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+      shootHeavy1: 'assets/sfx/shoot_heavy1.ogg',
       shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
       uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
       uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],

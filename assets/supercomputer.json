@@ -152,8 +152,8 @@
         "vibrationStrong",
         {
           "preset": "pulse",
-          "scaleMul": 0.01,
-          "frequencyHz": 10
+          "scaleMul": 0.005,
+          "frequencyHz": 100
         }
       ]
     },
@@ -169,18 +169,18 @@
       "effects": [
         {
           "preset": "float",
-          "amplitudeY": 11.1,
-          "frequencyHz": 50.9,
+          "amplitudeY": 1.0,
+          "frequencyHz": 10.9,
           "phase": 0.15
         },
         {
           "preset": "sway",
-          "angleDeg": 11.8,
-          "amplitudeX": 11.4
+          "angleDeg": 0.1,
+          "amplitudeX": 0.1
         },
         {
           "preset": "vibration",
-          "amplitudeY": 10.8
+          "amplitudeY": 1.5
         }
       ]
     },
@@ -298,7 +298,7 @@
   "storageCell": {
     "atlas": "slot_warehouse_atlas.png",
     "offset": {
-      "x": -60,
+      "x": -62,
       "y": -30
     },
     "animations": {
@@ -345,7 +345,7 @@
   "button": {
     "offset": {
       "x": -10,
-      "y": -10
+      "y": -13
     }
   }
 }

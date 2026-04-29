@@ -1,12 +1,14 @@
 # game.js — Структурная карта (~9 500 строк)
 
+> Last validated: 2026-04-29 (line numbers refreshed against current game.js, total lines = 16372).
+
 > **ВНИМАНИЕ**: Номера строк здесь приблизительны.
 > Файл был сокращён с 10 749 до ~9 500 строк (извлечены RuntimeTasks, CannonUpgrades; удалён мёртвый код ~120 строк; компактифицирован createInitialState).
 > Извлечённые модули: `src/core/runtimeTasks.js` (Game.RuntimeTasks), `src/mechanics/cannonUpgrades.js` (Game.CannonUpgrades), `src/persistence/initialState.js` (Game.InitialState — обновлён).
 > Дополнительно вынесены крупные runtime-блоки: `src/audio/sfxPoolRuntime.js`, `src/systems/worldEventsRuntime.js`, `src/render/zombieRender.js`, `src/mechanics/crateRuntime.js`, `src/ui/bigMenuRuntime.js`.
 > Для точных номеров строк используйте grep.
 
-## Extraction status (2026-02-25)
+## Extraction status (2026-04-29)
 - В `game.js` для 5 систем добавлены `ensure*RuntimeController()` и делегирование вызовов в `Game.*Runtime.createController(...)`.
 - Встроенная логика в `game.js` оставлена как fallback (поведение не зависит жёстко от порядка/наличия runtime-скриптов).
 - Talents v2 UI layout в `getTalentNodeLayoutV2(...)` берётся из `node.layout` (из `Game.TalentsV2.getTalentsByBranch(...)`) с fallback на legacy `TALENT_LAYOUT`.
@@ -58,20 +60,20 @@
 `game.js` остаётся главным bootstrap/runtime-монолитом проекта: здесь живут глобальные aliases `window.Game`, world loop, render orchestration, часть fallback-логики, UI wiring и интеграция всех extracted модулей из `src/*`.
 
 ## Быстрый старт для агента
-- Нужен boot / asset wiring → [boot()](../../game.js#L11714-L11885)
-- Нужен world loop → [loop()](../../game.js#L11460-L11713)
-- Нужен render order → [draw()](../../game.js#L11127-L11200)
-- Нужен zombie debuff overlay scale-path → [drawScaledDebuffExpiryOverlay()](../../game.js#L11561-L11586), [drawScaledZombieDebuffOverlays()](../../game.js#L11588-L11643), вызов из [draw()](../../game.js#L11714-L11723)
-- Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2374-L2387), [syncHybridUiScale()](../../game.js#L2389-L2403), [resizeCanvas()](../../game.js#L2407-L2437)
-- Нужен fence repair wiring / delegation → [getFenceRepairCostCoins()](../../game.js#L2278-L2285), [tryRepairFenceSegmentAt()](../../game.js#L7500-L7516), [boot() fence repair init](../../game.js#L14824-L14833)
-- Нужен chip-count aura routing / procedural `auraOrbs` fallback / variant-specific sprite treatment → [getInstalledChipCountForCell()](../../game.js#L14174-L14192), [resolveTankAuraVisual()](../../game.js#L14194-L14198), [getAuraOrbsConfig()](../../game.js#L14199-L14205), [computeAuraBand()](../../game.js#L14207-L14221), [drawTankAura()](../../game.js#L14263-L14297), [drawTankAuraSprite()](../../game.js#L14299-L14382)
-- Нужен per-stat modifiers seam для weapons/drones/walls → [getCannonUpgradeTotalCost()](../../game.js#L878-L888), [applyCannonUpgrade()](../../game.js#L890-L910), [getFenceUpgradeTotalCost()](../../game.js#L912-L922), [applyFenceUpgrade()](../../game.js#L924-L945), [getDronUpgradeTotalCost()](../../game.js#L3282-L3292), [applyDronUpgrade()](../../game.js#L3294-L3313)
-- Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L3759-L3772), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L3800-L3802), [updateTalentAbilitySlotsV2()](../../game.js#L8688-L8827), [updateStageAbilitySlots()](../../game.js#L8829-L8838)
+- Нужен boot / asset wiring → [boot()](../../game.js#L16358-L16529)
+- Нужен world loop → [loop()](../../game.js#L15437-L15690)
+- Нужен render order → [draw()](../../game.js#L12656-L12729)
+- Нужен zombie debuff overlay scale-path → [drawScaledDebuffExpiryOverlay()](../../game.js#L12561-L12586), [drawScaledZombieDebuffOverlays()](../../game.js#L12588-L12643), вызов из [draw()](../../game.js#L12656-L12665)
+- Нужен master UI scale seam → [readMasterUiScale()](../../game.js#L2672-L2685), [syncHybridUiScale()](../../game.js#L2687-L2701), [resizeCanvas()](../../game.js#L2705-L2735)
+- Нужен fence repair wiring / delegation → [getFenceRepairCostCoins()](../../game.js#L2352-L2359), [tryRepairFenceSegmentAt()](../../game.js#L8001-L8017), [boot() fence repair init](../../game.js#L16358-L16367)
+- Нужен chip-count aura routing / procedural `auraOrbs` fallback / variant-specific sprite treatment → [getInstalledChipCountForCell()](../../game.js#L14485-L14503), [resolveTankAuraVisual()](../../game.js#L14505-L14509), [getAuraOrbsConfig()](../../game.js#L14521-L14527), [computeAuraBand()](../../game.js#L14527-L14541), [drawTankAura()](../../game.js#L14583-L14617), [drawTankAuraSprite()](../../game.js#L14621-L14704)
+- Нужен per-stat modifiers seam для weapons/drones/walls → [getCannonUpgradeTotalCost()](../../game.js#L891-L901), [applyCannonUpgrade()](../../game.js#L903-L923), [getFenceUpgradeTotalCost()](../../game.js#L925-L935), [applyFenceUpgrade()](../../game.js#L937-L958), [getDronUpgradeTotalCost()](../../game.js#L3470-L3480), [applyDronUpgrade()](../../game.js#L3482-L3501)
+- Нужны v2 stage active icons / HUD slots → [getTalentV2ActiveIconByBranch()](../../game.js#L5383-L5396), [getTalentV2ActiveIconUrlByBranch()](../../game.js#L5424-L5426), [updateTalentAbilitySlotsV2()](../../game.js#L11667-L11806), [updateStageAbilitySlots()](../../game.js#L11768-L11777)
 - Нужен Talents v2 redraw/update orchestration → `updateTalentUIV2()` делегирует orchestration в `src/ui/talentOverlayUi.js`, а `game.js` оставляет bootstrap/fallback helpers для node/edge render.
-- Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L9699-L9724), [drawSupercomputerHpBarOverlay()](../../game.js#L9750-L9755), [drawSupercomputer()](../../game.js#L9774-L9794)
-- Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2314-L2328), [performTankPurchaseOnce()](../../game.js#L3289-L3307), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L11374-L11382)
+- Нужен supercomputer render → [drawSupercomputerSpriteClip()](../../game.js#L13111-L13136), [drawSupercomputerHpBarOverlay()](../../game.js#L13273-L13278), [drawSupercomputer()](../../game.js#L13297-L13317)
+- Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2742-L2756), [performTankPurchaseOnce()](../../game.js#L4318-L4336), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L15346-L15354)
 - Нужен browser context-menu suppression / legacy input guard → [document-level guard](../../game.js#L11153-L11157)
-- Нужен canvas touch-safe drag / tap split → [preventTouchPointerDefault()](../../game.js#L11319-L11324), [releaseCanvasPointer()](../../game.js#L11326-L11345), [onPointerDown()](../../game.js#L11347-L11382), [onPointerMove()](../../game.js#L11383-L11405)
+- Нужен canvas touch-safe drag / tap split → [preventTouchPointerDefault()](../../game.js#L12097-L12102), [releaseCanvasPointer()](../../game.js#L12106-L12125), [onPointerDown()](../../game.js#L11347-L11382), [onPointerMove()](../../game.js#L11383-L11405)
 
 ## Инварианты ⚠️
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
@@ -79,11 +81,11 @@
 - Master UI scale source-of-truth живёт в `resizeCanvas()`: `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))` пишется в `:root`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` прокидывает scale в `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`; startup `boot().catch(...)` должен вызывать этот path уже при загрузке страницы.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.
-- Zombie debuff expiry overlay не имеет отдельного fixed-px render path: `drawScaledZombieDebuffOverlays()` вычисляет `iconSizePx/iconStepPx` из `debuffIconScale`, `drawScaledDebuffExpiryOverlay()` получает этот размер напрямую, а `draw()` прокидывает значения из локального `ZombieSprites`. Любая правка wedge/dot overlay должна сохранять этот shared scale contract: [game.js](../../game.js#L11561-L11643), [game.js](../../game.js#L11714-L11723).
+- Zombie debuff expiry overlay не имеет отдельного fixed-px render path: `drawScaledZombieDebuffOverlays()` вычисляет `iconSizePx/iconStepPx` из `debuffIconScale`, `drawScaledDebuffExpiryOverlay()` получает этот размер напрямую, а `draw()` прокидывает значения из локального `ZombieSprites`. Любая правка wedge/dot overlay должна сохранять этот shared scale contract: [game.js](../../game.js#L12588-L12670), [game.js](../../game.js#L12588-L12597).
 - Tutorial runtime за пределами `game.js` использует правило first available incomplete tutorial step; skip-ahead баги нужно чинить в `src/ui/tutorialRuntime.js`/`src/config/tutorialSteps.js`, а не перестановкой поздних UI-completion hooks в монолите.
 - `game.js` — canonical apply/cost layer для supercomputer modifiers modal: UI передаёт `level + statKey + pendingCount`, а функции `applyCannonUpgrade` / `applyDronUpgrade` / `applyFenceUpgrade` сами нормализуют ключ, суммируют per-stat step cost и обновляют encoded applied arrays. Стоимость не дублируется в UI и не должна хардкодиться вне JSON/runtime helper'ов.
 - `game.js` больше не владеет формулой fence repair cost: boot обязан дождаться `Game.FenceRepair.loadTankPrices()` и `Game.FenceRepair.init({ getFenceConfig })`, а runtime-path ограничивается delegation через `getFenceRepairCostCoins()` и `tryRepairFenceSegmentAt()`. Config-first resolution order и cumulative surcharge живут в `src/mechanics/fenceRepair.js`, не в монолите.
-- Visual gate ауры танка живёт здесь, а не в sprite loader: `resolveTankAuraVisual(cellIndex, level)` использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально установленных чипов (red + yellow slots), активирует `aura1/aura2/aura3` по count `1..3`, а `drawTankAuraSprite()` даёт variant-specific runtime treatment поверх спрайта. Procedural fallback `drawTankAura()` берёт `auraOrbs` через `getAuraOrbsConfig()` из live cached `TankSprites.config`, который может быть явно обновлён `TankSprites.refreshConfig()` вне render hot path. `drawTankAura()` не fetch'ит JSON, не нормализует raw config и не мутирует state: [game.js](../../game.js#L14174-L14382), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L233-L258), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L617-L644).
+- Visual gate ауры танка живёт здесь, а не в sprite loader: `resolveTankAuraVisual(cellIndex, level)` использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально установленных чипов (red + yellow slots), активирует `aura1/aura2/aura3` по count `1..3`, а `drawTankAuraSprite()` даёт variant-specific runtime treatment поверх спрайта. Procedural fallback `drawTankAura()` берёт `auraOrbs` через `getAuraOrbsConfig()` из live cached `TankSprites.config`, который может быть явно обновлён `TankSprites.refreshConfig()` вне render hot path. `drawTankAura()` не fetch'ит JSON, не нормализует raw config и не мутирует state: [game.js](../../game.js#L14621-L14829), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L233-L258), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L617-L644).
 - Browser input guard живёт здесь, а не в разрозненных DOM-модулях: `game.js` ставит document-level `contextmenu` suppression один раз на страницу и тем самым удерживает legacy-path в том же no-context-menu contract, что и Phaser bootstrap. Не дублировать этот guard в каждом overlay и не удалять его без синхронного изменения `src/phaser/phaserBootstrap.js`: [game.js](../../game.js#L11153-L11157), [src/phaser/phaserBootstrap.js](../../src/phaser/phaserBootstrap.js#L106-L116).
 - Canvas pointer path обязан оставаться touch-safe: `preventTouchPointerDefault()` вызывается только для cancelable touch events, pointer capture снимается через `releaseCanvasPointer()` на `up/cancel`, а drag-state не должен обновляться до общего порога `6px`, чтобы tap по canvas не превращался в ложный drag.
 
@@ -93,12 +95,12 @@
 | Canvas / aliases / DOM refs | [game.js](../../game.js#L1-L109) | `canvas`, `ctx`, `window.Game`, `ui` |
 | Баланс / апгрейды / начальное состояние | [game.js](../../game.js#L110-L815) | `BAL`, cannon/fence/dron upgrades, `createInitialState()` |
 | Supercomputer state / sim clock / API refs | [game.js](../../game.js#L816-L1013) | `getComputerState()`, seeds, debug flag, world helpers |
-| i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L1875) | language, audio, `SupercomputerSprites`, loader wiring |
-| Board / layout / production line placement | [game.js](../../game.js#L2244-L2334) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
-| Core combat pipeline | [game.js](../../game.js#L5918-L6961) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `cleanupKills` |
-| Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L7107-L8838) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
+| i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L2335) | language, audio, `SupercomputerSprites`, loader wiring |
+| Board / layout / production line placement | [game.js](../../game.js#L2742-L2820) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
+| Core combat pipeline | [game.js](../../game.js#L8209-L9700) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `cleanupKills` |
+| Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L9750-L11900) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
 | Chip aura routing / HUD hover helpers | [game.js](../../game.js#L8102-L8159) | Installed chip count → aura variant selection |
-| World render | [game.js](../../game.js#L11127-L11200) | `draw()`: z-order: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay |
+| World render | [game.js](../../game.js#L12656-L12729) | `draw()`: z-order: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay |
 | Canvas pointer input | [game.js](../../game.js#L11319-L11405) | touch-safe drag/tap split, pointer capture, shared 6px threshold |
 | Step tail / loop / boot | [game.js](../../game.js#L11425-L11885) | `stepSupercomputer`, `loop`, `boot` |
 
@@ -112,19 +114,19 @@
 | `getDamagePoints()` / damage upgrade helpers | [game.js](../../game.js#L572-L693), [game.js](../../game.js#L878-L945), [game.js](../../game.js#L3282-L3313) | Damage points и per-stat apply/cost helpers для cannon/fence/dron modifiers modal |
 | `getComputerState()` / `getComputerLevel()` | [game.js](../../game.js#L818-L851) | Доступ к runtime суперкомпьютера |
 | `getTankWordKey(count)` | [game.js](../../game.js#L1064-L1082) | Pluralized i18n key для слова «танк»; делегирует в `Game.I18n.pluralize` с inline fallback |
-| `readMasterUiScale()` | [game.js](../../game.js#L2374-L2387) | Читает `--ui-scale` из `:root`/computed styles и отдаёт runtime-friendly число |
+| `readMasterUiScale()` | [game.js](../../game.js#L2672-L2685) | Читает `--ui-scale` из `:root`/computed styles и отдаёт runtime-friendly число |
 | `syncHybridUiScale(nextScale)` | [game.js](../../game.js#L2389-L2403) | Обновляет `HudAdapter`, `ModalAdapter` и `SceneOverlayManager` одним master scale token |
-| `resizeCanvas()` | [game.js](../../game.js#L2407-L2437) | Resize canvas + compute `--ui-scale = max(0.4, min(W/1920, H/1080))`, sync hybrid seam и `initBoard()` |
+| `resizeCanvas()` | [game.js](../../game.js#L2705-L2735) | Resize canvas + compute `--ui-scale = max(0.4, min(W/1920, H/1080))`, sync hybrid seam и `initBoard()` |
 | `getFenceRepairCostCoins(fenceLevel, repairCount)` | [game.js](../../game.js#L2278-L2285) | Delegation helper: отдаёт repair price из `window.Game.FenceRepair`, а не держит локальную формулу |
 
 ### Layout / world init
 | Функция | Строки | Назначение |
 |---|---|---|
 | `DESKTOP_CELL_BASE` / `applyBalScale(scale)` | [game.js](../../game.js#L2336-L2370) | Desktop-responsive cellW/cellH: `DESKTOP_CELL_BASE=42` × clamped scale вместо hardcoded `70`; upper clamp `1.35` убран, полное пропорциональное масштабирование |
-| `initBoard()` | [game.js](../../game.js#L2244-L2334) | Геометрия карты, fence, supercomputer, production line layout |
+| `initBoard()` | [game.js](../../game.js#L2742-L2820) | Геометрия карты, fence, supercomputer, production line layout |
 | `getTankPrintDurationSec()` | [game.js](../../game.js#L2744-L2756) | Единая длительность печати/штампа из `assets/tanks.json` |
 | `makeTank()` | [game.js](../../game.js#L2725-L2794) | Создание танка, включая stamp/runtime flags |
-| `performTankPurchaseOnce()` | [game.js](../../game.js#L3289-L3307) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
+| `performTankPurchaseOnce()` | [game.js](../../game.js#L4318-L4336) | Покупка танка и старт окна `buildTank` у суперкомпьютера |
 | `checkPerfectFenceWave()` | [game.js](../../game.js#L3481-L3490) | Проверка идеального завершения волны (fence без повреждений); использует `continue` для invalid сегментов |
 | `getHangarMasterThresholds()` | [game.js](../../game.js#L3497-L3518) | Config-driven thresholds для hangar_master: читает achievement defs по `familyId='hangar_master'`, fallback на hardcoded `[60,40,20,10,1]` |
 | `computeHangarMasterLevel()` | [game.js](../../game.js#L3519-L3545) | Вычисляет tier hangar_master по min tank level среди первых 15 ячеек; использует `getHangarMasterThresholds()` |
@@ -136,18 +138,18 @@
 | `resetDefenseOrderAchievementProgress()` | [game.js](../../game.js#L3433-L3440) | Обнуление defense_order streak |
 | `invalidateDefenseOrderEpisode()` | [game.js](../../game.js#L3442-L3446) | Инвалидация defense_order episode при merge во время волны |
 | `finalizeDefenseOrderEpisode()` | [game.js](../../game.js#L3448-L3453) | Финализация defense_order episode при выходе из attack mode |
-| `getTalentV2ActiveIconByBranch()` / `getTalentV2ActiveIconUrlByBranch()` | [game.js](../../game.js#L3759-L3802) | Branch → active talent icon key/url для stage HUD |
-| `getInstalledChipCountForCell()` / `resolveTankAuraVisual()` | [game.js](../../game.js#L13267-L13296) | Считает реально установленные чипы в ячейке (red+yellow slots) и выбирает aura variant/fallback band |
+| `getTalentV2ActiveIconByBranch()` / `getTalentV2ActiveIconUrlByBranch()` | [game.js](../../game.js#L5383-L5426) | Branch → active talent icon key/url для stage HUD |
+| `getInstalledChipCountForCell()` / `resolveTankAuraVisual()` | [game.js](../../game.js#L14485-L14514) | Считает реально установленные чипы в ячейке (red+yellow slots) и выбирает aura variant/fallback band |
 
 ### Combat / cleanup hooks
 | Функция | Строки | Назначение |
 |---|---|---|
 | `restoreFullState()` | [game.js](../../game.js#L4179-L4580) | Полное восстановление сейва / post-restore sync |
-| `stepZombies()` | [game.js](../../game.js#L7667-L7900) | Zombie AI / movement / fence interaction / unstick mechanism |
-| `stepTanks()` | [game.js](../../game.js#L6167-L6538) | Танки, таргетинг, стрельба |
-| `spawnProjectile()` | [game.js](../../game.js#L6539-L6638) | Projectile pool / init |
-| `impactAt()` | [game.js](../../game.js#L6639-L6960) | Impact effects / damage application |
-| `cleanupKills()` | [game.js](../../game.js#L6961-L7106) | Награды за убийство, XP, conveyor work trigger |
+| `stepZombies()` | [game.js](../../game.js#L8209-L8442) | Zombie AI / movement / fence interaction / unstick mechanism |
+| `stepTanks()` | [game.js](../../game.js#L8495-L8866) | Танки, таргетинг, стрельба |
+| `spawnProjectile()` | [game.js](../../game.js#L9035-L9134) | Projectile pool / init |
+| `impactAt()` | [game.js](../../game.js#L9175-L9496) | Impact effects / damage application |
+| `cleanupKills()` | [game.js](../../game.js#L9546-L9691) | Награды за убийство, XP, conveyor work trigger |
 
 ### UI / reset / menus
 | Функция | Строки | Назначение |
@@ -157,20 +159,20 @@
 | `restartSimulationPartial()` | [game.js](../../game.js#L7742-L7760) | Partial restart orchestration |
 | `applyCriticalRestartPostLoad()` | [game.js](../../game.js#L7761-L7870) | Critical restart post-load normalization, включая reset purchase baseline |
 | `resetGameState()` | [game.js](../../game.js#L7875-L7952) | Full reset; `new_game` path даёт baseline `computerLevel=0`, `xpToNext=50`, free talent points = `0` |
-| `updateTalentAbilitySlotsV2()` / `updateStageAbilitySlots()` | [game.js](../../game.js#L8688-L8838) | Runtime icon wiring, charge badges, cooldown fill и HUD slot delegation |
+| `updateTalentAbilitySlotsV2()` / `updateStageAbilitySlots()` | [game.js](../../game.js#L11667-L11817) | Runtime icon wiring, charge badges, cooldown fill и HUD slot delegation |
 | `updateTalentUI()` | [game.js](../../game.js#L8822-L9338) | Talents DOM refresh / HUD slots |
 
 ### Render / world draw
 | Функция | Строки | Назначение |
 |---|---|---|
-| `draw()` | [game.js](../../game.js#L9339-L9398) | Main render orchestrator |
-| `drawTankAuraSprite()` | [game.js](../../game.js#L13421-L13532) | Variant-specific aura sprite render: glow/ring/accent treatment для `aura1/aura2/aura3` |
-| `computeAuraBand()` | [game.js](../../game.js#L13297-L13310) | Fallback aura band, если sprite variant не найден |
-| `drawScaledDebuffExpiryOverlay()` / `drawScaledZombieDebuffOverlays()` | [game.js](../../game.js#L11561-L11643) | Shared debuff icon + expiry wedge/dot scale path от `debuffIconScale` |
+| `draw()` | [game.js](../../game.js#L12656-L12715) | Main render orchestrator |
+| `drawTankAuraSprite()` | [game.js](../../game.js#L14621-L14732) | Variant-specific aura sprite render: glow/ring/accent treatment для `aura1/aura2/aura3` |
+| `computeAuraBand()` | [game.js](../../game.js#L14527-L14540) | Fallback aura band, если sprite variant не найден |
+| `drawScaledDebuffExpiryOverlay()` / `drawScaledZombieDebuffOverlays()` | [game.js](../../game.js#L12561-L12643) | Shared debuff icon + expiry wedge/dot scale path от `debuffIconScale` |
 | `drawBackground()` / `drawTankTrack()` | [game.js](../../game.js#L9490-L9568) | Фон и track |
-| `drawSupercomputerSpriteClip()` | [game.js](../../game.js#L9699-L9724) | Root sprite + animation effects |
+| `drawSupercomputerSpriteClip()` | [game.js](../../game.js#L13111-L13136) | Root sprite + animation effects |
 | `drawSupercomputerHpBar()` / `drawSupercomputerHpBarOverlay()` | [game.js](../../game.js#L9725-L9755) | Финальный HP overlay |
-| `drawSupercomputer()` | [game.js](../../game.js#L9774-L9794) | Root supercomputer draw |
+| `drawSupercomputer()` | [game.js](../../game.js#L13297-L13317) | Root supercomputer draw |
 | `renderFenceHpBars()` | [game.js](../../game.js#L10331-L10350) | Fence HP bars поверх зомби/трупов |
 | `drawBoard()` | [game.js](../../game.js#L10460-L10520) | Hangar cells / board |
 | `drawTankSlot()` / `drawTankIconWithStampReveal()` | [game.js](../../game.js#L10521-L10585) | Hangar slot visuals |
@@ -181,8 +183,8 @@
 | Функция | Строки | Назначение |
 |---|---|---|
 | `stepSupercomputer()` | [game.js](../../game.js#L11425-L11459) | Supercomputer state tick |
-| `loop()` | [game.js](../../game.js#L11460-L11713) | Step + draw + runtime sync |
-| `boot()` | [game.js](../../game.js#L11714-L11885) | Загрузка JSON, sprites, bootstrap controllers; инициализирует `Game.FenceRepair` до старта симуляции |
+| `loop()` | [game.js](../../game.js#L15437-L15690) | Step + draw + runtime sync |
+| `boot()` | [game.js](../../game.js#L16358-L16529) | Загрузка JSON, sprites, bootstrap controllers; инициализирует `Game.FenceRepair` до старта симуляции |
 
 ## Горячие зоны от 2026-03-06
 - `SupercomputerSprites` → `ProductionLineRender` wiring: [game.js](../../game.js#L1869-L1875)
@@ -218,10 +220,10 @@
 | 4280 | `tankLevelCounts()` |
 | 4300 | `zombieLevelWeights()` |
 | 5850 | `fireTankProjectile(tank, cell, target)` |
-| 5900 | `spawnProjectile(opts)` |
-| 5950 | `stepProjectiles(dt)` |
+| 9035 | `spawnProjectile(opts)` |
+| 9075 | `stepProjectiles(dt)` |
 | 6028 | `critChanceFromTankLevel(level)` |
-| 6034 | `impactAt(x, y, b, opts)` |
+| 9175 | `impactAt(x, y, b, opts)` |
 | 6096 | `chainLightning(x, y, b, opts)` |
 
 ### Зомби
@@ -236,13 +238,13 @@
 | 5300 | `applyFenceSegmentDamage(seg, damage)` |
 | 5350 | `getZombieFinalAttackDamage(z)` |
 | 5360 | `startZombieDying(z)` |
-| 5400 | `stepZombies(dt)` |
+| 8209 | `stepZombies(dt)` |
 | 5715 | `zombieFenceLimit(z)` |
 
 ### Танки
 | Строка | Функция |
 |---|---|
-| 5700 | `stepTanks(dt)` |
+| 8495 | `stepTanks(dt)` |
 | 5800 | `tankOrbitState(cell, timeSec)` |
 
 ### Fence
@@ -286,7 +288,7 @@
 ### Kill / Respawn / Particles
 | Строка | Функция |
 |---|---|
-| 6310 | `cleanupKills()` |
+| 9546 | `cleanupKills()` |
 | 6342 | `particle(x, y, r, color, life)` |
 | 6348 | `burst(x, y, count, color)` |
 | 6354 | `popText(x, y, text, color)` |
@@ -398,7 +400,7 @@
 ### Render (draw*)
 | Строка | Функция |
 |---|---|
-| 8409 | `draw()` — main render orchestrator |
+| 12656 | `draw()` — main render orchestrator |
 | 8439 | `drawZombieAttackOverlay()` |
 | 8485 | `drawAttackModeEveningDim()` |
 | 8498 | `drawLevelUpVfx()` |
@@ -410,7 +412,7 @@
 | 8615 | `drawTankTrack()` |
 | 8660 | `drawSupercomputerHpBar(sc, hpBarCfg)` |
 | 8688 | `drawSupercomputerFallback(sc)` |
-| 8708 | `drawSupercomputer()` |
+| 13297 | `drawSupercomputer()` |
 | 8981 | `drawSupercomputerBoostIcons()` |
 | 9079 | `drawDrones()` |
 | 9091 | `drawZombieFence()` |
@@ -425,10 +427,10 @@
 | 9370 | `drawTankIcon(x, y, level, mutedSlot)` |
 | 9374 | `getOnTrackIconOpacity()` |
 | 9383 | `drawTankIconTo(targetCtx, x, y, level, mutedSlot, scaleMul)` |
-| 9503 | `computeAuraBand(level)` |
-| 9527 | `drawTankAura(x, y, band)` |
-| 9587 | `drawTankAuraSprite(x, y, aura)` |
-| 9634 | `drawTank(x, y, tank, ghost, rotation, showLevelLabel, isDragPreview)` |
+| 14527 | `computeAuraBand(level)` |
+| 14583 | `drawTankAura(x, y, band)` |
+| 14621 | `drawTankAuraSprite(x, y, aura)` |
+| 14692 | `drawTank(x, y, tank, ghost, rotation, showLevelLabel, isDragPreview)` |
 | 9808 | `drawZombies()` |
 | 9814 | `drawZombieEntity(z, x, y)` |
 | 9821 | `drawZombieSprite(x, y, z)` |
@@ -457,7 +459,7 @@
 | Строка | Функция |
 |---|---|
 | 10315 | `stepImpacts(dt)` |
-| 10328 | `setSupercomputerWantsBuildTank(wantsBuildTank)` |
+| 15346 | `setSupercomputerWantsBuildTank(wantsBuildTank)` |
 | 10337 | `applySupercomputerDamage(baseDamage)` |
 | 10375 | `stepSupercomputer(dt)` |
 
@@ -478,7 +480,7 @@
 | Строка | Функция |
 |---|---|
 | 10401 | `scheduleMainLoop()` |
-| 10407 | `loop(now)` |
+| 15437 | `loop(now)` |
 
 ### Debug
 | Строка | Функция |

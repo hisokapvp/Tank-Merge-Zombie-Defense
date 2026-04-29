@@ -5,7 +5,7 @@
 #   1. Resolve OUT_ROOT (default `dist/release`) and TS (UTC, sortable).
 #   2. Invoke `node ci/build_release.mjs --out "$OUT_DIR" [--yandex] [--no-zip]`.
 #   3. The Node helper performs whitelist copy, computes per-file SHA-256,
-#      injects ?v=<sha8> cache-busting markers into the copied index.html,
+#      injects ?v=<sha12> cache-busting markers into the copied index.html,
 #      writes release_manifest.json, optionally injects the Yandex SDK seam,
 #      and creates a zip archive of the output folder.
 #
@@ -58,21 +58,16 @@ if ! command -v node >/dev/null 2>&1; then
   exit 4
 fi
 
+# Cross-platform deterministic zip is now produced by ci/build_release.mjs itself
+# (solo-pipeline-yandex-vk#1 / item 1). PowerShell `Compress-Archive` and the
+# Windows `zip` ports both wrote ZIP entries with backslash separators, which
+# Yandex Games CDN treated as flat filenames -> mass 404 on /src/**, /assets/**,
+# /vendor/**. The Node writer always emits forward-slash entries per APPNOTE.TXT.
+if [[ "${DO_ZIP}" -eq 0 ]]; then
+  EXTRA_FLAGS+=("--no-zip")
+fi
+
 printf "[build_release] OUT_DIR=%s\n" "${OUT_DIR}"
 node "${ROOT_DIR}/ci/build_release.mjs" --root "${ROOT_DIR}" --out "${OUT_DIR}" "${EXTRA_FLAGS[@]}"
-
-if [[ "${DO_ZIP}" -eq 1 ]]; then
-  ZIP_PATH="${OUT_DIR}.zip"
-  printf "[build_release] zipping -> %s\n" "${ZIP_PATH}"
-  if command -v zip >/dev/null 2>&1; then
-    ( cd "${OUT_ROOT}" && zip -qr "${ZIP_PATH}" "${TS}" )
-  elif command -v powershell.exe >/dev/null 2>&1; then
-    powershell.exe -NoProfile -Command "Compress-Archive -Path '${OUT_DIR}\\*' -DestinationPath '${ZIP_PATH}' -Force" >/dev/null
-  elif command -v pwsh >/dev/null 2>&1; then
-    pwsh -NoProfile -Command "Compress-Archive -Path '${OUT_DIR}/*' -DestinationPath '${ZIP_PATH}' -Force" >/dev/null
-  else
-    printf "WARN: no zip / Compress-Archive available; skipping archive.\n" >&2
-  fi
-fi
 
 printf "[build_release] done.\n"
