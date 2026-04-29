@@ -1,0 +1,6794 @@
+{
+  "_readme": "Новая схема: ключи tank_lvl1..tank_lvl60. Каждый уровень независим, без fallback-наследования.",
+  "_comment_projectileCount": "Опционально: stats.projectileCount задаёт количество базовых снарядов танка для конкретного tank_lvlN. Если поле не задано, runtime использует legacy level-based fallback.",
+  "tankScale": 2.5,
+  "maxLevel": 60,
+  "tankPrintDurationSec": 0.75,
+  "_comment_auraOrbs": "Параметры процедурного эффекта «3 фиолетовых огонька» вокруг танка. Все остальные ауры удалены. levelRange — [min,max] уровней (включительно), на которых эффект включён. color — RGBA-строка базового цвета круга и частиц. radius — радиус орбиты в px. alpha — прозрачность фонового круга (0..1). pulseSpeed — скорость пульсации радиуса. particleCount — фиксированное число частиц (если null — динамическое 2..4). particleSize — px радиус частицы. particleAlphaScale — alpha trailing-канала для частицы (0..1).",
+  "auraOrbs": {
+    "levelRange": [
+      56,
+      60
+    ],
+    "color": "rgba(186,140,255,0.99)",
+    "radius": 50,
+    "alpha": 0,
+    "pulseSpeed": 0,
+    "particleCount": null,
+    "particleSize": 3,
+    "particleAlphaScale": 0.5
+  },
+  "ui": {
+    "onTrackIconOpacity": 0.35
+  },
+  "hangarAnimations": {
+    "defaultCycle": [
+      "alertPulse",
+      "idleBob",
+      "hoverScan"
+    ],
+    "hoverScan": {
+      "effects": [
+        {
+          "preset": "float",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.1
+        },
+        {
+          "preset": "sway",
+          "angleDeg": 1.6,
+          "frequencyHz": 0.48,
+          "phase": 0.22
+        }
+      ]
+    },
+    "idleBob": {
+      "effects": [
+        {
+          "preset": "bob",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.35
+        },
+        {
+          "preset": "pulse",
+          "scaleMul": 0.01,
+          "frequencyHz": 5,
+          "phase": 0.18
+        }
+      ]
+    },
+    "alertPulse": {
+      "effects": [
+        {
+          "preset": "hover",
+          "amplitudeY": 0.5,
+          "frequencyHz": 5,
+          "phase": 0.52
+        },
+        {
+          "preset": "vibration",
+          "amplitudeX": 0.15,
+          "amplitudeY": 0.15,
+          "frequencyHz": 5,
+          "phase": 0.08
+        },
+        {
+          "preset": "pulse",
+          "scaleMul": 0.005,
+          "frequencyHz": 5,
+          "phase": 0.4
+        }
+      ]
+    }
+  },
+  "tank_lvl1": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 2600
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl1_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 2,
+      "attackSpeed": 2
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl2": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 2650
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl1_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 2,
+      "attackSpeed": 2
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl3": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 2700
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl1_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 3,
+      "attackSpeed": 3
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl4": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 2750
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl1_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 3,
+      "attackSpeed": 3
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl5": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 3200
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl1_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 4,
+      "attackSpeed": 4
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl6": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 3750
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl2_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 4,
+      "attackSpeed": 4
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 3,
+      "animSpeed": 3,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 0.8
+    },
+    "aura2": {
+      "src": "tanks/Aura2.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 3,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 0.8
+    },
+    "aura3": {
+      "src": "tanks/Aura3.png",
+      "frame": {
+        "x": 666,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 2
+    }
+  },
+  "tank_lvl7": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 4300
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl2_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 5,
+      "attackSpeed": 5
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl8": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 4800
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl2_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 5,
+      "attackSpeed": 5
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl9": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 5350
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl2_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 6,
+      "attackSpeed": 6
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl10": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 5900
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl2_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 6,
+      "attackSpeed": 6
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl11": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 5950
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl3_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 7,
+      "attackSpeed": 7
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl12": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6000
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl3_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 7,
+      "attackSpeed": 7
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl13": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6050
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl3_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 8,
+      "attackSpeed": 8
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl14": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6100
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl3_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 8,
+      "attackSpeed": 8
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl15": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6150
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl3_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 9,
+      "attackSpeed": 9
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl16": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6350
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl4_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 9,
+      "attackSpeed": 9
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl17": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 6750
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl4_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 10,
+      "attackSpeed": 10
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl18": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 7150
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl4_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 10,
+      "attackSpeed": 10
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl19": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 7500
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl4_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 11,
+      "attackSpeed": 11
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl20": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 10900
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl4_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 11,
+      "attackSpeed": 11
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl21": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 12400
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl5_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 12,
+      "attackSpeed": 12
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl22": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 12950
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl5_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 12,
+      "attackSpeed": 12
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl23": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 13550
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl5_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 13,
+      "attackSpeed": 13
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl24": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 14050
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl5_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 13,
+      "attackSpeed": 13
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl25": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 14650
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl5_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 14,
+      "attackSpeed": 14
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl26": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 15250
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl6_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 14,
+      "attackSpeed": 14
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl27": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 15800
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl6_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 15,
+      "attackSpeed": 15
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl28": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 16350
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl6_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 15,
+      "attackSpeed": 15
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl29": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 16900
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl6_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 16,
+      "attackSpeed": 16
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl30": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 16950
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl6_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 16,
+      "attackSpeed": 16
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl31": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 17200
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl7_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 17,
+      "attackSpeed": 17
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl32": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 17700
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl7_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 17,
+      "attackSpeed": 17
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl33": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 18250
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl7_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 18,
+      "attackSpeed": 18
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl34": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 18800
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl7_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 18,
+      "attackSpeed": 18
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl35": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 19350
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl7_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 19,
+      "attackSpeed": 19
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl36": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 19850
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl8_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 19,
+      "attackSpeed": 19
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl37": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 20400
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl8_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 20,
+      "attackSpeed": 20
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl38": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 20950
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl8_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 20,
+      "attackSpeed": 20
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl39": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 21500
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl8_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 21,
+      "attackSpeed": 21
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl40": {
+    "stats": {
+      "projectileCount": 1,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22000
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl8_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 21,
+      "attackSpeed": 21
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl41": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22025
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl9_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 22,
+      "attackSpeed": 22
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl42": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22050
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl9_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 22,
+      "attackSpeed": 22
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl43": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22075
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl9_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 23,
+      "attackSpeed": 23
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl44": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22100
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl9_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 23,
+      "attackSpeed": 23
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl45": {
+    "stats": {
+      "projectileCount": 2,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22225
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl9_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 24,
+      "attackSpeed": 24
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl46": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 22725
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl10_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 24,
+      "attackSpeed": 24
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl47": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 23225
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl10_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 25,
+      "attackSpeed": 25
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl48": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 23675
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl10_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 25,
+      "attackSpeed": 25
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl49": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24175
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl10_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 26,
+      "attackSpeed": 26
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl50": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24650
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl10_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 26,
+      "attackSpeed": 26
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl51": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24655
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl11_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 27,
+      "attackSpeed": 27
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl52": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24660
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl11_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 27,
+      "attackSpeed": 27
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl53": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24665
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl11_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 28,
+      "attackSpeed": 28
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl54": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24670
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl11_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 28,
+      "attackSpeed": 28
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl55": {
+    "stats": {
+      "projectileCount": 3,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24675
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl11_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 60,
+      "fireFrame": 5,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.7
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 28,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 2,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 29,
+      "attackSpeed": 29
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl56": {
+    "stats": {
+      "projectileCount": 4,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24690
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl12_desert.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 40,
+      "fireFrame": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 20,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 29,
+      "attackSpeed": 29
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl57": {
+    "stats": {
+      "projectileCount": 4,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24715
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl12_green.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 40,
+      "fireFrame": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 20,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 30,
+      "attackSpeed": 30
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl58": {
+    "stats": {
+      "projectileCount": 4,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24740
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl12_blue.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 40,
+      "fireFrame": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 20,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 30,
+      "attackSpeed": 30
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl59": {
+    "stats": {
+      "projectileCount": 4,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24765
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl12_red.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 40,
+      "fireFrame": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 20,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 31,
+      "attackSpeed": 31
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  },
+  "tank_lvl60": {
+    "stats": {
+      "projectileCount": 4,
+      "moveSpeed": 1,
+      "attackSpeed": 1,
+      "baseDamage": 24790
+    },
+    "body": {
+      "src": "tanks/body_all.png",
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 2,
+      "animSpeed": 2,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.6
+      },
+      "scale": 1
+    },
+    "cannon": {
+      "src": "tanks/cannon_lvl12_purple.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "frames": 8,
+      "animSpeed": 40,
+      "fireFrame": 7,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.55
+      },
+      "scale": 1,
+      "muzzle": {
+        "x": 20,
+        "y": -2
+      },
+      "recoil": 4
+    },
+    "bulletId": "bullet_base",
+    "bulletLevel": 1,
+    "upgradeDamagePointsCosts": {
+      "baseDamage": 31,
+      "attackSpeed": 31
+    },
+    "aura1": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura2": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    }
+  }
+}

@@ -1,0 +1,570 @@
+/**
+ * MergePopup — state-machine merge popup with asset display, stats and manual close.
+ * States: IDLE → MERGE_ANIM (3 s, plays once) → SHOWCASE (loop, fire) → IDLE (on close).
+ * Assets loaded from TankSprites (tanks.json). Stats computed from BAL constants.
+ * Buttons: #btn-fight / #btn-close / #mergePopupCloseX dismiss the popup.
+ */
+(function (global) {
+  'use strict';
+
+  /* ── constants ── */
+  var MERGE_ANIM_MS = 3000;
+  var SEEN_LEVELS_KEY = 'seenMergeLevels';
+  var STATE = { IDLE: 0, MERGE_ANIM: 1, SHOWCASE: 2 };
+
+  /* ── internal state ── */
+  var seenLevels = {};
+  var currentState = STATE.IDLE;
+  var animFrame = null;
+  var shootTimer = null;
+  var mergeTimeout = null;
+  var currentLevel = 1;
+  var animStartTime = 0;
+  var previewModel = null;
+  var usePreview = false;
+  // QA (manual): in merge popup, right-side hull shot trace/flash must be absent;
+  // cannon fire/SFX and other popup loops remain unchanged.
+  var PREVIEW_UPDATE_OPTS = { disableRightHullShotFx: true };
+  var PREVIEW_RENDER_OPTS = { showRightHullShotFx: false };
+  var lastFrameTime = 0;
+  var lastCanvasW = 0;
+  var lastCanvasH = 0;
+
+  /* ── DOM refs ── */
+  var modal, canvas, ctxPopup, titleEl, subtitleEl, statsEl, btnFight, btnClose, btnCloseX;
+
+  function getI18n() {
+    return global.Game && global.Game.I18n ? global.Game.I18n : null;
+  }
+
+  function t(key, vars) {
+    var i18n = getI18n();
+    if (i18n && typeof i18n.t === 'function') return i18n.t(key, vars || {});
+    return key;
+  }
+
+  function emitTelemetry(event, payload) {
+    if (global.Game && global.Game.EventTelemetry && typeof global.Game.EventTelemetry.emit === 'function') {
+      global.Game.EventTelemetry.emit(event, payload);
+      return;
+    }
+    if (global.Game && global.Game.TelemetryLogger) {
+      global.Game.TelemetryLogger.log(event, payload);
+    }
+    if (global.Game && global.Game.AnalyticsCollector) {
+      global.Game.AnalyticsCollector.track(event, payload);
+    }
+  }
+
+  /* ═══════════════ Persistence ═══════════════ */
+  function loadSeenLevels() {
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.load === 'function') {
+      return storage.load(SEEN_LEVELS_KEY);
+    }
+    try {
+      var raw = global.localStorage && global.localStorage.getItem(SEEN_LEVELS_KEY);
+      if (!raw) return {};
+      var data = JSON.parse(raw);
+      return typeof data === 'object' && data !== null ? data : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveSeenLevels() {
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.save === 'function') {
+      storage.save(SEEN_LEVELS_KEY, seenLevels);
+      return;
+    }
+    try {
+      if (global.localStorage) global.localStorage.setItem(SEEN_LEVELS_KEY, JSON.stringify(seenLevels));
+    } catch (e) {}
+  }
+
+  function markLevelSeen(level) {
+    seenLevels[level] = true;
+    saveSeenLevels();
+  }
+
+  function hasSeenLevel(level) {
+    return !!seenLevels[level];
+  }
+
+  /** Clear all seen-level flags (called on New Game). */
+  function resetSeenLevels() {
+    seenLevels = {};
+    var storage = global.Game && global.Game.MergePopupSeenLevels;
+    if (storage && typeof storage.reset === 'function') {
+      storage.reset(SEEN_LEVELS_KEY);
+      return;
+    }
+    try {
+      if (global.localStorage) global.localStorage.removeItem(SEEN_LEVELS_KEY);
+    } catch (e) {}
+  }
+
+  /* ═══════════════ Init ═══════════════ */
+  function init() {
+    seenLevels = loadSeenLevels();
+    modal      = document.getElementById('mergePopupModal');
+    canvas     = document.getElementById('mergePopupCanvas');
+    titleEl    = document.getElementById('mergePopupTitle');
+    subtitleEl = document.getElementById('mergePopupSubtitle');
+    statsEl    = document.getElementById('mergePopupStats');
+    btnFight   = document.getElementById('btn-fight');
+    btnClose   = document.getElementById('btn-close');
+    btnCloseX  = document.getElementById('mergePopupCloseX');
+
+    if (canvas) {
+      ctxPopup = canvas.getContext('2d');
+      ctxPopup.imageSmoothingEnabled = false;
+    }
+
+    // Buttons — the only way to close (manual close)
+    if (btnFight) {
+      btnFight.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnFight.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnClose.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+    }
+    if (btnCloseX) {
+      btnCloseX.addEventListener('click', function (e) { e.stopPropagation(); close(); });
+      btnCloseX.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); close(); });
+    }
+    // NO global click-to-close — manual close only via buttons
+    if (global.Game && global.Game.A11y && modal) {
+      global.Game.A11y.registerModal(modal, { onClose: close, initialFocus: btnFight });
+    }
+
+    initPreview();
+  }
+
+  function initPreview() {
+    var MPModel = global.Game && global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.createModel === 'function') {
+      previewModel = MPModel.createModel();
+    }
+    usePreview = !!(previewModel && global.Game && global.Game.MergePreviewRenderer && global.Game.TankPortrait && global.Game.TankConfig);
+  }
+
+  function refreshPreview(level) {
+    if (!usePreview || !previewModel) return;
+    var MPModel = global.Game.MergePreviewModel;
+    if (!MPModel || typeof MPModel.reset !== 'function') return;
+    MPModel.reset(previewModel, { level: level });
+    updatePreviewLayout();
+    lastFrameTime = performance.now();
+  }
+
+  function updatePreviewLayout() {
+    if (!usePreview || !previewModel || !canvas) return;
+    var w = canvas.width || 0;
+    var h = canvas.height || 0;
+    if (!w || !h) return;
+    if (w === lastCanvasW && h === lastCanvasH) return;
+    lastCanvasW = w;
+    lastCanvasH = h;
+    var MPModel = global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.setLayout === 'function') {
+      MPModel.setLayout(previewModel, w, h);
+    }
+  }
+
+  function applyPreviewPositions(phase) {
+    if (!usePreview || !previewModel) return;
+    var layout = previewModel.layout;
+    if (!layout || !layout.w) return;
+    var offset = Math.max(8, (layout.rightX - layout.leftX) * (1 - phase));
+    var leftX = currentState === STATE.MERGE_ANIM ? (layout.centerX - offset) : layout.leftX;
+    var rightX = currentState === STATE.MERGE_ANIM ? (layout.centerX + offset) : layout.rightX;
+    var MPModel = global.Game && global.Game.MergePreviewModel;
+    if (MPModel && typeof MPModel.setTankPositions === 'function') {
+      MPModel.setTankPositions(previewModel, leftX, rightX, layout.centerX, layout.centerY);
+    }
+  }
+
+  /* ═══════════════ Show / Close ═══════════════ */
+  function show(level) {
+    if (!modal || !canvas) {
+      console.warn('[MergePopup] DOM not initialized');
+      return false;
+    }
+    if (hasSeenLevel(level)) return false;
+
+    markLevelSeen(level);
+    currentLevel = level;
+
+    emitTelemetry('mergePopupShow', { level: level });
+
+    if (titleEl) titleEl.textContent = t('mergePopupTitle', { level: level });
+    if (subtitleEl) subtitleEl.textContent = t('mergePopupSubtitle');
+
+    updateStats(level);
+    refreshPreview(level);
+
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    if (global.document && global.document.body) {
+      global.document.body.classList.add('merge-popup-open');
+    }
+    if (global.Game && global.Game.A11y) {
+      global.Game.A11y.openModal(modal, { onClose: close, initialFocus: btnFight });
+    }
+
+    enterMergeAnim();
+    return true;
+  }
+
+  function close() {
+    if (currentState === STATE.IDLE) return;
+    stopAll();
+    currentState = STATE.IDLE;
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      if (global.document && global.document.body) {
+        global.document.body.classList.remove('merge-popup-open');
+      }
+      if (global.Game && global.Game.A11y) global.Game.A11y.closeModal(modal);
+    }
+    emitTelemetry('mergePopupClose', { level: currentLevel });
+  }
+
+  /* ═══════════════ State transitions ═══════════════ */
+  function enterMergeAnim() {
+    currentState = STATE.MERGE_ANIM;
+    animStartTime = performance.now();
+    lastFrameTime = animStartTime;
+    startRenderLoop();
+
+    if (mergeTimeout) clearTimeout(mergeTimeout);
+    mergeTimeout = setTimeout(function () {
+      mergeTimeout = null;
+      enterShowcase();
+    }, MERGE_ANIM_MS);
+  }
+
+  function enterShowcase() {
+    currentState = STATE.SHOWCASE;
+    animStartTime = performance.now();
+    if (!usePreview) startFireLoop();
+    // render loop continues from merge phase
+  }
+
+  function getTankStatsSnapshot(level) {
+    var tankCfg = global.TankSprites && typeof global.TankSprites.getTank === 'function'
+      ? global.TankSprites.getTank(level)
+      : null;
+    var statsCfg = tankCfg && tankCfg.stats ? tankCfg.stats : null;
+    return {
+      damage: Number.isFinite(statsCfg && statsCfg.baseDamage) ? statsCfg.baseDamage : null,
+      attackSpeed: Number.isFinite(statsCfg && statsCfg.attackSpeed) && statsCfg.attackSpeed > 0 ? statsCfg.attackSpeed : null,
+    };
+  }
+
+  /* ═══════════════ Stats display ═══════════════ */
+  function updateStats(level) {
+    if (!statsEl) return;
+    var helper = global.Game && global.Game.MergePopupStats;
+    if (helper && typeof helper.buildRows === 'function') {
+      statsEl.innerHTML = helper.buildRows(level, t, global.BAL || {});
+      return;
+    }
+
+    var BAL = global.BAL || {};
+  var tankStats = getTankStatsSnapshot(level);
+  var dmg = tankStats.damage != null ? tankStats.damage : (BAL.dmgBase || 7) * Math.pow(BAL.dmgMultPerLevel || 1, level - 1);
+  var fr  = tankStats.attackSpeed != null ? tankStats.attackSpeed : (BAL.fireRateBase || 1);
+    var range = 315;
+    var N = level <= 5 ? 1 : level <= 10 ? 2 : 3;
+    var fmt = function (n) { return n < 10 ? n.toFixed(1) : Math.round(n).toString(); };
+
+    var rows =
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupDamageLabel') + ':</span> ' + fmt(dmg) + (N > 1 ? ' <small>(' + N + '×' + fmt(dmg / N) + ')</small>' : '') + '</div>' +
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupFireRateLabel') + ':</span> ' + fr.toFixed(2) + t('mergePopupRateUnit') + '</div>' +
+      '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' + t('mergePopupRangeLabel') + ':</span> ' + range + '</div>';
+    if (N > 1) {
+      rows += '<div class="mergePopupModal__stat"><span class="mergePopupModal__statLabel">' +
+        t('mergePopupBarrelsLabel') + ':</span> ' + N + '</div>';
+    }
+    statsEl.innerHTML = rows;
+  }
+
+  /* ═══════════════ Animation loops ═══════════════ */
+  function startRenderLoop() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = requestAnimationFrame(function loop() {
+      if (currentState === STATE.IDLE) return;
+      renderFrame();
+      animFrame = requestAnimationFrame(loop);
+    });
+  }
+
+  function startFireLoop() {
+    var tankStats = getTankStatsSnapshot(currentLevel);
+    var fireRate = tankStats.attackSpeed != null ? tankStats.attackSpeed : ((global.BAL && global.BAL.fireRateBase) || 1);
+    var cooldownMs = Math.max(80, 1000 / fireRate);
+
+    fireShotEffect(currentLevel);
+    if (shootTimer) clearInterval(shootTimer);
+    shootTimer = setInterval(function () {
+      if (currentState !== STATE.SHOWCASE) return;
+      fireShotEffect(currentLevel);
+    }, cooldownMs);
+  }
+
+  function stopAll() {
+    if (animFrame)    { cancelAnimationFrame(animFrame); animFrame = null; }
+    if (shootTimer)   { clearInterval(shootTimer); shootTimer = null; }
+    if (mergeTimeout) { clearTimeout(mergeTimeout); mergeTimeout = null; }
+    lastFrameTime = 0;
+  }
+
+  /* ═══════════════ Shot FX ═══════════════ */
+  function fireShotEffect(level) {
+    if (global.playSfx) {
+      var sfxId = level >= 20 ? 'shootHeavy' : 'shootNormal';
+      global.playSfx(sfxId);
+    }
+  }
+
+  /* ═══════════════ Render ═══════════════ */
+  function renderFrame() {
+    if (!ctxPopup || !canvas) return;
+    var w = canvas.width;
+    var h = canvas.height;
+    var now = performance.now();
+    var dt = (now - lastFrameTime) / 1000;
+    if (!Number.isFinite(dt) || dt <= 0) dt = 1 / 60;
+    if (dt > 0.05) dt = 0.05;
+    lastFrameTime = now;
+
+    ctxPopup.clearRect(0, 0, w, h);
+
+    if (usePreview && previewModel && global.Game && global.Game.MergePreviewModel && global.Game.MergePreviewRenderer) {
+      updatePreviewLayout();
+      if (currentState === STATE.MERGE_ANIM) {
+        var elapsedPreview = (now - animStartTime) / 1000;
+        var totalPreviewSec = MERGE_ANIM_MS / 1000;
+        var phasePreview = Math.min(1, elapsedPreview / (totalPreviewSec * 0.35));
+        applyPreviewPositions(phasePreview);
+        global.Game.MergePreviewModel.update(previewModel, dt, PREVIEW_UPDATE_OPTS);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, phasePreview, PREVIEW_RENDER_OPTS);
+      } else if (currentState === STATE.SHOWCASE) {
+        applyPreviewPositions(1);
+        global.Game.MergePreviewModel.update(previewModel, dt, PREVIEW_UPDATE_OPTS);
+        global.Game.MergePreviewRenderer.render(ctxPopup, previewModel, currentState, 1, PREVIEW_RENDER_OPTS);
+      }
+      return;
+    }
+
+    if (currentState === STATE.MERGE_ANIM) {
+      var elapsed = (performance.now() - animStartTime) / 1000;
+      var totalSec = MERGE_ANIM_MS / 1000;
+      // Merge phase occupies first 35 % of the 3 s window
+      var mergePhase = Math.min(1, elapsed / (totalSec * 0.35));
+      drawMergeScene(mergePhase, elapsed);
+    } else if (currentState === STATE.SHOWCASE) {
+      var showcaseElapsed = (performance.now() - animStartTime) / 1000;
+      drawShowcaseScene(showcaseElapsed);
+    }
+
+  }
+
+  /* ═══════════════ Scene drawing ═══════════════ */
+  function drawMergeScene(phase, elapsed) {
+    var w = canvas.width, h = canvas.height;
+    var cx = w / 2, cy = h / 2;
+    var ease = function (t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; };
+    var eased = ease(phase);
+
+    if (phase < 1) {
+      // Two tanks converging
+      var offset = 40 * (1 - eased);
+      var alphaVal = 0.7 + 0.3 * (1 - eased);
+
+      ctxPopup.save(); ctxPopup.globalAlpha = alphaVal;
+      drawTankSprite(ctxPopup, cx - offset - 15, cy, Math.max(1, currentLevel - 1), 0.7);
+      ctxPopup.restore();
+
+      ctxPopup.save(); ctxPopup.globalAlpha = alphaVal;
+      drawTankSprite(ctxPopup, cx + offset + 15, cy, Math.max(1, currentLevel - 1), 0.7);
+      ctxPopup.restore();
+
+      if (phase > 0.7) {
+        var flashAlpha = (phase - 0.7) / 0.3;
+        ctxPopup.save();
+        ctxPopup.globalAlpha = flashAlpha * 0.8;
+        var grad = ctxPopup.createRadialGradient(cx, cy, 0, cx, cy, 50);
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(0.5, '#7dffb2');
+        grad.addColorStop(1, 'transparent');
+        ctxPopup.fillStyle = grad;
+        ctxPopup.fillRect(cx - 60, cy - 60, 120, 120);
+        ctxPopup.restore();
+      }
+    } else {
+      // Post-merge: reveal new tank with pulse
+      var pulse = 1 + 0.05 * Math.sin(elapsed * 8);
+      ctxPopup.save();
+      ctxPopup.globalAlpha = 0.4;
+      var glow = ctxPopup.createRadialGradient(cx, cy, 0, cx, cy, 45);
+      glow.addColorStop(0, '#7dffb2');
+      glow.addColorStop(1, 'transparent');
+      ctxPopup.fillStyle = glow;
+      ctxPopup.fillRect(cx - 50, cy - 50, 100, 100);
+      ctxPopup.restore();
+      drawTankSprite(ctxPopup, cx, cy, currentLevel, pulse);
+    }
+  }
+
+  function drawShowcaseScene(elapsed) {
+    var w = canvas.width, h = canvas.height;
+    var cx = w / 2, cy = h / 2;
+    var pulse = 1 + 0.03 * Math.sin(elapsed * 4);
+
+    ctxPopup.save();
+    ctxPopup.globalAlpha = 0.3;
+    var glow = ctxPopup.createRadialGradient(cx, cy, 0, cx, cy, 50);
+    glow.addColorStop(0, '#7dffb2');
+    glow.addColorStop(1, 'transparent');
+    ctxPopup.fillStyle = glow;
+    ctxPopup.fillRect(cx - 55, cy - 55, 110, 110);
+    ctxPopup.restore();
+
+    drawTankSprite(ctxPopup, cx, cy, currentLevel, pulse);
+  }
+
+  /* ═══════════════ Tank sprite ═══════════════ */
+  function drawTankSprite(targetCtx, x, y, level, scale) {
+    scale = scale || 1;
+
+    // Try TankSprites (tanks.json assets)
+    if (global.TankSprites && global.TankSprites.pickBody && global.TankSprites.pickCannon) {
+      var body   = global.TankSprites.pickBody(level);
+      var cannon = global.TankSprites.pickCannon(level);
+      if (body && cannon) {
+        var bodyW = (body.cfg.frame && body.cfg.frame.w) || body.img.width;
+        var bodyH = (body.cfg.frame && body.cfg.frame.h) || body.img.height;
+        var bodyFrameX = (body.cfg.frame && body.cfg.frame.x) || 0;
+        var bodyFrameY = (body.cfg.frame && body.cfg.frame.y) || 0;
+        var maxW = 60 * scale;
+        var maxH = 45 * scale;
+        var imgScale = Math.min(maxW / bodyW, maxH / bodyH);
+
+        targetCtx.save();
+        targetCtx.translate(x, y);
+        var drawW = bodyW * imgScale;
+        var drawH = bodyH * imgScale;
+        var bodyAnchor = body.cfg.anchor || { x: 0.5, y: 0.6 };
+        targetCtx.drawImage(
+          body.img,
+          bodyFrameX, bodyFrameY, bodyW, bodyH,
+          -drawW * bodyAnchor.x, -drawH * bodyAnchor.y, drawW, drawH
+        );
+
+        var cannonW = (cannon.cfg.frame && cannon.cfg.frame.w) || cannon.img.width;
+        var cannonH = (cannon.cfg.frame && cannon.cfg.frame.h) || cannon.img.height;
+        var cannonAnchor = cannon.cfg.anchor || { x: 0.35, y: 0.5 };
+        var cannonDrawW = cannonW * imgScale;
+        var cannonDrawH = cannonH * imgScale;
+        targetCtx.drawImage(
+          cannon.img,
+          0, 0, cannonW, cannonH,
+          -cannonDrawW * cannonAnchor.x, -cannonDrawH * cannonAnchor.y, cannonDrawW, cannonDrawH
+        );
+
+        targetCtx.restore();
+        return;
+      }
+    }
+
+    // Fallback: geometric tank
+    var tier = Math.floor((level - 1) / 3);
+    var colors = ['#b83232', '#c63a3a', '#d14646', '#e05a5a', '#f07171'];
+    var hull = colors[Math.min(tier, colors.length - 1)];
+
+    targetCtx.save();
+    targetCtx.translate(x, y);
+    targetCtx.scale(scale * 0.8, scale * 0.8);
+
+    // Shadow
+    targetCtx.fillStyle = 'rgba(0,0,0,.35)';
+    roundRect(targetCtx, -22, 8, 44, 10, 5);
+    targetCtx.fill();
+
+    // Body
+    targetCtx.fillStyle = hull;
+    roundRect(targetCtx, -20, -12, 40, 24, 6);
+    targetCtx.fill();
+
+    // Turret
+    targetCtx.fillStyle = shadeColor(hull, -18);
+    targetCtx.beginPath();
+    targetCtx.arc(0, -2, 10, 0, Math.PI * 2);
+    targetCtx.fill();
+
+    // Cannon
+    targetCtx.fillStyle = shadeColor(hull, -30);
+    roundRect(targetCtx, 5, -5, 25, 6, 2);
+    targetCtx.fill();
+
+    // Level label
+    targetCtx.fillStyle = '#eaf1ff';
+    targetCtx.font = 'bold 10px sans-serif';
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'top';
+    targetCtx.fillText('Lv' + level, 0, 18);
+
+    targetCtx.restore();
+  }
+
+  /* ── helpers ── */
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function shadeColor(color, percent) {
+    var num = parseInt(color.replace('#', ''), 16);
+    var amt = Math.round(2.55 * percent);
+    var R = (num >> 16) + amt;
+    var G = (num >> 8 & 0x00FF) + amt;
+    var B = (num & 0x0000FF) + amt;
+    R = Math.max(0, Math.min(255, R));
+    G = Math.max(0, Math.min(255, G));
+    B = Math.max(0, Math.min(255, B));
+    return '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+  }
+
+  /* ═══════════════ Public API ═══════════════ */
+  global.Game = global.Game || {};
+  global.Game.MergePopup = {
+    init: init,
+    show: show,
+    close: close,
+    hasSeenLevel: hasSeenLevel,
+    resetSeenLevels: resetSeenLevels,
+    getSeenLevels: function () { return Object.assign({}, seenLevels); },
+    loadSeenLevels: function (data) {
+      if (data && typeof data === 'object') seenLevels = data;
+    },
+    exportSeenLevels: function () { return Object.assign({}, seenLevels); },
+    // Expose for testing
+    _getState: function () { return currentState; },
+    _STATE: STATE,
+    _MERGE_ANIM_MS: MERGE_ANIM_MS,
+  };
+
+})(typeof window !== 'undefined' ? window : this);

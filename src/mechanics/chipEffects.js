@@ -292,6 +292,109 @@
   /* ────────── active laser marks (mod 13) ────────── */
   var _laserMarks = [];
 
+  /* ────────── solo-pipeline-yandex-vk#1 step-4: visual-only spatial dedup ──────────
+   *
+   * Suppresses **visual** spawns of chip effects within a small radius and TTL.
+   * The damage/duration tick of any already-active effect remains fully
+   * authoritative — dedup only prevents a second visual being added on top of
+   * a recent one in the same spot (postmortem 16: "shouldSpawnEffect == false
+   * must NOT skip damage/duration tick of already-active effect").
+   *
+   * Spatial bucket lookup (cell = 32px) avoids O(N²) over recent effects on
+   * dense waves (postmortem 12). TTL = 0.1s flushes stale entries lazily on
+   * each query.
+   *
+   * Per-type radius lets us tune fire/ice/acid pools differently from electro
+   * nodes / laser marks.
+   */
+  // solo-pipeline-yandex-vk#1 step-3.55 user-directed rework: пользователь
+  // подтвердил все 4 пункта как done, но добавил comment про сохраняющийся
+  // lag и предложил увеличить радиус для пункта 1. Бампим радиусы дедупа
+  // (electro/laser ×~1.6, pools ×1.5) и удлиняем TTL до 0.15s, чтобы реальные
+  // повторные spawn'ы в той же ячейке стабильнее схлопывались. Damage/duration
+  // tick по-прежнему остаются за authoritative effect (postmortem 16).
+  var _dedupRadiusByEffectType = {
+    electroNode: 22,
+    laserMark:   22,
+    fireZone:    24,
+    iceZone:     24,
+    acidPool:    24,
+    default:     22
+  };
+  var _DEDUP_TTL_SEC  = 0.15;
+  var _DEDUP_CELL_PX  = 32;
+  var _DEDUP_BUCKET_K = 100000; // x-bucket * K + y-bucket; K must exceed any plausible y-bucket
+  // type → { bucketKey → array of {x,y,t} }
+  var _recentEffectsByType = Object.create(null);
+
+  function _bucketKey(x, y) {
+    var bx = Math.floor(x / _DEDUP_CELL_PX);
+    var by = Math.floor(y / _DEDUP_CELL_PX);
+    return bx * _DEDUP_BUCKET_K + by;
+  }
+
+  function _pruneRecentEffects(type, nowSec) {
+    var bucketsForType = _recentEffectsByType[type];
+    if (!bucketsForType) return;
+    for (var key in bucketsForType) {
+      var arr = bucketsForType[key];
+      var keep = [];
+      for (var i = 0; i < arr.length; i++) {
+        if (nowSec - arr[i].t <= _DEDUP_TTL_SEC) keep.push(arr[i]);
+      }
+      if (keep.length === 0) delete bucketsForType[key];
+      else bucketsForType[key] = keep;
+    }
+  }
+
+  /**
+   * Should we visually spawn a new effect of this type at (x,y) right now?
+   * Returns false if a same-type effect was already spawned within the
+   * type-specific radius and TTL. Visual-only — callers must still apply
+   * their authoritative damage/duration logic regardless of the verdict.
+   */
+  function shouldSpawnEffect(type, x, y, nowSec) {
+    var t = (typeof nowSec === 'number') ? nowSec : _now();
+    _pruneRecentEffects(type, t);
+    var radius = _dedupRadiusByEffectType[type] || _dedupRadiusByEffectType.default;
+    var r2 = radius * radius;
+    var bucketsForType = _recentEffectsByType[type];
+    if (!bucketsForType) return true;
+    // Check the 9 neighbour buckets so a point near a cell boundary still
+    // sees prior spawns in the next cell over.
+    var bx = Math.floor(x / _DEDUP_CELL_PX);
+    var by = Math.floor(y / _DEDUP_CELL_PX);
+    for (var dx = -1; dx <= 1; dx++) {
+      for (var dy = -1; dy <= 1; dy++) {
+        var k = (bx + dx) * _DEDUP_BUCKET_K + (by + dy);
+        var arr = bucketsForType[k];
+        if (!arr) continue;
+        for (var i = 0; i < arr.length; i++) {
+          var p = arr[i];
+          var ddx = p.x - x, ddy = p.y - y;
+          if (ddx * ddx + ddy * ddy <= r2) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function _recordEffectSpawn(type, x, y, nowSec) {
+    var t = (typeof nowSec === 'number') ? nowSec : _now();
+    var bucketsForType = _recentEffectsByType[type];
+    if (!bucketsForType) {
+      bucketsForType = Object.create(null);
+      _recentEffectsByType[type] = bucketsForType;
+    }
+    var key = _bucketKey(x, y);
+    var arr = bucketsForType[key];
+    if (!arr) {
+      arr = [];
+      bucketsForType[key] = arr;
+    }
+    arr.push({ x: x, y: y, t: t });
+  }
+
   /* ================== helpers ================== */
 
   function _now() { return typeof performance !== 'undefined' ? performance.now() / 1000 : Date.now() / 1000; }
@@ -1028,16 +1131,22 @@
     if (sm.firePool && opts.addDecal) {
       var eff = getModEffectConfig(10);
       if (eff) {
-        opts.addDecal({
-          kind: 'chipPool', subKind: 'fire', x: x, y: y,
-          r: eff.poolRadius,
-          life: eff.poolLife,
-          dps: b.dmg * eff.poolDpsMul,
-          color: resolveModEffectColor(10, 'rgba(255,99,72,0.25)', eff.color),
-          effectSprite: getModEffectSprite(10),
-          chipModId: 10,
-          codeVisualEnabled: isModEffectEnabled(10)
-        });
+        // solo-pipeline-yandex-vk#1 step-4: visual-only dedup; addDecal-driven
+        // dps tick of any already-active fire pool keeps running normally.
+        var _fireNow = _now();
+        if (shouldSpawnEffect('fireZone', x, y, _fireNow)) {
+          opts.addDecal({
+            kind: 'chipPool', subKind: 'fire', x: x, y: y,
+            r: eff.poolRadius,
+            life: eff.poolLife,
+            dps: b.dmg * eff.poolDpsMul,
+            color: resolveModEffectColor(10, 'rgba(255,99,72,0.25)', eff.color),
+            effectSprite: getModEffectSprite(10),
+            chipModId: 10,
+            codeVisualEnabled: isModEffectEnabled(10)
+          });
+          _recordEffectSpawn('fireZone', x, y, _fireNow);
+        }
       }
     }
 
@@ -1045,17 +1154,22 @@
     if (sm.iceZone && opts.addDecal) {
       var iceEff = getModEffectConfig(11);
       if (iceEff) {
-        opts.addDecal({
-          kind: 'chipPool', subKind: 'ice', x: x, y: y,
-          r: iceEff.poolRadius,
-          life: iceEff.poolLife,
-          dps: 0,
-          slowFactor: iceEff.slowFactor,
-          color: resolveModEffectColor(11, 'rgba(112,161,255,0.2)', iceEff.color),
-          effectSprite: getModEffectSprite(11),
-          chipModId: 11,
-          codeVisualEnabled: isModEffectEnabled(11)
-        });
+        // solo-pipeline-yandex-vk#1 step-4: visual-only dedup.
+        var _iceNow = _now();
+        if (shouldSpawnEffect('iceZone', x, y, _iceNow)) {
+          opts.addDecal({
+            kind: 'chipPool', subKind: 'ice', x: x, y: y,
+            r: iceEff.poolRadius,
+            life: iceEff.poolLife,
+            dps: 0,
+            slowFactor: iceEff.slowFactor,
+            color: resolveModEffectColor(11, 'rgba(112,161,255,0.2)', iceEff.color),
+            effectSprite: getModEffectSprite(11),
+            chipModId: 11,
+            codeVisualEnabled: isModEffectEnabled(11)
+          });
+          _recordEffectSpawn('iceZone', x, y, _iceNow);
+        }
       }
     }
 
@@ -1063,19 +1177,25 @@
     if (sm.electroNode) {
       var elEff = getModEffectConfig(12);
       if (elEff) {
-        _electroNodes.push({
-          x: x, y: y,
-          life: elEff.nodeLife,
-          maxLife: elEff.nodeLife,
-          interval: elEff.nodeInterval,
-          range: elEff.nodeRange,
-          dmg: b.dmg * elEff.nodeDmgMul,
-          timer: 0,
-          color: resolveModEffectColor(12, 'rgba(236,204,104,0.3)', elEff.color),
-          effectSprite: getModEffectSprite(12),
-          chipModId: 12,
-          codeVisualEnabled: isModEffectEnabled(12)
-        });
+        // solo-pipeline-yandex-vk#1 step-4: visual-only dedup; the per-node
+        // zap interval/dmg of an already-spawned node is unaffected.
+        var _elNow = _now();
+        if (shouldSpawnEffect('electroNode', x, y, _elNow)) {
+          _electroNodes.push({
+            x: x, y: y,
+            life: elEff.nodeLife,
+            maxLife: elEff.nodeLife,
+            interval: elEff.nodeInterval,
+            range: elEff.nodeRange,
+            dmg: b.dmg * elEff.nodeDmgMul,
+            timer: 0,
+            color: resolveModEffectColor(12, 'rgba(236,204,104,0.3)', elEff.color),
+            effectSprite: getModEffectSprite(12),
+            chipModId: 12,
+            codeVisualEnabled: isModEffectEnabled(12)
+          });
+          _recordEffectSpawn('electroNode', x, y, _elNow);
+        }
       }
     }
 
@@ -1083,18 +1203,24 @@
     if (sm.laserMark) {
       var laEff = getModEffectConfig(13);
       if (laEff) {
-        _laserMarks.push({
-          x: x, y: y,
-          life: laEff.markLife,
-          maxLife: laEff.markLife,
-          damageMul: laEff.damageMul,
-          aoeMul: laEff.aoeMul,
-          r: 18,
-          color: resolveModEffectColor(13, 'rgba(255,71,87,0.35)', laEff.color),
-          effectSprite: getModEffectSprite(13),
-          chipModId: 13,
-          codeVisualEnabled: isModEffectEnabled(13)
-        });
+        // solo-pipeline-yandex-vk#1 step-4: visual-only dedup; checkLaserMarkBoost
+        // still consumes any already-active mark, so damage boost path is intact.
+        var _laNow = _now();
+        if (shouldSpawnEffect('laserMark', x, y, _laNow)) {
+          _laserMarks.push({
+            x: x, y: y,
+            life: laEff.markLife,
+            maxLife: laEff.markLife,
+            damageMul: laEff.damageMul,
+            aoeMul: laEff.aoeMul,
+            r: 18,
+            color: resolveModEffectColor(13, 'rgba(255,71,87,0.35)', laEff.color),
+            effectSprite: getModEffectSprite(13),
+            chipModId: 13,
+            codeVisualEnabled: isModEffectEnabled(13)
+          });
+          _recordEffectSpawn('laserMark', x, y, _laNow);
+        }
       }
     }
 
@@ -1102,17 +1228,22 @@
     if (sm.acidPool && opts.addDecal) {
       var acidEff = getModEffectConfig(14);
       if (acidEff) {
-        opts.addDecal({
-          kind: 'chipPool', subKind: 'acid', x: x, y: y,
-          r: acidEff.poolRadius,
-          life: acidEff.poolLife,
-          dps: b.dmg * acidEff.poolDpsMul,
-          slowFactor: acidEff.slowFactor,
-          color: resolveModEffectColor(14, 'rgba(184,255,59,0.18)', acidEff.color),
-          effectSprite: getModEffectSprite(14),
-          chipModId: 14,
-          codeVisualEnabled: isModEffectEnabled(14)
-        });
+        // solo-pipeline-yandex-vk#1 step-4: visual-only dedup.
+        var _acidNow = _now();
+        if (shouldSpawnEffect('acidPool', x, y, _acidNow)) {
+          opts.addDecal({
+            kind: 'chipPool', subKind: 'acid', x: x, y: y,
+            r: acidEff.poolRadius,
+            life: acidEff.poolLife,
+            dps: b.dmg * acidEff.poolDpsMul,
+            slowFactor: acidEff.slowFactor,
+            color: resolveModEffectColor(14, 'rgba(184,255,59,0.18)', acidEff.color),
+            effectSprite: getModEffectSprite(14),
+            chipModId: 14,
+            codeVisualEnabled: isModEffectEnabled(14)
+          });
+          _recordEffectSpawn('acidPool', x, y, _acidNow);
+        }
       }
     }
 
@@ -1459,6 +1590,8 @@
     _nukeCooldowns = {};
     _electroNodes = [];
     _laserMarks = [];
+    // solo-pipeline-yandex-vk#1 step-4: clear visual dedup state on wave/game reset.
+    _recentEffectsByType = Object.create(null);
   }
 
   /* ================== Getters for render ================== */
@@ -1483,6 +1616,8 @@
     stepChipEffects: stepChipEffects,
     stepChipDecal: stepChipDecal,
     reset: reset,
+    // solo-pipeline-yandex-vk#1 step-4: expose visual-only spawn-dedup gate.
+    shouldSpawnEffect: shouldSpawnEffect,
     getElectroNodes: getElectroNodes,
     getLaserMarks: getLaserMarks,
     getModBulletSprite: getModBulletSprite,

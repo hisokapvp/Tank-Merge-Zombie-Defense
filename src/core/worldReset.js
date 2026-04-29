@@ -155,6 +155,20 @@
     var opts = options || {};
     if (typeof opts.resetWorldRuntime !== 'function') return;
     opts.resetWorldRuntime();
+    // Solo-pipeline-yandex-vk#1 step-3 (postmortem item 17):
+    // Partial reset preserves talents/upgrades/drones/achievements but the
+    // sprite namespace (zombie atlases, tank atlases, chip effect sprites)
+    // can be rebuilt by gameplay subsystems during world reset. Bump the
+    // atlas version so any cached frame refs (Game.Sprites.getCachedFrameRef)
+    // are invalidated and the next draw call re-resolves the ImageBitmap ref.
+    try {
+      var Sprites = (typeof global !== 'undefined' && global.Game && global.Game.Sprites)
+        || (typeof window !== 'undefined' && window.Game && window.Game.Sprites)
+        || null;
+      if (Sprites && typeof Sprites.bumpAtlasVersion === 'function') {
+        Sprites.bumpAtlasVersion('worldReset.partial');
+      }
+    } catch (_spriteErr) { /* additive — never throws into reset path */ }
   }
 
   function restartSimulationPartial(options) {

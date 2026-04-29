@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Merge Tank: Zombie invasion</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script>
+    (function (global, doc) {
+      var game = global.Game = global.Game || {};
+      var token = '20260425-solo-pipeline-yandex-vk-b1-v1';
+      function resolve(path) {
+        var normalized = String(path || '');
+        var separator = normalized.indexOf('?') === -1 ? '?' : '&';
+        return normalized + separator + 'v=' + encodeURIComponent(token);
+      }
+      game.EntryAssetVersion = {
+        getToken: function () { return token; },
+        resolve: resolve,
+      };
+
+      // Only entry assets loaded directly by index.html belong to this shared token.
+      var stylesheet = doc.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = resolve('style.css');
+      doc.head.appendChild(stylesheet);
+    }(window, document));
+  </script>
+</head>
+<body>
+  <main class="layout">
+    <section class="stage">
+      <div class="stageCanvas">
+        <canvas id="c" width="1100" height="650"></canvas>
+        <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" tabindex="0" aria-label="Настройки" title="Настройки">⚙</button>
+        <div id="achievementToast" class="achievementToast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
+        <div class="stageUi stageUiRight">
+          <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Развернуть терминал" data-ui-tooltip="Развернуть терминал">
+            <img src="assets/ui/icons/terminal_icon.png?v=096a9f06" alt="Terminal" id="terminalExpandIcon" onerror="this.style.display='none'; this.parentElement.innerText='🖥'" />
+          </button>
+
+          <div class="terminal-panel" id="terminalPanel">
+            <div class="hudBelow">
+              <div class="hud">
+                <div class="hudItem"><div class="k" data-i18n="hudCoins">Money</div><div class="v" id="coins">0</div></div>
+                <div class="hudItem"><div class="k" data-i18n="hudKills">Kills</div><div class="v" id="zcount">0</div></div>
+              </div>
+
+              <div class="xpPanel hudPanel" id="xpWrap">
+                <div class="xpLabel" id="lvlText">Уровень: 1</div>
+                <div class="xpBar">
+                  <div id="xpBar" class="xpFill"></div>
+                </div>
+                <div class="xpValue" id="xpText">0/0</div>
+              </div>
+
+              <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
+                <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
+                <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="Защита"></button>
+                <button id="stageActive2" class="btn talentAbilitySlot talentAbilitySlot_economy" type="button" data-branch="2" title="" aria-label="Экономика"></button>
+              </div>
+
+              <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
+              
+              <div class="stageActions">
+                <button id="buy" class="btn btnPrimary">
+                  <span data-i18n="buyTank">Создать танк Lv1</span>
+                  <span class="price"> — <span id="buyCost">50</span>$</span>
+                </button>
+                <button id="buyBulk" class="btn btnSecondary hidden" type="button">Создать 2 танка</button>
+                <button id="autoMergeBtn" class="btn btnSecondary hidden" type="button">Соединить 2 танка</button>
+                <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
+              </div>
+            </div>
+            <button id="terminalCollapseBtn" class="terminalCollapseBtn" type="button" aria-label="Свернуть терминал" data-ui-tooltip="Свернуть терминал">_</button>
+          </div>
+        </div>
+        <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">
+          <span class="supercomputerHudBtn__icon" aria-hidden="true">🖥</span>
+        </button>
+        <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
+          <div class="menuBackdrop"></div>
+          <div class="menuPanel" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
+            <div class="menuHeader">
+              <div class="menuTitle" id="menuTitle" data-i18n="menuTitle">Merge Tank: Zombie invasion</div>
+            </div>
+            <div id="smallMenuRootView" class="smallMenuRoot">
+              <div class="menuActions" id="menuMainActions">
+                <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">Продолжить</button>
+                <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
+                <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
+                <button id="menuLoad" class="btn btnSecondary" type="button" data-i18n="menuLoad">Загрузка</button>
+                <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
+              </div>
+              <div id="menuMainView" class="menuView">
+              <div class="menuSettings">
+                <div class="menuRow">
+                  <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
+                  <div class="menuSlider">
+                    <input id="menuSfx" type="range" min="0" max="100" step="1" value="75" />
+                    <span class="menuValue" id="menuSfxValue">75%</span>
+                  </div>
+                </div>
+                <div class="menuRow">
+                  <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">Громкость музыки</label>
+                  <div class="menuSlider">
+                    <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
+                    <span class="menuValue" id="menuMusicValue">60%</span>
+                  </div>
+                </div>
+                <div class="menuRow">
+                  <label class="menuToggle">
+                    <input id="menuAutoPause" type="checkbox" />
+                    <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+                  </label>
+                </div>
+                <div class="menuRow">
+                  <label class="menuToggle">
+                    <input id="menuTutorialToggle" type="checkbox" checked />
+                    <span class="menuLabel" data-i18n="menuTutorialToggle">Обучение</span>
+                  </label>
+                </div>
+              </div>
+              </div>
+
+              <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
+                <div class="menuRow">
+                  <div class="menuExitText" data-i18n="menuExitConfirm">Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?</div>
+                </div>
+                <div class="menuInlineActions">
+                  <button id="menuExitConfirmLeave" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmLeave">Выйти</button>
+                  <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
+                </div>
+              </div>
+
+              <div id="menuNewConfirmView" class="menuView hidden" aria-hidden="true">
+                <div class="menuRow">
+                  <div class="menuExitText" data-i18n="menuNewConfirm">Если Вы начнёте новую игру, весь прогресс будет потерян. Уверены что хотите начать новую игру?</div>
+                </div>
+                <div class="menuInlineActions">
+                  <button id="menuNewConfirmStart" class="btn btnSecondary" type="button" data-i18n="menuNewConfirmContinue">Продолжить</button>
+                  <button id="menuNewConfirmBack" class="btn btnSecondary" type="button" data-i18n="common.back">Назад</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="smallMenuSaveView" class="smallMenuSaveView" aria-hidden="true">
+              <div class="smallMenuSaveView__header" data-i18n="menu.save.title">Сохранение</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.save.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveTable" role="table" aria-label="Save slots">
+                <div class="smallMenuSaveTable__head" role="rowgroup">
+                  <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.save.col.number">№</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.save.col.name">Имя</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.save.col.date">Дата</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.save.col.action">Сохранить</div>
+                  </div>
+                </div>
+                <div id="smallMenuSaveRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
+              </div>
+              <div id="smallMenuSaveToast" class="smallMenuSaveToast" aria-live="polite" aria-atomic="true"></div>
+              <div class="menuInlineActions smallMenuSaveActions">
+                <button id="smallMenuSaveBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+              </div>
+            </div>
+
+            <div id="smallMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
+              <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
+                <div class="smallMenuSaveTable__head" role="rowgroup">
+                  <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+                  </div>
+                </div>
+                <div id="smallMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
+              </div>
+              <div class="menuInlineActions smallMenuSaveActions">
+                <button id="smallMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="levelModal" aria-hidden="true">
+          <div class="levelModal__backdrop"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="levelTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="levelModalClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="levelTitle">Вы достигли 1 уровня!</div>
+            <div class="levelModal__line" id="levelTalent">Вы получили: 1 Очки улучшений</div>
+            <div class="levelModal__line" id="levelGold">Вы получили 0 золота</div>
+            <button id="levelAccept" class="btn btnPrimary" type="button" data-i18n="levelUpAccept">Принять награду</button>
+          </div>
+        </div>
+        <div class="levelModal crateModal hidden" id="crateModal" aria-hidden="true">
+          <div class="levelModal__backdrop crateModal__backdrop" data-crate-close="true"></div>
+          <div class="levelModal__panel crateModal__panel" role="dialog" aria-modal="true" aria-labelledby="crateTitle" aria-describedby="crateText" tabindex="-1">
+            <button class="levelModal__close crateModal__close scModal__close" id="crateClose" type="button" aria-label="Закрыть">×</button>
+            <div class="crateModal__content">
+              <div class="crateModal__iconWrap">
+                <canvas id="crateTankIcon" width="96" height="96"></canvas>
+              </div>
+              <div class="levelModal__title crateModal__title" id="crateTitle" data-i18n="crateModalTitle">Военная помощь</div>
+              <div class="levelModal__line crateModal__text" id="crateText" data-i18n="crateModalText">Для успешного завершения миссии центр управления отправил Вам дополнительный танк</div>
+              <div class="crateModal__actions">
+                <button id="crateDismiss" class="btn btnSecondary" type="button" data-crate-close="true" data-i18n="menuClose">Закрыть</button>
+                <button id="crateGet" class="btn btnPrimary talentResetCooldownAdBtn crateModal__claimBtn" type="button">
+                  <span class="talentResetCooldownAdBtn__label">Получить</span>
+                  <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="dismantleModal" aria-hidden="true">
+          <div class="levelModal__backdrop" data-dismantle-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="dismantleConfirmTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="dismantleClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title hidden" id="dismantleConfirmTitle"></div>
+            <div class="levelModal__line" id="dismantleConfirmText"></div>
+            <div id="dismantleIconsWrap" class="levelModal__line" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 0;"></div>
+            <div class="levelModal__actions dismantleModal__actions">
+              <button id="dismantleYes" class="btn btnPrimary dismantleModal__btn" type="button" data-i18n="dismantleConfirmYes">Подтвердить</button>
+              <button id="dismantleNo" class="btn btnSecondary dismantleModal__btn" type="button" data-i18n="dismantleConfirmCancel">Отменить</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="achievementsModal" aria-hidden="true">
+          <div class="levelModal__backdrop" data-achievements-close="true"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="achievementsClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="achievementsTitle" data-i18n="achievementsTitle">Достижения</div>
+            <div class="achievementsList" id="achievementsList"></div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="achievementPopup" aria-hidden="true">
+          <div class="levelModal__backdrop"></div>
+          <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementPopupTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">Достижение получено</div>
+            <div class="levelModal__line achievementPopup__name" id="achievementPopupName"></div>
+            <div class="levelModal__line achievementPopup__meta" id="achievementPopupCondition"></div>
+            <div class="levelModal__line achievementPopup__meta" id="achievementPopupReward"></div>
+            <div class="achievementPopup__actions">
+              <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
+              <button id="achievementPopupDismiss" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+            </div>
+          </div>
+        </div>
+        <!-- Production Line Storage Modal -->
+        <div class="plStorage hidden" id="productionLineStorageModal" aria-hidden="true">
+          <div class="plStorage__backdrop"></div>
+          <div class="plStorage__panel" role="dialog" aria-modal="true" aria-labelledby="plStorageTitle" tabindex="-1">
+            <div class="plStorage__header">
+              <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Производственный склад</div>
+              <div class="plStorage__headerActions">
+                <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn plStorage__headerHelp" id="plStorageHelp" type="button" aria-label="Help" data-font-floor-ignore="true">?</button>
+                <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+              </div>
+            </div>
+            <div class="plStorage__grid" id="plStorageGrid"></div>
+            <div class="plStorage__confirm hidden" id="plConfirmOverlay">
+              <div class="plStorage__confirmBox">
+                <div id="plConfirmText" class="levelModal__line">Хотите открыть коробку?</div>
+                <div class="levelModal__actions plStorage__confirmActions">
+                  <button id="plConfirmYes" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
+                    <span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">Открыть</span>
+                    <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
+                  </button>
+                  <button id="plConfirmNo" class="btn btnSecondary" type="button">Нет</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="levelModal hidden" id="supercomputerMenuOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-supercomputer-root-close="true"></div>
+          <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">×</button>
+            <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Варианты технологий</div>
+            <div class="scModal__body">
+              <div id="supercomputerMenuRootView" class="supercomputerMenuView">
+                <div class="levelModal__actions scRootTiles">
+                  <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
+                  </button>
+                  <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации техники и стен</span>
+                  </button>
+                  <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
+                    <span class="scRootTile__icon" aria-hidden="true"></span>
+                    <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Варианты технологий</span>
+                  </button>
+                </div>
+              </div>
+              <div id="supercomputerTalentsView" class="supercomputerMenuView hidden" aria-hidden="true">
+                <div id="supercomputerTalentsMount" class="supercomputerTalentsMount"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="modsHangarOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-mods-hangar-close="true"></div>
+          <div class="levelModal__panel scModal hangarChipsModal" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
+            <div class="scModal__headerActions">
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsHangarHelpBtn" type="button" data-tech-help-open="true" aria-label="Справка">?</button>
+              <button class="levelModal__close scModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">Улучшения ячеек ангара</div>
+            <div class="scTabs" role="tablist" aria-label="Hangar tabs">
+              <button id="hangarTabCells" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="hangarPanelCells" tabindex="0" data-i18n="hangarChipsTabCells">Улучшение ячеек</button>
+              <button id="hangarTabWorkshop" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelWorkshop" tabindex="-1" data-i18n="hangarChipsTabWorkshop">Мастерская</button>
+              <button id="hangarTabTechUnlock" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelTechUnlock" tabindex="-1" data-i18n="hangarChipsTabTechUnlock">Открытие технологий</button>
+            </div>
+            <div class="scModal__body">
+              <section class="scTabPanel hangarPanel" id="hangarPanelCells" role="tabpanel" aria-labelledby="hangarTabCells">
+                <div class="hangarLayout">
+                  <div class="hangarDetail" id="hangarDetail">
+                    <div class="hangarRow">
+                      <div class="hangarSlotViewWrap">
+                        <div class="hangarCellTitle" id="hangarCellTitle">Ячейка 1</div>
+                        <div class="hangarSlotView" id="hangarSlotView"></div>
+                      </div>
+                      <div class="hangarRightCol">
+                        <div class="hangarActiveMods" id="hangarActiveMods"></div>
+                        <div class="hangarGridWrapUnder">
+                          <div class="hangarGrid" id="hangarGrid"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="hangarChipsList" id="hangarChipsList"></div>
+                  </div>
+                </div>
+              </section>
+              <section class="scTabPanel" id="hangarPanelWorkshop" role="tabpanel" aria-labelledby="hangarTabWorkshop" hidden>
+                <div class="workshopSubTabs" role="tablist" aria-label="Workshop sub-tabs">
+                  <button id="workshopTabChipUpgrade" class="btn scButton workshopSubTab workshopSubTab--active" type="button" role="tab" aria-selected="true" aria-controls="workshopPanelChipUpgrade" tabindex="0" data-i18n="workshopTabChipUpgrade">Улучшение чипов</button>
+                  <button id="workshopTabChipCraft" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipCraft" tabindex="-1" data-i18n="workshopTabChipCraft">Создание чипов</button>
+                  <button id="workshopTabChipRecycle" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipRecycle" tabindex="-1" data-i18n="workshopTabChipRecycle">Переработка чипов</button>
+                </div>
+                <section class="workshopSubPanel" id="workshopPanelChipUpgrade" role="tabpanel" aria-labelledby="workshopTabChipUpgrade">
+                  <div class="chipUpgradeGrid" id="chipUpgradeGrid"></div>
+                </section>
+                <section class="workshopSubPanel" id="workshopPanelChipCraft" role="tabpanel" aria-labelledby="workshopTabChipCraft" hidden>
+                  <div class="chipCraftContainer" id="chipCraftContainer"></div>
+                </section>
+                <section class="workshopSubPanel" id="workshopPanelChipRecycle" role="tabpanel" aria-labelledby="workshopTabChipRecycle" hidden>
+                  <div class="chipCraftContainer" id="chipRecycleContainer"></div>
+                </section>
+              </section>
+              <section class="scTabPanel" id="hangarPanelTechUnlock" role="tabpanel" aria-labelledby="hangarTabTechUnlock" hidden>
+                <div class="techUnlockContainer" id="techUnlockContainer"></div>
+              </section>
+            </div>
+            <div class="levelModal__actions modsHangarActions">
+              <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+            </div>
+          </div>
+        </div>
+        <div class="levelModal hidden" id="modsTankWallOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-mods-tank-wall-close="true"></div>
+          <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="modsTankWallTitle" tabindex="-1">
+            <div class="scModal__headerActions">
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="Справка">?</button>
+              <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации техники и стен</div>
+            <div class="scTabs" role="tablist" aria-label="Модификации техники и стен">
+              <button id="modsTankWallTabGuns" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="modsTankWallPanelGuns" tabindex="0" data-i18n="modsTabGuns">Орудия</button>
+              <button id="modsTankWallTabDrones" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelDrones" tabindex="-1" data-i18n="modsTabDrones">Дроны</button>
+              <button id="modsTankWallTabWalls" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelWalls" tabindex="-1" data-i18n="modsTabWalls">Стены</button>
+            </div>
+            <div class="scModal__body">
+              <div class="scTabPanels">
+                <section class="scTabPanel" id="modsTankWallPanelGuns" role="tabpanel" aria-labelledby="modsTankWallTabGuns">
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                </section>
+                <section class="scTabPanel" id="modsTankWallPanelDrones" role="tabpanel" aria-labelledby="modsTankWallTabDrones" hidden>
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                </section>
+                <section class="scTabPanel" id="modsTankWallPanelWalls" role="tabpanel" aria-labelledby="modsTankWallTabWalls" hidden>
+                  <div class="levelModal__line" id="modsTankWallDamagePoints">Очки урона: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceLevel">Уровень стен: 1</div>
+                  <div class="levelModal__line" id="modsTankWallFenceHp">HP сегмента: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceArmor">Броня: 0</div>
+                  <div class="levelModal__actions modsTankWall__panelActions">
+                    <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">Улучшить</button>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <div class="levelModal__actions modsTankWall__footerActions">
+              <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+            </div>
+          </div>
+        </div>
+        <!-- Underground Hangar Modal -->
+        <div class="levelModal hidden" id="undergroundHangarOverlay" aria-hidden="true">
+          <div class="ughBackdrop" data-ugh-close="true"></div>
+          <div class="ughPanel" role="dialog" aria-modal="true" aria-labelledby="undergroundHangarTitle" tabindex="-1">
+            <div class="scModal__headerActions ughPanel__headerActions">
+              <button class="levelModal__close scModal__close" id="undergroundHangarClose" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="levelModal__title" id="undergroundHangarTitle" data-i18n="ughModalTitle">Подземный ангар</div>
+            <div class="scModal__body" id="undergroundHangarBody"></div>
+          </div>
+        </div>
+        <div class="levelModal levelModal_onTop hidden" id="criticalOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop"></div>
+          <div class="levelModal__panel criticalModal" role="dialog" aria-modal="true" aria-labelledby="criticalTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close hidden" id="criticalCloseX" type="button" aria-label="Close" data-font-floor-ignore="true">×</button>
+            <div class="levelModal__title" id="criticalTitle" data-i18n="criticalTitle">Критическое состояние</div>
+            <pre class="criticalModal__log" id="criticalLog" aria-live="polite"></pre>
+            <div class="criticalModal__actions criticalModal__actions_single">
+              <button id="criticalSkipBtn" class="btn btnSecondary" type="button" data-i18n="criticalSkip">Пропустить</button>
+            </div>
+            <div class="criticalModal__actions">
+              <button id="criticalRestartBtn" class="btn btnPrimary hidden" type="button" data-i18n="criticalRestart">Перезапустить симуляцию</button>
+              <button id="criticalSaveExitBtn" class="btn btnSecondary hidden" type="button" data-i18n="criticalSaveExit">Сохранить прогресс и выйти</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class="levelModal levelModal_onTop hidden" id="resetTalentsModal" aria-hidden="true">
+    <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
+    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="resetTalentsModalText" tabindex="-1">
+      <button class="levelModal__close scModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
+      <div class="levelModal__contentWrap">
+          <div class="levelModal__title" id="resetTalentsModalText">Для сброса улучшений требуется 500$, Вы уверены что хотите сбросить улучшения?</div>
+          <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Да</button>
+      </div>
+    </div>
+  </div>
+  <div class="levelModal levelModal_onTop hidden" id="talentResetCooldownModal" aria-hidden="true">
+    <div class="levelModal__backdrop" data-talent-reset-cooldown-close="true"></div>
+    <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="talentResetCooldownModalTitle" tabindex="-1">
+      <button class="levelModal__close scModal__close" id="talentResetCooldownModalClose" type="button" aria-label="Закрыть">×</button>
+      <div class="levelModal__contentWrap">
+        <div class="levelModal__title" id="talentResetCooldownModalTitle">Сбросить улучшения</div>
+        <div class="levelModal__line talentResetCooldownModal__text" id="talentResetCooldownModalText">Следующий сброс возможен через 00:00:00; дождитесь окончания сброса</div>
+        <div class="menuInlineActions" id="talentResetCooldownModalActions">
+          <button id="talentResetCooldownModalDismiss" class="btn btnSecondary" type="button">Закрыть</button>
+          <button id="talentResetCooldownModalRefresh" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
+            <span class="talentResetCooldownAdBtn__label">Обновить моментально</span>
+            <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true" data-i18n="menuSettings">Настройки</div>
+
+  <!-- Merge Popup Modal -->
+  <div class="mergePopupModal hidden" id="mergePopupModal" aria-hidden="true">
+    <div class="mergePopupModal__backdrop"></div>
+    <div class="mergePopupModal__panel" role="dialog" aria-modal="true" aria-labelledby="mergePopupTitle" aria-describedby="mergePopupSubtitle" tabindex="-1">
+      <button class="levelModal__close scModal__close mergePopupModal__close" id="mergePopupCloseX" type="button" aria-label="Close">×</button>
+      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle" data-i18n="mergePopupSubtitle">ОТКРЫТ НОВЫЙ УРОВЕНЬ ТАНКА!</div>
+      <canvas id="mergePopupCanvas" width="200" height="120"></canvas>
+      <div class="mergePopupModal__title" id="mergePopupTitle">Новый танк уровень 2</div>
+      <div class="mergePopupModal__stats" id="mergePopupStats"></div>
+      <div class="mergePopupModal__actions">
+        <button id="btn-fight" class="btn btnPrimary" type="button" data-i18n="mergePopupFight">В бой!</button>
+        <button id="btn-close" class="btn btnSecondary" type="button" data-i18n="mergePopupClose">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lesson Progress Panel -->
+  <div class="lessonProgressPanel hidden" id="lessonProgressPanel" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lessonProgressTitle" tabindex="-1">
+    <div class="lessonProgressPanel__header">
+      <span class="lessonProgressPanel__title" id="lessonProgressTitle" data-i18n="lessonProgressTitle">Lesson Progress</span>
+      <button class="lessonProgress__close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="lessonProgress__list"></div>
+    <div class="lessonProgressPanel__footer">
+      <div class="lessonProgress__schedule">
+        <div class="lessonProgress__next" id="lessonNextReviewText" data-i18n="lessonNextReviewNone">Next review: —</div>
+        <div class="lessonProgress__scheduleActions">
+          <button id="lessonRepeatNextBtn" class="btn btnSecondary" type="button" data-i18n="lessonRepeatNow">Repeat now</button>
+          <button id="lessonExportScheduleBtn" class="btn btnSecondary" type="button" data-i18n="lessonExportSchedule">Export schedule</button>
+          <label class="btn btnSecondary lessonProgress__fileBtn" for="lessonImportScheduleInput">
+            <span data-i18n="lessonImportSchedule">Import schedule</span>
+          </label>
+          <input id="lessonImportScheduleInput" class="lessonProgress__fileInput" type="file" accept="application/json" />
+        </div>
+        <div class="lessonProgress__ankiActions">
+          <button id="lessonAnkiPreviewBtn" class="btn btnSecondary" type="button" data-i18n="lessonPreviewAnki">Preview Anki</button>
+          <button id="export-anki" class="btn btnSecondary" type="button" data-format="csv" data-i18n="lessonExportAnki">Export Anki</button>
+        </div>
+        <pre id="lessonAnkiPreview" class="lessonProgress__preview hidden"></pre>
+        <div id="lessonScheduleStatus" class="lessonProgress__status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bigMenuOverlay" class="bigMenuOverlay" aria-hidden="false">
+    <div class="bigMenuPanel" role="dialog" aria-modal="true" aria-labelledby="bigMenuTitle" tabindex="-1">
+      <div class="bigMenuTitle" id="bigMenuTitle">Merge Tank: Zombie invasion</div>
+      <div id="bigMenuRootView" class="bigMenuRootView" aria-hidden="false">
+        <div class="bigMenuActions" aria-label="Главное меню">
+          <button id="bigMenuNew" class="btn btnSecondary" type="button">Новая игра</button>
+          <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
+          <div id="bigMenuSoundWrap" class="bigMenuActionWithPanel">
+            <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+            <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSoundInlinePanel" aria-hidden="true">
+              <div class="bigMenuSubpanelTitle">Звук</div>
+              <div class="menuRow">
+                <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
+                <div class="menuSlider">
+                  <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
+                  <span class="menuValue" id="bigMenuSfxValue">75%</span>
+                </div>
+              </div>
+              <div class="menuRow">
+                <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
+                <div class="menuSlider">
+                  <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
+                  <span class="menuValue" id="bigMenuMusicValue">60%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
+            <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
+            <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
+              <div class="bigMenuLangActions">
+                <button id="bigMenuLangRu" class="btn btnSecondary" type="button">Русский</button>
+                <button id="bigMenuLangEn" class="btn btnSecondary" type="button">Английский</button>
+              </div>
+            </div>
+          </div>
+          <button id="bigMenuDevs" class="btn btnSecondary" type="button">Devs</button>
+        </div>
+        <div class="menuRow">
+          <label class="menuToggle" id="bigMenuRootAutoPauseLabel">
+            <input id="bigMenuRootAutoPause" type="checkbox" />
+            <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+          </label>
+        </div>
+
+      </div>
+
+      <div id="bigMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
+        <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
+        <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+        <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
+          <div class="smallMenuSaveTable__head" role="rowgroup">
+            <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+            </div>
+          </div>
+          <div id="bigMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
+        </div>
+        <div class="menuInlineActions smallMenuSaveActions">
+          <button id="bigMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="levelModal levelModal_onTop hidden" id="creditsModal" aria-hidden="true">
+    <div class="levelModal__backdrop" data-credits-close="true"></div>
+    <div class="levelModal__panel creditsModal__panel" role="dialog" aria-modal="true" aria-labelledby="creditsModalTitle" tabindex="-1">
+      <button class="levelModal__close" id="creditsModalClose" type="button" aria-label="Close">×</button>
+      <div class="levelModal__title" id="creditsModalTitle">Создатели</div>
+      <div id="creditsModalList" class="creditsModal__list"></div>
+    </div>
+  </div>
+
+  <script src="src/core/runtimeTasks.js?v=9e440fb6"></script>
+  <script src="src/utils/numberFormat.js?v=7e1c9805"></script>
+  <script src="src/utils/telemetry.js?v=0ad92aaf"></script>
+  <script src="src/utils/eventTelemetry.js?v=fdc62e96"></script>
+  <script src="src/utils/tankConfig.js?v=bc95db6d"></script>
+  <script src="src/config/tankVisualTiers.js?v=4f36d5ac"></script>
+  <script src="src/lessons/catalog.js?v=ee150c0a"></script>
+  <script src="src/scheduler/srs.js?v=d3e80957"></script>
+  <script src="src/mechanics/trackQuery.js?v=44a959af"></script>
+  <script src="src/mechanics/garage.js?v=e07950ea"></script>
+  <script src="src/mechanics/economy.js?v=6acb769d"></script>
+  <script src="src/mechanics/cannonUpgrades.js?v=a26e5f0e"></script>
+  <script src="src/mechanics/levelFlow.js?v=a2e49907"></script>
+  <script src="src/mechanics/progression.js?v=84f31bd8"></script>
+  <script src="src/mechanics/supercomputer.js?v=6718c659"></script>
+  <script src="src/mechanics/productionLine.js?v=b9fc4d50"></script>
+  <script src="src/mechanics/combatProfiles.js?v=10859895"></script>
+  <script src="src/mechanics/combat.js?v=6f0725b9"></script>
+  <script src="src/mechanics/fenceSides.js?v=ffae8370"></script>
+  <script src="src/mechanics/fenceRepair.js?v=20260402-fd2-fontfloor-workshop-mobile-drag-v1"></script>
+  <script src="src/mechanics/zombieSpawn.js?v=3410fd50"></script>
+  <script src="src/persistence/initialState.js?v=2bcfd030"></script>
+  <script src="src/persistence/serializedStateTypes.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="tools/saveSchemaValidator.js?v=20260424-solo-yandex-vk-b6-v1"></script>
+  <script src="src/persistence/saveSchemaLoader.js?v=20260424-solo-yandex-vk-b6-v1"></script>
+  <script src="src/persistence/storage.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="src/persistence/offlineRewardModel.js?v=5c1ff397"></script>
+  <script src="src/persistence/offlineProgress.js?v=b7927c48"></script>
+  <script src="src/render/canvasRoot.js?v=20260327-branch2-dom-preview-helper"></script>
+  <script src="src/render/hudScratch.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="src/core/events.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="src/config/layoutTuning.js?v=16f7e1b1"></script>
+  <script src="src/config/criticalModalTuning.js?v=97e8993f"></script>
+  <script src="src/config/criticalAudioPolicy.js?v=7d71d372"></script>
+  <script src="src/config/worldEvents.js?v=35cbc970"></script>
+  <script src="src/render/layout/hangarLayout.js?v=46908bda"></script>
+  <script src="src/render/fenceLayout.js?v=46e12685"></script>
+  <script src="src/render/groundGen.js?v=3810e333"></script>
+  <script src="src/utils/seededRng.js?v=2406a7cc"></script>
+  <script src="src/render/groundLayer.js?v=a61bfdda"></script>
+  <script src="src/render/spriteLoaders.js?v=20260425-solo-pipeline-yandex-vk-b1-v1"></script>
+  <script src="src/render/slotActivityOverlay.js?v=694e958e"></script>
+  <script src="src/render/productionLineRender.js?v=20260428-solo-pipeline-yandex-vk-b2-v1"></script>
+  <script src="src/render/cornerTowers.js?v=20260428-solo-pipeline-yandex-vk-b1-v1"></script>
+  <script src="src/render/tankPortrait.js?v=773202cd"></script>
+  <script src="src/render/tankHangarAnimation.js?v=6254199f"></script>
+  <script src="src/render/input.js?v=0c107add"></script>
+  <script src="src/config/tutorialSteps.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
+  <script src="src/ui/adService.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
+  <script src="src/ui/continueFlow.js?v=3f11ff5f"></script>
+  <script src="src/ui/shopUI.js?v=c794b54c"></script>
+  <script src="src/ui/toast.js?v=3e4ed6b0"></script>
+  <script src="src/ui/mergePreview/mergePreviewModel.js?v=0e7915f6"></script>
+  <script src="src/ui/mergePreview/mergePreviewRenderer.js?v=5f1ef913"></script>
+  <script src="src/ui/mergePopup/mergePopupSeenLevels.js?v=2b040b52"></script>
+  <script src="src/ui/mergePopup/mergePopupStats.js?v=79644468"></script>
+  <script src="src/config/audioUi.js?v=c395c3fb"></script>
+  <script src="src/ui/buttonBehavior.js?v=20260328-branch1-debuff-header-mobile"></script>
+  <script src="src/ui/inputGuards.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/ui/fontFloor.js?v=20260402-fd2-fontfloor-workshop-mobile-drag-v1"></script>
+  <script src="src/ui/mergePopup.js?v=c33747b0"></script>
+  <script src="src/ui/zombieAnimPreview.js?v=b481a5a3"></script>
+  <script src="src/telemetry/telemetry.js?v=997731de"></script>
+  <script src="src/analytics/collector.js?v=d8c9553e"></script>
+  <script src="src/analytics/funnel.js?v=8cd55888"></script>
+  <script src="src/tools/anki/importer.js"></script>
+  <script src="src/tools/anki/anki_export.js"></script>
+  <script src="src/flags/flags.js?v=4f63138b"></script>
+  <script src="src/core/engineAdapter.js?v=89ef0c1f"></script>
+  <script src="src/experiments/experiments.js?v=6d6fa512"></script>
+  <script src="src/perf/mobileMode.js?v=cf578127"></script>
+  <script src="src/i18n/index.js?v=7d2e999d"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260402-fd2-fontfloor-workshop-mobile-drag-v1"></script>
+  <script src="src/i18n/pluralize.js?v=7a338b65"></script>
+  <script src="src/ui/adminFlags.js?v=f2a878ad"></script>
+  <script src="src/ui/adminDamagePoints.js?v=a7e91cda"></script>
+  <script src="src/ui/analyticsPanel.js?v=df155038"></script>
+  <script src="src/ui/experimentsPanel.js?v=7d933569"></script>
+  <script src="src/ui/funnelPanel.js?v=dbe71f29"></script>
+  <script src="src/ui/bugTriage.js?v=afab5a97"></script>
+  <script src="src/ui/debugPanel.js?v=1410446d"></script>
+  <script src="src/mechanics/hangarChips.js?v=15cce3ba"></script>
+  <script src="src/mechanics/chipEffects.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/ui/chipCraftLayout.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/ui/hangarChipsUI.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="src/ui/modals.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
+  <script src="src/ui/achievementsModal.js?v=3af017c5"></script>
+  <script src="src/ui/talentOverlayDom.js?v=49174f54"></script>
+  <script src="src/ui/talentOverlayRenderer.js?v=20260322-branch1-talents-storage-v2"></script>
+  <script src="src/ui/talentOverlayUi.js?v=6fc10071"></script>
+  <script src="src/config/tankWallStatCatalog.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
+  <script src="src/ui/supercomputerMenu.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/ui/productionLineUI.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/ui/criticalModal.js?v=0bdbb4a1"></script>
+  <script src="src/systems/pauseManager.js?v=ceda9ae9"></script>
+  <script src="src/systems/depthSort.js?v=a150c786"></script>
+  <script src="src/perf/objectPool.js?v=d1e70ab6"></script>
+  <script src="src/audio/settingsAudio.js?v=d1ca5b79"></script>
+  <script src="src/audio/sfxPoolRuntime.js?v=c19913cb"></script>
+  <script src="src/accessibility/a11y.js?v=0a45dc45"></script>
+  <script src="src/render/zombieRender.js?v=d3d0dab9"></script>
+  <script src="src/mechanics/crateRuntime.js?v=1412ff2f"></script>
+  <script src="src/systems/worldEventsRuntime.js?v=d8fbb7ea"></script>
+  <script src="src/systems/talents/talentsV2.js?v=dba61d92"></script>
+  <script src="src/ui/bigMenuRuntime.js?v=49bb732e"></script>
+  <script src="src/ui/lessonProgress.js?v=6f9fea38"></script>
+  <script src="src/ui/tutorialRuntime.js?v=20260328-branch1-tech-unlock-stat-contract"></script>
+  <script src="src/core/bootstrap.js?v=4c35ecf3"></script>
+  <script src="src/core/worldReset.js?v=cfaaba1b"></script>
+  <script src="src/mechanics/targeting.js?v=61863eba"></script>
+  <script src="src/mechanics/achievements.js?v=a2a17ef8"></script>
+  <script src="src/mechanics/drones.js?v=48c76465"></script>
+  <script src="src/mechanics/autoMerge.js?v=a714a47d"></script>
+  <script src="src/mechanics/undergroundHangar.js?v=2f994e1b"></script>
+  <script src="src/ui/undergroundHangarUI.js?v=20260403-solo-yandex-vk-v1"></script>
+  <script src="src/mechanics/corpseDespawn.js?v=6091f421"></script>
+  <script src="src/ui/supercomputerBuildTankFx.js?v=c16e24ad"></script>
+  <!-- ── Phaser 3 migration layer ── -->
+  <!-- Phaser is always loaded (cached by browser); activation controlled by usePhaser flag -->
+  <script src="vendor/phaser.min.js?v=62081f6a"></script>
+  <!-- Phase 1: core bridge/clock/scenes/bootstrap -->
+  <script src="src/phaser/phaserBridge.js?v=488583af"></script>
+  <script src="src/phaser/clockAdapter.js?v=aea1fcee"></script>
+  <script src="src/phaser/scenes/BootScene.js?v=e52ae669"></script>
+  <script src="src/phaser/scenes/GameScene.js?v=e98931b1"></script>
+  <script src="src/phaser/phaserBootstrap.js?v=20260402-fd2-fontfloor-workshop-mobile-drag-v1"></script>
+  <!-- Phase 2: input adapter + render registry -->
+  <script src="src/phaser/inputAdapter.js?v=9c9559a9"></script>
+  <script src="src/phaser/renderRegistry.js?v=ed640408"></script>
+  <!-- Phase 2c: Phaser layer manager + layer modules -->
+  <script src="src/phaser/layers/PhaserLayerManager.js?v=c0ad9263"></script>
+  <script src="src/phaser/layers/BackgroundLayer.js?v=2a5e6372"></script>
+  <script src="src/phaser/layers/TankTrackLayer.js?v=7036815c"></script>
+  <script src="src/phaser/layers/FenceHpBarsLayer.js?v=2b2e1ec3"></script>
+  <script src="src/phaser/layers/EveningDimLayer.js?v=23c2ecdf"></script>
+  <script src="src/phaser/layers/FenceBaseLayer.js?v=0bff5b44"></script>
+  <script src="src/phaser/layers/BoardLayer.js?v=71237cf0"></script>
+  <script src="src/phaser/layers/OrbitingTanksLayer.js?v=bf55aee7"></script>
+  <script src="src/phaser/layers/SupercomputerLayer.js?v=138724ee"></script>
+  <script src="src/phaser/layers/ProductionLineLayer.js?v=7e6bc6c7"></script>
+  <script src="src/phaser/layers/ZombiesCorpsesLayer.js?v=804c98e0"></script>
+  <script src="src/phaser/layers/ProjectilesEffectsLayer.js?v=fe52e684"></script>
+  <script src="src/phaser/layers/DronesLayer.js?v=0506723f"></script>
+  <!-- Phase 2d: audio adapter + input comparison harness -->
+  <script src="src/phaser/audioAdapter.js?v=d6bb7649"></script>
+  <script src="src/phaser/inputComparisonHarness.js?v=7b10a623"></script>
+  <!-- Phase 3: HUD / modal / overlay adapters + HUD scene -->
+  <script src="src/phaser/hudAdapter.js?v=73fa64fe"></script>
+  <script src="src/phaser/sceneOverlayManager.js?v=d57130f1"></script>
+  <script src="src/phaser/modalAdapter.js?v=d8f56b2d"></script>
+  <script src="src/phaser/scenes/HudScene.js?v=2fb5d1c0"></script>
+  <!-- Phase 3b: Modal overlay scenes -->
+  <script src="src/phaser/scenes/PauseMenuScene.js?v=4388d3fb"></script>
+  <script src="src/phaser/scenes/LevelUpScene.js?v=76f790db"></script>
+  <script src="src/phaser/scenes/CrateRewardScene.js?v=1e968e8b"></script>
+  <!-- Phase 3c: Progression & achievement overlay scenes -->
+  <script src="src/phaser/scenes/BigMenuScene.js?v=c7a4cc6e"></script>
+  <script src="src/phaser/scenes/AchievementsScene.js?v=0c4bb350"></script>
+  <script src="src/phaser/scenes/AchievementPopupScene.js?v=cf57a12f"></script>
+  <!-- Phase 3d: Talents, supercomputer root, help, tutorial overlay scenes -->
+  <script src="src/phaser/scenes/TalentsScene.js?v=39e1dc91"></script>
+  <script src="src/phaser/scenes/SupercomputerRootScene.js?v=4d47afef"></script>
+  <script src="src/phaser/scenes/HelpScene.js?v=5b39c8ff"></script>
+  <script src="src/phaser/scenes/TutorialOverlayScene.js?v=57608dba"></script>
+  <!-- Phase 3e: Hangar, workshop, underground hangar overlay scenes -->
+  <script src="src/phaser/scenes/HangarChipsScene.js?v=86cb8ae5"></script>
+  <script src="src/phaser/scenes/WorkshopScene.js?v=57c14b33"></script>
+  <script src="src/phaser/scenes/UndergroundHangarScene.js?v=244fadc8"></script>
+  <!-- Phase 4: Parity & rollout modules -->
+  <script src="src/phaser/parityHarness.js?v=cfed5545"></script>
+  <script src="src/phaser/parityGate.js?v=523a9540"></script>
+  <script src="src/phaser/rolloutController.js?v=3cd2fc9b"></script>
+  <script src="src/phaser/legacyCleanupManifest.js?v=dfabb07c"></script>
+  <script>
+    (function (global, doc) {
+      var game = global.Game || {};
+      var helper = game.EntryAssetVersion;
+      var resolve = helper && typeof helper.resolve === 'function'
+        ? helper.resolve
+        : function (path) { return path; };
+      var script = doc.createElement('script');
+      script.async = false;
+      script.src = resolve('game.js');
+      doc.body.appendChild(script);
+    }(window, document));
+  </script>
+</body>
+</html>

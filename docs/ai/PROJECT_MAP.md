@@ -148,6 +148,13 @@ graph TD
   G --> J[assets/chips.json]
 ```
 
+## Релизный пайплайн (generic static host + opt-in Yandex)
+| Артефакт | Файл | Назначение |
+|---|---|---|
+| Release builder shell | [ci/build_release.sh](../../ci/build_release.sh) | bash-обёртка над node-хелпером: timestamped output `dist/release/<UTC>/`, опциональный `--yandex`, опциональный `--no-zip`; REFUSE-guard на `dist/release/staging/`. |
+| Release builder core | [ci/build_release.mjs](../../ci/build_release.mjs) | Whitelist-копия (`index.html`, `game.js`, `style.css`, `README.md`, `src/**`, `assets/**`, `vendor/**`), SHA-256 manifest, cache-bust `?v=<sha8>` только в копии `index.html`, optional Yandex SDK seam, audit relative `fetch()`. |
+| Release playbook | [docs/ai/PLAYBOOKS/release-yandex.md](PLAYBOOKS/release-yandex.md) | Manual checklist + invariants: generic-host билд default, Yandex SDK opt-in `--yandex`, no minify / no source maps, `dist/release/staging/` неприкасаем. |
+
 ## Что НЕ документировано
 - `dist/release/staging/*` — release mirror, неканоничный источник.
 - Прочие `tools/*` и внешние balance-dashboard'ы — вне текущей agent-doc surface; исключение: [SYSTEMS/balance-editor.md](SYSTEMS/balance-editor.md) документирует Balance Lab stack вокруг `tools/balance-editor.html`, `tools/balance-lab.js`, `tools/balance-shared.js`, `tools/balance-registry.js`, `tools/balance-optimizer.js` и `tools/balance-sim.js` как repo-local balance workbench.

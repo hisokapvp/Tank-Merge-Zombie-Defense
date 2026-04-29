@@ -1,0 +1,1966 @@
+{
+  "_readme": "=== КОНФИГУРАЦИЯ ЗАБОРА (fence.json) === Забор собирается из corner + side сегментов. Для корректного угла используйте id: cornerTL/cornerTR/cornerBR/cornerBL и sideTop/sideRight/sideBottom/sideLeft. Поворот кадра: rotation (приоритет) -> rotationDeg -> 0. rotation применяется только к текущему frame/id. Пример: cornerTL { rotation:0 }, sideTop { rotation:0 }, sideRight { rotation:90 }, sideBottom { rotation:180 }, sideLeft { rotation:270 }. Для UI вкладки Стены можно задавать levels[].uiIcon: { atlas, frameId } или { atlas, frame:{x,y,w,h} }.",
+  "atlas": "fence_atlas.png",
+  "cornerInsetPx": 0,
+  "segmentsPerSide": 7,
+  "shields": {
+    "_readme": "Task 10 (rework-cycle-2): отображается поверх каждого fence-сегмента пока активен Купол (defenseActive). atlas — путь относительно assets/. frameRate — кадров в секунду. scale — общий множитель размера, anchor — точка привязки в долях кадра. Кадры можно задать двумя способами: (а) массив frames:[{x,y,w,h}] — явно; (б) grid:{cols,rows,frameWidth?,frameHeight?} — автогенерация из атласа (если frameWidth/Height не заданы, используется naturalWidth/cols и naturalHeight/rows). Отключить: выставить visibleWhile в пустую строку или убрать frames и grid.",
+    "atlas": "shields.png",
+    "grid": {
+      "cols": 12,
+      "rows": 1
+    },
+    "frames": [],
+    "frameRate": 12,
+    "scale": 2.4,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "visibleWhile": "defenseActive"
+  },
+  "levels": [
+    {
+      "segmentMaxHp": 1100000,
+      "armorFlat": 9.5,
+      "upgradeCostDamagePoints": 2,
+      "atlas": "fence_atlas.png",
+      "uiIcon": {
+        "atlas": "fence_atlas.png",
+        "frame": {
+          "id": "IconLvl1",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 2,
+        "armorFlat": 2
+      }
+    },
+    {
+      "segmentMaxHp": 1135420,
+      "armorFlat": 12.35,
+      "upgradeCostDamagePoints": 4,
+      "atlas": "fence_atlas_2.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_2.png",
+        "frame": {
+          "id": "IconLvl2",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 4,
+        "armorFlat": 4
+      }
+    },
+    {
+      "segmentMaxHp": 1170840,
+      "armorFlat": 15.2,
+      "upgradeCostDamagePoints": 6,
+      "atlas": "fence_atlas_3.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_3.png",
+        "frame": {
+          "id": "IconLvl3",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 6,
+        "armorFlat": 6
+      }
+    },
+    {
+      "segmentMaxHp": 1206270,
+      "armorFlat": 17.1,
+      "upgradeCostDamagePoints": 8,
+      "atlas": "fence_atlas_4.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_4.png",
+        "frame": {
+          "id": "IconLvl4",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 8,
+        "armorFlat": 8
+      }
+    },
+    {
+      "segmentMaxHp": 1241690,
+      "armorFlat": 19.95,
+      "upgradeCostDamagePoints": 10,
+      "atlas": "fence_atlas_5.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_5.png",
+        "frame": {
+          "id": "IconLvl5",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 10,
+        "armorFlat": 10
+      }
+    },
+    {
+      "segmentMaxHp": 1277110,
+      "armorFlat": 22.8,
+      "upgradeCostDamagePoints": 12,
+      "atlas": "fence_atlas_6.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_6.png",
+        "frame": {
+          "id": "IconLvl6",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 12,
+        "armorFlat": 12
+      }
+    },
+    {
+      "segmentMaxHp": 1312540,
+      "armorFlat": 25.65,
+      "upgradeCostDamagePoints": 14,
+      "atlas": "fence_atlas_7.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_7.png",
+        "frame": {
+          "id": "IconLvl7",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 14,
+        "armorFlat": 14
+      }
+    },
+    {
+      "segmentMaxHp": 1347960,
+      "armorFlat": 28.5,
+      "upgradeCostDamagePoints": 16,
+      "atlas": "fence_atlas_8.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_8.png",
+        "frame": {
+          "id": "IconLvl8",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 16,
+        "armorFlat": 16
+      }
+    },
+    {
+      "segmentMaxHp": 1383390,
+      "armorFlat": 31.35,
+      "upgradeCostDamagePoints": 18,
+      "atlas": "fence_atlas_9.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_9.png",
+        "frame": {
+          "id": "IconLvl9",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 18,
+        "armorFlat": 18
+      }
+    },
+    {
+      "segmentMaxHp": 1418810,
+      "armorFlat": 34.2,
+      "upgradeCostDamagePoints": 20,
+      "atlas": "fence_atlas_10.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_10.png",
+        "frame": {
+          "id": "IconLvl10",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 20,
+        "armorFlat": 20
+      }
+    },
+    {
+      "segmentMaxHp": 1454230,
+      "armorFlat": 37.05,
+      "upgradeCostDamagePoints": 22,
+      "atlas": "fence_atlas_11.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_11.png",
+        "frame": {
+          "id": "IconLvl11",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 22,
+        "armorFlat": 22
+      }
+    },
+    {
+      "segmentMaxHp": 1489660,
+      "armorFlat": 39.9,
+      "upgradeCostDamagePoints": 24,
+      "atlas": "fence_atlas_12.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_12.png",
+        "frame": {
+          "id": "IconLvl12",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 24,
+        "armorFlat": 24
+      }
+    },
+    {
+      "segmentMaxHp": 1525080,
+      "armorFlat": 42.75,
+      "upgradeCostDamagePoints": 26,
+      "atlas": "fence_atlas_13.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_13.png",
+        "frame": {
+          "id": "IconLvl13",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 26,
+        "armorFlat": 26
+      }
+    },
+    {
+      "segmentMaxHp": 1560520,
+      "armorFlat": 45.6,
+      "upgradeCostDamagePoints": 28,
+      "atlas": "fence_atlas_14.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_14.png",
+        "frame": {
+          "id": "IconLvl14",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 28,
+        "armorFlat": 28
+      }
+    },
+    {
+      "segmentMaxHp": 1595940,
+      "armorFlat": 48.45,
+      "upgradeCostDamagePoints": 30,
+      "atlas": "fence_atlas_15.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_15.png",
+        "frame": {
+          "id": "IconLvl15",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 30,
+        "armorFlat": 30
+      }
+    },
+    {
+      "segmentMaxHp": 1631370,
+      "armorFlat": 51.3,
+      "upgradeCostDamagePoints": 32,
+      "atlas": "fence_atlas_16.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_16.png",
+        "frame": {
+          "id": "IconLvl16",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 32,
+        "armorFlat": 32
+      }
+    },
+    {
+      "segmentMaxHp": 1666790,
+      "armorFlat": 54.15,
+      "upgradeCostDamagePoints": 34,
+      "atlas": "fence_atlas_17.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_17.png",
+        "frame": {
+          "id": "IconLvl17",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 34,
+        "armorFlat": 34
+      }
+    },
+    {
+      "segmentMaxHp": 1702210,
+      "armorFlat": 57,
+      "upgradeCostDamagePoints": 36,
+      "atlas": "fence_atlas_18.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_18.png",
+        "frame": {
+          "id": "IconLvl18",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 36,
+        "armorFlat": 36
+      }
+    },
+    {
+      "segmentMaxHp": 1737640,
+      "armorFlat": 59.85,
+      "upgradeCostDamagePoints": 38,
+      "atlas": "fence_atlas_19.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_19.png",
+        "frame": {
+          "id": "IconLvl19",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 38,
+        "armorFlat": 38
+      }
+    },
+    {
+      "segmentMaxHp": 1773060,
+      "armorFlat": 62.7,
+      "upgradeCostDamagePoints": 40,
+      "atlas": "fence_atlas_20.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_20.png",
+        "frame": {
+          "id": "IconLvl20",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 40,
+        "armorFlat": 40
+      }
+    },
+    {
+      "segmentMaxHp": 1808490,
+      "armorFlat": 65.55,
+      "upgradeCostDamagePoints": 42,
+      "atlas": "fence_atlas_21.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_21.png",
+        "frame": {
+          "id": "IconLvl21",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 42,
+        "armorFlat": 42
+      }
+    },
+    {
+      "segmentMaxHp": 1843910,
+      "armorFlat": 68.4,
+      "upgradeCostDamagePoints": 44,
+      "atlas": "fence_atlas_22.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_22.png",
+        "frame": {
+          "id": "IconLvl22",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 44,
+        "armorFlat": 44
+      }
+    },
+    {
+      "segmentMaxHp": 1879330,
+      "armorFlat": 71.25,
+      "upgradeCostDamagePoints": 46,
+      "atlas": "fence_atlas_23.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_23.png",
+        "frame": {
+          "id": "IconLvl23",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 46,
+        "armorFlat": 46
+      }
+    },
+    {
+      "segmentMaxHp": 1914760,
+      "armorFlat": 74.1,
+      "upgradeCostDamagePoints": 48,
+      "atlas": "fence_atlas_24.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_24.png",
+        "frame": {
+          "id": "IconLvl24",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 48,
+        "armorFlat": 48
+      }
+    },
+    {
+      "segmentMaxHp": 1950180,
+      "armorFlat": 76.95,
+      "upgradeCostDamagePoints": 50,
+      "atlas": "fence_atlas_25.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_25.png",
+        "frame": {
+          "id": "IconLvl25",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 50,
+        "armorFlat": 50
+      }
+    },
+    {
+      "segmentMaxHp": 1985610,
+      "armorFlat": 79.8,
+      "upgradeCostDamagePoints": 52,
+      "atlas": "fence_atlas_26.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_26.png",
+        "frame": {
+          "id": "IconLvl26",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 52,
+        "armorFlat": 52
+      }
+    },
+    {
+      "segmentMaxHp": 2021030,
+      "armorFlat": 82.65,
+      "upgradeCostDamagePoints": 54,
+      "atlas": "fence_atlas_27.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_27.png",
+        "frame": {
+          "id": "IconLvl27",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 54,
+        "armorFlat": 54
+      }
+    },
+    {
+      "segmentMaxHp": 2056460,
+      "armorFlat": 85.5,
+      "upgradeCostDamagePoints": 56,
+      "atlas": "fence_atlas_28.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_28.png",
+        "frame": {
+          "id": "IconLvl28",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 56,
+        "armorFlat": 56
+      }
+    },
+    {
+      "segmentMaxHp": 2091880,
+      "armorFlat": 88.35,
+      "upgradeCostDamagePoints": 58,
+      "atlas": "fence_atlas_29.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_29.png",
+        "frame": {
+          "id": "IconLvl29",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 58,
+        "armorFlat": 58
+      }
+    },
+    {
+      "segmentMaxHp": 2127300,
+      "armorFlat": 91.2,
+      "upgradeCostDamagePoints": 60,
+      "atlas": "fence_atlas_30.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_30.png",
+        "frame": {
+          "id": "IconLvl30",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 60,
+        "armorFlat": 60
+      }
+    },
+    {
+      "segmentMaxHp": 2162730,
+      "armorFlat": 94.05,
+      "upgradeCostDamagePoints": 62,
+      "atlas": "fence_atlas_31.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_31.png",
+        "frame": {
+          "id": "IconLvl31",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 62,
+        "armorFlat": 62
+      }
+    },
+    {
+      "segmentMaxHp": 2198150,
+      "armorFlat": 96.9,
+      "upgradeCostDamagePoints": 64,
+      "atlas": "fence_atlas_32.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_32.png",
+        "frame": {
+          "id": "IconLvl32",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 64,
+        "armorFlat": 64
+      }
+    },
+    {
+      "segmentMaxHp": 2233580,
+      "armorFlat": 99.75,
+      "upgradeCostDamagePoints": 66,
+      "atlas": "fence_atlas_33.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_33.png",
+        "frame": {
+          "id": "IconLvl33",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 66,
+        "armorFlat": 66
+      }
+    },
+    {
+      "segmentMaxHp": 2269000,
+      "armorFlat": 102.6,
+      "upgradeCostDamagePoints": 68,
+      "atlas": "fence_atlas_34.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_34.png",
+        "frame": {
+          "id": "IconLvl34",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 68,
+        "armorFlat": 68
+      }
+    },
+    {
+      "segmentMaxHp": 2304430,
+      "armorFlat": 105.45,
+      "upgradeCostDamagePoints": 70,
+      "atlas": "fence_atlas_35.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_35.png",
+        "frame": {
+          "id": "IconLvl35",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 70,
+        "armorFlat": 70
+      }
+    },
+    {
+      "segmentMaxHp": 2339850,
+      "armorFlat": 108.3,
+      "upgradeCostDamagePoints": 72,
+      "atlas": "fence_atlas_36.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_36.png",
+        "frame": {
+          "id": "IconLvl36",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 72,
+        "armorFlat": 72
+      }
+    },
+    {
+      "segmentMaxHp": 2375270,
+      "armorFlat": 111.15,
+      "upgradeCostDamagePoints": 74,
+      "atlas": "fence_atlas_37.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_37.png",
+        "frame": {
+          "id": "IconLvl37",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 74,
+        "armorFlat": 74
+      }
+    },
+    {
+      "segmentMaxHp": 2410710,
+      "armorFlat": 114,
+      "upgradeCostDamagePoints": 76,
+      "atlas": "fence_atlas_38.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_38.png",
+        "frame": {
+          "id": "IconLvl38",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 76,
+        "armorFlat": 76
+      }
+    },
+    {
+      "segmentMaxHp": 2446130,
+      "armorFlat": 116.85,
+      "upgradeCostDamagePoints": 78,
+      "atlas": "fence_atlas_39.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_39.png",
+        "frame": {
+          "id": "IconLvl39",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 78,
+        "armorFlat": 78
+      }
+    },
+    {
+      "segmentMaxHp": 2481560,
+      "armorFlat": 119.7,
+      "upgradeCostDamagePoints": 80,
+      "atlas": "fence_atlas_40.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_40.png",
+        "frame": {
+          "id": "IconLvl40",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 80,
+        "armorFlat": 80
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_41.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_41.png",
+        "frame": {
+          "id": "IconLvl41",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_42.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_42.png",
+        "frame": {
+          "id": "IconLvl42",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_43.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_43.png",
+        "frame": {
+          "id": "IconLvl43",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_44.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_44.png",
+        "frame": {
+          "id": "IconLvl44",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_45.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_45.png",
+        "frame": {
+          "id": "IconLvl45",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_46.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_46.png",
+        "frame": {
+          "id": "IconLvl46",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_47.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_47.png",
+        "frame": {
+          "id": "IconLvl47",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_48.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_48.png",
+        "frame": {
+          "id": "IconLvl48",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_49.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_49.png",
+        "frame": {
+          "id": "IconLvl49",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_50.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_50.png",
+        "frame": {
+          "id": "IconLvl50",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_51.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_51.png",
+        "frame": {
+          "id": "IconLvl51",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_52.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_52.png",
+        "frame": {
+          "id": "IconLvl52",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_53.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_53.png",
+        "frame": {
+          "id": "IconLvl53",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_54.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_54.png",
+        "frame": {
+          "id": "IconLvl54",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_55.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_55.png",
+        "frame": {
+          "id": "IconLvl55",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_56.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_56.png",
+        "frame": {
+          "id": "IconLvl56",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_57.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_57.png",
+        "frame": {
+          "id": "IconLvl57",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_58.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_58.png",
+        "frame": {
+          "id": "IconLvl58",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_59.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_59.png",
+        "frame": {
+          "id": "IconLvl59",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    },
+    {
+      "segmentMaxHp": 2288160,
+      "armorFlat": 129,
+      "upgradeCostDamagePoints": 82,
+      "atlas": "fence_atlas_60.png",
+      "uiIcon": {
+        "atlas": "fence_atlas_60.png",
+        "frame": {
+          "id": "IconLvl60",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128,
+          "scale": 1,
+          "rotation": 0,
+          "anchor": {
+            "x": 0.5,
+            "y": 0.5
+          }
+        }
+      },
+      "upgradeDamagePointsCosts": {
+        "segmentMaxHp": 82,
+        "armorFlat": 82
+      }
+    }
+  ],
+  "healthBar": {
+    "w": 28,
+    "h": 4,
+    "offsetY": -24
+  },
+  "repair": {
+    "enabled": true,
+    "costCoins": 100,
+    "perLevel": {
+      "1": 50,
+      "2": 100,
+      "3": 200,
+      "4": 400,
+      "5": 800,
+      "6": 1600,
+      "7": 3200,
+      "8": 6400,
+      "9": 12800,
+      "10": 25600,
+      "11": 51200,
+      "12": 102400,
+      "13": 204800,
+      "14": 409600,
+      "15": 819200,
+      "16": 1638400,
+      "17": 3276800,
+      "18": 6553600,
+      "19": 13107200,
+      "20": 26214400,
+      "21": 52428800,
+      "22": 104857600,
+      "23": 209715200,
+      "24": 419430400,
+      "25": 838860800,
+      "26": 1677721600,
+      "27": 3355443200,
+      "28": 6710886400,
+      "29": 13421772800,
+      "30": 26843545600,
+      "31": 53687091200,
+      "32": 107374182400,
+      "33": 214748364800,
+      "34": 429496729600,
+      "35": 858993459200,
+      "36": 1717986918400,
+      "37": 3435973836800,
+      "38": 6871947673600,
+      "39": 13743895347200,
+      "40": 27487790694400,
+      "41": 54975581388800,
+      "42": 109951162777600,
+      "43": 219902325555200,
+      "44": 439804651110400,
+      "45": 879609302220800,
+      "46": 1759218604441600,
+      "47": 3518437208883200,
+      "48": 7036874417766400,
+      "49": 14073748835532800,
+      "50": 28147497671065600,
+      "51": 56294995342131200,
+      "52": 112589990684262400,
+      "53": 225179981368524800,
+      "54": 450359962737049600,
+      "55": 900719925474099200,
+      "56": 1801439850948198400,
+      "57": 3602879701896397000,
+      "58": 7205759403792794000,
+      "59": 14411518807585587000,
+      "60": 28823037615171174000
+    },
+    "_comment_perLevel": "Стоимость ремонта по уровням (coins). Canonical key. Формат аналогичен goldPerLevel в levelreward.json. costCoinsByLevel сохранён как legacy alias."
+  },
+  "frames": [
+    {
+      "id": "post",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "scale": 1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "rail",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "scale": 1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "segment",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "scale": 1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerTL",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerTR",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerBR",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerBL",
+      "x": 384,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideTop",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideRight",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideBottom",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideLeft",
+      "x": 256,
+      "y": 384,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideTopBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideRightBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideBottomBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "sideLeftBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerTLBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 270,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerTRBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 0,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerBRBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 90,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    {
+      "id": "cornerBLBroken",
+      "x": 0,
+      "y": 512,
+      "w": 128,
+      "h": 128,
+      "scale": 2.1,
+      "rotation": 180,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  ],
+  "cornerTowers": {
+    "_readme": "=== УГЛОВЫЕ ВЫШКИ (item 3) === Четыре вышки, привязанные к угловым сегментам забора cornerTL/cornerTR/cornerBL/cornerBR. Каждая читает кадры из общего atlas (по умолчанию assets/tower_atlas.png). Параметры: enabled — включает рендер; atlas — путь относительно assets/, не указанный или отсутствующий файл просто отключает рендер (graceful no-render); animations.idle — спокойное состояние (loop), animations.work — проигрывается ровно один раз когда зомби умирает в радиусе killRadiusPx (мировые пиксели) и НЕ перезапускается, если ещё один зомби умирает во время её проигрывания (анимация всегда играет до конца текущего цикла). queueRetrigger (default false) — если выставить true, вышка запомнит ровно одно убийство во время play и автоматически сыграет work ещё раз сразу после завершения текущего цикла; false = mid-play kills полностью игнорируются. offsets.{tl,tr,bl,br} — смещение центра вышки относительно центра соответствующего углового сегмента (px, до game scale; +x вправо, +y вниз). Меняйте только цифры, никаких ручных правок кода не требуется.",
+    "enabled": true,
+    "atlas": "tower_atlas.png",
+    "scale": 0.75,
+    "anchor": {
+      "x": 0.5,
+      "y": 0.5
+    },
+    "drawOrder": "betweenFenceAndZombies",
+    "killRadiusPx": 250,
+    "killTriggerCooldownSec": 0.05,
+    "queueRetrigger": false,
+    "frame": {
+      "w": 92,
+      "h": 92
+    },
+    "animations": {
+      "idle": {
+        "_readme": "Кадры в idle. Можно задать массив frames:[{x,y,w,h}] или grid:{cols,rows,frameWidth,frameHeight,startIndex,count}.",
+        "grid": {
+          "cols": 42,
+          "rows": 1,
+          "frameWidth": 92,
+          "frameHeight": 92,
+          "startIndex": 32,
+          "count": 10
+        },
+        "frames": [],
+        "frameRate": 10,
+        "loop": true
+      },
+      "work": {
+        "_readme": "Анимация триггерится один раз на смерть зомби в радиусе. После проигрывания вышка возвращается в idle.",
+        "grid": {
+          "cols": 42,
+          "rows": 1,
+          "frameWidth": 92,
+          "frameHeight": 92,
+          "startIndex": 0,
+          "count": 31
+        },
+        "frames": [],
+        "frameRate": 31,
+        "loop": false,
+        "returnTo": "idle"
+      }
+    },
+    "offsets": {
+      "tl": { "x": 40, "y": 25 },
+      "tr": { "x": -40, "y": 25 },
+      "bl": { "x": 40, "y": -50 },
+      "br": { "x": -35, "y": -50 }
+    },
+    "anchors": {
+      "tl": "cornerTL",
+      "tr": "cornerTR",
+      "bl": "cornerBL",
+      "br": "cornerBR"
+    }
+  }
+}

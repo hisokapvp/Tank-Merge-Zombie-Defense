@@ -8628,9 +8628,12 @@ const _zombieCollisionGrid = new Map();
 const _zombieGridBucketPool = [];
 let _zombieGridBucketPoolUsed = 0;
 const _zombieGridQueryScratch = [];
-// Snapshot of grid query results inside impactAt; isolates iteration from
-// re-entrant queries that may occur via talents/chip onHit callbacks.
-const _impactAoeIndices = [];
+// Perf (solo-pipeline-yandex-vk#2 / item 6, postmortem item 12):
+// Module-scope `_impactAoeIndices` snapshot was removed. Each `impactAt` call
+// now allocates a per-impact local buffer (lightweight slice — NOT a worker
+// pool). This keeps the snapshot contract correct under any future async or
+// parallelized impactAt path while avoiding pool infrastructure that would be
+// premature while impactAt remains synchronous.
 
 function _acquireZombieGridBucket(){
   if (_zombieGridBucketPoolUsed < _zombieGridBucketPool.length) {
@@ -8642,6 +8645,29 @@ function _acquireZombieGridBucket(){
   _zombieGridBucketPool.push(bucket);
   _zombieGridBucketPoolUsed++;
   return bucket;
+}
+
+// Solo-pipeline-yandex-vk#1 step-1-2 (items 4, 14, postmortem 14):
+// Warm up the zombie-grid bucket pool to avoid an N alloc-spike on the first
+// big attack wave. The lazy pool in `_acquireZombieGridBucket` would otherwise
+// push() N fresh arrays into _zombieGridBucketPool the first time the wave
+// fills the grid. Reserving a small N upfront flattens that frame.
+//
+// Invariants:
+//   - Only **prefills** the pool array — does NOT mutate `_zombieGridBucketPoolUsed`
+//     or any active grid state. The next `rebuildZombieCollisionGrid` resets the
+//     used counter to 0 and starts handing out the prewarmed buckets normally.
+//   - Hardcoded cap (32) protects low-end devices from a runaway config (postmortem 14).
+//   - Idempotent: calling twice with the same n is a no-op once the pool reaches n.
+const _ZOMBIE_GRID_BUCKET_POOL_CAP = 32;
+function _warmupZombieGridBucketPool(n){
+  let target = (Number.isFinite(n) ? Math.floor(n) : 16);
+  if (target < 0) target = 0;
+  if (target > _ZOMBIE_GRID_BUCKET_POOL_CAP) target = _ZOMBIE_GRID_BUCKET_POOL_CAP;
+  while (_zombieGridBucketPool.length < target) {
+    _zombieGridBucketPool.push([]);
+  }
+  return _zombieGridBucketPool.length;
 }
 
 function rebuildZombieCollisionGrid(){
@@ -9045,6 +9071,12 @@ function spawnProjectile(p){
 }
 
 function stepProjectiles(dt){
+  // Solo-pipeline-yandex-vk#1 step-5 (postmortem 11, 15):
+  // Profiler markers are DEBUG-guarded so release-mirror has zero overhead.
+  // The double check (Game.DEBUG === true && Game.Profiler) ensures dead-code
+  // elimination friendliness and avoids any property access in release.
+  const _profStep = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  if (_profStep) _profStep.start('stepProjectiles');
   // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): reuse module-scope Map
   // across frames instead of `new Map(state.zombies.map(...))` per frame.
   // Eliminates per-frame allocation of N pairs + Map instance.
@@ -9129,6 +9161,7 @@ function stepProjectiles(dt){
 
   projectilesNext = prev;
   state.projectiles = next;
+  if (_profStep) _profStep.end('stepProjectiles');
 }
 
 function critChanceFromTankLevel(level){
@@ -9138,6 +9171,9 @@ function critChanceFromTankLevel(level){
 }
 
 function impactAt(x,y,b,opts){
+  // Solo-pipeline-yandex-vk#1 step-5 (postmortem 11, 15): DEBUG-guarded marker.
+  const _profImpact = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  if (_profImpact) _profImpact.start('impactAt');
   const suppressCombatFx = !!(opts && opts.suppressCombatFx);
   const mods = getMods();
   const attackMult = getZombieAttackMultipliers();
@@ -9163,12 +9199,17 @@ function impactAt(x,y,b,opts){
   const _ax = center.x;
   const _ay = center.y;
   const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe);
-  // Snapshot indices into a local array so subsequent grid queries (e.g. from
-  // talents callbacks) cannot clobber `_zombieGridQueryScratch` mid-iteration.
-  // Behavior 1:1: same indices, same iteration order.
+  // Snapshot indices into a per-impact local array so subsequent grid queries
+  // (e.g. from talents/chip onHit callbacks) cannot clobber
+  // `_zombieGridQueryScratch` mid-iteration. Behavior 1:1: same indices, same
+  // ascending iteration order (queryZombieIndicesInRadius ascending sort
+  // preserved — hard invariant).
+  // Perf (solo-pipeline-yandex-vk#2 / item 6, postmortem item 12):
+  // Per-impact local buffer (Array.prototype.slice) — NOT a pool. Keeps the
+  // snapshot contract correct under any future async/parallel impactAt path
+  // while avoiding premature pool infrastructure (impactAt is sync today).
   const _aoeCount = _aoeCandidates.length;
-  if (_impactAoeIndices.length < _aoeCount) _impactAoeIndices.length = _aoeCount;
-  for (let _ci = 0; _ci < _aoeCount; _ci++) _impactAoeIndices[_ci] = _aoeCandidates[_ci];
+  const _impactAoeIndices = _aoeCandidates.slice(0, _aoeCount);
   let aoeVictimsCount = 0;
   {
     const _aZs = state.zombies;
@@ -9291,6 +9332,7 @@ function impactAt(x,y,b,opts){
       if (chipImpactSfx) playSfx(chipImpactSfx);
     }
   }
+  if (_profImpact) _profImpact.end('impactAt');
 }
 
 function chainLightning(x,y,b,opts){
@@ -12876,6 +12918,10 @@ function drawDecorZombieLayer(){
   // Skip BOTH push to items[] (saves sort cost) and drawZombieEntity (saves drawImage).
   // Behavior 1:1: zombies whose sprite center lies outside [viewport ± 96px] are
   // never visible on the canvas anyway. Decor not culled (fixed map positions).
+  // Perf (solo-pipeline-yandex-vk#2 / item 5, postmortem item 9):
+  // Decor AABB cull mirrors zombie cull below. Margin must stay >= 96px
+  // (hard invariant). renderOrder is assigned BEFORE cull-skip so that when
+  // a decor returns into view its depth-sort order remains stable.
   const _camCullMargin = 96;
   const _camMinX = -_camCullMargin;
   const _camMaxX = viewSize.w + _camCullMargin;
@@ -12884,7 +12930,11 @@ function drawDecorZombieLayer(){
   if (state.decors && state.decors.length) {
     for (let i = 0; i < state.decors.length; i++) {
       const d = state.decors[i];
+      // Assign renderOrder BEFORE cull-skip — keeps depth-sort stable across
+      // viewport re-entry (decor that scrolls back in must keep its slot).
       if (!Number.isFinite(d.renderOrder)) d.renderOrder = i;
+      // AABB cull: skip decor fully outside viewport (matches zombie cull below).
+      if (d.x < _camMinX || d.x > _camMaxX || d.y < _camMinY || d.y > _camMaxY) continue;
       items.push({ kind: 'decor', y: d.y, order: d.renderOrder, id: d.spriteId + ':' + d.renderOrder, ref: d });
     }
   }
@@ -15995,16 +16045,39 @@ async function boot(){
           tank: balData.tank || {},
           tankOverrides: balData.tankOverrides || {},
           merge: balData.merge || {},
+          perf: balData.perf || {},
         };
         // Item 6 (solo-pipeline-yandex-vk#2): прокинуть merge-конфиг (maxMergeTier) в Game.Balance,
         // чтобы autoMerge.findMergePairs мог фильтровать tier-60 танки.
         GameApi.Balance = GameApi.Balance || {};
         GameApi.Balance.merge = BalanceConfig.merge;
+        GameApi.Balance.perf = BalanceConfig.perf;
         // Item 6 (solo-pipeline-yandex-vk#1): прокинуть production-конфиг в renderer.
         const _PLR = window.Game && window.Game.ProductionLineRender;
         if (_PLR && typeof _PLR.setProductionConfig === 'function' && balData.production) {
           _PLR.setProductionConfig(balData.production);
         }
+        // Solo-pipeline-yandex-vk#1 step-1-2 (item 4, postmortem 14):
+        // Warm-up the zombie-collision-grid bucket pool with N from balance
+        // (default 16, hardcoded cap 32). Idempotent — safe to call once at
+        // boot here; no-op if pool already filled.
+        try {
+          const _warmupN = Number.isFinite(balData.perf && balData.perf.gridBucketWarmup)
+            ? balData.perf.gridBucketWarmup
+            : 16;
+          _warmupZombieGridBucketPool(_warmupN);
+        } catch (_warmupErr) { /* additive, never throws into boot */ }
+        // Solo-pipeline-yandex-vk#1 step-1 (postmortem 11, 15):
+        // Seed Profiler budgets from balance so on-device diagnostics can
+        // emit `perf.budget.exceeded` for hot-path phases. Markers themselves
+        // remain DEBUG-guarded (release-mirror has Game.DEBUG !== true).
+        try {
+          const _PR = window.Game && window.Game.Profiler;
+          const _budgets = balData.perf && balData.perf.profilerBudgetsMs;
+          if (_PR && typeof _PR.setBudgets === 'function' && _budgets && typeof _budgets === 'object') {
+            _PR.setBudgets(_budgets);
+          }
+        } catch (_perfErr) { /* additive, never throws into boot */ }
       }
     } catch (e) { console.warn('balance.json load failed:', e); }
 

@@ -78,3 +78,17 @@
 - **Tank↔zombie spatial hash**: те же grid + query можно переиспользовать в `selectZombieAttackTargetForZombie` / `stepZombies` для tank-targeting. Сейчас итерация по `state.cells` — это малое N (≤16), win незначительный, но если cells вырастет — есть запас.
 - **Audio pool reuse**: всё ещё актуально — sfx hit-events на attack wave могут давать spike GC из-за `new Audio()`.
 - **localStorage write throttling unification**: разрозненные save-paths могут писать чаще 7s; нужен audit.
+
+## Decor AABB culling (solo-pipeline-yandex-vk#2 / 2026-04-28)
+
+- **Где**: `drawDecorZombieLayer` (`game.js`, тот же блок где живёт zombie cull).
+- **Контракт**: декоры чьи `(d.x, d.y)` лежат вне `[viewport ± 96px]` не push-ятся в `items[]` и не доходят до `drawDecorSpriteAt`. Margin = тот же `_camCullMargin = 96`, что у зомби — общий hard invariant `>= 96px`.
+- **Стабильность сортировки**: `d.renderOrder` присваивается **до** cull-skip. Это удерживает depth-sort стабильным при возврате декора в кадр (иначе при scroll обратно order сместился бы и слои прыгали бы).
+- **Зачем сейчас**: postmortem #5 — текущие декоры почти всегда в кадре, win небольшой; но семантика готова к параллаксу / удалённым постройкам, где AABB cull станет обязательным. Это future-proof guard, а не оптимизация под конкретный сценарий.
+- **Не делать**: не уменьшать margin ниже 96px без визуального теста; не пропускать `renderOrder` assignment до skip; не применять cull к HUD/UI слоям.
+
+## Snapshot contract (updated — solo-pipeline-yandex-vk#2 / 2026-04-28)
+
+- **Per-impact local AoE buffer**: внутри `impactAt` массив индексов жертв AOE — это **per-call local** копия (`_aoeCandidates.slice(0, _aoeCount)`), а не reused module-scope buffer. Снимок изолирован от любых re-entrant grid-query из `talentsApi.onHit` / chip onHit callbacks **и** корректен под будущие async/parallelized impactAt-варианты (web worker), где shared module-scope буфер сразу бы поломался.
+- **Что НЕ делать**: не возвращать old pattern `const _impactAoeIndices = []` в module scope; не строить full per-impact AoE pool с reuse-инфраструктурой, пока `impactAt` остаётся sync (postmortem item 12 — преждевременная оптимизация без runtime-выгоды). Lightweight slice — каноничный путь.
+- **Order preservation**: `queryZombieIndicesInRadius` сортирует ascending; `slice` сохраняет порядок 1:1. Менять sort на bucket-order запрещено (talents side-effects порядок-чувствительны — hard invariant).

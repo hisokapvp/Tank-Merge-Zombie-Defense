@@ -1,0 +1,738 @@
+{
+  "title": "Merge Tank: Zombie invasion",
+  "subtitle": "В духе cut-the-rope • Ангар с оградой • Ходячие зомби • Поддержка спрайтов танков",
+  "menuTitle": "Merge Tank: Zombie invasion",
+  "menuSubtitle": "Главное меню выживших",
+  "menuContinue": "Продолжить",
+  "menuNew": "Новая игра",
+  "menuSave": "Сохранить",
+  "menuLoad": "Загрузка",
+  "tutorialMergeTankMessage": "Объедините два одинаковых танка в более мощный, чтобы убивать зомби ещё эффективней!",
+  "menu.save.title": "Сохранение",
+  "menu.save.subtitle": "Выберите слот",
+  "menu.save.col.number": "№",
+  "menu.save.col.name": "Имя",
+  "menu.save.col.date": "Дата",
+  "menu.save.col.action": "Сохранить",
+  "menu.save.toast.saved": "Сохранено",
+  "menu.save.toast.error": "Ошибка сохранения",
+  "menu.load.title": "Загрузка",
+  "menu.load.subtitle": "Выберите слот",
+  "menu.load.col.number": "№",
+  "menu.load.col.name": "Имя",
+  "menu.load.col.date": "Дата",
+  "menu.load.col.action": "Загрузить",
+  "menu.load.toast.loaded": "Загрузка выполнена",
+  "menu.load.toast.error": "Ошибка загрузки",
+  "save.autoRetryName": "Сейв перед повтором",
+  "ui.toast.noSaves": "Нет сохранений",
+  "ui.toast.unavailable": "Недоступно",
+  "ughAutoMergeUnavailableDetailed": "Нет доступных танков для объединения, либо они ещё не создались.",
+  "menuExit": "Выход",
+  "common.back": "Назад",
+  "menuBack": "Назад",
+  "menuClose": "Закрыть",
+  "menuSaveSlotName": "Имя слота",
+  "menuSaveAction": "Сохранить",
+  "menuSaveSuccess": "Игра успешно сохранена",
+  "menuExitConfirm": "Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?",
+  "menuExitConfirmLeave": "Выйти",
+  "menuExitConfirmCancel": "Отмена",
+  "menuNewConfirm": "Если Вы начнёте новую игру, весь прогресс будет потерян. Уверены что хотите начать новую игру?",
+  "menuNewConfirmContinue": "Продолжить",
+  "menuLanguage": "Язык",
+  "bigMenuLoad": "Загрузить",
+  "bigMenuSound": "Звук",
+  "bigMenuSfx": "Эффекты",
+  "bigMenuMusic": "Музыка",
+  "bigMenuNoSave": "Нет сохранения",
+  "bigMenuDevs": "Создатели",
+  "bigMenuDevsText": "Debug и dev-фичи доступны в режиме <strong>?debug=1</strong>.",
+  "creditsModalTitle": "Создатели",
+  "creditsModalEmpty": "Список создателей пока пуст.",
+  "languageRussian": "Русский",
+  "languageEnglish": "Английский",
+  "menuSfx": "Громкость эффектов",
+  "menuMusic": "Громкость музыки",
+  "workshopChipUpgradeEmpty": "У Вас пока нет двух одинаковых чипов, для того чтобы сделать улучшение",
+  "menuAutoPause": "Автопауза при неактивной вкладке",
+  "sound.trackLoop": "Громкость трассы",
+  "hudCoins": "Деньги",
+  "hudKills": "Убито монстров",
+  "hudSprites": "Спрайты",
+  "buyTank": "Создать танк {level} уровня",
+  "armyTitle": "Армия",
+  "zombieSpritesTitle": "Зомби-спрайты",
+  "tankSpritesTitle": "Танки-спрайты (опционально)",
+  "filesLabel": "Файлы:",
+  "addLabel": "Добавь:",
+  "tipZombies": "Зомби визуально «ходят» (тень + покачивание + разворот по касательной). Танки стреляют видимыми снарядами.",
+  "tipTanks": "Танки-спрайты: добавь <span class=\"mono\">assets/tanks.json</span> и PNG в <span class=\"mono\">assets/tanks/</span>.",
+  "tankInfoCount": "Кол-во",
+  "tankInfoMax": "Макс. уровень",
+  "tankInfoLevels": "Уровни",
+  "hintSpritesOff": "Спрайты отключены (assets/zombies.json).",
+  "popTank": "+Танк",
+  "popHangar": "Ангар",
+  "popTrack": "В бой!",
+  "crateMessage": "Посмотри рекламу и получи танк.",
+  "crateModalTitle": "Военная помощь",
+  "crateModalText": "Для успешного завершения миссии центр управления отправил Вам дополнительный танк",
+  "crateGet": "Получить",
+  "crateAdLoading": "Просмотр рекламы...",
+  "talentsBtn": "Древо улучшений",
+  "supercomputerBtn": "Суперкомпьютер",
+  "supercomputerMenuTitle": "Меню суперкомпьютера",
+  "supercomputerModsHangarBtn": "Модификации ангара",
+  "supercomputerModsTankWallBtn": "Модификации техники и стен",
+  "supercomputerTalentsBtn": "Древо улучшений",
+  "modsHangarTitle": "Улучшения ячеек ангара",
+  "modsTankWallTitle": "Модификации техники и стен",
+  "modsTabGuns": "Орудия",
+  "modsTabDrones": "Дроны",
+  "modsTabWalls": "Стены",
+  "modsDamagePoints": "Очки урона",
+  "damagePointsLabel": "Очки урона: {count}",
+  "modsGunsReservedLabel": "Зарезервировано очков: {count}",
+  "modsGunsColType": "Тип пушки",
+  "modsGunsColLevel": "Ур.",
+  "modsGunsColAttackSpeed": "Скорость атаки",
+  "modsGunsColDamage": "Базовый урон",
+  "modsDronesColMoveSpeed": "Скорость полёта",
+  "modsDronesColRepairSpeed": "Скорость ремонта",
+  "modsDronesColCostMult": "Множитель стоимости ремонта",
+  "modsGunsColUpgradeLevel": "Уровень улучш.",
+  "modsGunsColCost": "Стоимость",
+  "modsGunsColActions": "Действия",
+  "modsGunsUpgrade": "Улучшить",
+  "modsGunsNotEnoughDamagePoints": "Недостаточно очков",
+  "modsGunsNoSprite": "Нет спрайта",
+  "modsDronesUpgrade": "Улучшить",
+  "modsWallsLevelLabel": "Уровень стен: {level}",
+  "modsWallsSegmentHpLabel": "HP сегмента: {hp}",
+  "modsWallsArmorLabel": "Броня: {armor}",
+  "modsWallsUpgradesLabel": "Улучшения",
+  "modsWallsCostLabel": "Стоимость",
+  "modsWallsActionLabel": "Действие",
+  "modsWallsUpgrade": "Улучшить",
+  "modsWallsUpgradeCost": "Улучшить ({cost})",
+  "modsWallsUpgradeMax": "Макс. уровень",
+  "modsInDevelopment": "В разработке",
+  "supercomputerBack": "Закрыть",
+  "criticalTitle": "Критическое состояние",
+  "criticalSkip": "Пропустить",
+  "criticalRestart": "Перезапустить симуляцию",
+  "criticalSaveExit": "Сохранить прогресс и выйти",
+  "criticalLogDetected": "[CRITICAL] Обнаружено критическое повреждение суперкомпьютера.",
+  "criticalLogThreshold": "[SYS] Зафиксирован аварийный порог: 5% остатка энергии.",
+  "criticalLogAutosaveStart": "[SYS] Запуск аварийного протокола сохранения состояния.",
+  "criticalLogSaveErrorTanks": "[ERR] Ошибка сохранения танков. Реестр боевых юнитов повреждён.",
+  "criticalLogTanksPurged": "[SYS] Для предотвращения каскадной ошибки танки выгружены из симуляции.",
+  "criticalLogDronesStandby": "[WARN] Дроны технической поддержки переведены в режим ожидания.",
+  "criticalLogActionPrompt": "[ACT] Выберите действие: перезапуск симуляции или выход с сохранением прогресса.",
+  "achievementsBtn": "Достижения",
+  "achievementsTitle": "Достижения",
+  "achievementUnlockedTitle": "Достижение получено",
+  "achievementToastUnlocked": "Открыто: {name}",
+  "achievementClaim": "Получить",
+  "achievementCondition": "Условие: {condition}",
+  "achievementStatusDone": "Получено",
+  "achievementStatusTodo": "Не получено",
+  "achievementProgress": "Прогресс: {value}/{target}",
+  "achievementReward": "Награда: {reward}",
+  "achievementDescriptionCreateTanks": "Создайте {target} танков",
+  "achievementDescriptionMergeTanks": "Объедините {target} танков",
+  "achievementBuyerNovice": "Покупатель - Новичок",
+  "achievementBuyerPro": "Покупатель - профессионал",
+  "achievementBuyerExpert": "Покупатель - эксперт",
+  "achievementCreatorNovice": "Создатель танков - Новичок",
+  "achievementCreatorPro": "Создатель танков - Профессионал",
+  "achievementCreatorExpert": "Создатель танков - Эксперт",
+  "achievementCreatorNoviceDesc": "Создайте 200 танков",
+  "achievementCreatorProDesc": "Создайте 800 танков",
+  "achievementCreatorExpertDesc": "Создайте 1600 танков",
+  "achievementEngineerNovice": "Инженер - Новичок",
+  "achievementEngineerPro": "Инженер - Профессионал",
+  "achievementEngineerExpert": "Инженер - Эксперт",
+  "achievementFenceMechanic1": "Механик ограды I",
+  "achievementFenceMechanic2": "Механик ограды II",
+  "achievementFenceMechanic3": "Механик ограды III",
+  "achievementFenceMechanic4": "Механик ограды IV",
+  "achievementFenceMechanic5": "Механик ограды V",
+  "achievementNewTechnology1": "Новая технология I",
+  "achievementNewTechnology2": "Новая технология II",
+  "achievementNewTechnology3": "Новая технология III",
+  "achievementNewTechnology4": "Новая технология IV",
+  "achievementDutyShift1": "Смена дежурства I",
+  "achievementDutyShift2": "Смена дежурства II",
+  "achievementDutyShift3": "Смена дежурства III",
+  "achievementTrackCleanup1": "Уборка трассы I",
+  "achievementTrackCleanup2": "Уборка трассы II",
+  "achievementTrackCleanup3": "Уборка трассы III",
+  "achievementTrackCleanup4": "Уборка трассы IV",
+  "achievementTrackCleanup5": "Уборка трассы V",
+  "achievementStableIncome1": "Стабильный доход I",
+  "achievementStableIncome2": "Стабильный доход II",
+  "achievementStableIncome3": "Стабильный доход III",
+  "achievementStableIncome4": "Стабильный доход IV",
+  "achievementStableIncome5": "Стабильный доход V",
+  "achievementEarlyCapital1": "Ранний капитал I",
+  "achievementEarlyCapital2": "Ранний капитал II",
+  "achievementEarlyCapital3": "Ранний капитал III",
+  "achievementEarlyCapital4": "Ранний капитал IV",
+  "achievementEarlyCapital5": "Ранний капитал V",
+  "achievementToughPerimeter": "Жёсткий периметр",
+  "achievementHangarMaster1": "Мастер ангара I",
+  "achievementHangarMaster2": "Мастер ангара II",
+  "achievementHangarMaster3": "Мастер ангара III",
+  "achievementHangarMaster4": "Мастер ангара IV",
+  "achievementHangarMaster5": "Мастер ангара V",
+  "achievementEngineerNoviceDesc": "Объедините 200 танков",
+  "achievementEngineerProDesc": "Объедините 500 танков",
+  "achievementEngineerExpertDesc": "Объедините 1000 танков",
+  "achievementFenceMechanic1Desc": "Выполните 1 успешный ручной ремонт ограды",
+  "achievementFenceMechanic2Desc": "Выполните 50 успешных ручных ремонтов ограды",
+  "achievementFenceMechanic3Desc": "Выполните 200 успешных ручных ремонтов ограды",
+  "achievementFenceMechanic4Desc": "Выполните 1000 успешных ручных ремонтов ограды",
+  "achievementFenceMechanic5Desc": "Выполните 10000 успешных ручных ремонтов ограды",
+  "achievementNewTechnology1Desc": "Завершите изучение 1 уникальной технологии модификатора",
+  "achievementNewTechnology2Desc": "Завершите изучение 3 уникальных технологий модификатора",
+  "achievementNewTechnology3Desc": "Завершите изучение 8 уникальных технологий модификатора",
+  "achievementNewTechnology4Desc": "Завершите изучение всех 16 уникальных технологий модификатора",
+  "achievementDutyShift1Desc": "Получите 1 дрон техподдержки",
+  "achievementDutyShift2Desc": "Получите 4 дрона техподдержки",
+  "achievementDutyShift3Desc": "Получите 9 дронов техподдержки",
+  "achievementTrackCleanup1Desc": "Переживите 1 волну атаки зомби без починки фрагментов забора",
+  "achievementTrackCleanup2Desc": "Переживите 5 волн атак зомби подряд без починки фрагментов забора",
+  "achievementTrackCleanup3Desc": "Переживите 10 волн атак зомби подряд без починки фрагментов забора",
+  "achievementTrackCleanup4Desc": "Переживите 25 волн атак зомби подряд без починки фрагментов забора",
+  "achievementTrackCleanup5Desc": "Переживите 50 волн атак зомби подряд без починки фрагментов забора",
+  "achievementStableIncome1Desc": "Заработайте 10K монет за всё время",
+  "achievementStableIncome2Desc": "Заработайте 1M монет за всё время",
+  "achievementStableIncome3Desc": "Заработайте 100M монет за всё время",
+  "achievementStableIncome4Desc": "Заработайте 100B монет за всё время",
+  "achievementStableIncome5Desc": "Заработайте 100T монет за всё время",
+  "achievementEarlyCapital1Desc": "Держите на счету 10K монет одновременно",
+  "achievementEarlyCapital2Desc": "Держите на счету 1M монет одновременно",
+  "achievementEarlyCapital3Desc": "Держите на счету 100M монет одновременно",
+  "achievementEarlyCapital4Desc": "Держите на счету 100B монет одновременно",
+  "achievementEarlyCapital5Desc": "Держите на счету 100T монет одновременно",
+  "achievementToughPerimeterDesc": "Переживите волну атаки с полностью целым забором (все сегменты на 100% HP)",
+  "achievementHangarMaster1Desc": "Заполните все 15 ячеек ангара танками",
+  "achievementHangarMaster2Desc": "Все 15 ячеек ангара заняты танками уровня 10+",
+  "achievementHangarMaster3Desc": "Все 15 ячеек ангара заняты танками уровня 20+",
+  "achievementHangarMaster4Desc": "Все 15 ячеек ангара заняты танками уровня 40+",
+  "achievementHangarMaster5Desc": "Все 15 ячеек ангара заняты танками уровня 60+",
+  "achievementRewardCreate2": "Возможность создавать 2 танка одновременно",
+  "achievementRewardCreate5": "Возможность создавать до 5 танков одновременно",
+  "achievementRewardCreateMax": "Возможность создавать максимальное количество танков одновременно",
+  "achievementRewardBuy2": "Возможность создавать 2 танка одновременно",
+  "achievementRewardBuy5": "Возможность создавать до 5 танков одновременно",
+  "achievementRewardBuyMax": "Возможность создавать максимальное количество танков одновременно",
+  "achievementRewardAutoMergeBasic": "Возможность полуавтоматически объединять 2 танка",
+  "achievementRewardAutoMergeAdvanced": "Возможность полуавтоматически объединять до 10 танков",
+  "achievementRewardAutoMergeExpert": "Возможность полуавтоматически объединять все доступные для объединения танки",
+  "achievementRewardFenceMechanicCoins75": "75$",
+  "achievementRewardFenceMechanicDust5": "5 кремниевой пыли",
+  "achievementRewardFenceMechanicFragment1": "1 случайный фрагмент чипа",
+  "achievementRewardFenceMechanicChips2": "2 случайных чипа",
+  "achievementRewardFenceMechanicUpgradePoint1": "1 очко улучшения",
+  "achievementRewardNewTechnologyFragments2": "2 случайных фрагмента чипа",
+  "achievementRewardNewTechnologyDust20": "20 кремниевой пыли",
+  "achievementRewardNewTechnologyChips2": "2 случайных чипа",
+  "achievementRewardNewTechnologyUpgradePoints3": "3 очка улучшения",
+  "achievementRewardDutyShiftUpgradePoint1": "1 очко улучшения",
+  "achievementRewardDutyShiftDamage20000": "20000 очков урона",
+  "achievementRewardDutyShiftUpgradePoints2": "2 очка улучшения",
+  "achievementRewardTrackCleanupDamagePoints50": "50 очков урона",
+  "achievementRewardTrackCleanupFragments2": "2 случайных фрагмента чипа",
+  "achievementRewardTrackCleanupUpgradePoint1": "1 очко улучшения",
+  "achievementRewardTrackCleanupChips5": "5 случайных чипов",
+  "achievementRewardTrackCleanupUpgradePoints3": "3 очка улучшения",
+  "achievementRewardStableIncomeDamage100": "100 очков урона",
+  "achievementRewardStableIncomeDamage1000": "1000 очков урона",
+  "achievementRewardStableIncomeDamage5000": "5000 очков урона",
+  "achievementRewardStableIncomeDamage20000": "20000 очков урона",
+  "achievementRewardStableIncomeDamage100000": "100000 очков урона",
+  "achievementRewardStableIncomeDamage500M": "500 000 000 очков урона",
+  "achievementRewardStableIncomeUpgradePoints10": "10 очков улучшения",
+  "achievementRewardEarlyCapitalFragments2": "2 случайных фрагмента чипа",
+  "achievementRewardEarlyCapitalChips2": "2 случайных чипа",
+  "achievementRewardEarlyCapitalDamage10000": "10000 очков урона",
+  "achievementRewardEarlyCapitalFragments20": "20 случайных фрагментов чипа",
+  "achievementRewardEarlyCapitalUpgrade3Drones5L2": "3 очка улучшения + 5 дронов (ур. 2)",
+  "achievementRewardToughPerimeterUpgradePoint1": "1 очко улучшения",
+  "achievementRewardHangarMaster1": "1 фрагмент чипа + 10 кремниевой пыли",
+  "achievementRewardHangarMaster2": "2 случайных чипа + 5000 очков урона",
+  "achievementRewardHangarMaster3": "1 очко улучшения + 1 дрон (ур. 1)",
+  "achievementRewardHangarMaster4": "50000 очков урона + 5 случайных чипов",
+  "achievementRewardHangarMaster5": "3 очка улучшения + 2 дрона (ур. 5)",
+  "achievementDefenseOrder1": "Защитный приказ I",
+  "achievementDefenseOrder2": "Защитный приказ II",
+  "achievementDefenseOrder3": "Защитный приказ III",
+  "achievementDefenseOrder4": "Защитный приказ IV",
+  "achievementDefenseOrder5": "Защитный приказ V",
+  "achievementDefenseOrder1Desc": "Переживите 5 волн без получения нового уровня танка",
+  "achievementDefenseOrder2Desc": "Переживите 10 волн без получения нового уровня танка",
+  "achievementDefenseOrder3Desc": "Переживите 25 волн без получения нового уровня танка",
+  "achievementDefenseOrder4Desc": "Переживите 50 волн без получения нового уровня танка",
+  "achievementDefenseOrder5Desc": "Переживите 100 волн без получения нового уровня танка",
+  "achievementRewardDefenseOrder1": "2 случайных фрагмента чипа",
+  "achievementRewardDefenseOrder2": "2 случайных чипа",
+  "achievementRewardDefenseOrder3": "1 очко улучшения и 1 дрон ур. 1",
+  "achievementRewardDefenseOrder4": "3 очка улучшения и 3 дрона ур. 3",
+  "achievementRewardDefenseOrder5": "5 очков улучшения и 15 случайных чипов",
+  "achievementFirstElite1": "Первая элита I",
+  "achievementFirstElite2": "Первая элита II",
+  "achievementFirstElite3": "Первая элита III",
+  "achievementFirstElite4": "Первая элита IV",
+  "achievementFirstElite5": "Первая элита V",
+  "achievementFirstElite6": "Первая элита VI",
+  "achievementFirstElite1Desc": "Достигните 10-го уровня танка",
+  "achievementFirstElite2Desc": "Достигните 20-го уровня танка",
+  "achievementFirstElite3Desc": "Достигните 30-го уровня танка",
+  "achievementFirstElite4Desc": "Достигните 40-го уровня танка",
+  "achievementFirstElite5Desc": "Достигните 50-го уровня танка",
+  "achievementFirstElite6Desc": "Достигните 60-го уровня танка",
+  "achievementRewardFirstElite1": "500 очков урона",
+  "achievementRewardFirstElite2": "1 очко улучшения",
+  "achievementRewardFirstElite3": "5000 очков урона + 2 случайных чипа",
+  "achievementRewardFirstElite4": "2 очка улучшения + 1 дрон (ур. 3)",
+  "achievementRewardFirstElite5": "3 очка улучшения + 2 дрона (ур. 5)",
+  "achievementRewardFirstElite6": "5 очков улучшения + 50000 очков урона",
+  "achievementClaimReward": "Получить награду",
+  "achievementNoFreeSlots": "Нет свободных слотов для дронов",
+  "buyBulk2": "Создать 2 танка",
+  "buyBulk5": "Создать 5 танков",
+  "buyBulkMax": "Создать максимум танков",
+  "buyBulkDynamic": "Создать {count} танков",
+  "buyBulkBuy": "Создать {count} {tankWord} - {cost}$",
+  "tankWord1": "танк",
+  "tankWord2_4": "танка",
+  "tankWord5": "танков",
+  "autoMerge2": "Объединить 2 танка",
+  "autoMerge4": "Объединить 4 танка",
+  "autoMergeDynamicShort": "Объединить {count} танков",
+  "autoMerge2Short": "Объединить 2",
+  "autoMerge4Short": "Объединить 4",
+  "autoMergeAll": "Объединить все танки",
+  "fenceRepairNoCoins": "Не хватает монет на ремонт",
+  "fenceRepairDone": "Сегмент отремонтирован",
+  "talentTreeTitle": "Древо улучшений",
+  "talentPoints": "Очки улучшений",
+  "talentApply": "Применить",
+  "talentReset": "Сбросить выбор",
+  "talentResetAll": "Сбросить улучшения",
+  "talentResetCooldownLabel": "Сброс через {time}",
+  "talentResetCooldownBlocked": "Повторный сброс будет доступен через {time}",
+  "talentResetNoCoins": "Не хватает монет для сброса улучшений",
+  "talentResetModalText": "Для сброса улучшений требуется {cost}$, Вы уверены что хотите сбросить улучшения?",
+  "talentResetModalWatchBtn": "Да",
+  "talentResetCooldownModalText": "Следующий сброс возможен через {time}; дождитесь окончания сброса",
+  "talentResetCooldownRefreshNow": "Обновить моментально",
+  "talentResetCooldownRefreshStub": "Моментальное обновление пока недоступно: рекламная заглушка ещё не подключена",
+  "talentPending": "Выбрано",
+  "talentNeedPoints": "Не хватает очков",
+  "talentActive": "Использовать активку",
+  "talentActiveCooldown": "Активка ({sec}с)",
+  "talentActiveCharges": "Заряды: {current}/{max}",
+  "talentActiveRechargeIn": "Перезарядка: {sec}с",
+  "talentActiveRechargeReady": "Перезарядка: готово",
+  "talentActiveDurationLeft": "Длительность: {sec}с",
+  "talentCantBuy_tierLocked": "Тир ещё не открыт",
+  "talentCantBuy_noPoints": "У Вас нет доступных очков улучшения",
+  "talentCantBuy_requires": "Требуются таланты",
+  "talentCantBuy_maxRank": "Достигнут максимальный ранг",
+  "levelLabel": "Уровень компьютера",
+  "levelShort": "Ур.",
+  "levelUp": "Ур.{level}!",
+  "levelModalTitle": "Суперкомпьютер достиг {level} уровня!",
+  "levelModalTalent": "Награда: {points} очк. улучшений",
+  "levelModalTalentWithDamage": "Награда: {points} очк. улучшений и {damagePoints} очков урона",
+  "levelModalGold": "Вы получили {gold} золота",
+  "levelUpAccept": "Принять награду",
+  "powerMoment40": "Открыты активные способности!",
+  "powerMoment50": "Максимальная мощь танков.",
+  "powerMoment60": "Режим эндгейма — враги усилены.",
+  "statusOn": "OK",
+  "statusOff": "OFF",
+  "zombieShort": "З",
+  "tankShort": "Т",
+  "dismantleBtn": "Разбор танков",
+  "dismantleBtnConfirm": "Подтвердить разбор",
+  "dismantleConfirm": "Вы действительно хотите разобрать танк {level} уровня?",
+  "dismantleConfirmMulti": "Вы действительно хотите разобрать выбранные танки?",
+  "dismantleYes": "Да",
+  "dismantleNo": "Нет",
+  "dismantleConfirmYes": "Подтвердить",
+  "dismantleConfirmCancel": "Отменить",
+  "dismantleConfirmTitle": "Подтвердить разбор танков",
+  "dismantleNoneSelected": "Не выбрано ни одного танка",
+  "dismantleCount": "танков",
+  "dismantleMore": "ещё",
+  "dropOnCrateReject": "Место занято",
+  "menuSettings": "Настройки",
+  "tutorialStarterTankMessage": "Нажми на танк и отправь его в бой!",
+  "tutorialSecondTankMessage": "Создайте ещё один танк",
+  "tutorialSupercomputerOpenMenuMessage": "Откройте меню Суперкомпьютера",
+  "tutorialSupercomputerOpenTreeMessage": "Перейдите в раздел \"Древо улучшений\"",
+  "tutorialSupercomputerApplyCaliberMessage": "Выберите улучшение и нажмите кнопку \"Применить\".",
+  "tutorialSupercomputerDamageOpenMenuMessage": "Откройте меню Суперкомпьютера",
+  "tutorialFirstWholeChipOpenSupercomputerMessage": "Откройте меню Суперкомпьютера",
+  "tutorialFirstWholeChipOpenHangarModsMessage": "Перейдите в раздел \"Модификации ангара\"",
+  "tutorialFirstWholeChipInstallFirstRedSlotMessage": "Улучшите ячейку ангара вставив чип в красный слот.",
+  "tutorialSupercomputerOpenTankWallMessage": "Перейдите в раздел \"Модификации орудий и стен\"",
+  "tutorialSupercomputerApplyWeaponDamageMessage": "Выберите орудие, которое хотите улучшить. Используя кнопки \"+\" и \"-\" вложите нужное количество очков урона. Нажмите кнопку \"Улучшить\" для применения улучшений.",
+  "tutorialProductionStorageOpenMessage": "Откройте производственный склад",
+  "tutorialProductionStorageOpenBoxMessage": "Нажмите на коробку, чтобы открыть её",
+  "tutorialContinue": "Продолжить",
+  "tutorialSkip": "Пропустить",
+  "tutorialDisable": "Выключить обучение",
+  "tutorialClose": "Закрыть обучение",
+  "tutorialDisableConfirmText": "Вы действительно хотите закончить обучение и продолжить играть без подсказок?",
+  "tutorialDisableConfirmAccept": "Подтвердить",
+  "tutorialDisableConfirmCancel": "Отмена",
+  "tutorialLockedTooltip": "Временно заблокировано. Закончите обучения для получения доступа",
+  "menuTutorialToggle": "Обучение",
+  "mergePopupTitle": "Новый танк уровень {level}",
+  "mergePopupSubtitle": "ОТКРЫТ НОВЫЙ УРОВЕНЬ ТАНКА!",
+  "mergePopupFight": "В бой!",
+  "mergePopupClose": "Закрыть",
+  "mergePopupDamageLabel": "Урон",
+  "mergePopupFireRateLabel": "Скорострельность",
+  "mergePopupRateUnit": "/с",
+  "mergePopupRangeLabel": "Дальность",
+  "mergePopupBarrelsLabel": "Стволы",
+  "lessonProgressTitle": "Прогресс уроков",
+  "lessonRepeatNow": "Повторить сейчас",
+  "lessonExportSchedule": "Экспорт расписания",
+  "lessonImportSchedule": "Импорт расписания",
+  "lessonPreviewAnki": "Предпросмотр Anki",
+  "lessonHidePreview": "Скрыть предпросмотр",
+  "lessonExportAnki": "Экспорт Anki",
+  "lessonScoreLabel": "Результат: {score}",
+  "lessonRepeat": "Повторить",
+  "lessonAnki": "Anki",
+  "lessonNextNotScheduled": "Следующее: не запланировано",
+  "lessonNextDueNow": "Следующее: сейчас",
+  "lessonNextIn": "Следующее: через {time}",
+  "lessonNextReviewLabel": "Следующее повторение: {text}",
+  "lessonNextReviewNone": "Следующее повторение: нет",
+  "lessonDueNotScheduled": "не запланировано",
+  "lessonDueNow": "сейчас",
+  "lessonDueIn": "через {time}",
+  "lessonScheduleExported": "Расписание экспортировано",
+  "lessonScheduleImported": "Импортировано элементов: {count}",
+  "lessonPreviewUnavailable": "Предпросмотр недоступен.",
+  "lessonBasics": "Основы: Слияние танков",
+  "lessonCombat": "Бой: Паттерны стрельбы",
+  "lessonEconomy": "Экономика: Стратегия монет",
+  "lessonDefense": "Оборона: Волны зомби",
+  "lessonAdvanced": "Продвинутое: Мультиствол"
+  ,"experimentsTitle": "Эксперименты"
+  ,"experimentsRefresh": "Обновить"
+  ,"experimentsClear": "Сбросить назначения"
+  ,"experimentsReset": "Сбросить конфиг"
+  ,"experimentsEmpty": "Эксперименты не заданы."
+  ,"experimentsEnabled": "Включено"
+  ,"experimentsRollout": "Роллаут %"
+  ,"experimentsForce": "Форс"
+  ,"experimentsAuto": "auto"
+  ,"funnelTitle": "Воронка"
+  ,"funnelRefresh": "Обновить"
+  ,"funnelExport": "Экспорт JSON"
+  ,"funnelReset": "Сбросить воронку"
+  ,"funnelCompleted": "готово"
+  ,"funnelPending": "ожидание"
+  ,"funnelDrop": "drop-off"
+  ,"funnelFirstLaunch": "Первый запуск"
+  ,"funnelFirstMerge": "Первый merge"
+  ,"funnelFirstBattle": "Первый бой"
+  ,"funnelFirstUpgrade": "Первый апгрейд"
+  ,"funnelReturnVisit": "Повторный вход"
+  ,"triageTitle": "Триаж багов"
+  ,"triageExport": "Экспорт JSON"
+  ,"triageClear": "Очистить"
+  ,"triageTitleLabel": "Заголовок"
+  ,"triageNotesLabel": "Заметки"
+  ,"triageStatusLabel": "Статус"
+  ,"triagePriorityLabel": "Приоритет"
+  ,"triageReproLabel": "Воспроизведение"
+  ,"triageSystemLabel": "Система"
+  ,"triageAdd": "Добавить баг"
+  ,"triageEmpty": "Баги не заведены."
+  ,"triageAttachTelemetry": "Привязать телеметрию"
+  ,"triageRemove": "Удалить"
+  ,"triageTelemetryAttached": "Телеметрия привязана"
+  ,"offlineOfferTitle": "Посмотри рекламу и получи упущенное"
+  ,"offlineOfferSub": "Накопилось:"
+  ,"offlineOfferCoins": "Деньги: $ {value}"
+  ,"offlineOfferXp": "Опыт: ⭐ {value}"
+  ,"offlineOfferClaim": "Посмотреть и получить"
+  ,"talentBranch_offense": "Наступление"
+  ,"talentBranch_defense": "Защита"
+  ,"talentBranch_economy": "Экономика"
+  ,"talent_off_caliber_name": "Калибр"
+  ,"talent_off_caliber_desc": "Постоянно увеличивает урон танков на 7% за ранг. Текущая прибавка урона - {current}%"
+  ,"talent_off_fire_rate_name": "Скорострельность"
+  ,"talent_off_fire_rate_desc": "+6% к скорострельности за ранг."
+  ,"talent_off_range_name": "Дальность"
+  ,"talent_off_range_desc": "+7% к дальности атаки за ранг."
+  ,"talent_off_aoe_name": "Широкий взрыв"
+  ,"talent_off_aoe_desc": "+6% к радиусу AoE за ранг. Бонус толпы от 6 целей: +6% к AoE-урону за ранг."
+  ,"talent_off_multishot_name": "Мультивыстрел"
+  ,"talent_off_multishot_desc": "Двойной выстрел: +4%/ранг (кап 45%). Тройной: +2%/ранг с 4 ранга (кап 12%)."
+  ,"talent_off_orbit_speed_name": "Разгон орбиты"
+  ,"talent_off_orbit_speed_desc": "+6% к скорости орбиты за ранг."
+  ,"talent_off_acid_dot_name": "Кислотный DoT"
+  ,"talent_off_acid_dot_desc": "Открывает кислотный DoT. Шанс 5%, длительность 3с, множитель DPS +7% за ранг."
+  ,"talent_off_mark_name": "Метка цели"
+  ,"talent_off_mark_desc": "Открывает метку. Шанс +6% за ранг, длительность 5с, урон по цели +5% за ранг."
+  ,"talent_off_armor_piercing_proc_name": "Бронебойный прок"
+  ,"talent_off_armor_piercing_proc_desc": "Открывает прок: 1% шанс, 5с длительность, x1.30 урон, ICD 3с."
+  ,"talent_off_impulse_proc_name": "Импульсный прок"
+  ,"talent_off_impulse_proc_desc": "Открывает прок: 1% шанс, 5с длительность, x1.35 скорострельность, ICD 3с."
+  ,"talent_off_execute_name": "Добивание"
+  ,"talent_off_execute_desc": "Открывает добивание ниже 30% HP. Множитель урона добивания +6% за ранг."
+  ,"talent_off_cc_micro_name": "Микро-контроль"
+  ,"talent_off_cc_micro_desc": "Открывает микро-контроль (замедление). Шанс +4%/ранг, замедление 35% на 800мс, ICD 2.5с."
+  ,"talent_off_ramp_up_name": "Разгон"
+  ,"talent_off_ramp_up_desc": "Открывает стаки разгона каждые 2с (макс 5, grace 1.2с). +2% скорострельности за стак и ранг."
+  ,"talent_off_pulse_aoe_name": "Импульсный AoE"
+  ,"talent_off_pulse_aoe_desc": "Открывает импульсный AoE. Интервал: 8 и -1 за ранг (мин 3). Импульс: AoE x1.40, урон x1.10."
+  ,"talent_off_convert_to_dot_name": "Конверсия в DoT"
+  ,"talent_off_convert_to_dot_desc": "Открывает перевод урона в DoT. Доля +4% за ранг (кап 20%), длительность 3с, обновление стака refresh."
+  ,"talent_off_ricochet_name": "Рикошет"
+  ,"talent_off_ricochet_desc": "Открывает рикошет. Шанс +6%/ранг (кап 25%), радиус 220, урон x0.70, +1 отскок (2 с 4 ранга)."
+  ,"talent_off_active_barrage_name": "Активка: Шквал"
+  ,"talent_off_active_barrage_desc": "Открывает активку атаки: 6с, 2 заряда, перезарядка 45с. x1.25 урон/AoE/скорострельность/орбита."
+  ,"talent_def_wall_hp_name": "Прочность стен"
+  ,"talent_def_wall_hp_desc": "+6% к HP стен за ранг."
+  ,"talent_def_armor_flat_name": "Композитная броня"
+  ,"talent_def_armor_flat_desc": "Увеличивает броню стены на 2% за ранг. Текущая прибавка - {current}%"
+  ,"talent_def_repair_cost_name": "Логистика ремонта"
+  ,"talent_def_repair_cost_desc": "Множитель стоимости ремонта -6% за ранг (доп. clamp в runtime)."
+  ,"talent_def_resists_name": "Сопротивления"
+  ,"talent_def_resists_desc": "Сопротивление огню/кислоте/взрыву +6% за ранг каждое (кап 30%)."
+  ,"talent_def_regen_name": "Контур регена"
+  ,"talent_def_regen_desc": "Базовый реген стены: старт через 4с, +0.6% HP/с за ранг."
+  ,"talent_def_shield_name": "Реактивный щит"
+  ,"talent_def_shield_desc": "Открывает щит. Период 12с и -1с/ранг (мин 8с), щит +2%/ранг, кап 25%."
+  ,"talent_def_slow_field_name": "Поле замедления"
+  ,"talent_def_slow_field_desc": "Открывает поле замедления. Замедление +10% за ранг, радиус 140."
+  ,"talent_def_thorns_name": "Шипы"
+  ,"talent_def_thorns_desc": "Открывает шипы. Доля отражения +5% за ранг, радиус 120, ICD 300мс."
+  ,"talent_def_barrier_trigger_name": "Триггер барьера"
+  ,"talent_def_barrier_trigger_desc": "Открывает барьер на 50% HP стены: 3с, 40% DR, ICD 20с."
+  ,"talent_def_stun_on_hit_name": "Оглушение при ударе"
+  ,"talent_def_stun_on_hit_desc": "Открывает оглушение от удара о стену. Шанс +6% за ранг, 200мс, ICD 2с."
+  ,"talent_def_second_wind_name": "Второе дыхание"
+  ,"talent_def_second_wind_desc": "Открывает аварийное восстановление: вернуть 20% HP стены."
+  ,"talent_def_broken_dr_name": "DR пробитого сегмента"
+  ,"talent_def_broken_dr_desc": "Множитель входящего урона по пробитым сегментам -6% за ранг."
+  ,"talent_def_auto_repair_name": "Авторемонт"
+  ,"talent_def_auto_repair_desc": "Открывает авторемонт каждые 8с. Восстановление +2% за ранг."
+  ,"talent_def_repair_efficiency_name": "Эффективность ремонта"
+  ,"talent_def_repair_efficiency_desc": "Множитель эффективности ремонта +10% за ранг."
+  ,"talent_def_repair_discount_timer_name": "Таймер скидки ремонта"
+  ,"talent_def_repair_discount_timer_desc": "Открывает периодическую скидку каждые 30с. Множитель стоимости ремонта -10% за ранг."
+  ,"talent_def_immunity_proc_name": "Прок иммунитета"
+  ,"talent_def_immunity_proc_desc": "Открывает прок иммунитета. Шанс +4%/ранг, длительность 1с, ICD 25с."
+  ,"talent_def_active_dome_name": "Активка: Купол"
+  ,"talent_def_active_dome_desc": "Открывает активку защиты: 6с, 2 заряда, перезарядка 60с. Входящий урон x0.15, авторемонт 3%/с."
+  ,"talent_eco_buy_discount_name": "Скидка на покупку"
+  ,"talent_eco_buy_discount_desc": "Множитель цены покупки танка -6% за ранг (мин x0.50)."
+  ,"talent_eco_upgrade_discount_name": "Скидка на апгрейды"
+  ,"talent_eco_upgrade_discount_desc": "Множители цены апгрейдов SC/стен/орудий -5% за ранг."
+  ,"talent_eco_repair_discount_name": "Скидка на ремонт"
+  ,"talent_eco_repair_discount_desc": "Множитель стоимости ремонта -6% за ранг."
+  ,"talent_eco_coins_kill_bonus_name": "Доход за убийства"
+  ,"talent_eco_coins_kill_bonus_desc": "+6% монет за убийство за ранг. Kill bounty с 3 ранга: шанс 1%, 5с, x1.30 монет, ICD 3с."
+  ,"talent_eco_coins_shot_bonus_name": "Доход за выстрел"
+  ,"talent_eco_coins_shot_bonus_desc": "+6% монет за выстрел за ранг."
+  ,"talent_eco_xp_bonus_name": "Опыт"
+  ,"talent_eco_xp_bonus_desc": "+6% XP за ранг."
+  ,"talent_eco_double_reward_name": "Двойная награда"
+  ,"talent_eco_double_reward_desc": "Шанс двойной награды за убийство +2% за ранг (кап 20%). Опц. шанс за выстрел +1% (кап 10%)."
+  ,"talent_eco_interest_name": "Процент"
+  ,"talent_eco_interest_desc": "Открывает начисление каждые 20с. +0.2% за ранг, кап за тик +20 за ранг."
+  ,"talent_eco_tax_relief_name": "Налоговая льгота"
+  ,"talent_eco_tax_relief_desc": "Открывает льготу: длительность 10с, множитель стоимости -3% за ранг."
+  ,"talent_eco_voucher_name": "Ваучер"
+  ,"talent_eco_voucher_desc": "Открывает ваучер. Нужно убийств: 25 и -3/ранг (мин 10). Скидка x0.80, кап 3."
+  ,"talent_eco_lottery_name": "Лотерея"
+  ,"talent_eco_lottery_desc": "Открывает лотерею. Шанс +1% за ранг, ICD 60с, лимит 3 за забег."
+  ,"talent_eco_clean_defense_name": "Чистая оборона"
+  ,"talent_eco_clean_defense_desc": "Открывает бонус чистой обороны: множитель монет +5% за ранг, множитель XP +5% за ранг."
+  ,"talent_eco_grey_to_damage_points_name": "Серое в очки урона"
+  ,"talent_eco_grey_to_damage_points_desc": "Открывает конверсию серых ресурсов в очки урона. Множитель +10% за ранг."
+  ,"talent_eco_crit_kill_bonus_name": "Крит-бонус за убийство"
+  ,"talent_eco_crit_kill_bonus_desc": "Плоский бонус монет за крит-убийство: +2 за ранг."
+  ,"talent_eco_bulk_buy_name": "Оптовая покупка"
+  ,"talent_eco_bulk_buy_desc": "Открывает bulk buy и даёт доп. множитель цены покупки танка x0.75."
+  ,"talent_eco_century_contract_name": "Контракт века"
+  ,"talent_eco_century_contract_desc": "Открывает century contract и даёт доп. множитель цены покупки танка x0.65."
+  ,"talent_eco_active_golden_hour_name": "Активка: Золотой час"
+  ,"talent_eco_active_golden_hour_desc": "Открывает активку экономики: 6с, 3 заряда, перезарядка 40с. Монеты x1.45, XP x1.25."
+  ,"hangarChipsTabCells": "Улучшение ячеек"
+  ,"hangarChipsTabWorkshop": "Мастерская"
+  ,"hangarChipsTabTechUnlock": "Открытие технологий"
+  ,"workshopTabChipUpgrade": "Улучшение чипов"
+  ,"workshopTabChipCraft": "Создание чипов"
+  ,"workshopTabChipRecycle": "Переработка чипов"
+  ,"workshopTabChipReprogram": "Перепрограммировать"
+  ,"chipCraftDisassemble": "Разобрать"
+  ,"chipCraftAssemble": "Создать чип"
+  ,"chipCraftDustBtn": "Распылить"
+  ,"chipCraftDustConfirm": "Подтвердить"
+  ,"chipCraftDustCancel": "Отменить"
+  ,"chipCraftDustConfirmTitle": "Подтвердить распыление"
+  ,"chipCraftDustConfirmText": "Выбранные чипы ({count}) будут распылены на {amount} \"Кремниевой пыли\". Продолжить?"
+  ,"chipCraftDustResult": "Получите кремниевой пыли: {amount}"
+  ,"chipCraftDustNoneSelected": "Выберите хотя бы один элемент"
+  ,"chipCraftDustGained": "Получено кремниевой пыли: {amount}"
+  ,"chipCraftSwitchToDisassemble": "Переключитесь в режим «Разобрать»"
+  ,"chipCraftSwitchToAssemble": "Переключитесь в режим «Создать чип»"
+  ,"chipCraftSiliconDust": "Кремниевая пыль"
+  ,"chipCraftNoMoreOfThis": "Все экземпляры этого чипа уже добавлены"
+  ,"chipCraftFragInvalid": "Этот фрагмент нельзя добавить (невалидная комбинация)"
+  ,"chipCraftNoMoreFrags": "Все экземпляры этого фрагмента уже добавлены"
+  ,"chipCraftDisassembledMultiple": "Разобрано чипов: {count}, получено фрагментов: {frags}"
+  ,"chipCraftChance": "Шанс: {chance}%"
+  ,"chipCraftContinue": "Продолжить"
+  ,"chipCraftRiskTitle": "Риск потери ресурсов"
+  ,"chipCraftRiskText": "Шанс успеха: {chance}%. При неудаче вы потеряете 1 случайный фрагмент{dustClause}. Продолжить?"
+  ,"chipCraftRiskDustClause": " и {amount} ед. кремниевой пыли"
+  ,"chipCraftResultSuccessTitle": "Соединение удалось"
+  ,"chipCraftResultSuccessText": "Поздравляем! Вы получили новый чип."
+  ,"chipCraftResultFailureTitle": "Соединение не удалось"
+  ,"chipCraftResultFailureText": "Попытка оказалась неудачной. Потеряны следующие ресурсы:"
+  ,"chipCraftSlotOverlayHint": "Перетащите сюда фрагмент чипа"
+  ,"chipCraftDisassembleOverlayHint": "Перетащите сюда чип"
+  ,"chipRecycleConfirmTitle": "Подтвердить разборку"
+  ,"chipRecycleConfirmText": "Выбранные чипы ({count}) будут разобраны на составные элементы. Продолжить?"
+  ,"chipReprogramAction": "Перепрограммировать"
+  ,"chipReprogramSelectLabel": "Новое свойство"
+  ,"chipReprogramDustCost": "Кремниевая пыль: {have} / {need}"
+  ,"chipReprogramSuccess": "Фрагмент перепрограммирован: {from} → {to}"
+  ,"chipReprogramNeedDust": "Для перепрограммирования нужно 2 ед. кремниевой пыли"
+  ,"chipCraftFailed": "Создание чипа провалилось."
+  ,"chipCraftNotEnoughDust": "Недостаточно кремниевой пыли"
+  ,"hangarChipsWorkshopWIP": "В разработке"
+  ,"hangarChipsCellLabel": "Ячейка"
+  ,"hangarChipsAvailable": "Доступные чипы"
+  ,"hangarChipsActiveMods": "Активные модификации"
+  ,"hangarChipsNoMods": "Нет активных модификаций"
+  ,"hangarChipsMatchSuccess": "Совпадение! A+B активны"
+  ,"hangarChipsMatchFail": "Нет совпадения. Только A"
+  ,"hangarChipsYellowLocked": "Можно установить только 1 жёлтый чип"
+  ,"hangarChipsActiveX": "Активируется внешний угол (не прилегающий к красным чипам)"
+  ,"hangarChipsSlotLocked": "Слот заблокирован"
+  ,"hangarChipsLevelShort": "Ур."
+  ,"hangarChipsFilterAll": "Все"
+  ,"hangarChipsFilterRed": "Красные"
+  ,"hangarChipsFilterYellow": "Жёлтые"
+  ,"hangarChipsNoChips": "Нет подходящих чипов в инвентаре"
+  ,"workshopChipTooltipLevel": "Уровень: {level}"
+  ,"workshopChipTooltipBonus": "Бонус: +{bonus}% к силе атаки"
+  ,"workshopChipTooltipCount": "Количество: {count}"
+  ,"chipReprogramResultTooltip": "Результат перепрограммирования"
+  ,"chipModifierDesc_1": "Танк стреляет двумя снарядами"
+  ,"chipModifierDesc_2": "Цепная молния с 2 перескоками"
+  ,"chipModifierDesc_3": "Матрёшка: большой(×2) → малый(×1)"
+  ,"chipModifierDesc_4": "Отталкивание: ×0.5 урона, 10px"
+  ,"chipModifierDesc_5": "Вакуум: ×0.5 урона, радиус 50px"
+  ,"chipModifierDesc_6": "Каждый 4-й выстрел: 3 залпа ×1.25"
+  ,"chipModifierDesc_7": "Случайный эффект каждый выстрел"
+  ,"chipModifierDesc_8": "Раз в 30с: ядерный взрыв ×3, радиус 100px"
+  ,"chipModifierDesc_9": "Заморозка атаки зомби на 0.5с"
+  ,"chipModifierDesc_10": "Оставляет огненную лужу"
+  ,"chipModifierDesc_11": "Оставляет ледяную зону замедления"
+  ,"chipModifierDesc_12": "Создаёт электроузел с периодическим уроном"
+  ,"chipModifierDesc_13": "Отмечает цель; попадание = ×2 урон"
+  ,"chipModifierDesc_14": "Оставляет кислотную лужу"
+  ,"chipModifierDesc_15": "Танк стреляет тремя снарядами"
+  ,"chipModifierDesc_16": "Танк стреляет шестью снарядами"
+  ,"chipModifierDesc_17": "Цепная молния с 3 перескоками"
+  ,"chipModifierDesc_18": "Цепная молния с 6 перескоками"
+  ,"chipModifierDesc_19": "Матрёшка: большой(×3) → средний(×2) → малый(×1)"
+  ,"chipModifierDesc_20": "Матрёшка: огромный(×4) → большой(×3) → средний(×2) → малый(×1)"
+  ,"chipModifierDesc_21": "Ударная волна: ×0.75 урона, отталкивание 15px"
+  ,"chipModifierDesc_22": "Ударная волна: ×1 урона, отталкивание 20px"
+  ,"chipModifierDesc_23": "Вакуум: ×0.75 урона, стягивание 15px"
+  ,"chipModifierDesc_24": "Вакуум: ×1 урона, стягивание 20px"
+  ,"chipModifierDesc_25": "Каждый 4-й выстрел: 3 залпа с ×1.5 уроном"
+  ,"chipModifierDesc_26": "Каждый 4-й выстрел: 4 залпа с ×2 уроном"
+  ,"chipModifierDesc_27": "Раз в 30с: ядерный взрыв ×4, радиус 300px"
+  ,"chipModifierDesc_28": "Раз в 30с: ядерный взрыв ×5, вся карта"
+  ,"chipModifierDesc_29": "Заморозка атаки зомби на 0.75с"
+  ,"chipModifierDesc_30": "Заморозка атаки зомби на 1с"
+  ,"plStorageTitle": "Производственный склад"
+  ,"plStorageHelpButton": "Справка по производственному складу"
+  ,"plStorageHelpIntro": "В этом разделе накапливаются коробки, которые печатает суперкомпьютер за счёт собранных реагентов и данных с убитых зомби. Вы можете объединять коробки между собой и за счёт этого у них будет меняться список возможных для выпадения предметов."
+  ,"plStorageHelpLevel1Title": "Коробка Ур. 1"
+  ,"plStorageHelpLevel1Items": "дрон — 1%\nдва больших чипа — 1%\nодин большой чип — 3%\nтри фрагмента — 5%\nдва фрагмента — 10%\n10 кремниевой пыли — 10%\nодин фрагмент — 30%\n5 кремниевой пыли — 40%"
+  ,"plStorageHelpLevel2Title": "Коробка Ур. 2"
+  ,"plStorageHelpLevel2Items": "дрон — 3.33%\nдва больших чипа — 3.33%\nодин большой чип — 10.00%\nтри фрагмента — 16.67%\nдва фрагмента — 33.33%\n10 кремниевой пыли — 33.34%"
+  ,"plStorageHelpLevel3Title": "Коробка Ур. 3"
+  ,"plStorageHelpLevel3Items": "дрон — 10%\nдва больших чипа — 10%\nодин большой чип — 30%\nтри фрагмента — 50%"
+  ,"plStorageHelpLevel4Title": "Коробка Ур. 4"
+  ,"plStorageHelpLevel4Items": "дрон — 50%\nдва больших чипа — 50%"
+  ,"plBoxSlotFilled": "Коробка (нажмите чтобы открыть)"
+  ,"plBoxSlotEmpty": "Пустая ячейка"
+  ,"plConfirmOpenBox": "Хотите открыть коробку?"
+  ,"plConfirmYes_label": "Открыть"
+  ,"plConfirmNo_label": "Нет"
+  ,"lootDrone": "Вы получили дрон!"
+  ,"lootTwoBigChips": "Вы получили 2 чипа!"
+  ,"lootOneBigChip": "Вы получили чип!"
+  ,"lootThreeFragments": "Вы получили 3 фрагмента чипа!"
+  ,"lootTwoFragments": "Вы получили 2 фрагмента чипа!"
+  ,"lootOneFragment": "Вы получили фрагмент чипа!"
+  ,"lootTenSiliconDust": "Вы получили 10 кремниевой пыли!"
+  ,"lootFiveSiliconDust": "Вы получили 5 кремниевой пыли!"
+  ,"plKillProgress": "Прогресс: {current}/{total} убийств"
+  ,"techUnlockAccel": "Ускорить процесс открытия"
+  ,"techUnlockAccelMax": "Максимальное ускорение"
+  ,"techUnlockAccelNoResources": "Нет ресурсов для ускорения"
+  ,"techUnlockHelpButton": "Справка по технологиям ангара"
+  ,"techUnlockHelpTitle": "Справка"
+  ,"techUnlockHelpText": "В этом разделе Вы можете усовершенствовать любой модификатор чипа. После изучения новой технологии будут усовершенствованы все чипы:\n- фрагменты чипов, которые есть в инвентаре\n- целые чипы, которые есть в инвентаре или вставлены в слоты\n- фрагменты чипов, которые будут получены после изучения технологии.\n- целые чипы, которые будут получены после изучения технологии."
+  ,"supercomputerTalentsHelpButton": "Справка по древу улучшений"
+  ,"supercomputerTalentsHelpText": "В этом разделе используя очки улучшений Вы можете прокачать Суперкомпьютер и увеличить свой боевой, защитный и экономический потенциал."
+  ,"supercomputerTankWallHelpButton": "Справка по модификациям танков и стен"
+  ,"supercomputerTankWallHelpText": "В этом разделе Вы можете прокачивать танковые орудия, дроны и защитные стены, улучшая их характеристики. Улучшения применяются и распространятся сразу на все прокаченные элементы. Бонусы от улучшений действуют только в рамках прокаченного уровня танков, дронов или стен."
+  ,"hangarCellsHelpText": "В этом разделе Вы можете усиливать ячейки танков за счёт добавления разных чипов в слоты. Для того чтобы два чипа начали работать в связке, нужно чтобы у них совпали модификаторы на прилегающих сторонах.\nЕсли у Вас в инвентаре будут чипы, которые могут работать в связке, то они выделятся зеленым цветом.\n\nЧипы в красных слотах в связке работают по следующему принципу:\n- первый модификатор срабатывает когда танк совершает выстрел;\n- второй модификатор срабатывает когда снаряд взрывается.\n\nЧип в желтом слоте в связке работает по следующему принципу:\n- модификатор всегда срабатывает на последних взрывах снаряда / снарядов;\n- срабатывает \"свободный\" модификатор, который не участвует в связке. Это либо \"Огненная лужа\", либо  \"Ледяная зона\", либо \"Электроузел\", либо \"Лазерная метка\", либо \"Кислотная лужа\" в зависимости от того, какой у Вас чип."
+  ,"hangarWorkshopHelpText": "В этом разделе Вы можете объединять, собирать и перерабатывать чипы ангара.\n\nВо подразделах мастерской объединяйте одинаковые чипы для усиления, собирайте новые чипы из фрагментов и перерабатывайте лишние ресурсы в полезные материалы для развития ангара."
+  ,"hangarWorkshopHelpChipUpgradeText": "В этом разделе Вы можете повышать уровень чипов за счёт объединения двух одинаковых чипов. Каждое повышения уровня чипа даёт бонус к силе атаки танка"
+  ,"hangarWorkshopHelpChipCraftText": "В этом разделе Вы можете создавать целые чипы из фрагментов. В случае неудачного создания чипа будет потерян один случайный фрагмент чипа. Используйте реагент \"Кремниевая пыль\" для того чтобы увеличить шанс создания целого чипа и избежать потери фрагмента."
+  ,"hangarWorkshopHelpChipRecycleDisassembleText": "В этом разделе Вы разобрать большие чипы на фрагменты. При разборе большого чипа на фрагменты Вы получаете 3 фрагмента чипа, из которых он состоял."
+  ,"hangarWorkshopHelpChipRecycleDustText": "В этом разделе Вы можете создавать реагент \"Кремниевая пыль\" за счёт распыления целых чипов или фрагментов чипов."
+  ,"hangarWorkshopHelpChipRecycleReprogramText": "В этом разделе Вы изменить текущую модификацию фрагмента чипа на любую другую за счёт перепрограммирования. Обязательно требуется наличие \"Кремниевая пыль\" в качестве реагента."
+  ,"techUnlockHelpClose": "Закрыть"
+  ,"techAccelTitle": "Ускорить процесс открытия"
+  ,"techAccelSubtitle": "Выберите ресурсы для ускорения."
+  ,"techAccelRateSummary": "Кремниевая пыль +{dust}% • большой чип +{chip}% • фрагмент +{fragment}%"
+  ,"techAccelNoChips": "Нет больших чипов, фрагментов или кремниевой пыли"
+  ,"techAccelBtnLabel": "Ускорить на {pct}%"
+  ,"techAccelClose": "Закрыть"
+  ,"techAccelApplied": "Ускорение применено. Итоговое ускорение: {pct}%"
+  ,"techAccelMaxReached": "Достигнуто максимальное ускорение (96%)"
+  ,"techAccelSelectionLimit": "Этот ресурс превысит лимит ускорения. Выберите другой."
+  ,"techAccelLimitBadge": "Лимит"
+  ,"techAccelSelectedSummary": "Выбрано ускорение: {pct}% • итог после применения: {total}% • осталось до лимита: {left}%"
+  ,"techAccelDustMeta": "+{pct}% за 1 ед."
+  ,"ughModalTitle": "Подземный ангар"
+  ,"ughMainHangarTitle": "Верхний ангар"
+  ,"ughUndergroundTitle": "Подземный ангар"
+  ,"ughBuyTank": "Создать танк {level} уровня - {cost}$"
+  ,"ughBuyBulk": "Создать x{n}"
+  ,"ughAutoMerge": "Объединить танки"
+  ,"ughTransferToUpper": "Перенести наверх"
+  ,"ughHelpButton": "Справка по подземному ангару"
+  ,"ughHelpText": "В этом разделе Вы можете хранить и объединять танки и / или дроны, если закончились свободные ячеки в основном ангаре."
+  ,"ughDismantle": "Разобрать танк"
+  ,"ughDronesTitle": "Дроны"
+  ,"productionStorageProgressLabel": "Печать коробки"
+  ,"productionStorageProgressTooltip": "Прогресс печати следующей коробки в склад. Заполняется убийствами зомби."
+}
