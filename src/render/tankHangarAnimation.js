@@ -89,6 +89,18 @@
       return { offsetX: 0, offsetY: 0, rotation: 0, scale: 1, presetName: '' };
     }
 
+    // Solo-pipeline-yandex-vk batch 1 / item A2: at density === 0, skip the
+    // hangar bob/sway animation entirely (instant fade of the procedural
+    // motion). Sprite render itself is whitelist (Aura1/Aura2/Aura3 etc.) and
+    // is unaffected because this helper only controls offset/rotation/scale.
+    var FxDensityNs = global.Game && global.Game.FxDensity;
+    if (FxDensityNs && typeof FxDensityNs.getDensity === 'function') {
+      var fxd = FxDensityNs.getDensity();
+      if (Number.isFinite(fxd) && fxd <= 0) {
+        return { offsetX: 0, offsetY: 0, rotation: 0, scale: 1, presetName: '' };
+      }
+    }
+
     var presetName = pickPresetName(cell, tank, config);
     var preset = getPresetConfig(config, presetName);
     var seed = (hashString(tank && tank.id) % 1000) / 1000;

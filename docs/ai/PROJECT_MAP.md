@@ -1,6 +1,6 @@
 # Tank Merge Zombie Defense — Project Map
 
-> Документ для агентов. Обновлён: 2026-04-25.
+> Документ для агентов. Обновлён: 2026-04-30.
 > Навигация: раздел → файл документации → строки кода.
 
 ## О проекте
@@ -68,6 +68,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | `Game.TalentsV2.init()` | [src/systems/talents/talentsV2.js](../../src/systems/talents/talentsV2.js#L2491-L2505) | 2491–2505 | Поднятие runtime талантов v2 |
 | `Game.I18n.pluralize()` | [src/i18n/pluralize.js](../../src/i18n/pluralize.js#L17-L33) | 17–33 | Russian/English number pluralization (mod10/mod100 логика); используется в `getTankWordKey()` и `getDismantleTankCountText()` |
 | `Game.FenceRepair` | [src/mechanics/fenceRepair.js](../../src/mechanics/fenceRepair.js#L1-L178) | 1–178 | Fence repair pricing source-of-truth: async `loadTankPrices()`, config-first base-cost resolution из `assets/fence.json`, cumulative `computeRepairCost(fenceLevel, repairCount)`, public `getFenceRepairCostCoins()` |
+| `Game.FxDensity` / `Game.Settings.fxDensity` | [src/perf/fxDensity.js](../../src/perf/fxDensity.js#L1-L320) | 1–320 | User-configurable visual effect density (0..100): cached scalar `getDensity()`, `shouldSpawn(weight)`, per-zombie `shouldSpawnFor(key, weight)`, `scaleCount/scaleCap`; persistence — shallow-merge в `localStorage['settings']`; mobile first-run default = 60, desktop = 100 через `Game.MobileMode`; на init инсталлируется noop-safe shim до основного IIFE |
 | `Game.TelemetryLogger` | [src/telemetry/telemetry.js](../../src/telemetry/telemetry.js#L1-L149) | 1–149 | Analytics taxonomy `tmzd-analytics-taxonomy.v1`, consent/privacy gate, adapter registration и limited/default event rules |
 | `Game.TelemetryLogger.getHealthSnapshot()` | [src/telemetry/telemetry.js](../../src/telemetry/telemetry.js#L628-L759) | 628–759 | Rollout health/read-back/manual smoke/weekly review snapshot со stale reasons для operator verification |
 | `Game.AnalyticsCollector` | [src/analytics/collector.js](../../src/analytics/collector.js#L1-L372) | 1–372 | Local aggregate analytics summary и mirrored rollout snapshot/staleness |
@@ -116,7 +117,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | Save / offline / restore | [SYSTEMS/save.md](SYSTEMS/save.md) | [HOT] |
 | Input / pointer / drag | [SYSTEMS/input.md](SYSTEMS/input.md) | |
 | World events / attack mode | [SYSTEMS/worldEvents.md](SYSTEMS/worldEvents.md) | |
-| Audio / telemetry / perf | [SYSTEMS/audio.md](SYSTEMS/audio.md), [SYSTEMS/telemetry.md](SYSTEMS/telemetry.md), [SYSTEMS/perf.md](SYSTEMS/perf.md) | |
+| Audio / telemetry / perf | [SYSTEMS/audio.md](SYSTEMS/audio.md), [SYSTEMS/telemetry.md](SYSTEMS/telemetry.md), [SYSTEMS/perf.md](SYSTEMS/perf.md) (FX density owner + B2/B3/B4 canon + visibilitychange-only auto-suspend) | |
 
 ## Hotspots (git log top-20)
 - [HOT] `game.js`

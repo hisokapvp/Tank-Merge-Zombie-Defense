@@ -1069,8 +1069,15 @@
     }
 
     /* Visual burst at cascade spawn point */
+    // Solo-pipeline-yandex-vk batch 1 / item A2: visual-only burst is gated
+    // through FxDensity.shouldSpawn so density=0 hides the cosmetic puff while
+    // cascade gameplay above (projectile spawning, applyShotModifiers) stays
+    // intact.
     if (opts.burst) {
-      opts.burst(x, y, Math.min(8, projCount * 3), 'rgba(255,220,100,0.35)');
+      var _fxd_chipBurst = global.Game && global.Game.FxDensity;
+      if (!_fxd_chipBurst || typeof _fxd_chipBurst.shouldSpawn !== 'function' || _fxd_chipBurst.shouldSpawn(1)) {
+        opts.burst(x, y, Math.min(8, projCount * 3), 'rgba(255,220,100,0.35)');
+      }
     }
   }
 
@@ -1519,8 +1526,13 @@
           var dmg = Math.round(node.dmg);
           if (opts.applyDamage) opts.applyDamage(best, dmg, 'tank');
           if (opts.addDamageNumber) opts.addDamageNumber(bp.x, bp.y, dmg, false);
+          // Solo-pipeline-yandex-vk batch 1 / item A2: chipElectro arc is a
+          // pure visual; gameplay damage already applied above.
           if (opts.impacts) {
-            opts.impacts.push({ x: node.x, y: node.y, tx: bp.x, ty: bp.y, life: 0.08, max: 0.08, kind: 'chipElectro' });
+            var _fxd_chipElectro = global.Game && global.Game.FxDensity;
+            if (!_fxd_chipElectro || typeof _fxd_chipElectro.shouldSpawn !== 'function' || _fxd_chipElectro.shouldSpawn(1)) {
+              opts.impacts.push({ x: node.x, y: node.y, tx: bp.x, ty: bp.y, life: 0.08, max: 0.08, kind: 'chipElectro' });
+            }
           }
         }
       }

@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-04-25.
+> Обновлено: 2026-04-30.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -37,12 +37,15 @@
 - Audio: `docs/ai/SYSTEMS/audio.md`
 - Telemetry/Flags: `docs/ai/SYSTEMS/telemetry.md`
 - Input: `docs/ai/SYSTEMS/input.md`
-- Performance: `docs/ai/SYSTEMS/perf.md`
+- Performance: `docs/ai/SYSTEMS/perf.md` (FX density owner `src/perf/fxDensity.js` + B2/B3/B4 canon: DPR cap mobileUltraLite, atlas pre-warm, `qualityLow` hysteresis, `saveProgress` safety, auto-suspend visibilitychange-only)
 - Tutorial runtime: `docs/ai/SYSTEMS/tutorial-runtime.md`
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-04-06
+## Фокус документации на 2026-04-30
+- **Solo-pipeline-yandex-vk perf optimisation + FX density slider feature**: новый owner-модуль `src/perf/fxDensity.js` экспонирует `Game.FxDensity` (cached scalar, no-alloc hot-path) и `Game.Settings.{getFxDensity,setFxDensity}` facade поверх существующего `localStorage['settings']` blob; mobile first-run default = 60%, desktop = 100% через `Game.MobileMode`. Слайдер живёт в `index.html` (`#bigMenuSoundPanel` + smallMenu row), wiring — `src/ui/bigMenuRuntime.js` и `src/core/bootstrap.js`. Hot-path gates: `drawParticles`, `drawDamageNumbers`, `drawImpacts`, `drawTankAura`, `drawScaledZombieDebuffOverlays`, `drawTankTrack`, `drawDecals`, `chipEffects.codeVisualEnabled`, render-side `zombieRender/cornerTowers/tankHangarAnimation`, `supercomputerBuildTankFx`. Gameplay-critical whitelist (всегда spawn): `popText` UI hints + tutorial bubbles + projectiles + drones + fence HP bars + Aura1/2/3. Quantity-scaled debuff icons используют per-zombie `FxDensity.shouldSpawnFor(zombieKey, ...)`. B2/B3/B4 канон: DPR cap mobileUltraLite, atlas pre-warm в `boot()`, `qualityLow` hysteresis (drop<45 / recover≥55 hold 5s), `saveProgress()` try/catch + 30s toast, pool length=0 cleanup в `src/core/worldReset.js`, fail-soft `tools/saveSchemaValidator.js`. **Auto-suspend в `src/core/runtimeTasks.js` использует только `document.visibilitychange`** — `window.blur`/`window.focus` намеренно НЕ слушаются (Windows resize handle / taskbar peek дают ложные blur events). Читать: `docs/ai/SYSTEMS/perf.md` (canon FX density + B2/B3/B4), `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`. Бейзлайн: `artifacts/perf-baseline-2026-04-30.md`.
+
+### Предыдущий фокус (2026-04-06)
 - **Combat/balance source of truth теперь полностью asset-driven**: live runtime и Balance Lab читают `assets/tanks.json.stats.baseDamage/attackSpeed` и explicit `assets/zombies.json.types[].Health`, `desiredTtk` трактуется как абсолютные секунды, legacy runtime-кривые урона/скорострельности/HP зафиксированы на `x1` и исключены из optimizer/write-path, lingering chip mods `10..14` сохраняют gameplay + `effectSprite` даже при `effect.enabled=false`, а `stepZombies()` держит 20-секундный decor fail-safe teleport к внешней стороне fence. Читать: `docs/ai/SYSTEMS/balance-editor.md`, `docs/ai/SYSTEMS/combat.md`, `docs/ai/CHIP_EFFECTS_MAP.md`, `docs/ai/SYSTEMS/save.md`.
 
 ### Предыдущий фокус (2026-04-03)

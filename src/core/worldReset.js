@@ -155,6 +155,20 @@
     var opts = options || {};
     if (typeof opts.resetWorldRuntime !== 'function') return;
     opts.resetWorldRuntime();
+    // solo-pipeline-yandex-vk#3 (B3): clear visual-pool arrays after reset to
+    // prevent long-session leaks (particles/decals/impacts/damageNumbers
+    // /projectiles can accumulate between simulation restarts because
+    // resetWorldRuntime focuses on gameplay state, not transient FX pools).
+    try {
+      var stateRef = (typeof opts.getState === 'function') ? opts.getState() : null;
+      if (stateRef && typeof stateRef === 'object') {
+        var poolKeys = ['particles', 'decals', 'impacts', 'damageNumbers', 'projectiles'];
+        for (var pi = 0; pi < poolKeys.length; pi++) {
+          var k = poolKeys[pi];
+          if (Array.isArray(stateRef[k])) stateRef[k].length = 0;
+        }
+      }
+    } catch (_poolErr) { /* additive — never throws into reset path */ }
     // Solo-pipeline-yandex-vk#1 step-3 (postmortem item 17):
     // Partial reset preserves talents/upgrades/drones/achievements but the
     // sprite namespace (zombie atlases, tank atlases, chip effect sprites)

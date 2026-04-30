@@ -19,6 +19,16 @@ cat <<'EOF'
 - Open each modal and verify: Escape closes, Tab stays inside
 - Verify merge popup copy, lesson progress labels, and Anki preview
 - Confirm FPS stays stable with zombies + projectiles
+- (B4 / solo-pipeline-yandex-vk#3) FX density slider: bigMenu → FX density.
+  Set slider to 0%, 50%, 100%. For each value, trigger weather (storm/rain)
+  and confirm:
+    * 0%   — only whitelisted FX visible (projectiles, drones, fence HP bars,
+             tutorial bubbles, weather, tank aura sprite). Procedural orbs
+             scaled out, no exceptions in console.
+    * 50%  — particle/decal density is visibly halved vs 100%, FPS improved.
+    * 100% — visual parity with pre-slider builds (default behaviour).
+  Repeat with Phaser overlay enabled (?usePhaser=1) and verify density is
+  applied through Game.RenderRegistry in both render paths (no double-draw).
 EOF
 
 # solo-pipeline-yandex-vk#1 (batch#1, item 2): pre-submit Yandex Games guard.

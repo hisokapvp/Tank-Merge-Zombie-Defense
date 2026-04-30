@@ -31,8 +31,8 @@
     },
     attackMode: {
       enabled: enabled,
-      attackEverySec: 30,
-      attackDurationSec: 10,
+      attackEverySec: 60,
+      attackDurationSec: 30,
       idleWave: {
         enabled: true,
         attackDamageMul: 0.01,
@@ -44,7 +44,7 @@
       },
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
-      targetAliveMult: 5,
+      targetAliveMult: 4,
       targetAliveRampSec: 3,
       speedMult: 1.5,
       damageMult: 1.5,

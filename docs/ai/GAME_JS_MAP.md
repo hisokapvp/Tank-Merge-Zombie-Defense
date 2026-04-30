@@ -53,8 +53,8 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-04-25.
-> Текущая длина файла: ~11 880 строк. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
+> Обновлено: 2026-04-30.
+> Текущая длина файла: ~16 372 строки. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
 
 ## Что это
 `game.js` остаётся главным bootstrap/runtime-монолитом проекта: здесь живут глобальные aliases `window.Game`, world loop, render orchestration, часть fallback-логики, UI wiring и интеграция всех extracted модулей из `src/*`.
@@ -74,10 +74,20 @@
 - Нужен production line / buildTank hook → [setSpriteSource() wiring](../../game.js#L1869-L1875), [initBoard() layout sync](../../game.js#L2742-L2756), [performTankPurchaseOnce()](../../game.js#L4318-L4336), [kill hook](../../game.js#L5902-L5917), [setSupercomputerWantsBuildTank()](../../game.js#L15346-L15354)
 - Нужен browser context-menu suppression / legacy input guard → [document-level guard](../../game.js#L11153-L11157)
 - Нужен canvas touch-safe drag / tap split → [preventTouchPointerDefault()](../../game.js#L12097-L12102), [releaseCanvasPointer()](../../game.js#L12106-L12125), [onPointerDown()](../../game.js#L11347-L11382), [onPointerMove()](../../game.js#L11383-L11405)
+- Нужен FX density gate / settings facade / first-run init → [DEFAULT_SETTINGS.fxDensity](../../game.js#L580-L586), [loadSettings() first-run mobile/desktop default](../../game.js#L1493-L1510), `Game.FxDensity` owner → [src/perf/fxDensity.js](../../src/perf/fxDensity.js)
+- Нужны hot-path FxDensity gates в `game.js` → `drawParticles()` ~L10217, `drawDamageNumbers()` ~L10201, `drawImpacts()` (impacts render path), `drawTankAura()` ~L14583, `drawScaledZombieDebuffOverlays()` [game.js](../../game.js#L12588-L12643) (per-zombie `shouldSpawnFor`), `drawTankTrack()` (tank track render path), `drawDecals()` ~L10191; `popText()` ~L6354 — whitelist (всегда spawn'ится при density=0)
+- Нужен DPR cap mobileUltraLite → [resizeCanvas() DPR cap](../../game.js#L2705-L2810) (default `min(devicePixelRatio, 2)`, при `getMobileMode().getFxLevel() >= 2` → 1)
+- Нужен sprite atlas pre-warm → [boot() atlas pre-warm](../../game.js#L11714-L11885) (off-screen 4×4 canvas + `drawImage(atlas, 0, 0, 1, 1)` для `ZombieSprites/TankSprites/GroundSprites`, try/catch boot-safe)
+- Нужен `qualityLow` hysteresis → [loop() qualityLow drop/recover](../../game.js#L15437-L15690) (drop @ `fpsAvg < 45 || fxLevel >= 1` instant; recover требует `fpsAvg >= 55 && fxLevel < 1` непрерывно ≥ `5s`; константы `QUALITY_LOW_DROP_FPS=45`, `QUALITY_LOW_RECOVER_FPS=55`, `QUALITY_LOW_RECOVER_HOLD_SEC=5`)
+- Нужен `saveProgress()` safety wrapper → [loop() saveProgress try/catch + 30s toast](../../game.js#L15437-L15690) (`lastSaveErrorAt` module scope, throttle ≥ 30s, не уменьшать)
+- Нужен auto-suspend wiring → [boot() Game.RuntimeTasks.installAutoSuspend()](../../game.js#L11714-L11885); сама установка слушает **только `document.visibilitychange`**: [src/core/runtimeTasks.js](../../src/core/runtimeTasks.js#L133-L165) (window.blur/focus намеренно НЕ слушаются — Windows resize transient focus)
 
 ## Инварианты ⚠️
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
 - `draw()` не мутирует gameplay-state; render side-effects выносятся в step/runtime-модули.
+- FX density gates обязаны уважать **gameplay-critical whitelist**: `popText` UI hints, tutorial bubbles, projectiles, drones, fence HP bars, Aura1/Aura2/Aura3 sprite-варианты — всегда spawn'ятся, даже при `density=0`. Любое расширение whitelist требует обновления `Test/pack8/fxDensityGameplayParity.test.js` и `docs/ai/SYSTEMS/perf.md`.
+- Quantity-scaled debuff icons обязаны использовать **per-zombie** `Game.FxDensity.shouldSpawnFor(zombieKey, ...)` в `drawScaledZombieDebuffOverlays()`, чтобы при density 50% примерно половина зомби показывали overlays целиком (не половина каждого зомби — это бы flicker'ило). НЕ переходить на global `shouldSpawn()` для debuff overlays.
+- Auto-suspend wiring через `Game.RuntimeTasks.installAutoSuspend()` обязан слушать **только `document.visibilitychange`**; `window.blur`/`window.focus` интегрированы намеренно НЕ были (Windows resize handle, taskbar peek, IME picker дают ложные blur events). НЕ возвращать blur/focus listener без user-confirmed обоснования.
 - Master UI scale source-of-truth живёт в `resizeCanvas()`: `--ui-scale = max(0.4, min(displayW / 1920, displayH / 1080))` пишется в `:root`, `readMasterUiScale()` читает token обратно, а `syncHybridUiScale()` прокидывает scale в `HudAdapter`, `ModalAdapter` и `SceneOverlayManager`; startup `boot().catch(...)` должен вызывать этот path уже при загрузке страницы.
 - HP bar суперкомпьютера рисуется последним overlay, отдельно от root sprite.
 - Stage active slots Talents v2 резолвят branch-icon из `TalentsV2.getTalentUi(...).icon` через `getTalentV2ActiveIconUrlByBranch()`; CSS `activeOff/activeDef/activeEco` в `style.css` — fallback, не primary source.

@@ -688,6 +688,42 @@
       opts.saveSettings();
     });
 
+    // solo-pipeline-yandex-vk rework R3: small/pause menu fxDensity slider.
+    // Mirrors bigMenu wiring in src/ui/bigMenuRuntime.js so users who never
+    // open the bigMenu still get the FX density control.
+    opts.ui.menuFxDensity && opts.ui.menuFxDensity.addEventListener('input', function (e) {
+      var raw = parseInt(e && e.target && e.target.value, 10);
+      if (!Number.isFinite(raw)) return;
+      if (raw < 0) raw = 0;
+      if (raw > 100) raw = 100;
+      var Settings = global.Game && global.Game.Settings;
+      if (Settings && typeof Settings.setFxDensity === 'function') {
+        Settings.setFxDensity(raw);
+      }
+      if (opts.ui.menuFxDensityValue) {
+        opts.ui.menuFxDensityValue.textContent = raw + '%';
+      }
+      if (typeof opts.playUiSliderPreviewSfxThrottled === 'function') {
+        opts.playUiSliderPreviewSfxThrottled();
+      }
+    });
+
+    // solo-pipeline-yandex-vk rework R3: cross-surface sync. When bigMenu
+    // (or any other surface) updates fxDensity, refresh the small menu UI
+    // through the canonical syncVolumeUIFromSettings hook.
+    try {
+      var _Events = global.Game && (global.Game.Events || global.Game.events);
+      if (_Events && typeof _Events.on === 'function') {
+        _Events.on('settings.fxDensity.changed', function () {
+          if (typeof opts.syncVolumeUIFromSettings === 'function') {
+            opts.syncVolumeUIFromSettings();
+          } else if (typeof opts.updateMenuVolumes === 'function') {
+            opts.updateMenuVolumes();
+          }
+        });
+      }
+    } catch (_fxEvErr) {}
+
     opts.ui.menuAutoPause && opts.ui.menuAutoPause.addEventListener('change', function (e) {
       var checked = !!(e && e.target && e.target.checked);
       if (typeof opts.setAutoPauseEnabled === 'function') {

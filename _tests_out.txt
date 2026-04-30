@@ -1,0 +1,116 @@
+﻿
+тФАтФА T1: computeBuyTankLevel (max-5, cap=55) тФАтФА
+  тЬУ T1-1: max=6 тЖТ 1
+  тЬУ T1-2: max=7 тЖТ 2
+  тЬУ T1-3: max=60 тЖТ 55 (cap raised)
+  тЬУ T1-4: max=1 тЖТ 1
+  тЬУ T1-5: max=0 тЖТ 1
+  тЬУ T1-6: max=55 тЖТ 50
+  тЬУ T1-7: MAX_BUY_TANK_LEVEL constant = 55
+  тЬУ T1-8: xpNeededForLevel(0) тЖТ 50
+  тЬУ T1-9: computePowerTier(0) тЖТ 0
+  тЬУ T2-1: 9999 тЖТ "9999"
+  тЬУ T2-2: 10000 тЖТ "10K"
+  тЬУ T2-3: 999999 тЖТ "999K"
+  тЬУ T2-4: 1_000_000 тЖТ "1M"
+  тЬУ T2-5: 1_234_567 тЖТ "1M"
+  тЬУ T2-6: 1_000_000_000 тЖТ "1B"
+  тЬУ T2-7: 0 тЖТ "0"
+  тЬУ T2-8: NaN тЖТ "0"
+  тЬУ T2-9: Infinity тЖТ "0"
+  тЬУ T2-10: negative -15000 тЖТ "-15K"
+  тЬУ T2-11: formatCompactRu is alias of formatShortNumber
+
+тФАтФА T4: coinsForShot (geometry 2^(level-1) with cap) тФАтФА
+  тЬУ T4-1: level=1 тЖТ 1 coin
+  тЬУ T4-2: level=2 тЖТ 2 coins
+  тЬУ T4-3: level=3 тЖТ 4 coins
+  тЬУ T4-4: level=4 тЖТ 8 coins
+  тЬУ T4-5: level=5 тЖТ 16 coins
+  тЬУ T4-6: level=10 тЖТ 512 coins
+  тЬУ T4-7: level=21 тЖТ cap (2^20)
+  тЬЧ T4-8: level=30 тЖТ cap (2^20) тАФ assertEqual: expected 9007199254740991, got 536870912
+  тЬУ T4-9: level=0 тЖТ 0 (invalid)
+  тЬУ T4-10: level=-1 тЖТ 0 (invalid)
+  тЬУ T4-11: level=null тЖТ 0 (invalid)
+  тЬЧ T4-12: MAX_COIN_PER_SHOT = 2^20 тАФ assertEqual: expected 1048576, got 9007199254740991
+
+тФАтФА T-DA: pickDeathAnim (deterministic death animation) тФАтФА
+  тЬУ T-DA-1: both available, rand=0.0 тЖТ personal
+  тЬУ T-DA-2: both available, rand=0.69 тЖТ personal
+  тЬУ T-DA-3: both available, rand=0.70 тЖТ common (boundary)
+  тЬУ T-DA-4: both available, rand=0.99 тЖТ common
+  тЬУ T-DA-5: only personal тЖТ personal (any rand)
+  тЬУ T-DA-6: only common тЖТ common (any rand)
+  тЬУ T-DA-7: neither available тЖТ null
+  тЬУ T-DA-8: undefined values also return null
+  тЬУ T-DA-9: rand=NaN treated as 0 тЖТ personal (boundary safe)
+  тЬУ T-DA-10: rand=-0.1 clamped to 0 тЖТ personal
+  тЬУ T-DA-11: rand=1.5 clamped to <1 тЖТ common
+  тЬУ T-DA-12: rand=Infinity clamped тЖТ common
+
+тФАтФА T1: syncProgressBlocking & continueFlow тФАтФА
+  тЬУ T1-1: generateSyncId returns unique strings
+  тЬУ T1-2: getElapsedMs returns 0 for null
+  тЬУ T1-3: getElapsedMs returns positive for past timestamp
+  тЬУ T1-4: shouldShowOfflineModal false for recent
+  тЬУ T1-5: shouldShowOfflineModal true for >5min
+  тЬУ T1-6: OFFLINE_THRESHOLD_MS = 5min
+  тЬУ T1-7: DEFAULT_TIMEOUT = 5000
+  тЬУ T1-8: MAX_RETRIES = 3
+  тЬУ T1-9: syncProgressBlocking resolves ok on 200
+  тЬУ T1-10: syncWithRetry exists
+
+тФАтФА T1 Async: syncProgressBlocking тФАтФА
+  тЬУ T1-async-1: syncProgress success тЖТ status ok
+  тЬУ T1-async-2: syncProgress 500 тЖТ error with code 500
+  тЬУ T1-async-3: syncProgress network error тЖТ error with message
+
+тФАтФА T6: index.html.txt1 removal тФАтФА
+  тЬУ T6-1: index.html does not start with // index.html.txt1
+  тЬУ T6-2: index.html does not contain "index.html.txt1" anywhere
+  тЬУ T6-3: game.js does not contain "game.js.txt1"
+  тЬУ T6-4: index.html starts with <!doctype
+
+тФАтФА T3: .stage fullscreen CSS тФАтФА
+  тЬУ T3-1: CSS contains .stage with position:fixed
+  тЬУ T3-2: CSS .stage has inset:0
+  тЬУ T3-3: CSS .stage has width:100vw and height:100vh
+  тЬУ T3-4: resizeCanvas uses window.innerWidth
+
+тФАтФА T5: Settings button position тФАтФА
+  тЬУ T5-1: CSS settingsGear has position:fixed
+  тЬУ T5-2: CSS settingsGear has left:8px
+  тЬУ T5-3: CSS settingsGear has z-index:10000
+  тЬУ T5-4: HTML settings button has tabindex="0"
+
+тФАтФА T7: Telemetry тФАтФА
+  тЬУ T7-1: Game.Telemetry exists
+  тЬУ T7-2: event() increments session counter
+  тЬУ T7-3: event() increments lifetime counter
+  тЬУ T7-4: gauge() records last value
+  тЬУ T7-5: max() records peak value
+  тЬУ T7-6: snapshot() returns valid structure
+  тЬУ T7-7: reset() clears session but not lifetime
+  тЬУ T7-8: JSON.stringify(snapshot()) is valid JSON
+  тЬУ T7-9: telemetry.js is included in index.html
+  тЬУ T7-10: game.js emits telemetry events
+
+тФАтФА T8: Fence layout / LevelFlow instant rewards тФАтФА
+  тЬУ T8-1: fence scale=2 stitches corner/side by bounds and supports negative cornerInsetPx overlap
+  тЬУ T8-2: grantXP gives multi-level rewards immediately
+  тЬУ T8-3: acceptLevelReward does not double-grant
+
+тФАтФА T9: ground layer deterministic + mapping + stretch coverage тФАтФА
+  тЬУ T9-1: procedural getTileAt is deterministic by seed/tile coords
+  тЬУ T9-2: getSrcRect maps {col,row} to atlas src rect by tile size
+  тЬУ T9-3: anchor=center stable and stretch fully covers viewport
+
+тХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХР
+RESULTS: 83 passed, 2 failed
+
+Failed tests:
+  - T4-8: level=30 тЖТ cap (2^20): assertEqual: expected 9007199254740991, got 536870912
+  - T4-12: MAX_COIN_PER_SHOT = 2^20: assertEqual: expected 1048576, got 9007199254740991
+тХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХР
+

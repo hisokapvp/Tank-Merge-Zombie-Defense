@@ -266,6 +266,12 @@
   function notifyZombieKill(worldX, worldY) {
     if (!isEnabled() || !_config) return;
     if (!Number.isFinite(worldX) || !Number.isFinite(worldY)) return;
+    // Solo-pipeline-yandex-vk batch 1 / item A2: stochastic FxDensity gate on
+    // kill-trigger rate. Gameplay damage already happened in game.js; this is
+    // a pure cosmetic kill-anim trigger.
+    var FX = (typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : null));
+    var fxd = FX && FX.Game && FX.Game.FxDensity;
+    if (fxd && typeof fxd.shouldSpawn === 'function' && !fxd.shouldSpawn(1)) return;
     var radius = Number.isFinite(_config.killRadiusPx) ? _config.killRadiusPx : 0;
     if (radius <= 0) return;
     var radiusSq = radius * radius;

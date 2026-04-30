@@ -662,6 +662,57 @@
           deps.saveSettings();
         });
       }
+      // Solo-pipeline-yandex-vk batch 1 / item A4: FX density slider.
+      // Direct DOM lookup so this wiring stays self-contained even though the
+      // shared ui bag (owned by game.js) does not yet expose bigMenuFxDensity.
+      var fxDensityInput = document.getElementById('bigMenuFxDensity');
+      var fxDensityValueEl = document.getElementById('bigMenuFxDensityValue');
+      var fxDensityLabelEl = document.getElementById('bigMenuFxDensityLabel');
+      var fxDensityHintEl = document.getElementById('bigMenuFxDensityHint');
+      function syncFxDensityUi() {
+        var Settings = global.Game && global.Game.Settings;
+        if (!Settings || typeof Settings.getFxDensityRaw !== 'function') return;
+        var raw = Settings.getFxDensityRaw();
+        if (fxDensityInput && Number(fxDensityInput.value) !== raw) {
+          fxDensityInput.value = String(raw);
+        }
+        if (fxDensityValueEl) {
+          fxDensityValueEl.textContent = raw + '%';
+        }
+        if (fxDensityLabelEl && deps && typeof deps.t === 'function') {
+          var label = deps.t('bigMenuFxDensity');
+          if (label && label !== 'bigMenuFxDensity') fxDensityLabelEl.textContent = label;
+        }
+        if (fxDensityHintEl && deps && typeof deps.t === 'function') {
+          var hint = deps.t('bigMenuFxDensityHint');
+          if (hint && hint !== 'bigMenuFxDensityHint') fxDensityHintEl.textContent = hint;
+        }
+      }
+      if (fxDensityInput) {
+        fxDensityInput.addEventListener('input', function (e) {
+          var Settings = global.Game && global.Game.Settings;
+          if (!Settings || typeof Settings.setFxDensity !== 'function') return;
+          var parsed = parseInt(e.target.value, 10);
+          if (!Number.isFinite(parsed)) parsed = 100;
+          if (parsed < 0) parsed = 0;
+          if (parsed > 100) parsed = 100;
+          Settings.setFxDensity(parsed);
+          if (fxDensityValueEl) fxDensityValueEl.textContent = parsed + '%';
+          if (typeof deps.playUiSliderPreviewSfxThrottled === 'function') {
+            deps.playUiSliderPreviewSfxThrottled();
+          }
+        });
+      }
+      // initial sync — runs after init wires the listener
+      syncFxDensityUi();
+      // re-sync if density is changed from another surface (programmatic
+      // setFxDensity, LS write, etc.) — helper emits via Game.Events.
+      try {
+        var ev = global.Game && (global.Game.Events || global.Game.events);
+        if (ev && typeof ev.on === 'function') {
+          ev.on('settings.fxDensity.changed', syncFxDensityUi);
+        }
+      } catch (e) {}
       if (ui.bigMenuAutoPause) {
         ui.bigMenuAutoPause.addEventListener('change', function (e) {
           if (typeof deps.setAutoPauseEnabled === 'function') {

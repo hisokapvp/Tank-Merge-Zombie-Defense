@@ -40,6 +40,19 @@
 
   function start(durationSec) {
     var durationMs = Math.round(resolveDurationSec(durationSec) * 1000);
+    // Solo-pipeline-yandex-vk batch 1 / item A2: tank hangar buy/print stamp
+    // honors FxDensity. At density === 0 the print effect resolves instantly
+    // (no visible stamp) but the gameplay-side runtime flag (setWantsBuildTank)
+    // is still toggled true->false so any consumer that relies on the flag
+    // observes the same lifecycle.
+    var FxDensityNs = global.Game && global.Game.FxDensity;
+    if (FxDensityNs && typeof FxDensityNs.getDensity === 'function') {
+      var fxd = FxDensityNs.getDensity();
+      if (Number.isFinite(fxd)) {
+        if (fxd <= 0) durationMs = 0;
+        else if (fxd < 1) durationMs = Math.max(0, Math.round(durationMs * fxd));
+      }
+    }
     clearActiveTimeout();
     if (!setActive(true)) return false;
     if (durationMs <= 0) {

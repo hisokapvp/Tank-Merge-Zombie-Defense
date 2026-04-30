@@ -373,6 +373,16 @@
                     <span class="menuValue" id="menuMusicValue">60%</span>
                   </div>
                 </div>
+                <div class="menuRow" id="menuFxDensityRow">
+                  <label class="menuLabel" id="menuFxDensityLabel" for="menuFxDensity" data-i18n="bigMenuFxDensity">Плотность эффектов</label>
+                  <div class="menuSlider">
+                    <input id="menuFxDensity" type="range" min="0" max="100" step="5" value="100" />
+                    <span class="menuValue" id="menuFxDensityValue">100%</span>
+                  </div>
+                </div>
+                <div class="menuRow menuRowHint" id="menuFxDensityHintRow">
+                  <span class="menuHint" id="menuFxDensityHint" data-i18n="bigMenuFxDensityHint">Снижает плотность визуальных эффектов для повышения FPS. Погода и молнии не зависят от этой настройки.</span>
+                </div>
                 <div class="menuRow">
                   <label class="menuToggle">
                     <input id="menuAutoPause" type="checkbox" />
@@ -791,6 +801,16 @@
                   <span class="menuValue" id="bigMenuMusicValue">60%</span>
                 </div>
               </div>
+              <div class="menuRow" id="bigMenuFxDensityRow">
+                <label class="menuLabel" id="bigMenuFxDensityLabel" for="bigMenuFxDensity">Плотность эффектов</label>
+                <div class="menuSlider">
+                  <input id="bigMenuFxDensity" type="range" min="0" max="100" step="5" value="100" />
+                  <span class="menuValue" id="bigMenuFxDensityValue">100%</span>
+                </div>
+              </div>
+              <div class="menuRow menuRowHint" id="bigMenuFxDensityHintRow">
+                <span class="menuHint" id="bigMenuFxDensityHint">Снижает плотность визуальных эффектов для повышения FPS. Погода и молнии не зависят от этой настройки.</span>
+              </div>
             </div>
           </div>
           <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
@@ -918,6 +938,7 @@
   <script src="src/perf/profiler.js?v=20260428-solo-yandex-vk-a1-v1"></script>
   <script src="src/render/spriteRefCache.js?v=20260428-solo-yandex-vk-a1-v1"></script>
   <script src="src/perf/mobileMode.js"></script>
+  <script src="src/perf/fxDensity.js?v=20260430-solo-yandex-vk-b1-v1"></script>
   <script src="src/i18n/index.js"></script>
   <script src="src/i18n/fallbackStrings.js?v=20260402-fd2-fontfloor-workshop-mobile-drag-v1"></script>
   <script src="src/i18n/pluralize.js"></script>

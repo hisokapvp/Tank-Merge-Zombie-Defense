@@ -3,6 +3,20 @@
 
   var DISABLE_ZOMBIE_AURAS = true;
 
+  // Solo-pipeline-yandex-vk batch 1 / item A2: corpse / blood-decal fade gate.
+  // Reads the cached scalar from Game.FxDensity so the hot-path stays no-alloc.
+  // density === 0 hides corpses immediately (alpha 0); density between 0..1
+  // multiplies the existing fade alpha so corpses persist as long as gameplay
+  // says they should but render lighter.
+  function _fxDensityScalar() {
+    var FX = global.Game && global.Game.FxDensity;
+    if (FX && typeof FX.getDensity === 'function') {
+      var d = FX.getDensity();
+      return Number.isFinite(d) ? d : 1;
+    }
+    return 1;
+  }
+
   function createController(deps) {
     deps = deps || {};
 
@@ -36,12 +50,18 @@
         ? z.corpseTimerLeft
         : (Number.isFinite(z && z.corpseTimer) ? z.corpseTimer : 0);
       if (timeToRemove <= 0) return 0;
+      // FxDensity gate: density=0 -> drop corpse render entirely (alpha 0);
+      // gameplay-side timer (z.corpseTimerLeft) is left untouched.
+      var fxDensity = _fxDensityScalar();
+      if (fxDensity <= 0) return 0;
       var fadeSec = typeof deps.getZombieCorpseFadeOutSec === 'function'
         ? deps.getZombieCorpseFadeOutSec()
         : 0;
-      if (!Number.isFinite(fadeSec) || fadeSec <= 0) return 1;
-      if (timeToRemove > fadeSec) return 1;
-      return deps.clamp(timeToRemove / fadeSec, 0, 1);
+      var baseAlpha;
+      if (!Number.isFinite(fadeSec) || fadeSec <= 0) baseAlpha = 1;
+      else if (timeToRemove > fadeSec) baseAlpha = 1;
+      else baseAlpha = deps.clamp(timeToRemove / fadeSec, 0, 1);
+      return baseAlpha * fxDensity;
     }
 
     function getZombieDeathScale(z, usesCommonDeathAtlas) {

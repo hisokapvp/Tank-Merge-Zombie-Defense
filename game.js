@@ -101,6 +101,10 @@ const ui = {
   menuTutorialToggle: document.getElementById('menuTutorialToggle'),
   menuSfxValue: document.getElementById('menuSfxValue'),
   menuMusicValue: document.getElementById('menuMusicValue'),
+  menuFxDensity: document.getElementById('menuFxDensity'),
+  menuFxDensityValue: document.getElementById('menuFxDensityValue'),
+  menuFxDensityLabel: document.getElementById('menuFxDensityLabel'),
+  menuFxDensityHint: document.getElementById('menuFxDensityHint'),
   bigMenuAutoPause: document.getElementById('bigMenuAutoPause'),
   bigMenuRootTutorial: document.getElementById('bigMenuRootTutorial'),
   crateModal: document.getElementById('crateModal'),
@@ -572,6 +576,14 @@ const DEFAULT_SETTINGS = audioDefaultsFromApi
       musicVolume: 0.6,
       autoPauseOnInactive: false,
     };
+// Solo-pipeline-yandex-vk#2 / item A5 — FX density persistence.
+// `fxDensity` ∈ [0..100] integer; `fxDensityInitialized` is a one-shot flag
+// that lets `loadSettings()` pick a sensible default on the very first run
+// (mobile → 60, desktop → 100) and switch to manual-only afterwards.
+// Save schema `assets/saveSchema.json` is a per-slot world save and is NOT
+// touched here — these fields live in the global `settings` LS object.
+if (DEFAULT_SETTINGS.fxDensity == null) DEFAULT_SETTINGS.fxDensity = 100;
+if (DEFAULT_SETTINGS.fxDensityInitialized == null) DEFAULT_SETTINGS.fxDensityInitialized = false;
 
 let settings = { ...DEFAULT_SETTINGS };
 let audioSettingsController = null;
@@ -1477,6 +1489,29 @@ function loadSettings(){
     }
   }catch(e){}
   settings.autoPauseOnInactive = !!settings.autoPauseOnInactive;
+  // Solo-pipeline-yandex-vk#2 / item A5 — FX density init flow.
+  // First-run-only: when `fxDensityInitialized !== true`, derive default by
+  // device class (mobile → 60, desktop → 100) and mark initialized=true.
+  // Subsequent loads keep the user's manual choice. The clamp also salvages
+  // any out-of-range or non-numeric value from older saves.
+  let _fxDensity = Number(settings.fxDensity);
+  if (!Number.isFinite(_fxDensity)) _fxDensity = NaN;
+  if (settings.fxDensityInitialized !== true) {
+    let _isMobile = false;
+    try {
+      _isMobile = !!(window.Game && window.Game.MobileMode
+        && typeof window.Game.MobileMode.isEnabled === 'function'
+        && window.Game.MobileMode.isEnabled());
+    } catch (_) { _isMobile = false; }
+    _fxDensity = _isMobile ? 60 : 100;
+    settings.fxDensityInitialized = true;
+  }
+  if (!Number.isFinite(_fxDensity)) _fxDensity = 100;
+  _fxDensity = Math.max(0, Math.min(100, Math.round(_fxDensity)));
+  settings.fxDensity = _fxDensity;
+  // Persist the resolved default + initialized flag so first-run defaulting
+  // does not re-trigger after the next reload.
+  saveSettings();
   syncAutoPauseWithPauseManager();
   applyAudioSettings();
   updateMenuVolumes();
@@ -2171,6 +2206,25 @@ function syncVolumeUIFromSettings(){
   if (ui.menuMusicValue) ui.menuMusicValue.textContent = `${musicPercent}%`;
   if (ui.menuSfxValue) ui.menuSfxValue.textContent = `${sfxPercent}%`;
 
+  // solo-pipeline-yandex-vk rework R3: keep small/pause menu fxDensity in
+  // sync with Settings + cross-surface ('settings.fxDensity.changed' event
+  // is fired by bigMenu / Settings.setFxDensity so the small menu reflects
+  // bigMenu changes immediately).
+  try {
+    var _SettingsFx = window.Game && window.Game.Settings;
+    var _fxRaw = (_SettingsFx && typeof _SettingsFx.getFxDensityRaw === 'function')
+      ? _SettingsFx.getFxDensityRaw() : 100;
+    if (!Number.isFinite(_fxRaw)) _fxRaw = 100;
+    if (ui.menuFxDensity) ui.menuFxDensity.value = String(_fxRaw);
+    if (ui.menuFxDensityValue) ui.menuFxDensityValue.textContent = _fxRaw + '%';
+    if (ui.menuFxDensityLabel && typeof t === 'function') {
+      ui.menuFxDensityLabel.textContent = t('bigMenuFxDensity');
+    }
+    if (ui.menuFxDensityHint && typeof t === 'function') {
+      ui.menuFxDensityHint.textContent = t('bigMenuFxDensityHint');
+    }
+  } catch (_fxe) {}
+
   if (ui.bigMenuSfx) ui.bigMenuSfx.value = String(sfxPercent);
   if (ui.bigMenuMusic) ui.bigMenuMusic.value = String(musicPercent);
   if (ui.bigMenuSfxValue) ui.bigMenuSfxValue.textContent = `${sfxPercent}%`;
@@ -2803,7 +2857,17 @@ function resizeCanvas(){
 
   const displayW = Math.max(200, window.innerWidth);
   const displayH = Math.max(200, window.innerHeight);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // solo-pipeline-yandex-vk#3 (B2): DPR cap is min(devicePixelRatio, 2) by
+  // default; under mobileUltraLite mode (fxLevel ≥ 2) opt into a cap of 1
+  // to halve fragment cost on low-end retina devices. Helper checks are
+  // tolerant of pre-mobileMode-init boot ordering — falls back to default.
+  let dprCap = 2;
+  try {
+    const _mm = (typeof getMobileMode === 'function') ? getMobileMode() : null;
+    const _fxLevel = (_mm && typeof _mm.getFxLevel === 'function') ? _mm.getFxLevel() : 0;
+    if (_fxLevel >= 2) dprCap = 1;
+  } catch (_dprErr) { /* additive — fall back to default cap */ }
+  const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
 
   canvas.style.width = `${displayW}px`;
   canvas.style.height = `${displayH}px`;
@@ -9435,11 +9499,19 @@ function impactAt(x,y,b,opts){
 
   if (!suppressCombatFx){
     // Visual impact rings (scale by effectIntensity)
+    // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 4): primary
+    // и overflow ring spawn × density через shouldSpawn. burst() уже сам gated
+    // внутри. Gameplay damage logic выше в этой функции — ВНЕ scope FxDensity
+    // (gameplay parity invariant).
+    const _FxImp = window.Game && window.Game.FxDensity;
+    const _shouldSpawnImpact = !_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn();
     const ei = b.effectIntensity ?? 1;
     const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
-    state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind,bulletCfg:b.bulletCfg||null});
+    if (_shouldSpawnImpact) {
+      state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind,bulletCfg:b.bulletCfg||null});
+    }
     burst(x, y, impactCount, b.glow);
-    if (b.dmg > 80){
+    if (b.dmg > 80 && (!_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn())){
       state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow',bulletCfg:b.bulletCfg||null});
     }
   }
@@ -9501,7 +9573,13 @@ function chainLightning(x,y,b,opts){
 
     if (!suppressCombatFx){
       // visual bolt
-      state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
+      // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 4): chain
+      // bolt — pure visual; gameplay damage application (applyDamageToZombie
+      // ниже) НЕ зависит от gate. При density=0 ущерб всё равно проходит.
+      const _FxBolt = window.Game && window.Game.FxDensity;
+      if (!_FxBolt || typeof _FxBolt.shouldSpawn !== 'function' || _FxBolt.shouldSpawn()) {
+        state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
+      }
     }
 
     const baseChainDmg = b.dmg * mul;
@@ -9532,7 +9610,17 @@ function formatDamageNumber(value){
 }
 
 function addDamageNumber(x, y, value, isCrit = false){
-  if (state.damageNumbers.length >= MAX_DAMAGE_NUMBERS) state.damageNumbers.shift();
+  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 3): user-tunable
+  // visual density × cap floor for damage popups. Crit popups always render
+  // (gameplay-readability whitelist); regular popups gated stochastically
+  // when density<1. Cap floor=6 keeps the most recent popups visible even at
+  // density=0 so crit stream remains legible. Behavior at density=1 is 1:1.
+  const _Fx = window.Game && window.Game.FxDensity;
+  if (!isCrit && _Fx && typeof _Fx.shouldSpawn === 'function' && !_Fx.shouldSpawn()) return;
+  const cap = (_Fx && typeof _Fx.scaleCap === 'function')
+    ? _Fx.scaleCap(MAX_DAMAGE_NUMBERS, 6)
+    : MAX_DAMAGE_NUMBERS;
+  while (state.damageNumbers.length >= cap) state.damageNumbers.shift();
   const jitter = 8;
   state.damageNumbers.push({
     x: x + (Math.random() * 2 - 1) * jitter,
@@ -9558,7 +9646,17 @@ function stepDamageNumbers(dt){
 
 // ---------- Decals (persistent effects) ----------
 function addDecal(d){
-  if (state.decals.length > BAL.maxDecals) state.decals.shift();
+  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 2): cap × density
+  // через scaleCap. NB: spawn-rate gate (shouldSpawn) НЕ применяется здесь
+  // потому что все текущие callers addDecal — gameplay (kind: 'pool', 'chipPool'
+  // — DOT pools, slow effects из ChipEffects). Floor=50 = mobile-low qualityLow
+  // baseline — гарантирует sufficient capacity для gameplay pools даже при
+  // density=0. Behavior 1:1 при density=1.
+  const _FxD = window.Game && window.Game.FxDensity;
+  const cap = (_FxD && typeof _FxD.scaleCap === 'function')
+    ? _FxD.scaleCap(BAL.maxDecals, 50)
+    : BAL.maxDecals;
+  while (state.decals.length > cap) state.decals.shift();
   state.decals.push({
     kind: d.kind,
     subKind: d.subKind || null,
@@ -9720,17 +9818,38 @@ function cleanupKills(){
 
 // ---------- Particles ----------
 function particle(x,y,r,color,life){
-  if (state.particles.length > BAL.maxParticles) return;
+  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 1): cap × density
+  // через scaleCap. Floor=100 — minimum pool для редких но важных вспышек
+  // даже при density=0. Spawn-rate gate применяется на caller-уровне (burst,
+  // drawTankAura, etc.) чтобы chip/talent visual pipelines, которые сами
+  // решают сколько частиц нужно, не получили двойной gate. Behavior 1:1.
+  const _FxP = window.Game && window.Game.FxDensity;
+  const cap = (_FxP && typeof _FxP.scaleCap === 'function')
+    ? _FxP.scaleCap(BAL.maxParticles, 100)
+    : BAL.maxParticles;
+  if (state.particles.length > cap) return;
   state.particles.push({x,y,r,color,life,max:life,vx:(Math.random()*2-1)*40,vy:(Math.random()*2-1)*40});
 }
 
 function burst(x,y,count,color){
+  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 1): spawn-burst
+  // count × density. getFxScale() остаётся mobile/quality scaler; FxDensity —
+  // user-tunable scaler поверх. При density=0 burst полностью пропускается.
   const scale = getFxScale();
-  const scaledCount = Math.max(1, Math.round(count * scale));
+  const _FxB = window.Game && window.Game.FxDensity;
+  const density = (_FxB && typeof _FxB.getDensity === 'function') ? _FxB.getDensity() : 1;
+  if (density <= 0) return;
+  const scaledCount = Math.max(1, Math.round(count * scale * density));
   for (let i=0;i<scaledCount;i++) particle(x,y,Math.random()*2.6+1.0,color,Math.random()*0.30+0.14);
 }
 
 function popText(x,y,text,color){
+  // R6 (solo-pipeline-yandex-vk rework3): popText — UI hint channel ALWAYS-SHOW
+  // whitelist. All current callers are UI feedback (popTank, levelUp,
+  // fenceRepairNoCoins, fenceRepairDone, popHangar, popTrack,
+  // dropOnCrateReject) — they must remain visible at fxDensity=0.
+  // Combat damage popups (HP loss numbers) go through addDamageNumber
+  // which keeps its own FxDensity.shouldSpawn() gate with crit whitelist.
   state.particles.push({kind:'text',x,y,text,color,life:0.95,max:0.95,vy:-26});
 }
 
@@ -12748,6 +12867,14 @@ function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffI
   for (let i = 0; i < zombies.length; i++) {
     const zombie = zombies[i];
     if (!zombie || zombie.state === 'dying') continue;
+    // R7 (solo-pipeline-yandex-vk rework3): per-zombie deterministic gate.
+    // FxDensity controls the QUANTITY of zombies displaying debuff overlays
+    // (icon + expiry wedge), not their alpha. Same zombie.id → same gate
+    // decision at a given density (no flicker frame-to-frame). Density
+    // change recomputes visibility consistently. If gate fails, BOTH icon
+    // and wedge are skipped together for visual consistency.
+    const _FxZ = window.Game && window.Game.FxDensity;
+    if (_FxZ && typeof _FxZ.shouldSpawnFor === 'function' && !_FxZ.shouldSpawnFor(zombie.id)) continue;
     const zRt = talentsApi.ensureZombieRt(zombie);
     if (!zRt) continue;
     resetZombieDebuffOverlayScratch();
@@ -12792,6 +12919,10 @@ function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffI
       if (iconImage && iconImage.complete) {
         ctx.drawImage(iconImage, zx - iconSizePx * 0.5, zy - iconSizePx * 0.5, iconSizePx, iconSizePx);
       }
+      // R7 (solo-pipeline-yandex-vk rework3): expiry wedge follows the same
+      // per-zombie gate as the icon (set above). If we got here, this zombie
+      // passed the FxDensity quantity gate, so render wedge at full alpha.
+      // No more alpha-density modulation — quantity replaces transparency.
       drawScaledDebuffExpiryOverlay(ctx, zx, zy, iconSizePx, zombieDebuffOverlayScratchFills[iconIndex]);
     }
     if (iconOpacity < 1) ctx.restore();
@@ -13155,7 +13286,15 @@ function drawTankTrack(){
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  for (let i=0;i<120;i++){
+  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 7): стамп-крап
+  // (декоративные точки на track) × density через scaleCount. Base track
+  // окружности (3 stroke arcs выше) — всегда 100% (gameplay-readability:
+  // tank orbit должен быть виден). При density=0 stamps полностью пропадают.
+  // NB: TZ указывал src/render/groundLayer.js, но drawTankTrack живёт в game.js;
+  // groundLayer.js — generative ground stamps (отдельный модуль, без fx spawn).
+  const _FxTT = window.Game && window.Game.FxDensity;
+  const stampCount = (_FxTT && typeof _FxTT.scaleCount === 'function') ? _FxTT.scaleCount(120) : 120;
+  for (let i=0;i<stampCount;i++){
     const n = seededNoise(i * 17.3, i * 41.7);
     const angle = i * 0.35 + n * Math.PI * 0.8;
     const r = BAL.tankOrbitRadius + (n - 0.5) * BAL.tankTrackWidth * 1.4;
@@ -14777,7 +14916,13 @@ function drawTankAura(x, y, band){
   ctx.arc(0, 0, r, 0, Math.PI * 2);
   ctx.fill();
   if (!isFxLite() && state.particles.length < BAL.maxParticles - 20){
-    const n = cfgParticleCount != null ? cfgParticleCount : Math.floor(2 + Math.sin(t * 3) * 1.5);
+    // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 5): количество
+    // процедурных орбов × density через scaleCount. Sprite-вариант
+    // (drawTankAuraSprite, Aura1/Aura2/Aura3) — ВСЕГДА 100% (whitelist по user
+    // clarification), не масштабируется.
+    const baseN = cfgParticleCount != null ? cfgParticleCount : Math.floor(2 + Math.sin(t * 3) * 1.5);
+    const _FxA = window.Game && window.Game.FxDensity;
+    const n = (_FxA && typeof _FxA.scaleCount === 'function') ? _FxA.scaleCount(baseN) : baseN;
     for (let i = 0; i < n; i++){
       const a = (t * 2 + i * 2.1) % (Math.PI * 2);
       const dist = r * (0.4 + 0.4 * Math.sin(t + i));
@@ -15358,20 +15503,38 @@ function drawChipEffectSprite(sprite, x, y, elapsedSec, alpha){
 }
 
 function drawDecals(){
+  // solo-pipeline-yandex-vk#rework-2 (R4): gate yellow chip effects visual
+  // layer by FxDensity. Mods 10..14 (firePool/iceZone/electroNode/laserMark/
+  // acidPool) — gameplay (pool tick/damage, hitboxes) lives in
+  // src/mechanics/chipEffects.js stepChipEffects and is NOT touched here. At
+  // density=0 we skip the entire visual loop; at intermediate values we
+  // multiply globalAlpha. Behavior 1:1 at density=1 (default before user
+  // changes the slider).
+  const _fxd = window.Game && window.Game.FxDensity;
+  const _density = _fxd && typeof _fxd.getDensity === 'function' ? _fxd.getDensity() : 1;
+  if (_density <= 0) return;
+  const _alphaMul = _density >= 1 ? 1 : _density;
 
   for (const d of state.decals){
     const t = d.life / d.max;
     const elapsed = Math.max(0, (d.max || 0) - (d.life || 0));
     if (d.codeVisualEnabled !== false) {
       ctx.save();
-      ctx.globalAlpha = 0.8 * t;
+      ctx.globalAlpha = 0.8 * t * _alphaMul;
       ctx.fillStyle = d.color;
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
       ctx.fill();
       ctx.restore();
     }
-    drawChipEffectSprite(d.effectSprite, d.x, d.y, elapsed, 0.9 * t);
+    if (_alphaMul >= 1) {
+      drawChipEffectSprite(d.effectSprite, d.x, d.y, elapsed, 0.9 * t);
+    } else {
+      ctx.save();
+      ctx.globalAlpha = _alphaMul;
+      drawChipEffectSprite(d.effectSprite, d.x, d.y, elapsed, 0.9 * t);
+      ctx.restore();
+    }
   }
 
   const ChipFx = window.Game && window.Game.ChipEffects;
@@ -15382,10 +15545,18 @@ function drawDecals(){
     const maxLife = Number.isFinite(node.maxLife) ? node.maxLife : node.life;
     const t = maxLife > 0 ? node.life / maxLife : 1;
     const elapsed = Math.max(0, maxLife - node.life);
-    if (drawChipEffectSprite(node.effectSprite, node.x, node.y, elapsed, 0.95 * t)) continue;
+    if (_alphaMul >= 1) {
+      if (drawChipEffectSprite(node.effectSprite, node.x, node.y, elapsed, 0.95 * t)) continue;
+    } else {
+      ctx.save();
+      ctx.globalAlpha = _alphaMul;
+      const _sprDrawn = drawChipEffectSprite(node.effectSprite, node.x, node.y, elapsed, 0.95 * t);
+      ctx.restore();
+      if (_sprDrawn) continue;
+    }
     if (node.codeVisualEnabled === false) continue;
     ctx.save();
-    ctx.globalAlpha = 0.8 * t;
+    ctx.globalAlpha = 0.8 * t * _alphaMul;
     ctx.fillStyle = node.color || 'rgba(236,204,104,.3)';
     ctx.beginPath();
     ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
@@ -15397,10 +15568,18 @@ function drawDecals(){
     const maxLife = Number.isFinite(mark.maxLife) ? mark.maxLife : mark.life;
     const t = maxLife > 0 ? mark.life / maxLife : 1;
     const elapsed = Math.max(0, maxLife - mark.life);
-    if (drawChipEffectSprite(mark.effectSprite, mark.x, mark.y, elapsed, 0.95 * t)) continue;
+    if (_alphaMul >= 1) {
+      if (drawChipEffectSprite(mark.effectSprite, mark.x, mark.y, elapsed, 0.95 * t)) continue;
+    } else {
+      ctx.save();
+      ctx.globalAlpha = _alphaMul;
+      const _sprDrawn = drawChipEffectSprite(mark.effectSprite, mark.x, mark.y, elapsed, 0.95 * t);
+      ctx.restore();
+      if (_sprDrawn) continue;
+    }
     if (mark.codeVisualEnabled === false) continue;
     ctx.save();
-    ctx.globalAlpha = 0.85 * t;
+    ctx.globalAlpha = 0.85 * t * _alphaMul;
     ctx.strokeStyle = mark.color || 'rgba(255,71,87,.35)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -15411,41 +15590,71 @@ function drawDecals(){
 }
 
 function drawDamageNumbers(){
-  for (const d of state.damageNumbers){
+  // solo-pipeline-yandex-vk#3 (B2): off-screen cull (margin 32px) + batched
+  // text-state to drop per-particle ctx.save/restore. globalAlpha is the
+  // only per-element state that varies; we restore canonical state once.
+  const arr = state.damageNumbers;
+  if (!arr || !arr.length) return;
+  const cullMarginX = 32;
+  const cullMarginY = 32;
+  const minX = -cullMarginX;
+  const maxX = (viewSize ? viewSize.w : 0) + cullMarginX;
+  const minY = -cullMarginY;
+  const maxY = (viewSize ? viewSize.h : 0) + cullMarginY;
+  ctx.save();
+  ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let lastFill = null;
+  for (let i = 0; i < arr.length; i++){
+    const d = arr[i];
+    if (d.x < minX || d.x > maxX || d.y < minY || d.y > maxY) continue;
     const t = d.life / d.max;
     const alpha = t <= 0.2 ? t / 0.2 : (t >= 0.6 ? 1 : (t - 0.2) / 0.4);
-    ctx.save();
+    const fill = d.isCrit ? '#c03030' : '#fff8e0';
+    if (fill !== lastFill){ ctx.fillStyle = fill; lastFill = fill; }
     ctx.globalAlpha = clamp(alpha, 0, 1) * (0.5 + 0.5 * t);
-    ctx.fillStyle = d.isCrit ? '#c03030' : '#fff8e0';
-    ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
     ctx.fillText(d.value, d.x, d.y);
-    ctx.restore();
   }
+  ctx.restore();
 }
 
 function drawParticles(){
-  for (const p of state.particles){
+  // solo-pipeline-yandex-vk#3 (B2): off-screen cull (margin 32px) + batched
+  // fillStyle. Particles dominate the per-frame state churn; one ctx.save
+  // for the whole pass instead of one per particle.
+  const arr = state.particles;
+  if (!arr || !arr.length) return;
+  const cullMarginX = 32;
+  const cullMarginY = 32;
+  const minX = -cullMarginX;
+  const maxX = (viewSize ? viewSize.w : 0) + cullMarginX;
+  const minY = -cullMarginY;
+  const maxY = (viewSize ? viewSize.h : 0) + cullMarginY;
+  ctx.save();
+  ctx.textAlign = 'center';
+  let lastFill = null;
+  let textFontSet = false;
+  for (let i = 0; i < arr.length; i++){
+    const p = arr[i];
+    if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) continue;
     const t = p.life / p.max;
+    const alpha = clamp(t, 0, 1);
+    if (p.color !== lastFill){ ctx.fillStyle = p.color; lastFill = p.color; }
+    ctx.globalAlpha = alpha;
     if (p.kind === 'text'){
-      ctx.save();
-      ctx.globalAlpha = clamp(t,0,1);
-      ctx.fillStyle = p.color;
-      ctx.font = '14px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.textAlign = 'center';
+      if (!textFontSet){
+        ctx.font = '14px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+        textFontSet = true;
+      }
       ctx.fillText(p.text, p.x, p.y);
-      ctx.restore();
       continue;
     }
-    ctx.save();
-    ctx.globalAlpha = clamp(t,0,1);
-    ctx.fillStyle = p.color;
     ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
+  ctx.restore();
 }
 
 function drawHint(text){
@@ -15619,6 +15828,16 @@ let lastFrameTs = last;
 let fpsAvg = 60;
 let lastProgressSave = 0;
 let qualityLow = false;
+// solo-pipeline-yandex-vk#3 (B3): qualityLow hysteresis — track how long fps
+// has been comfortably above the recovery threshold so we don't oscillate
+// the BAL caps between low/high every few frames.
+let qualityLowRecoveryAccum = 0;
+const QUALITY_LOW_DROP_FPS = 45;
+const QUALITY_LOW_RECOVER_FPS = 55;
+const QUALITY_LOW_RECOVER_HOLD_SEC = 5;
+// solo-pipeline-yandex-vk#3 (B3): localStorage quota / save error throttle so
+// we don't spam toasts on every frame when storage is full.
+let lastSaveErrorAt = 0;
 let mainLoopRafId = 0;
 let sessionRuntimeStopped = false;
 let phaserLoopActive = false;
@@ -15644,7 +15863,25 @@ function loop(now){
   last = now;
   fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
   const fxLevel = getFxLevel();
-  qualityLow = fpsAvg < 45 || fxLevel >= 1;
+  // solo-pipeline-yandex-vk#3 (B3): hysteresis — drop into qualityLow when
+  // fpsAvg falls below 45 (or fxLevel forces it). Only recover when fpsAvg
+  // stays above 55 for ≥5s. Prevents BAL.maxParticles thrashing.
+  if (qualityLow) {
+    if (fpsAvg >= QUALITY_LOW_RECOVER_FPS && fxLevel < 1) {
+      qualityLowRecoveryAccum += dt;
+      if (qualityLowRecoveryAccum >= QUALITY_LOW_RECOVER_HOLD_SEC) {
+        qualityLow = false;
+        qualityLowRecoveryAccum = 0;
+      }
+    } else {
+      qualityLowRecoveryAccum = 0;
+    }
+  } else {
+    if (fpsAvg < QUALITY_LOW_DROP_FPS || fxLevel >= 1) {
+      qualityLow = true;
+      qualityLowRecoveryAccum = 0;
+    }
+  }
   if (isFxUltraLite()){
     BAL.maxParticles = 520;
     BAL.maxDecals = 50;
@@ -15653,7 +15890,25 @@ function loop(now){
     BAL.maxDecals = qualityLow ? 70 : 120;
   }
   if (nowSec() - lastProgressSave > 7){
-    saveProgress();
+    // solo-pipeline-yandex-vk#3 (B3): wrap save in try/catch + non-blocking
+    // toast on quota error. saveProgress() already swallows storage errors
+    // for the legacy path, but the Storage.saveGame branch can throw and
+    // surface as a white-screen / silent-data-loss otherwise.
+    try {
+      saveProgress();
+    } catch (saveErr) {
+      const _now = nowSec();
+      if (_now - lastSaveErrorAt > 30) {
+        lastSaveErrorAt = _now;
+        try { console.warn('[progress-save] failed:', saveErr && saveErr.message); } catch (_) {}
+        try {
+          const Toast = window.Game && (window.Game.Toast || window.Game.UIToast);
+          if (Toast && typeof Toast.show === 'function') {
+            Toast.show(t('saveQuotaWarning') || 'Save failed (storage full?)', { kind: 'warn', durationMs: 4000 });
+          }
+        } catch (_toastErr) { /* additive — never throws into loop */ }
+      }
+    }
     lastProgressSave = nowSec();
     // Refresh telemetry debug widget (throttled to save interval)
     if (DebugPanelEnabled && window.Game && window.Game.Telemetry) window.Game.Telemetry.refreshUI();
@@ -16339,6 +16594,47 @@ async function boot(){
     // Task 10: preload shields.png on boot (non-blocking failure path)
     try { await ShieldSprites.load(); } catch (_) {}
     rebuildGroundLayer();
+    // solo-pipeline-yandex-vk#3 (B2): sprite atlas pre-warm — render each
+    // loaded zombie/tank atlas once off-screen so the GPU uploads the
+    // texture before the first real draw. Without this, Chrome shows a
+    // 100–200ms hitch on the first wave of new zombie types. Additive,
+    // never throws into boot.
+    try {
+      const _warmCanvas = (typeof document !== 'undefined' && document.createElement)
+        ? document.createElement('canvas') : null;
+      const _warmCtx = _warmCanvas ? _warmCanvas.getContext('2d') : null;
+      if (_warmCtx) {
+        _warmCanvas.width = 4;
+        _warmCanvas.height = 4;
+        const _warmAtlases = [];
+        const _push = (img) => {
+          if (img && typeof img === 'object' && _warmAtlases.indexOf(img) === -1) {
+            _warmAtlases.push(img);
+          }
+        };
+        _push(ZombieSprites && ZombieSprites.atlasImg);
+        _push(TankSprites && TankSprites.atlasImg);
+        _push(GroundSprites && GroundSprites.atlasImg);
+        const _ZS = (window.Game && window.Game.ZombieSprites) || ZombieSprites;
+        if (_ZS && typeof _ZS.getAllAtlasImages === 'function') {
+          try {
+            const all = _ZS.getAllAtlasImages();
+            if (Array.isArray(all)) all.forEach(_push);
+          } catch (_) {}
+        }
+        for (let i = 0; i < _warmAtlases.length; i++) {
+          try { _warmCtx.drawImage(_warmAtlases[i], 0, 0, 1, 1); } catch (_) {}
+        }
+      }
+    } catch (_warmErr) { /* additive, never throws into boot */ }
+    // solo-pipeline-yandex-vk#3 (B3): wire RuntimeTasks auto-suspend so RAF
+    // and setTimeout/setInterval truly stop when the tab is hidden.
+    try {
+      const _RT = window.Game && window.Game.RuntimeTasks;
+      if (_RT && typeof _RT.installAutoSuspend === 'function') {
+        _RT.installAutoSuspend();
+      }
+    } catch (_rtErr) { /* additive, never throws into boot */ }
     if (BootstrapApi && typeof BootstrapApi.runBoot === 'function') {
       await BootstrapApi.runBoot({
         windowObj: window,

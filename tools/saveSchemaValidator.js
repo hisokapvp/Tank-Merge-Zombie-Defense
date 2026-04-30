@@ -145,9 +145,38 @@
     if (typeof require !== 'function') {
       throw new Error('loadSchemaSync requires Node.js');
     }
-    var fs = require('fs');
-    var raw = fs.readFileSync(schemaPath, 'utf-8');
-    return JSON.parse(raw);
+    // solo-pipeline-yandex-vk#3 (B3): never throw into game boot/load.
+    // On read or parse error return null — callers (storage.js, CI) treat
+    // null as "schema unavailable" and degrade to fail-soft (no validation),
+    // logging via console.warn instead of crashing the page.
+    try {
+      var fs = require('fs');
+      var raw = fs.readFileSync(schemaPath, 'utf-8');
+      return JSON.parse(raw);
+    } catch (e) {
+      try {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[saveSchemaValidator] loadSchemaSync failed for', schemaPath, e && e.message);
+        }
+      } catch (_) {}
+      return null;
+    }
+  }
+
+  // solo-pipeline-yandex-vk#3 (B3): safe wrapper for storage.js. Validates
+  // payload only when both schema and validator are usable; never throws.
+  function safeValidate(payload, schema) {
+    try {
+      if (!schema || typeof schema !== 'object') return { ok: true, errors: [], skipped: true };
+      return validatePayload(payload, schema);
+    } catch (e) {
+      try {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn('[saveSchemaValidator] safeValidate threw, fail-soft skip:', e && e.message);
+        }
+      } catch (_) {}
+      return { ok: true, errors: [], skipped: true };
+    }
   }
 
   function main(argv) {
@@ -163,6 +192,13 @@
       else if (!args[i].startsWith('-')) { payloads.push(args[i]); }
     }
     var schema = loadSchemaSync(schemaPath);
+    if (!schema) {
+      // solo-pipeline-yandex-vk#3 (B3): treat unreadable schema as a soft
+      // failure in CI mode — emit warning and exit non-zero so build catches
+      // it, but no crash dump.
+      process.stderr.write('save-schema: schema unavailable at ' + schemaPath + '\n');
+      return 3;
+    }
     if (payloads.length === 0) {
       // Self-test: build a minimal valid skeleton, validate it; ensure schema parses & reports clean.
       var skeleton = {
@@ -200,6 +236,7 @@
 
   var api = {
     validatePayload: validatePayload,
+    safeValidate: safeValidate,
     loadSchemaSync: loadSchemaSync,
     main: main,
   };

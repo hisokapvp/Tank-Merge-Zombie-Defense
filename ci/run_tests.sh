@@ -47,6 +47,7 @@ run_test "Pack 8 (balance optimizer locks)" "Test/pack8/balanceOptimizerLocks.te
 run_test "Pack 8 (balance curve repair)" "Test/pack8/balanceCurveRepair.test.js"
 run_test "Pack 8 (zombie fail-safe teleport)" "Test/pack8/zombieFailSafeTeleport.test.js"
 run_test "Pack 9 (offline modal UI/i18n)" "Test/pack9/offlineModal_ui_i18n.test.js"
+run_test "Pack 10 (FX density render parity)" "Test/pack10/fxDensityRender.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."
