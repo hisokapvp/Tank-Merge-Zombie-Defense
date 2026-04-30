@@ -280,7 +280,12 @@
         }
         if ((freePoints + spentPoints) >= 31) {
           computer.eventShown40 = true;
-          showCenterNotification(t('powerMoment40'));
+          // batch solo-pipeline-yandex-vk#1 (item 9): silent unlock — pop-up
+          // «Открыты активные способности» suppressed by user request.
+          // Visual indicator in the upgrade menu (talentAbilityUnlocked class
+          // applied via `btn.classList.toggle('talentAbilityUnlocked', stateActive.unlocked)`
+          // in game.js) remains; only this center-screen notification is gated.
+          // showCenterNotification(t('powerMoment40'));
         }
       }
       if (level >= 50) computer.eventShown50 = true;

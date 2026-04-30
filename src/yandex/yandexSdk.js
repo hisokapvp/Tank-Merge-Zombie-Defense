@@ -10,9 +10,17 @@
  *     `ysdk.features.LoadingAPI.ready()` once the host signals the game is fully loaded
  *     via `Game.YandexSDK.signalLoaded()` (item 7).
  *
- * Safe-by-default: outside of Yandex Games (e.g. local dev, VK build) the module
- * silently degrades — splash still hides on `signalLoaded()`, `getPreferredLang()`
- * returns null, no SDK calls are made.
+ * Safe-by-default: outside of the Yandex Games iframe host (e.g. local dev, VK
+ * build) the module silently degrades — splash still hides on `signalLoaded()`,
+ * `getPreferredLang()` returns null, no SDK calls are made.
+ *
+ * Source-level discipline (item 10, batch#3): JSDoc and inline comments in this
+ * file deliberately avoid concrete dev/CDN host literals. Use neutral phrases
+ * such as `[redacted Yandex iframe host]` or `the Yandex Games iframe host`
+ * instead of repeating real domain names. The build sanitiser in
+ * `ci/build_release.mjs` remains as defense-in-depth (see
+ * `docs/ai/SYSTEMS/yandex.md`), but the primary line of defense lives here at
+ * the source level so a stray paste in a comment never reaches a release zip.
  */
 (function (global) {
   'use strict';
@@ -42,15 +50,20 @@
   /**
    * solo-pipeline-yandex-vk#A1-9items-rework / console-diag:
    * The Yandex Games SDK assumes the page is embedded in a Yandex Games iframe
-   * (app-*.games.s3.yandex.net, parent yandex.ru/games or yandex.com/games).
-   * When loaded outside that environment (local dev `file://`, plain
-   * localhost, VK build, or the standalone build at e.g. boosty publishing),
-   * `YaGames.init()` triggers a flood of "No parent to post message" /
-   * "SDK environment: window.YandexGamesSDKEnvironment is undefined" /
-   * "Can not get appId from environment" errors because there is no Yandex
-   * postMessage parent to talk to. Detect that case and skip init() entirely
-   * — the SDK script itself can still load harmlessly. Inside a real Yandex
-   * iframe the existing path is used unchanged.
+   * served by Yandex's CDN, with the parent document being a Yandex Games
+   * portal page. When loaded outside that environment (local dev `file://`,
+   * plain localhost, VK build, or the standalone build at e.g. boosty
+   * publishing), `YaGames.init()` triggers a flood of "No parent to post
+   * message" / "SDK environment: window.YandexGamesSDKEnvironment is
+   * undefined" / "Can not get appId from environment" errors because there
+   * is no Yandex postMessage parent to talk to. Detect that case and skip
+   * init() entirely — the SDK script itself can still load harmlessly.
+   * Inside a real Yandex iframe the existing path is used unchanged.
+   *
+   * Note (item 10, batch#3): concrete CDN host literals are intentionally
+   * absent from this comment. The runtime detection below uses only
+   * substring fragments (`yandex`, `games.s3`) which match the live host
+   * patterns without printing the full names.
    */
   function _isYandexEnv() {
     try {
@@ -60,11 +73,12 @@
       var hostname = String(loc.hostname || '').toLowerCase();
       var doc = global.document || {};
       var referrer = String(doc.referrer || '').toLowerCase();
-      // Real Yandex Games iframe hosts: `app-*.games.s3.yandex.net`,
-      // `*.games.yandex.net`, `*.yandex.ru`, `*.yandex.com`.
+      // Real Yandex Games iframe hosts and their parent portal hosts are
+      // matched by the substring fragments below — see
+      // `docs/ai/SYSTEMS/yandex.md` for the current allowlist contract.
       if (hostname.indexOf('yandex') !== -1) return true;
       if (hostname.indexOf('games.s3') !== -1) return true;
-      // Parent doc referrer should be yandex.ru/games or yandex.com/games.
+      // Parent doc referrer should be a Yandex Games portal page.
       if (referrer.indexOf('yandex.ru/games') !== -1) return true;
       if (referrer.indexOf('yandex.com/games') !== -1) return true;
       if (referrer.indexOf('yandex.net') !== -1) return true;
@@ -95,10 +109,10 @@
   }
 
   function init() {
-    // Skip Yandex SDK initialisation outside a real Yandex Games iframe to
-    // suppress the "No parent to post message" / "SDK environment ..." error
-    // flood. The splash element and signalLoaded()/_hideSplash() flow stay
-    // functional so the loading overlay still hides correctly.
+    // Skip Yandex SDK initialisation outside a real Yandex Games iframe host
+    // to suppress the "No parent to post message" / "SDK environment ..."
+    // error flood. The splash element and signalLoaded()/_hideSplash() flow
+    // stay functional so the loading overlay still hides correctly.
     if (!_isYandexEnv()) {
       _logNonYandexOnce();
       _finalizeReady(null);

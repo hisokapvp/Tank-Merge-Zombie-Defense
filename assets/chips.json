@@ -498,11 +498,11 @@
         "scale": 1.3
       },
       "effectSprite": {
-        "src": "bullet_atlas.png",
-        "frame": { "x": 0, "y": 0, "w": 81, "h": 81 },
-        "frames": 9,
-        "frameRateFps": 20,
-        "scale": 0.9,
+        "src": "impact_ice.png",
+        "frame": { "x": 0, "y": 0, "w": 96, "h": 96 },
+        "frames": 49,
+        "frameRateFps": 49,
+        "scale": 1.35,
         "loop": true
       },
       "effect": {

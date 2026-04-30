@@ -7,7 +7,21 @@
     function getWorldEventsAttackCfg() {
       var WorldEventsCfg = deps.getWorldEventsCfg();
       var state = deps.getState();
-      var cfg = WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {};
+      // solo-pipeline-yandex-vk#2 / item 2: pick attackMode60 instead of
+      // the generic attackMode once L60 zombies are active. The two configs
+      // are mutually exclusive — exactly one is read here per tick.
+      // Trigger reuses the existing endgame proxy (max tank level achieved
+      // >= 60), which is the same gate that flips the endgame wave buff.
+      var maxTankLevelAchieved = state && Number.isFinite(state.maxTankLevelAchieved)
+        ? Math.floor(state.maxTankLevelAchieved)
+        : 1;
+      var l60Active = maxTankLevelAchieved >= 60
+        && WorldEventsCfg
+        && WorldEventsCfg.attackMode60
+        && WorldEventsCfg.attackMode60.enabled !== false;
+      var cfg = l60Active
+        ? WorldEventsCfg.attackMode60
+        : (WorldEventsCfg && WorldEventsCfg.attackMode ? WorldEventsCfg.attackMode : {});
       var idleWaveCfg = cfg && cfg.idleWave && typeof cfg.idleWave === 'object' ? cfg.idleWave : {};
       var debugForceAttack = !!(state && state.debug && (
         typeof state.debug.forceAttackMode === 'boolean'
@@ -368,6 +382,10 @@
           // of compounding on top of it. Track the endgame-wave counter on worldEventsState
           // so it survives within a runtime session and resets with the rest of state on
           // restart/load.
+          // Rework (solo-pipeline-yandex-vk#2 / item 5): bump the per-wave step from +20%
+          // to +50%. Multiplier = 1 + 0.50 * N (wave1=1.50, wave2=2.00, wave3=2.50, ...).
+          // Banner percent matches: 50 * N. Replacement semantics preserved; non-L60 path
+          // (the `else if` branch) keeps its existing ×1.05 compounding rule untouched.
           var maxTankLevelAchieved = Number.isFinite(state.maxTankLevelAchieved)
             ? Math.floor(state.maxTankLevelAchieved)
             : 1;
@@ -378,12 +396,12 @@
               : 0;
             var endgameWaveCount = prevEndgameWaveCount + 1;
             worldEventsState.endgameWaveCount = endgameWaveCount;
-            var endgameMult = 1 + 0.20 * endgameWaveCount;
+            var endgameMult = 1 + 0.50 * endgameWaveCount;
             // Replacement, NOT compounding: each wave overrides previous buff.
             state.zombieWaveAtkMult = endgameMult;
             state.zombieWaveHpMult = endgameMult;
             if (typeof deps.onEndgameWaveStart === 'function') {
-              var endgamePercent = 20 * endgameWaveCount;
+              var endgamePercent = 50 * endgameWaveCount;
               try { deps.onEndgameWaveStart(endgameWaveCount, endgamePercent); } catch (e) {}
             }
           } else if (worldEventsState.waveNumber > attackCfg.safeWaves) {

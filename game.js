@@ -3582,15 +3582,21 @@ function getDronUpgradeStepCost(level, statKey, appliedIndex){
   return getProgressiveUpgradeStepCost(getDronUpgradeCostBase(level, statKey), appliedIndex);
 }
 
+// solo-pipeline-yandex-vk batch#3 items 4+7:
+// Drone repair-speed and repair-cost multipliers step by a fixed 0.005 per upgrade
+// unit (independent of the cannonUpgrades.json row[3] used for tank damage).
+// This makes the modal's "Модификации техники и стен" → drones panel produce
+// values like 1.000, 0.995, 0.990 ... 0.905 when the cost multiplier is decremented.
+const DRON_REPAIR_SPEED_STEP_PER_UPGRADE = 0.005;
+const DRON_REPAIR_COST_STEP_PER_UPGRADE = 0.005;
+
 function getDronUpgradePercentsForLevel(level){
   const row = getCannonUpgradeRow(level) || [];
   const moveSpeedIncPer = Number.isFinite(Number(row[4])) ? Math.max(0, Number(row[4])) : 0;
-  const repairSpeedIncPer = Number.isFinite(Number(row[3])) ? Math.max(0, Number(row[3])) : 0;
-  const repairCostDecPer = Number.isFinite(Number(row[3])) ? Math.max(0, Number(row[3])) : 0;
   return {
     moveSpeedIncPer,
-    repairSpeedIncPer,
-    repairCostDecPer,
+    repairSpeedIncPer: DRON_REPAIR_SPEED_STEP_PER_UPGRADE,
+    repairCostDecPer: DRON_REPAIR_COST_STEP_PER_UPGRADE,
   };
 }
 
@@ -3607,11 +3613,15 @@ function buildDronStatsWithApplied(baseStats, level, applied){
     : decodeAppliedUpgradeEntry(applied, DRON_UPGRADE_STAT_KEYS);
   const percents = getDronUpgradePercentsForLevel(level);
   const moveSpeedPxSec = baseMove * (1 + percents.moveSpeedIncPer * (appliedCounts.moveSpeedPxSec || 0));
-  const repairSpeedMult = baseRepair * (1 + percents.repairSpeedIncPer * (appliedCounts.repairSpeedMult || 0));
-  const costMulRaw = baseCost * (1 - percents.repairCostDecPer * (appliedCounts.costMult || 0));
+  // solo-pipeline-yandex-vk batch#3 items 4+7:
+  // Repair speed and cost multipliers step ADDITIVELY by 0.005 per upgrade unit
+  // (e.g. baseCost 1.000 after 19 cost-down upgrades → 0.905). This matches the
+  // user-visible example in the modal and makes the increment level-independent.
+  const repairSpeedMult = baseRepair + percents.repairSpeedIncPer * (appliedCounts.repairSpeedMult || 0);
+  const costMulRaw = baseCost - percents.repairCostDecPer * (appliedCounts.costMult || 0);
   return {
     moveSpeedPxSec: moveSpeedPxSec,
-    repairSpeedMult: repairSpeedMult,
+    repairSpeedMult: Math.max(0, repairSpeedMult),
     costMult: Math.max(0.01, costMulRaw),
   };
 }
@@ -12728,6 +12738,33 @@ window.addEventListener('keydown', function(e) {
   if (_UGHUI && typeof _UGHUI.isOpen === 'function' && _UGHUI.isOpen()) {
     if (typeof _UGHUI.close === 'function') _UGHUI.close();
     _notifyModal('undergroundHangar', false);
+    return;
+  }
+  // batch solo-pipeline-yandex-vk#1 (item 1): ESC closes any visible help modal
+  // (category «Справка») first — both shared SC-family help (`Game.SupercomputerMenu`
+  // sharedHelpModalEl) and `Game.HangarChipsUI` tech-help modal share the
+  // `.techModal__backdrop` class. Topmost help modal wins so a single ESC press
+  // dismisses help while leaving the underlying modal (storage / hangar / SC) open.
+  const _helpBackdrops = document.querySelectorAll('.techModal__backdrop');
+  for (let _i = _helpBackdrops.length - 1; _i >= 0; _i--) {
+    const _bd = _helpBackdrops[_i];
+    if (!_bd) continue;
+    const _styleDisplay = _bd.style && _bd.style.display;
+    const _ariaHidden = _bd.getAttribute && _bd.getAttribute('aria-hidden');
+    const _visible = _styleDisplay !== 'none' && _ariaHidden !== 'true';
+    if (!_visible) continue;
+    _bd.style.display = 'none';
+    if (_bd.setAttribute) _bd.setAttribute('aria-hidden', 'true');
+    _bd.innerHTML = '';
+    return;
+  }
+  // batch solo-pipeline-yandex-vk#1 (item 1): ESC closes Production Storage
+  // («Производственный склад»). Use public `Game.ProductionLineUI.close()` so
+  // pause-lock unwind via `setMenuPauseSource('productionStorage', false)` and
+  // body-class cleanup happen through the canonical path.
+  const _PLUI = window.Game && window.Game.ProductionLineUI;
+  if (_PLUI && typeof _PLUI.isOpen === 'function' && _PLUI.isOpen()) {
+    if (typeof _PLUI.close === 'function') _PLUI.close();
     return;
   }
   const higherPriorityLockOpen = hasHigherPriorityEscapeLock();

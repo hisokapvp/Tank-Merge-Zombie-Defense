@@ -184,7 +184,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6685,
+      "Health": 13370,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -250,7 +250,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6820,
+      "Health": 13640,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -316,7 +316,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 6950,
+      "Health": 13900,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -382,7 +382,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 7080,
+      "Health": 14160,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -448,7 +448,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 8335,
+      "Health": 16670,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -514,7 +514,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 9775,
+      "Health": 19550,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -580,7 +580,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 11215,
+      "Health": 22430,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -646,7 +646,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 12680,
+      "Health": 25360,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -712,7 +712,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 14145,
+      "Health": 28290,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -778,7 +778,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 15615,
+      "Health": 31230,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -844,7 +844,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16600,
+      "Health": 33200,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -910,7 +910,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16765,
+      "Health": 33530,
       "anchor_shadow": {
         "x": 0,
         "y": -7
@@ -976,7 +976,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16925,
+      "Health": 33850,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -1042,7 +1042,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 17320,
+      "Health": 34640,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1108,7 +1108,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 17495,
+      "Health": 34990,
       "anchor_shadow": {
         "x": 0,
         "y": -12
@@ -1174,7 +1174,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 18090,
+      "Health": 36180,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -1240,7 +1240,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 19540,
+      "Health": 39080,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1306,7 +1306,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 20740,
+      "Health": 41480,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1372,7 +1372,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 21795,
+      "Health": 43590,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1438,7 +1438,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 32215,
+      "Health": 64430,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1504,7 +1504,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 39135,
+      "Health": 78270,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1570,7 +1570,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 40960,
+      "Health": 81920,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1636,7 +1636,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 43630,
+      "Health": 87260,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1702,7 +1702,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 45350,
+      "Health": 90700,
       "anchor_shadow": {
         "x": 0,
         "y": 9
@@ -1768,7 +1768,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 47400,
+      "Health": 94800,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1834,7 +1834,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 50270,
+      "Health": 100540,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1900,7 +1900,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 52220,
+      "Health": 104440,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1966,7 +1966,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 54185,
+      "Health": 108370,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2032,7 +2032,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 57105,
+      "Health": 114210,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2098,7 +2098,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 57440,
+      "Health": 114880,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2164,7 +2164,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 62235,
+      "Health": 124470,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2230,7 +2230,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 65335,
+      "Health": 130670,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2296,7 +2296,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 67575,
+      "Health": 135150,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2362,7 +2362,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 69830,
+      "Health": 139660,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -2428,7 +2428,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 73370,
+      "Health": 146740,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2494,7 +2494,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 75515,
+      "Health": 151030,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2560,7 +2560,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 77865,
+      "Health": 155730,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -2626,7 +2626,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 81675,
+      "Health": 163350,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2692,7 +2692,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 84110,
+      "Health": 168220,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2758,7 +2758,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 86370,
+      "Health": 172740,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2824,7 +2824,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 87355,
+      "Health": 174710,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2890,7 +2890,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 89815,
+      "Health": 179630,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -2956,7 +2956,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 92285,
+      "Health": 184570,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3022,7 +3022,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 96335,
+      "Health": 192670,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3088,7 +3088,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 98905,
+      "Health": 197810,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3154,7 +3154,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 101495,
+      "Health": 202990,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3220,7 +3220,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 106050,
+      "Health": 212100,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3286,7 +3286,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 108530,
+      "Health": 217060,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3352,7 +3352,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 111235,
+      "Health": 222470,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3418,7 +3418,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 116115,
+      "Health": 232230,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3484,7 +3484,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 116925,
+      "Health": 233850,
       "anchor_shadow": {
         "x": 0,
         "y": -8
@@ -3550,7 +3550,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 119495,
+      "Health": 238990,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3616,7 +3616,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 124630,
+      "Health": 249260,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -3682,7 +3682,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 127525,
+      "Health": 255050,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3748,7 +3748,7 @@
           "frameRateFps": 8
         }
       },
-      "Health": 130440,
+      "Health": 260880,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -3814,7 +3814,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 135705,
+      "Health": 271410,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3880,7 +3880,7 @@
           "frameRateFps": 20
         }
       },
-      "Health": 138735,
+      "Health": 277470,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3946,7 +3946,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 141785,
+      "Health": 283570,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -4012,7 +4012,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 147645,
+      "Health": 295290,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -4078,7 +4078,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 150585,
+      "Health": 301170,
       "anchor_shadow": {
         "x": 0,
         "y": 10

@@ -1267,6 +1267,18 @@
         .replace(/(\.\d)0$/, '$1');
     }
 
+    // solo-pipeline-yandex-vk batch#3 items 4+7:
+    // Drone repair-speed (`repairSpeedMult`) and repair-cost (`costMult`)
+    // multipliers step by 0.005 per upgrade — too small for the 2-decimal
+    // `formatNumber` to surface. Render those two cells with a fixed 3-decimal
+    // format so values like 0.905 / 0.910 stay legible in the modal.
+    function formatDroneMult(value) {
+      var num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      if (Math.abs(num) >= 100) return String(Math.round(num));
+      return num.toFixed(3);
+    }
+
     function normalizeRootTilesSize() {
       var tilesWrap = documentObj.querySelector('#supercomputerMenuOverlay .scRootTiles');
       if (!tilesWrap) return;
@@ -1755,8 +1767,8 @@
             '<div class="scGunsTable__cell scGunsTable__cell_level">' + String(level) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_sprite">' + spriteHtml + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.moveSpeedPxSec) + ' / ' + formatNumber(stats.moveSpeedPxSec) + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.repairSpeedMult) + ' / ' + formatNumber(stats.repairSpeedMult) + '</div>' +
-            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatNumber(baseStats.costMult) + ' / ' + formatNumber(stats.costMult) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatDroneMult(baseStats.repairSpeedMult) + ' / ' + formatDroneMult(stats.repairSpeedMult) + '</div>' +
+            '<div class="scGunsTable__cell scGunsTable__cell_stat">' + formatDroneMult(baseStats.costMult) + ' / ' + formatDroneMult(stats.costMult) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_upgrade">' + upgradeText + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_cost">' + formatCostRange(costValues) + '</div>' +
             '<div class="scGunsTable__cell scGunsTable__cell_actions">' +

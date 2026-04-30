@@ -4,7 +4,7 @@
   // ─── Constants ─────────────────────────────────────────────
   const BASE_KILL_COST       = 500;
   const COST_MULTIPLIER      = 2;
-  const MAX_KILL_COST         = 16000;
+  const MAX_KILL_COST         = 8000;
   const DEFAULT_STORAGE_SLOTS = 9;
   const STORAGE_COLS          = 3;
   const MAX_BOX_LEVEL         = 4;
