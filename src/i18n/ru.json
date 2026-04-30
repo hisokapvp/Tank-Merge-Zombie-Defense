@@ -354,6 +354,7 @@
   "powerMoment40": "Открыты активные способности!",
   "powerMoment50": "Максимальная мощь танков.",
   "powerMoment60": "Режим эндгейма — враги усилены.",
+  "endgameWaveBanner": "Волна {wave}, зомби усилены на {percent}%",
   "statusOn": "OK",
   "statusOff": "OFF",
   "zombieShort": "З",

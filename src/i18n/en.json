@@ -352,6 +352,7 @@
   "powerMoment40": "Active abilities unlocked!",
   "powerMoment50": "Maximum tank power.",
   "powerMoment60": "Endgame mode — enemies enhanced.",
+  "endgameWaveBanner": "Wave {wave}, zombies enhanced by {percent}%",
   "statusOn": "OK",
   "statusOff": "OFF",
   "zombieShort": "Z",

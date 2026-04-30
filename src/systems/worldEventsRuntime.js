@@ -360,7 +360,33 @@
           worldEventsState.attackEndAt = startAt + attackCfg.attackDurationSec;
           worldEventsState.attackStartAt = startAt + attackCfg.attackEverySec;
           worldEventsState.waveNumber = Math.max(0, Math.floor(worldEventsState.waveNumber || 0)) + 1;
-          if (worldEventsState.waveNumber > attackCfg.safeWaves) {
+          // solo-pipeline-yandex-vk#A2 / item 4: at tank level 60+, every wave applies a buff
+          // to atk/HP and shows a center banner via deps.onEndgameWaveStart.
+          // Rework (#A1-9items-rework/item 4): switch from compounding (×1.20 every wave) to
+          // non-stacking REPLACEMENT — wave N gives multiplier = 1 + 0.20 * N (wave1=1.20,
+          // wave2=1.40, wave3=1.60, ...). Each wave fully overrides the previous buff instead
+          // of compounding on top of it. Track the endgame-wave counter on worldEventsState
+          // so it survives within a runtime session and resets with the rest of state on
+          // restart/load.
+          var maxTankLevelAchieved = Number.isFinite(state.maxTankLevelAchieved)
+            ? Math.floor(state.maxTankLevelAchieved)
+            : 1;
+          var endgameWaveBuff = maxTankLevelAchieved >= 60;
+          if (endgameWaveBuff) {
+            var prevEndgameWaveCount = Number.isFinite(worldEventsState.endgameWaveCount)
+              ? Math.max(0, Math.floor(worldEventsState.endgameWaveCount))
+              : 0;
+            var endgameWaveCount = prevEndgameWaveCount + 1;
+            worldEventsState.endgameWaveCount = endgameWaveCount;
+            var endgameMult = 1 + 0.20 * endgameWaveCount;
+            // Replacement, NOT compounding: each wave overrides previous buff.
+            state.zombieWaveAtkMult = endgameMult;
+            state.zombieWaveHpMult = endgameMult;
+            if (typeof deps.onEndgameWaveStart === 'function') {
+              var endgamePercent = 20 * endgameWaveCount;
+              try { deps.onEndgameWaveStart(endgameWaveCount, endgamePercent); } catch (e) {}
+            }
+          } else if (worldEventsState.waveNumber > attackCfg.safeWaves) {
             state.zombieWaveAtkMult = Math.max(0, Number.isFinite(state.zombieWaveAtkMult) ? state.zombieWaveAtkMult : 1) * 1.05;
              state.zombieWaveHpMult = Math.max(0, Number.isFinite(state.zombieWaveHpMult) ? state.zombieWaveHpMult : 1) * 1.05;
           }

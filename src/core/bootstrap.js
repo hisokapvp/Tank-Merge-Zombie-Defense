@@ -11,8 +11,20 @@
 
     opts.loadSettings();
     var savedLang = localStorageObj.getItem('lang');
-    if (savedLang) opts.setLanguage(savedLang);
-    else opts.setLanguage(opts.currentLang);
+    if (savedLang) {
+      opts.setLanguage(savedLang);
+    } else {
+      // Yandex Games i18n env hook (item 8 — solo-pipeline-yandex-vk batch A3).
+      // If running under Yandex SDK and the user has no explicit `lang` localStorage
+      // override, honour `ysdk.environment.i18n.lang` so the debug panel sees the
+      // env language being read. Falls back to the existing default otherwise.
+      var envLang = null;
+      try {
+        var yndx = windowObj && windowObj.Game && windowObj.Game.YandexSDK;
+        if (yndx && typeof yndx.getPreferredLang === 'function') envLang = yndx.getPreferredLang();
+      } catch (_) { envLang = null; }
+      opts.setLanguage(envLang || opts.currentLang);
+    }
 
     var i18n = opts.getI18n();
     if (i18n && typeof i18n.onReady === 'function') {

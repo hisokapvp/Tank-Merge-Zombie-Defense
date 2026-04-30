@@ -36,7 +36,8 @@
 
     var SFX_SOURCES = {
       shootNormal: 'assets/sfx/shoot_normal.ogg',
-      shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+      // shoot_heavy.ogg missing on disk — alias to shoot_heavy1.ogg (rework / console-diag).
+      shootHeavy: 'assets/sfx/shoot_heavy1.ogg',
       shootHeavy1: 'assets/sfx/shoot_heavy1.ogg',
       shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
       uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],

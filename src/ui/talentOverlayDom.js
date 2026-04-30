@@ -81,7 +81,10 @@
     const closeBtn = createElement(documentObj, 'button', {
       className: 'modalClose talentOverlayClose',
       type: 'button',
-      textContent: '✕',
+      // solo-pipeline-yandex-vk#A2 / item 6: use U+00D7 (multiplication sign) which matches
+      // index.html close buttons; avoids Yandex Games CP1252 mojibake (âœ•) seen
+      // when U+2715 (HEAVY MULTIPLICATION X) was used.
+      textContent: '\u00D7',
       attributes: {
         'aria-label': translate('menuClose', 'Close'),
       },

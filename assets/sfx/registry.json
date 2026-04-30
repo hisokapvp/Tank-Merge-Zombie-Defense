@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$comment": "Canonical SFX manifest. Source-of-truth for SFX_SOURCES and SFX_CHANNELS. Loaded at boot by src/audio/sfxRegistry.js. Inline literals in game.js, src/audio/sfxPoolRuntime.js, and src/audio/settingsAudio.js are emergency fallbacks; on registry load, drift is logged via console.warn and live SFX_SOURCES is synced via setSfxSources().",
+  "version": 1,
+  "channels": {
+    "shootNormal": "gameplay",
+    "shootHeavy": "gameplay",
+    "shootHeavy1": "gameplay",
+    "shootHeavy2": "gameplay",
+    "trackLoop": "gameplay",
+    "tankToTrack": "gameplay",
+    "tankToHangar": "gameplay",
+    "activeAbility": "gameplay",
+    "thunder": "gameplay",
+    "rainLoop": "gameplay",
+    "uiHover": "ui",
+    "uiClickOnEnabled": "ui",
+    "uiClickOnDisable": "ui",
+    "uiSliderPreview": "ui",
+    "levelUp": "ui",
+    "mergeNewMaxLevel": "ui",
+    "applyTalents": "ui"
+  },
+  "sources": {
+    "shootNormal": "assets/sfx/shoot_normal.ogg",
+    "shootHeavy": "assets/sfx/shoot_heavy1.ogg",
+    "shootHeavy1": "assets/sfx/shoot_heavy1.ogg",
+    "shootHeavy2": "assets/sfx/shoot_heavy2.ogg",
+    "uiHover": ["assets/sfx/ui_hover.ogg", "assets/sfx/ui_hover.mp3"],
+    "uiClickOnEnabled": ["assets/sfx/ui_click_enabled.ogg", "assets/sfx/ui_click_enabled.mp3"],
+    "uiClickOnDisable": ["assets/sfx/ui_click_disabled.ogg", "assets/sfx/ui_click_disabled.mp3"],
+    "uiSliderPreview": ["assets/sfx/ui_slider_preview_TEMPLATE.ogg"],
+    "tankToTrack": ["assets/sfx/tank_to_track.ogg", "assets/sfx/tank_to_track.mp3"],
+    "tankToHangar": ["assets/sfx/tank_to_hangar.ogg", "assets/sfx/tank_to_hangar.mp3"],
+    "trackLoop": ["assets/sfx/TankDrive.ogg", "assets/sfx/TankDrive.mp3"],
+    "levelUp": "assets/sfx/level_up.ogg",
+    "mergeNewMaxLevel": ["assets/sfx/merge_new_max_level.ogg", "assets/sfx/merge_new_max_level.mp3"],
+    "applyTalents": "assets/sfx/apply_talents.ogg",
+    "activeAbility": "assets/sfx/active_ability.ogg",
+    "thunder": ["assets/sfx/thunder.ogg", "assets/sfx/thunder.wav"],
+    "rainLoop": ["assets/sfx/rain_loop.ogg", "assets/sfx/rain_loop.wav"]
+  }
+}

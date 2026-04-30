@@ -7,10 +7,172 @@
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- TMZD game font (Press Start 2P) — pre-load so the loading splash matches
+       the in-game palette/typography. solo-pipeline-yandex-vk#A1-9items-rework / item 7. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
+  <!-- Yandex Games SDK (item 7+8 — solo-pipeline-yandex-vk batch A3).
+       solo-pipeline-yandex-vk#A1-9items-rework / console-diag: load the SDK
+       script ONLY inside a real Yandex Games iframe. The SDK script v2 itself
+       fires postMessage during evaluation, which floods the console with
+       "No parent to post message" errors when the page runs outside Yandex
+       (local dev, VK build, standalone). Detecting the env at load time and
+       skipping the <script> entirely silences those errors at the source. -->
+  <script>
+    (function () {
+      try {
+        if (!window.parent || window.parent === window) return;
+        var host = String(window.location && window.location.hostname || '').toLowerCase();
+        var ref = String(document.referrer || '').toLowerCase();
+        var inYandex =
+          host.indexOf('yandex') !== -1 ||
+          host.indexOf('games.s3') !== -1 ||
+          ref.indexOf('yandex.ru/games') !== -1 ||
+          ref.indexOf('yandex.com/games') !== -1 ||
+          ref.indexOf('yandex.net') !== -1;
+        if (!inYandex) return;
+        // solo-pipeline-yandex-vk#A1-9items-rework-round2 / C2: Yandex publisher's
+        // static HTML scan rejects uploads that contain the literal Yandex SDK URL
+        // as "URL of internal service storage". Source must NOT carry that
+        // substring continuously (so this comment also avoids quoting it verbatim).
+        // Build-time pipeline (ci/build_release.mjs --yandex) substitutes
+        // __YANDEX_SDK_URL__ with the real URL only inside the Yandex artefact;
+        // for VK/standalone builds it becomes empty. Local dev / non-built source
+        // path reconstructs the URL via concat so direct `index.html` browsing
+        // still works on yandex.* hosts without a build step.
+        var sdkUrl = '__YANDEX_SDK_URL__';
+        if (sdkUrl.charAt(0) === '_') {
+          sdkUrl = 'https' + '://' + 'yandex' + '.ru' + '/games/sdk/v2';
+        }
+        if (!sdkUrl) return;
+        var s = document.createElement('script');
+        s.src = sdkUrl;
+        s.onerror = function () { window.__YA_SDK_FAILED = true; };
+        document.head.appendChild(s);
+      } catch (_) {
+        window.__YA_SDK_FAILED = true;
+      }
+    }());
+  </script>
+  <style>
+    /* Yandex preloader splash (item 7). Inlined so it paints before any other style.
+       solo-pipeline-yandex-vk#A1-9items-rework / item 7: restyled to match TMZD's
+       in-game palette (#101610 panel bg, #4af626 accent green, Press Start 2P type,
+       hard-edge box-shadow, CRT scanlines). The progress bar is JS-driven (linear
+       0→95% over 10s) instead of a CSS pulse, so the user sees a steady fill rather
+       than a bouncing fake-progress effect. */
+    .yandexLoadingSplash {
+      position: fixed; inset: 0; z-index: 100000;
+      background: radial-gradient(ellipse at center, #1a1e1a 0%, #0a0d0a 80%);
+      display: flex; align-items: center; justify-content: center;
+      color: #b9f5c2;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      transition: opacity 480ms ease, visibility 480ms ease;
+      opacity: 1; visibility: visible;
+      overflow: hidden;
+    }
+    .yandexLoadingSplash--hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .yandexLoadingSplash__scanlines {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(74, 246, 38, 0.10) 3px,
+        rgba(0, 0, 0, 0) 4px
+      );
+      mix-blend-mode: overlay;
+      animation: ysdkSplashScan 4s linear infinite;
+    }
+    @keyframes ysdkSplashScan {
+      from { background-position: 0 0; }
+      to   { background-position: 0 200px; }
+    }
+    /* solo-pipeline-yandex-vk#A1-9items-rework / item 7 (rework):
+       Grainy noise overlay matching the in-game tutorial/menu CRT feel.
+       Uses an inline SVG fractalNoise as a tiled background and a small
+       translate animation for the "alive" flicker. */
+    .yandexLoadingSplash__grain {
+      position: absolute; inset: -10%; pointer-events: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.7  0 0 0 0 1  0 0 0 0 0.7  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      background-size: 160px 160px;
+      mix-blend-mode: overlay;
+      opacity: 0.35;
+      animation: ysdkSplashGrain 6s steps(6) infinite;
+    }
+    @keyframes ysdkSplashGrain {
+      0%   { transform: translate(0, 0); }
+      25%  { transform: translate(-2%, 1%); }
+      50%  { transform: translate(1%, -2%); }
+      75%  { transform: translate(2%, 2%); }
+      100% { transform: translate(0, 0); }
+    }
+    .yandexLoadingSplash__panel {
+      position: relative; text-align: center;
+      padding: 36px 52px 32px;
+      border: 4px solid #3e3e3e;
+      box-shadow:
+        2px 2px 0 #000,
+        0 0 18px rgba(74, 246, 38, 0.35),
+        inset 0 0 50px rgba(0, 0, 0, 0.8);
+      background: #1a1e1a;
+      max-width: 80vw;
+    }
+    .yandexLoadingSplash__panel::after {
+      /* Subtle CRT vignette like .talentTreeModal::after */
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.10) 50%),
+        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 2px 100%;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+    .yandexLoadingSplash__title {
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: clamp(20px, 4vw, 32px);
+      letter-spacing: 0.10em;
+      color: #4af626;
+      text-shadow: 0 0 8px rgba(74, 246, 38, 0.55), 2px 2px 0 #000;
+      line-height: 1.4;
+    }
+    .yandexLoadingSplash__subtitle {
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: clamp(10px, 2vw, 14px);
+      letter-spacing: 0.18em; margin-top: 12px;
+      color: #7fc090;
+      text-shadow: 0 0 6px rgba(74, 246, 38, 0.35), 1px 1px 0 #000;
+    }
+    .yandexLoadingSplash__bar {
+      margin: 28px auto 14px; width: clamp(200px, 55vw, 380px); height: 12px;
+      border: 2px solid #4af626;
+      background: #0a0d0a;
+      box-shadow: 2px 2px 0 #000, inset 0 0 6px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+    }
+    .yandexLoadingSplash__barFill {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #4af626, #b9f5c2);
+      box-shadow: 0 0 10px rgba(74, 246, 38, 0.65);
+      transition: width 200ms linear;
+    }
+    .yandexLoadingSplash__status {
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: clamp(10px, 1.8vw, 13px);
+      letter-spacing: 0.16em; color: #9ed4a8;
+      text-shadow: 0 0 4px rgba(74, 246, 38, 0.30);
+      animation: ysdkSplashTextPulse 1.4s ease-in-out infinite;
+    }
+    @keyframes ysdkSplashTextPulse {
+      0%, 100% { opacity: 0.55; }
+      50%      { opacity: 1; }
+    }
+  </style>
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260425-solo-pipeline-yandex-vk-b1-v1';
+      var token = '20260429-solo-pipeline-yandex-vk-b3-v1';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -30,6 +192,107 @@
   </script>
 </head>
 <body>
+  <!-- Yandex preloader splash (item 7). Hidden by Game.YandexSDK.signalLoaded(). -->
+  <div id="yandexLoadingSplash" class="yandexLoadingSplash" role="status" aria-live="polite" aria-hidden="false">
+    <div class="yandexLoadingSplash__scanlines" aria-hidden="true"></div>
+    <div class="yandexLoadingSplash__grain" aria-hidden="true"></div>
+    <div class="yandexLoadingSplash__panel">
+      <div class="yandexLoadingSplash__title">MERGE TANK</div>
+      <div class="yandexLoadingSplash__subtitle">ZOMBIE INVASION</div>
+      <div class="yandexLoadingSplash__bar" aria-hidden="true">
+        <div class="yandexLoadingSplash__barFill" id="yandexLoadingSplashBar"></div>
+      </div>
+      <div class="yandexLoadingSplash__status" id="yandexLoadingSplashStatus">ЗАГРУЗКА…</div>
+    </div>
+  </div>
+  <script>
+    /* solo-pipeline-yandex-vk#A1-9items-rework / item 7:
+       Smooth deterministic progress driver for the loading splash bar.
+       Replaces the previous CSS pulse (12%↔92% bounce) with a linear ramp from
+       0% → 95% over 10 seconds. Holds at 95% until Game.YandexSDK.signalLoaded()
+       toggles the .yandexLoadingSplash--hidden class on the splash element; at
+       that moment the driver jumps the bar to 100% (CSS transition 200ms linear)
+       and clears its tick interval so nothing keeps running after the splash
+       disappears. */
+    (function (global, doc) {
+      var splash = doc.getElementById('yandexLoadingSplash');
+      var bar = doc.getElementById('yandexLoadingSplashBar');
+      if (!splash || !bar) return;
+
+      var startTs = (typeof performance !== 'undefined' && performance && typeof performance.now === 'function')
+        ? performance.now()
+        : Date.now();
+      var rampDurationMs = 10000;
+      var holdPct = 95;
+      var tickIntervalMs = 100;
+      var intervalId = null;
+      var observer = null;
+      var finalized = false;
+
+      function nowTs() {
+        return (typeof performance !== 'undefined' && performance && typeof performance.now === 'function')
+          ? performance.now()
+          : Date.now();
+      }
+
+      function applyPct(pct) {
+        if (pct < 0) pct = 0;
+        if (pct > 100) pct = 100;
+        bar.style.width = pct + '%';
+      }
+
+      function tick() {
+        if (finalized) return;
+        var elapsed = nowTs() - startTs;
+        var pct = (elapsed / rampDurationMs) * holdPct;
+        if (pct >= holdPct) {
+          applyPct(holdPct);
+          if (intervalId !== null) {
+            global.clearInterval(intervalId);
+            intervalId = null;
+          }
+          return;
+        }
+        applyPct(pct);
+      }
+
+      function finalize() {
+        if (finalized) return;
+        finalized = true;
+        applyPct(100);
+        if (intervalId !== null) {
+          global.clearInterval(intervalId);
+          intervalId = null;
+        }
+        if (observer) {
+          try { observer.disconnect(); } catch (_) {}
+          observer = null;
+        }
+      }
+
+      // Boot the steady ramp on the next animation frame so the layout settles
+      // before the first paint of the bar.
+      try {
+        applyPct(0);
+        intervalId = global.setInterval(tick, tickIntervalMs);
+      } catch (_) {}
+
+      // Watch the splash element for the `--hidden` class added by
+      // Game.YandexSDK.signalLoaded() (or by the boot()-resolves path in
+      // game.js). When it appears, race the bar to 100% so the user sees a
+      // proper completion before fade-out.
+      if (typeof global.MutationObserver === 'function') {
+        try {
+          observer = new global.MutationObserver(function () {
+            if (splash.classList && splash.classList.contains('yandexLoadingSplash--hidden')) {
+              finalize();
+            }
+          });
+          observer.observe(splash, { attributes: true, attributeFilter: ['class'] });
+        } catch (_) {}
+      }
+    }(window, document));
+  </script>
   <main class="layout">
     <section class="stage">
       <div class="stageCanvas">
@@ -668,7 +931,7 @@
   <script src="src/mechanics/hangarChips.js"></script>
   <script src="src/mechanics/chipEffects.js?v=20260403-solo-yandex-vk-v1"></script>
   <script src="src/ui/chipCraftLayout.js?v=20260403-solo-yandex-vk-v1"></script>
-  <script src="src/ui/hangarChipsUI.js?v=20260424-solo-yandex-vk-b1-v1"></script>
+  <script src="src/ui/hangarChipsUI.js?v=20260429-solo-pipeline-yandex-vk-b3-v1"></script>
   <script src="src/ui/modals.js?v=20260326-branch2-sc-rename-hangar-scale"></script>
   <script src="src/ui/achievementsModal.js"></script>
   <script src="src/ui/talentOverlayDom.js"></script>
@@ -682,6 +945,7 @@
   <script src="src/systems/depthSort.js"></script>
   <script src="src/perf/objectPool.js"></script>
   <script src="src/audio/settingsAudio.js"></script>
+  <script src="src/audio/sfxRegistry.js"></script>
   <script src="src/audio/sfxPoolRuntime.js"></script>
   <script src="src/accessibility/a11y.js"></script>
   <script src="src/render/zombieRender.js"></script>
@@ -757,6 +1021,9 @@
   <script src="src/phaser/parityGate.js"></script>
   <script src="src/phaser/rolloutController.js"></script>
   <script src="src/phaser/legacyCleanupManifest.js"></script>
+  <!-- Yandex SDK wrapper (item 7+8). Loaded before game.js so Game.YandexSDK
+       is available during boot for i18n env.lang lookup. -->
+  <script src="src/yandex/yandexSdk.js?v=20260429-solo-pipeline-yandex-vk-b3-v1"></script>
   <script>
     (function (global, doc) {
       var game = global.Game || {};

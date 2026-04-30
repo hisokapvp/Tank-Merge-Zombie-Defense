@@ -689,6 +689,64 @@ function normalizeZombieWaveMultiplier(value){
   return Math.max(0, value);
 }
 
+// solo-pipeline-yandex-vk#1 (batch#1, item 3 + postmortem items 6/9):
+// Single canonical entry-point for re-deriving zombie wave multipliers from
+// `state.zombieWave{Atk,Hp}Mult`. Every write/restore site (init, save,
+// restoreFullState, applySaved, partial-reset, retry-after-game-over) must
+// route through this hook so the trace ring-buffer stays consistent with
+// the live state. The hook only re-normalises in-place values; sites that
+// pull from a save payload should assign the raw payload first and then
+// call the hook with the appropriate `reason`.
+//
+// Trace records are kept in `state._debug.zombieWaveTrace` (capped at 32)
+// only when admin/debug flags are on, so production builds incur no extra
+// allocation in the hot path.
+function isAdminDebugEnabledForZombieWaveTrace(){
+  try {
+    var f = (typeof window !== 'undefined' && window.Game && window.Game.AdminFlags
+      && typeof window.Game.AdminFlags.getAdminFlags === 'function')
+      ? window.Game.AdminFlags.getAdminFlags() : null;
+    return !!(f && (f.debug || f.zombieWaveTrace));
+  } catch (_) { return false; }
+}
+function recordZombieWaveDeriveTrace(record){
+  if (!isAdminDebugEnabledForZombieWaveTrace()) return;
+  var target = record && record.targetState ? record.targetState : state;
+  if (!target || typeof target !== 'object') return;
+  if (!target._debug || typeof target._debug !== 'object') target._debug = {};
+  if (!Array.isArray(target._debug.zombieWaveTrace)) target._debug.zombieWaveTrace = [];
+  target._debug.zombieWaveTrace.push({
+    reason: record.reason,
+    prevAtk: record.prevAtk,
+    prevHp: record.prevHp,
+    nextAtk: record.nextAtk,
+    nextHp: record.nextHp,
+    at: record.at,
+  });
+  while (target._debug.zombieWaveTrace.length > 32) target._debug.zombieWaveTrace.shift();
+}
+function recomputeZombieWaveMultipliers(opts){
+  var reason = (opts && opts.reason) || 'unknown';
+  var target = (opts && opts.state && typeof opts.state === 'object') ? opts.state : state;
+  if (!target || typeof target !== 'object') return null;
+  var prevAtk = target.zombieWaveAtkMult;
+  var prevHp = target.zombieWaveHpMult;
+  var nextAtk = normalizeZombieWaveMultiplier(prevAtk);
+  var nextHp = normalizeZombieWaveMultiplier(prevHp);
+  target.zombieWaveAtkMult = nextAtk;
+  target.zombieWaveHpMult = nextHp;
+  recordZombieWaveDeriveTrace({
+    reason: reason,
+    prevAtk: prevAtk,
+    prevHp: prevHp,
+    nextAtk: nextAtk,
+    nextHp: nextHp,
+    at: (typeof Date !== 'undefined' && typeof Date.now === 'function') ? Date.now() : 0,
+    targetState: target,
+  });
+  return { atk: nextAtk, hp: nextHp };
+}
+
 function ensureDamageProgressState(){
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(state.totalDamageDealtRaw);
   return state.totalDamageDealtRaw;
@@ -1985,7 +2043,10 @@ function syncTrackLoopSfxState(paused){
 
 const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
-  shootHeavy: 'assets/sfx/shoot_heavy.ogg',
+  // shoot_heavy.ogg (no number) is missing on disk; alias to shoot_heavy1.ogg
+  // to silence the 404 flood reported in solo-pipeline-yandex-vk#A1-9items-rework
+  // / console-diag. Only shoot_heavy1.ogg and shoot_heavy2.ogg actually ship.
+  shootHeavy: 'assets/sfx/shoot_heavy1.ogg',
   shootHeavy1: 'assets/sfx/shoot_heavy1.ogg',
   shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
   uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
@@ -2002,6 +2063,39 @@ const SFX_SOURCES = {
   thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
   rainLoop: DEFAULT_RAIN_LOOP_SOURCES.slice(),
 };
+
+// Canonical SFX manifest (assets/sfx/registry.json) is the source-of-truth for
+// SFX_SOURCES and SFX_CHANNELS. The inline literals above + SFX_CHANNELS earlier
+// in this file remain as boot fallback so the game still starts when fetch fails
+// (offline / file://). After async load, validate-on-boot logs any drift via
+// console.warn and syncs live runtime sources via setSfxSources(id, sources).
+function bootSfxRegistry(){
+  try {
+    const reg = (typeof window !== 'undefined' && window.Game && window.Game.SfxRegistry)
+      ? window.Game.SfxRegistry : null;
+    if (!reg || typeof reg.load !== 'function') return;
+    reg.load().then(function(){
+      try {
+        const report = reg.validate(SFX_SOURCES, SFX_CHANNELS);
+        if (typeof reg.logValidationReport === 'function') reg.logValidationReport(report);
+        if (report && Array.isArray(report.sourceMismatches) && report.sourceMismatches.length){
+          report.sourceMismatches.forEach(function(entry){
+            try { setSfxSources(entry.id, entry.registry); }
+            catch (e) { /* ignore individual sync failure */ }
+          });
+        }
+        if (report && Array.isArray(report.missingInRuntime) && report.missingInRuntime.length){
+          const regSources = reg.getSources() || {};
+          report.missingInRuntime.forEach(function(id){
+            try { setSfxSources(id, regSources[id]); }
+            catch (e) { /* ignore */ }
+          });
+        }
+      } catch (e) { /* validate/sync best-effort */ }
+    }).catch(function(){ /* fallback to inline literals */ });
+  } catch (e) { /* ignore */ }
+}
+bootSfxRegistry();
 
 function normalizeVolumeKind(kind){
   return kind === 'music' ? 'music' : 'sfx';
@@ -2497,6 +2591,7 @@ function resetZombieAndAttackModeToDefaultAfterRestore(){
 
   state.zombieWaveAtkMult = 1;
   state.zombieWaveHpMult = 1;
+  recomputeZombieWaveMultipliers({ reason: 'world-reset' });
   if (!state.activeEffects || typeof state.activeEffects !== 'object') {
     state.activeEffects = { attackUntil: 0, speedUntil: 0, economyUntil: 0 };
   } else {
@@ -2828,6 +2923,12 @@ function initBoard(){
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(sc, SupercomputerSprites.config);
   }
+
+  // Preserve fence fragment HP across resize/orientation changes: snapshot HP-by-id
+  // BEFORE clearing fenceSegments so the subsequent renderFenceBase rebuild can
+  // merge state.savedFenceState.hpById back into the rebuilt segments. Without
+  // this snapshot, screen resize would reset every fragment to full HP.
+  try { snapshotFenceHpById(state); } catch (e) { /* best-effort: keep legacy behaviour on snapshot failure */ }
 
   state.fenceSegments = [];
   state.fenceSegmentsMeta = null;
@@ -3250,6 +3351,13 @@ function ensureWorldEventsRuntimeController(){
     normalizedSfxSources: normalizedSfxSources,
     setSfxSources: setSfxSources,
     getDefaultRainLoopSources(){ return DEFAULT_RAIN_LOOP_SOURCES; },
+    // solo-pipeline-yandex-vk#A2 / item 4: endgame wave banner at tank level 60+.
+    onEndgameWaveStart(waveNumber, percent){
+      try {
+        const text = t('endgameWaveBanner', { wave: waveNumber, percent: percent });
+        showCenterNotification(text, { variant: 'endgameWave' });
+      } catch (e) { /* non-fatal */ }
+    },
   });
   return worldEventsRuntimeController;
 }
@@ -5308,7 +5416,7 @@ function checkPowerMomentEvents(level){
 
 let centerNotificationEl = null;
 let centerNotificationHideAt = 0;
-function showCenterNotification(text){
+function showCenterNotification(text, opts){
   if (!centerNotificationEl){
     centerNotificationEl = document.createElement('div');
     centerNotificationEl.className = 'centerNotification';
@@ -5316,6 +5424,11 @@ function showCenterNotification(text){
     document.body.appendChild(centerNotificationEl);
   }
   centerNotificationEl.textContent = text;
+  // Reset variant classes between calls so banners don't leak styles across notifications.
+  centerNotificationEl.classList.remove('centerNotification--endgameWave');
+  if (opts && typeof opts.variant === 'string' && opts.variant) {
+    centerNotificationEl.classList.add('centerNotification--' + opts.variant);
+  }
   centerNotificationEl.classList.remove('hidden');
   centerNotificationHideAt = nowSec() + 3;
 }
@@ -6006,8 +6119,9 @@ function restoreFullState(saved){
   lastAchievementCoinsSync = Number.NaN;
   state.kills = saved.kills != null ? saved.kills : state.kills;
   state.totalDamageDealtRaw = normalizeTotalDamageDealtRaw(saved.totalDamageDealtRaw);
-  state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(saved.zombieWaveAtkMult);
-  state.zombieWaveHpMult = normalizeZombieWaveMultiplier(saved.zombieWaveHpMult);
+  state.zombieWaveAtkMult = saved.zombieWaveAtkMult;
+  state.zombieWaveHpMult = saved.zombieWaveHpMult;
+  recomputeZombieWaveMultipliers({ reason: 'restore-full' });
   state.damagePointsSpent = normalizeDamagePointsSpent(saved.damagePointsSpent);
   ensurePlayerDamagePointsState();
   state.fenceLevel = Number.isFinite(saved.fenceLevel) ? Math.max(1, Math.floor(saved.fenceLevel)) : 1;
@@ -6044,6 +6158,26 @@ function restoreFullState(saved){
   state.runtimeMaxTankLevelAchieved = Number.isFinite(state.maxTankLevelAchieved)
     ? Math.max(1, Math.floor(state.maxTankLevelAchieved))
     : 1;
+  // solo-pipeline-yandex-vk#A1-9items-rework-round2 / C3: worldEventsState.endgameWaveCount
+  // is module-local runtime state (not part of the persisted save payload), but
+  // state.zombieWaveAtkMult IS persisted. Derive the wave counter from the saved
+  // multiplier using the inverse of the runtime formula (mult = 1 + 0.20 * count;
+  // see src/systems/worldEventsRuntime.js endgameWaveBuff branch). Approach chosen:
+  // alternative #2 from the round-2 TZ — derive at load instead of extending the
+  // save schema. Lower risk: no save format changes, no migration for old saves,
+  // single edit point. Counter only matters when the endgame buff is active
+  // (level >= 60), so non-endgame sessions keep count = 0.
+  {
+    var __savedMult = state.zombieWaveAtkMult;
+    var __savedMaxLevel = Number.isFinite(state.maxTankLevelAchieved)
+      ? Math.floor(state.maxTankLevelAchieved)
+      : 1;
+    if (__savedMult > 1 && __savedMaxLevel >= 60) {
+      worldEventsState.endgameWaveCount = Math.max(0, Math.round((__savedMult - 1) / 0.20));
+    } else {
+      worldEventsState.endgameWaveCount = 0;
+    }
+  }
   state.currentFenceTierApplied = Number.isFinite(state.fenceLevel)
     ? Math.max(1, Math.floor(state.fenceLevel))
     : 1;
@@ -6357,8 +6491,9 @@ function applySavedProgress(data){
     ? Math.max(1, Math.floor(state.fenceLevel))
     : 1;
   syncFenceTierWithMaxTankLevel(state, { force: true });
-  state.zombieWaveAtkMult = normalizeZombieWaveMultiplier(data.zombieWaveAtkMult);
-  state.zombieWaveHpMult = normalizeZombieWaveMultiplier(data.zombieWaveHpMult);
+  state.zombieWaveAtkMult = data.zombieWaveAtkMult;
+  state.zombieWaveHpMult = data.zombieWaveHpMult;
+  recomputeZombieWaveMultipliers({ reason: 'apply-saved' });
   /* Restore player chips for Workshop/Chip Upgrade — один emit `playerChips.changed` с reason='restore' (P3.8). */
   if (Array.isArray(data.playerChips)) {
     state.playerChips = data.playerChips;
@@ -10142,6 +10277,10 @@ function applyPreRetryRuntimeReset(targetState){
   targetState.kills = 0;
   targetState.zombieWaveAtkMult = 1;
   targetState.zombieWaveHpMult = 1;
+  // solo-pipeline-yandex-vk#1 (batch#1, item 3): retry-after-game-over path
+  // routes through the canonical recompute hook so the trace ring-buffer
+  // stays consistent with the live state on the post-restart load.
+  recomputeZombieWaveMultipliers({ reason: 'retry-after-game-over', state: targetState });
   targetState.fenceLevel = 1;
   targetState.zombies = [];
   targetState.projectiles = [];
@@ -10395,6 +10534,14 @@ function restartSimulationPartial(){
         }
       },
       onAfterRestore: function (restoredState) {
+        // solo-pipeline-yandex-vk#1 (batch#1, item 3): partial-reset path runs
+        // outside the `restoreFullState` / `applySaved` hot paths, so without
+        // an explicit derive call the canonical recompute hook never sees the
+        // post-snapshot zombie-wave multipliers (the snapshot intentionally
+        // omits them — partial reset is supposed to start fresh on waves).
+        // Routing through the hook here keeps the trace ring-buffer
+        // consistent with the live state after restart-after-game-over.
+        recomputeZombieWaveMultipliers({ reason: 'partial-reset', state: restoredState });
         finalizePartialRestartPostRestore(restoredState);
         finalizePartialRestartRestore();
       },
@@ -11225,7 +11372,7 @@ function ensureTalentUI(){
       <div class="modal talentTreeModal" role="dialog" aria-modal="true">
         <div class="modalHeader">
           <div class="modalTitle">${t('talentTreeTitle')}</div>
-          <button class="modalClose" type="button" aria-label="Close">✕</button>
+          <button class="modalClose" type="button" aria-label="Close">×</button>
         </div>
         <div class="modalBody talentTreeBody">
           <div class="talentBranches" id="talentBranches"></div>
@@ -16405,9 +16552,28 @@ initBigMainMenu();
   }
 }
 
-  boot().catch(function (err) {
-    console.error('[boot] startup failed:', err);
-  });
+  boot()
+    .then(function () {
+      // Yandex preloader splash hide + LoadingAPI.ready() (item 7 —
+      // solo-pipeline-yandex-vk batch A3). Safe no-op outside Yandex Games.
+      try {
+        if (window.Game && window.Game.YandexSDK &&
+            typeof window.Game.YandexSDK.signalLoaded === 'function') {
+          window.Game.YandexSDK.signalLoaded();
+        }
+      } catch (_) {}
+    })
+    .catch(function (err) {
+      console.error('[boot] startup failed:', err);
+      // Hide splash even on failure so the user sees the actual error UI
+      // instead of a permanent splash screen.
+      try {
+        if (window.Game && window.Game.YandexSDK &&
+            typeof window.Game.YandexSDK.signalLoaded === 'function') {
+          window.Game.YandexSDK.signalLoaded();
+        }
+      } catch (_) {}
+    });
 
 /*
 assets/zombies.json example:

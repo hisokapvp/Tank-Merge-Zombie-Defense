@@ -21,4 +21,22 @@ cat <<'EOF'
 - Confirm FPS stays stable with zombies + projectiles
 EOF
 
+# solo-pipeline-yandex-vk#1 (batch#1, item 2): pre-submit Yandex Games guard.
+# Run a fresh --yandex build and rely on `assertNoDevUrlLiterals` inside
+# `ci/build_release.mjs` to abort if any dev-URL literal survives sanitisation.
+# This catches new admin/debug code introduced after batch#1 before it hits
+# the moderation queue.
+printf "\n[Yandex pre-submit] dev-URL literal guard\n"
+if command -v node >/dev/null 2>&1; then
+  YANDEX_GUARD_OUT="${ROOT_DIR}/dist/release/_yandex_guard_$(date -u +%Y%m%d-%H%M%S)"
+  if node "${ROOT_DIR}/ci/build_release.mjs" --out "${YANDEX_GUARD_OUT}" --yandex --no-zip; then
+    printf "Yandex pre-submit guard passed (output: %s)\n" "${YANDEX_GUARD_OUT}"
+  else
+    printf "Yandex pre-submit guard FAILED — fix dev-URL leaks before submitting.\n" >&2
+    exit 5
+  fi
+else
+  printf "node not on PATH — skipping Yandex pre-submit guard (run bash ci/build_release.sh --yandex manually before publishing)\n" >&2
+fi
+
 printf "\nRelease checklist completed.\n"

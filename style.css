@@ -1468,6 +1468,42 @@ body.scmodal-open{
   display:none;
 }
 
+/* solo-pipeline-yandex-vk#A2 / item 4 — Endgame wave banner (tank level 60+).
+   TMZD style: green CRT palette, Press Start 2P, customizable font-size via
+   --wave-banner-font-size. Edit the variable to tune size without touching JS. */
+:root{
+  --wave-banner-font-size: calc(22px * var(--ui-scale, 1));
+}
+.centerNotification.centerNotification--endgameWave{
+  font-family:'Press Start 2P', 'Courier New', monospace;
+  font-size: var(--wave-banner-font-size);
+  color:#4af626;
+  background:#101610;
+  border:2px solid #4af626;
+  border-radius:0;
+  box-shadow:2px 2px 0 #000, 0 0 12px rgba(74,246,38,.45);
+  text-shadow:0 0 6px rgba(74,246,38,.55);
+  letter-spacing:0.5px;
+  /* solo-pipeline-yandex-vk#A1-9items-rework / item 4:
+     The shared .centerNotification rule applies padding-top:60px !important;
+     this banner needs symmetric padding (60px on all sides) and the text
+     centered inside the box (vertical + horizontal). Higher specificity
+     (.centerNotification.centerNotification--endgameWave = 2 classes) plus
+     !important wins over the shared single-class rule. */
+  padding: 60px !important;
+  text-align: center;
+}
+/* Apply flex centering only while the banner is actually visible. Using a
+   :not(.hidden) selector keeps `.centerNotification.hidden { display:none }`
+   in command of visibility — without this guard, a `display: flex !important`
+   here would beat .hidden and leave a black box on screen after the timer
+   clears textContent (rework feedback / item 4). */
+.centerNotification.centerNotification--endgameWave:not(.hidden){
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .achievementToast{
   position:fixed;
   left:50%;
@@ -3020,8 +3056,32 @@ input, select, textarea, button {
   flex-direction:column;
 }
 #modsTankWallOverlay .scGunsTable__rows{
-  max-height:min(56vh, 460px);
+  /* solo-pipeline-yandex-vk#1 (batch#1, item 1):
+     The Орудия tab in the «Модификации техники и стен» modal had ~250px of
+     empty space between the last row and the «ЗАКРЫТЬ» button because this
+     container was capped at min(56vh, 460px) regardless of the actual modal
+     height (.levelModal__panel.scModal has max-height:86vh).
+
+     Fix: switch to flex-grow so the rows container fills all available
+     vertical space inside .scTabPanel → .scGunsTable. The min-height keeps
+     the existing minimum size on small modals, max-height:none releases the
+     cap, and the parent flex chain below ensures the inner rows can both
+     grow and shrink as the modal resizes (mobile fullscreen shell ≤1501px
+     parity preserved). */
+  flex:1 1 0;
   min-height:272px;
+  max-height:none;
+}
+#modsTankWallOverlay .scTabPanel{
+  /* Activate vertical fill so .scGunsTable can stretch within the active panel. */
+  flex:1 1 auto;
+  min-height:0;
+}
+#modsTankWallOverlay .scGunsTable{
+  /* Already flex-column from .scGunsTable; ensure it consumes the full panel
+     height so .scGunsTable__rows has a non-zero growth budget. */
+  flex:1 1 auto;
+  min-height:0;
 }
 #modsTankWallOverlay .scGunsTable__row{
   min-height:var(--scTableTileHeight, 112px);
@@ -4269,7 +4329,10 @@ button[data-tutorial-locked="true"]::after,
 .levelModal__close::before,
 .modalClose::before,
 .lessonProgress__close::before{
-  content:'✕';
+  /* solo-pipeline-yandex-vk#A2 / item 6: U+00D7 (multiplication sign) instead of U+2715
+     (HEAVY MULTIPLICATION X). Same glyph family used by every index.html close button;
+     avoids Yandex CP1252 mojibake when the served file is reinterpreted as Latin-1. */
+  content:'\00D7';
   position:static !important;
   top:auto;
   left:auto;
@@ -7973,6 +8036,24 @@ button.hangarChipInvItem{
   font-size: calc(14px * var(--ui-scale));
 }
 
+/* solo-pipeline-yandex-vk#A2 / item 5 — Desktop-only override.
+   On desktop (hover-capable + fine pointer + ≥1024px viewport) drop the 440px
+   adaptive ui-scale width cap for these 4 specific modals so they expand to
+   their natural content width instead of the narrow mobile shell:
+     • #levelModal           — "Суперкомпьютер получил Х уровень"
+     • #achievementPopup     — "Получено достижение"
+     • .crateModal__panel    — "Военная помощь"
+     • .plStorage__panel     — "Производственный склад"
+   Mobile/touch devices keep the original adaptive width unchanged. */
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px){
+  #levelModal .levelModal__panel,
+  #achievementPopup .levelModal__panel,
+  .crateModal .crateModal__panel,
+  .plStorage__panel{
+    width: auto;
+  }
+}
+
 /* ── Adaptive UI scaling — extended block ──
    Covers remaining modals, overlays, menus, panels, HUD, tooltips.
    Close buttons are still NOT scaled (44×44 hit-area preserved). */
@@ -8326,12 +8407,42 @@ button.hangarChipInvItem{
 #modsTankWallOverlay .scModal--fullscreenShell > .scModal__body{
   overflow-y:auto;
 }
+/* solo-pipeline-yandex-vk#A1-9items-rework-round2 / C1 (round 2): the parent
+   chain in fullscreen mode is
+     .scModal__body > .scTabPanels > .scTabPanel:not([hidden]) > .scGunsTable
+   The original .scTabPanels rule (line ~2998) sets flex:1 + min-height:0 but
+   does NOT set display:flex, so its .scTabPanel children render in default
+   block flow and cannot grow vertically — even though .scTabPanel itself is a
+   flex column. That broke fullscreen stretch for .scGunsTable_weapons.
+   Force the flex column chain in fullscreen scope so each level participates
+   in flex-grow propagation down to .scGunsTable. Scoped to
+   #modsTankWallOverlay .scModal--fullscreenShell to keep non-fullscreen
+   layout unchanged. */
+#modsTankWallOverlay .scModal--fullscreenShell .scTabPanels{
+  display:flex;
+  flex-direction:column;
+}
 #modsTankWallOverlay .scModal--fullscreenShell .scTabPanels,
 #modsTankWallOverlay .scModal--fullscreenShell .scTabPanel:not([hidden]),
 #modsTankWallOverlay .scModal--fullscreenShell .scGunsTable,
 #modsTankWallOverlay .scModal--fullscreenShell .scGunsTable__rows{
   flex:1 1 auto;
   min-height:0;
+}
+/* solo-pipeline-yandex-vk#A1-9items-rework-round2 / C1: explicit compound
+   selector for .scGunsTable.scGunsTable_weapons inside the fullscreen
+   "Древо улучшений" overlay. Round 1 stretched the bare .scGunsTable, but
+   the weapons-variant tab kept rendering at fixed (small) size on fullscreen
+   because grid sizing was tied to header column widths and the table didn't
+   claim available width/height of .scTabPanels. Force flex-grow + width:100%
+   + min-height:0 + overflow:auto here so the table fills the panel. Scoped
+   to #modsTankWallOverlay .scModal--fullscreenShell to preserve non-fullscreen
+   layout. */
+#modsTankWallOverlay .scModal--fullscreenShell .scGunsTable.scGunsTable_weapons{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  overflow:auto;
 }
 #modsTankWallOverlay .scModal--fullscreenShell .scGunsTable__rows{
   max-height:none;
@@ -8743,7 +8854,7 @@ button.hangarChipInvItem{
 .levelModal__panel,
 .mergePopupModal__panel {
   font-size: max(14px, 1em) !important;
-  padding-top: 50px !important;
+  padding-top: 60px !important;
 }
 
 /* Mobile popup / confirm shells need an explicit late 16px floor that beats stale font-floor inline styles. */
@@ -8835,4 +8946,113 @@ button.hangarChipInvItem{
   .hudBelow{
     gap:6px;
   }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Fullscreen modal contract (RAW_TZ item 3, batch solo-pipeline-yandex-vk#A1)
+   Forces Древо улучшений (.talentTreeModal), Модификации техники и стен
+   (#modsTankWallOverlay panel), Модификации ангара (#modsHangarOverlay panel)
+   and Подземный ангар (.ughPanel) to occupy the entire viewport on every
+   device (PC, tablet, mobile). Visual language is preserved: CRT scanline
+   pseudo-elements on .talentTreeModal stay intact, background/border/text
+   palette is left untouched; only sizing tokens are overridden.
+   These rules live at the end of the file so they win the cascade against
+   the earlier .hangarChipsModal / .talentTreeModal / .ughPanel sizing.
+   =================================================================== */
+
+/* solo-pipeline-yandex-vk#A1-9items-rework / item 3:
+   Древо улучшений (.modal.talentTreeModal) and Модификации техники и стен
+   (#modsTankWallOverlay .levelModal__panel.scModal) were still floating in a
+   window. Two issues from the prior batch:
+     1. .talentTreeModal had position:relative (line 2690) — inset:0 didn't take
+        effect, so even with width/height:100vw/100vh the panel was centered as a
+        flex child with the original max-height:86vh from .modal applying through
+        the cascade in some flow contexts. Force position:fixed + inset:0.
+     2. #modsTankWallOverlay panel does NOT have .hangarChipsModal class (only
+        modsHangarOverlay does). The prior selector required .hangarChipsModal,
+        so tank/wall mods skipped the rule entirely. Drop the .hangarChipsModal
+        requirement for the tank/wall side and add a generic
+        .levelModal__panel.scModal selector. */
+
+#talentOverlay .modal.talentTreeModal,
+#talentOverlay .talentTreeModal,
+.modal.talentTreeModal,
+.talentTreeModal{
+  position:fixed !important;
+  width:100vw !important;
+  max-width:100vw !important;
+  min-width:100vw !important;
+  height:100vh !important;
+  max-height:100vh !important;
+  min-height:100vh !important;
+  inset:0 !important;
+  top:0 !important;
+  left:0 !important;
+  margin:0 !important;
+  border-radius:0 !important;
+  box-sizing:border-box;
+}
+
+#modsHangarOverlay .levelModal__panel.scModal,
+#modsHangarOverlay .levelModal__panel.scModal.hangarChipsModal,
+#modsHangarOverlay .hangarChipsModal,
+#modsTankWallOverlay .levelModal__panel.scModal,
+#modsTankWallOverlay .levelModal__panel.scModal.hangarChipsModal,
+#modsTankWallOverlay .hangarChipsModal,
+#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView{
+  width:100vw !important;
+  max-width:100vw !important;
+  min-width:100vw !important;
+  height:100vh !important;
+  max-height:100vh !important;
+  min-height:100vh !important;
+  inset:0 !important;
+  margin:0 !important;
+  border-radius:0 !important;
+  box-sizing:border-box;
+}
+
+/* Ensure inner content of fullscreened modals stretches to fill the panel
+   instead of leaving a tiny tab-panel container floating against an empty
+   background. solo-pipeline-yandex-vk#A1-9items-rework / item 3 rework. */
+#modsHangarOverlay .levelModal__panel.scModal > .scModal__body,
+#modsTankWallOverlay .levelModal__panel.scModal > .scModal__body,
+#supercomputerMenuOverlay .levelModal__panel.scModal.scModal--talentsView > .scModal__body{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+}
+#modsHangarOverlay .levelModal__panel.scModal .scTabPanels,
+#modsTankWallOverlay .levelModal__panel.scModal .scTabPanels{
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+}
+
+#undergroundHangarOverlay .ughPanel{
+  width:100vw !important;
+  max-width:100vw !important;
+  min-width:100vw !important;
+  height:100vh !important;
+  max-height:100vh !important;
+  min-height:100vh !important;
+  inset:0 !important;
+  margin:0 !important;
+  border-radius:0 !important;
+  box-sizing:border-box;
+  overflow-y:auto;
+}
+
+/* Make sure the host overlays themselves cover the entire viewport so the
+   panels above have a full-viewport flex parent on every device. */
+#talentOverlay,
+#modsHangarOverlay,
+#modsTankWallOverlay,
+#undergroundHangarOverlay{
+  inset:0 !important;
 }

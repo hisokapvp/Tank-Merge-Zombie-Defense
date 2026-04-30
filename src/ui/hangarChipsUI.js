@@ -1334,6 +1334,7 @@
     if (h && typeof h.normalizeFragmentsInventory === 'function') {
       _playerFragments = h.normalizeFragmentsInventory(_playerFragments);
     }
+    _emitPlayerChipsChanged('fragments-set', []);
   }
 
   /** Add fragment(s) to inventory. fragmentId = modId (1–30). */
@@ -1347,11 +1348,13 @@
     for (var i = 0; i < frags.length; i++) {
       if (frags[i].fragmentId === normalizedId) {
         frags[i].count += cnt;
+        _emitPlayerChipsChanged('fragment-add', [normalizedId]);
         return frags[i];
       }
     }
     var entry = { fragmentId: normalizedId, count: cnt };
     frags.push(entry);
+    _emitPlayerChipsChanged('fragment-add', [normalizedId]);
     return entry;
   }
 
@@ -1367,6 +1370,7 @@
       if (frags[i].fragmentId === normalizedId) {
         frags[i].count -= cnt;
         if (frags[i].count <= 0) frags.splice(i, 1);
+        _emitPlayerChipsChanged('fragment-remove', [normalizedId]);
         return true;
       }
     }
@@ -1450,7 +1454,13 @@
   }
   function _scheduleLazyRepaint(/* payload */) {
     if (!_isHangarOverlayVisible()) return;
+    /* Item 9 expansion (solo-pipeline-yandex-vk batch A3): repaint covers the
+       active hangar tab AND its workshop sub-tab so freshly-arrived chips,
+       fragments and silicon dust become visible without a manual tab toggle. */
     try { render(); } catch (_) {}
+    try { renderChipUpgradeGrid(); } catch (_) {}
+    try { renderChipCraftPanel(); } catch (_) {}
+    try { renderTechUnlockPanel(); } catch (_) {}
   }
   try {
     if (global.Game && global.Game.Events && typeof global.Game.Events.on === 'function') {
@@ -1488,6 +1498,23 @@
     return !!chip && getChipMergePairCount(pairCounts, chip.chipId, chip.level) >= 2;
   }
 
+  /**
+   * Emit canonical `playerChips.changed` topic so background listeners
+   * (lazy repaint, tutorial gate, achievements) can react when the inventory
+   * mutates outside an open modal (item 9 — solo-pipeline-yandex-vk batch A3).
+   * Safe-by-default: silent no-op if Game.Events is unavailable.
+   */
+  function _emitPlayerChipsChanged(reason, changedIds) {
+    try {
+      var ev = global.Game && global.Game.Events;
+      if (!ev || typeof ev.emit !== 'function') return;
+      ev.emit('playerChips.changed', {
+        reason: reason || 'mutation',
+        changedIds: Array.isArray(changedIds) ? changedIds.slice() : [],
+      });
+    } catch (_) {}
+  }
+
   /** Add a chip to player's inventory. Each chip is a separate entry (no stacking). */
   function addPlayerChip(chipDef, level) {
     var chips = ensurePlayerChips();
@@ -1507,6 +1534,7 @@
       count: 1
     };
     chips.push(entry);
+    _emitPlayerChipsChanged('add', [chipDef.chipId]);
     return entry;
   }
 
@@ -1517,6 +1545,7 @@
       if (chips[i].chipId === chipId && chips[i].level === level) {
         chips[i].count--;
         if (chips[i].count <= 0) chips.splice(i, 1);
+        _emitPlayerChipsChanged('remove', [chipId]);
         return true;
       }
     }
@@ -1566,6 +1595,7 @@
         level: newLevel,
         count: 1
       });
+      _emitPlayerChipsChanged('merge', [chipId]);
     }
     return newLevel;
   }
@@ -4765,7 +4795,29 @@
 
   function show() {
     if (!_initialized) init();
+    /* Item 9 — solo-pipeline-yandex-vk batch A3.
+       Reset sticky transient UI state so a fresh open of the modal always
+       reflects the current inventory. Without this reset, a previously held
+       _selectedSlot / _chipFilter could filter out a freshly-granted chip
+       until the user toggles a tab. Re-acquire DOM refs defensively in case
+       the overlay has been re-mounted by an upstream layout pass. */
+    _chipFilter = 'all';
+    clearSlotSelection();
+    if (_doc) {
+      dom.grid = el('hangarGrid');
+      dom.cellTitle = el('hangarCellTitle');
+      dom.slotView = el('hangarSlotView');
+      dom.activeMods = el('hangarActiveMods');
+      dom.chipsList = el('hangarChipsList');
+    }
+    /* Render every known tab/sub-tab so whatever is currently active
+       (cells / workshop chipUpgrade|chipCraft|chipRecycle / techUnlock)
+       reflects the latest chips, fragments and silicon dust state without
+       requiring a manual tab toggle. */
     render();
+    try { renderChipUpgradeGrid(); } catch (_) {}
+    try { renderChipCraftPanel(); } catch (_) {}
+    try { renderTechUnlockPanel(); } catch (_) {}
   }
 
   function getActiveHangarTab() {
@@ -4883,7 +4935,11 @@
     removePlayerFragment: removePlayerFragment,
     getFragmentCount: getFragmentCount,
     getSiliconDust: function () { return _siliconDust; },
-    setSiliconDust: function (v) { _siliconDust = (typeof v === 'number' && v >= 0) ? v : 0; },
+    setSiliconDust: function (v) {
+      var prev = _siliconDust;
+      _siliconDust = (typeof v === 'number' && v >= 0) ? v : 0;
+      if (_siliconDust !== prev) _emitPlayerChipsChanged('dust-set', []);
+    },
     resetTransientUiState: resetTransientUiState,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,

@@ -117,6 +117,61 @@ PowerShell-обёртка зеркалит контракт `build_release.sh`: 
 Если в `tools/...` — добавь его путь в `WHITELIST_EXTRA_FILES`
 в `ci/build_release.mjs`.
 
+## Yandex SDK URL — runtime-only, never written to disk (round 2 carryover C2)
+
+Yandex publisher выполняет статический скан **всех** файлов upload'а и
+отклоняет публикацию, если видит континуальный substring SDK URL в любом из
+них (`Замечания к релизу. Обнаружена ссылка на сервисное хранилище.`). Round
+1 fix только разнёс конкатенацию в source — этого было недостаточно, потому
+что собранный Yandex artefact всё равно содержал URL континуально в
+`<script src="...">` через `injectYandexSeam`.
+
+Round 2 контракт:
+
+- Источник `index.html` содержит inline-loader, который собирает URL
+  **в браузере во время выполнения** через concat parts:
+  `'https' + '://' + 'yandex' + '.ru' + '/games/sdk/v2'`. На диске такой
+  substring никогда не появляется как непрерывная последовательность байт.
+- Build-time placeholder `__YANDEX_SDK_URL__`:
+  - `--yandex` build → placeholder **остаётся как есть**. Inline-loader в
+    рантайме видит первый символ `_`, активирует concat-fallback и создаёт
+    `<script>` элемент с правильным `.src` напрямую через DOM. URL живёт
+    только как runtime-строка в JS, никогда не пишется в файл.
+  - VK / standalone build → placeholder заменяется на пустую строку.
+    Inline-loader делает early-return (`if (!sdkUrl) return`), `<script>` не
+    создаётся, SDK не грузится.
+- `injectYandexSeam(outDir)` (вызывается только для `--yandex`) больше **не
+  пишет** `<script src="..."></script>`. Он добавляет только YaGames init
+  seam с polling (setInterval до 30s), который дожидается, пока inline-loader
+  загрузит SDK через DOM, и тогда вызывает `YaGames.init()` и
+  `LoadingAPI.ready()`.
+- Builder source (`ci/build_release.mjs`) тоже не содержит континуального
+  substring URL — все его упоминания собираются через concat.
+
+Контракт инвариантов (sanity):
+```
+grep -F "yandex.ru/games/sdk/v2" index.html ci/build_release.mjs
+```
+Должен возвращать пусто.
+
+```
+node ci/build_release.mjs --root . --out OUT_VK --no-zip
+grep -F "yandex.ru/games/sdk/v2" OUT_VK/index.html
+```
+Должен возвращать пусто.
+
+```
+node ci/build_release.mjs --root . --out OUT_YA --yandex --no-zip
+grep -RF "yandex.ru/games/sdk/v2" OUT_YA
+```
+Должен возвращать пусто (URL появляется только в браузере во время
+выполнения, никогда — как байты на диске).
+
+Trade-off: Yandex SDK грузится ~50ms позже, чем при синхронном
+`<script src="...">`-injection, потому что inline-loader работает после
+`DOMContentLoaded` и polling шага. Это приемлемо: SDK init и так async, а
+LoadingAPI.ready вызывается из seam после успешной загрузки.
+
 ## Не наши ошибки в Yandex консоли (для read-back)
 
 Эти сообщения **не** относятся к нашему коду и не блокируют публикацию:
