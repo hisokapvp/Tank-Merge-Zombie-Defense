@@ -33,11 +33,15 @@
 
   // ─── Public API ───
 
-  /** Инкремент счётчика (session + lifetime). */
-  function event(name) {
+  /** Инкремент счётчика (session + lifetime).
+   * @param {string} name  — имя счётчика
+   * @param {number} [count=1] — шаг инкремента (для batch-убийств передаётся K)
+   */
+  function event(name, count) {
     if (!name) return;
-    session[name] = (session[name] || 0) + 1;
-    lifetime[name] = (lifetime[name] || 0) + 1;
+    var n = (typeof count === 'number' && count > 1) ? Math.floor(count) : 1;
+    session[name] = (session[name] || 0) + n;
+    lifetime[name] = (lifetime[name] || 0) + n;
   }
 
   /** Gauge — last-write-wins (session-only). */

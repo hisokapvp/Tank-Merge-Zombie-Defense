@@ -41,12 +41,16 @@
   function markRewardGranted(state, achievementId) {
     if (!state || typeof achievementId !== 'string' || !achievementId) return false;
     var achievementsApi = getAchievementsApi();
+    var metadata = arguments.length > 2 ? arguments[2] : null;
     if (achievementsApi && typeof achievementsApi.markRewardGranted === 'function') {
-      return !!achievementsApi.markRewardGranted(state, achievementId);
+      return !!achievementsApi.markRewardGranted(state, achievementId, metadata);
     }
     var rewarded = ensureRewardedState(state);
     if (!rewarded) return false;
     rewarded[achievementId] = true;
+    if (achievementsApi && typeof achievementsApi.appendRewardHistory === 'function') {
+      achievementsApi.appendRewardHistory(state, achievementId, metadata || null);
+    }
     return true;
   }
 
@@ -138,6 +142,13 @@
 
   /* ── Canonical reward mode → granter lookup table ─────── */
   var REWARD_TABLE = {
+    /* chip_crafting family */
+    chipCombinatorUpgrade1Dust50: { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'dust', amount: 50 }], i18nKey: 'achievementRewardChipCombinatorUpgrade1Dust50' },
+    chipCreatorDust10:            { type: 'dust', amount: 10, i18nKey: 'achievementRewardChipCreatorDust10' },
+    /* power_reserve family */
+    powerReserveDust15Fragments3:  { type: 'composite', items: [{ type: 'dust', amount: 15 }, { type: 'fragments', amount: 3 }], i18nKey: 'achievementRewardPowerReserve1' },
+    powerReserveRandomChips3Upgrade1: { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'upgradePoints', amount: 1 }], i18nKey: 'achievementRewardPowerReserve2' },
+    powerReserveUpgrade3Damage100000: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'damagePoints', amount: 100000 }], i18nKey: 'achievementRewardPowerReserve3' },
     /* fence_mechanic family */
     fenceMechanicCoins75:        { type: 'coins',          amount: 75,    i18nKey: 'achievementRewardFenceMechanicCoins75' },
     fenceMechanicDust5:          { type: 'dust',           amount: 5,     i18nKey: 'achievementRewardFenceMechanicDust5' },
@@ -148,6 +159,13 @@
     dutyShiftUpgradePoint1:      { type: 'upgradePoints',  amount: 1,     i18nKey: 'achievementRewardDutyShiftUpgradePoint1' },
     dutyShiftDamage20000:        { type: 'damagePoints',   amount: 20000, i18nKey: 'achievementRewardDutyShiftDamage20000' },
     dutyShiftUpgradePoints2:     { type: 'upgradePoints',  amount: 2,     i18nKey: 'achievementRewardDutyShiftUpgradePoints2' },
+    /* drone_brigadier family */
+    droneBrigadierDrones2L2:     { type: 'drones',         amount: 2, level: 2, i18nKey: 'achievementRewardDroneBrigadier1' },
+    droneBrigadierDrones3L5Upgrade3: { type: 'composite', items: [{ type: 'drones', amount: 3, level: 5 }, { type: 'upgradePoints', amount: 3 }], i18nKey: 'achievementRewardDroneBrigadier2' },
+    /* optimizer family */
+    optimizerUpgrade2Drones2L2:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 2 }, { type: 'drones', amount: 2, level: 2 }], i18nKey: 'achievementRewardOptimizer1' },
+    optimizerChips10Damage100000:{ type: 'composite', items: [{ type: 'randomChips', amount: 10 }, { type: 'damagePoints', amount: 100000 }], i18nKey: 'achievementRewardOptimizer2' },
+    optimizerUpgrade5Drones3L5:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'drones', amount: 3, level: 5 }], i18nKey: 'achievementRewardOptimizer3' },
     /* track_cleanup family */
     trackCleanupDamagePoints50:  { type: 'damagePoints',   amount: 50,    i18nKey: 'achievementRewardTrackCleanupDamagePoints50' },
     trackCleanupFragments2:      { type: 'fragments',      amount: 2,     i18nKey: 'achievementRewardTrackCleanupFragments2' },
@@ -202,6 +220,76 @@
     firstEliteUpgrade3Drones2L5:    { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 2, level: 5 }], i18nKey: 'achievementRewardFirstElite5' },
     firstEliteUpgrade5Damage50000:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'damagePoints', amount: 50000 }], i18nKey: 'achievementRewardFirstElite6' },
   };
+
+  var ATOMIC_REWARD_MODES = {
+    chipCombinatorUpgrade1Dust50: true,
+    chipCreatorDust10: true,
+    powerReserveDust15Fragments3: true,
+    powerReserveRandomChips3Upgrade1: true,
+    powerReserveUpgrade3Damage100000: true,
+    droneBrigadierDrones2L2: true,
+    droneBrigadierDrones3L5Upgrade3: true,
+    optimizerUpgrade2Drones2L2: true,
+    optimizerChips10Damage100000: true,
+    optimizerUpgrade5Drones3L5: true,
+  };
+
+  function cloneSerializable(value) {
+    if (value === null || typeof value !== 'object') return value;
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function createAtomicSnapshot(state) {
+    var chipsUi = getHangarChipsUi();
+    var snapshot = {
+      coins: normalizeCounter(state && state.coins),
+      totalDamageDealtRaw: normalizeDamageProgress(state && state.totalDamageDealtRaw),
+      damagePointsSpent: normalizeCounter(state && state.damagePointsSpent),
+      playerDamagePoints: normalizeCounter(state && state.player && state.player.damagePoints),
+      freePoints: normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints),
+      freePointsMirror: normalizeCounter(state && state.player && state.player.freeTalentPointsV2),
+      rewarded: cloneSerializable(state && state.achievements && state.achievements.rewarded),
+      rewardHistory: cloneSerializable(state && state.achievements && state.achievements.rewardHistory),
+      siliconDust: chipsUi && typeof chipsUi.getSiliconDust === 'function' ? normalizeCounter(chipsUi.getSiliconDust()) : null,
+      playerFragments: chipsUi && typeof chipsUi.getPlayerFragments === 'function' ? cloneSerializable(chipsUi.getPlayerFragments()) : null,
+      playerChips: chipsUi && typeof chipsUi.getPlayerChips === 'function' ? cloneSerializable(chipsUi.getPlayerChips()) : null,
+    };
+    return snapshot;
+  }
+
+  function restoreAtomicSnapshot(state, snapshot) {
+    if (!state || !snapshot || typeof snapshot !== 'object') return;
+    state.coins = snapshot.coins;
+    state.totalDamageDealtRaw = snapshot.totalDamageDealtRaw;
+    state.damagePointsSpent = snapshot.damagePointsSpent;
+    if (!state.player || typeof state.player !== 'object') state.player = {};
+    state.player.damagePoints = snapshot.playerDamagePoints;
+    if (!state.player.talentsV2 || typeof state.player.talentsV2 !== 'object') {
+      state.player.talentsV2 = { ranksById: {}, freePoints: 0 };
+    }
+    state.player.talentsV2.freePoints = snapshot.freePoints;
+    state.player.freeTalentPointsV2 = snapshot.freePointsMirror;
+
+    if (!state.achievements || typeof state.achievements !== 'object') state.achievements = {};
+    state.achievements.rewarded = snapshot.rewarded && typeof snapshot.rewarded === 'object' ? snapshot.rewarded : {};
+    state.achievements.rewardHistory = Array.isArray(snapshot.rewardHistory) ? snapshot.rewardHistory : [];
+
+    var chipsUi = getHangarChipsUi();
+    if (chipsUi && snapshot.siliconDust !== null && typeof chipsUi.setSiliconDust === 'function') {
+      chipsUi.setSiliconDust(snapshot.siliconDust);
+    }
+    if (chipsUi && snapshot.playerFragments && typeof chipsUi.setPlayerFragments === 'function') {
+      chipsUi.setPlayerFragments(snapshot.playerFragments);
+    }
+    if (chipsUi && snapshot.playerChips && typeof chipsUi.setPlayerChips === 'function') {
+      chipsUi.setPlayerChips(snapshot.playerChips, { reason: 'achievement.rollback' });
+    }
+
+    var tv2 = global.Game && global.Game.TalentsV2;
+    if (tv2 && typeof tv2.setFreePoints === 'function') {
+      tv2.setFreePoints(state.player.talentsV2.freePoints);
+    }
+  }
 
   function grantAchievementDrones(count, level, state) {
     var addDronFn = global.Game && typeof global.Game._productionLineAddDron === 'function'
@@ -283,10 +371,20 @@
 
     var opts = options && typeof options === 'object' ? options : null;
     var randomFn = opts && typeof opts.random === 'function' ? opts.random : Math.random;
+    var useAtomicGrant = !!ATOMIC_REWARD_MODES[def.rewardMode];
+    var snapshot = useAtomicGrant ? createAtomicSnapshot(state) : null;
     var granted = grantByTable(state, def.rewardMode, randomFn);
 
+    if (!granted && useAtomicGrant) {
+      restoreAtomicSnapshot(state, snapshot);
+      return false;
+    }
+
     if (!granted) return false;
-    return markRewardGranted(state, def.id);
+    return markRewardGranted(state, def.id, {
+      rewardMode: def.rewardMode,
+      status: 'granted',
+    });
   }
 
   function claimDeferredRewards(state) {

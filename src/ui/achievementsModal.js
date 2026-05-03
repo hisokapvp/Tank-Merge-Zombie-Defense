@@ -96,6 +96,9 @@
       var getProgress = typeof input.getProgress === 'function'
         ? input.getProgress
         : function () { return 0; };
+      var getReservePowerMetrics = typeof input.getReservePowerMetrics === 'function'
+        ? input.getReservePowerMetrics
+        : function () { return null; };
       var deferredCount = Number.isFinite(input.deferredCount) ? Math.max(0, input.deferredCount) : 0;
       currentClaimCallback = typeof input.onClaimDeferred === 'function' ? input.onClaimDeferred : null;
 
@@ -168,6 +171,15 @@
           ? global.Game.NumberFormat.formatCompactRu
           : function (n) { return String(n); };
         descRow.appendChild(createMetaLine(translate('achievementProgress', { value: fmt(progress), target: fmt(displayTarget) })));
+        if (def.progressType === 'unspentUpgradePoints') {
+          var reserveMetrics = getReservePowerMetrics() || {};
+          var currentReserve = Number.isFinite(reserveMetrics.current) ? Math.max(0, Math.floor(reserveMetrics.current)) : progress;
+          var peakReserve = Number.isFinite(reserveMetrics.peak) ? Math.max(0, Math.floor(reserveMetrics.peak)) : currentReserve;
+          descRow.appendChild(createMetaLine(translate('achievementReservePowerIndicator', {
+            current: fmt(currentReserve),
+            peak: fmt(peakReserve),
+          })));
+        }
         descRow.appendChild(createMetaLine(translate('achievementReward', { reward: translate(def.rewardKey) })));
 
         row.appendChild(headerRow);

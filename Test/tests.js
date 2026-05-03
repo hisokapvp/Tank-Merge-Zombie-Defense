@@ -678,7 +678,8 @@ console.log('\n── T1 Async: syncProgressBlocking ──');
     const js = fs.readFileSync(path.resolve(__dirname, '..', 'game.js'), 'utf-8');
     assert(js.indexOf("Telemetry.event('buyTank')") !== -1, 'buyTank event');
     assert(js.indexOf("Telemetry.event('merge')") !== -1, 'merge event');
-    assert(js.indexOf("Telemetry.event('zombieKill')") !== -1, 'zombieKill event');
+    // zombieKill now uses batch count API: Telemetry.event('zombieKill', K)
+    assert(js.indexOf("Telemetry.event('zombieKill'") !== -1, 'zombieKill event');
     assert(js.indexOf("Telemetry.event('shotFired')") !== -1, 'shotFired event');
   });
 

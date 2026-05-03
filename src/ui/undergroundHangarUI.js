@@ -254,7 +254,7 @@
     let html = '<div class="' + cls + '" data-ugh-drone="' + slotIndex + '">';
     html += '<div class="ughDroneCell__surface">';
     if (occupied) {
-      html += '<canvas class="ughDroneCell__spriteCanvas" data-ugh-sprite="drone" data-ugh-drone-slot="' + slotIndex + '" width="56" height="56"></canvas>';
+      html += '<canvas class="ughDroneCell__spriteCanvas" data-ugh-sprite="drone" data-ugh-drone-slot="' + slotIndex + '" data-ugh-drone-surface="rail" width="56" height="56"></canvas>';
       html += '<span class="ughDroneCell__levelBadge">' + levelLabel(drone.level) + '</span>';
     } else {
       html += '<span class="ughDroneCell__emptyMark"></span>';
@@ -556,7 +556,7 @@
     );
   }
 
-  function drawDroneSpriteCanvas(canvas, drone) {
+  function drawDroneSpriteCanvas(canvas, drone, surfaceKind) {
     if (!canvas || !drone) return;
     const targetCtx = canvas.getContext('2d');
     if (!targetCtx) return;
@@ -574,10 +574,18 @@
     const canvasMetrics = syncPreviewCanvasResolution(canvas);
     const cfg = dronSprites.config || {};
     const scaleBase = Number.isFinite(cfg.scale) && cfg.scale > 0 ? cfg.scale : 1;
-    const scale = Math.min(canvasMetrics.width * 0.62 / frame.w, canvasMetrics.height * 0.62 / frame.h) * scaleBase;
+    const isStorageSurface = surfaceKind === 'storage';
+    const widthCoverage = isStorageSurface ? 0.9 : 0.92;
+    const heightCoverage = isStorageSurface ? 0.84 : 0.88;
+    // Keep the shared drone atlas scale for the rest of the game, but neutralize it locally
+    // so underground hangar previews can fill their existing cells like tank previews do.
+    const undergroundPreviewScaleBoost = Math.min(3.2, Math.max(2, 1 / scaleBase));
+    const scale = Math.min(canvasMetrics.width * widthCoverage / frame.w, canvasMetrics.height * heightCoverage / frame.h)
+      * scaleBase
+      * undergroundPreviewScaleBoost;
     const anchor = cfg.anchor && typeof cfg.anchor === 'object' ? cfg.anchor : { x: 0.5, y: 0.5 };
     const centerX = canvasMetrics.width * 0.5;
-    const centerY = canvasMetrics.height * 0.5;
+    const centerY = canvasMetrics.height * (isStorageSurface ? 0.47 : 0.45);
 
     targetCtx.clearRect(0, 0, canvasMetrics.width, canvasMetrics.height);
     targetCtx.imageSmoothingEnabled = false;
@@ -608,14 +616,17 @@
       }
       if (spriteType === 'drone') {
         const slotIndex = Number(canvas.getAttribute('data-ugh-drone-slot'));
-        if (Number.isFinite(slotIndex)) drawDroneSpriteCanvas(canvas, getDroneBySlotIndex(slotIndex));
+        if (Number.isFinite(slotIndex)) {
+          const surfaceKind = canvas.getAttribute('data-ugh-drone-surface') || 'rail';
+          drawDroneSpriteCanvas(canvas, getDroneBySlotIndex(slotIndex), surfaceKind);
+        }
         continue;
       }
       if (spriteType === 'drone-storage') {
         const storageIndex = Number(canvas.getAttribute('data-ugh-storage-cell'));
         const storageCell = getTankCell('underground', storageIndex);
         if (Number.isFinite(storageIndex) && storageCell && storageCell.drone) {
-          drawDroneSpriteCanvas(canvas, storageCell.drone);
+          drawDroneSpriteCanvas(canvas, storageCell.drone, 'storage');
         }
       }
     }

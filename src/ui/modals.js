@@ -287,9 +287,7 @@
     var wrap = document.getElementById('dismantleIconsWrap');
     if (!wrap) return;
 
-    var maxIcons = 12;
-    var ids = selectedTankIds.slice(0, maxIcons);
-    var rest = Math.max(0, selectedTankIds.length - maxIcons);
+    var ids = selectedTankIds.slice();
     wrap.innerHTML = '';
 
     ids.forEach(function (id) {
@@ -298,14 +296,18 @@
       });
       if (!cell || !cell.tank) return;
 
+      // Keep visual size at x1.5 while reserving extra vertical space to avoid clipping.
+      var iconScale = 1.05;
+      var iconWidth = 54;
+      var iconHeight = 52;
       var can = document.createElement('canvas');
-      can.width = 36;
-      can.height = 28;
+      can.width = iconWidth;
+      can.height = iconHeight;
       can.style.verticalAlign = 'middle';
       can.style.marginRight = '4px';
       var cctx = can.getContext('2d');
       if (typeof drawTankIconTo === 'function') {
-        drawTankIconTo(cctx, 18, 14, cell.tank.level, false, 0.7, { showShadow: false });
+        drawTankIconTo(cctx, iconWidth * 0.5, iconHeight * 0.5, cell.tank.level, false, iconScale, { showShadow: false });
       }
       wrap.appendChild(can);
     });
@@ -313,11 +315,7 @@
     var span = document.createElement('span');
     span.style.marginLeft = '8px';
     var countText = getDismantleTankCountText(selectedTankIds.length, t);
-    if (rest > 0) {
-      span.textContent = t('dismantleMore') + ' ' + rest + ' · ' + countText;
-    } else {
-      span.textContent = countText;
-    }
+    span.textContent = countText;
     wrap.appendChild(span);
   }
 

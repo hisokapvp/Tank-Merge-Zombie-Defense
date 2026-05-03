@@ -397,7 +397,7 @@ body::after{
   position:fixed;
   top:15px;
   left:8px;
-  z-index:10000;
+  z-index:4;
   width:60px;
   height:60px;
   padding:4px 10px;
@@ -2169,9 +2169,15 @@ input, select, textarea, button {
 #talentOverlay .modalHeader{
   position:static;
   min-height:100px;
-  padding-right:calc(var(--uiModalPad) + 104px);
+  justify-content:center;
+  padding-left:min(118px, 26vw);
+  padding-right:min(118px, 26vw);
 }
 #talentOverlay .modalTitle{
+  width:100%;
+  font-size:18px;
+  line-height:1.15;
+  text-align:center;
   padding-right:0;
 }
 #talentOverlay .modalClose{
@@ -4727,7 +4733,7 @@ body.ugh-open::before{
   width:min(96vw, 980px);
   max-height:92vh;
   --ugh-cell-size:clamp(56px, calc(64px * var(--ui-scale)), 64px);
-  --ugh-drone-cell-size:clamp(38px, calc(44px * var(--ui-scale)), 44px);
+  --ugh-drone-cell-size:clamp(30px, calc(44px * var(--ui-scale)), 44px);
   overflow-y:auto;
   background:#0d100d;
   border:2px solid #4af626;
@@ -5080,7 +5086,7 @@ body.ugh-open::before{
 @media (max-width: 720px){
   .ughPanel{
     --ugh-cell-size:clamp(48px, calc(56px * var(--ui-scale)), 56px);
-    --ugh-drone-cell-size:clamp(34px, calc(38px * var(--ui-scale)), 38px);
+    --ugh-drone-cell-size:clamp(30px, calc(38px * var(--ui-scale)), 38px);
   }
   .ughMainCluster__row{
     gap:8px;

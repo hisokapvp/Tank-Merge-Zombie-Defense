@@ -1,6 +1,10 @@
 ﻿# Система: UI
 
-> Обновлено: 2026-04-03.
+> Обновлено: 2026-05-02.
+
+## Post-merge update (2026-05-02)
+- Preview scaling дронов в underground hangar зафиксирован как локализованный render seam внутри `src/ui/undergroundHangarUI.js`: `drawDroneSpriteCanvas()` использует `undergroundPreviewScaleBoost` только при отрисовке preview-canvas (`rail`/`storage`) и не меняет shared `DronSprites.config.scale` для остального runtime. Это deliberate local компенсация atlas-scale для заполнения существующих preview-рамок, а не глобальный resize дронов.
+- Контракт «без resize rail cells» остаётся неизменным: размеры ячеек задаются только CSS-переменными `--ugh-cell-size` и `--ugh-drone-cell-size`, а canvas preview растёт внутри уже фиксированной геометрии surface/cell, не меняя layout правой/верхней/нижней rail-сетки. См. [src/ui/undergroundHangarUI.js](../../../src/ui/undergroundHangarUI.js#L559-L603), [style.css](../../../style.css#L4728-L4730), [style.css](../../../style.css#L4779-L4781), [style.css](../../../style.css#L4813-L4824).
 
 ## Post-merge update (2026-04-03)
 - `src/ui/chipCraftLayout.js` стал отдельным owner'ом геометрии craft energy rail: `src/ui/hangarChipsUI.js` больше не держит локальный расчёт якорей ingredient/result cards, а вызывает `Game.ChipCraftLayout.buildEnergyRailLayout(panel)` и тем самым сохраняет один DOM-layout contract для assemble preview вместо in-place математики внутри render/runtime glue: [src/ui/chipCraftLayout.js](../../../src/ui/chipCraftLayout.js), [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js).

@@ -167,6 +167,66 @@
       ],
     },
     {
+      id: 'chip_crafting',
+      definitions: [
+        {
+          id: 'chip_combinator_1',
+          familyId: 'chip_crafting',
+          titleKey: 'achievementChipCombinator1',
+          descKey: 'achievementChipCombinator1Desc',
+          rewardKey: 'achievementRewardChipCombinatorUpgrade1Dust50',
+          target: 1,
+          progressType: 'chipComboTriples',
+          rewardMode: 'chipCombinatorUpgrade1Dust50',
+        },
+        {
+          id: 'chip_creator_1',
+          familyId: 'chip_crafting',
+          titleKey: 'achievementChipCreator1',
+          descKey: 'achievementChipCreator1Desc',
+          rewardKey: 'achievementRewardChipCreatorDust10',
+          target: 1,
+          progressType: 'chipCraftFromFragments',
+          rewardMode: 'chipCreatorDust10',
+        },
+      ],
+    },
+    {
+      id: 'power_reserve',
+      definitions: [
+        {
+          id: 'power_reserve_1',
+          familyId: 'power_reserve',
+          titleKey: 'achievementPowerReserve1',
+          descKey: 'achievementPowerReserve1Desc',
+          rewardKey: 'achievementRewardPowerReserve1',
+          target: 5,
+          progressType: 'unspentUpgradePoints',
+          rewardMode: 'powerReserveDust15Fragments3',
+        },
+        {
+          id: 'power_reserve_2',
+          familyId: 'power_reserve',
+          titleKey: 'achievementPowerReserve2',
+          descKey: 'achievementPowerReserve2Desc',
+          rewardKey: 'achievementRewardPowerReserve2',
+          target: 10,
+          progressType: 'unspentUpgradePoints',
+          rewardMode: 'powerReserveRandomChips3Upgrade1',
+        },
+        {
+          id: 'power_reserve_3',
+          familyId: 'power_reserve',
+          titleKey: 'achievementPowerReserve3',
+          descKey: 'achievementPowerReserve3Desc',
+          rewardKey: 'achievementRewardPowerReserve3',
+          target: 15,
+          progressType: 'unspentUpgradePoints',
+          rewardMode: 'powerReserveUpgrade3Damage100000',
+        },
+      ],
+    },
+    {
       id: 'duty_shift',
       definitions: [
         {
@@ -198,6 +258,72 @@
           target: 9,
           progressType: 'droneAcquisitions',
           rewardMode: 'dutyShiftUpgradePoints2',
+        },
+      ],
+    },
+    {
+      id: 'drone_brigadier',
+      definitions: [
+        {
+          id: 'drone_brigadier_1',
+          familyId: 'drone_brigadier',
+          titleKey: 'achievementDroneBrigadier1',
+          descKey: 'achievementDroneBrigadier1Desc',
+          rewardKey: 'achievementRewardDroneBrigadier1',
+          target: 5,
+          progressType: 'droneMaxLevel',
+          rewardMode: 'droneBrigadierDrones2L2',
+        },
+        {
+          id: 'drone_brigadier_2',
+          familyId: 'drone_brigadier',
+          titleKey: 'achievementDroneBrigadier2',
+          descKey: 'achievementDroneBrigadier2Desc',
+          rewardKey: 'achievementRewardDroneBrigadier2',
+          target: 10,
+          progressType: 'droneMaxLevel',
+          rewardMode: 'droneBrigadierDrones3L5Upgrade3',
+        },
+      ],
+    },
+    {
+      id: 'optimizer',
+      definitions: [
+        {
+          id: 'optimizer_1',
+          familyId: 'optimizer',
+          titleKey: 'achievementOptimizer1',
+          descKey: 'achievementOptimizer1Desc',
+          rewardKey: 'achievementRewardOptimizer1',
+          target: 1,
+          displayTarget: 15,
+          optimizerMinChips: 1,
+          progressType: 'hangarCellChipTier',
+          rewardMode: 'optimizerUpgrade2Drones2L2',
+        },
+        {
+          id: 'optimizer_2',
+          familyId: 'optimizer',
+          titleKey: 'achievementOptimizer2',
+          descKey: 'achievementOptimizer2Desc',
+          rewardKey: 'achievementRewardOptimizer2',
+          target: 2,
+          displayTarget: 15,
+          optimizerMinChips: 2,
+          progressType: 'hangarCellChipTier',
+          rewardMode: 'optimizerChips10Damage100000',
+        },
+        {
+          id: 'optimizer_3',
+          familyId: 'optimizer',
+          titleKey: 'achievementOptimizer3',
+          descKey: 'achievementOptimizer3Desc',
+          rewardKey: 'achievementRewardOptimizer3',
+          target: 3,
+          displayTarget: 15,
+          optimizerMinChips: 3,
+          progressType: 'hangarCellChipTier',
+          rewardMode: 'optimizerUpgrade5Drones3L5',
         },
       ],
     },
@@ -656,6 +782,74 @@
     return normalizeCounter(inferred);
   }
 
+  function countInstalledChipsInHangarCell(cell) {
+    if (!cell || typeof cell !== 'object') return 0;
+    if (Array.isArray(cell.activeModifiers)) {
+      return normalizeCounter(cell.activeModifiers.length);
+    }
+    var total = 0;
+    var red = cell.redSlots;
+    var yellow = cell.yellowSlots;
+    if (red && typeof red === 'object') {
+      if (red.slot1) total += 1;
+      if (red.slot2) total += 1;
+    }
+    if (yellow && typeof yellow === 'object') {
+      if (yellow.slot1) total += 1;
+      if (yellow.slot2) total += 1;
+      if (yellow.slot3) total += 1;
+      if (yellow.slot4) total += 1;
+    }
+    return normalizeCounter(total);
+  }
+
+  function computeHangarCellChipTierFromState(state) {
+    var hangarCells = null;
+    var hui = global.Game && global.Game.HangarChipsUI;
+    if (hui && typeof hui.getCells === 'function') {
+      var uiCells = hui.getCells();
+      if (Array.isArray(uiCells)) hangarCells = uiCells;
+    }
+    if (!hangarCells && state && Array.isArray(state.hangarCells)) {
+      hangarCells = state.hangarCells;
+    }
+    if (!hangarCells || hangarCells.length < 15) return 0;
+    var maxCells = Math.min(hangarCells.length, 15);
+    var minInstalled = Number.MAX_SAFE_INTEGER;
+    for (var i = 0; i < maxCells; i++) {
+      var installed = countInstalledChipsInHangarCell(hangarCells[i]);
+      if (installed < minInstalled) minInstalled = installed;
+    }
+    if (minInstalled === Number.MAX_SAFE_INTEGER) return 0;
+    return Math.max(0, Math.min(3, Math.floor(minInstalled)));
+  }
+
+  function computeDroneMaxLevelFromState(state) {
+    var maxLevel = 0;
+    var drones = state && Array.isArray(state.drones) ? state.drones : null;
+    if (drones) {
+      for (var i = 0; i < drones.length; i++) {
+        var drone = drones[i];
+        if (!drone) continue;
+        var level = normalizeCounter(drone.level);
+        if (level > maxLevel) maxLevel = level;
+      }
+    }
+    var undergroundCells = state && state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)
+      ? state.undergroundHangar.cells
+      : null;
+    if (undergroundCells) {
+      for (var ci = 0; ci < undergroundCells.length; ci++) {
+        var cell = undergroundCells[ci];
+        var cellDrone = cell && cell.drone ? cell.drone : null;
+        if (!cellDrone) continue;
+        var cellLevel = normalizeCounter(cellDrone.level);
+        if (cellLevel > maxLevel) maxLevel = cellLevel;
+      }
+    }
+    return normalizeCounter(maxLevel);
+  }
+
   function isSelfManagedRewardMode(rewardMode) {
     return !!SELF_MANAGED_REWARD_MODES[rewardMode];
   }
@@ -770,6 +964,8 @@
     var hasHangarMasterLevel = Number.isFinite(stats.hangarMasterLevelCount);
     var hasDefenseOrderStreak = Number.isFinite(stats.defenseOrderStreakCount);
     var hasMaxTankLevel = Number.isFinite(stats.maxTankLevelCount);
+    var hasChipComboTriples = Number.isFinite(stats.chipComboTriplesCount);
+    var hasChipCraftFromFragments = Number.isFinite(stats.chipCraftFromFragmentsCount);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -782,6 +978,8 @@
     var legacyHangarMasterLevel = normalizeCounter(ach.totalHangarMasterLevel);
     var legacyDefenseOrderStreak = normalizeCounter(ach.totalDefenseOrderStreak);
     var legacyMaxTankLevel = normalizeCounter(ach.totalMaxTankLevel);
+    var legacyChipComboTriples = normalizeCounter(ach.totalChipComboTriples);
+    var legacyChipCraftFromFragments = normalizeCounter(ach.totalChipCraftFromFragments);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -816,6 +1014,12 @@
     if (!hasMaxTankLevel) stats.maxTankLevelCount = legacyMaxTankLevel;
     else stats.maxTankLevelCount = normalizeCounter(stats.maxTankLevelCount);
 
+    if (!hasChipComboTriples) stats.chipComboTriplesCount = legacyChipComboTriples;
+    else stats.chipComboTriplesCount = normalizeCounter(stats.chipComboTriplesCount);
+
+    if (!hasChipCraftFromFragments) stats.chipCraftFromFragmentsCount = legacyChipCraftFromFragments;
+    else stats.chipCraftFromFragmentsCount = normalizeCounter(stats.chipCraftFromFragmentsCount);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -834,6 +1038,8 @@
     ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
     ach.totalDefenseOrderStreak = stats.defenseOrderStreakCount;
     ach.totalMaxTankLevel = stats.maxTankLevelCount;
+    ach.totalChipComboTriples = stats.chipComboTriplesCount;
+    ach.totalChipCraftFromFragments = stats.chipCraftFromFragmentsCount;
     return stats;
   }
 
@@ -850,6 +1056,9 @@
     }
     if (!state.achievements.rewarded || typeof state.achievements.rewarded !== 'object') {
       state.achievements.rewarded = {};
+    }
+    if (!Array.isArray(state.achievements.rewardHistory)) {
+      state.achievements.rewardHistory = [];
     }
     state.achievements.completedModifierTechs = normalizeModifierTechMap(state.achievements.completedModifierTechs);
 
@@ -940,6 +1149,36 @@
       state.achievements.totalMaxTankLevel = normalizeCounter(state.achievements.totalMaxTankLevel);
     }
 
+    if (!Number.isFinite(state.achievements.totalChipComboTriples)) {
+      state.achievements.totalChipComboTriples = 0;
+    } else {
+      state.achievements.totalChipComboTriples = normalizeCounter(state.achievements.totalChipComboTriples);
+    }
+
+    if (!Number.isFinite(state.achievements.totalChipCraftFromFragments)) {
+      state.achievements.totalChipCraftFromFragments = 0;
+    } else {
+      state.achievements.totalChipCraftFromFragments = normalizeCounter(state.achievements.totalChipCraftFromFragments);
+    }
+
+    if (!Number.isFinite(state.achievements.totalDroneMaxLevel)) {
+      state.achievements.totalDroneMaxLevel = computeDroneMaxLevelFromState(state);
+    } else {
+      state.achievements.totalDroneMaxLevel = normalizeCounter(state.achievements.totalDroneMaxLevel);
+    }
+
+    if (!Number.isFinite(state.achievements.totalHangarCellChipTier)) {
+      state.achievements.totalHangarCellChipTier = computeHangarCellChipTierFromState(state);
+    } else {
+      state.achievements.totalHangarCellChipTier = normalizeCounter(state.achievements.totalHangarCellChipTier);
+    }
+
+    if (!Number.isFinite(state.achievements.reservePowerPeakCycle)) {
+      state.achievements.reservePowerPeakCycle = 0;
+    } else {
+      state.achievements.reservePowerPeakCycle = normalizeCounter(state.achievements.reservePowerPeakCycle);
+    }
+
     if (!Array.isArray(state.achievements.deferredRewards)) {
       state.achievements.deferredRewards = [];
     }
@@ -985,6 +1224,9 @@
     var type = typeof progressType === 'string' ? progressType : 'purchases';
     var stats = state && state.stats && typeof state.stats === 'object' ? state.stats : null;
 
+    if (type === 'droneMaxLevel') return computeDroneMaxLevelFromState(state);
+    if (type === 'hangarCellChipTier') return computeHangarCellChipTierFromState(state);
+
     if (stats) {
       if (type === 'currentBalance') return normalizeCounter(state && state.coins);
       if (type === 'merges') return normalizeCounter(stats.tanksMergedCount);
@@ -997,6 +1239,11 @@
       if (type === 'hangarMasterLevel') return normalizeCounter(stats.hangarMasterLevelCount);
       if (type === 'defenseOrderStreak') return normalizeCounter(stats.defenseOrderStreakCount);
       if (type === 'maxTankLevel') return normalizeCounter(stats.maxTankLevelCount);
+      if (type === 'chipComboTriples') return normalizeCounter(stats.chipComboTriplesCount);
+      if (type === 'chipCraftFromFragments') return normalizeCounter(stats.chipCraftFromFragmentsCount);
+      if (type === 'unspentUpgradePoints') {
+        return normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
+      }
       return normalizeCounter(stats.tanksBoughtCount);
     }
 
@@ -1033,6 +1280,21 @@
     }
     if (type === 'maxTankLevel') {
       return normalizeCounter(ach.totalMaxTankLevel);
+    }
+    if (type === 'chipComboTriples') {
+      return normalizeCounter(ach.totalChipComboTriples);
+    }
+    if (type === 'chipCraftFromFragments') {
+      return normalizeCounter(ach.totalChipCraftFromFragments);
+    }
+    if (type === 'unspentUpgradePoints') {
+      return normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
+    }
+    if (type === 'droneMaxLevel') {
+      return normalizeCounter(ach.totalDroneMaxLevel);
+    }
+    if (type === 'hangarCellChipTier') {
+      return normalizeCounter(ach.totalHangarCellChipTier);
     }
     return normalizeCounter(ach.totalPurchased);
   }
@@ -1112,6 +1374,16 @@
         stats.hangarMasterLevelCount = normalizeCounter(stats.hangarMasterLevelCount + delta);
       } else if (type === 'defenseOrderStreak') {
         stats.defenseOrderStreakCount = normalizeCounter(stats.defenseOrderStreakCount + delta);
+      } else if (type === 'chipComboTriples') {
+        stats.chipComboTriplesCount = normalizeCounter(stats.chipComboTriplesCount + delta);
+      } else if (type === 'chipCraftFromFragments') {
+        stats.chipCraftFromFragmentsCount = normalizeCounter(stats.chipCraftFromFragmentsCount + delta);
+      } else if (type === 'droneMaxLevel') {
+        var droneLevel = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+        ach.totalDroneMaxLevel = Math.max(normalizeCounter(ach.totalDroneMaxLevel), droneLevel);
+      } else if (type === 'hangarCellChipTier') {
+        var chipTier = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+        ach.totalHangarCellChipTier = Math.max(normalizeCounter(ach.totalHangarCellChipTier), chipTier);
       } else {
         stats.tanksBoughtCount = normalizeCounter(stats.tanksBoughtCount + delta);
       }
@@ -1126,11 +1398,17 @@
       ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
       ach.totalDefenseOrderStreak = stats.defenseOrderStreakCount;
       ach.totalMaxTankLevel = normalizeCounter(stats.maxTankLevelCount);
+      ach.totalChipComboTriples = normalizeCounter(stats.chipComboTriplesCount);
+      ach.totalChipCraftFromFragments = normalizeCounter(stats.chipCraftFromFragmentsCount);
     } else if (type === 'maxTankLevel') {
       var lvl = Math.max(0, Math.floor(Number(deltaRaw) || 0));
       if (lvl > normalizeCounter(ach.totalMaxTankLevel)) {
         ach.totalMaxTankLevel = lvl;
       }
+    } else if (type === 'chipComboTriples') {
+      ach.totalChipComboTriples = normalizeCounter(ach.totalChipComboTriples + delta);
+    } else if (type === 'chipCraftFromFragments') {
+      ach.totalChipCraftFromFragments = normalizeCounter(ach.totalChipCraftFromFragments + delta);
     } else if (type === 'droneAcquisitions') {
       ach.totalDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions + delta);
     } else if (type === 'noRepairAttackWaveStreak') {
@@ -1150,6 +1428,14 @@
     } else if (type === 'defenseOrderStreak') {
       if (!Number.isFinite(ach.totalDefenseOrderStreak)) ach.totalDefenseOrderStreak = 0;
       ach.totalDefenseOrderStreak += delta;
+    } else if (type === 'droneMaxLevel') {
+      var maxDroneLevel = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+      if (!Number.isFinite(ach.totalDroneMaxLevel)) ach.totalDroneMaxLevel = 0;
+      if (maxDroneLevel > ach.totalDroneMaxLevel) ach.totalDroneMaxLevel = maxDroneLevel;
+    } else if (type === 'hangarCellChipTier') {
+      var maxChipTier = Math.max(0, Math.floor(Number(deltaRaw) || 0));
+      if (!Number.isFinite(ach.totalHangarCellChipTier)) ach.totalHangarCellChipTier = 0;
+      if (maxChipTier > ach.totalHangarCellChipTier) ach.totalHangarCellChipTier = maxChipTier;
     } else {
       ach.totalPurchased = normalizeCounter(ach.totalPurchased + delta);
     }
@@ -1223,10 +1509,29 @@
     return !!ach.rewarded[achievementId];
   }
 
-  function markRewardGranted(state, achievementId) {
+  function appendRewardHistory(state, achievementId, metadata) {
+    var ach = ensureState(state);
+    if (!ach || typeof achievementId !== 'string' || !achievementId) return false;
+    if (!Array.isArray(ach.rewardHistory)) ach.rewardHistory = [];
+    var info = metadata && typeof metadata === 'object' ? metadata : {};
+    var entry = {
+      achievementId: achievementId,
+      rewardMode: typeof info.rewardMode === 'string' ? info.rewardMode : '',
+      status: typeof info.status === 'string' ? info.status : 'granted',
+      ts: Date.now(),
+    };
+    ach.rewardHistory.push(entry);
+    if (ach.rewardHistory.length > 300) {
+      ach.rewardHistory = ach.rewardHistory.slice(ach.rewardHistory.length - 300);
+    }
+    return true;
+  }
+
+  function markRewardGranted(state, achievementId, metadata) {
     var ach = ensureState(state);
     if (!ach || typeof achievementId !== 'string' || !achievementId) return false;
     ach.rewarded[achievementId] = true;
+    appendRewardHistory(state, achievementId, metadata);
     return true;
   }
 
@@ -1240,6 +1545,7 @@
     getBulkMode: getBulkMode,
     hasRewardGranted: hasRewardGranted,
     markRewardGranted: markRewardGranted,
+    appendRewardHistory: appendRewardHistory,
     recordModifierTechUnlock: recordModifierTechUnlock,
     recordNoRepairAttackWaveSuccess: recordNoRepairAttackWaveSuccess,
     resetNoRepairAttackWaveStreak: resetNoRepairAttackWaveStreak,

@@ -51,7 +51,7 @@
     }
   },
   "perf": {
-    "_readme": "=== PERF (solo-pipeline-yandex-vk#1 / items 3,4,11,14,15) === gridBucketWarmup — сколько zombie-collision-grid bucket'ов резервировать на старте, чтобы первая большая волна не давала alloc-spike. Hardcoded cap = 32 (см. game.js _warmupZombieGridBucketPool). Безопасный диапазон: 8–32. Profiler budgets — пороги (мс) per-phase: при превышении эмитится perf.budget.exceeded в Game.Events. Markers сами включаются ТОЛЬКО при Game.DEBUG === true (release-mirror без overhead).",
+    "_readme": "=== PERF (solo-pipeline-yandex-vk#1 / items 3,4,11,14,15) === gridBucketWarmup — сколько zombie-collision-grid bucket'ов резервировать на старте, чтобы первая большая волна не давала alloc-spike. Hardcoded cap = 32 (см. game.js _warmupZombieGridBucketPool). Безопасный диапазон: 8–32. Profiler budgets — пороги (мс) per-phase: при превышении эмитится perf.budget.exceeded в Game.Events. Markers сами включаются ТОЛЬКО при Game.DEBUG === true (release-mirror без overhead). deathBurstFrameBudget (top-level) — бюджет death-particles на кадр при массовых смертях (K>8); распределяется по individual bursts и проходит FxDensity.scaleCount.",
     "gridBucketWarmup": 16,
     "profilerBudgetsMs": {
       "stepProjectiles": 2.5,
@@ -60,5 +60,7 @@
       "drawTank": 2.0,
       "chipEffectsSpawn": 1.0
     }
-  }
+  },
+  "deathBurstFrameBudget": 240,
+  "deathClusterRadiusPx": 256
 }

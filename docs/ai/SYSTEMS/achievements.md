@@ -1,6 +1,7 @@
 ﻿# Система: Achievements
 
-> Обновлён: 2026-03-26. (post-merge: early_capital family, currentBalance sync, shared ui-scale/cache-bust wiring)
+> Обновлён: 2026-05-03. (post-merge: drone_brigadier + optimizer families, idempotent reward-claim guard)
+> Дополнение: 2026-05-02. (chip_crafting/power_reserve families, reserve current+peak indicator, atomic reward grant для нового batch)
 
 ## Где править
 - Definitions, family grouping, прогресс и self-managed rewards: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L4-L512)
@@ -11,13 +12,23 @@
 - Regression coverage: [Test/pack4/tutorial_first_run_runtime.test.js](../../../Test/pack4/tutorial_first_run_runtime.test.js#L337-L491)
 
 ## Что это
-Achievements runtime теперь держит двенадцать семейств (`creator`, `engineer`, `fence_mechanic`, `new_technology`, `duty_shift`, `track_cleanup`, `stable_income`, `early_capital`, `tough_perimeter`, `hangar_master`, `defense_order`, `first_elite`) в одном state-machine: покупки, merge, успешные ручные ремонты ограды, уникальные исследования технологий модификаторов, получение дронов техподдержки, серию волн attack mode без ремонта фрагментов забора, суммарный lifetime-income, одновременный баланс на счету, идеальное завершение волн без повреждений ограды, минимальный уровень танков в ангаре, серию волн с пополнением без разрушений и максимальный уровень танка за всю игру. `src/mechanics/achievements.js` остаётся canonical источником definitions/progress/dedupe, а non-self-managed награды идут через `src/mechanics/achievementRewards.js` и подхватываются `game.js` до показа informational popup.
+Achievements runtime теперь держит шестнадцать семейств (`creator`, `engineer`, `fence_mechanic`, `new_technology`, `chip_crafting`, `power_reserve`, `duty_shift`, `drone_brigadier`, `optimizer`, `track_cleanup`, `stable_income`, `early_capital`, `tough_perimeter`, `hangar_master`, `defense_order`, `first_elite`) в одном state-machine: покупки, merge, успешные ручные ремонты ограды, уникальные исследования технологий модификаторов, крафт чипов, резерв нераспределённых upgrade points, получение/уровни дронов техподдержки, полное покрытие ячеек ангара чипами, серию волн attack mode без ремонта фрагментов забора, суммарный lifetime-income, одновременный баланс на счету, идеальное завершение волн без повреждений ограды, минимальный уровень танков в ангаре, серию волн с пополнением без разрушений и максимальный уровень танка за всю игру. `src/mechanics/achievements.js` остаётся canonical источником definitions/progress/dedupe, а non-self-managed награды идут через `src/mechanics/achievementRewards.js` и подхватываются `game.js` до показа informational popup.
+
+### 2026-05-03 — Drone Brigadier + Optimizer
+- Добавлены семьи `drone_brigadier` (`drone_brigadier_1..2`) и `optimizer` (`optimizer_1..3`).
+- `drone_brigadier` использует `progressType='droneMaxLevel'` и смотрит на фактический max-level дронов в main + underground hangar state, без отдельного инкрементального счётчика.
+- `optimizer` использует `progressType='hangarCellChipTier'`: unlock-tier = минимальное число установленных чипов среди первых 15 ячеек ангара, capped до `3`.
+- В UI-прогрессе `optimizer` показывает количество ячеек (из 15), удовлетворяющих `optimizerMinChips` для каждого тира.
+- Reward claiming остаётся идемпотентным через `hasRewardGranted`/`markRewardGranted`; новые reward modes дополнительно включены в `ATOMIC_REWARD_MODES` для rollback-safe выдачи composite rewards.
+
+Для `power_reserve` инвариант: unlock проверяется по текущему `unspentUpgradePoints`, а UI одновременно показывает `current` и `reservePowerPeakCycle` (пик за цикл). Для `chip_crafting` и `power_reserve` выдача наград обёрнута в atomic snapshot/rollback в `AchievementRewards.grant()`, чтобы не оставлять частично выданные composite-награды при сбое подтипа выдачи.
 
 ## Инварианты
 - Успешный ручной ремонт ограды увеличивает прогресс ровно один раз внутри `tryRepairFenceSegmentAt()` и только после фактического восстановления сегмента и списания монет: [game.js](../../../game.js#L6720-L6736)
 - `duty_shift` использует только canonical gameplay hook `addDron(level) -> processAchievementProgress('droneAcquisitions', 1)`; прямой инкремент счётчика вне runtime hook недопустим: [game.js](../../../game.js), [src/mechanics/achievements.js](../../../src/mechanics/achievements.js)
 - `track_cleanup` считает только завершённые episode attack mode и сбрасывает streak при любом реальном ремонте во время эпизода: ручной ремонт инвалидирует streak сразу, а ремонт дроном детектится через delta HP fence-сегментов до/после drone step: [game.js](../../../game.js), [src/mechanics/achievements.js](../../../src/mechanics/achievements.js)
 - `defense_order` считает завершённые episode attack mode без merge-событий; любой merge во время активного эпизода invalidate'ит streak через `invalidateDefenseOrderEpisode()`, который сразу сбрасывает `totalDefenseOrderStreak` через `resetDefenseOrderAchievementProgress()`: [game.js](../../../game.js#L3448-L3458)
+- `chip_combinator_1` больше не опирается на `chips.crafted`: прогресс `chipComboTriples` идёт только от `hangar.slotChipInstalled` при `conditionMet=true` (в одной ячейке установлены 3 больших чипа в треугольные слоты и активны 3 модификатора). `chip_creator_1` сохраняет progress-path через `chips.crafted` и `chipCraftFromFragments`: [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js), [game.js](../../../game.js)
 - Прогресс технологий считается по уникальным `techId` через `achievements.completedModifierTechs`; повторный callback для уже изученной технологии не должен повторно повышать `totalModifierTechUnlocks` или выдавать reward; `recordModifierTechUnlock()` всегда вызывает `recalculateUnlocks()` даже если `alreadyTracked === true`, чтобы fixить inference race при `ensureState`: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L711-L731), [game.js](../../../game.js#L9348-L9373)
 - One-shot rewards живут в `achievements.rewarded`; `ensureState()`, `restoreFullState()`, `applySavedProgress()` и `recalculateUnlocks()` обязаны сохранять эту карту до backfill-а наград, иначе self-managed rewards задвоятся: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L331-L391), [game.js](../../../game.js#L5150-L5200), [game.js](../../../game.js#L5376-L5412)
 - `ACHIEVEMENT_FAMILIES` и `flattenAchievementFamilies()` задают canonical порядок семейств и уровней достижений; UI и runtime должны брать определения только из уже flatten'нутого списка `ACHIEVEMENTS`, не собирая family-order заново: [src/mechanics/achievements.js](../../../src/mechanics/achievements.js#L4-L183)

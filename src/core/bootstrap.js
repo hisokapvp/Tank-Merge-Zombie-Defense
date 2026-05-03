@@ -74,11 +74,20 @@
     var saveViewConfig = {
       manualOnly: false,
       exitAfterSave: false,
+      disableBackButton: false,
     };
 
     function resetSaveViewConfig() {
       saveViewConfig.manualOnly = false;
       saveViewConfig.exitAfterSave = false;
+      saveViewConfig.disableBackButton = false;
+    }
+
+    function syncSaveBackButtonState() {
+      if (!opts.ui.smallMenuSaveBack) return;
+      var disabled = !!saveViewConfig.disableBackButton;
+      opts.ui.smallMenuSaveBack.disabled = disabled;
+      opts.ui.smallMenuSaveBack.setAttribute('aria-disabled', disabled ? 'true' : 'false');
     }
 
     function isAutoSlot(slot, index) {
@@ -398,6 +407,7 @@
 
     function openMainMenuView() {
       resetSaveViewConfig();
+      syncSaveBackButtonState();
       setSlotViewsOpen('none');
       clearConfirmSelectedState();
       setMenuView('main');
@@ -408,6 +418,8 @@
       var cfg = config && typeof config === 'object' ? config : {};
       saveViewConfig.manualOnly = !!cfg.manualOnly;
       saveViewConfig.exitAfterSave = !!cfg.exitAfterSave;
+      saveViewConfig.disableBackButton = !!cfg.disableBackButton;
+      syncSaveBackButtonState();
       setSlotViewsOpen('save');
       renderSlotRows('save');
       if (typeof opts.updateBigMenuLoadState === 'function') {
@@ -506,7 +518,7 @@
         },
         openCriticalSaveView: function () {
           markSmallMenuButtonActive('menuSave');
-          openSaveView({ manualOnly: true, exitAfterSave: true });
+          openSaveView({ manualOnly: true, exitAfterSave: true, disableBackButton: true });
           opts.setMenuOpen(true);
         },
       });
@@ -626,6 +638,7 @@
     });
 
     opts.ui.smallMenuSaveBack && opts.ui.smallMenuSaveBack.addEventListener('click', function () {
+      if (saveViewConfig.disableBackButton) return;
       openMainMenuView();
     });
     opts.ui.smallMenuLoadBack && opts.ui.smallMenuLoadBack.addEventListener('click', function () {

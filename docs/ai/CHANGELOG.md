@@ -1,5 +1,18 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-05-03
+- **Achievements: solo-pipeline-yandex-vk batch #1 (indices 1..5) — новые семьи `drone_brigadier` + `optimizer`, idempotent reward claiming (`src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `game.js`, `src/i18n/{ru,en}.json`, `src/i18n/fallbackStrings.js`, `docs/ai/SYSTEMS/achievements.md`)**
+  - Добавлены достижения: `drone_brigadier_1/2` (максимальный уровень дрона 5/10) и `optimizer_1/2/3` (все 15 ячеек ангара имеют минимум 1/2/3 установленных чипа).
+  - Прогресс считается по runtime state, без новых инкрементальных трекеров: `droneMaxLevel` берётся из main+underground drones, `hangarCellChipTier` — из минимального числа чипов среди первых 15 ячеек `state.hangarCells`.
+  - Выдача наград остаётся идемпотентной через `achievements.rewarded`, новые reward-modes добавлены в `REWARD_TABLE` и включены в `ATOMIC_REWARD_MODES` для rollback-safe composite grants.
+  - i18n синхронизация выполнена в `ru/en/fallback` для title/desc/reward ключей новых достижений.
+
+## 2026-05-02
+- **Документация: one-shot shared post-merge update после join для локализованного underground hangar drone preview scaling (`src/ui/undergroundHangarUI.js`)**
+  - Обновлён `docs/ai/SYSTEMS/ui.md`.
+  - Зафиксированы: `drawDroneSpriteCanvas()` в `src/ui/undergroundHangarUI.js` применяет `undergroundPreviewScaleBoost` только в preview render seam (rail/storage canvases), компенсируя shared atlas-scale локально и не изменяя глобальный `DronSprites.config.scale` для остального runtime.
+  - Зафиксированы: изменение не затрагивает layout-контракт rail cells; размеры ячеек остаются owner'ом CSS-переменных `--ugh-cell-size` и `--ugh-drone-cell-size`, а увеличенный preview рендерится внутри текущих cell bounds без resize rail-сетки.
+
 ## 2026-04-28
 - **Hot-path perf-deep: solo-pipeline-yandex-vk batch #4 item bonus-1 — off-screen culling, spatial hash для AOE collision, DOM HUD diff (`game.js`, `docs/ai/SYSTEMS/perf.md`)**
   - Цель: продолжение bonus-1 после rework cycle 3 — user feedback «немного, но всё ещё лагает». Применены top-3 highest-impact оптимизации поверх предыдущих 7 zero-alloc правок. Сохранено поведение 1:1, gameplay/balance numerics не тронуты. Тесты: 83/85 (T4-8/T4-12 baseline preserved).

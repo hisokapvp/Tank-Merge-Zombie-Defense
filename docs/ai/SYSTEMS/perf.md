@@ -158,3 +158,38 @@ Batch 3 of `solo-pipeline-yandex-vk` (items 9, 10, 11) добавил render+sta
 - **Per-impact local AoE buffer**: внутри `impactAt` массив индексов жертв AOE — это **per-call local** копия (`_aoeCandidates.slice(0, _aoeCount)`), а не reused module-scope buffer. Снимок изолирован от любых re-entrant grid-query из `talentsApi.onHit` / chip onHit callbacks **и** корректен под будущие async/parallelized impactAt-варианты (web worker), где shared module-scope буфер сразу бы поломался.
 - **Что НЕ делать**: не возвращать old pattern `const _impactAoeIndices = []` в module scope; не строить full per-impact AoE pool с reuse-инфраструктурой, пока `impactAt` остаётся sync (postmortem item 12 — преждевременная оптимизация без runtime-выгоды). Lightweight slice — каноничный путь.
 - **Order preservation**: `queryZombieIndicesInRadius` сортирует ascending; `slice` сохраняет порядок 1:1. Менять sort на bucket-order запрещено (talents side-effects порядок-чувствительны — hard invariant).
+
+## Канон mass-death batching (solo-pipeline-yandex-vk#4 / 2026-05-01)
+
+Batch 4 закрепляет общий паттерн для волн с большим количеством одновременных смертей (K≈80), чтобы убрать burst-lag без изменения gameplay outcome.
+
+### 1. Death-batch coalescer
+
+- **Split contract**: `startZombieDying()` остаётся orchestration wrapper, а state mutation + side-effects разделены на `markZombieDying()` и `flushZombieDeathFx()`.
+- **Назначение split**: `markZombieDying()` выполняет только перевод сущности в `dying` и подготовку runtime-полей; `flushZombieDeathFx()` батчево применяет эффекты/телеметрию/achievement delta после обработки kill-пула.
+- **Почему это важно**: per-kill side-effects внутри одного цикла дают frame spikes из-за fan-out на частицы, телеметрию и доп. проходы.
+
+### 2. Particle pool интеграция
+
+- `ObjectPool` в `src/perf/objectPool.js` — canonical allocator для burst-частиц в массовых смертях.
+- В hot-path запрещено создавать новый particle-object на каждую смерть при наличии свободных объектов в pool.
+- Release объекта обратно в pool выполняется после окончания life и reset transient-полей.
+
+### 3. Frame burst budget + cluster distribution (Variant A)
+
+- Runtime budget задаётся через `BAL.deathBurstFrameBudget`.
+- **Variant A**: индивидуальные burst-события на каждую смерть сохраняются; меняется только распределение количества частиц на kill внутри budget.
+- Cluster detection (centroid+bbox, `deathClusterRadiusPx`) используется для перераспределения budget внутри текущего кадра, а не для замены на «один общий burst».
+
+### 4. In-place compaction canon для mass-death связанных массивов
+
+- `cleanupKills`: write-index compaction вместо rebuild через `alive=[]`.
+- `stepDamageNumbers`: write-index compaction вместо `next=[]`.
+- `drawDecorZombieLayer`: pooled render records (module-scope reuse + `length=0`) вместо per-frame object literals.
+- `addDamageNumber`: ring-buffer overwrite (`writeIndex % MAX_DAMAGE_NUMBERS`) вместо `shift()`.
+
+### 5. Не нарушать
+
+- Не переносить gameplay damage/kill outcome под FxDensity gates: FxDensity ограничивает только visual load.
+- Не возвращать per-kill telemetry payload literals в mass-death loop, где достаточно агрегированных counters.
+- Не ломать draw-invariant: render path остаётся без мутации gameplay-state.

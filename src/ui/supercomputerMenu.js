@@ -1279,6 +1279,18 @@
       return num.toFixed(3);
     }
 
+    function isDronCostMultAtFloor(level, pendingEntry) {
+      var safePending = normalizePendingEntry(pendingEntry, DRON_STAT_KEYS);
+      var previewApplied = {
+        moveSpeedPxSec: toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level, 'moveSpeedPxSec')) + safePending.moveSpeedPxSec,
+        repairSpeedMult: toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level, 'repairSpeedMult')) + safePending.repairSpeedMult,
+        costMult: toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level, 'costMult')) + safePending.costMult,
+      };
+      var previewStats = getDronStatsForLevel(level, previewApplied) || {};
+      var costMult = Number(previewStats.costMult);
+      return Number.isFinite(costMult) && costMult <= 0.25 + 1e-9;
+    }
+
     function normalizeRootTilesSize() {
       var tilesWrap = documentObj.querySelector('#supercomputerMenuOverlay .scRootTiles');
       if (!tilesWrap) return;
@@ -1622,6 +1634,11 @@
         if (DRON_STAT_KEYS.indexOf(statKey) === -1) return;
         if (action === 'plus') {
           var pending = getPendingStatValue(state.pendingDronUpgradesByLevel, level, statKey, DRON_STAT_KEYS);
+          var pendingEntry = normalizePendingEntry(getPendingEntry(state.pendingDronUpgradesByLevel, level, DRON_STAT_KEYS), DRON_STAT_KEYS);
+          if (statKey === 'costMult' && isDronCostMultAtFloor(level, pendingEntry)) {
+            renderDronsPanel();
+            return;
+          }
           var appliedLevel = toSafeNonNegativeInt(getAppliedDronUpgradeLevel(level, statKey));
           var nextCost = toSafeNonNegativeInt(getDronUpgradeStepCost(level, statKey, appliedLevel + pending));
           var available = toSafeNonNegativeInt(getDamagePoints());
@@ -1782,6 +1799,10 @@
           for (var dronStatIndex = 0; dronStatIndex < dronRenderStats.length; dronStatIndex++) {
             var dronStat = dronRenderStats[dronStatIndex];
             var dronCost = costByStat[dronStat.statKey];
+            var canAdd = dronCost > 0 && (availablePoints - reservedPoints) >= dronCost;
+            if (dronStat.statKey === 'costMult' && isDronCostMultAtFloor(level, pendingEntry)) {
+              canAdd = false;
+            }
             rowsHtml += buildStatControlHtml({
               family: 'drones',
               level: level,
@@ -1790,7 +1811,7 @@
               applied: appliedByStat[dronStat.statKey],
               pending: pendingEntry[dronStat.statKey],
               cost: dronCost,
-              canAdd: dronCost > 0 && (availablePoints - reservedPoints) >= dronCost,
+              canAdd: canAdd,
               canApplyPending: canApply,
               actionAttr: dronActionAttr,
             });

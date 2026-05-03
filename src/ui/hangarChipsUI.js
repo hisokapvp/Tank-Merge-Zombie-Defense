@@ -1508,15 +1508,33 @@
     try {
       var ev = global.Game && global.Game.Events;
       if (!ev || typeof ev.emit !== 'function') return;
+      var normalizedReason = reason || 'mutation';
       ev.emit('playerChips.changed', {
-        reason: reason || 'mutation',
+        reason: normalizedReason,
         changedIds: Array.isArray(changedIds) ? changedIds.slice() : [],
       });
+      if (normalizedReason === 'craft') {
+        ev.emit('chips.crafted', {
+          changedIds: Array.isArray(changedIds) ? changedIds.slice() : [],
+        });
+      }
+    } catch (_) {}
+  }
+
+  function notifyAchievementRuntimeHooks() {
+    try {
+      var runtime = global.Game;
+      if (runtime && typeof runtime._onHangarSlotChipInstalledForAchievements === 'function') {
+        runtime._onHangarSlotChipInstalledForAchievements();
+      }
+      if (runtime && typeof runtime.recalculateAchievementsAndQueuePopups === 'function') {
+        runtime.recalculateAchievementsAndQueuePopups();
+      }
     } catch (_) {}
   }
 
   /** Add a chip to player's inventory. Each chip is a separate entry (no stacking). */
-  function addPlayerChip(chipDef, level) {
+  function addPlayerChip(chipDef, level, reason) {
     var chips = ensurePlayerChips();
     var lvl = (Number.isFinite(level) && level >= 1) ? Math.floor(level) : 1;
     var mods = chipDef.modIds ? chipDef.modIds.slice() : [];
@@ -1534,7 +1552,7 @@
       count: 1
     };
     chips.push(entry);
-    _emitPlayerChipsChanged('add', [chipDef.chipId]);
+    _emitPlayerChipsChanged(typeof reason === 'string' && reason ? reason : 'add', [chipDef.chipId]);
     return entry;
   }
 
@@ -2128,6 +2146,26 @@
 
     var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl, invEntry.modIds);
     if (ok) {
+      notifyAchievementRuntimeHooks();
+      try {
+        var ev = global.Game && global.Game.Events;
+        if (ev && typeof ev.emit === 'function') {
+          var installedChipCount =
+            (cell.redSlots && cell.redSlots.slot1 ? 1 : 0)
+            + (cell.redSlots && cell.redSlots.slot2 ? 1 : 0)
+            + (cell.yellowSlots && cell.yellowSlots.slot1 ? 1 : 0)
+            + (cell.yellowSlots && cell.yellowSlots.slot2 ? 1 : 0)
+            + (cell.yellowSlots && cell.yellowSlots.slot3 ? 1 : 0)
+            + (cell.yellowSlots && cell.yellowSlots.slot4 ? 1 : 0);
+          var activeModifiersCount = Array.isArray(cell.activeModifiers) ? cell.activeModifiers.length : 0;
+          ev.emit('hangar.slotChipInstalled', {
+            cellIndex: _selectedCell,
+            installedChipCount: installedChipCount,
+            activeModifiersCount: activeModifiersCount,
+            conditionMet: installedChipCount >= 3,
+          });
+        }
+      } catch (_) {}
       /* Remove from inventory */
       activateInstalledSlotActions(_selectedSlot.type, _selectedSlot.slotId);
       removePlayerChipOne(chipId, lvl);
@@ -2162,6 +2200,7 @@
     }
 
     h.removeChip(cell, slotType, slotId);
+    notifyAchievementRuntimeHooks();
     setInstallSlotSelection(slotType, slotId);
     render();
   }
@@ -2190,6 +2229,7 @@
           var cell = cells[_selectedCell];
           if (cell) {
             h.rotateChip(cell, actType, actSlot, dir);
+            notifyAchievementRuntimeHooks();
             render();
           }
         }
@@ -4306,7 +4346,7 @@
       var chipDef = _resolveCraftResultChipDef(craftPayload.result);
 
       /* Add assembled chip to inventory at level 1 */
-      addPlayerChip(chipDef, 1);
+      addPlayerChip(chipDef, 1, 'craft');
 
       _resetCraftSlots();
       renderChipCraftPanel();
@@ -4674,6 +4714,7 @@
           if (!invE2) return;
           var ok2 = h2.installChip(cell, slotType, slotId, chipDef, sd.level, invE2.modIds);
           if (ok2) {
+            notifyAchievementRuntimeHooks();
             removePlayerChipOne(sd.chipId, sd.level);
             activateInstalledSlotActions(slotType, slotId);
             render();

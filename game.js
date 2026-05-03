@@ -477,6 +477,8 @@ const BAL = {
   tankSpriteRotOffset: -Math.PI/2,
 
   maxParticles: 1600,
+  deathBurstFrameBudget: 240,
+  deathClusterRadiusPx: 256,
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
 
@@ -2517,7 +2519,7 @@ function getDronRuntimeConfig(){
     levels[lvl] = {
       moveSpeedPxSec: Number.isFinite(appliedStats.moveSpeedPxSec) ? Math.max(0, appliedStats.moveSpeedPxSec) : Math.max(0, baseStats.moveSpeedPxSec),
       repairSpeedMult: Number.isFinite(appliedStats.repairSpeedMult) ? Math.max(0, appliedStats.repairSpeedMult) : Math.max(0, baseStats.repairSpeedMult),
-      costMult: Number.isFinite(appliedStats.costMult) ? Math.max(0.01, appliedStats.costMult) : Math.max(0.01, baseStats.costMult),
+      costMult: Number.isFinite(appliedStats.costMult) ? Math.max(DRON_REPAIR_COST_MIN_MULT, appliedStats.costMult) : Math.max(DRON_REPAIR_COST_MIN_MULT, baseStats.costMult),
     };
   }
   if (!Object.keys(levels).length && sourceLevels && typeof sourceLevels === 'object') {
@@ -3589,6 +3591,7 @@ function getDronUpgradeStepCost(level, statKey, appliedIndex){
 // values like 1.000, 0.995, 0.990 ... 0.905 when the cost multiplier is decremented.
 const DRON_REPAIR_SPEED_STEP_PER_UPGRADE = 0.005;
 const DRON_REPAIR_COST_STEP_PER_UPGRADE = 0.005;
+const DRON_REPAIR_COST_MIN_MULT = 0.25;
 
 function getDronUpgradePercentsForLevel(level){
   const row = getCannonUpgradeRow(level) || [];
@@ -3603,7 +3606,7 @@ function getDronUpgradePercentsForLevel(level){
 function buildDronStatsWithApplied(baseStats, level, applied){
   const baseMove = Number.isFinite(baseStats && baseStats.moveSpeedPxSec) ? Math.max(0, Number(baseStats.moveSpeedPxSec)) : 0;
   const baseRepair = Number.isFinite(baseStats && baseStats.repairSpeedMult) ? Math.max(0, Number(baseStats.repairSpeedMult)) : 0;
-  const baseCost = Number.isFinite(baseStats && baseStats.costMult) ? Math.max(0.01, Number(baseStats.costMult)) : 1;
+  const baseCost = Number.isFinite(baseStats && baseStats.costMult) ? Math.max(DRON_REPAIR_COST_MIN_MULT, Number(baseStats.costMult)) : 1;
   const appliedCounts = Number.isFinite(applied)
     ? {
         moveSpeedPxSec: Math.max(0, Math.floor(applied)),
@@ -3622,7 +3625,7 @@ function buildDronStatsWithApplied(baseStats, level, applied){
   return {
     moveSpeedPxSec: moveSpeedPxSec,
     repairSpeedMult: Math.max(0, repairSpeedMult),
-    costMult: Math.max(0.01, costMulRaw),
+    costMult: Math.max(DRON_REPAIR_COST_MIN_MULT, costMulRaw),
   };
 }
 
@@ -3635,7 +3638,7 @@ function getDronStatsForLevel(level, appliedOverride){
   const baseStats = {
     moveSpeedPxSec: Number.isFinite(raw && raw.moveSpeedPxSec) ? Math.max(0, raw.moveSpeedPxSec) : 0,
     repairSpeedMult: Number.isFinite(raw && raw.repairSpeedMult) ? Math.max(0, raw.repairSpeedMult) : 0,
-    costMult: Number.isFinite(raw && raw.costMult) ? Math.max(0.01, raw.costMult) : 1,
+    costMult: Number.isFinite(raw && raw.costMult) ? Math.max(DRON_REPAIR_COST_MIN_MULT, raw.costMult) : 1,
   };
   const applied = Number.isFinite(appliedOverride)
     ? Math.max(0, Math.floor(appliedOverride))
@@ -3832,6 +3835,7 @@ function ensureAchievementsState(){
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
   if (!state.achievements.rewarded || typeof state.achievements.rewarded !== 'object') state.achievements.rewarded = {};
   if (!state.achievements.completedModifierTechs || typeof state.achievements.completedModifierTechs !== 'object') state.achievements.completedModifierTechs = {};
+  if (!Array.isArray(state.achievements.rewardHistory)) state.achievements.rewardHistory = [];
   normalizeAchievementPopupQueueInPlace(state.achievements.popupQueue);
   if (!Number.isFinite(state.achievements.totalPurchased)) state.achievements.totalPurchased = 0;
   if (!Number.isFinite(state.achievements.totalMerges)) state.achievements.totalMerges = 0;
@@ -3840,6 +3844,9 @@ function ensureAchievementsState(){
   if (!Number.isFinite(state.achievements.totalDroneAcquisitions)) state.achievements.totalDroneAcquisitions = 0;
   if (!Number.isFinite(state.achievements.totalNoRepairAttackWaveStreak)) state.achievements.totalNoRepairAttackWaveStreak = 0;
   if (!Number.isFinite(state.achievements.totalDefenseOrderStreak)) state.achievements.totalDefenseOrderStreak = 0;
+  if (!Number.isFinite(state.achievements.totalChipComboTriples)) state.achievements.totalChipComboTriples = 0;
+  if (!Number.isFinite(state.achievements.totalChipCraftFromFragments)) state.achievements.totalChipCraftFromFragments = 0;
+  if (!Number.isFinite(state.achievements.reservePowerPeakCycle)) state.achievements.reservePowerPeakCycle = 0;
   return state.achievements;
 }
 
@@ -3915,6 +3922,8 @@ function processAchievementProgress(progressType, deltaCount){
     else if (type === 'droneAcquisitions') ach.totalDroneAcquisitions += count;
     else if (type === 'noRepairAttackWaveStreak') ach.totalNoRepairAttackWaveStreak += count;
     else if (type === 'defenseOrderStreak') { if (!Number.isFinite(ach.totalDefenseOrderStreak)) ach.totalDefenseOrderStreak = 0; ach.totalDefenseOrderStreak += count; }
+    else if (type === 'chipComboTriples') { if (!Number.isFinite(ach.totalChipComboTriples)) ach.totalChipComboTriples = 0; ach.totalChipComboTriples += count; }
+    else if (type === 'chipCraftFromFragments') { if (!Number.isFinite(ach.totalChipCraftFromFragments)) ach.totalChipCraftFromFragments = 0; ach.totalChipCraftFromFragments += count; }
     else if (type === 'moneyEarned') { if (!Number.isFinite(ach.totalMoneyEarned)) ach.totalMoneyEarned = 0; ach.totalMoneyEarned += count; }
     else if (type === 'perfectFenceWaves') { if (!Number.isFinite(ach.totalPerfectFenceWaves)) ach.totalPerfectFenceWaves = 0; ach.totalPerfectFenceWaves += count; }
     else if (type === 'hangarMasterLevel') { if (!Number.isFinite(ach.totalHangarMasterLevel)) ach.totalHangarMasterLevel = 0; ach.totalHangarMasterLevel += count; }
@@ -3925,6 +3934,10 @@ function processAchievementProgress(progressType, deltaCount){
 }
 
 let lastAchievementCoinsSync = Number.NaN;
+let lastAchievementReserveSync = Number.NaN;
+let lastAchievementReservePeakSync = Number.NaN;
+let lastAchievementDroneMaxSync = Number.NaN;
+let achievementChipCraftEventsBound = false;
 
 function syncCurrentBalanceAchievements(){
   const currentCoins = clampDevInt(state && state.coins);
@@ -3935,6 +3948,87 @@ function syncCurrentBalanceAchievements(){
   if (currentCoins === lastAchievementCoinsSync) return;
   lastAchievementCoinsSync = currentCoins;
   recalculateAchievementsAndQueuePopups();
+}
+
+function getCurrentUnspentUpgradePoints(){
+  return clampDevInt(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
+}
+
+function syncReservePowerAchievements(){
+  if (!(AchievementsApi && AchievementsApi.recalculateUnlocks)) {
+    lastAchievementReserveSync = Number.NaN;
+    lastAchievementReservePeakSync = Number.NaN;
+    return;
+  }
+  const currentReserve = getCurrentUnspentUpgradePoints();
+  const ach = ensureAchievementsState();
+  const previousPeak = clampDevInt(ach.reservePowerPeakCycle);
+  if (currentReserve > previousPeak) ach.reservePowerPeakCycle = currentReserve;
+  const nextPeak = clampDevInt(ach.reservePowerPeakCycle);
+  if (currentReserve === lastAchievementReserveSync && nextPeak === lastAchievementReservePeakSync) return;
+  lastAchievementReserveSync = currentReserve;
+  lastAchievementReservePeakSync = nextPeak;
+  recalculateAchievementsAndQueuePopups();
+}
+
+function syncDroneMaxLevelAchievements(){
+  if (!(AchievementsApi && AchievementsApi.recalculateUnlocks)) {
+    lastAchievementDroneMaxSync = Number.NaN;
+    return;
+  }
+  const currentDroneMax = computeCurrentDroneMaxLevel();
+  if (currentDroneMax === lastAchievementDroneMaxSync) return;
+  lastAchievementDroneMaxSync = currentDroneMax;
+  if (currentDroneMax > 0) {
+    processAchievementProgress('droneMaxLevel', currentDroneMax);
+  }
+}
+
+function checkChipCombinatorAchievement() {
+  if (AchievementsApi && typeof AchievementsApi.getProgressValue === 'function') {
+    var existing = AchievementsApi.getProgressValue(state, 'chipComboTriples');
+    if (Number.isFinite(existing) && existing >= 1) return;
+  }
+  var HC = window.Game && window.Game.HangarChips;
+  if (!HC || typeof HC.calculateActiveModifiers !== 'function') return;
+  var HUI = window.Game && window.Game.HangarChipsUI;
+  if (!HUI || typeof HUI.getCells !== 'function') return;
+  var cells = HUI.getCells();
+  if (!Array.isArray(cells)) return;
+  for (var _ci = 0; _ci < cells.length; _ci++) {
+    var _cell = cells[_ci];
+    if (!_cell) continue;
+    // Calculate active modifiers for this cell (returns {modifiers: [], redMatchSuccess, ...})
+    var _activeResult = HC.calculateActiveModifiers(_cell);
+    if (_activeResult && Array.isArray(_activeResult.modifiers)) {
+      // Check if this cell has >= 3 active modifiers
+      if (_activeResult.modifiers.length >= 3) {
+        processAchievementProgress('chipComboTriples', 1);
+        return;
+      }
+    }
+  }
+}
+
+function onHangarSlotChipInstalledForAchievements(){
+  checkHangarOptimizerAchievement();
+  checkChipCombinatorAchievement();
+}
+if (window.Game) {
+  window.Game._onHangarSlotChipInstalledForAchievements = onHangarSlotChipInstalledForAchievements;
+}
+
+function bindAchievementChipCraftEvents(){
+  if (achievementChipCraftEventsBound) return;
+  const eventsApi = window.Game && window.Game.Events;
+  if (!eventsApi || typeof eventsApi.on !== 'function') return;
+  eventsApi.on('chips.crafted', function(){
+    processAchievementProgress('chipCraftFromFragments', 1);
+  });
+  eventsApi.on('hangar.slotChipInstalled', function(){
+    onHangarSlotChipInstalledForAchievements();
+  });
+  achievementChipCraftEventsBound = true;
 }
 
 function clampDevInt(value){
@@ -3956,6 +4050,8 @@ function getSerializedAchievementStats(){
     perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
     hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
     defenseOrderStreakCount: clampDevInt(Number.isFinite(stats.defenseOrderStreakCount) ? stats.defenseOrderStreakCount : ach.totalDefenseOrderStreak),
+    chipComboTriplesCount: clampDevInt(Number.isFinite(stats.chipComboTriplesCount) ? stats.chipComboTriplesCount : ach.totalChipComboTriples),
+    chipCraftFromFragmentsCount: clampDevInt(Number.isFinite(stats.chipCraftFromFragmentsCount) ? stats.chipCraftFromFragmentsCount : ach.totalChipCraftFromFragments),
   };
 }
 
@@ -3972,6 +4068,8 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
     if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
     if (Number.isFinite(savedStats.defenseOrderStreakCount)) state.stats.defenseOrderStreakCount = clampDevInt(savedStats.defenseOrderStreakCount);
+    if (Number.isFinite(savedStats.chipComboTriplesCount)) state.stats.chipComboTriplesCount = clampDevInt(savedStats.chipComboTriplesCount);
+    if (Number.isFinite(savedStats.chipCraftFromFragmentsCount)) state.stats.chipCraftFromFragmentsCount = clampDevInt(savedStats.chipCraftFromFragmentsCount);
   }
   ensureAchievementsState();
 }
@@ -3983,6 +4081,7 @@ function recalculateAchievementsAndQueuePopups(){
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
   return unlocked;
 }
+GameApi.recalculateAchievementsAndQueuePopups = recalculateAchievementsAndQueuePopups;
 
 const noRepairAttackWaveRuntime = {
   activeEpisodeKey: null,
@@ -4182,6 +4281,101 @@ function computeHangarCellCountForMinLevel(minLevel){
     if (cell && cell.tank && cell.tank.level >= minLevel) count++;
   }
   return count;
+}
+
+function countInstalledChipsInHangarCell(cell){
+  if (!cell || typeof cell !== 'object') return 0;
+  if (Array.isArray(cell.activeModifiers)) {
+    return Math.max(0, Math.floor(cell.activeModifiers.length));
+  }
+  let installed = 0;
+  const red = cell.redSlots;
+  const yellow = cell.yellowSlots;
+  if (red && typeof red === 'object') {
+    if (red.slot1) installed += 1;
+    if (red.slot2) installed += 1;
+  }
+  if (yellow && typeof yellow === 'object') {
+    if (yellow.slot1) installed += 1;
+    if (yellow.slot2) installed += 1;
+    if (yellow.slot3) installed += 1;
+    if (yellow.slot4) installed += 1;
+  }
+  return installed;
+}
+
+function getAchievementHangarCells(){
+  const HUI = window.Game && window.Game.HangarChipsUI;
+  if (HUI && typeof HUI.getCells === 'function') {
+    const cells = HUI.getCells();
+    if (Array.isArray(cells)) return cells;
+  }
+  return Array.isArray(state.hangarCells) ? state.hangarCells : [];
+}
+
+function computeHangarOptimizerLevel(){
+  const cells = getAchievementHangarCells();
+  if (cells.length < 15) return 0;
+  const maxCells = Math.min(cells.length, 15);
+  let minInstalled = Number.MAX_SAFE_INTEGER;
+  for (let i = 0; i < maxCells; i++) {
+    const installed = countInstalledChipsInHangarCell(cells[i]);
+    if (installed < minInstalled) minInstalled = installed;
+  }
+  if (minInstalled === Number.MAX_SAFE_INTEGER) return 0;
+  return Math.max(0, Math.min(3, Math.floor(minInstalled)));
+}
+
+function computeHangarCellsWithMinChipCount(minChipCount){
+  const threshold = Math.max(1, Math.floor(Number(minChipCount) || 1));
+  const cells = getAchievementHangarCells();
+  const maxCells = Math.min(cells.length, 15);
+  let count = 0;
+  for (let i = 0; i < maxCells; i++) {
+    if (countInstalledChipsInHangarCell(cells[i]) >= threshold) count += 1;
+  }
+  return count;
+}
+
+function computeCurrentDroneMaxLevel(){
+  let maxLevel = 0;
+  if (Array.isArray(state.drones)) {
+    for (let i = 0; i < state.drones.length; i++) {
+      const drone = state.drones[i];
+      if (!drone || !Number.isFinite(drone.level)) continue;
+      if (drone.level > maxLevel) maxLevel = Math.floor(drone.level);
+    }
+  }
+  const undergroundCells = state && state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)
+    ? state.undergroundHangar.cells
+    : null;
+  if (undergroundCells) {
+    for (let ci = 0; ci < undergroundCells.length; ci++) {
+      const cell = undergroundCells[ci];
+      const drone = cell && cell.drone ? cell.drone : null;
+      if (!drone || !Number.isFinite(drone.level)) continue;
+      if (drone.level > maxLevel) maxLevel = Math.floor(drone.level);
+    }
+  }
+  return Math.max(0, maxLevel);
+}
+
+function getCurrentOptimizerTierFromUnlocks(){
+  const ach = ensureAchievementsState();
+  if (!ach || !ach.unlocked || typeof ach.unlocked !== 'object') return 0;
+  if (ach.unlocked.optimizer_3) return 3;
+  if (ach.unlocked.optimizer_2) return 2;
+  if (ach.unlocked.optimizer_1) return 1;
+  return 0;
+}
+
+function checkHangarOptimizerAchievement(){
+  const level = computeHangarOptimizerLevel();
+  if (level <= 0) return;
+  const currentTier = getCurrentOptimizerTierFromUnlocks();
+  if (level > currentTier) {
+    processAchievementProgress('hangarCellChipTier', level);
+  }
 }
 
 function checkHangarMasterAchievement(){
@@ -8315,7 +8509,17 @@ function zombieFenceLimit(z){
   return outerLimit;
 }
 
-function startZombieDying(z){
+// ---------- Death-batch coalescer (Phase 1 / solo-pipeline-yandex-vk#1) ----------
+// Pre-allocated kill-batch buffer — reused each frame, grows to steady-state once.
+// No new Array/Object allocation per kill once buffer reaches steady-state capacity.
+var _killBatchBuf = [];       // zombie refs accumulated this frame
+var _killBatchLen = 0;        // write-index into _killBatchBuf
+var _killBatchCoinsTotal = 0; // sum of killCoins accumulated this frame
+
+// markZombieDying — state mutation only (idempotent guard, animation setup, corpse
+// timing, coins/kills/XP). Side-effects (telemetry, achievements, burst, CornerTowers)
+// are deferred to flushZombieDeathFx() which runs once per frame after the kill loop.
+function markZombieDying(z) {
   if (z.state === 'dying') return;
   z.state = 'dying';
   z.attackState = 'walk';
@@ -8337,7 +8541,7 @@ function startZombieDying(z){
     return p || rc || null;
   };
   z.deathAnim = pickDeathAnim(commonDeath, personalDeath, Math.random());
-  
+
   z.deathFrame = 0; // current frame of death animation
   const animCfg = getZombieAnimConfig(z);
   /* Check if common was selected: compare against all variants if array */
@@ -8388,32 +8592,138 @@ function startZombieDying(z){
 
   const _killCoins = Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
   state.coins += _killCoins;
-  if (_killCoins > 0) processAchievementProgress('moneyEarned', _killCoins);
   state.kills += 1;
-  if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill');
-  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill', { level: z.level });
-  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_battle', { level: z.level });
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
   grantXP(Math.floor(baseXp * mods.xpMul * activeMul * BAL.zombieKillXpMul));
-  {
-    const _PLR = window.Game && window.Game.ProductionLineRender;
-    if (_PLR && typeof _PLR.triggerConveyorWork === 'function') {
-      _PLR.triggerConveyorWork();
-    }
+
+  // Accumulate in kill-batch buffer (index-based write — no new object per kill)
+  if (_killBatchLen < _killBatchBuf.length) {
+    _killBatchBuf[_killBatchLen] = z;
+  } else {
+    _killBatchBuf.push(z);
   }
-  const p = zombiePos(z);
-  burst(p.x, p.y, 18, 'rgba(125,255,178,.18)');
-  // CornerTowers (item 3): notify with coords relative to center (как у fenceSegments).
-  {
-    const _CT = window.Game && window.Game.CornerTowers;
-    if (_CT && typeof _CT.notifyZombieKill === 'function') {
-      _CT.notifyZombieKill(p.x - center.x, p.y - center.y);
-    }
-  }
+  _killBatchLen++;
+  _killBatchCoinsTotal += _killCoins;
 }
+
+// flushZombieDeathFx — process all kills accumulated this frame as a single batch.
+// Achievements: one additive delta call (ladder-safe: moneyEarned is a simple counter).
+// Telemetry: one event('zombieKill', K) call using the count-aware API.
+// Funnel: one trackStep('first_battle') call, no per-kill payload.
+// Burst + CornerTowers: per-kill (visual FX — cannot batch in Phase 1).
+// ProductionLineRender.triggerConveyorWork: once per batch.
+function flushZombieDeathFx() {
+  const K = _killBatchLen;
+  if (K === 0) return;
+
+  // Achievements: single additive delta (item 3)
+  if (_killBatchCoinsTotal > 0) processAchievementProgress('moneyEarned', _killBatchCoinsTotal);
+
+  // Telemetry / Funnel: K calls → 1 call each (item 4)
+  if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill', K);
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('zombieKill');
+  if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_battle');
+
+  // Per-kill FX: burst particles + CornerTowers.
+  // Phase 2: mass-death frame budget (K>8), cluster-aware budget distribution
+  // with Variant A behavior: still individual bursts per kill.
+  const _CT = window.Game && window.Game.CornerTowers;
+  const _hasCT = _CT && typeof _CT.notifyZombieKill === 'function';
+  const useBudget = K > 8;
+  let perKillBase = 18;
+  let extraBurstSlots = 0;
+  let compactCluster = false;
+
+  if (useBudget) {
+    const _FxBudget = window.Game && window.Game.FxDensity;
+    const rawBudget = Number.isFinite(BAL.deathBurstFrameBudget) ? BAL.deathBurstFrameBudget : 240;
+    let burstBudget = Math.max(0, Math.floor(rawBudget * getFxScale()));
+    if (_FxBudget && typeof _FxBudget.scaleCount === 'function') {
+      burstBudget = _FxBudget.scaleCount(burstBudget);
+    }
+
+    perKillBase = Math.max(4, Math.floor(burstBudget / K));
+    if (perKillBase > 18) perKillBase = 18;
+    const spare = burstBudget - perKillBase * K;
+    extraBurstSlots = spare > 0 ? Math.min(K, spare) : 0;
+
+    let sumX = 0;
+    let sumY = 0;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < K; i++) {
+      const z = _killBatchBuf[i];
+      const px = center.x + Math.cos(z.theta) * z.r;
+      const py = center.y + Math.sin(z.theta) * z.r;
+      sumX += px;
+      sumY += py;
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+    const centroidX = sumX / K;
+    const centroidY = sumY / K;
+    const bboxW = maxX - minX;
+    const bboxH = maxY - minY;
+    const clusterRadiusPx = Number.isFinite(BAL.deathClusterRadiusPx) ? BAL.deathClusterRadiusPx : 256;
+    compactCluster = Number.isFinite(centroidX)
+      && Number.isFinite(centroidY)
+      && bboxW < clusterRadiusPx
+      && bboxH < clusterRadiusPx;
+  }
+
+  let evenSpreadAcc = 0;
+  for (let i = 0; i < K; i++) {
+    const z = _killBatchBuf[i];
+    const px = center.x + Math.cos(z.theta) * z.r;
+    const py = center.y + Math.sin(z.theta) * z.r;
+    if (!useBudget) {
+      burst(px, py, 18, 'rgba(125,255,178,.18)');
+    } else {
+      let burstCount = perKillBase;
+      if (extraBurstSlots > 0) {
+        if (compactCluster) {
+          // Spread +1 budget increments uniformly across kills.
+          evenSpreadAcc += extraBurstSlots;
+          if (evenSpreadAcc >= K) {
+            burstCount += 1;
+            evenSpreadAcc -= K;
+          }
+        } else if (i < extraBurstSlots) {
+          burstCount += 1;
+        }
+      }
+      burstRaw(px, py, burstCount, 'rgba(125,255,178,.18)');
+    }
+    // CornerTowers: notify with coords relative to center
+    if (_hasCT) _CT.notifyZombieKill(px - center.x, py - center.y);
+  }
+
+  // ProductionLineRender: once per batch
+  const _PLR = window.Game && window.Game.ProductionLineRender;
+  if (_PLR && typeof _PLR.triggerConveyorWork === 'function') {
+    _PLR.triggerConveyorWork();
+  }
+
+  // Reset batch accumulators for next frame
+  _killBatchLen = 0;
+  _killBatchCoinsTotal = 0;
+}
+
+// startZombieDying — backward-compat thin wrapper.
+// cleanupKills calls markZombieDying + flushZombieDeathFx directly for batch efficiency.
+// This wrapper handles any direct single-kill call (external or legacy code paths).
+function startZombieDying(z){
+  markZombieDying(z);
+  flushZombieDeathFx();
+}
+
 
 function stepZombies(dt){
   const now = nowSec();
@@ -9606,6 +9916,7 @@ function chainLightning(x,y,b,opts){
 }
 
 const MAX_DAMAGE_NUMBERS = 24;
+let _damageNumberWriteIndex = 0;
 
 function formatDamageNumber(value){
   if (window.Game && window.Game.NumberFormat) return window.Game.NumberFormat.formatCompactRu(Math.round(value));
@@ -9630,9 +9941,12 @@ function addDamageNumber(x, y, value, isCrit = false){
   const cap = (_Fx && typeof _Fx.scaleCap === 'function')
     ? _Fx.scaleCap(MAX_DAMAGE_NUMBERS, 6)
     : MAX_DAMAGE_NUMBERS;
-  while (state.damageNumbers.length >= cap) state.damageNumbers.shift();
+  const arr = state.damageNumbers;
+  if (arr.length > cap) {
+    arr.length = cap;
+  }
   const jitter = 8;
-  state.damageNumbers.push({
+  const entry = {
     x: x + (Math.random() * 2 - 1) * jitter,
     y: y + (Math.random() * 2 - 1) * jitter,
     value: formatDamageNumber(value),
@@ -9640,18 +9954,33 @@ function addDamageNumber(x, y, value, isCrit = false){
     max: 1,
     vy: -28,
     isCrit: !!isCrit,
-  });
+  };
+  if (arr.length < cap) {
+    arr.push(entry);
+    _damageNumberWriteIndex = arr.length % Math.max(1, cap);
+    return;
+  }
+  if (_damageNumberWriteIndex >= cap) _damageNumberWriteIndex = 0;
+  arr[_damageNumberWriteIndex] = entry;
+  _damageNumberWriteIndex = (_damageNumberWriteIndex + 1) % Math.max(1, cap);
 }
 
 function stepDamageNumbers(dt){
-  const next = [];
-  for (const d of state.damageNumbers){
+  const arr = state.damageNumbers;
+  let w = 0;
+  for (let r = 0; r < arr.length; r++){
+    const d = arr[r];
     d.life -= dt;
     if (d.life <= 0) continue;
     d.y += d.vy * dt;
-    next.push(d);
+    arr[w++] = d;
   }
-  state.damageNumbers = next;
+  arr.length = w;
+  if (w === 0) {
+    _damageNumberWriteIndex = 0;
+  } else if (_damageNumberWriteIndex >= w) {
+    _damageNumberWriteIndex = _damageNumberWriteIndex % w;
+  }
 }
 
 // ---------- Decals (persistent effects) ----------
@@ -9786,12 +10115,19 @@ function crateHitTest(x,y){
 }
 
 // ---------- Kills / respawn ----------
+// cleanupKills — in-place write-index compaction (items 1+5).
+// Eliminates alive=[] allocation per frame.
+// Corpse-overflow clipping preserved: overflow dying zombies get TTL clipped to
+// CORPSE_OVERFLOW_FADE_SEC in the same single pass.
+// Batch side-effects fire once via flushZombieDeathFx() after the compaction loop.
 function cleanupKills(){
   const CORPSE_OVERFLOW_FADE_SEC = 0.2;
   const corpseMax = BAL.corpseMaxCount;
   let dyingCount = 0;
+  const zlen = state.zombies.length;
   if (Number.isFinite(corpseMax)){
-    for (const z of state.zombies){
+    for (let i = 0; i < zlen; i++){
+      const z = state.zombies[i];
       if (z.state !== 'dying') continue;
       const ttl = Number.isFinite(z.corpseTimerLeft) ? z.corpseTimerLeft : (Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer);
       if (ttl > 0) dyingCount++;
@@ -9799,34 +10135,59 @@ function cleanupKills(){
   }
   const limitCorpses = Number.isFinite(corpseMax) && dyingCount > corpseMax;
   let keptDying = 0;
-  const alive = [];
-  for (const z of state.zombies){
+  let w = 0; // write-index for in-place compaction — no alive=[] allocation
+  for (let i = 0; i < zlen; i++){
+    const z = state.zombies[i];
     if (z.state === 'dying'){
       const ttl = Number.isFinite(z.corpseTimerLeft) ? z.corpseTimerLeft : (Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer);
       if (ttl > 0){
         if (limitCorpses && keptDying >= corpseMax) {
+          // Clip overflow corpse TTL — same-pass, no extra loop
           const reducedTtl = Math.min(ttl, CORPSE_OVERFLOW_FADE_SEC);
           z.corpseTimerLeft = reducedTtl;
           z.corpseTimer = reducedTtl;
         } else {
           keptDying++;
         }
-        alive.push(z);
+        state.zombies[w++] = z;
       }
       continue;
     }
     if (z.hp <= 0){
-      startZombieDying(z);
-      alive.push(z);
+      markZombieDying(z); // accumulate in _killBatchBuf; flush below
+      state.zombies[w++] = z;
       continue;
     }
-    alive.push(z);
+    state.zombies[w++] = z;
   }
-  state.zombies = alive;
+  state.zombies.length = w; // in-place truncate — no new array assignment
+  flushZombieDeathFx();     // batch: achievements, telemetry, funnel, burst
   ensureZombieCount();
 }
 
+
 // ---------- Particles ----------
+function resetParticle(p){
+  p.kind = '';
+  p.x = 0;
+  p.y = 0;
+  p.r = 0;
+  p.color = '';
+  p.life = 0;
+  p.max = 0;
+  p.vx = 0;
+  p.vy = 0;
+  p.text = '';
+}
+
+const particlePool = (window.Game && window.Game.ObjectPool && window.Game.ObjectPool.create)
+  ? window.Game.ObjectPool.create({ max: 16, reset: resetParticle })
+  : null;
+
+function releaseParticle(p){
+  if (particlePool) particlePool.release(p);
+}
+
 function particle(x,y,r,color,life){
   // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 1): cap × density
   // через scaleCap. Floor=100 — minimum pool для редких но важных вспышек
@@ -9838,7 +10199,22 @@ function particle(x,y,r,color,life){
     ? _FxP.scaleCap(BAL.maxParticles, 100)
     : BAL.maxParticles;
   if (state.particles.length > cap) return;
-  state.particles.push({x,y,r,color,life,max:life,vx:(Math.random()*2-1)*40,vy:(Math.random()*2-1)*40});
+  const _p = particlePool ? particlePool.acquire() : {};
+  _p.kind = 'particle';
+  _p.x = x;
+  _p.y = y;
+  _p.r = r;
+  _p.color = color;
+  _p.life = life;
+  _p.max = life;
+  _p.vx = (Math.random() * 2 - 1) * 40;
+  _p.vy = (Math.random() * 2 - 1) * 40;
+  _p.text = '';
+  state.particles.push(_p);
+}
+
+function burstRaw(x, y, count, color) {
+  for (let i = 0; i < count; i++) particle(x, y, Math.random() * 2.6 + 1.0, color, Math.random() * 0.30 + 0.14);
 }
 
 function burst(x,y,count,color){
@@ -9850,7 +10226,7 @@ function burst(x,y,count,color){
   const density = (_FxB && typeof _FxB.getDensity === 'function') ? _FxB.getDensity() : 1;
   if (density <= 0) return;
   const scaledCount = Math.max(1, Math.round(count * scale * density));
-  for (let i=0;i<scaledCount;i++) particle(x,y,Math.random()*2.6+1.0,color,Math.random()*0.30+0.14);
+  burstRaw(x, y, scaledCount, color);
 }
 
 function popText(x,y,text,color){
@@ -9872,7 +10248,10 @@ function stepParticles(dt){
   for (let _r = 0; _r < arr.length; _r++){
     const p = arr[_r];
     p.life -= dt;
-    if (p.life <= 0) continue;
+    if (p.life <= 0) {
+      releaseParticle(p);
+      continue;
+    }
     if (p.kind === 'text'){
       p.y += (p.vy||-20)*dt;
       arr[_w++] = p;
@@ -10685,6 +11064,13 @@ function restartSimulationPartial(){
 
 function applyCriticalRestartPostLoad(){
   clearAllTanksFromCells(state);
+  // Clear tanks from underground hangar cells so only 1 lvl-1 tank remains after restart
+  if (state.undergroundHangar && Array.isArray(state.undergroundHangar.cells)) {
+    for (var _ughI = 0; _ughI < state.undergroundHangar.cells.length; _ughI++) {
+      var _ughCell = state.undergroundHangar.cells[_ughI];
+      if (_ughCell) _ughCell.tank = null;
+    }
+  }
   spawnInitialTanksLvl1(state, 1);
   refreshTanksPowerTier();
   finalizePartialRestartPostRestore(state, { preserveProgression: true, forceFenceRuntimeReset: true, resetPurchaseProgress: true });
@@ -10912,7 +11298,10 @@ function updateUI(){
   const level = buyTankLevel();
   const cost = buyTankCost(level);
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
+  bindAchievementChipCraftEvents();
   syncCurrentBalanceAchievements();
+  syncReservePowerAchievements();
+  syncDroneMaxLevelAchievements();
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): DOM HUD diff-update.
   // Cache last assigned text on the element (`__lastHudText`) and skip the
   // textContent setter when value is unchanged. Eliminates layout thrash on
@@ -11366,6 +11755,9 @@ function renderAchievementsList(){
       if (def.progressType === 'hangarMasterLevel') {
         return computeHangarCellCountForMinLevel(def.hangarMinLevel || 1);
       }
+      if (def.progressType === 'hangarCellChipTier') {
+        return computeHangarCellsWithMinChipCount(def.optimizerMinChips || 1);
+      }
       if (AchievementsApi && AchievementsApi.getProgressValue) {
         return AchievementsApi.getProgressValue(state, def.progressType);
       }
@@ -11376,7 +11768,19 @@ function renderAchievementsList(){
       if (def.progressType === 'noRepairAttackWaveStreak') return ach.totalNoRepairAttackWaveStreak;
       if (def.progressType === 'defenseOrderStreak') return ach.totalDefenseOrderStreak;
       if (def.progressType === 'maxTankLevel') return ach.totalMaxTankLevel || 0;
+      if (def.progressType === 'droneMaxLevel') return computeCurrentDroneMaxLevel();
+      if (def.progressType === 'hangarCellChipTier') return computeHangarCellsWithMinChipCount(def.optimizerMinChips || 1);
+      if (def.progressType === 'chipComboTriples') return ach.totalChipComboTriples || 0;
+      if (def.progressType === 'chipCraftFromFragments') return ach.totalChipCraftFromFragments || 0;
+      if (def.progressType === 'unspentUpgradePoints') return getCurrentUnspentUpgradePoints();
       return ach.totalPurchased;
+    },
+    getReservePowerMetrics: () => {
+      const reserveState = ensureAchievementsState();
+      return {
+        current: getCurrentUnspentUpgradePoints(),
+        peak: clampDevInt(reserveState.reservePowerPeakCycle),
+      };
     },
   });
 }
@@ -13228,6 +13632,34 @@ function drawDecorSpriteAt(d){
   ctx.restore();
 }
 
+const _decorZombieItems = [];
+const _decorZombieItemPool = [];
+
+function _acquireDecorZombieItem(kind, y, order, id, ref, x, zY){
+  const i = _decorZombieItems.length;
+  let rec = _decorZombieItemPool[i];
+  if (!rec) {
+    rec = { kind: '', y: 0, order: 0, id: '', ref: null, x: 0, zY: 0 };
+    _decorZombieItemPool[i] = rec;
+  }
+  rec.kind = kind;
+  rec.y = y;
+  rec.order = order;
+  rec.id = id;
+  rec.ref = ref;
+  rec.x = x;
+  rec.zY = zY;
+  _decorZombieItems.push(rec);
+}
+
+function _compareDecorZombieItems(a, b){
+  if (a.y !== b.y) return a.y - b.y;
+  if (a.order !== b.order) return a.order - b.order;
+  if (a.kind !== b.kind) return a.kind < b.kind ? -1 : 1;
+  if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+  return 0;
+}
+
 function drawDecorZombieLayer(){
   // Solo-pipeline-yandex-vk#2 / item 7: Profiler markers around the zombie
   // render loop boundary. Phase name 'drawZombies' matches the budget seeded
@@ -13238,7 +13670,7 @@ function drawDecorZombieLayer(){
   const _profDZL = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
   if (_profDZL) _profDZL.start('drawZombies');
   try {
-  const items = [];
+  _decorZombieItems.length = 0;
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): off-screen culling.
   // Viewport AABB with margin covering zombie sprite half + debuff icons (~96px).
   // Skip BOTH push to items[] (saves sort cost) and drawZombieEntity (saves drawImage).
@@ -13261,7 +13693,7 @@ function drawDecorZombieLayer(){
       if (!Number.isFinite(d.renderOrder)) d.renderOrder = i;
       // AABB cull: skip decor fully outside viewport (matches zombie cull below).
       if (d.x < _camMinX || d.x > _camMaxX || d.y < _camMinY || d.y > _camMaxY) continue;
-      items.push({ kind: 'decor', y: d.y, order: d.renderOrder, id: d.spriteId + ':' + d.renderOrder, ref: d });
+      _acquireDecorZombieItem('decor', d.y, d.renderOrder, d.renderOrder, d, 0, 0);
     }
   }
   if (state.zombies && state.zombies.length) {
@@ -13272,14 +13704,12 @@ function drawDecorZombieLayer(){
       const p = zombiePos(z);
       // Culling AABB: skip zombies fully outside viewport (live + dying both).
       if (p.x < _camMinX || p.x > _camMaxX || p.y < _camMinY || p.y > _camMaxY) continue;
-      items.push({ kind: 'zombie', y: p.y, order: z.renderOrder, id: z.id || String(z.renderOrder), ref: z, x: p.x, zY: p.y });
+      _acquireDecorZombieItem('zombie', p.y, z.renderOrder, z.id || z.renderOrder, z, p.x, p.y);
     }
   }
-  const sorted = DepthSortApi && typeof DepthSortApi.sortDecorAndZombies === 'function'
-    ? DepthSortApi.sortDecorAndZombies(items)
-    : items.sort((a, b) => (a.y - b.y) || (a.order - b.order));
-  for (let i = 0; i < sorted.length; i++) {
-    const item = sorted[i];
+  _decorZombieItems.sort(_compareDecorZombieItems);
+  for (let i = 0; i < _decorZombieItems.length; i++) {
+    const item = _decorZombieItems[i];
     if (item.kind === 'decor') drawDecorSpriteAt(item.ref);
     else if (item.kind === 'zombie') drawZombieEntity(item.ref, item.x, item.zY);
   }
@@ -16569,6 +16999,13 @@ async function boot(){
             _PR.setBudgets(_budgets);
           }
         } catch (_perfErr) { /* additive, never throws into boot */ }
+
+        if (Number.isFinite(balData.deathBurstFrameBudget)) {
+          BAL.deathBurstFrameBudget = Math.max(0, Math.floor(balData.deathBurstFrameBudget));
+        }
+        if (Number.isFinite(balData.deathClusterRadiusPx)) {
+          BAL.deathClusterRadiusPx = Math.max(0, Math.floor(balData.deathClusterRadiusPx));
+        }
       }
     } catch (e) { console.warn('balance.json load failed:', e); }
 
