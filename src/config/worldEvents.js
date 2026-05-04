@@ -1,6 +1,13 @@
 (function (global) {
   'use strict';
 
+  // NOTE (solo-pipeline-yandex-vk batch #1 / Phase 1 item 3):
+  // shop kill-switch переехал в `src/config/shop.js` — namespace
+  // `Game.Config.Shop.enabled`. Здесь логика магазина не живёт; этот
+  // указатель оставлен только для навигации, чтобы инженеры, пришедшие
+  // к WorldEvents за «глобальным флагом включения», нашли правильный
+  // namespace.
+
   var enabled = true;
 
   var cfg = {

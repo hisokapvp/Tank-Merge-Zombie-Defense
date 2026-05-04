@@ -954,6 +954,27 @@
     return drone;
   }
 
+  // grantFromShop — thin shop-side wrapper around addDron. Added for the
+  // Yandex chip-bundle shop (item 10 — solo-pipeline-yandex-vk batch#4).
+  // Keeps the canonical slot/level pipeline (sanitize → assign slot →
+  // push) so shop-granted drones are indistinguishable from those added
+  // via achievement / level rewards. Caller (applyBundle.js) handles
+  // count expansion and idempotency.
+  //
+  //   droneSpec: {
+  //     level: 1..maxLevel (default 1),
+  //     dronConfig: optional override forwarded to addDron,
+  //   }
+  function grantFromShop(state, droneSpec) {
+    var spec = droneSpec || {};
+    var lvl = Number.isFinite(spec.level) ? spec.level : 1;
+    var opts = {};
+    if (spec.dronConfig && typeof spec.dronConfig === 'object') {
+      opts.dronConfig = spec.dronConfig;
+    }
+    return addDron(state, lvl, opts);
+  }
+
   function drawRoundedRect(ctx, x, y, w, h, r) {
     var radius = Math.max(0, Math.min(r, w * 0.5, h * 0.5));
     ctx.beginPath();
@@ -1297,6 +1318,7 @@
     DRONE_SLOT_COUNT: DRONE_SLOT_COUNT,
     isSlotIndexValid: isValidSlotIndex,
     addDron: addDron,
+    grantFromShop: grantFromShop,
     step: step,
     draw: draw,
     drawSlots: drawSlots,

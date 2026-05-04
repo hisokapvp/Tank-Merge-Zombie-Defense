@@ -40,6 +40,7 @@
 - Performance: `docs/ai/SYSTEMS/perf.md` (FX density owner `src/perf/fxDensity.js` + B2/B3/B4 canon: DPR cap mobileUltraLite, atlas pre-warm, `qualityLow` hysteresis, `saveProgress` safety, auto-suspend visibilitychange-only)
 - Tutorial runtime: `docs/ai/SYSTEMS/tutorial-runtime.md`
 - Yandex SDK / sanitiser allowlist: `docs/ai/SYSTEMS/yandex.md`
+- Yandex Chip-Bundle Shop: `docs/ai/SYSTEMS/shop.md` (last-updated: 2026-05-04) → playbook `docs/ai/PLAYBOOKS/shop-add-bundle.md` (как добавить новый бандл) → user-facing мануал `docs/SHOP_GUIDE_RU.md`
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 

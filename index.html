@@ -298,6 +298,11 @@
       <div class="stageCanvas">
         <canvas id="c" width="1100" height="650"></canvas>
         <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" tabindex="0" aria-label="Настройки" title="Настройки">⚙</button>
+        <!-- HUD-кнопка магазина чипов (item 13, batch#5 of solo-pipeline-yandex-vk).
+             Hidden by default; src/ui/hudShopButton.js показывает её только если
+             Config.Shop.enabled && _isYandexEnv() && YandexPayments.isReady().
+             Иконка корзины — CSS-only placeholder (data-i18n driven). -->
+        <button id="hudShopButton" class="btn btnIcon hudShopButton hidden" type="button" tabindex="0" aria-hidden="true" aria-label="Магазин чипов" data-i18n-aria-label="shop.title" title="Магазин чипов" data-i18n-title="shop.title">🛒</button>
         <div id="achievementToast" class="achievementToast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
         <div class="stageUi stageUiRight">
           <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Развернуть терминал" data-ui-tooltip="Развернуть терминал">
@@ -487,6 +492,19 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+        <!-- Chip-bundle shop overlay (item 11, batch#4 of solo-pipeline-yandex-vk).
+             DOM shell only; cards/labels/prices are populated dynamically by
+             src/ui/chipShopModal.js. Stable selector hooks: #chipShopClose,
+             [data-chip-shop-close], #chipShopCards, #chipShopFooter. -->
+        <div class="levelModal hidden" id="chipShopOverlay" aria-hidden="true">
+          <div class="levelModal__backdrop" data-chip-shop-close="true"></div>
+          <div class="levelModal__panel chipShopModal__panel" role="dialog" aria-modal="true" aria-labelledby="chipShopTitle" tabindex="-1">
+            <button class="levelModal__close scModal__close" id="chipShopClose" type="button" aria-label="Закрыть">×</button>
+            <div class="levelModal__title chipShopModal__title" id="chipShopTitle" data-i18n="shop.title">Магазин чипов</div>
+            <div class="chipShopModal__cards" id="chipShopCards" role="list"></div>
+            <div class="levelModal__line chipShopModal__footer" id="chipShopFooter" data-i18n="shop.legal.disclaimer">Покупки доступны только в Яндекс Играх. Цены и валюта определяются регионом.</div>
           </div>
         </div>
         <div class="levelModal hidden" id="dismantleModal" aria-hidden="true">
@@ -899,6 +917,7 @@
   <script src="src/config/criticalModalTuning.js"></script>
   <script src="src/config/criticalAudioPolicy.js"></script>
   <script src="src/config/worldEvents.js"></script>
+  <script src="src/config/shop.js"></script>
   <script src="src/render/layout/hangarLayout.js"></script>
   <script src="src/render/fenceLayout.js"></script>
   <script src="src/render/groundGen.js"></script>
@@ -1045,6 +1064,38 @@
   <!-- Yandex SDK wrapper (item 7+8). Loaded before game.js so Game.YandexSDK
        is available during boot for i18n env.lang lookup. -->
   <script src="src/yandex/yandexSdk.js?v=20260429-solo-pipeline-yandex-vk-b3-v1"></script>
+  <!-- Yandex Payments wrapper (item 4, batch#2 of solo-pipeline-yandex-vk).
+       Must load AFTER yandexSdk.js so Game.YandexSDK.onReady is wired. -->
+  <script src="src/yandex/yandexPayments.js?v=20260504-solo-pipeline-yandex-vk-b2-v1"></script>
+  <!-- Yandex CloudSave adapter (item 8, batch#3 of solo-pipeline-yandex-vk).
+       Pushes only state.shop via player.setData/getData. Must load AFTER
+       yandexPayments.js so the SDK and config kill-switches are settled. -->
+  <script src="src/persistence/cloudSave.js?v=20260504-solo-pipeline-yandex-vk-b3-v1"></script>
+  <!-- Shop ledger (item 9, batch#3 of solo-pipeline-yandex-vk).
+       Writes entitlements/pendingDeliveries through to state.shop. Must
+       load AFTER cloudSave.js so flushShop is referenceable. -->
+  <script src="src/shop/shopLedger.js?v=20260504-solo-pipeline-yandex-vk-b3-v1"></script>
+  <!-- Atomic chip-bundle delivery (item 10, batch#4 of solo-pipeline-yandex-vk).
+       Reads Game.HangarChipsUI/Game.Drones/Game.ShopLedger; idempotent on
+       purchaseToken. Must load AFTER shopLedger.js. -->
+  <script src="src/shop/applyBundle.js?v=20260504-solo-pipeline-yandex-vk-b4-v1"></script>
+  <!-- Chip-bundle shop modal UI (item 12, batch#4 of solo-pipeline-yandex-vk).
+       Wires #chipShopOverlay DOM to Game.A11y / Game.ModalAdapter and
+       drives the YandexPayments.purchase → applyBundle flow. Must load
+       AFTER applyBundle.js so Game.ChipShop.applyBundle is wired. -->
+  <script src="src/ui/chipShopModal.js?v=20260504-solo-pipeline-yandex-vk-b4-v1"></script>
+  <!-- HUD shop button (item 13, batch#5 of solo-pipeline-yandex-vk).
+       Wires #hudShopButton click → Game.ChipShop.UI.open(). Must load
+       AFTER chipShopModal.js so Game.ChipShop.UI is exported before any
+       click resolves the namespace. -->
+  <script src="src/ui/hudShopButton.js?v=20260504-solo-pipeline-yandex-vk-b5-v1"></script>
+  <!-- Shop bootstrap wiring (item 16, batch#6 of solo-pipeline-yandex-vk).
+       Game.ShopBootstrap.run() — idempotent: payments.init →
+       cloudSave.pullShop merge → getPurchases replay → applyBundle +
+       consumePurchase. Defensive on offline/network errors. Called from
+       boot() in game.js after shop.json fetch. Must load AFTER
+       hudShopButton.js so all surfaces it nudges are already exported. -->
+  <script src="src/core/shopBootstrap.js?v=20260504-solo-pipeline-yandex-vk-b6-v1"></script>
   <script>
     (function (global, doc) {
       var game = global.Game || {};

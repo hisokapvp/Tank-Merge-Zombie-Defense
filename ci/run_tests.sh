@@ -17,6 +17,7 @@ run_test() {
 }
 
 run_test "Unit tests" "Test/tests.js"
+run_test "Shop apply-bundle (idempotency + record shape + HUD gate)" "Test/test_shop_apply_bundle.js"
 run_test "Pack 1 (fire logic)" "Test/pack1/fireLogic.test.js"
 run_test "Pack 1 (merge popup)" "Test/pack1/mergePopup.test.js"
 run_test "Pack 1 (new game reset)" "Test/pack1/newGamePopupReset.test.js"

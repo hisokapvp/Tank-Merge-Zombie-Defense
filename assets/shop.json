@@ -1,0 +1,56 @@
+{
+  "_comment": "Yandex Games Chip-Bundle Shop — data-driven каталог SKU. Загружается в boot() рядом с levelreward.json и присваивается в Game.Config.Shop.bundles. Контракт записи: { id, yandexProductId, tier, priceHint, contents:{ chips:[{family,tier,count}], drones:[{type,count}], siliconDust:N }, sortOrder, iconAsset?:string|null }. iconAsset опционален (batch #9 rework, item B): null → chipShopModal.js рисует emoji-fallback по tier; для любого реального пути при 404 рисуется тот же fallback через onerror. Состав бандлов — стартовые дефолты (Phase 1); пользователь согласует постфактум через session log review. priceHint указан в копейках RUB (для дисплея до загрузки реальных цен через YandexPayments.getCatalog в Phase 6).",
+  "bundles": [
+    {
+      "id": "small_chip_pack",
+      "yandexProductId": "small_chip_pack",
+      "tier": "small",
+      "priceHint": { "currency": "RUB", "amount": 4900 },
+      "contents": {
+        "chips": [
+          { "family": "any", "tier": 1, "count": 3 }
+        ],
+        "drones": [],
+        "siliconDust": 50
+      },
+      "sortOrder": 10,
+      "iconAsset": null
+    },
+    {
+      "id": "medium_chip_pack",
+      "yandexProductId": "medium_chip_pack",
+      "tier": "medium",
+      "priceHint": { "currency": "RUB", "amount": 14900 },
+      "contents": {
+        "chips": [
+          { "family": "any", "tier": 1, "count": 5 },
+          { "family": "any", "tier": 2, "count": 2 }
+        ],
+        "drones": [
+          { "type": "drones", "count": 1 }
+        ],
+        "siliconDust": 150
+      },
+      "sortOrder": 20,
+      "iconAsset": null
+    },
+    {
+      "id": "large_chip_pack",
+      "yandexProductId": "large_chip_pack",
+      "tier": "large",
+      "priceHint": { "currency": "RUB", "amount": 49900 },
+      "contents": {
+        "chips": [
+          { "family": "any", "tier": 2, "count": 5 },
+          { "family": "any", "tier": 3, "count": 3 }
+        ],
+        "drones": [
+          { "type": "drones", "count": 2, "level": 3 }
+        ],
+        "siliconDust": 500
+      },
+      "sortOrder": 30,
+      "iconAsset": null
+    }
+  ]
+}

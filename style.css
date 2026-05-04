@@ -149,6 +149,7 @@ body.achievements-open::before,
 body.achievement-popup-open::before,
 body.levelmodal-open::before,
 body.dismantle-open::before,
+body.chipshop-open::before,
 body.critical-open::before{
   content:"";
   position:fixed;
@@ -9061,4 +9062,153 @@ button.hangarChipInvItem{
 #modsTankWallOverlay,
 #undergroundHangarOverlay{
   inset:0 !important;
+}
+
+/* ============================================================
+   Chip-bundle shop (items 11-12-14, solo-pipeline-yandex-vk).
+   .chipShopModal__* — наследует визуал от .levelModal* / .scModal*
+   (контракт docs/ai/STYLE_CSS_MAP.md, HANGAR_CHIPS_UI_MAP.md).
+   #hudShopButton — HUD-кнопка корзины, наследует от .settingsGear.
+   ============================================================ */
+.chipShopModal__panel{
+  max-width: calc(720px * var(--ui-scale));
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  gap: calc(12px * var(--ui-scale));
+  padding-top: calc(28px * var(--ui-scale));
+  padding-bottom: calc(20px * var(--ui-scale));
+}
+.chipShopModal__title{
+  margin-bottom: calc(4px * var(--ui-scale));
+}
+.chipShopModal__cards{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(180px * var(--ui-scale)), 1fr));
+  gap: calc(12px * var(--ui-scale));
+  width: 100%;
+  padding: 0 calc(8px * var(--ui-scale));
+  box-sizing: border-box;
+}
+.chipShopModal__card{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: calc(8px * var(--ui-scale));
+  padding: calc(12px * var(--ui-scale));
+  background: #0d140b;
+  border: 2px solid #4af626;
+  box-shadow: 0 0 10px rgba(74, 246, 38, 0.2), 2px 2px 0 #000;
+  color: #4af626;
+  font-family: 'Courier New', Courier, monospace;
+  text-align: center;
+  position: relative;
+}
+.chipShopModal__card[data-tier="medium"]{
+  border-color: #f6c84a;
+  color: #f6c84a;
+  box-shadow: 0 0 10px rgba(246, 200, 74, 0.2), 2px 2px 0 #000;
+}
+.chipShopModal__card[data-tier="large"]{
+  border-color: #f6764a;
+  color: #f6764a;
+  box-shadow: 0 0 10px rgba(246, 118, 74, 0.2), 2px 2px 0 #000;
+}
+.chipShopModal__cardName{
+  font-size: calc(14px * var(--ui-scale));
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.chipShopModal__cardDesc{
+  font-size: calc(11px * var(--ui-scale));
+  line-height: 1.35;
+  opacity: 0.85;
+  min-height: calc(44px * var(--ui-scale));
+}
+.chipShopModal__price{
+  font-size: calc(13px * var(--ui-scale));
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: calc(4px * var(--ui-scale)) 0;
+  border-top: 1px dashed currentColor;
+  border-bottom: 1px dashed currentColor;
+}
+.chipShopModal__buy,
+.chipShopCard__buyBtn{
+  display: inline-block;
+  padding: calc(8px * var(--ui-scale)) calc(14px * var(--ui-scale));
+  background: #0d140b;
+  border: 2px solid currentColor;
+  color: inherit;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  border-radius: 0;
+}
+.chipShopModal__buy:hover:not([disabled]),
+.chipShopCard__buyBtn:hover:not([disabled]){
+  /* batch#10-rework item D: replicate scModal__close hover canon —
+     bright green gradient bg + crisp dark text + green glow. The previous
+     `background: currentColor; color: #0d140b` rule produced invisible
+     text because `currentColor` resolves to the new computed color in the
+     same declaration block (both bg and text became `#0d140b`). */
+  background: linear-gradient(180deg, #57ff2d 0%, #39cf1d 100%) !important;
+  border-color: #84ff68 !important;
+  color: #0a2200 !important;
+  box-shadow: 0 0 16px rgba(74,246,38,.38), 2px 2px 0 #000;
+  filter: none;
+}
+.chipShopModal__buy[disabled],
+.chipShopCard__buyBtn[disabled]{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.chipShopCard__buyBtn[data-state="loading"]{
+  opacity: 0.75;
+  cursor: progress;
+}
+.chipShopModal__footer{
+  font-size: calc(10px * var(--ui-scale));
+  opacity: 0.7;
+  font-style: italic;
+  text-align: center;
+  margin-top: calc(4px * var(--ui-scale));
+}
+
+/* HUD-кнопка корзины (item 13). Наследует визуал от .settingsGear /
+   .supercomputerHudBtn — фиксированная позиция, фосфорно-зелёная рамка,
+   моноширинный «корзина»-юникод. Скрывается через .hidden, видимость
+   управляется src/ui/hudShopButton.js. */
+#hudShopButton.hudShopButton{
+  position: fixed;
+  top: 15px;
+  left: 78px;
+  z-index: 4;
+  width: 60px;
+  height: 60px;
+  padding: 4px 10px;
+  font-size: 22px;
+  flex: none;
+  background: #0d140b !important;
+  border: 2px solid #4af626 !important;
+  color: #4af626 !important;
+  box-shadow: 0 0 10px rgba(74, 246, 38, 0.2), 2px 2px 0 #000 !important;
+  border-radius: 0 !important;
+  filter: none !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#hudShopButton.hudShopButton:hover{
+  background: #4af626 !important;
+  color: #000 !important;
+}
+#hudShopButton.hudShopButton.hidden{
+  display: none !important;
 }

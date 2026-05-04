@@ -257,3 +257,33 @@
 - Политика unknown/refund/clamp:
 	- неизвестные v1-имена не ломают загрузку и возвращаются в `freePoints` как refund;
 	- ранги v2 всегда clamp по `maxRank` из дерева.
+## Shop (state.shop payload block)
+
+> Добавлено: 2026-05-04 (`solo-pipeline-yandex-vk` batch #7 / item 20). Контракт магазина в целом — [docs/ai/SYSTEMS/shop.md](./shop.md); как добавить SKU — [docs/ai/PLAYBOOKS/shop-add-bundle.md](../PLAYBOOKS/shop-add-bundle.md); user-facing мануал — [docs/SHOP_GUIDE_RU.md](../../SHOP_GUIDE_RU.md).
+
+- Runtime-источник: `state.shop`. Default-инициализация в [src/persistence/initialState.js](../../../src/persistence/initialState.js#L205-L220) (добавлено в batch #2 / item 6).
+- Save-структура (поля payload):
+	- `state.shop.entitlements` — `{ [purchaseToken: string]: { productId, grantedAt, deliveredAt|null, contentsSnapshot, signature } }`. Источник истины для «уже оплачено и (опционально) выдано». Idempotency-ключ для `applyBundle`.
+	- `state.shop.pendingDeliveries` — `string[]`, очередь tokens, которые `recordPurchase` положил в очередь, но `markDelivered` ещё не зафиксировал. Bootstrap replay (см. ниже) обязан реплеить **объединение** этой очереди и `Game.YandexPayments.getPurchases()`.
+	- `state.shop.pendingExports` — `Array<{ type, purchaseToken, productId, ts, payload? }>`. Аналитический seam `ShopLedger.exportEvent` (только если `Game.Config.Shop.ledgerExport.enabled === true`).
+	- `state.shop.lastSync` — `number` (unix-ms), timestamp последнего успешного `Game.CloudSave.pullShop`.
+- Сериализация: `state.shop` целиком пишется в slot payload через стандартный `serializeState()` ([src/persistence/storage.js](../../../src/persistence/storage.js)) и зеркалится в [assets/saveSchema.json](../../../assets/saveSchema.json) (добавлено в batch #3 / item 7). Backwards-compat: старые save без `shop` → seed-объект из `createInitialState()`.
+- Owner tag для Payload Contract Map: `economy` (entitlements + pending очереди), отдельная category за пределами `core/hangar/progression/world`.
+
+### Cloud-save policy «cloud wins for entitlements only»
+
+`Game.CloudSave` ([src/persistence/cloudSave.js](../../../src/persistence/cloudSave.js)) — отдельный adapter поверх Yandex `player.setData/getData`, который пишет **только** `state.shop` под ключом `tmzd_shop_v1` (host KV ≤ 200 KiB, throttle 1/5s). Локальный slot-based `localStorage` save и cloud KV — **разные namespace'ы**, они не пересекаются.
+
+Контракт мерджа на `pullShop()`:
+
+- **Cloud wins для entitlements**: если cloud-side `entitlements[token]` существует, а локальный — нет (или старее по `grantedAt`), берётся cloud-версия. Это защищает от пропавших entitlement'ов после очистки cookies или смены устройства.
+- **Local wins для `deliveredAt`**: даже если cloud показывает entitlement как уже выданный, локальный `deliveredAt == null` означает, что текущая инсталляция ещё не получила контент → bootstrap replay сделает повторный `applyBundle` (idempotent по token). Аналогично, если local уже выставил `deliveredAt = T`, cloud не может «откатить» это в `null`.
+- **`pendingDeliveries`** не мерджится с cloud напрямую — это локальная очередь текущей сессии. Bootstrap replay вычитывает union `getPurchases() ∪ pendingDeliveries` (см. [docs/ai/PLAYBOOKS/shop-add-bundle.md#union-replay-контракт-getpurchases--stateshoppendingdeliveries](../PLAYBOOKS/shop-add-bundle.md)).
+- **`lastSync`** — последняя успешная попытка `pullShop`; при offline/`scopes:false` reject `pullShop` молча резолвит `null` и `lastSync` не меняется.
+
+Kill-switch `Game.Config.Shop.cloudSave.enabled = false` ([src/config/shop.js](../../../src/config/shop.js#L30-L34)) делает `Game.CloudSave.*` целиком no-op; локальный save продолжает работать без изменений.
+
+### Reset-scope для `state.shop`
+
+- `partial-restart`: `state.shop` входит в `takeProgressSnapshot()`/`restoreProgressSnapshot()` ([src/core/worldReset.js](../../../src/core/worldReset.js)) как `partial-preserve` — entitlements не должны теряться при retry-сценариях.
+- `new game` (`reason: 'new_game'`): `state.shop` пересоздаётся через `createInitialState()` (пустые объекты/массивы); cloud-side `tmzd_shop_v1` остаётся нетронутым, и при следующем boot `pullShop()` вернёт entitlements обратно — это desired behaviour для платных бандлов (компенсация за случайный «New game»).

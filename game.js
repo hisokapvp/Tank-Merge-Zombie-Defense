@@ -654,7 +654,12 @@ function createInitialState(options){
           preRetrySaveFailed: false,
         },
         selectedHangarCellIndex: null, isDismantleMode: false, selectedTankIds: [],
-        undergroundHangar: { cells: [] } };
+        undergroundHangar: { cells: [] },
+        // Yandex chip-bundle shop ledger fallback (item 6, batch#2). Mirrors
+        // the canonical default in src/persistence/initialState.js so the
+        // inline boot fallback object also carries `state.shop`. Real
+        // saveSchema/cloudSave wiring lives in Phase 3 (next batch).
+        shop: { entitlements: {}, lastSync: 0, pendingDeliveries: [] } };
   if (reason === 'new_game') {
     if (!initialState.player || typeof initialState.player !== 'object') {
       initialState.player = { talentPoints: 0, talentsV2: { ranksById: {}, freePoints: 0 }, freeTalentPointsV2: 0 };
@@ -680,11 +685,44 @@ function createInitialState(options){
   }
   initialState.zombieWaveAtkMult = normalizeZombieWaveMultiplier(initialState.zombieWaveAtkMult);
   initialState.zombieWaveHpMult = normalizeZombieWaveMultiplier(initialState.zombieWaveHpMult);
+  // state.shop default-init guard (item 6, batch#2 of
+  // solo-pipeline-yandex-vk). Some legacy saves were created before the
+  // shop ledger existed; if InitialState ever returns an object without
+  // `shop` (e.g. a stale unit-test stub), backfill the canonical shape so
+  // applyBundle/cloudSave (next batches) can rely on it unconditionally.
+  if (!initialState.shop || typeof initialState.shop !== 'object') {
+    initialState.shop = { entitlements: {}, lastSync: 0, pendingDeliveries: [] };
+  } else {
+    if (!initialState.shop.entitlements || typeof initialState.shop.entitlements !== 'object') {
+      initialState.shop.entitlements = {};
+    }
+    if (!Number.isFinite(initialState.shop.lastSync)) {
+      initialState.shop.lastSync = 0;
+    }
+    if (!Array.isArray(initialState.shop.pendingDeliveries)) {
+      initialState.shop.pendingDeliveries = [];
+    }
+  }
   return initialState;
 }
 
 let state = createInitialState();
 let meta = { lastSeenAt: null };
+
+// solo-pipeline-yandex-vk batch#10-rework item A:
+// Expose canonical mutable state to shop modules (applyBundle.js,
+// shopBootstrap.js, shopLedger.js) which read `Game.state`. Without this
+// getter, every shop bundle delivery silently no-ops because `_state()`
+// returns undefined and applyBundle returns `{ok:false, status:'no_state'}`.
+// Getter is used because `state` is reassigned in `resetGameState()`.
+try {
+  window.Game = window.Game || {};
+  Object.defineProperty(window.Game, 'state', {
+    configurable: true,
+    enumerable: true,
+    get: function () { return state; },
+  });
+} catch (_) {}
 ensureCannonUpgradesAppliedState();
 ensureDronUpgradesAppliedState();
 
@@ -1599,6 +1637,7 @@ let menuPauseLocks = {
   achievementPopup: false,
   productionStorage: false,
   undergroundHangar: false,
+  chipShop: false,
   critical: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
 };
@@ -1745,7 +1784,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.bigMenu);
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
@@ -1763,6 +1802,13 @@ function setMenuPauseSource(source, open){
   menuPauseLocks[source] = !!open;
   recomputeMenuPauseLock();
 }
+
+// solo-pipeline-yandex-vk batch#10-rework item B:
+// Bridge for chipShopModal (auto-init from DOMContentLoaded, no init({...}) seam).
+// Mirrors the pause-source contract used by ProductionLine/UndergroundHangar.
+window.Game._setShopPauseLock = function (open) {
+  setMenuPauseSource('chipShop', !!open);
+};
 
 function enterCriticalPause(){
   if (pauseManager && typeof pauseManager.enterCriticalPause === 'function') {
@@ -10354,6 +10400,7 @@ function hasHigherPriorityEscapeLock(){
     || menuPauseLocks.achievements
     || menuPauseLocks.productionStorage
     || menuPauseLocks.undergroundHangar
+    || menuPauseLocks.chipShop
     || menuPauseLocks.critical
     || menuPauseLocks.bigMenu);
 }
@@ -13116,7 +13163,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.chipShop && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },
@@ -17063,6 +17110,42 @@ async function boot(){
         console.log('[LevelReward] levelreward.json loaded OK');
       }
     } catch (e) { console.warn('levelreward.json load failed:', e); }
+
+    // ── Load shop.json for Yandex chip-bundle shop catalog ──
+    // (solo-pipeline-yandex-vk batch #1 / Phase 1 item 2). Заполняем
+    // `Game.Config.Shop.bundles` боевым каталогом из data-driven JSON.
+    // Failure-path: лог + пустой каталог — kill-switch уже встроен в
+    // src/config/shop.js (enabled / bundles[]), модалка и HUD-кнопка
+    // (Phase 5) трактуют пустой массив как «магазин недоступен».
+    try {
+      const shopRes = await fetch('assets/shop.json', { cache: 'no-store' });
+      if (shopRes.ok) {
+        const shopData = await shopRes.json();
+        if (window.Game && window.Game.Config && window.Game.Config.Shop && shopData && Array.isArray(shopData.bundles)) {
+          window.Game.Config.Shop.bundles = shopData.bundles;
+          console.log('[Shop] shop.json loaded OK (' + shopData.bundles.length + ' bundles)');
+        }
+      }
+    } catch (e) { console.warn('shop.json load failed:', e); }
+
+    // ── Shop bootstrap wiring (item 16, batch#6) ──
+    // After shop.json is loaded into Game.Config.Shop.bundles, drive the
+    // idempotent wiring chain: YandexPayments.init → CloudSave.pullShop
+    // (merge into state.shop) → getPurchases → applyBundle (idempotent)
+    // → consumePurchase. Defensive: errors never block boot, the rest of
+    // the loading sequence continues regardless. UI surfaces are auto-init
+    // via DOMContentLoaded inside chipShopModal.js / hudShopButton.js;
+    // ShopBootstrap.run() defensively re-nudges them once payments are
+    // resolved so the HUD button flips visible without an explicit poll.
+    try {
+      const _shopBoot = window.Game && window.Game.ShopBootstrap;
+      if (_shopBoot && typeof _shopBoot.run === 'function') {
+        // Fire-and-forget: do not await so a slow Yandex SDK / network
+        // hop cannot delay the rest of boot() (asset preload, runtime
+        // tasks). The promise resolves silently or warns on its own.
+        _shopBoot.run();
+      }
+    } catch (e) { console.warn('ShopBootstrap.run() failed (continuing):', e); }
 
     await GroundSprites.load().catch(function () {});
     // Task 10: preload shields.png on boot (non-blocking failure path)

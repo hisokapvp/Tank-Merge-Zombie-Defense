@@ -144,6 +144,51 @@
       "type": "array",
       "items": { "type": "object", "additionalProperties": true }
     },
-    "lastSeenAt": { "type": "number" }
+    "lastSeenAt": { "type": "number" },
+    "shop": {
+      "description": "Yandex chip-bundle shop ledger block (solo-pipeline-yandex-vk batch#2 default-init, batch#3 schema). OPTIONAL at the top level: legacy saves from batch#1/#2 written before this field existed must still validate (backfill-safe). Inner fields are also optional so partial blobs (e.g. cloud-pulled with only entitlements) round-trip cleanly.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "entitlements": {
+          "description": "Map purchaseToken -> entitlement record. Idempotency key for shopLedger.recordPurchase / applyBundle.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "productId":        { "type": "string" },
+              "grantedAt":        { "type": "number", "minimum": 0 },
+              "deliveredAt":      { "type": ["number", "null"], "minimum": 0 },
+              "contentsSnapshot": { "type": ["object", "null"], "additionalProperties": true },
+              "signature":        { "type": ["string", "null"] }
+            }
+          }
+        },
+        "pendingDeliveries": {
+          "description": "Queue of purchaseTokens that survived the host call but were not credited yet (e.g. boot interrupted before applyBundle).",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "pendingExports": {
+          "description": "Optional outbox of ledger events buffered when Game.Config.Shop.ledgerExport.enabled is true. Absent when ledgerExport is disabled (the default).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "type":          { "type": "string" },
+              "purchaseToken": { "type": "string" },
+              "ts":            { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "lastSync": {
+          "description": "Unix-ms timestamp of the last successful CloudSave reconciliation. 0 means never synced.",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
   }
 }

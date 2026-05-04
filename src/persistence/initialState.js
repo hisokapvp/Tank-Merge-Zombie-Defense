@@ -202,6 +202,20 @@
         conveyorAnimTime: 0,
         firstNewGameBoxGuaranteedPending: reason === 'new_game',
       },
+      // Yandex chip-bundle shop ledger (item 6, batch#2 of
+      // solo-pipeline-yandex-vk). `entitlements` keyed by purchaseToken
+      // tracks "what was already credited" so applyBundle (item 10) is
+      // idempotent across reloads. `lastSync` is a unix-ms timestamp of
+      // the last successful cloud-save reconciliation. `pendingDeliveries`
+      // queues purchase tokens that survived the host call but have not
+      // yet been credited locally (e.g. interrupted boot). Saved/restored
+      // by Phase 3 saveSchema/cloudSave (next batch); kept default-init
+      // here so the field exists on first run and on legacy saves.
+      shop: {
+        entitlements: {},
+        lastSync: 0,
+        pendingDeliveries: [],
+      },
     };
   }
 

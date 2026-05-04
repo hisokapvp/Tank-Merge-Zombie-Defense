@@ -99,3 +99,39 @@ boundary, exclude `www.w3.org`, etc.) instead of widening the allowlist.
   the table in this file and reference it in the PR.
 * Did you `bash ci/build_release.sh` after your edit? The final assertion
   is the source of truth — never bypass it locally.
+
+## Shop wrapper modules (`solo-pipeline-yandex-vk` batches #2–#3, item 20 batch #7)
+
+Поверх базового `src/yandex/yandexSdk.js` shop-семейство добавило два первоклассных wrapper-модуля. Оба подчиняются тем же substring-fragment / sanitiser-allowlist правилам, что и `yandexSdk.js`. Полный контракт магазина — [docs/ai/SYSTEMS/shop.md](./shop.md); как добавить SKU — [docs/ai/PLAYBOOKS/shop-add-bundle.md](../PLAYBOOKS/shop-add-bundle.md); save-side payload — [docs/ai/SYSTEMS/save.md](./save.md).
+
+### `src/yandex/yandexPayments.js` — Yandex Payments wrapper
+
+- Public API: `Game.YandexPayments.{ init, isReady, getCatalog, purchase, consumePurchase, getPurchases }`.
+- `init()` идемпотентен (`initStarted` guard) и резолвится после `getPayments({ signed: true })`. Это ключевой контракт: **payments-объект всегда запрашивается с `signed: true`**, чтобы каждая `purchase()` возвращала host-подписанный `signature/payload` для последующей серверной верификации (через `Game.ShopLedger.exportEvent` seam, [src/shop/shopLedger.js](../../../src/shop/shopLedger.js)).
+- `getCatalog()` — фильтрует по `productID` из `assets/shop.json.bundles[].yandexProductId`; используется и в UI карточках ([src/ui/chipShopModal.js](../../../src/ui/chipShopModal.js)), и в bootstrap replay для resolve `bundleByProductId(purchase.productID)`.
+- `purchase(productId)` — wrapper над host `payments.purchase({ id })`; возвращает `{ purchaseToken, productID, signature, payload, ... }`. Token идёт прямиком в `state.shop.entitlements` как idempotency-ключ ([docs/ai/SYSTEMS/save.md#shop-state-shop-payload-block](./save.md)).
+- `getPurchases()` — список не-consumed покупок; источник истины для bootstrap replay вместе с `state.shop.pendingDeliveries` (union-контракт, см. [playbook](../PLAYBOOKS/shop-add-bundle.md#union-replay-контракт-getpurchases--stateshoppendingdeliveries)).
+- `consumePurchase(token)` — обязательно вызывается после успешного `applyBundle`; без consume host будет возвращать ту же покупку из `getPurchases()` бесконечно (и replay будет повторно тратить CPU, хотя idempotency `deliveredAt` защитит от дубль-выдачи).
+- Outside Yandex (`_isYandexEnv() === false`): все методы возвращают benign empty values (`getCatalog → []`, `getPurchases → []`, `purchase → reject`), `isReady → false`. UI это учитывает: HUD-кнопка скрыта, кнопка `Купить` дисейблится в карточке.
+
+### `src/persistence/cloudSave.js` — Cloud-save adapter
+
+- Public API: `Game.CloudSave.{ init, isReady, pushShop, flushShop, pullShop }`.
+- Backing store: Yandex `player.setData/getData` под единственным ключом `tmzd_shop_v1`. Cloud KV пишет **только** `state.shop`, не пересекаясь со slot-based `localStorage` save (slot save остаётся 100% локальным и не уходит в cloud).
+- Throttle: `pushShop` debounce ≤ 1 запрос / 5s; `flushShop` форсированно (используется при close/visibility-hidden).
+- Pull merge policy — «cloud wins for entitlements only» (см. [docs/ai/SYSTEMS/save.md#cloud-save-policy-cloud-wins-for-entitlements-only](./save.md)). Локальный `deliveredAt` всегда побеждает cloud, чтобы recovery loop не выдал бандл повторно.
+- Kill-switch: `Game.Config.Shop.cloudSave.enabled = false` ([src/config/shop.js#L30-L34](../../../src/config/shop.js#L30-L34)) → весь модуль no-op без сетевых вызовов; `state.shop` живёт только локально.
+- Outside Yandex (`_isYandexEnv() === false`): `init` ставит `isReady → false`, остальные методы — no-op (фактически зеркалят kill-switch путь).
+
+### Sanitiser substring-fragment контракт для shop-модулей
+
+Оба новых модуля (`yandexPayments.js`, `cloudSave.js`), плюс `hudShopButton.js` / `chipShopModal.js` / `shopBootstrap.js`, подчиняются тому же contract'у, что и `yandexSdk.js`:
+
+- Никаких host-литералов (`s3.yandex.net`, `app-*.games.s3.yandex.net`, `yastatic*` и т.п.) в комментариях или JSDoc — используем нейтральные фразы `[redacted Yandex iframe host]` / `the Yandex Games iframe host`.
+- Если host-фрагмент нужен в runtime (например, для `_isYandexEnv()` host-detection), он экспонируется как substring-fragment — три-четыре отдельных подстроки, склеиваемых на runtime, а не один literal. См. `_isYandexEnv()` в [src/yandex/yandexPayments.js](../../../src/yandex/yandexPayments.js) и [src/persistence/cloudSave.js](../../../src/persistence/cloudSave.js) — оба используют тот же шаблон, что и `yandexSdk.js` ещё с batch #1.
+- Перед коммитом обязательно `node ci/build_release.mjs --yandex --dry-run` — flag `--dry-run` добавлен в batch #6 / item 17, чистит tmpdir после успеха.
+
+### Sandbox smoke pointer
+
+Полная процедура sandbox smoke для новых SKU и любых изменений в shop wrapper'ах — в [docs/ai/PLAYBOOKS/shop-add-bundle.md#шаг-6-sandbox-smoke-yandex-games](../PLAYBOOKS/shop-add-bundle.md). User-facing сводка для команды релиза/маркетинга — в [docs/SHOP_GUIDE_RU.md](../../SHOP_GUIDE_RU.md).
+

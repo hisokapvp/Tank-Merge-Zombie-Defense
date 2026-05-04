@@ -20,6 +20,7 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { execSync } from 'node:child_process';
@@ -29,7 +30,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function parseArgs(argv) {
-  const args = { root: path.resolve(__dirname, '..'), out: null, yandex: false, zip: true };
+  const args = { root: path.resolve(__dirname, '..'), out: null, yandex: false, zip: true, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--root') args.root = path.resolve(argv[++i]);
@@ -37,14 +38,27 @@ function parseArgs(argv) {
     else if (a === '--yandex') args.yandex = true;
     else if (a === '--zip') args.zip = true;
     else if (a === '--no-zip') args.zip = false;
+    // solo-pipeline-yandex-vk batch#6 / item 17: `--dry-run` runs the
+    // full pipeline (copy → sanitise → assertNoDevUrlLiterals) into a
+    // throwaway tmp directory and skips zip/manifest cleanup. Used by
+    // the TZ-mandated pre-commit check `node ci/build_release.mjs
+    // --yandex --dry-run`. The temp dir is removed on success.
+    else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--help' || a === '-h') {
-      process.stdout.write('Usage: node ci/build_release.mjs --root <repo> --out <dir> [--yandex] [--no-zip]\n');
+      process.stdout.write('Usage: node ci/build_release.mjs --root <repo> --out <dir> [--yandex] [--no-zip] [--dry-run]\n');
       process.exit(0);
     } else {
       throw new Error(`Unknown flag: ${a}`);
     }
   }
-  if (!args.out) throw new Error('--out <dir> is required');
+  if (args.dryRun) {
+    if (!args.out) {
+      const stamp = `${process.pid}-${Date.now()}`;
+      args.out = path.join(os.tmpdir(), `tmzd-build-release-dryrun-${stamp}`);
+    }
+    args.zip = false;
+  }
+  if (!args.out) throw new Error('--out <dir> is required (or use --dry-run)');
   return args;
 }
 
@@ -820,6 +834,17 @@ async function main() {
     console.log(`[build_release] zip written: ${zipInfo.entryCount} entries, ${zipInfo.totalBytes} bytes.`);
   } else {
     console.log('[build_release] zip step skipped (--no-zip).');
+  }
+
+  // solo-pipeline-yandex-vk batch#6 / item 17: dry-run cleanup.
+  if (args.dryRun) {
+    try {
+      await fs.rm(out, { recursive: true, force: true });
+      console.log(`[build_release][DRY-RUN] removed throwaway out dir: ${out}`);
+    } catch (e) {
+      console.warn(`[build_release][DRY-RUN] could not remove ${out}:`, e.message);
+    }
+    console.log('[build_release][DRY-RUN] sanitiser pipeline OK — no shipped artifact.');
   }
 }
 
