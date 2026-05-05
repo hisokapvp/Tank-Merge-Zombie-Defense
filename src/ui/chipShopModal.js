@@ -54,6 +54,9 @@
     'shop.unavailable_hint': 'Доступно только в Яндекс Играх',
     'shop.buy': 'Купить',
     'shop.loading': 'Покупка…',
+    'shop.reward.chips': 'Чипы',
+    'shop.reward.drones': 'Дроны',
+    'shop.reward.siliconDust': 'Кремниевая пыль',
   };
 
   function _t(key) {
@@ -157,7 +160,7 @@
         var c = contents.chips[i] || {};
         chipsTotal += (c.count | 0);
       }
-      if (chipsTotal > 0) parts.push('Чипы × ' + chipsTotal);
+      if (chipsTotal > 0) parts.push(_t('shop.reward.chips') + ' × ' + chipsTotal);
     }
     if (Array.isArray(contents.drones)) {
       var dronesTotal = 0;
@@ -165,10 +168,10 @@
         var d = contents.drones[k] || {};
         dronesTotal += (d.count | 0);
       }
-      if (dronesTotal > 0) parts.push('Дроны × ' + dronesTotal);
+      if (dronesTotal > 0) parts.push(_t('shop.reward.drones') + ' × ' + dronesTotal);
     }
     var dust = contents.siliconDust | 0;
-    if (dust > 0) parts.push('Кремниевая пыль × ' + dust);
+    if (dust > 0) parts.push(_t('shop.reward.siliconDust') + ' × ' + dust);
     return parts.join(' · ');
   }
 

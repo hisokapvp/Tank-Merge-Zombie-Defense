@@ -2325,6 +2325,25 @@ function applyTranslations(){
     ui.supercomputerBtn.setAttribute('data-ui-tooltip', t('supercomputerBtn'));
     ui.supercomputerBtn.removeAttribute('title');
   }
+  if (ui.terminalCollapseBtn){
+    const collapseLabel = t('terminalCollapseBtn');
+    ui.terminalCollapseBtn.setAttribute('aria-label', collapseLabel);
+    ui.terminalCollapseBtn.setAttribute('data-ui-tooltip', collapseLabel);
+    ui.terminalCollapseBtn.removeAttribute('title');
+  }
+  if (ui.terminalExpandBtn){
+    const expandLabel = t('terminalExpandBtn');
+    ui.terminalExpandBtn.setAttribute('aria-label', expandLabel);
+    ui.terminalExpandBtn.setAttribute('data-ui-tooltip', expandLabel);
+    ui.terminalExpandBtn.removeAttribute('title');
+  }
+  const plStorageHelp = document.getElementById('plStorageHelp');
+  if (plStorageHelp){
+    const storageHelpLabel = t('plStorageHelpButton');
+    plStorageHelp.setAttribute('aria-label', storageHelpLabel);
+    plStorageHelp.setAttribute('data-ui-tooltip', storageHelpLabel);
+    plStorageHelp.removeAttribute('title');
+  }
   const langSwitch = document.querySelector('.langSwitch');
   if (langSwitch){
     langSwitch.setAttribute('aria-label', t('menuLanguage'));

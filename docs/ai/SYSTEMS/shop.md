@@ -3,6 +3,9 @@
 > Обновлено: 2026-05-04 (passport `solo-pipeline-yandex-vk`, batch #6 / item 18).
 > Контракт магазина чипов на Yandex Games: data flow от SDK до runtime-выдачи и cloud-save.
 
+## Post-merge update (2026-05-05)
+- Reward description formatter в `src/ui/chipShopModal.js` теперь живёт на том же i18n/data-driven contract, что и остальная modal copy: `_bundleDescription(bundle)` больше не собирает строки из hardcoded Russian literals, а использует `shop.reward.chips`, `shop.reward.drones` и `shop.reward.siliconDust` через `_t(...)`. Это сохраняет корректный EN output до прихода live catalog/prices и не создаёт отдельную локальную схему перевода для наград магазина: [src/ui/chipShopModal.js](../../../src/ui/chipShopModal.js#L57-L59), [src/ui/chipShopModal.js](../../../src/ui/chipShopModal.js#L153-L174), [src/i18n/ru.json](../../../src/i18n/ru.json#L784-L786), [src/i18n/en.json](../../../src/i18n/en.json#L784-L786), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L495-L496), [src/i18n/fallbackStrings.js](../../../src/i18n/fallbackStrings.js#L1092-L1093).
+
 ## Где править
 
 | Слой | Файл | Назначение |

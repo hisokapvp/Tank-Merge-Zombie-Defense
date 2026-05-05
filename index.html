@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Merge Tank: Zombie invasion</title>
   <link rel="icon" href="data:,">
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- TMZD game font (Press Start 2P) — pre-load so the loading splash matches
-       the in-game palette/typography. solo-pipeline-yandex-vk#A1-9items-rework / item 7. -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" />
+    <!-- TMZD game font (Press Start 2P) is self-hosted so startup stays offline-safe
+      and the loading splash/HUD do not depend on Google Fonts. -->
+    <link rel="preload" href="assets/ui/fonts/PressStart2P-Regular-cyrillic.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/ui/fonts/PressStart2P-Regular-latin.woff2" as="font" type="font/woff2" crossorigin />
   <!-- Yandex Games SDK (item 7+8 — solo-pipeline-yandex-vk batch A3).
        solo-pipeline-yandex-vk#A1-9items-rework / console-diag: load the SDK
        script ONLY inside a real Yandex Games iframe. The SDK script v2 itself
@@ -172,7 +171,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260429-solo-pipeline-yandex-vk-b3-v1';
+      var token = '20260505-solo-pipeline-yandex-vk-b1-v1';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -305,7 +304,7 @@
         <button id="hudShopButton" class="btn btnIcon hudShopButton hidden" type="button" tabindex="0" aria-hidden="true" aria-label="Магазин чипов" data-i18n-aria-label="shop.title" title="Магазин чипов" data-i18n-title="shop.title">🛒</button>
         <div id="achievementToast" class="achievementToast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
         <div class="stageUi stageUiRight">
-          <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Развернуть терминал" data-ui-tooltip="Развернуть терминал">
+          <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Expand terminal" data-ui-tooltip="Expand terminal">
             <img src="assets/ui/icons/terminal_icon.png" alt="Terminal" id="terminalExpandIcon" onerror="this.style.display='none'; this.parentElement.innerText='🖥'" />
           </button>
 
@@ -342,7 +341,7 @@
                 <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
               </div>
             </div>
-            <button id="terminalCollapseBtn" class="terminalCollapseBtn" type="button" aria-label="Свернуть терминал" data-ui-tooltip="Свернуть терминал">_</button>
+            <button id="terminalCollapseBtn" class="terminalCollapseBtn" type="button" aria-label="Collapse terminal" data-ui-tooltip="Collapse terminal">_</button>
           </div>
         </div>
         <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">
