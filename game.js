@@ -4148,6 +4148,24 @@ function recalculateAchievementsAndQueuePopups(){
 }
 GameApi.recalculateAchievementsAndQueuePopups = recalculateAchievementsAndQueuePopups;
 
+// Bridge: production-storage snapshot seams (productionLine.js push/openBox/mergeBoxes)
+// must route through the canonical achievement pipeline so storage_worker family unlocks
+// receive their composite rewards via reconcileAchievementRewards() and trigger popups via
+// queueAchievementPopup(). Plain Achievements.recordProductionStorageSnapshot() only flips
+// `unlocked[]` flags and runs grantSelfManagedReward() (new_technology family only) — that
+// path silently dropped storage_worker rewards/popups before this bridge existed.
+function onProductionStorageSnapshotChanged(stateArg){
+  if (!(AchievementsApi && typeof AchievementsApi.recordProductionStorageSnapshot === 'function')) return [];
+  const target = stateArg || state;
+  const unlocked = AchievementsApi.recordProductionStorageSnapshot(target) || [];
+  if (unlocked.length){
+    reconcileAchievementRewards(unlocked);
+    for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  }
+  return unlocked;
+}
+GameApi.onProductionStorageSnapshotChanged = onProductionStorageSnapshotChanged;
+
 const noRepairAttackWaveRuntime = {
   activeEpisodeKey: null,
   invalidated: false,
@@ -11825,7 +11843,7 @@ function renderAchievementsList(){
         return computeHangarCellsWithMinChipCount(def.optimizerMinChips || 1);
       }
       if (AchievementsApi && AchievementsApi.getProgressValue) {
-        return AchievementsApi.getProgressValue(state, def.progressType);
+        return AchievementsApi.getProgressValue(state, def.progressType, def);
       }
       if (def.progressType === 'merges') return ach.totalMerges;
       if (def.progressType === 'manualFenceRepairs') return ach.totalManualFenceRepairs;

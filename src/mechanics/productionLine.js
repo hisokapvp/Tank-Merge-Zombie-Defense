@@ -292,6 +292,12 @@
         pl.killsTracked -= cost;
         pl.boxesProduced += 1;
         pl.progress = 0;
+        var BridgePush = global.Game;
+        if (BridgePush && typeof BridgePush.onProductionStorageSnapshotChanged === 'function') {
+          BridgePush.onProductionStorageSnapshotChanged(state);
+        } else if (BridgePush && BridgePush.Achievements && typeof BridgePush.Achievements.recordProductionStorageSnapshot === 'function') {
+          BridgePush.Achievements.recordProductionStorageSnapshot(state);
+        }
       } else {
         // Storage full — clamp kills so we don't lose them, pause at 100%
         pl.killsTracked = cost;
@@ -307,6 +313,12 @@
 
     const box = normalizeSavedBox(pl.storage[boxIndex]);
     pl.storage.splice(boxIndex, 1);
+    var BridgeOpen = global.Game;
+    if (BridgeOpen && typeof BridgeOpen.onProductionStorageSnapshotChanged === 'function') {
+      BridgeOpen.onProductionStorageSnapshotChanged(state);
+    } else if (BridgeOpen && BridgeOpen.Achievements && typeof BridgeOpen.Achievements.recordProductionStorageSnapshot === 'function') {
+      BridgeOpen.Achievements.recordProductionStorageSnapshot(state);
+    }
 
     const loot = (box.level === 1 ? getLootById(box.guaranteedLootId) : null) || rollLootForLevel(box.level);
     const result = { lootId: loot.id, label: loot.label, items: [], boxLevel: box.level };
@@ -410,6 +422,12 @@
     pl.storage[sourceIndex] = sourceBox;
     pl.storage[targetIndex] = targetBox;
     pl.storage.splice(sourceIndex, 1);
+    var BridgeMerge = global.Game;
+    if (BridgeMerge && typeof BridgeMerge.onProductionStorageSnapshotChanged === 'function') {
+      BridgeMerge.onProductionStorageSnapshotChanged(state);
+    } else if (BridgeMerge && BridgeMerge.Achievements && typeof BridgeMerge.Achievements.recordProductionStorageSnapshot === 'function') {
+      BridgeMerge.Achievements.recordProductionStorageSnapshot(state);
+    }
     return {
       level: targetBox.level,
       targetIndex: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex,

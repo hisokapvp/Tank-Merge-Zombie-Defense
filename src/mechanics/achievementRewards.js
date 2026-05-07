@@ -144,7 +144,9 @@
   var REWARD_TABLE = {
     /* chip_crafting family */
     chipCombinatorUpgrade1Dust50: { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'dust', amount: 50 }], i18nKey: 'achievementRewardChipCombinatorUpgrade1Dust50' },
-    chipCreatorDust10:            { type: 'dust', amount: 10, i18nKey: 'achievementRewardChipCreatorDust10' },
+    chipCreator1Dust15:           { type: 'dust', amount: 15, i18nKey: 'achievementRewardChipCreator1Dust15' },
+    chipCreator2RandomChips3Dust50: { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'dust', amount: 50 }], i18nKey: 'achievementRewardChipCreator2RandomChips3Dust50' },
+    chipCreator3UpgradePoints3Dust200: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'dust', amount: 200 }], i18nKey: 'achievementRewardChipCreator3UpgradePoints3Dust200' },
     /* power_reserve family */
     powerReserveDust15Fragments3:  { type: 'composite', items: [{ type: 'dust', amount: 15 }, { type: 'fragments', amount: 3 }], i18nKey: 'achievementRewardPowerReserve1' },
     powerReserveRandomChips3Upgrade1: { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'upgradePoints', amount: 1 }], i18nKey: 'achievementRewardPowerReserve2' },
@@ -219,11 +221,17 @@
     firstEliteUpgrade2Drone1L3:     { type: 'composite', items: [{ type: 'upgradePoints', amount: 2 }, { type: 'drones', amount: 1, level: 3 }], i18nKey: 'achievementRewardFirstElite4' },
     firstEliteUpgrade3Drones2L5:    { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 2, level: 5 }], i18nKey: 'achievementRewardFirstElite5' },
     firstEliteUpgrade5Damage50000:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'damagePoints', amount: 50000 }], i18nKey: 'achievementRewardFirstElite6' },
+    /* storage_worker family */
+    storageWorker1Chips3Drone1L3:   { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'drones', amount: 1, level: 3 }], i18nKey: 'achievementRewardStorageWorker1' },
+    storageWorker2Chips5Drone2L4:   { type: 'composite', items: [{ type: 'randomChips', amount: 5 }, { type: 'drones', amount: 2, level: 4 }], i18nKey: 'achievementRewardStorageWorker2' },
+    storageWorker3Upgrade5Chips10:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 10 }], i18nKey: 'achievementRewardStorageWorker3' },
   };
 
   var ATOMIC_REWARD_MODES = {
     chipCombinatorUpgrade1Dust50: true,
-    chipCreatorDust10: true,
+    chipCreator1Dust15: true,
+    chipCreator2RandomChips3Dust50: true,
+    chipCreator3UpgradePoints3Dust200: true,
     powerReserveDust15Fragments3: true,
     powerReserveRandomChips3Upgrade1: true,
     powerReserveUpgrade3Damage100000: true,
@@ -232,6 +240,10 @@
     optimizerUpgrade2Drones2L2: true,
     optimizerChips10Damage100000: true,
     optimizerUpgrade5Drones3L5: true,
+    /* storage_worker composite grants — rollback parity with chip_creator */
+    storageWorker1Chips3Drone1L3: true,
+    storageWorker2Chips5Drone2L4: true,
+    storageWorker3Upgrade5Chips10: true,
   };
 
   function cloneSerializable(value) {

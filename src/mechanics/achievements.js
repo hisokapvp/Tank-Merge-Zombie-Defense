@@ -184,10 +184,30 @@
           familyId: 'chip_crafting',
           titleKey: 'achievementChipCreator1',
           descKey: 'achievementChipCreator1Desc',
-          rewardKey: 'achievementRewardChipCreatorDust10',
+          rewardKey: 'achievementRewardChipCreator1Dust15',
           target: 1,
           progressType: 'chipCraftFromFragments',
-          rewardMode: 'chipCreatorDust10',
+          rewardMode: 'chipCreator1Dust15',
+        },
+        {
+          id: 'chip_creator_2',
+          familyId: 'chip_crafting',
+          titleKey: 'achievementChipCreator2',
+          descKey: 'achievementChipCreator2Desc',
+          rewardKey: 'achievementRewardChipCreator2RandomChips3Dust50',
+          target: 10,
+          progressType: 'chipCraftFromFragments',
+          rewardMode: 'chipCreator2RandomChips3Dust50',
+        },
+        {
+          id: 'chip_creator_3',
+          familyId: 'chip_crafting',
+          titleKey: 'achievementChipCreator3',
+          descKey: 'achievementChipCreator3Desc',
+          rewardKey: 'achievementRewardChipCreator3UpgradePoints3Dust200',
+          target: 100,
+          progressType: 'chipCraftFromFragments',
+          rewardMode: 'chipCreator3UpgradePoints3Dust200',
         },
       ],
     },
@@ -692,6 +712,44 @@
         },
       ],
     },
+    {
+      id: 'storage_worker',
+      definitions: [
+        {
+          id: 'storage_worker_1',
+          familyId: 'storage_worker',
+          titleKey: 'achievementStorageWorker1',
+          descKey: 'achievementStorageWorker1Desc',
+          rewardKey: 'achievementRewardStorageWorker1',
+          target: 9,
+          progressLevel: 0,
+          progressType: 'productionStorageSnapshot',
+          rewardMode: 'storageWorker1Chips3Drone1L3',
+        },
+        {
+          id: 'storage_worker_2',
+          familyId: 'storage_worker',
+          titleKey: 'achievementStorageWorker2',
+          descKey: 'achievementStorageWorker2Desc',
+          rewardKey: 'achievementRewardStorageWorker2',
+          target: 6,
+          progressLevel: 2,
+          progressType: 'productionStorageSnapshot',
+          rewardMode: 'storageWorker2Chips5Drone2L4',
+        },
+        {
+          id: 'storage_worker_3',
+          familyId: 'storage_worker',
+          titleKey: 'achievementStorageWorker3',
+          descKey: 'achievementStorageWorker3Desc',
+          rewardKey: 'achievementRewardStorageWorker3',
+          target: 3,
+          progressLevel: 4,
+          progressType: 'productionStorageSnapshot',
+          rewardMode: 'storageWorker3Upgrade5Chips10',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -1018,7 +1076,7 @@
     else stats.chipComboTriplesCount = normalizeCounter(stats.chipComboTriplesCount);
 
     if (!hasChipCraftFromFragments) stats.chipCraftFromFragmentsCount = legacyChipCraftFromFragments;
-    else stats.chipCraftFromFragmentsCount = normalizeCounter(stats.chipCraftFromFragmentsCount);
+    else stats.chipCraftFromFragmentsCount = Math.max(normalizeCounter(stats.chipCraftFromFragmentsCount), legacyChipCraftFromFragments);
 
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
@@ -1183,6 +1241,18 @@
       state.achievements.deferredRewards = [];
     }
 
+    if (!state.achievements.counters || typeof state.achievements.counters !== 'object') {
+      state.achievements.counters = {};
+    }
+    if (!state.achievements.counters.productionStorageSnapshot || typeof state.achievements.counters.productionStorageSnapshot !== 'object') {
+      state.achievements.counters.productionStorageSnapshot = { total: 0, level2: 0, level4: 0 };
+    } else {
+      var psSnap = state.achievements.counters.productionStorageSnapshot;
+      psSnap.total = normalizeCounter(psSnap.total);
+      psSnap.level2 = normalizeCounter(psSnap.level2);
+      psSnap.level4 = normalizeCounter(psSnap.level4);
+    }
+
     if (completedModifierTechCount > state.achievements.totalModifierTechUnlocks) {
       state.achievements.totalModifierTechUnlocks = completedModifierTechCount;
       if (state.stats && typeof state.stats === 'object') {
@@ -1220,12 +1290,20 @@
     return nextValue;
   }
 
-  function getProgressValueFromState(progressType, state, ach) {
+  function getProgressValueFromState(progressType, state, ach, def) {
     var type = typeof progressType === 'string' ? progressType : 'purchases';
     var stats = state && state.stats && typeof state.stats === 'object' ? state.stats : null;
 
     if (type === 'droneMaxLevel') return computeDroneMaxLevelFromState(state);
     if (type === 'hangarCellChipTier') return computeHangarCellChipTierFromState(state);
+    if (type === 'productionStorageSnapshot') {
+      var snapCounters = ach && ach.counters && ach.counters.productionStorageSnapshot;
+      if (!snapCounters) return 0;
+      var snapLvl = def && Number.isFinite(def.progressLevel) ? def.progressLevel : 0;
+      if (snapLvl >= 4) return normalizeCounter(snapCounters.level4);
+      if (snapLvl >= 2) return normalizeCounter(snapCounters.level2);
+      return normalizeCounter(snapCounters.total);
+    }
 
     if (stats) {
       if (type === 'currentBalance') return normalizeCounter(state && state.coins);
@@ -1299,9 +1377,9 @@
     return normalizeCounter(ach.totalPurchased);
   }
 
-  function getProgressValue(state, progressType) {
+  function getProgressValue(state, progressType, def) {
     var ach = ensureState(state);
-    return getProgressValueFromState(progressType, state, ach);
+    return getProgressValueFromState(progressType, state, ach, def);
   }
 
   function recalculateUnlocks(state) {
@@ -1311,7 +1389,7 @@
     for (var i = 0; i < ACHIEVEMENTS.length; i++) {
       var def = ACHIEVEMENTS[i];
       if (ach.unlocked[def.id]) continue;
-      var progress = getProgressValueFromState(def.progressType, state, ach);
+      var progress = getProgressValueFromState(def.progressType, state, ach, def);
       if (progress >= def.target) {
         ach.unlocked[def.id] = true;
         grantSelfManagedReward(state, def.id, def, ach);
@@ -1475,6 +1553,31 @@
     return true;
   }
 
+  function recordProductionStorageSnapshot(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    if (!ach.counters || typeof ach.counters !== 'object') ach.counters = {};
+    if (!ach.counters.productionStorageSnapshot || typeof ach.counters.productionStorageSnapshot !== 'object') {
+      ach.counters.productionStorageSnapshot = { total: 0, level2: 0, level4: 0 };
+    }
+    var pl = state && state.productionLine;
+    if (!pl || !Array.isArray(pl.storage)) return [];
+    var total = pl.storage.length;
+    var lvl2 = 0, lvl4 = 0;
+    for (var bi = 0; bi < pl.storage.length; bi++) {
+      var bx = pl.storage[bi];
+      if (!bx) continue;
+      var bxLvl = normalizeCounter(bx.level);
+      if (bxLvl >= 2) lvl2++;
+      if (bxLvl >= 4) lvl4++;
+    }
+    var c = ach.counters.productionStorageSnapshot;
+    if (total > c.total) c.total = total;
+    if (lvl2 > c.level2) c.level2 = lvl2;
+    if (lvl4 > c.level4) c.level4 = lvl4;
+    return recalculateUnlocks(state);
+  }
+
   function recordModifierTechUnlock(state, techId) {
     var ach = ensureState(state);
     if (!ach) return [];
@@ -1547,6 +1650,7 @@
     markRewardGranted: markRewardGranted,
     appendRewardHistory: appendRewardHistory,
     recordModifierTechUnlock: recordModifierTechUnlock,
+    recordProductionStorageSnapshot: recordProductionStorageSnapshot,
     recordNoRepairAttackWaveSuccess: recordNoRepairAttackWaveSuccess,
     resetNoRepairAttackWaveStreak: resetNoRepairAttackWaveStreak,
     recordDefenseOrderWaveSuccess: recordDefenseOrderWaveSuccess,

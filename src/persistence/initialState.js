@@ -152,6 +152,9 @@
         totalMaxTankLevel: 0,
         reservePowerPeakCycle: 0,
         completedModifierTechs: {},
+        counters: {
+          productionStorageSnapshot: { total: 0, level2: 0, level4: 0 },
+        },
       },
       stats: {
         tanksMergedCount: 0,
