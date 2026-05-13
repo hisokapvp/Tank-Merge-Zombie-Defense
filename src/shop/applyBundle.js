@@ -168,7 +168,13 @@
     var dust = (amount | 0);
     if (dust <= 0) return 0;
     var ui = _hangarChipsUi();
-    if (!ui || typeof ui.getSiliconDust !== 'function' || typeof ui.setSiliconDust !== 'function') {
+    if (!ui) return 0;
+    /* solo-pipeline-yandex-vk batch#1 — prefer canonical inflow seam
+       so state.stats.dustEarnedLifetime tracks shop bundle deliveries. */
+    if (typeof ui.creditSiliconDust === 'function') {
+      try { return ui.creditSiliconDust(dust, 'shop-bundle'); } catch (_) { return 0; }
+    }
+    if (typeof ui.getSiliconDust !== 'function' || typeof ui.setSiliconDust !== 'function') {
       return 0;
     }
     var current = ui.getSiliconDust();

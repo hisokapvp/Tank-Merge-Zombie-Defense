@@ -151,6 +151,10 @@
         totalHangarMasterLevel: 0,
         totalMaxTankLevel: 0,
         reservePowerPeakCycle: 0,
+        // Lifetime counters (ADR — see src/mechanics/achievements.js ACHIEVEMENT_FAMILIES dust_master/fragment_collector):
+        // monotonic, survive partial+full reset, only positive deltas, written via creditSiliconDust + addPlayerFragment seams.
+        dustEarnedLifetime: 0,
+        fragmentsAcquired: 0,
         completedModifierTechs: {},
         counters: {
           productionStorageSnapshot: { total: 0, level2: 0, level4: 0 },
@@ -169,6 +173,9 @@
         maxTankLevelCount: 0,
         chipComboTriplesCount: 0,
         chipCraftFromFragmentsCount: 0,
+        // Lifetime dust/fragment counters — canonical home in stats; ensureStats mirrors achievements.* legacy pair.
+        dustEarnedLifetime: 0,
+        fragmentsAcquired: 0,
       },
       ui: {
         talentsOpen: false,

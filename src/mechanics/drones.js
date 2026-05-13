@@ -816,6 +816,9 @@
       }
       state.coins = Math.max(0, availableCoins - deltaCoins);
       repair.coinsSpentPrev = spentPrev + deltaCoins;
+      if (global.Game && global.Game.Achievements && typeof global.Game.Achievements.recordCoinsSpent === 'function') {
+        global.Game.Achievements.recordCoinsSpent(state, deltaCoins, 'repair');
+      }
     }
 
     var hpStart = clamp(Number(repair.startHp) || 0, 0, seg.maxHp);

@@ -112,7 +112,10 @@
         "totalManualFenceRepairs":      { "type": "integer", "minimum": 0 },
         "totalModifierTechUnlocks":     { "type": "integer", "minimum": 0 },
         "totalDroneAcquisitions":       { "type": "integer", "minimum": 0 },
-        "totalNoRepairAttackWaveStreak": { "type": "integer", "minimum": 0 }
+        "totalNoRepairAttackWaveStreak": { "type": "integer", "minimum": 0 },
+        "$comment_dust_fragment_lifetime": "dustEarnedLifetime + fragmentsAcquired — monotonic lifetime counters; survive partial AND full reset (see ADR in src/mechanics/achievements.js near ACHIEVEMENT_FAMILIES dust_master/fragment_collector); never decremented; only positive deltas via creditSiliconDust / addPlayerFragment seams",
+        "dustEarnedLifetime":           { "type": "integer", "minimum": 0 },
+        "fragmentsAcquired":            { "type": "integer", "minimum": 0 }
       }
     },
     "stats": {
@@ -124,7 +127,9 @@
         "manualFenceRepairsCount":        { "type": "integer", "minimum": 0 },
         "modifierTechUnlocksCount":       { "type": "integer", "minimum": 0 },
         "droneAcquisitionsCount":         { "type": "integer", "minimum": 0 },
-        "noRepairAttackWaveStreakCount":  { "type": "integer", "minimum": 0 }
+        "noRepairAttackWaveStreakCount":  { "type": "integer", "minimum": 0 },
+        "dustEarnedLifetime":             { "type": "integer", "minimum": 0 },
+        "fragmentsAcquired":              { "type": "integer", "minimum": 0 }
       }
     },
     "mapSeeds": {

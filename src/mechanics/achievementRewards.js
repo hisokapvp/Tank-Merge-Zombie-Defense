@@ -96,7 +96,16 @@
   function grantAchievementDust(amount) {
     var chipsUi = getHangarChipsUi();
     var total = normalizeCounter(amount);
-    if (!chipsUi || typeof chipsUi.getSiliconDust !== 'function' || typeof chipsUi.setSiliconDust !== 'function' || total <= 0) {
+    if (!chipsUi || total <= 0) return false;
+    /* solo-pipeline-yandex-vk batch#1 — prefer canonical inflow seam.
+       creditSiliconDust(amount, source) bumps state.stats.dustEarnedLifetime
+       so dust_master progress tracks every positive delta. Fall back to
+       legacy setSiliconDust+getSiliconDust if creditSiliconDust is
+       unavailable (e.g. pack4 unit tests with stubbed UI). */
+    if (typeof chipsUi.creditSiliconDust === 'function') {
+      return chipsUi.creditSiliconDust(total, 'achievement-reward') > 0;
+    }
+    if (typeof chipsUi.getSiliconDust !== 'function' || typeof chipsUi.setSiliconDust !== 'function') {
       return false;
     }
     var currentDust = normalizeCounter(chipsUi.getSiliconDust());
@@ -164,6 +173,20 @@
     /* drone_brigadier family */
     droneBrigadierDrones2L2:     { type: 'drones',         amount: 2, level: 2, i18nKey: 'achievementRewardDroneBrigadier1' },
     droneBrigadierDrones3L5Upgrade3: { type: 'composite', items: [{ type: 'drones', amount: 3, level: 5 }, { type: 'upgradePoints', amount: 3 }], i18nKey: 'achievementRewardDroneBrigadier2' },
+    /* solo-pipeline-yandex-vk batch#1 — dust_master family.
+       Reuses existing reward types (fragments / randomChips / composite
+       with upgradePoints+drones). The composite reward for level 3 is
+       intentionally identical to fragment_collector_3 (3 upgrade points
+       + 3 drones level 7) per design spec. */
+    dustMaster1RandomFragments10:        { type: 'fragments',   amount: 10, i18nKey: 'achievementRewardDustMaster1' },
+    dustMaster2RandomChips10:            { type: 'randomChips', amount: 10, i18nKey: 'achievementRewardDustMaster2' },
+    dustMaster3UpgradePoints3DronesL7x3: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 7 }], i18nKey: 'achievementRewardDustMaster3' },
+    /* solo-pipeline-yandex-vk batch#2 — fragment_collector family.
+       Reuses 'dust' and 'composite(upgradePoints+drones)' reward types.
+       Tier 3 composite is intentionally identical to dust_master_3. */
+    fragmentCollector1Dust50:                   { type: 'dust',      amount: 50,  i18nKey: 'achievementRewardFragmentCollector1' },
+    fragmentCollector2Dust500:                  { type: 'dust',      amount: 500, i18nKey: 'achievementRewardFragmentCollector2' },
+    fragmentCollector3UpgradePoints3DronesL7x3: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 7 }], i18nKey: 'achievementRewardFragmentCollector3' },
     /* optimizer family */
     optimizerUpgrade2Drones2L2:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 2 }, { type: 'drones', amount: 2, level: 2 }], i18nKey: 'achievementRewardOptimizer1' },
     optimizerChips10Damage100000:{ type: 'composite', items: [{ type: 'randomChips', amount: 10 }, { type: 'damagePoints', amount: 100000 }], i18nKey: 'achievementRewardOptimizer2' },
@@ -225,6 +248,28 @@
     storageWorker1Chips3Drone1L3:   { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'drones', amount: 1, level: 3 }], i18nKey: 'achievementRewardStorageWorker1' },
     storageWorker2Chips5Drone2L4:   { type: 'composite', items: [{ type: 'randomChips', amount: 5 }, { type: 'drones', amount: 2, level: 4 }], i18nKey: 'achievementRewardStorageWorker2' },
     storageWorker3Upgrade5Chips10:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 10 }], i18nKey: 'achievementRewardStorageWorker3' },
+    /* wave_survivor family */
+    waveSurvivor1Coins2000:         { type: 'coins',         amount: 2000, i18nKey: 'achievementRewardWaveSurvivor1' },
+    waveSurvivor2RandomChips2:      { type: 'randomChips',   amount: 2,    i18nKey: 'achievementRewardWaveSurvivor2' },
+    waveSurvivor3UpgradePoints3:    { type: 'upgradePoints', amount: 3,    i18nKey: 'achievementRewardWaveSurvivor3' },
+    waveSurvivor4Drone1L5Chips5:    { type: 'composite', items: [{ type: 'drones', amount: 1, level: 5 }, { type: 'randomChips', amount: 5 }], i18nKey: 'achievementRewardWaveSurvivor4' },
+    waveSurvivor5Upgrade10Damage1M: { type: 'composite', items: [{ type: 'upgradePoints', amount: 10 }, { type: 'damagePoints', amount: 1000000 }], i18nKey: 'achievementRewardWaveSurvivor5' },
+    /* big_spender family */
+    bigSpender1Damage10000:         { type: 'damagePoints',  amount: 10000, i18nKey: 'achievementRewardBigSpender1' },
+    bigSpender2Chips2Upgrade2:      { type: 'composite', items: [{ type: 'randomChips', amount: 2 }, { type: 'upgradePoints', amount: 2 }], i18nKey: 'achievementRewardBigSpender2' },
+    bigSpender3Upgrade5Chips5:      { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 5 }], i18nKey: 'achievementRewardBigSpender3' },
+    /* auto_merge_addict family (TZ items 1..5) — progressType: autoMergeActivations */
+    autoMergeAddict1Dust25Fragments10:    { type: 'composite', items: [{ type: 'dust', amount: 25 }, { type: 'fragments', amount: 10 }],                       i18nKey: 'achievementRewardAutoMergeAddict1' },
+    autoMergeAddict2Upgrade1Chips5:       { type: 'composite', items: [{ type: 'upgradePoints', amount: 1 }, { type: 'randomChips', amount: 5 }],              i18nKey: 'achievementRewardAutoMergeAddict2' },
+    autoMergeAddict3Damage100000Drones3L3:{ type: 'composite', items: [{ type: 'damagePoints', amount: 100000 }, { type: 'drones', amount: 3, level: 3 }],     i18nKey: 'achievementRewardAutoMergeAddict3' },
+    autoMergeAddict4Upgrade3Chips15:      { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'randomChips', amount: 15 }],             i18nKey: 'achievementRewardAutoMergeAddict4' },
+    autoMergeAddict5Drones6L6Damage1M:    { type: 'composite', items: [{ type: 'drones', amount: 6, level: 6 }, { type: 'damagePoints', amount: 1000000 }],    i18nKey: 'achievementRewardAutoMergeAddict5' },
+    /* conveyor_master family (TZ items 6..10) — progressType: purchases (reuse existing counter) */
+    conveyorMaster1Dust75:                { type: 'composite', items: [{ type: 'dust', amount: 75 }],                                                          i18nKey: 'achievementRewardConveyorMaster1' },
+    conveyorMaster2Fragments25Chips5:     { type: 'composite', items: [{ type: 'fragments', amount: 25 }, { type: 'randomChips', amount: 5 }],                 i18nKey: 'achievementRewardConveyorMaster2' },
+    conveyorMaster3Drones5L4:             { type: 'composite', items: [{ type: 'drones', amount: 5, level: 4 }],                                               i18nKey: 'achievementRewardConveyorMaster3' },
+    conveyorMaster4Upgrade5Dust150:       { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'dust', amount: 150 }],                   i18nKey: 'achievementRewardConveyorMaster4' },
+    conveyorMaster5Damage10MDrones2L8:    { type: 'composite', items: [{ type: 'damagePoints', amount: 10000000 }, { type: 'drones', amount: 2, level: 8 }],   i18nKey: 'achievementRewardConveyorMaster5' },
   };
 
   var ATOMIC_REWARD_MODES = {
@@ -244,6 +289,22 @@
     storageWorker1Chips3Drone1L3: true,
     storageWorker2Chips5Drone2L4: true,
     storageWorker3Upgrade5Chips10: true,
+    waveSurvivor4Drone1L5Chips5: true,
+    waveSurvivor5Upgrade10Damage1M: true,
+    bigSpender2Chips2Upgrade2: true,
+    bigSpender3Upgrade5Chips5: true,
+    /* auto_merge_addict composite grants — rollback parity with wave_survivor */
+    autoMergeAddict1Dust25Fragments10: true,
+    autoMergeAddict2Upgrade1Chips5: true,
+    autoMergeAddict3Damage100000Drones3L3: true,
+    autoMergeAddict4Upgrade3Chips15: true,
+    autoMergeAddict5Drones6L6Damage1M: true,
+    /* conveyor_master composite grants — rollback parity with auto_merge_addict */
+    conveyorMaster1Dust75: true,
+    conveyorMaster2Fragments25Chips5: true,
+    conveyorMaster3Drones5L4: true,
+    conveyorMaster4Upgrade5Dust150: true,
+    conveyorMaster5Damage10MDrones2L8: true,
   };
 
   function cloneSerializable(value) {

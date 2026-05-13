@@ -643,8 +643,8 @@ function createInitialState(options){
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
         endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
-        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, deferredRewards: [], totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalDefenseOrderStreak: 0, totalMaxTankLevel: 0, completedModifierTechs: {} },
-        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, defenseOrderStreakCount: 0, maxTankLevelCount: 0 },
+        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, deferredRewards: [], totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, totalMaxTankLevel: 0, completedModifierTechs: {} },
+        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, attackWavesCompletedCount: 0, coinsSpentTotal: 0, coinsSpentBySource: {}, defenseOrderStreakCount: 0, maxTankLevelCount: 0 },
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
           unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
@@ -3894,7 +3894,7 @@ function ensureAchievementsState(){
     return achievementsState;
   }
   if (!state.achievements || typeof state.achievements !== 'object') {
-    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalDefenseOrderStreak: 0, completedModifierTechs: {} };
+    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, completedModifierTechs: {} };
   }
   if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
@@ -3908,6 +3908,8 @@ function ensureAchievementsState(){
   if (!Number.isFinite(state.achievements.totalModifierTechUnlocks)) state.achievements.totalModifierTechUnlocks = 0;
   if (!Number.isFinite(state.achievements.totalDroneAcquisitions)) state.achievements.totalDroneAcquisitions = 0;
   if (!Number.isFinite(state.achievements.totalNoRepairAttackWaveStreak)) state.achievements.totalNoRepairAttackWaveStreak = 0;
+  if (!Number.isFinite(state.achievements.totalAttackWavesCompleted)) state.achievements.totalAttackWavesCompleted = 0;
+  if (!Number.isFinite(state.achievements.totalCoinsSpent)) state.achievements.totalCoinsSpent = 0;
   if (!Number.isFinite(state.achievements.totalDefenseOrderStreak)) state.achievements.totalDefenseOrderStreak = 0;
   if (!Number.isFinite(state.achievements.totalChipComboTriples)) state.achievements.totalChipComboTriples = 0;
   if (!Number.isFinite(state.achievements.totalChipCraftFromFragments)) state.achievements.totalChipCraftFromFragments = 0;
@@ -4111,6 +4113,9 @@ function getSerializedAchievementStats(){
     modifierTechUnlocksCount: clampDevInt(Number.isFinite(stats.modifierTechUnlocksCount) ? stats.modifierTechUnlocksCount : ach.totalModifierTechUnlocks),
     droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
     noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
+    attackWavesCompletedCount: clampDevInt(Number.isFinite(stats.attackWavesCompletedCount) ? stats.attackWavesCompletedCount : ach.totalAttackWavesCompleted),
+    coinsSpentTotal: clampDevInt(Number.isFinite(stats.coinsSpentTotal) ? stats.coinsSpentTotal : ach.totalCoinsSpent),
+    coinsSpentBySource: (stats.coinsSpentBySource && typeof stats.coinsSpentBySource === 'object') ? stats.coinsSpentBySource : {},
     moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
     perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
     hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
@@ -4129,6 +4134,9 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.modifierTechUnlocksCount)) state.stats.modifierTechUnlocksCount = clampDevInt(savedStats.modifierTechUnlocksCount);
     if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
     if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
+    if (Number.isFinite(savedStats.attackWavesCompletedCount)) state.stats.attackWavesCompletedCount = clampDevInt(savedStats.attackWavesCompletedCount);
+    if (Number.isFinite(savedStats.coinsSpentTotal)) state.stats.coinsSpentTotal = clampDevInt(savedStats.coinsSpentTotal);
+    if (savedStats.coinsSpentBySource && typeof savedStats.coinsSpentBySource === 'object') state.stats.coinsSpentBySource = savedStats.coinsSpentBySource;
     if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
     if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
     if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
@@ -4200,6 +4208,44 @@ function completeNoRepairAttackWaveAchievementProgress(){
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
 }
 
+function completeAttackEpisodeAchievementProgress(){
+  let unlocked = [];
+  if (AchievementsApi && typeof AchievementsApi.recordAttackEpisodeCompleted === 'function') {
+    unlocked = AchievementsApi.recordAttackEpisodeCompleted(state) || [];
+  } else {
+    const ach = ensureAchievementsState();
+    const nextValue = clampDevInt((ach.totalAttackWavesCompleted || 0) + 1);
+    ach.totalAttackWavesCompleted = nextValue;
+    if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+    state.stats.attackWavesCompletedCount = nextValue;
+  }
+  reconcileAchievementRewards(unlocked);
+  for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+}
+
+function recordCoinsSpentForBigSpender(amount, source){
+  const inc = Number(amount);
+  if (!Number.isFinite(inc) || inc <= 0) return;
+  let unlocked = [];
+  if (AchievementsApi && typeof AchievementsApi.recordCoinsSpent === 'function') {
+    unlocked = AchievementsApi.recordCoinsSpent(state, inc, typeof source === 'string' ? source : '') || [];
+  } else {
+    const ach = ensureAchievementsState();
+    const prev = Number(ach.totalCoinsSpent) || 0;
+    const next = Math.min(Number.MAX_SAFE_INTEGER, prev + Math.floor(inc));
+    ach.totalCoinsSpent = next;
+    if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+    state.stats.coinsSpentTotal = next;
+    if (typeof source === 'string' && source.length > 0) {
+      if (!state.stats.coinsSpentBySource || typeof state.stats.coinsSpentBySource !== 'object') state.stats.coinsSpentBySource = {};
+      const prevSrc = Number(state.stats.coinsSpentBySource[source]) || 0;
+      state.stats.coinsSpentBySource[source] = Math.min(Number.MAX_SAFE_INTEGER, prevSrc + Math.floor(inc));
+    }
+  }
+  reconcileAchievementRewards(unlocked);
+  for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+}
+
 function resetNoRepairAttackWaveAchievementProgress(){
   if (AchievementsApi && typeof AchievementsApi.resetNoRepairAttackWaveStreak === 'function') {
     AchievementsApi.resetNoRepairAttackWaveStreak(state);
@@ -4222,6 +4268,8 @@ function finalizeNoRepairAttackWaveEpisode(){
   if (!noRepairAttackWaveRuntime.activeEpisodeKey) return;
   const shouldCount = !noRepairAttackWaveRuntime.invalidated;
   resetNoRepairAttackWaveRuntime();
+  // wave_survivor: count every survived attack episode regardless of repair state
+  completeAttackEpisodeAchievementProgress();
   if (!shouldCount) return;
   completeNoRepairAttackWaveAchievementProgress();
 }
@@ -4541,6 +4589,7 @@ function getAchievementConditionText(def){
   if (typeof def.descKey === 'string' && def.descKey) return t(def.descKey);
   if (def.progressType === 'merges') return t('achievementDescriptionMergeTanks', { target });
   if (def.progressType === 'purchases') return t('achievementDescriptionCreateTanks', { target });
+  if (def.progressType === 'autoMergeActivations') return t('achievementDescriptionAutoMerge', { target });
   return '';
 }
 
@@ -4804,6 +4853,7 @@ function performTankPurchaseOnce(opts){
     const empty = state.cells[freeIdx];
     if (!empty || empty.tank || (state.crate && state.crate.cellIndex === empty.i)) return false;
     state.coins -= cost;
+    recordCoinsSpentForBigSpender(cost, 'tank');
     empty.tank = makeTank(level, false, instant ? { enableStamp: false } : null);
     recordTankLevel(level);
     state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
@@ -4824,6 +4874,7 @@ function performTankPurchaseOnce(opts){
     popText(empty.x+empty.w/2, empty.y+empty.h/2, t('popTank'), '#7dffb2');
   } else {
     state.coins -= cost;
+    recordCoinsSpentForBigSpender(cost, 'tank');
     state.undergroundHangar.cells[undergroundIdx].tank = makeTank(level, false, instant ? { enableStamp: false } : null);
     recordTankLevel(level);
     state.buyCounts[level] = (state.buyCounts[level] || 0) + 1;
@@ -5548,10 +5599,18 @@ function runUndergroundHangarAutoMergeClick(){
   const pairs = collectUndergroundHangarAutoMergePairs(maxPairs);
   if (!pairs.length) return;
 
+  let executedPairs = 0;
   for (let i = 0; i < pairs.length; i++) {
     const pair = pairs[i];
     if (!pair || !pair[0] || !pair[1]) continue;
-    mergeUndergroundHangarAutoPair(pair[0], pair[1]);
+    if (mergeUndergroundHangarAutoPair(pair[0], pair[1])) executedPairs += 1;
+  }
+
+  /* Achievement seam: underground hangar auto-merge bypasses AutoMergeApi.runAutoMerge,
+     so the recorder must be invoked from this click handler too — otherwise underground
+     auto-merge presses would never increment the auto_merge_addict counter. */
+  if (executedPairs > 0 && AchievementsApi && typeof AchievementsApi.recordAutoMergeActivations === 'function') {
+    try { AchievementsApi.recordAutoMergeActivations(state, executedPairs); } catch (_) {}
   }
 
   updateUI();
@@ -5967,6 +6026,7 @@ function resetAllTalents(){
         spendCoins: (price) => {
           if (state.coins < price) return false;
           state.coins -= price;
+          recordCoinsSpentForBigSpender(price, 'talent');
           return true;
         },
         nowMs: Date.now(),
@@ -8497,6 +8557,7 @@ function tryRepairFenceSegmentAt(px, py){
     return true;
   }
   state.coins -= costCoins;
+  recordCoinsSpentForBigSpender(costCoins, 'wall');
   if (!Number.isFinite(state.fenceRepairCount)) state.fenceRepairCount = 0;
   state.fenceRepairCount++;
   const wasBroken = !!seg.broken;

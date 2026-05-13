@@ -713,6 +713,116 @@
       ],
     },
     {
+      id: 'auto_merge_addict',
+      definitions: [
+        {
+          id: 'auto_merge_addict_1',
+          familyId: 'auto_merge_addict',
+          titleKey: 'achievementAutoMergeAddict1',
+          descKey: 'achievementAutoMergeAddict1Desc',
+          rewardKey: 'achievementRewardAutoMergeAddict1',
+          target: 5000,
+          progressType: 'autoMergeActivations',
+          rewardMode: 'autoMergeAddict1Dust25Fragments10',
+        },
+        {
+          id: 'auto_merge_addict_2',
+          familyId: 'auto_merge_addict',
+          titleKey: 'achievementAutoMergeAddict2',
+          descKey: 'achievementAutoMergeAddict2Desc',
+          rewardKey: 'achievementRewardAutoMergeAddict2',
+          target: 10000,
+          progressType: 'autoMergeActivations',
+          rewardMode: 'autoMergeAddict2Upgrade1Chips5',
+        },
+        {
+          id: 'auto_merge_addict_3',
+          familyId: 'auto_merge_addict',
+          titleKey: 'achievementAutoMergeAddict3',
+          descKey: 'achievementAutoMergeAddict3Desc',
+          rewardKey: 'achievementRewardAutoMergeAddict3',
+          target: 20000,
+          progressType: 'autoMergeActivations',
+          rewardMode: 'autoMergeAddict3Damage100000Drones3L3',
+        },
+        {
+          id: 'auto_merge_addict_4',
+          familyId: 'auto_merge_addict',
+          titleKey: 'achievementAutoMergeAddict4',
+          descKey: 'achievementAutoMergeAddict4Desc',
+          rewardKey: 'achievementRewardAutoMergeAddict4',
+          target: 50000,
+          progressType: 'autoMergeActivations',
+          rewardMode: 'autoMergeAddict4Upgrade3Chips15',
+        },
+        {
+          id: 'auto_merge_addict_5',
+          familyId: 'auto_merge_addict',
+          titleKey: 'achievementAutoMergeAddict5',
+          descKey: 'achievementAutoMergeAddict5Desc',
+          rewardKey: 'achievementRewardAutoMergeAddict5',
+          target: 100000,
+          progressType: 'autoMergeActivations',
+          rewardMode: 'autoMergeAddict5Drones6L6Damage1M',
+        },
+      ],
+    },
+    {
+      id: 'conveyor_master',
+      definitions: [
+        {
+          id: 'conveyor_master_1',
+          familyId: 'conveyor_master',
+          titleKey: 'achievementConveyorMaster1',
+          descKey: 'achievementConveyorMaster1Desc',
+          rewardKey: 'achievementRewardConveyorMaster1',
+          target: 10000,
+          progressType: 'purchases',
+          rewardMode: 'conveyorMaster1Dust75',
+        },
+        {
+          id: 'conveyor_master_2',
+          familyId: 'conveyor_master',
+          titleKey: 'achievementConveyorMaster2',
+          descKey: 'achievementConveyorMaster2Desc',
+          rewardKey: 'achievementRewardConveyorMaster2',
+          target: 25000,
+          progressType: 'purchases',
+          rewardMode: 'conveyorMaster2Fragments25Chips5',
+        },
+        {
+          id: 'conveyor_master_3',
+          familyId: 'conveyor_master',
+          titleKey: 'achievementConveyorMaster3',
+          descKey: 'achievementConveyorMaster3Desc',
+          rewardKey: 'achievementRewardConveyorMaster3',
+          target: 50000,
+          progressType: 'purchases',
+          rewardMode: 'conveyorMaster3Drones5L4',
+        },
+        {
+          id: 'conveyor_master_4',
+          familyId: 'conveyor_master',
+          titleKey: 'achievementConveyorMaster4',
+          descKey: 'achievementConveyorMaster4Desc',
+          rewardKey: 'achievementRewardConveyorMaster4',
+          target: 100000,
+          progressType: 'purchases',
+          rewardMode: 'conveyorMaster4Upgrade5Dust150',
+        },
+        {
+          id: 'conveyor_master_5',
+          familyId: 'conveyor_master',
+          titleKey: 'achievementConveyorMaster5',
+          descKey: 'achievementConveyorMaster5Desc',
+          rewardKey: 'achievementRewardConveyorMaster5',
+          target: 250000,
+          progressType: 'purchases',
+          rewardMode: 'conveyorMaster5Damage10MDrones2L8',
+        },
+      ],
+    },
+    {
       id: 'storage_worker',
       definitions: [
         {
@@ -747,6 +857,197 @@
           progressLevel: 4,
           progressType: 'productionStorageSnapshot',
           rewardMode: 'storageWorker3Upgrade5Chips10',
+        },
+      ],
+    },
+    {
+      id: 'wave_survivor',
+      definitions: [
+        {
+          id: 'wave_survivor_1',
+          familyId: 'wave_survivor',
+          titleKey: 'achievementWaveSurvivor1',
+          descKey: 'achievementWaveSurvivor1Desc',
+          rewardKey: 'achievementRewardWaveSurvivor1',
+          target: 10,
+          progressType: 'attackWavesCompleted',
+          rewardMode: 'waveSurvivor1Coins2000',
+        },
+        {
+          id: 'wave_survivor_2',
+          familyId: 'wave_survivor',
+          titleKey: 'achievementWaveSurvivor2',
+          descKey: 'achievementWaveSurvivor2Desc',
+          rewardKey: 'achievementRewardWaveSurvivor2',
+          target: 50,
+          progressType: 'attackWavesCompleted',
+          rewardMode: 'waveSurvivor2RandomChips2',
+        },
+        {
+          id: 'wave_survivor_3',
+          familyId: 'wave_survivor',
+          titleKey: 'achievementWaveSurvivor3',
+          descKey: 'achievementWaveSurvivor3Desc',
+          rewardKey: 'achievementRewardWaveSurvivor3',
+          target: 200,
+          progressType: 'attackWavesCompleted',
+          rewardMode: 'waveSurvivor3UpgradePoints3',
+        },
+        {
+          id: 'wave_survivor_4',
+          familyId: 'wave_survivor',
+          titleKey: 'achievementWaveSurvivor4',
+          descKey: 'achievementWaveSurvivor4Desc',
+          rewardKey: 'achievementRewardWaveSurvivor4',
+          target: 1000,
+          progressType: 'attackWavesCompleted',
+          rewardMode: 'waveSurvivor4Drone1L5Chips5',
+        },
+        {
+          id: 'wave_survivor_5',
+          familyId: 'wave_survivor',
+          titleKey: 'achievementWaveSurvivor5',
+          descKey: 'achievementWaveSurvivor5Desc',
+          rewardKey: 'achievementRewardWaveSurvivor5',
+          target: 5000,
+          progressType: 'attackWavesCompleted',
+          rewardMode: 'waveSurvivor5Upgrade10Damage1M',
+        },
+      ],
+    },
+    {
+      id: 'big_spender',
+      definitions: [
+        {
+          id: 'big_spender_1',
+          familyId: 'big_spender',
+          titleKey: 'achievementBigSpender1',
+          descKey: 'achievementBigSpender1Desc',
+          rewardKey: 'achievementRewardBigSpender1',
+          target: 1000000,
+          progressType: 'coinsSpentTotal',
+          rewardMode: 'bigSpender1Damage10000',
+        },
+        {
+          id: 'big_spender_2',
+          familyId: 'big_spender',
+          titleKey: 'achievementBigSpender2',
+          descKey: 'achievementBigSpender2Desc',
+          rewardKey: 'achievementRewardBigSpender2',
+          target: 100000000000,
+          progressType: 'coinsSpentTotal',
+          rewardMode: 'bigSpender2Chips2Upgrade2',
+        },
+        {
+          id: 'big_spender_3',
+          familyId: 'big_spender',
+          titleKey: 'achievementBigSpender3',
+          descKey: 'achievementBigSpender3Desc',
+          rewardKey: 'achievementRewardBigSpender3',
+          target: 100000000000000,
+          progressType: 'coinsSpentTotal',
+          rewardMode: 'bigSpender3Upgrade5Chips5',
+        },
+      ],
+    },
+    /* solo-pipeline-yandex-vk batch#1 — dust_master family.
+       ADR (lifetime invariants):
+         * `state.stats.dustEarnedLifetime` is a monotonic counter of
+           positive silicon-dust deltas. Only the canonical inflow seam
+           `HangarChipsUI.creditSiliconDust(amount, source)` updates it.
+           Snapshot restoration (`achievementRewards.applyDustSnapshot`)
+           and direct `setSiliconDust(...)` writes must NOT touch it,
+           otherwise atomic rollback would re-credit lifetime.
+         * The counter survives partial reset (workshop reset / shop
+           rebalance) and full reset alike — it lives under both
+           `state.stats.dustEarnedLifetime` and the legacy mirror
+           `state.achievements.dustEarnedLifetime`, reconciled via
+           `Math.max` in `ensureStats`.
+         * dust_master_3 reward is intentionally identical to the
+           future fragment_collector_3 reward (3 upgrade points + 3
+           drones level 7) — by design, not a bug. */
+    {
+      id: 'dust_master',
+      definitions: [
+        {
+          id: 'dust_master_1',
+          familyId: 'dust_master',
+          titleKey: 'achievementDustMaster1',
+          descKey: 'achievementDustMaster1Desc',
+          rewardKey: 'achievementRewardDustMaster1',
+          target: 500,
+          progressType: 'dustEarnedLifetime',
+          rewardMode: 'dustMaster1RandomFragments10',
+        },
+        {
+          id: 'dust_master_2',
+          familyId: 'dust_master',
+          titleKey: 'achievementDustMaster2',
+          descKey: 'achievementDustMaster2Desc',
+          rewardKey: 'achievementRewardDustMaster2',
+          target: 2500,
+          progressType: 'dustEarnedLifetime',
+          rewardMode: 'dustMaster2RandomChips10',
+        },
+        {
+          id: 'dust_master_3',
+          familyId: 'dust_master',
+          titleKey: 'achievementDustMaster3',
+          descKey: 'achievementDustMaster3Desc',
+          rewardKey: 'achievementRewardDustMaster3',
+          target: 10000,
+          progressType: 'dustEarnedLifetime',
+          rewardMode: 'dustMaster3UpgradePoints3DronesL7x3',
+        },
+      ],
+    },
+    /* solo-pipeline-yandex-vk batch#2 — fragment_collector family.
+     * ADR:
+     * - Lifetime monotonic counter `state.stats.fragmentsAcquired` is
+     *   bumped exclusively via the canonical inflow seam
+     *   `Game.HangarChipsUI.addPlayerFragment(fragmentId, count)` →
+     *   `_bumpFragmentsAcquired` → `_triggerAchievementSweep()`. No
+     *   other entry points must mutate the counter.
+     * - Counter survives partial reset (workshop reset / shop rebalance)
+     *   and full reset alike — lives under both
+     *   `state.stats.fragmentsAcquired` and the legacy mirror
+     *   `state.achievements.fragmentsAcquired`, reconciled via
+     *   `Math.max` in `ensureStats`.
+     * - fragment_collector_3 reward is intentionally identical to
+     *   dust_master_3 (3 upgrade points + 3 drones level 7) — by
+     *   design, not a bug. */
+    {
+      id: 'fragment_collector',
+      definitions: [
+        {
+          id: 'fragment_collector_1',
+          familyId: 'fragment_collector',
+          titleKey: 'achievementFragmentCollector1',
+          descKey: 'achievementFragmentCollector1Desc',
+          rewardKey: 'achievementRewardFragmentCollector1',
+          target: 50,
+          progressType: 'fragmentsAcquired',
+          rewardMode: 'fragmentCollector1Dust50',
+        },
+        {
+          id: 'fragment_collector_2',
+          familyId: 'fragment_collector',
+          titleKey: 'achievementFragmentCollector2',
+          descKey: 'achievementFragmentCollector2Desc',
+          rewardKey: 'achievementRewardFragmentCollector2',
+          target: 250,
+          progressType: 'fragmentsAcquired',
+          rewardMode: 'fragmentCollector2Dust500',
+        },
+        {
+          id: 'fragment_collector_3',
+          familyId: 'fragment_collector',
+          titleKey: 'achievementFragmentCollector3',
+          descKey: 'achievementFragmentCollector3Desc',
+          rewardKey: 'achievementRewardFragmentCollector3',
+          target: 1000,
+          progressType: 'fragmentsAcquired',
+          rewardMode: 'fragmentCollector3UpgradePoints3DronesL7x3',
         },
       ],
     },
@@ -1017,6 +1318,9 @@
     var hasModifierTechUnlocks = Number.isFinite(stats.modifierTechUnlocksCount);
     var hasDroneAcquisitions = Number.isFinite(stats.droneAcquisitionsCount);
     var hasNoRepairAttackWaveStreak = Number.isFinite(stats.noRepairAttackWaveStreakCount);
+    var hasAttackWavesCompleted = Number.isFinite(stats.attackWavesCompletedCount);
+    var hasAutoMergeActivations = Number.isFinite(stats.autoMergeActivationsCount);
+    var hasCoinsSpentTotal = Number.isFinite(stats.coinsSpentTotal);
     var hasMoneyEarned = Number.isFinite(stats.moneyEarnedCount);
     var hasPerfectFenceWaves = Number.isFinite(stats.perfectFenceWavesCount);
     var hasHangarMasterLevel = Number.isFinite(stats.hangarMasterLevelCount);
@@ -1024,6 +1328,11 @@
     var hasMaxTankLevel = Number.isFinite(stats.maxTankLevelCount);
     var hasChipComboTriples = Number.isFinite(stats.chipComboTriplesCount);
     var hasChipCraftFromFragments = Number.isFinite(stats.chipCraftFromFragmentsCount);
+    /* solo-pipeline-yandex-vk batch#1 — lifetime counters for
+       dust_master + fragment_collector families. See ADR above
+       ACHIEVEMENT_FAMILIES.dust_master block. */
+    var hasDustEarnedLifetime = Number.isFinite(stats.dustEarnedLifetime);
+    var hasFragmentsAcquired = Number.isFinite(stats.fragmentsAcquired);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -1031,6 +1340,9 @@
     var legacyModifierTechUnlocks = normalizeCounter(ach.totalModifierTechUnlocks);
     var legacyDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions);
     var legacyNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak);
+    var legacyAttackWavesCompleted = normalizeCounter(ach.totalAttackWavesCompleted);
+    var legacyAutoMergeActivations = normalizeCounter(ach.totalAutoMergeActivations);
+    var legacyCoinsSpentTotal = normalizeCounter(ach.totalCoinsSpent);
     var legacyMoneyEarned = normalizeCounter(ach.totalMoneyEarned);
     var legacyPerfectFenceWaves = normalizeCounter(ach.totalPerfectFenceWaves);
     var legacyHangarMasterLevel = normalizeCounter(ach.totalHangarMasterLevel);
@@ -1038,6 +1350,8 @@
     var legacyMaxTankLevel = normalizeCounter(ach.totalMaxTankLevel);
     var legacyChipComboTriples = normalizeCounter(ach.totalChipComboTriples);
     var legacyChipCraftFromFragments = normalizeCounter(ach.totalChipCraftFromFragments);
+    var legacyDustEarnedLifetime = normalizeCounter(ach.dustEarnedLifetime);
+    var legacyFragmentsAcquired = normalizeCounter(ach.fragmentsAcquired);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -1056,6 +1370,16 @@
 
     if (!hasNoRepairAttackWaveStreak) stats.noRepairAttackWaveStreakCount = legacyNoRepairAttackWaveStreak;
     else stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount);
+
+    if (!hasAttackWavesCompleted) stats.attackWavesCompletedCount = legacyAttackWavesCompleted;
+    else stats.attackWavesCompletedCount = normalizeCounter(stats.attackWavesCompletedCount);
+
+    if (!hasAutoMergeActivations) stats.autoMergeActivationsCount = legacyAutoMergeActivations;
+    else stats.autoMergeActivationsCount = normalizeCounter(stats.autoMergeActivationsCount);
+
+    if (!hasCoinsSpentTotal) stats.coinsSpentTotal = legacyCoinsSpentTotal;
+    else stats.coinsSpentTotal = normalizeCounter(stats.coinsSpentTotal);
+    if (!stats.coinsSpentBySource || typeof stats.coinsSpentBySource !== 'object') stats.coinsSpentBySource = {};
 
     if (!hasMoneyEarned) stats.moneyEarnedCount = legacyMoneyEarned;
     else stats.moneyEarnedCount = normalizeCounter(stats.moneyEarnedCount);
@@ -1078,6 +1402,15 @@
     if (!hasChipCraftFromFragments) stats.chipCraftFromFragmentsCount = legacyChipCraftFromFragments;
     else stats.chipCraftFromFragmentsCount = Math.max(normalizeCounter(stats.chipCraftFromFragmentsCount), legacyChipCraftFromFragments);
 
+    /* Lifetime counters survive partial + full reset, reconcile via
+       Math.max so a stale legacy mirror cannot demote the canonical
+       stats counter. */
+    if (!hasDustEarnedLifetime) stats.dustEarnedLifetime = legacyDustEarnedLifetime;
+    else stats.dustEarnedLifetime = Math.max(normalizeCounter(stats.dustEarnedLifetime), legacyDustEarnedLifetime);
+
+    if (!hasFragmentsAcquired) stats.fragmentsAcquired = legacyFragmentsAcquired;
+    else stats.fragmentsAcquired = Math.max(normalizeCounter(stats.fragmentsAcquired), legacyFragmentsAcquired);
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -1091,6 +1424,8 @@
     ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
     ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
     ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
+    ach.totalAttackWavesCompleted = stats.attackWavesCompletedCount;
+    ach.totalAutoMergeActivations = stats.autoMergeActivationsCount;
     ach.totalMoneyEarned = stats.moneyEarnedCount;
     ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
     ach.totalHangarMasterLevel = stats.hangarMasterLevelCount;
@@ -1098,6 +1433,8 @@
     ach.totalMaxTankLevel = stats.maxTankLevelCount;
     ach.totalChipComboTriples = stats.chipComboTriplesCount;
     ach.totalChipCraftFromFragments = stats.chipCraftFromFragmentsCount;
+    ach.dustEarnedLifetime = stats.dustEarnedLifetime;
+    ach.fragmentsAcquired = stats.fragmentsAcquired;
     return stats;
   }
 
@@ -1173,6 +1510,18 @@
       state.achievements.totalNoRepairAttackWaveStreak = 0;
     } else {
       state.achievements.totalNoRepairAttackWaveStreak = normalizeCounter(state.achievements.totalNoRepairAttackWaveStreak);
+    }
+
+    if (!Number.isFinite(state.achievements.totalAttackWavesCompleted)) {
+      state.achievements.totalAttackWavesCompleted = 0;
+    } else {
+      state.achievements.totalAttackWavesCompleted = normalizeCounter(state.achievements.totalAttackWavesCompleted);
+    }
+
+    if (!Number.isFinite(state.achievements.totalAutoMergeActivations)) {
+      state.achievements.totalAutoMergeActivations = 0;
+    } else {
+      state.achievements.totalAutoMergeActivations = normalizeCounter(state.achievements.totalAutoMergeActivations);
     }
 
     if (!Number.isFinite(state.achievements.totalMoneyEarned)) {
@@ -1312,6 +1661,9 @@
       if (type === 'modifierTechUnlocks') return normalizeCounter(stats.modifierTechUnlocksCount);
       if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
       if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
+      if (type === 'attackWavesCompleted') return normalizeCounter(stats.attackWavesCompletedCount);
+      if (type === 'autoMergeActivations') return normalizeCounter(stats.autoMergeActivationsCount);
+      if (type === 'coinsSpentTotal') return normalizeCounter(stats.coinsSpentTotal);
       if (type === 'moneyEarned') return normalizeCounter(stats.moneyEarnedCount);
       if (type === 'perfectFenceWaves') return normalizeCounter(stats.perfectFenceWavesCount);
       if (type === 'hangarMasterLevel') return normalizeCounter(stats.hangarMasterLevelCount);
@@ -1319,6 +1671,8 @@
       if (type === 'maxTankLevel') return normalizeCounter(stats.maxTankLevelCount);
       if (type === 'chipComboTriples') return normalizeCounter(stats.chipComboTriplesCount);
       if (type === 'chipCraftFromFragments') return normalizeCounter(stats.chipCraftFromFragmentsCount);
+      if (type === 'dustEarnedLifetime') return normalizeCounter(stats.dustEarnedLifetime);
+      if (type === 'fragmentsAcquired') return normalizeCounter(stats.fragmentsAcquired);
       if (type === 'unspentUpgradePoints') {
         return normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
       }
@@ -1344,6 +1698,15 @@
     if (type === 'noRepairAttackWaveStreak') {
       return normalizeCounter(ach.totalNoRepairAttackWaveStreak);
     }
+    if (type === 'attackWavesCompleted') {
+      return normalizeCounter(ach.totalAttackWavesCompleted);
+    }
+    if (type === 'autoMergeActivations') {
+      return normalizeCounter(ach.totalAutoMergeActivations);
+    }
+    if (type === 'coinsSpentTotal') {
+      return normalizeCounter(ach.totalCoinsSpent);
+    }
     if (type === 'moneyEarned') {
       return normalizeCounter(ach.totalMoneyEarned);
     }
@@ -1364,6 +1727,12 @@
     }
     if (type === 'chipCraftFromFragments') {
       return normalizeCounter(ach.totalChipCraftFromFragments);
+    }
+    if (type === 'dustEarnedLifetime') {
+      return normalizeCounter(ach.dustEarnedLifetime);
+    }
+    if (type === 'fragmentsAcquired') {
+      return normalizeCounter(ach.fragmentsAcquired);
     }
     if (type === 'unspentUpgradePoints') {
       return normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
@@ -1553,6 +1922,115 @@
     return true;
   }
 
+  function setAttackWavesCompleted(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.attackWavesCompletedCount = nextValue;
+    }
+    achievementState.totalAttackWavesCompleted = nextValue;
+  }
+
+  function recordAttackEpisodeCompleted(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var current = getProgressValueFromState('attackWavesCompleted', state, ach);
+    setAttackWavesCompleted(state, ach, current + 1);
+    return recalculateUnlocks(state);
+  }
+
+  function resetAttackWavesCompleted(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    if (getProgressValueFromState('attackWavesCompleted', state, ach) <= 0) return false;
+    setAttackWavesCompleted(state, ach, 0);
+    return true;
+  }
+
+  function setAutoMergeActivations(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.autoMergeActivationsCount = nextValue;
+    }
+    achievementState.totalAutoMergeActivations = nextValue;
+  }
+
+  /* Postmortem item 11: pairsExecuted is the number of realized merge pairs
+     after the eligibility filter in autoMerge.runAutoMerge — NOT button clicks.
+     Invoked from autoMerge.js seam only when executed > 0. */
+  function recordAutoMergeActivations(state, pairsExecuted) {
+    if (!Number.isFinite(pairsExecuted) || pairsExecuted <= 0) return [];
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var inc = Math.max(0, Math.floor(Number(pairsExecuted)));
+    if (inc <= 0) return [];
+    var current = getProgressValueFromState('autoMergeActivations', state, ach);
+    setAutoMergeActivations(state, ach, current + inc);
+    return recalculateUnlocks(state);
+  }
+
+  function resetAutoMergeActivations(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    if (getProgressValueFromState('autoMergeActivations', state, ach) <= 0) return false;
+    setAutoMergeActivations(state, ach, 0);
+    return true;
+  }
+
+  var COINS_SPENT_MAX = Number.MAX_SAFE_INTEGER;
+  var COINS_SPENT_SOURCES = { tank: true, upgrade: true, wall: true, supercomputer: true, hangar: true, repair: true, talent: true };
+  var coinsSpentClampWarned = false;
+
+  function setCoinsSpent(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (nextValue > COINS_SPENT_MAX) nextValue = COINS_SPENT_MAX;
+    achievementState.totalCoinsSpent = nextValue;
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.coinsSpentTotal = nextValue;
+    }
+  }
+
+  function recordCoinsSpent(state, delta, source) {
+    if (!Number.isFinite(delta) || delta <= 0) return [];
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var inc = Math.max(0, Math.floor(Number(delta)));
+    if (inc <= 0) return [];
+    var current = getProgressValueFromState('coinsSpentTotal', state, ach);
+    var next = current + inc;
+    if (next > COINS_SPENT_MAX) {
+      if (!coinsSpentClampWarned && typeof console !== 'undefined' && console.warn) {
+        console.warn('[achievements] coinsSpentTotal clamped at MAX_SAFE_INTEGER');
+        coinsSpentClampWarned = true;
+      }
+      next = COINS_SPENT_MAX;
+    }
+    setCoinsSpent(state, ach, next);
+    if (state && state.stats && typeof state.stats === 'object' && typeof source === 'string' && source.length > 0 && COINS_SPENT_SOURCES[source]) {
+      if (!state.stats.coinsSpentBySource || typeof state.stats.coinsSpentBySource !== 'object') state.stats.coinsSpentBySource = {};
+      var prevSrc = Number(state.stats.coinsSpentBySource[source]) || 0;
+      var nextSrc = prevSrc + inc;
+      if (nextSrc > COINS_SPENT_MAX) nextSrc = COINS_SPENT_MAX;
+      state.stats.coinsSpentBySource[source] = nextSrc;
+    }
+    return recalculateUnlocks(state);
+  }
+
+  function resetCoinsSpent(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    if (getProgressValueFromState('coinsSpentTotal', state, ach) <= 0
+      && (!state || !state.stats || !state.stats.coinsSpentBySource || Object.keys(state.stats.coinsSpentBySource).length === 0)) return false;
+    setCoinsSpent(state, ach, 0);
+    if (state && state.stats && typeof state.stats === 'object') state.stats.coinsSpentBySource = {};
+    return true;
+  }
+
   function recordProductionStorageSnapshot(state) {
     var ach = ensureState(state);
     if (!ach) return [];
@@ -1655,5 +2133,11 @@
     resetNoRepairAttackWaveStreak: resetNoRepairAttackWaveStreak,
     recordDefenseOrderWaveSuccess: recordDefenseOrderWaveSuccess,
     resetDefenseOrderStreak: resetDefenseOrderStreak,
+    recordAttackEpisodeCompleted: recordAttackEpisodeCompleted,
+    resetAttackWavesCompleted: resetAttackWavesCompleted,
+    recordAutoMergeActivations: recordAutoMergeActivations,
+    resetAutoMergeActivations: resetAutoMergeActivations,
+    recordCoinsSpent: recordCoinsSpent,
+    resetCoinsSpent: resetCoinsSpent,
   };
 })(typeof window !== 'undefined' ? window : this);

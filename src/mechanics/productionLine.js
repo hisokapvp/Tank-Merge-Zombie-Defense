@@ -381,7 +381,10 @@
         break;
       }
       case 'ten_silicon_dust': {
-        if (ChipsUI && typeof ChipsUI.getSiliconDust === 'function') {
+        // solo-pipeline-yandex-vk batch#1 — use canonical inflow seam.
+        if (ChipsUI && typeof ChipsUI.creditSiliconDust === 'function') {
+          ChipsUI.creditSiliconDust(10, 'production-line-loot');
+        } else if (ChipsUI && typeof ChipsUI.getSiliconDust === 'function') {
           const cur = ChipsUI.getSiliconDust() || 0;
           ChipsUI.setSiliconDust(cur + 10);
         }
@@ -389,7 +392,9 @@
         break;
       }
       case 'five_silicon_dust': {
-        if (ChipsUI && typeof ChipsUI.getSiliconDust === 'function') {
+        if (ChipsUI && typeof ChipsUI.creditSiliconDust === 'function') {
+          ChipsUI.creditSiliconDust(5, 'production-line-loot');
+        } else if (ChipsUI && typeof ChipsUI.getSiliconDust === 'function') {
           const cur = ChipsUI.getSiliconDust() || 0;
           ChipsUI.setSiliconDust(cur + 5);
         }

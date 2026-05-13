@@ -224,6 +224,18 @@
       else skipped += 1;
     }
 
+    /* Achievement seam: count realized auto-merge pairs (not button clicks).
+       Per postmortem item 11, increment only when at least one pair was
+       actually executed by the eligibility-filtered merge loop above. */
+    if (executed > 0) {
+      try {
+        var achievementsApi = global.Game && global.Game.Achievements;
+        if (achievementsApi && typeof achievementsApi.recordAutoMergeActivations === 'function') {
+          achievementsApi.recordAutoMergeActivations(state, executed);
+        }
+      } catch (_) { /* never let achievement bookkeeping break auto-merge */ }
+    }
+
     return {
       executed: executed,
       skipped: skipped,

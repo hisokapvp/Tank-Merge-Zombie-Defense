@@ -1348,6 +1348,12 @@
     var normalizedId = h && typeof h.normalizeFragmentId === 'function'
       ? h.normalizeFragmentId(fragmentId)
       : fragmentId;
+    /* solo-pipeline-yandex-vk batch#1 — lifetime fragment counter.
+       Every positive delta of player fragments (achievements reward,
+       production line drop, shop bundle, workshop craft refund, etc.)
+       routes through this single seam, so state.stats.fragmentsAcquired
+       is monotonic and ready for the future fragment_collector family. */
+    _bumpFragmentsAcquired(cnt);
     for (var i = 0; i < frags.length; i++) {
       if (frags[i].fragmentId === normalizedId) {
         frags[i].count += cnt;
@@ -1359,6 +1365,72 @@
     frags.push(entry);
     _emitPlayerChipsChanged('fragment-add', [normalizedId]);
     return entry;
+  }
+
+  /* solo-pipeline-yandex-vk batch#1 — lifetime counter bump helpers.
+     Both helpers read the canonical game state through window.Game.state
+     (exposed in game.js around L716 as a getter). They no-op silently if
+     state or state.stats is unavailable (e.g. pack4 unit tests). */
+  function _gameState() {
+    try {
+      var g = global && global.Game;
+      return g && g.state && typeof g.state === 'object' ? g.state : null;
+    } catch (_) { return null; }
+  }
+  function _triggerAchievementSweep() {
+    /* solo-pipeline-yandex-vk batch#1 rework — sync dust/fragment lifetime
+       progress into the canonical Achievements pipeline so dust_master and
+       future fragment_collector unlocks fire incrementally instead of only
+       when the achievements modal is opened. Mirrors
+       syncCurrentBalanceAchievements() pattern in game.js. */
+    try {
+      var g = global && global.Game;
+      if (g && typeof g.recalculateAchievementsAndQueuePopups === 'function') {
+        g.recalculateAchievementsAndQueuePopups();
+      }
+    } catch (_) { /* defensive no-op */ }
+  }
+  function _bumpDustEarnedLifetime(delta) {
+    var d = (typeof delta === 'number' && delta > 0) ? Math.floor(delta) : 0;
+    if (d <= 0) return;
+    var s = _gameState();
+    if (!s) return;
+    if (!s.stats || typeof s.stats !== 'object') s.stats = {};
+    var cur = (typeof s.stats.dustEarnedLifetime === 'number' && s.stats.dustEarnedLifetime >= 0) ? s.stats.dustEarnedLifetime : 0;
+    s.stats.dustEarnedLifetime = cur + d;
+    if (s.achievements && typeof s.achievements === 'object') {
+      s.achievements.dustEarnedLifetime = s.stats.dustEarnedLifetime;
+    }
+    _triggerAchievementSweep();
+  }
+  function _bumpFragmentsAcquired(delta) {
+    var d = (typeof delta === 'number' && delta > 0) ? Math.floor(delta) : 0;
+    if (d <= 0) return;
+    var s = _gameState();
+    if (!s) return;
+    if (!s.stats || typeof s.stats !== 'object') s.stats = {};
+    var cur = (typeof s.stats.fragmentsAcquired === 'number' && s.stats.fragmentsAcquired >= 0) ? s.stats.fragmentsAcquired : 0;
+    s.stats.fragmentsAcquired = cur + d;
+    if (s.achievements && typeof s.achievements === 'object') {
+      s.achievements.fragmentsAcquired = s.stats.fragmentsAcquired;
+    }
+    _triggerAchievementSweep();
+  }
+
+  /** Canonical silicon-dust inflow seam.
+   *  All positive-delta dust grants (achievement rewards, shop bundles,
+   *  attack-mode loot, production-line drops) must route through this.
+   *  Snapshot restoration and other neutral writes must keep using
+   *  setSiliconDust directly so they do not re-credit lifetime. */
+  function creditSiliconDust(amount, source) {
+    var add = (typeof amount === 'number' && amount > 0) ? Math.floor(amount) : 0;
+    if (add <= 0) return 0;
+    var current = (typeof _siliconDust === 'number' && _siliconDust >= 0) ? _siliconDust : 0;
+    var prev = _siliconDust;
+    _siliconDust = current + add;
+    _bumpDustEarnedLifetime(add);
+    if (_siliconDust !== prev) _emitPlayerChipsChanged('dust-credit', []);
+    return add;
   }
 
   /** Remove one fragment from inventory. Returns true if removed. */
@@ -4242,7 +4314,9 @@
         removePlayerFragment(fId, cnt);
       }
     }
-    _siliconDust += totalDust;
+    // solo-pipeline-yandex-vk batch#1 — route through canonical creditSiliconDust seam
+    // so dustEarnedLifetime is bumped for dust_master achievements (workshop dust subtab).
+    creditSiliconDust(totalDust, 'workshop-recycle-dust');
     if (global.Game && global.Game.Toast) {
       global.Game.Toast.show(t('chipCraftDustGained', 'Получено кремниевой пыли: {amount}').replace('{amount}', totalDust), 2000);
     }
@@ -4997,6 +5071,7 @@
       _siliconDust = (typeof v === 'number' && v >= 0) ? v : 0;
       if (_siliconDust !== prev) _emitPlayerChipsChanged('dust-set', []);
     },
+    creditSiliconDust: creditSiliconDust,
     resetTransientUiState: resetTransientUiState,
     debugInstallChipById: debugInstallChipById,
     debugInstallByKey: debugInstallByKey,

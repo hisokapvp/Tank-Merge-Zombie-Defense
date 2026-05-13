@@ -173,6 +173,10 @@ Search results can flood context. Use `ctx_execute(language: "shell", code: "gre
 | `ctx doctor` | Call the `ctx_doctor` MCP tool, run the returned shell command, display as checklist |
 | `ctx upgrade` | Call the `ctx_upgrade` MCP tool, run the returned shell command, display as checklist |
 
+## Context lazy loading doctrine
+
+Phase 1 doctrine: agents must call `ctx_search` before `read_file` for any `docs/ai/**`, `assets/balance/*.json` analysis, or cross-file exploration; `read_file` only when the file will be edited. Canonical note: [`.agents/.github/docs/CONTEXT_LAZY_LOADING.md`](../../../.agents/.github/docs/CONTEXT_LAZY_LOADING.md) (absolute: `c:\Users\hisok\.agents\.github\docs\CONTEXT_LAZY_LOADING.md`).
+
 
 ## ReasoningBank Memory Authoring
 
