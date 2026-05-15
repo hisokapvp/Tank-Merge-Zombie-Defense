@@ -1992,6 +1992,65 @@
     runtime.modsCache = null;
   }
 
+  /* solo-pipeline-yandex-vk batch B2 — talent_path achievements seam.
+     Снимаем состояние всех веток (rankSum + maxRankSum + active ability
+     талант) сразу после мутации runtime.ranksById, отдаём bridge'у в
+     game.js (onTalentRanksPurchased), который вызывает
+     AchievementsApi.recordTalentRanksPurchased. Карта активных
+     способностей продублирована локально (см. game.js
+     TALENTS_V2_ACTIVE_ID_BY_BRANCH) — talentsV2 единственный модуль,
+     знающий runtime ranks без bootstrap зависимости от game.js. */
+  var TALENT_PATH_BRANCH_IDS = ['offense', 'defense', 'economy'];
+  var TALENT_PATH_ACTIVE_TALENT_BY_BRANCH = {
+    offense: 'off_active_barrage',
+    defense: 'def_active_dome',
+    economy: 'eco_active_golden_hour',
+  };
+
+  function getTalentBranchSnapshotForAchievements() {
+    var out = [];
+    var ids = Object.keys(runtime.talentsById || {});
+    for (var i = 0; i < TALENT_PATH_BRANCH_IDS.length; i++) {
+      var branchId = TALENT_PATH_BRANCH_IDS[i];
+      var rankSum = 0;
+      var maxRankSum = 0;
+      for (var j = 0; j < ids.length; j++) {
+        var def = runtime.talentsById[ids[j]];
+        if (!def || def.branch !== branchId) continue;
+        rankSum += Math.max(0, toInt(runtime.ranksById[ids[j]], 0));
+        maxRankSum += Math.max(1, toInt(def.maxRank, 1));
+      }
+      var activeId = TALENT_PATH_ACTIVE_TALENT_BY_BRANCH[branchId] || '';
+      var activeDef = activeId ? runtime.talentsById[activeId] : null;
+      var activeRank = activeId ? Math.max(0, toInt(runtime.ranksById[activeId], 0)) : 0;
+      var activeMaxRank = activeDef ? Math.max(1, toInt(activeDef.maxRank, 1)) : 0;
+      out.push({
+        branchId: branchId,
+        rankSum: rankSum,
+        maxRankSum: maxRankSum,
+        fullyMaxed: maxRankSum > 0 && rankSum >= maxRankSum,
+        activeTalentId: activeId,
+        activeRank: activeRank,
+        activeMaxRank: activeMaxRank,
+        activeMaxed: activeMaxRank > 0 && activeRank >= activeMaxRank,
+      });
+    }
+    return out;
+  }
+
+  function emitTalentRanksPurchased(ranksDelta) {
+    var delta = Math.max(0, toInt(ranksDelta, 0));
+    if (delta <= 0) return;
+    if (typeof global === 'undefined' || !global.Game) return;
+    if (typeof global.Game.onTalentRanksPurchased !== 'function') return;
+    try {
+      global.Game.onTalentRanksPurchased({
+        ranksDelta: delta,
+        branches: getTalentBranchSnapshotForAchievements(),
+      });
+    } catch (_) { /* never break talents flow on achievement side */ }
+  }
+
   function buyRank(talentId) {
     var check = canBuy(talentId);
     if (!check.ok) return check;
@@ -2002,6 +2061,7 @@
     runtime.freePoints = Math.max(0, runtime.freePoints - talent.costPerRank);
     markModsDirty();
     persistSave();
+    emitTalentRanksPurchased(1);
 
     return {
       ok: true,
@@ -2071,6 +2131,7 @@
     runtime.freePoints = Math.max(0, runtime.freePoints - pendingCost);
     markModsDirty();
     persistSave();
+    emitTalentRanksPurchased(appliedRanks);
 
     return {
       ok: true,

@@ -248,12 +248,74 @@
     storageWorker1Chips3Drone1L3:   { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'drones', amount: 1, level: 3 }], i18nKey: 'achievementRewardStorageWorker1' },
     storageWorker2Chips5Drone2L4:   { type: 'composite', items: [{ type: 'randomChips', amount: 5 }, { type: 'drones', amount: 2, level: 4 }], i18nKey: 'achievementRewardStorageWorker2' },
     storageWorker3Upgrade5Chips10:  { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 10 }], i18nKey: 'achievementRewardStorageWorker3' },
+    /* solo-pipeline-yandex-vk batch#2 — production_line family.
+       Tier 1 (dust atomic) и tier 2 (fragments atomic) используют atomic-типы.
+       Tier 3 composite (upgradePoints + drones level 7) попадает в
+       ATOMIC_REWARD_MODES ниже для rollback parity (drones grant fallback
+       в UH/deferredRewards аналогично storage_worker_1 / dust_master_3). */
+    productionLine1Dust100:                 { type: 'dust',      amount: 100, i18nKey: 'achievementRewardProductionLine1' },
+    productionLine2Fragments50:             { type: 'fragments', amount: 50,  i18nKey: 'achievementRewardProductionLine2' },
+    productionLine3Upgrade5Drones3L7:       { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'drones', amount: 3, level: 7 }], i18nKey: 'achievementRewardProductionLine3' },
     /* wave_survivor family */
     waveSurvivor1Coins2000:         { type: 'coins',         amount: 2000, i18nKey: 'achievementRewardWaveSurvivor1' },
     waveSurvivor2RandomChips2:      { type: 'randomChips',   amount: 2,    i18nKey: 'achievementRewardWaveSurvivor2' },
     waveSurvivor3UpgradePoints3:    { type: 'upgradePoints', amount: 3,    i18nKey: 'achievementRewardWaveSurvivor3' },
     waveSurvivor4Drone1L5Chips5:    { type: 'composite', items: [{ type: 'drones', amount: 1, level: 5 }, { type: 'randomChips', amount: 5 }], i18nKey: 'achievementRewardWaveSurvivor4' },
     waveSurvivor5Upgrade10Damage1M: { type: 'composite', items: [{ type: 'upgradePoints', amount: 10 }, { type: 'damagePoints', amount: 1000000 }], i18nKey: 'achievementRewardWaveSurvivor5' },
+    /* solo-pipeline-yandex-vk batch#1 — meta_hoarder family.
+       Reuses existing reward types (randomChips / composite
+       upgradePoints+damagePoints / composite upgradePoints+randomChips).
+       Tier 2 damagePoints=500000 follows powerReserveUpgrade3Damage100000
+       and waveSurvivor5Upgrade10Damage1M math: grantAchievementDamagePoints
+       multiplies by DAMAGE_PROGRESS_PER_POINT (10000) inside the helper,
+       so totalDamageDealtRaw stays aligned and damagePoints credit is
+       exact (P10 — no round-down artefact). Tier 3 randomChips=15 reuses
+       grantAchievementRandomChips, which already drives chipsUi.addPlayerChip
+       per item; storage capacity / inventory overflow is owned by the UI
+       seam (P11). */
+    metaHoarder1RandomChips5:                 { type: 'randomChips',  amount: 5,                                                                                                              i18nKey: 'achievementRewardMetaHoarder1' },
+    metaHoarder2Upgrade3Damage500000:         { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'damagePoints', amount: 500000 }],                                  i18nKey: 'achievementRewardMetaHoarder2' },
+    metaHoarder3Upgrade5RandomChips15:        { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'randomChips', amount: 15 }],                                       i18nKey: 'achievementRewardMetaHoarder3' },
+    /* solo-pipeline-yandex-vk batch#1 — box_hunter family (открытие
+       боксов военной помощи через claimCrateReward seam в game.js).
+       Tier 1 — atomic fragments. Tier 2 / Tier 3 — composite; обе
+       composite-комбинации повторно используют существующие helpers
+       (randomChips+dust для T2, upgradePoints+drones level=3 для T3 —
+       шаблон совпадает с repair_crew_2 и defense_order_4). Новых
+       reward type-ов не вводится. Composite-ключи попадают в
+       ATOMIC_REWARD_MODES whitelist ниже для rollback parity с
+       storage_worker_1 / dust_master_3 / repair_crew_3. */
+    bonusHunter1Fragments5:                   { type: 'fragments',    amount: 5,                                                                                                              i18nKey: 'achievementRewardBonusHunter1' },
+    bonusHunter2RandomChips5Dust50:           { type: 'composite', items: [{ type: 'randomChips', amount: 5 }, { type: 'dust', amount: 50 }],                                                i18nKey: 'achievementRewardBonusHunter2' },
+    bonusHunter3UpgradePoints3DronesL3x3:     { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 3 }],                                   i18nKey: 'achievementRewardBonusHunter3' },
+    /* solo-pipeline-yandex-vk batch#2 — daily_attendance family.
+       Tier 1 — atomic randomChips. Tier 2 — atomic drones level=5.
+       Tier 3 — composite (randomChips + damagePoints). Tier 4 —
+       composite (upgradePoints + drones level=9). Composite-ключи
+       попадают в ATOMIC_REWARD_MODES ниже для rollback parity с
+       repair_crew / bonus_hunter / box_hunter — grant-helpers и UH
+       fallback (deferredRewards для drones при перегруженном
+       ангаре) обрабатывают эти композиты идентично. */
+    dailyAttendance1RandomChips2:             { type: 'randomChips',  amount: 2,                                                                                                              i18nKey: 'achievementRewardDailyAttendance1' },
+    dailyAttendance2Drone1L5:                 { type: 'drones',       amount: 1, level: 5,                                                                                                    i18nKey: 'achievementRewardDailyAttendance2' },
+    dailyAttendance3RandomChips10Damage500000:{ type: 'composite', items: [{ type: 'randomChips', amount: 10 }, { type: 'damagePoints', amount: 500000 }],                                  i18nKey: 'achievementRewardDailyAttendance3' },
+    dailyAttendance4Upgrade3DronesL9x3:       { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 9 }],                                   i18nKey: 'achievementRewardDailyAttendance4' },
+    /* solo-pipeline-yandex-vk batch B1 — repair_crew family.
+       Прогресс через droneRepairsCompleted seam в drones.js.
+       Tier 3 использует канонический drones type с level=9 — grantAchievementDrones
+       не клампит верхний уровень и корректно фоллбэчит в UH/deferredRewards. */
+    repairCrew1RandomChips5:        { type: 'randomChips',   amount: 5,    i18nKey: 'achievementRewardRepairCrew1' },
+    repairCrew2DronesL3x3:          { type: 'drones',        amount: 3, level: 3, i18nKey: 'achievementRewardRepairCrew2' },
+    repairCrew3DroneL9Upgrade3:     { type: 'composite', items: [{ type: 'drones', amount: 1, level: 9 }, { type: 'upgradePoints', amount: 3 }], i18nKey: 'achievementRewardRepairCrew3' },
+    /* solo-pipeline-yandex-vk batch B2 — talent_path family.
+       Прогресс через bridge Game.onTalentRanksPurchased (game.js) →
+       AchievementsApi.recordTalentRanksPurchased. Tier 1 (fragments-only)
+       и tier 3 (upgradePoints-only) — atomic; tier 2 и tier 4 —
+       composite, попадают в ATOMIC_REWARD_MODES ниже для rollback parity. */
+    talentPath1Fragments10:         { type: 'fragments',     amount: 10,   i18nKey: 'achievementRewardTalentPath1' },
+    talentPath2RandomChips5Dust50:  { type: 'composite', items: [{ type: 'randomChips', amount: 5 }, { type: 'dust', amount: 50 }], i18nKey: 'achievementRewardTalentPath2' },
+    talentPath3Upgrade3:            { type: 'upgradePoints', amount: 3,    i18nKey: 'achievementRewardTalentPath3' },
+    talentPath4Upgrade10Damage1M:   { type: 'composite', items: [{ type: 'upgradePoints', amount: 10 }, { type: 'damagePoints', amount: 1000000 }], i18nKey: 'achievementRewardTalentPath4' },
     /* big_spender family */
     bigSpender1Damage10000:         { type: 'damagePoints',  amount: 10000, i18nKey: 'achievementRewardBigSpender1' },
     bigSpender2Chips2Upgrade2:      { type: 'composite', items: [{ type: 'randomChips', amount: 2 }, { type: 'upgradePoints', amount: 2 }], i18nKey: 'achievementRewardBigSpender2' },
@@ -291,6 +353,15 @@
     storageWorker3Upgrade5Chips10: true,
     waveSurvivor4Drone1L5Chips5: true,
     waveSurvivor5Upgrade10Damage1M: true,
+    /* meta_hoarder composite grants — rollback parity with wave_survivor */
+    metaHoarder2Upgrade3Damage500000: true,
+    metaHoarder3Upgrade5RandomChips15: true,
+    /* box_hunter composite grants — rollback parity with storage_worker / repair_crew */
+    bonusHunter2RandomChips5Dust50: true,
+    bonusHunter3UpgradePoints3DronesL3x3: true,
+    /* daily_attendance composite grants — rollback parity with box_hunter */
+    dailyAttendance3RandomChips10Damage500000: true,
+    dailyAttendance4Upgrade3DronesL9x3: true,
     bigSpender2Chips2Upgrade2: true,
     bigSpender3Upgrade5Chips5: true,
     /* auto_merge_addict composite grants — rollback parity with wave_survivor */
@@ -305,6 +376,13 @@
     conveyorMaster3Drones5L4: true,
     conveyorMaster4Upgrade5Dust150: true,
     conveyorMaster5Damage10MDrones2L8: true,
+    /* production_line composite grant — rollback parity with storage_worker_1 */
+    productionLine1Dust100: true,
+    productionLine2Fragments50: true,
+    productionLine3Upgrade5Drones3L7: true,
+    /* talent_path composite grants (B2) — rollback parity for tiers 2 and 4 */
+    talentPath2RandomChips5Dust50: true,
+    talentPath4Upgrade10Damage1M: true,
   };
 
   function cloneSerializable(value) {

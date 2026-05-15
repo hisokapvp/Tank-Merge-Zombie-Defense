@@ -860,6 +860,48 @@
         },
       ],
     },
+    /* solo-pipeline-yandex-vk batch#2 — production_line family.
+       Прогресс через инкремент state.stats.productionBoxesOpenedByLevel[String(boxLevel)]
+       в openBox seam (src/mechanics/productionLine.js), ДО вызова bridge
+       Game.onProductionStorageSnapshotChanged(state). Resolver агрегирует
+       словарь: productionBoxesOpenedAny = сумма всех уровней,
+       productionBoxesOpenedLevel4 = только ключ '4'. Tier 3 composite
+       (5 upgrade points + 3 drones level 7) попадает в ATOMIC_REWARD_MODES. */
+    {
+      id: 'production_line',
+      definitions: [
+        {
+          id: 'production_line_1',
+          familyId: 'production_line',
+          titleKey: 'achievementProductionLine1',
+          descKey: 'achievementProductionLine1Desc',
+          rewardKey: 'achievementRewardProductionLine1',
+          target: 50,
+          progressType: 'productionBoxesOpenedAny',
+          rewardMode: 'productionLine1Dust100',
+        },
+        {
+          id: 'production_line_2',
+          familyId: 'production_line',
+          titleKey: 'achievementProductionLine2',
+          descKey: 'achievementProductionLine2Desc',
+          rewardKey: 'achievementRewardProductionLine2',
+          target: 150,
+          progressType: 'productionBoxesOpenedAny',
+          rewardMode: 'productionLine2Fragments50',
+        },
+        {
+          id: 'production_line_3',
+          familyId: 'production_line',
+          titleKey: 'achievementProductionLine3',
+          descKey: 'achievementProductionLine3Desc',
+          rewardKey: 'achievementRewardProductionLine3',
+          target: 50,
+          progressType: 'productionBoxesOpenedLevel4',
+          rewardMode: 'productionLine3Upgrade5Drones3L7',
+        },
+      ],
+    },
     {
       id: 'wave_survivor',
       definitions: [
@@ -912,6 +954,243 @@
           target: 5000,
           progressType: 'attackWavesCompleted',
           rewardMode: 'waveSurvivor5Upgrade10Damage1M',
+        },
+      ],
+    },
+    {
+      /* solo-pipeline-yandex-vk batch#1 — box_hunter family.
+         Progress tracker: stats.bonusBoxesOpenedCount.
+         Counter incremented exactly once per successful crate open via
+         Game.Achievements.recordBonusBoxOpened from game.js
+         claimCrateReward seam (single-point increment after
+         grantCrateTank).
+         No legacy mirror in ach.* — fresh-start counter; new saves
+         start at 0, old saves without ach.totalBonusBoxesOpened do NOT
+         retroactively grant rewards. */
+      id: 'box_hunter',
+      definitions: [
+        {
+          id: 'bonus_hunter_1',
+          familyId: 'box_hunter',
+          titleKey: 'achievementBonusHunter1',
+          descKey: 'achievementBonusHunter1Desc',
+          rewardKey: 'achievementRewardBonusHunter1',
+          target: 10,
+          progressType: 'bonusBoxesOpened',
+          rewardMode: 'bonusHunter1Fragments5',
+        },
+        {
+          id: 'bonus_hunter_2',
+          familyId: 'box_hunter',
+          titleKey: 'achievementBonusHunter2',
+          descKey: 'achievementBonusHunter2Desc',
+          rewardKey: 'achievementRewardBonusHunter2',
+          target: 100,
+          progressType: 'bonusBoxesOpened',
+          rewardMode: 'bonusHunter2RandomChips5Dust50',
+        },
+        {
+          id: 'bonus_hunter_3',
+          familyId: 'box_hunter',
+          titleKey: 'achievementBonusHunter3',
+          descKey: 'achievementBonusHunter3Desc',
+          rewardKey: 'achievementRewardBonusHunter3',
+          target: 500,
+          progressType: 'bonusBoxesOpened',
+          rewardMode: 'bonusHunter3UpgradePoints3DronesL3x3',
+        },
+      ],
+    },
+    {
+      /* solo-pipeline-yandex-vk batch#2 — daily_attendance family.
+         Progress tracker: stats.totalLoginDays.
+         Счётчик повышается ровно один раз в UTC-сутки через
+         Game.Achievements.recordDailyLoginTick — вызывается из бутстрап-seam'а
+         в game.js после applySavedProgress/load. Идемпотентность через
+         ach.lastLoginDate (ISO yyyy-mm-dd в UTC) — повторные релоады
+         в тот же день не двоит. No retroactive grant: legacy save
+         без ach.totalLoginDays начинает с 0; ensureStats backfillит mirror
+         без инкремента (только recorder меняет счётчик). */
+      id: 'daily_attendance',
+      definitions: [
+        {
+          id: 'daily_attendance_1',
+          familyId: 'daily_attendance',
+          titleKey: 'achievementDailyAttendance1',
+          descKey: 'achievementDailyAttendance1Desc',
+          rewardKey: 'achievementRewardDailyAttendance1',
+          target: 2,
+          progressType: 'loginDaysTotal',
+          rewardMode: 'dailyAttendance1RandomChips2',
+        },
+        {
+          id: 'daily_attendance_2',
+          familyId: 'daily_attendance',
+          titleKey: 'achievementDailyAttendance2',
+          descKey: 'achievementDailyAttendance2Desc',
+          rewardKey: 'achievementRewardDailyAttendance2',
+          target: 7,
+          progressType: 'loginDaysTotal',
+          rewardMode: 'dailyAttendance2Drone1L5',
+        },
+        {
+          id: 'daily_attendance_3',
+          familyId: 'daily_attendance',
+          titleKey: 'achievementDailyAttendance3',
+          descKey: 'achievementDailyAttendance3Desc',
+          rewardKey: 'achievementRewardDailyAttendance3',
+          target: 14,
+          progressType: 'loginDaysTotal',
+          rewardMode: 'dailyAttendance3RandomChips10Damage500000',
+        },
+        {
+          id: 'daily_attendance_4',
+          familyId: 'daily_attendance',
+          titleKey: 'achievementDailyAttendance4',
+          descKey: 'achievementDailyAttendance4Desc',
+          rewardKey: 'achievementRewardDailyAttendance4',
+          target: 30,
+          progressType: 'loginDaysTotal',
+          rewardMode: 'dailyAttendance4Upgrade3DronesL9x3',
+        },
+      ],
+    },
+    {
+      /* solo-pipeline-yandex-vk batch#1 — meta_hoarder family.
+         Progress tracker: stats.achievementsUnlockedCount.
+         Counter is incremented exactly once per achievement unlock
+         inside recalculateUnlocks() (single-point seam). The increment
+         explicitly excludes def.familyId === 'meta_hoarder' so unlocking
+         meta_hoarder_1 does not cascade-credit progress toward
+         meta_hoarder_2/3 (self-counting guard, P4).
+         No new reward types — composites reuse existing helpers
+         (grantAchievementRandomChips/UpgradePoints/DamagePoints). */
+      id: 'meta_hoarder',
+      definitions: [
+        {
+          id: 'meta_hoarder_1',
+          familyId: 'meta_hoarder',
+          titleKey: 'achievementMetaHoarder1',
+          descKey: 'achievementMetaHoarder1Desc',
+          rewardKey: 'achievementRewardMetaHoarder1',
+          target: 25,
+          progressType: 'achievementsUnlockedCount',
+          rewardMode: 'metaHoarder1RandomChips5',
+        },
+        {
+          id: 'meta_hoarder_2',
+          familyId: 'meta_hoarder',
+          titleKey: 'achievementMetaHoarder2',
+          descKey: 'achievementMetaHoarder2Desc',
+          rewardKey: 'achievementRewardMetaHoarder2',
+          target: 75,
+          progressType: 'achievementsUnlockedCount',
+          rewardMode: 'metaHoarder2Upgrade3Damage500000',
+        },
+        {
+          id: 'meta_hoarder_3',
+          familyId: 'meta_hoarder',
+          titleKey: 'achievementMetaHoarder3',
+          descKey: 'achievementMetaHoarder3Desc',
+          rewardKey: 'achievementRewardMetaHoarder3',
+          target: 150,
+          progressType: 'achievementsUnlockedCount',
+          rewardMode: 'metaHoarder3Upgrade5RandomChips15',
+        },
+      ],
+    },
+    {
+      // solo-pipeline-yandex-vk batch B1: repair_crew family.
+      // Прогресс считается через droneRepairsCompleted seam в src/mechanics/drones.js
+      // (единственная каноническая точка полного восстановления HP сегмента дроном).
+      // Награды composite/non-self-managed — резолвятся только через external
+      // REWARD_TABLE в src/mechanics/achievementRewards.js; LOCAL fallback не нужен.
+      id: 'repair_crew',
+      definitions: [
+        {
+          id: 'repair_crew_1',
+          familyId: 'repair_crew',
+          titleKey: 'achievementRepairCrew1',
+          descKey: 'achievementRepairCrew1Desc',
+          rewardKey: 'achievementRewardRepairCrew1',
+          target: 10000,
+          progressType: 'droneRepairsCompleted',
+          rewardMode: 'repairCrew1RandomChips5',
+        },
+        {
+          id: 'repair_crew_2',
+          familyId: 'repair_crew',
+          titleKey: 'achievementRepairCrew2',
+          descKey: 'achievementRepairCrew2Desc',
+          rewardKey: 'achievementRewardRepairCrew2',
+          target: 25000,
+          progressType: 'droneRepairsCompleted',
+          rewardMode: 'repairCrew2DronesL3x3',
+        },
+        {
+          id: 'repair_crew_3',
+          familyId: 'repair_crew',
+          titleKey: 'achievementRepairCrew3',
+          descKey: 'achievementRepairCrew3Desc',
+          rewardKey: 'achievementRewardRepairCrew3',
+          target: 100000,
+          progressType: 'droneRepairsCompleted',
+          rewardMode: 'repairCrew3DroneL9Upgrade3',
+        },
+      ],
+    },
+    {
+      // solo-pipeline-yandex-vk batch B2: talent_path family.
+      // Прогресс считается через talent purchase seam в src/systems/talents/talentsV2.js
+      // (buyRank + applyPending — единственные канонические точки списания очков
+      // улучшения). Bridge Game.onTalentRanksPurchased в game.js передаёт
+      // detail.ranksDelta + per-branch snapshot, recordTalentRanksPurchased
+      // обновляет три счётчика: lifetime points spent + monotonic peak
+      // branches-fully-maxed + monotonic peak branch-actives-maxed (peak
+      // переживает respec — раз достигнутое значение не уменьшается).
+      // Награды composite/non-self-managed — резолвятся только через external
+      // REWARD_TABLE в src/mechanics/achievementRewards.js; LOCAL fallback не нужен.
+      id: 'talent_path',
+      definitions: [
+        {
+          id: 'talent_path_1',
+          familyId: 'talent_path',
+          titleKey: 'achievementTalentPath1',
+          descKey: 'achievementTalentPath1Desc',
+          rewardKey: 'achievementRewardTalentPath1',
+          target: 10,
+          progressType: 'talentPointsSpent',
+          rewardMode: 'talentPath1Fragments10',
+        },
+        {
+          id: 'talent_path_2',
+          familyId: 'talent_path',
+          titleKey: 'achievementTalentPath2',
+          descKey: 'achievementTalentPath2Desc',
+          rewardKey: 'achievementRewardTalentPath2',
+          target: 25,
+          progressType: 'talentPointsSpent',
+          rewardMode: 'talentPath2RandomChips5Dust50',
+        },
+        {
+          id: 'talent_path_3',
+          familyId: 'talent_path',
+          titleKey: 'achievementTalentPath3',
+          descKey: 'achievementTalentPath3Desc',
+          rewardKey: 'achievementRewardTalentPath3',
+          target: 1,
+          progressType: 'talentBranchesMaxed',
+          rewardMode: 'talentPath3Upgrade3',
+        },
+        {
+          id: 'talent_path_4',
+          familyId: 'talent_path',
+          titleKey: 'achievementTalentPath4',
+          descKey: 'achievementTalentPath4Desc',
+          rewardKey: 'achievementRewardTalentPath4',
+          target: 3,
+          progressType: 'talentBranchActivesMaxed',
+          rewardMode: 'talentPath4Upgrade10Damage1M',
         },
       ],
     },
@@ -1319,6 +1598,7 @@
     var hasDroneAcquisitions = Number.isFinite(stats.droneAcquisitionsCount);
     var hasNoRepairAttackWaveStreak = Number.isFinite(stats.noRepairAttackWaveStreakCount);
     var hasAttackWavesCompleted = Number.isFinite(stats.attackWavesCompletedCount);
+    var hasDroneRepairsCompleted = Number.isFinite(stats.droneRepairsCompletedCount);
     var hasAutoMergeActivations = Number.isFinite(stats.autoMergeActivationsCount);
     var hasCoinsSpentTotal = Number.isFinite(stats.coinsSpentTotal);
     var hasMoneyEarned = Number.isFinite(stats.moneyEarnedCount);
@@ -1333,6 +1613,39 @@
        ACHIEVEMENT_FAMILIES.dust_master block. */
     var hasDustEarnedLifetime = Number.isFinite(stats.dustEarnedLifetime);
     var hasFragmentsAcquired = Number.isFinite(stats.fragmentsAcquired);
+    /* solo-pipeline-yandex-vk batch#2 — talent_path family.
+       talentPointsSpentTotal — lifetime сумма потраченных очков
+       улучшения (respec не уменьшает; растёт только из buyRank /
+       applyPending seam). talentBranchesMaxedPeak и
+       talentBranchActivesMaxedPeak — monotonic peak: фиксируют
+       наибольшее одновременно достигнутое количество полностью
+       прокачанных веток и количество branch-active-ability талантов
+       на максимуме (peak переживает respec). */
+    var hasTalentPointsSpentTotal = Number.isFinite(stats.talentPointsSpentTotal);
+    var hasTalentBranchesMaxedPeak = Number.isFinite(stats.talentBranchesMaxedPeak);
+    var hasTalentBranchActivesMaxedPeak = Number.isFinite(stats.talentBranchActivesMaxedPeak);
+    /* solo-pipeline-yandex-vk batch#1 meta_hoarder — single canonical
+       counter for the meta_hoarder family. Backfill on first migration
+       only (Number.isFinite gate prevents double counting). No retro
+       grant: rewards still gated by ach.rewarded[id] in
+       grantSelfManagedReward / reconcileAchievementRewards (P5/P6/P9). */
+    var hasAchievementsUnlocked = Number.isFinite(stats.achievementsUnlockedCount);
+    /* solo-pipeline-yandex-vk batch#1 — box_hunter family.
+       Canonical counter is stats.bonusBoxesOpenedCount; there is NO
+       legacy ach.totalBonusBoxesOpened mirror. New-feature counter:
+       fresh-start from 0, no retroactive grant from previously
+       claimed crates (postmortem #9 — absent-key migration policy). */
+    var hasBonusBoxesOpened = Number.isFinite(stats.bonusBoxesOpenedCount);
+    /* solo-pipeline-yandex-vk batch#2 — daily_attendance family.
+       Canonical counter stats.totalLoginDays; инкремент только в
+       recordDailyLoginTick (UTC idempotency по ach.lastLoginDate).
+       Backfill: если stats.totalLoginDays нет — берём legacy
+       ach.totalLoginDays (свежий save — 0); ensureStats никогда
+       не инкрементирует счётчик самостоятельно — только
+       backfillит mirror. lastLoginDate нормализуется в пустую
+       строку, если её нет (cold-start или legacy save). */
+    var hasTotalLoginDays = Number.isFinite(stats.totalLoginDays);
+    var legacyTotalLoginDays = normalizeCounter(ach.totalLoginDays);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -1341,6 +1654,7 @@
     var legacyDroneAcquisitions = normalizeCounter(ach.totalDroneAcquisitions);
     var legacyNoRepairAttackWaveStreak = normalizeCounter(ach.totalNoRepairAttackWaveStreak);
     var legacyAttackWavesCompleted = normalizeCounter(ach.totalAttackWavesCompleted);
+    var legacyDroneRepairsCompleted = normalizeCounter(ach.totalDroneRepairsCompleted);
     var legacyAutoMergeActivations = normalizeCounter(ach.totalAutoMergeActivations);
     var legacyCoinsSpentTotal = normalizeCounter(ach.totalCoinsSpent);
     var legacyMoneyEarned = normalizeCounter(ach.totalMoneyEarned);
@@ -1352,6 +1666,10 @@
     var legacyChipCraftFromFragments = normalizeCounter(ach.totalChipCraftFromFragments);
     var legacyDustEarnedLifetime = normalizeCounter(ach.dustEarnedLifetime);
     var legacyFragmentsAcquired = normalizeCounter(ach.fragmentsAcquired);
+    var legacyTalentPointsSpentTotal = normalizeCounter(ach.totalTalentPointsSpent);
+    var legacyTalentBranchesMaxedPeak = normalizeCounter(ach.totalTalentBranchesMaxed);
+    var legacyTalentBranchActivesMaxedPeak = normalizeCounter(ach.totalTalentBranchActivesMaxed);
+    var legacyAchievementsUnlocked = normalizeCounter(ach.totalAchievementsUnlocked);
 
     if (!hasMerged) stats.tanksMergedCount = legacyMerges;
     else stats.tanksMergedCount = normalizeCounter(stats.tanksMergedCount);
@@ -1373,6 +1691,9 @@
 
     if (!hasAttackWavesCompleted) stats.attackWavesCompletedCount = legacyAttackWavesCompleted;
     else stats.attackWavesCompletedCount = normalizeCounter(stats.attackWavesCompletedCount);
+
+    if (!hasDroneRepairsCompleted) stats.droneRepairsCompletedCount = legacyDroneRepairsCompleted;
+    else stats.droneRepairsCompletedCount = normalizeCounter(stats.droneRepairsCompletedCount);
 
     if (!hasAutoMergeActivations) stats.autoMergeActivationsCount = legacyAutoMergeActivations;
     else stats.autoMergeActivationsCount = normalizeCounter(stats.autoMergeActivationsCount);
@@ -1411,6 +1732,51 @@
     if (!hasFragmentsAcquired) stats.fragmentsAcquired = legacyFragmentsAcquired;
     else stats.fragmentsAcquired = Math.max(normalizeCounter(stats.fragmentsAcquired), legacyFragmentsAcquired);
 
+    /* solo-pipeline-yandex-vk batch#2 — talent_path counters.
+       talentPointsSpentTotal: lifetime (только растёт; respec не
+       уменьшает, так как мы не вызываем reset из refund-пути).
+       talentBranchesMaxedPeak / talentBranchActivesMaxedPeak:
+       monotonic peak — Math.max против legacy mirror и предыдущего
+       значения, чтобы respec не «съел» уже зафиксированный пик. */
+    if (!hasTalentPointsSpentTotal) stats.talentPointsSpentTotal = legacyTalentPointsSpentTotal;
+    else stats.talentPointsSpentTotal = Math.max(normalizeCounter(stats.talentPointsSpentTotal), legacyTalentPointsSpentTotal);
+
+    if (!hasTalentBranchesMaxedPeak) stats.talentBranchesMaxedPeak = legacyTalentBranchesMaxedPeak;
+    else stats.talentBranchesMaxedPeak = Math.max(normalizeCounter(stats.talentBranchesMaxedPeak), legacyTalentBranchesMaxedPeak);
+
+    if (!hasTalentBranchActivesMaxedPeak) stats.talentBranchActivesMaxedPeak = legacyTalentBranchActivesMaxedPeak;
+    else stats.talentBranchActivesMaxedPeak = Math.max(normalizeCounter(stats.talentBranchActivesMaxedPeak), legacyTalentBranchActivesMaxedPeak);
+
+    /* meta_hoarder counter (P5 backfill, P7 hot-path O(1) lookup):
+       — first run after migration: prefer existing stats counter, then
+         legacy mirror, then one-time honest snapshot from
+         Object.keys(ach.unlocked).length (P5).
+       — subsequent loads: Number.isFinite(stats.achievementsUnlockedCount)
+         is true, so the snapshot fallback never runs again (P8 — no
+         double counting in load/migrate paths). */
+    if (!hasAchievementsUnlocked) {
+      var unlockedKeys = (ach && ach.unlocked && typeof ach.unlocked === 'object') ? Object.keys(ach.unlocked) : null;
+      var unlockedSnapshot = unlockedKeys ? unlockedKeys.length : 0;
+      stats.achievementsUnlockedCount = Math.max(legacyAchievementsUnlocked, normalizeCounter(unlockedSnapshot));
+    } else {
+      stats.achievementsUnlockedCount = Math.max(normalizeCounter(stats.achievementsUnlockedCount), legacyAchievementsUnlocked);
+    }
+
+    /* box_hunter counter — fresh-start, no legacy fallback. Старые
+       saves без ach.totalBonusBoxesOpened на первом миграционном
+       проходе получают 0 (никаких retro-grants). */
+    if (!hasBonusBoxesOpened) stats.bonusBoxesOpenedCount = 0;
+    else stats.bonusBoxesOpenedCount = normalizeCounter(stats.bonusBoxesOpenedCount);
+
+    /* daily_attendance counter — backfill mirror без инкремента.
+       Свежий save: legacy ach.totalLoginDays = 0 → stats.totalLoginDays = 0.
+       recordDailyLoginTick — единственная точка инкремента
+       (UTC idempotency по ach.lastLoginDate). Не прыгаем на
+       Math.max — монотонный рост обеспечивается recorder'ом. */
+    if (!hasTotalLoginDays) stats.totalLoginDays = legacyTotalLoginDays;
+    else stats.totalLoginDays = normalizeCounter(stats.totalLoginDays);
+    if (!ach.lastLoginDate || typeof ach.lastLoginDate !== 'string') ach.lastLoginDate = '';
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -1420,11 +1786,13 @@
 
     ach.totalMerges = stats.tanksMergedCount;
     ach.totalPurchased = stats.tanksBoughtCount;
+    ach.totalLoginDays = stats.totalLoginDays;
     ach.totalManualFenceRepairs = stats.manualFenceRepairsCount;
     ach.totalModifierTechUnlocks = stats.modifierTechUnlocksCount;
     ach.totalDroneAcquisitions = stats.droneAcquisitionsCount;
     ach.totalNoRepairAttackWaveStreak = stats.noRepairAttackWaveStreakCount;
     ach.totalAttackWavesCompleted = stats.attackWavesCompletedCount;
+    ach.totalDroneRepairsCompleted = stats.droneRepairsCompletedCount;
     ach.totalAutoMergeActivations = stats.autoMergeActivationsCount;
     ach.totalMoneyEarned = stats.moneyEarnedCount;
     ach.totalPerfectFenceWaves = stats.perfectFenceWavesCount;
@@ -1435,6 +1803,10 @@
     ach.totalChipCraftFromFragments = stats.chipCraftFromFragmentsCount;
     ach.dustEarnedLifetime = stats.dustEarnedLifetime;
     ach.fragmentsAcquired = stats.fragmentsAcquired;
+    ach.totalTalentPointsSpent = stats.talentPointsSpentTotal;
+    ach.totalTalentBranchesMaxed = stats.talentBranchesMaxedPeak;
+    ach.totalTalentBranchActivesMaxed = stats.talentBranchActivesMaxedPeak;
+    ach.totalAchievementsUnlocked = stats.achievementsUnlockedCount;
     return stats;
   }
 
@@ -1516,6 +1888,33 @@
       state.achievements.totalAttackWavesCompleted = 0;
     } else {
       state.achievements.totalAttackWavesCompleted = normalizeCounter(state.achievements.totalAttackWavesCompleted);
+    }
+
+    if (!Number.isFinite(state.achievements.totalDroneRepairsCompleted)) {
+      state.achievements.totalDroneRepairsCompleted = 0;
+    } else {
+      state.achievements.totalDroneRepairsCompleted = normalizeCounter(state.achievements.totalDroneRepairsCompleted);
+    }
+
+    /* solo-pipeline-yandex-vk batch#2 — talent_path mirrors.
+       Инициализируем мониторы под legacy mirror, чтобы ensureStats
+       мог восстановить значения, если canonical state.stats потерян. */
+    if (!Number.isFinite(state.achievements.totalTalentPointsSpent)) {
+      state.achievements.totalTalentPointsSpent = 0;
+    } else {
+      state.achievements.totalTalentPointsSpent = normalizeCounter(state.achievements.totalTalentPointsSpent);
+    }
+
+    if (!Number.isFinite(state.achievements.totalTalentBranchesMaxed)) {
+      state.achievements.totalTalentBranchesMaxed = 0;
+    } else {
+      state.achievements.totalTalentBranchesMaxed = normalizeCounter(state.achievements.totalTalentBranchesMaxed);
+    }
+
+    if (!Number.isFinite(state.achievements.totalTalentBranchActivesMaxed)) {
+      state.achievements.totalTalentBranchActivesMaxed = 0;
+    } else {
+      state.achievements.totalTalentBranchActivesMaxed = normalizeCounter(state.achievements.totalTalentBranchActivesMaxed);
     }
 
     if (!Number.isFinite(state.achievements.totalAutoMergeActivations)) {
@@ -1653,6 +2052,26 @@
       if (snapLvl >= 2) return normalizeCounter(snapCounters.level2);
       return normalizeCounter(snapCounters.total);
     }
+    /* solo-pipeline-yandex-vk batch#2 — production_line family.
+       Лениво читаем словарь stats.productionBoxesOpenedByLevel. Если
+       словаря нет (cold start или legacy save) — возвращаем 0; ensureState
+       не предсоздаёт словарь, инкремент создаёт его в openBox seam. */
+    if (type === 'productionBoxesOpenedAny') {
+      var anyDict = stats && stats.productionBoxesOpenedByLevel;
+      if (!anyDict || typeof anyDict !== 'object') return 0;
+      var anyTotal = 0;
+      for (var anyKey in anyDict) {
+        if (Object.prototype.hasOwnProperty.call(anyDict, anyKey)) {
+          anyTotal += normalizeCounter(anyDict[anyKey]);
+        }
+      }
+      return anyTotal;
+    }
+    if (type === 'productionBoxesOpenedLevel4') {
+      var lvl4Dict = stats && stats.productionBoxesOpenedByLevel;
+      if (!lvl4Dict || typeof lvl4Dict !== 'object') return 0;
+      return normalizeCounter(lvl4Dict['4']);
+    }
 
     if (stats) {
       if (type === 'currentBalance') return normalizeCounter(state && state.coins);
@@ -1662,6 +2081,7 @@
       if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
       if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
       if (type === 'attackWavesCompleted') return normalizeCounter(stats.attackWavesCompletedCount);
+      if (type === 'droneRepairsCompleted') return normalizeCounter(stats.droneRepairsCompletedCount);
       if (type === 'autoMergeActivations') return normalizeCounter(stats.autoMergeActivationsCount);
       if (type === 'coinsSpentTotal') return normalizeCounter(stats.coinsSpentTotal);
       if (type === 'moneyEarned') return normalizeCounter(stats.moneyEarnedCount);
@@ -1671,8 +2091,14 @@
       if (type === 'maxTankLevel') return normalizeCounter(stats.maxTankLevelCount);
       if (type === 'chipComboTriples') return normalizeCounter(stats.chipComboTriplesCount);
       if (type === 'chipCraftFromFragments') return normalizeCounter(stats.chipCraftFromFragmentsCount);
+      if (type === 'achievementsUnlockedCount') return normalizeCounter(stats.achievementsUnlockedCount);
+      if (type === 'bonusBoxesOpened') return normalizeCounter(stats.bonusBoxesOpenedCount);
+      if (type === 'loginDaysTotal') return normalizeCounter(stats.totalLoginDays);
       if (type === 'dustEarnedLifetime') return normalizeCounter(stats.dustEarnedLifetime);
       if (type === 'fragmentsAcquired') return normalizeCounter(stats.fragmentsAcquired);
+      if (type === 'talentPointsSpent') return normalizeCounter(stats.talentPointsSpentTotal);
+      if (type === 'talentBranchesMaxed') return normalizeCounter(stats.talentBranchesMaxedPeak);
+      if (type === 'talentBranchActivesMaxed') return normalizeCounter(stats.talentBranchActivesMaxedPeak);
       if (type === 'unspentUpgradePoints') {
         return normalizeCounter(state && state.player && state.player.talentsV2 && state.player.talentsV2.freePoints);
       }
@@ -1701,8 +2127,23 @@
     if (type === 'attackWavesCompleted') {
       return normalizeCounter(ach.totalAttackWavesCompleted);
     }
+    if (type === 'droneRepairsCompleted') {
+      return normalizeCounter(ach.totalDroneRepairsCompleted);
+    }
+    if (type === 'talentPointsSpent') {
+      return normalizeCounter(ach.totalTalentPointsSpent);
+    }
+    if (type === 'talentBranchesMaxed') {
+      return normalizeCounter(ach.totalTalentBranchesMaxed);
+    }
+    if (type === 'talentBranchActivesMaxed') {
+      return normalizeCounter(ach.totalTalentBranchActivesMaxed);
+    }
     if (type === 'autoMergeActivations') {
       return normalizeCounter(ach.totalAutoMergeActivations);
+    }
+    if (type === 'loginDaysTotal') {
+      return normalizeCounter(ach.totalLoginDays);
     }
     if (type === 'coinsSpentTotal') {
       return normalizeCounter(ach.totalCoinsSpent);
@@ -1727,6 +2168,9 @@
     }
     if (type === 'chipCraftFromFragments') {
       return normalizeCounter(ach.totalChipCraftFromFragments);
+    }
+    if (type === 'achievementsUnlockedCount') {
+      return normalizeCounter(ach.totalAchievementsUnlocked);
     }
     if (type === 'dustEarnedLifetime') {
       return normalizeCounter(ach.dustEarnedLifetime);
@@ -1761,6 +2205,24 @@
       var progress = getProgressValueFromState(def.progressType, state, ach, def);
       if (progress >= def.target) {
         ach.unlocked[def.id] = true;
+        /* solo-pipeline-yandex-vk batch#1 meta_hoarder — single-point
+           increment for stats.achievementsUnlockedCount (P4 contract).
+           Skip the meta_hoarder family itself so unlocking
+           meta_hoarder_1 does not cascade-credit progress for tier 2/3
+           inside the same recalculateUnlocks pass (self-counting guard).
+           This is the only canonical seam where ach.unlocked[def.id]
+           transitions from false to true, so there is no double count
+           (P8) and no per-frame Object.keys recompute (P7). */
+        if (def.familyId !== 'meta_hoarder') {
+          var st = state && state.stats;
+          if (!st || typeof st !== 'object') {
+            if (state) { state.stats = {}; st = state.stats; }
+          }
+          if (st) {
+            st.achievementsUnlockedCount = normalizeCounter(st.achievementsUnlockedCount) + 1;
+          }
+          ach.totalAchievementsUnlocked = normalizeCounter(ach.totalAchievementsUnlocked) + 1;
+        }
         grantSelfManagedReward(state, def.id, def, ach);
         unlockedNow.push(def.id);
       }
@@ -1940,12 +2402,179 @@
     return recalculateUnlocks(state);
   }
 
+  /* solo-pipeline-yandex-vk batch#1 — box_hunter family recorder.
+     Called from game.js claimCrateReward seam after grantCrateTank() so
+     бокс засчитывается ровно один раз в конце success-pipeline.
+     Canonical counter is stats.bonusBoxesOpenedCount; никакого
+     ach.totalBonusBoxesOpened mirror нет (постмортем #9 — no
+     retroactive grants). */
+  function recordBonusBoxOpened(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    if (!state || typeof state !== 'object') return [];
+    if (!state.stats || typeof state.stats !== 'object') {
+      state.stats = {};
+    }
+    var current = normalizeCounter(state.stats.bonusBoxesOpenedCount);
+    state.stats.bonusBoxesOpenedCount = current + 1;
+    return recalculateUnlocks(state);
+  }
+
+  /* solo-pipeline-yandex-vk batch#2 — daily_attendance family recorder.
+     Вызывается из game.js после завершения BootstrapApi.runBoot
+     (пост-load seam). UTC idempotency по ach.lastLoginDate —
+     повторные релоады/F5 в тот же день не двоят счётчик.
+     Не делаем retroactive grant: если пользователь входил 5
+     дней назад и не возвращался — сегодняшний tick даёт +1,
+     не +5 (canonical fresh-start rule). Новая игра = день 1
+     (вход в игру сам по себе засчитывается). */
+  function recordDailyLoginTick(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    if (!state || typeof state !== 'object') return [];
+    if (!state.stats || typeof state.stats !== 'object') {
+      state.stats = {};
+    }
+    var todayUtc;
+    try {
+      todayUtc = new Date().toISOString().slice(0, 10);
+    } catch (_) {
+      return [];
+    }
+    if (ach.lastLoginDate === todayUtc) return [];
+    var current = normalizeCounter(state.stats.totalLoginDays);
+    state.stats.totalLoginDays = current + 1;
+    ach.totalLoginDays = state.stats.totalLoginDays;
+    ach.lastLoginDate = todayUtc;
+    return recalculateUnlocks(state);
+  }
+
   function resetAttackWavesCompleted(state) {
     var ach = ensureState(state);
     if (!ach) return false;
     if (getProgressValueFromState('attackWavesCompleted', state, ach) <= 0) return false;
     setAttackWavesCompleted(state, ach, 0);
     return true;
+  }
+
+  function setDroneRepairsCompleted(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.droneRepairsCompletedCount = nextValue;
+    }
+    achievementState.totalDroneRepairsCompleted = nextValue;
+  }
+
+  // repair_crew family recorder. Вызывается из bridge Game.onDroneRepairCompleted
+  // (game.js) — единственный путь, гарантирующий composite reward reconciliation
+  // + popup queue. Direct call из drones.js остаётся только как unit-test fallback.
+  function recordDroneRepairCompleted(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var current = getProgressValueFromState('droneRepairsCompleted', state, ach);
+    setDroneRepairsCompleted(state, ach, current + 1);
+    return recalculateUnlocks(state);
+  }
+
+  function resetDroneRepairsCompleted(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    if (getProgressValueFromState('droneRepairsCompleted', state, ach) <= 0) return false;
+    setDroneRepairsCompleted(state, ach, 0);
+    return true;
+  }
+
+  // ─── talent_path family (solo-pipeline-yandex-vk batch#2) ──────────────────
+  // Единственная каноническая точка прогресса — bridge Game.onTalentRanksPurchased
+  // в game.js, который вызывается из src/systems/talents/talentsV2.js
+  // (buyRank + applyPending — единственные точки списания очков улучшения).
+  // detail.ranksDelta — суммарное количество новых рангов в одной операции
+  // (1 для buyRank, N для applyPending). detail.branches — снимок состояния
+  // всех веток после мутации, который позволяет посчитать fullyMaxed / activeMaxed
+  // без обращения к runtime talentsV2 из этого модуля.
+  function setTalentPointsSpentTotal(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.talentPointsSpentTotal = nextValue;
+    }
+    achievementState.totalTalentPointsSpent = nextValue;
+  }
+
+  function setTalentBranchesMaxedPeak(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.talentBranchesMaxedPeak = nextValue;
+    }
+    achievementState.totalTalentBranchesMaxed = nextValue;
+  }
+
+  function setTalentBranchActivesMaxedPeak(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.talentBranchActivesMaxedPeak = nextValue;
+    }
+    achievementState.totalTalentBranchActivesMaxed = nextValue;
+  }
+
+  function recordTalentRanksPurchased(state, detail) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    if (!detail || typeof detail !== 'object') return [];
+
+    var ranksDelta = Math.max(0, normalizeCounter(detail.ranksDelta));
+    if (ranksDelta > 0) {
+      var currentSpent = getProgressValueFromState('talentPointsSpent', state, ach);
+      setTalentPointsSpentTotal(state, ach, currentSpent + ranksDelta);
+    }
+
+    var branches = Array.isArray(detail.branches) ? detail.branches : [];
+    var branchesMaxedCount = 0;
+    var activesMaxedCount = 0;
+    for (var i = 0; i < branches.length; i++) {
+      var snap = branches[i];
+      if (!snap || typeof snap !== 'object') continue;
+      if (snap.fullyMaxed) branchesMaxedCount++;
+      if (snap.activeMaxed) activesMaxedCount++;
+    }
+
+    var prevBranchesMaxed = getProgressValueFromState('talentBranchesMaxed', state, ach);
+    if (branchesMaxedCount > prevBranchesMaxed) {
+      setTalentBranchesMaxedPeak(state, ach, branchesMaxedCount);
+    }
+
+    var prevActivesMaxed = getProgressValueFromState('talentBranchActivesMaxed', state, ach);
+    if (activesMaxedCount > prevActivesMaxed) {
+      setTalentBranchActivesMaxedPeak(state, ach, activesMaxedCount);
+    }
+
+    return recalculateUnlocks(state);
+  }
+
+  function resetTalentPathProgress(state) {
+    var ach = ensureState(state);
+    if (!ach) return false;
+    var changed = false;
+    if (getProgressValueFromState('talentPointsSpent', state, ach) > 0) {
+      setTalentPointsSpentTotal(state, ach, 0);
+      changed = true;
+    }
+    if (getProgressValueFromState('talentBranchesMaxed', state, ach) > 0) {
+      setTalentBranchesMaxedPeak(state, ach, 0);
+      changed = true;
+    }
+    if (getProgressValueFromState('talentBranchActivesMaxed', state, ach) > 0) {
+      setTalentBranchActivesMaxedPeak(state, ach, 0);
+      changed = true;
+    }
+    return changed;
   }
 
   function setAutoMergeActivations(state, ach, value) {
@@ -2135,6 +2764,12 @@
     resetDefenseOrderStreak: resetDefenseOrderStreak,
     recordAttackEpisodeCompleted: recordAttackEpisodeCompleted,
     resetAttackWavesCompleted: resetAttackWavesCompleted,
+    recordBonusBoxOpened: recordBonusBoxOpened,
+    recordDailyLoginTick: recordDailyLoginTick,
+    recordDroneRepairCompleted: recordDroneRepairCompleted,
+    resetDroneRepairsCompleted: resetDroneRepairsCompleted,
+    recordTalentRanksPurchased: recordTalentRanksPurchased,
+    resetTalentPathProgress: resetTalentPathProgress,
     recordAutoMergeActivations: recordAutoMergeActivations,
     resetAutoMergeActivations: resetAutoMergeActivations,
     recordCoinsSpent: recordCoinsSpent,

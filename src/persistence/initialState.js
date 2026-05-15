@@ -155,6 +155,11 @@
         // monotonic, survive partial+full reset, only positive deltas, written via creditSiliconDust + addPlayerFragment seams.
         dustEarnedLifetime: 0,
         fragmentsAcquired: 0,
+        // solo-pipeline-yandex-vk batch#2 — daily_attendance family.
+        // totalLoginDays — monotonic counter дней входа в игру (UTC, идемпотентно по lastLoginDate).
+        // lastLoginDate — ISO yyyy-mm-dd (UTC) последнего засчитанного входа.
+        totalLoginDays: 0,
+        lastLoginDate: '',
         completedModifierTechs: {},
         counters: {
           productionStorageSnapshot: { total: 0, level2: 0, level4: 0 },
@@ -173,9 +178,16 @@
         maxTankLevelCount: 0,
         chipComboTriplesCount: 0,
         chipCraftFromFragmentsCount: 0,
+        // box_hunter canonical counter (military aid crate opens). No legacy ach.totalBonusBoxesOpened mirror —
+        // pure stats.* fresh-start, no retroactive grants. Increments only via Game.Achievements.recordBonusBoxOpened
+        // from game.js claimCrateReward seam.
+        bonusBoxesOpenedCount: 0,
         // Lifetime dust/fragment counters — canonical home in stats; ensureStats mirrors achievements.* legacy pair.
         dustEarnedLifetime: 0,
         fragmentsAcquired: 0,
+        // solo-pipeline-yandex-vk batch#2 — daily_attendance canonical counter.
+        // Инкремент только через Game.Achievements.recordDailyLoginTick (UTC-day idempotency).
+        totalLoginDays: 0,
       },
       ui: {
         talentsOpen: false,

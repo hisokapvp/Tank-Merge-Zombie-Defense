@@ -838,6 +838,15 @@
       if (seg.broken !== wasBrokenAtCap && typeof runtimeOptions.onFenceSegmentStateChanged === 'function') {
         runtimeOptions.onFenceSegmentStateChanged(seg);
       }
+      // repair_crew family seam: единственная каноническая точка полного
+      // восстановления HP сегмента дроном. Bridge в game.js гарантирует
+      // composite reward reconciliation + popup queue для repair_crew_1/2/3.
+      // Fallback на direct API call оставляем для unit-тестов без game.js wiring.
+      if (global.Game && typeof global.Game.onDroneRepairCompleted === 'function') {
+        global.Game.onDroneRepairCompleted(state);
+      } else if (global.Game && global.Game.Achievements && typeof global.Game.Achievements.recordDroneRepairCompleted === 'function') {
+        global.Game.Achievements.recordDroneRepairCompleted(state);
+      }
       clearTargetAndClaim(state, drone);
       if (!tryAcquireRepairTarget(state, drone, runtimeOptions)) {
         drone.substate = SUBSTATE_REPAIR_PATROL;

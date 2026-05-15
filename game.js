@@ -643,8 +643,8 @@ function createInitialState(options){
           mods: null, modsDirty: true,
           eventShown40: false, eventShown50: false, eventShown60: false },
         endgameVisuals: false, maxTankLevelAchieved: 1, runtimeMaxTankLevelAchieved: 1, currentFenceTierApplied: 1, buyCounts: {}, buyPrices: {},
-        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, deferredRewards: [], totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, totalMaxTankLevel: 0, completedModifierTechs: {} },
-        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, attackWavesCompletedCount: 0, coinsSpentTotal: 0, coinsSpentBySource: {}, defenseOrderStreakCount: 0, maxTankLevelCount: 0 },
+        achievements: { unlocked: {}, popupQueue: [], rewarded: {}, deferredRewards: [], totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, totalMaxTankLevel: 0, totalAchievementsUnlocked: 0, completedModifierTechs: {} },
+        stats: { tanksMergedCount: 0, tanksBoughtCount: 0, manualFenceRepairsCount: 0, modifierTechUnlocksCount: 0, droneAcquisitionsCount: 0, noRepairAttackWaveStreakCount: 0, attackWavesCompletedCount: 0, coinsSpentTotal: 0, coinsSpentBySource: {}, defenseOrderStreakCount: 0, maxTankLevelCount: 0, achievementsUnlockedCount: 0 },
         ui: { talentsOpen: false, talentBranch: 0, levelReward: null, levelRewardTimer: 0,
           menuOpen: true, toast: { active: null, queue: [] },
           unlockFx: { autoMergeUntilMs: 0, bulkBuyUntilMs: 0 } },
@@ -3894,7 +3894,7 @@ function ensureAchievementsState(){
     return achievementsState;
   }
   if (!state.achievements || typeof state.achievements !== 'object') {
-    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, completedModifierTechs: {} };
+    state.achievements = { unlocked: {}, popupQueue: [], rewarded: {}, totalPurchased: 0, totalMerges: 0, totalManualFenceRepairs: 0, totalModifierTechUnlocks: 0, totalDroneAcquisitions: 0, totalNoRepairAttackWaveStreak: 0, totalAttackWavesCompleted: 0, totalCoinsSpent: 0, totalDefenseOrderStreak: 0, totalAchievementsUnlocked: 0, completedModifierTechs: {} };
   }
   if (!state.achievements.unlocked || typeof state.achievements.unlocked !== 'object') state.achievements.unlocked = {};
   if (!Array.isArray(state.achievements.popupQueue)) state.achievements.popupQueue = [];
@@ -4122,6 +4122,7 @@ function getSerializedAchievementStats(){
     defenseOrderStreakCount: clampDevInt(Number.isFinite(stats.defenseOrderStreakCount) ? stats.defenseOrderStreakCount : ach.totalDefenseOrderStreak),
     chipComboTriplesCount: clampDevInt(Number.isFinite(stats.chipComboTriplesCount) ? stats.chipComboTriplesCount : ach.totalChipComboTriples),
     chipCraftFromFragmentsCount: clampDevInt(Number.isFinite(stats.chipCraftFromFragmentsCount) ? stats.chipCraftFromFragmentsCount : ach.totalChipCraftFromFragments),
+    achievementsUnlockedCount: clampDevInt(Number.isFinite(stats.achievementsUnlockedCount) ? stats.achievementsUnlockedCount : ach.totalAchievementsUnlocked),
   };
 }
 
@@ -4143,6 +4144,7 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.defenseOrderStreakCount)) state.stats.defenseOrderStreakCount = clampDevInt(savedStats.defenseOrderStreakCount);
     if (Number.isFinite(savedStats.chipComboTriplesCount)) state.stats.chipComboTriplesCount = clampDevInt(savedStats.chipComboTriplesCount);
     if (Number.isFinite(savedStats.chipCraftFromFragmentsCount)) state.stats.chipCraftFromFragmentsCount = clampDevInt(savedStats.chipCraftFromFragmentsCount);
+    if (Number.isFinite(savedStats.achievementsUnlockedCount)) state.stats.achievementsUnlockedCount = clampDevInt(savedStats.achievementsUnlockedCount);
   }
   ensureAchievementsState();
 }
@@ -4173,6 +4175,46 @@ function onProductionStorageSnapshotChanged(stateArg){
   return unlocked;
 }
 GameApi.onProductionStorageSnapshotChanged = onProductionStorageSnapshotChanged;
+
+// Bridge: drone repair completion seam (drones.js stepRepairWork — единственная
+// каноническая точка восстановления seg.hp до seg.maxHp). Маршрутизирует прогресс
+// repair_crew family через стандартный pipeline: recordDroneRepairCompleted()
+// возвращает unlocked[], затем reconcileAchievementRewards() выдаёт composite
+// награды (randomChips / drones / upgradePoints), затем queueAchievementPopup()
+// гарантирует popup. Без этого bridge композитные награды repair_crew_2/3 были
+// бы тихо потеряны (тот же класс бага, что storage_worker до починки).
+function onDroneRepairCompleted(stateArg){
+  if (!(AchievementsApi && typeof AchievementsApi.recordDroneRepairCompleted === 'function')) return [];
+  const target = stateArg || state;
+  const unlocked = AchievementsApi.recordDroneRepairCompleted(target) || [];
+  if (unlocked.length){
+    reconcileAchievementRewards(unlocked);
+    for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  }
+  return unlocked;
+}
+GameApi.onDroneRepairCompleted = onDroneRepairCompleted;
+
+// solo-pipeline-yandex-vk batch B2: talent_path achievements bridge.
+// Вызывается из src/systems/talents/talentsV2.js (buyRank + applyPending) с
+// detail = { ranksDelta, branches[] }. recordTalentRanksPurchased обновляет три
+// канонических счётчика (lifetime spent + monotonic peak fullyMaxed +
+// monotonic peak activeMaxed) и возвращает unlocked[]. reconcileAchievementRewards
+// раздаёт composite payouts (randomChips/dust для tier 2; upgradePoints/damagePoints
+// для tier 4), queueAchievementPopup гарантирует UI popup. stateArg оставлен для
+// симметрии с onDroneRepairCompleted, хотя talentsV2 сейчас вызывает без state.
+function onTalentRanksPurchased(detail, stateArg){
+  if (!(AchievementsApi && typeof AchievementsApi.recordTalentRanksPurchased === 'function')) return [];
+  if (!detail || typeof detail !== 'object') return [];
+  const target = stateArg || state;
+  const unlocked = AchievementsApi.recordTalentRanksPurchased(target, detail) || [];
+  if (unlocked.length){
+    reconcileAchievementRewards(unlocked);
+    for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+  }
+  return unlocked;
+}
+GameApi.onTalentRanksPurchased = onTalentRanksPurchased;
 
 const noRepairAttackWaveRuntime = {
   activeEpisodeKey: null,
@@ -12799,6 +12841,20 @@ function claimCrateReward(){
     state.crate = null;
     state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
     grantCrateTank(rewardLevel, crateSlotId);
+    // solo-pipeline-yandex-vk batch#1 — box_hunter achievement family seam.
+    // Канонический pipeline (как у onDroneRepairCompleted / completeAttackEpisode):
+    // record -> unlocked[] -> reconcileAchievementRewards (composite payouts:
+    // randomChips/dust для bonus_hunter_2, upgradePoints/drones для
+    // bonus_hunter_3) -> queueAchievementPopup для UI. Без этого fix композит
+    // молча терялся и popup не появлялся (тот же класс бага, что repair_crew
+    // до починки).
+    if (AchievementsApi && typeof AchievementsApi.recordBonusBoxOpened === 'function') {
+      const unlockedBoxHunter = AchievementsApi.recordBonusBoxOpened(state) || [];
+      if (unlockedBoxHunter.length) {
+        reconcileAchievementRewards(unlockedBoxHunter);
+        for (let i = 0; i < unlockedBoxHunter.length; i++) queueAchievementPopup(unlockedBoxHunter[i]);
+      }
+    }
     closeCrateModal();
   }, 1200);
 }
@@ -17367,6 +17423,25 @@ async function boot(){
         startLoop: scheduleMainLoop,
       });
       rebuildGroundLayer();
+
+      // solo-pipeline-yandex-vk batch#2 — daily_attendance post-load seam.
+      // Канонический pipeline (как box_hunter / repair_crew):
+      // recordDailyLoginTick -> unlocked[] -> reconcileAchievementRewards
+      // (composite payouts: randomChips/damagePoints для daily_attendance_3,
+      // upgradePoints/drones level=9 для daily_attendance_4) ->
+      // queueAchievementPopup для UI. UTC idempotency обеспечивает
+      // recorder сам (повторный F5 в тот же день не двоит счётчик).
+      // Не вызываем внутри ensureState/hydrate — только один раз
+      // после полного завершения boot.
+      try {
+        if (AchievementsApi && typeof AchievementsApi.recordDailyLoginTick === 'function') {
+          const unlockedDailyAttendance = AchievementsApi.recordDailyLoginTick(state) || [];
+          if (unlockedDailyAttendance.length) {
+            reconcileAchievementRewards(unlockedDailyAttendance);
+            for (let i = 0; i < unlockedDailyAttendance.length; i++) queueAchievementPopup(unlockedDailyAttendance[i]);
+          }
+        }
+      } catch (_dailyAttendanceErr) { /* additive, never throws into boot */ }
 
       // ── Phase 1: Initialize engine adapter and Phaser infrastructure ──
       initEngineAdapterPhase1();

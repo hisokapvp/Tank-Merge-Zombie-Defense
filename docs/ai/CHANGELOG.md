@@ -1,5 +1,15 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-05-15
+- **Achievements: solo-pipeline-yandex-vk batch #2 — новая семья `daily_attendance` (постоянный вход в игру, 4 тира: 2/7/14/30 дней) (`src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/persistence/initialState.js`, `src/i18n/{ru,en}.json`, `src/i18n/fallbackStrings.js`, `game.js`). UTC-идемпотентный recorder `recordDailyLoginTick` (post-boot seam в `game.js` после `rebuildGroundLayer()`, до `initEngineAdapterPhase1()`); счётчик `state.stats.totalLoginDays` ↔ legacy `ach.totalLoginDays` (ensureStats parallel pair, без объединения); `ach.lastLoginDate` (ISO yyyy-mm-dd UTC) — single source of truth идемпотентности. Композитные награды tier 3 (10 randomChips + 500 000 damagePoints) и tier 4 (3 upgradePoints + 3 drones lv.9) попадают в `ATOMIC_REWARD_MODES` для rollback parity с `box_hunter`/`repair_crew`. AUDIT: канонический `REWARD_TABLE` суммарно содержит 142 upgradePoints — план рассчитывал на 133 (127 baseline + 3 bonus_hunter_3 + 3 daily_attendance_4), цифра 127 в плане оказалась устаревшей, фактический baseline (без bonus_hunter_3 и daily_attendance_4) = 136 UP.**
+- **Achievements: solo-pipeline-yandex-vk batch #1 — новая семья `box_hunter` (открытие боксов военной помощи) (`src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `src/persistence/initialState.js`, `assets/saveSchema.json`, `src/i18n/{ru,en}.json`, `src/i18n/fallbackStrings.js`, `game.js`)**
+  - Добавлены достижения: `bonus_hunter_1/2/3` (10/100/500 открытых боксов военной помощи) с rewards 5 фрагментов / 5 чипов + 50 пыли / 3 очка улучшения + 3 дрона ур.3.
+  - Новый прогресс-счётчик `stats.bonusBoxesOpenedCount` (canonical path; no legacy ach.totalBonusBoxesOpened mirror — fresh-start, без retroactive grants).
+  - Recorder `recordBonusBoxOpened()` инкрементит счётчик из game.js `claimCrateReward` после `grantCrateTank()` через канонический pipeline `record -> reconcileAchievementRewards -> queueAchievementPopup`.
+  - `REWARD_TABLE` пополнен 3 новыми reward-modes; `ATOMIC_REWARD_MODES` whitelist расширен композитами (`bonusHunter2RandomChips5Dust50`, `bonusHunter3UpgradePoints3DronesL3x3`) для rollback-safe grants.
+  - i18n: ru/en/fallback синхронизированы для title/desc/reward ключей.
+  - Critical contract reminder: каждое новое family-описание должно использовать ключ `definitions: [...]`, не `achievements: [...]` (`flattenAchievementFamilies` читает строго `family.definitions`; иначе семья silent-skip из ACHIEVEMENTS и не появляется ни в модалке, ни в debug panel).
+
 ## 2026-05-03
 - **Achievements: solo-pipeline-yandex-vk batch #1 (indices 1..5) — новые семьи `drone_brigadier` + `optimizer`, idempotent reward claiming (`src/mechanics/achievements.js`, `src/mechanics/achievementRewards.js`, `game.js`, `src/i18n/{ru,en}.json`, `src/i18n/fallbackStrings.js`, `docs/ai/SYSTEMS/achievements.md`)**
   - Добавлены достижения: `drone_brigadier_1/2` (максимальный уровень дрона 5/10) и `optimizer_1/2/3` (все 15 ячеек ангара имеют минимум 1/2/3 установленных чипа).

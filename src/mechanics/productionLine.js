@@ -313,6 +313,17 @@
 
     const box = normalizeSavedBox(pl.storage[boxIndex]);
     pl.storage.splice(boxIndex, 1);
+    /* solo-pipeline-yandex-vk batch#2 — production_line family counter seam.
+       Инкремент state.stats.productionBoxesOpenedByLevel[String(box.level)]
+       ДО вызова bridge: resolver в achievements.js агрегирует словарь и
+       triggers unlock для production_line_1/2 (любой уровень) и _3 (level 4). */
+    if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+    if (!state.stats.productionBoxesOpenedByLevel || typeof state.stats.productionBoxesOpenedByLevel !== 'object') {
+      state.stats.productionBoxesOpenedByLevel = {};
+    }
+    var openedKey = String(box.level);
+    state.stats.productionBoxesOpenedByLevel[openedKey] =
+      (Number(state.stats.productionBoxesOpenedByLevel[openedKey]) || 0) + 1;
     var BridgeOpen = global.Game;
     if (BridgeOpen && typeof BridgeOpen.onProductionStorageSnapshotChanged === 'function') {
       BridgeOpen.onProductionStorageSnapshotChanged(state);
