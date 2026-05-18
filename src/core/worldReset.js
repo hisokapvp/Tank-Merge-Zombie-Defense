@@ -199,6 +199,7 @@
       : function (state, snapshot) { restoreProgressSnapshot(state, snapshot); };
 
     var beforeState = opts.getState();
+
     var snapshot = takeSnapshot(beforeState);
 
     resetWorldRuntimeState({ resetWorldRuntime: opts.resetWorldRuntime });

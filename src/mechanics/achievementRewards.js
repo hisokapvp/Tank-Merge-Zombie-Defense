@@ -160,6 +160,8 @@
     powerReserveDust15Fragments3:  { type: 'composite', items: [{ type: 'dust', amount: 15 }, { type: 'fragments', amount: 3 }], i18nKey: 'achievementRewardPowerReserve1' },
     powerReserveRandomChips3Upgrade1: { type: 'composite', items: [{ type: 'randomChips', amount: 3 }, { type: 'upgradePoints', amount: 1 }], i18nKey: 'achievementRewardPowerReserve2' },
     powerReserveUpgrade3Damage100000: { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'damagePoints', amount: 100000 }], i18nKey: 'achievementRewardPowerReserve3' },
+    /* Item 3 — survivor family (5 upgrade points + 750000 damage points). */
+    survivorUpgrade5Damage750000: { type: 'composite', items: [{ type: 'upgradePoints', amount: 5 }, { type: 'damagePoints', amount: 750000 }], i18nKey: 'achievementRewardSurvivor' },
     /* fence_mechanic family */
     fenceMechanicCoins75:        { type: 'coins',          amount: 75,    i18nKey: 'achievementRewardFenceMechanicCoins75' },
     fenceMechanicDust5:          { type: 'dust',           amount: 5,     i18nKey: 'achievementRewardFenceMechanicDust5' },
@@ -300,6 +302,17 @@
     dailyAttendance2Drone1L5:                 { type: 'drones',       amount: 1, level: 5,                                                                                                    i18nKey: 'achievementRewardDailyAttendance2' },
     dailyAttendance3RandomChips10Damage500000:{ type: 'composite', items: [{ type: 'randomChips', amount: 10 }, { type: 'damagePoints', amount: 500000 }],                                  i18nKey: 'achievementRewardDailyAttendance3' },
     dailyAttendance4Upgrade3DronesL9x3:       { type: 'composite', items: [{ type: 'upgradePoints', amount: 3 }, { type: 'drones', amount: 3, level: 9 }],                                   i18nKey: 'achievementRewardDailyAttendance4' },
+    /* solo-pipeline-yandex-vk — zombie_slayer family (5 tiers).
+       Tier 1 — atomic dust. Tier 2 — atomic randomChips. Tier 3/4/5 —
+       composite (upgradePoints+damagePoints / randomChips+drones L6 /
+       upgradePoints+damagePoints). Composite keys попадают в
+       ATOMIC_REWARD_MODES ниже для rollback parity. Drones level=6 —
+       параметр, не новый reward type (см. conveyorMaster3Drones5L4). */
+    zombieSlayer1Dust25:                          { type: 'dust',         amount: 25,                                                                                                            i18nKey: 'achievementRewardZombieSlayer1' },
+    zombieSlayer2RandomChips5:                    { type: 'randomChips',  amount: 5,                                                                                                             i18nKey: 'achievementRewardZombieSlayer2' },
+    zombieSlayer3Upgrade2Damage100000:            { type: 'composite', items: [{ type: 'upgradePoints', amount: 2 }, { type: 'damagePoints', amount: 100000 }],                                  i18nKey: 'achievementRewardZombieSlayer3' },
+    zombieSlayer4RandomChips10DronesL6x2:         { type: 'composite', items: [{ type: 'randomChips', amount: 10 }, { type: 'drones', amount: 2, level: 6 }],                                    i18nKey: 'achievementRewardZombieSlayer4' },
+    zombieSlayer5Upgrade10Damage1500000:          { type: 'composite', items: [{ type: 'upgradePoints', amount: 10 }, { type: 'damagePoints', amount: 1500000 }],                                i18nKey: 'achievementRewardZombieSlayer5' },
     /* solo-pipeline-yandex-vk batch B1 — repair_crew family.
        Прогресс через droneRepairsCompleted seam в drones.js.
        Tier 3 использует канонический drones type с level=9 — grantAchievementDrones
@@ -362,6 +375,10 @@
     /* daily_attendance composite grants — rollback parity with box_hunter */
     dailyAttendance3RandomChips10Damage500000: true,
     dailyAttendance4Upgrade3DronesL9x3: true,
+    /* zombie_slayer composite grants — rollback parity with daily_attendance */
+    zombieSlayer3Upgrade2Damage100000: true,
+    zombieSlayer4RandomChips10DronesL6x2: true,
+    zombieSlayer5Upgrade10Damage1500000: true,
     bigSpender2Chips2Upgrade2: true,
     bigSpender3Upgrade5Chips5: true,
     /* auto_merge_addict composite grants — rollback parity with wave_survivor */

@@ -1056,6 +1056,69 @@
       ],
     },
     {
+      /* solo-pipeline-yandex-vk — zombie_slayer family (5 tiers).
+         Progress tracker: stats.zombieKillsTotal.
+         Increment via Game.Achievements.recordZombieKilled из
+         flushZombieDeathFx batched seam (K-count per batch, source
+         default 'tank'). Lifetime counter; survives partial reset
+         (preserve overlay в game.js). Composite rewards reuse
+         existing grantAchievementDust/RandomChips/UpgradePoints/
+         DamagePoints/Drones helpers (no new reward types). */
+      id: 'zombie_slayer',
+      definitions: [
+        {
+          id: 'zombie_slayer_1',
+          familyId: 'zombie_slayer',
+          titleKey: 'achievementZombieSlayer1',
+          descKey: 'achievementZombieSlayer1Desc',
+          rewardKey: 'achievementRewardZombieSlayer1',
+          target: 1000,
+          progressType: 'zombieKillsTotal',
+          rewardMode: 'zombieSlayer1Dust25',
+        },
+        {
+          id: 'zombie_slayer_2',
+          familyId: 'zombie_slayer',
+          titleKey: 'achievementZombieSlayer2',
+          descKey: 'achievementZombieSlayer2Desc',
+          rewardKey: 'achievementRewardZombieSlayer2',
+          target: 100000,
+          progressType: 'zombieKillsTotal',
+          rewardMode: 'zombieSlayer2RandomChips5',
+        },
+        {
+          id: 'zombie_slayer_3',
+          familyId: 'zombie_slayer',
+          titleKey: 'achievementZombieSlayer3',
+          descKey: 'achievementZombieSlayer3Desc',
+          rewardKey: 'achievementRewardZombieSlayer3',
+          target: 1000000,
+          progressType: 'zombieKillsTotal',
+          rewardMode: 'zombieSlayer3Upgrade2Damage100000',
+        },
+        {
+          id: 'zombie_slayer_4',
+          familyId: 'zombie_slayer',
+          titleKey: 'achievementZombieSlayer4',
+          descKey: 'achievementZombieSlayer4Desc',
+          rewardKey: 'achievementRewardZombieSlayer4',
+          target: 100000000,
+          progressType: 'zombieKillsTotal',
+          rewardMode: 'zombieSlayer4RandomChips10DronesL6x2',
+        },
+        {
+          id: 'zombie_slayer_5',
+          familyId: 'zombie_slayer',
+          titleKey: 'achievementZombieSlayer5',
+          descKey: 'achievementZombieSlayer5Desc',
+          rewardKey: 'achievementRewardZombieSlayer5',
+          target: 1000000000,
+          progressType: 'zombieKillsTotal',
+          rewardMode: 'zombieSlayer5Upgrade10Damage1500000',
+        },
+      ],
+    },
+    {
       /* solo-pipeline-yandex-vk batch#1 — meta_hoarder family.
          Progress tracker: stats.achievementsUnlockedCount.
          Counter is incremented exactly once per achievement unlock
@@ -1327,6 +1390,30 @@
           target: 1000,
           progressType: 'fragmentsAcquired',
           rewardMode: 'fragmentCollector3UpgradePoints3DronesL7x3',
+        },
+      ],
+    },
+    /* Item 3 — survivor (Выживший).
+     * ADR:
+     * - One-shot achievement (target=1). Срабатывает при завершении attack-эпизода,
+     *   если в ходе волны были разрушены ВСЕ фрагменты забора (хотя бы в один момент).
+     * - Canonical counter: stats.survivorWaveCompletionsCount; legacy mirror
+     *   ach.totalSurvivorWaveCompletions (parity для save schema).
+     * - Latch хранится в game.js noRepairAttackWaveRuntime.allFencesDestroyedThisWave;
+     *   record вызывается из finalizeNoRepairAttackWaveEpisode ДО сброса эпизода.
+     * - Reward: 5 upgrade points + 750000 damage points (composite в REWARD_TABLE). */
+    {
+      id: 'survivor',
+      definitions: [
+        {
+          id: 'survivor_1',
+          familyId: 'survivor',
+          titleKey: 'achievementSurvivor',
+          descKey: 'achievementSurvivorDesc',
+          rewardKey: 'achievementRewardSurvivor',
+          target: 1,
+          progressType: 'survivorWaveCompletions',
+          rewardMode: 'survivorUpgrade5Damage750000',
         },
       ],
     },
@@ -1646,6 +1733,15 @@
        строку, если её нет (cold-start или legacy save). */
     var hasTotalLoginDays = Number.isFinite(stats.totalLoginDays);
     var legacyTotalLoginDays = normalizeCounter(ach.totalLoginDays);
+    /* solo-pipeline-yandex-vk — zombie_slayer family.
+       Canonical counter stats.zombieKillsTotal; инкремент только в
+       recordZombieKilled (вызывается из flushZombieDeathFx batched seam).
+       Survives partial+full reset (preserve overlay в game.js). Source
+       breakdown в stats.zombieKillsBySource{tank,drone,talent,wall}.
+       Math.max против legacy ach.totalZombieKills mirror, чтобы
+       никакой sync-back не уронил canonical счётчик. */
+    var hasZombieKillsTotal = Number.isFinite(stats.zombieKillsTotal);
+    var legacyZombieKillsTotal = normalizeCounter(ach.totalZombieKills);
 
     var legacyMerges = normalizeCounter(ach.totalMerges);
     var legacyPurchased = normalizeCounter(ach.totalPurchased);
@@ -1688,6 +1784,13 @@
 
     if (!hasNoRepairAttackWaveStreak) stats.noRepairAttackWaveStreakCount = legacyNoRepairAttackWaveStreak;
     else stats.noRepairAttackWaveStreakCount = normalizeCounter(stats.noRepairAttackWaveStreakCount);
+
+    // Item 3 — survivor canonical counter (mirror noRepairAttackWaveStreak pattern).
+    var hasSurvivorWaveCompletions = Number.isFinite(stats.survivorWaveCompletionsCount);
+    var legacySurvivorWaveCompletions = normalizeCounter(ach.totalSurvivorWaveCompletions);
+    if (!hasSurvivorWaveCompletions) stats.survivorWaveCompletionsCount = legacySurvivorWaveCompletions;
+    else stats.survivorWaveCompletionsCount = Math.max(normalizeCounter(stats.survivorWaveCompletionsCount), legacySurvivorWaveCompletions);
+    ach.totalSurvivorWaveCompletions = stats.survivorWaveCompletionsCount;
 
     if (!hasAttackWavesCompleted) stats.attackWavesCompletedCount = legacyAttackWavesCompleted;
     else stats.attackWavesCompletedCount = normalizeCounter(stats.attackWavesCompletedCount);
@@ -1777,6 +1880,16 @@
     else stats.totalLoginDays = normalizeCounter(stats.totalLoginDays);
     if (!ach.lastLoginDate || typeof ach.lastLoginDate !== 'string') ach.lastLoginDate = '';
 
+    /* zombie_slayer canonical counter — Math.max guard (lifetime),
+       плюс ensure source breakdown object с whitelisted keys. */
+    if (!hasZombieKillsTotal) stats.zombieKillsTotal = legacyZombieKillsTotal;
+    else stats.zombieKillsTotal = Math.max(normalizeCounter(stats.zombieKillsTotal), legacyZombieKillsTotal);
+    if (!stats.zombieKillsBySource || typeof stats.zombieKillsBySource !== 'object') stats.zombieKillsBySource = {};
+    if (!Number.isFinite(stats.zombieKillsBySource.tank)) stats.zombieKillsBySource.tank = 0;
+    if (!Number.isFinite(stats.zombieKillsBySource.drone)) stats.zombieKillsBySource.drone = 0;
+    if (!Number.isFinite(stats.zombieKillsBySource.talent)) stats.zombieKillsBySource.talent = 0;
+    if (!Number.isFinite(stats.zombieKillsBySource.wall)) stats.zombieKillsBySource.wall = 0;
+
     if (hasMerged && opts.hadLegacyMerges && stats.tanksMergedCount !== legacyMerges) {
       stats.tanksMergedCount = legacyMerges;
     }
@@ -1807,6 +1920,7 @@
     ach.totalTalentBranchesMaxed = stats.talentBranchesMaxedPeak;
     ach.totalTalentBranchActivesMaxed = stats.talentBranchActivesMaxedPeak;
     ach.totalAchievementsUnlocked = stats.achievementsUnlockedCount;
+    ach.totalZombieKills = stats.zombieKillsTotal;
     return stats;
   }
 
@@ -2027,6 +2141,26 @@
     return nextValue;
   }
 
+  // Item 3 — setSurvivorWaveCompletions (mirror setNoRepairAttackWaveStreak).
+  function setSurvivorWaveCompletions(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return 0;
+    var nextValue = normalizeCounter(value);
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.survivorWaveCompletionsCount = nextValue;
+    }
+    achievementState.totalSurvivorWaveCompletions = nextValue;
+    return nextValue;
+  }
+
+  function recordSurvivorWaveCompleted(state) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var current = getProgressValueFromState('survivorWaveCompletions', state, ach);
+    setSurvivorWaveCompletions(state, ach, current + 1);
+    return recalculateUnlocks(state);
+  }
+
   function setDefenseOrderStreak(state, ach, value) {
     var achievementState = ach || ensureState(state);
     if (!achievementState) return 0;
@@ -2080,6 +2214,7 @@
       if (type === 'modifierTechUnlocks') return normalizeCounter(stats.modifierTechUnlocksCount);
       if (type === 'droneAcquisitions') return normalizeCounter(stats.droneAcquisitionsCount);
       if (type === 'noRepairAttackWaveStreak') return normalizeCounter(stats.noRepairAttackWaveStreakCount);
+      if (type === 'survivorWaveCompletions') return normalizeCounter(stats.survivorWaveCompletionsCount);
       if (type === 'attackWavesCompleted') return normalizeCounter(stats.attackWavesCompletedCount);
       if (type === 'droneRepairsCompleted') return normalizeCounter(stats.droneRepairsCompletedCount);
       if (type === 'autoMergeActivations') return normalizeCounter(stats.autoMergeActivationsCount);
@@ -2094,6 +2229,7 @@
       if (type === 'achievementsUnlockedCount') return normalizeCounter(stats.achievementsUnlockedCount);
       if (type === 'bonusBoxesOpened') return normalizeCounter(stats.bonusBoxesOpenedCount);
       if (type === 'loginDaysTotal') return normalizeCounter(stats.totalLoginDays);
+      if (type === 'zombieKillsTotal') return normalizeCounter(stats.zombieKillsTotal);
       if (type === 'dustEarnedLifetime') return normalizeCounter(stats.dustEarnedLifetime);
       if (type === 'fragmentsAcquired') return normalizeCounter(stats.fragmentsAcquired);
       if (type === 'talentPointsSpent') return normalizeCounter(stats.talentPointsSpentTotal);
@@ -2124,6 +2260,9 @@
     if (type === 'noRepairAttackWaveStreak') {
       return normalizeCounter(ach.totalNoRepairAttackWaveStreak);
     }
+    if (type === 'survivorWaveCompletions') {
+      return normalizeCounter(ach.totalSurvivorWaveCompletions);
+    }
     if (type === 'attackWavesCompleted') {
       return normalizeCounter(ach.totalAttackWavesCompleted);
     }
@@ -2144,6 +2283,9 @@
     }
     if (type === 'loginDaysTotal') {
       return normalizeCounter(ach.totalLoginDays);
+    }
+    if (type === 'zombieKillsTotal') {
+      return normalizeCounter(ach.totalZombieKills);
     }
     if (type === 'coinsSpentTotal') {
       return normalizeCounter(ach.totalCoinsSpent);
@@ -2660,6 +2802,52 @@
     return true;
   }
 
+  /* solo-pipeline-yandex-vk — zombie_slayer recorder.
+     Канонический lifetime-инкремент через flushZombieDeathFx batch
+     seam (game.js); per-kill из death-animation tick запрещён. Source
+     whitelist tank/drone/talent/wall — на этом seam default 'tank'.
+     Clamp на MAX_SAFE_INTEGER с однократным dev-warning. */
+  var ZOMBIE_KILLS_MAX = Number.MAX_SAFE_INTEGER;
+  var ZOMBIE_KILLS_SOURCES = { tank: true, drone: true, talent: true, wall: true };
+  var zombieKillsClampWarned = false;
+
+  function setZombieKillsTotal(state, ach, value) {
+    var achievementState = ach || ensureState(state);
+    if (!achievementState) return;
+    var nextValue = normalizeCounter(value);
+    if (nextValue > ZOMBIE_KILLS_MAX) nextValue = ZOMBIE_KILLS_MAX;
+    achievementState.totalZombieKills = nextValue;
+    if (state && state.stats && typeof state.stats === 'object') {
+      state.stats.zombieKillsTotal = nextValue;
+    }
+  }
+
+  function recordZombieKilled(state, delta, source) {
+    if (!Number.isFinite(delta) || delta <= 0) return [];
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var inc = Math.max(0, Math.floor(Number(delta)));
+    if (inc <= 0) return [];
+    var current = getProgressValueFromState('zombieKillsTotal', state, ach);
+    var next = current + inc;
+    if (next > ZOMBIE_KILLS_MAX) {
+      if (!zombieKillsClampWarned && typeof console !== 'undefined' && console.warn) {
+        console.warn('[achievements] zombieKillsTotal clamped at MAX_SAFE_INTEGER');
+        zombieKillsClampWarned = true;
+      }
+      next = ZOMBIE_KILLS_MAX;
+    }
+    setZombieKillsTotal(state, ach, next);
+    if (state && state.stats && typeof state.stats === 'object' && typeof source === 'string' && source.length > 0 && ZOMBIE_KILLS_SOURCES[source]) {
+      if (!state.stats.zombieKillsBySource || typeof state.stats.zombieKillsBySource !== 'object') state.stats.zombieKillsBySource = {};
+      var prevSrc = Number(state.stats.zombieKillsBySource[source]) || 0;
+      var nextSrc = prevSrc + inc;
+      if (nextSrc > ZOMBIE_KILLS_MAX) nextSrc = ZOMBIE_KILLS_MAX;
+      state.stats.zombieKillsBySource[source] = nextSrc;
+    }
+    return recalculateUnlocks(state);
+  }
+
   function recordProductionStorageSnapshot(state) {
     var ach = ensureState(state);
     if (!ach) return [];
@@ -2774,5 +2962,7 @@
     resetAutoMergeActivations: resetAutoMergeActivations,
     recordCoinsSpent: recordCoinsSpent,
     resetCoinsSpent: resetCoinsSpent,
+    recordZombieKilled: recordZombieKilled,
+    recordSurvivorWaveCompleted: recordSurvivorWaveCompleted,
   };
 })(typeof window !== 'undefined' ? window : this);

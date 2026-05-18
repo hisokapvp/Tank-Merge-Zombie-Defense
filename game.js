@@ -4116,6 +4116,11 @@ function getSerializedAchievementStats(){
     attackWavesCompletedCount: clampDevInt(Number.isFinite(stats.attackWavesCompletedCount) ? stats.attackWavesCompletedCount : ach.totalAttackWavesCompleted),
     coinsSpentTotal: clampDevInt(Number.isFinite(stats.coinsSpentTotal) ? stats.coinsSpentTotal : ach.totalCoinsSpent),
     coinsSpentBySource: (stats.coinsSpentBySource && typeof stats.coinsSpentBySource === 'object') ? stats.coinsSpentBySource : {},
+    /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter +
+       per-source breakdown (tank/drone/talent/wall). Mirrored on
+       ach.totalZombieKills via normalizeCounter+Math.max in ensureStats. */
+    zombieKillsTotal: clampDevInt(Number.isFinite(stats.zombieKillsTotal) ? stats.zombieKillsTotal : ach.totalZombieKills),
+    zombieKillsBySource: (stats.zombieKillsBySource && typeof stats.zombieKillsBySource === 'object') ? stats.zombieKillsBySource : {},
     moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
     perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
     hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
@@ -4138,6 +4143,9 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.attackWavesCompletedCount)) state.stats.attackWavesCompletedCount = clampDevInt(savedStats.attackWavesCompletedCount);
     if (Number.isFinite(savedStats.coinsSpentTotal)) state.stats.coinsSpentTotal = clampDevInt(savedStats.coinsSpentTotal);
     if (savedStats.coinsSpentBySource && typeof savedStats.coinsSpentBySource === 'object') state.stats.coinsSpentBySource = savedStats.coinsSpentBySource;
+    /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter restore. */
+    if (Number.isFinite(savedStats.zombieKillsTotal)) state.stats.zombieKillsTotal = clampDevInt(savedStats.zombieKillsTotal);
+    if (savedStats.zombieKillsBySource && typeof savedStats.zombieKillsBySource === 'object') state.stats.zombieKillsBySource = savedStats.zombieKillsBySource;
     if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
     if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
     if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
@@ -4220,11 +4228,15 @@ const noRepairAttackWaveRuntime = {
   activeEpisodeKey: null,
   invalidated: false,
   nextSyntheticEpisodeKey: 1,
+  // Item 3 — latch: в ходе текущей attack-волны все фрагменты забора были разрушены
+  // одновременно. Сбрасывается в resetNoRepairAttackWaveRuntime(); читается в finalize ДО сброса.
+  allFencesDestroyedThisWave: false,
 };
 
 function resetNoRepairAttackWaveRuntime(){
   noRepairAttackWaveRuntime.activeEpisodeKey = null;
   noRepairAttackWaveRuntime.invalidated = false;
+  noRepairAttackWaveRuntime.allFencesDestroyedThisWave = false;
 }
 
 function beginNoRepairAttackWaveEpisode(){
@@ -4309,9 +4321,19 @@ function invalidateNoRepairAttackWaveEpisode(){
 function finalizeNoRepairAttackWaveEpisode(){
   if (!noRepairAttackWaveRuntime.activeEpisodeKey) return;
   const shouldCount = !noRepairAttackWaveRuntime.invalidated;
+  // Item 3 — захватываем latch ДО resetNoRepairAttackWaveRuntime, иначе будет сброшен.
+  const survivorEligible = !!noRepairAttackWaveRuntime.allFencesDestroyedThisWave;
   resetNoRepairAttackWaveRuntime();
   // wave_survivor: count every survived attack episode regardless of repair state
   completeAttackEpisodeAchievementProgress();
+  // Item 3 — выдаём одноразовое достижение «Выживший», если в волне latch взвёлся.
+  if (survivorEligible && AchievementsApi && typeof AchievementsApi.recordSurvivorWaveCompleted === 'function') {
+    const unlocked = AchievementsApi.recordSurvivorWaveCompleted(state) || [];
+    if (unlocked.length) {
+      reconcileAchievementRewards(unlocked);
+      for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
+    }
+  }
   if (!shouldCount) return;
   completeNoRepairAttackWaveAchievementProgress();
 }
@@ -6667,6 +6689,12 @@ function restoreFullState(saved){
     ach.totalDefenseOrderStreak = Number.isFinite(saved.achievements.totalDefenseOrderStreak)
       ? Math.max(0, Math.floor(saved.achievements.totalDefenseOrderStreak))
       : ach.totalDefenseOrderStreak;
+    ach.totalSimulationResets = Number.isFinite(saved.achievements.totalSimulationResets)
+      ? Math.max(0, Math.floor(saved.achievements.totalSimulationResets))
+      : ach.totalSimulationResets;
+    ach.totalSurvivorWaveCompletions = Number.isFinite(saved.achievements.totalSurvivorWaveCompletions)
+      ? Math.max(0, Math.floor(saved.achievements.totalSurvivorWaveCompletions))
+      : ach.totalSurvivorWaveCompletions;
     ach.completedModifierTechs = saved.achievements.completedModifierTechs && typeof saved.achievements.completedModifierTechs === 'object'
       ? { ...saved.achievements.completedModifierTechs }
       : ach.completedModifierTechs;
@@ -7242,8 +7270,9 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
 
   const levelOmegaMul = 1 + BAL.zombieLevelOmegaMul * (level - 1);
   const explicitHealth = Number.isFinite(t?.health) && t.health > 0 ? t.health : null;
+  const piecewiseLevelMul = getZombieLevelMultiplier(level);
   const baseHp = explicitHealth != null
-    ? explicitHealth
+    ? explicitHealth * piecewiseLevelMul
     : BAL.zombieHpBase
       * (1 + (Math.random()*2-1)*BAL.zombieHpVar)
       * zombieHpMultiplier(level)
@@ -7673,11 +7702,52 @@ function zombieLevelScale(z){
   return 1;
 }
 
+// Piecewise zombie level scaling for HP and attack damage.
+// Single source of truth for the TZ schema "увеличить урон и здоровье зомби
+// за каждый уровень после 10". Applied multiplicatively on top of the
+// existing baseline scaling, so levels 1..10 stay at 1.0 (unchanged) and
+// levels 11..60 accumulate per-level percentages. Above level 60 the
+// multiplier clamps to the level-60 value (no extrapolation).
+//
+// Breakpoints:
+//   lvl 11..20: +5% per level   -> lvl 20 = +50%
+//   lvl 21..30: +10% per level  -> lvl 30 = +150%
+//   lvl 31..40: +15% per level  -> lvl 40 = +300%
+//   lvl 41..50: +20% per level  -> lvl 50 = +500%
+//   lvl 51..60: +30% per level  -> lvl 60 = +800%
+//
+// Hot-path contract: precomputed Float64Array(61), O(1) lookup, no per-call
+// allocations, no Math.pow, no branching in the lookup itself.
+const ZOMBIE_LEVEL_SCALING_MAX_LEVEL = 60;
+const ZOMBIE_LEVEL_SCALING_TABLE = (function buildZombieLevelScalingTable(){
+  const table = new Float64Array(ZOMBIE_LEVEL_SCALING_MAX_LEVEL + 1);
+  let acc = 0;
+  for (let lvl = 0; lvl <= ZOMBIE_LEVEL_SCALING_MAX_LEVEL; lvl++) {
+    let step;
+    if (lvl <= 10) step = 0;
+    else if (lvl <= 20) step = 0.05;
+    else if (lvl <= 30) step = 0.10;
+    else if (lvl <= 40) step = 0.15;
+    else if (lvl <= 50) step = 0.20;
+    else step = 0.30;
+    acc += step;
+    table[lvl] = 1 + acc;
+  }
+  return table;
+})();
+
+function getZombieLevelMultiplier(level){
+  const lvl = Number.isFinite(level) ? level : 1;
+  if (lvl <= 10) return 1;
+  if (lvl >= ZOMBIE_LEVEL_SCALING_MAX_LEVEL) return ZOMBIE_LEVEL_SCALING_TABLE[ZOMBIE_LEVEL_SCALING_MAX_LEVEL];
+  return ZOMBIE_LEVEL_SCALING_TABLE[lvl | 0];
+}
+
 function zombieHpMultiplier(level){
   const lvl = Math.max(1, level);
   const dmgScale = Math.pow(BAL.dmgMultPerLevel, lvl - 1);
   const extra = 1 + BAL.zombieHpExtraPerLevel * Math.max(0, lvl - 1);
-  return dmgScale * extra;
+  return dmgScale * extra * getZombieLevelMultiplier(lvl);
 }
 
 function zombieCollisionRadius(z){
@@ -8505,6 +8575,20 @@ function applyFenceSegmentDamage(seg, amount){
   if (seg.broken !== wasBroken) {
     syncFenceBreachForSegment(seg);
     if (seg.broken) breakAdjacentFenceSegments(seg);
+    // Item 3 — фиксируем moment, когда в ходе текущей attack-волны
+    // все фрагменты забора разрушены. Latch одноразовый и живёт
+    // до конца эпизода (resetNoRepairAttackWaveRuntime сбрасывает его при finalize).
+    if (seg.broken && noRepairAttackWaveRuntime.activeEpisodeKey
+        && !noRepairAttackWaveRuntime.allFencesDestroyedThisWave) {
+      const segs = state && Array.isArray(state.fenceSegments) ? state.fenceSegments : null;
+      if (segs && segs.length > 0) {
+        let allBroken = true;
+        for (let i = 0; i < segs.length; i++) {
+          if (!segs[i] || !segs[i].broken) { allBroken = false; break; }
+        }
+        if (allBroken) noRepairAttackWaveRuntime.allFencesDestroyedThisWave = true;
+      }
+    }
   }
   return true;
 }
@@ -8531,7 +8615,8 @@ function getZombieWaveHpMult(){
 function getZombieFinalAttackDamage(z, damageMul){
   const baseDamage = getZombieAttackDamage(z);
   const attackModeMul = Number.isFinite(damageMul) ? Math.max(0, damageMul) : 1;
-  return baseDamage * attackModeMul * getZombieWaveAtkMult();
+  const levelMul = getZombieLevelMultiplier((z && z.level) || 1);
+  return baseDamage * attackModeMul * getZombieWaveAtkMult() * levelMul;
 }
 
 function isBlockingModalOpen(){
@@ -8807,6 +8892,19 @@ function flushZombieDeathFx() {
 
   // Achievements: single additive delta (item 3)
   if (_killBatchCoinsTotal > 0) processAchievementProgress('moneyEarned', _killBatchCoinsTotal);
+
+  // solo-pipeline-yandex-vk — zombie_slayer family. Batched lifetime
+  // increment через AchievementsApi.recordZombieKilled(state, K, 'tank').
+  // Per-kill из death-animation tick запрещён (postmortem P/avoid-1);
+  // single batch call after moneyEarned зеркалит paritet. source='tank' —
+  // default seam; drone/talent/wall attribution оставлено будущему seam'у.
+  if (AchievementsApi && typeof AchievementsApi.recordZombieKilled === 'function') {
+    const _unlockedZombieSlayer = AchievementsApi.recordZombieKilled(state, K, 'tank') || [];
+    if (_unlockedZombieSlayer.length) {
+      reconcileAchievementRewards(_unlockedZombieSlayer);
+      for (let i = 0; i < _unlockedZombieSlayer.length; i++) queueAchievementPopup(_unlockedZombieSlayer[i]);
+    }
+  }
 
   // Telemetry / Funnel: K calls → 1 call each (item 4)
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('zombieKill', K);
@@ -11353,6 +11451,18 @@ function handleCriticalCloseToMenu(){
 function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
+  // Item 2 — Инкремент счётчика «Перезагрузка симуляции» при показе модалки «Критическое состояние».
+  // Считается каждый показ критической модалки (= каждая перезагрузка симуляции),
+  // сохраняется немедленно в localStorage и обновляется в HUD-терминале.
+  try {
+    if (!state.achievements || typeof state.achievements !== 'object') state.achievements = {};
+    const _prevResets = Number.isFinite(state.achievements.totalSimulationResets)
+      ? Math.max(0, Math.floor(state.achievements.totalSimulationResets))
+      : 0;
+    state.achievements.totalSimulationResets = _prevResets + 1;
+    try { saveProgress(); } catch (_simResetSaveErr) { /* additive */ }
+    try { updateProgressUI(); } catch (_simResetUiErr) { /* additive */ }
+  } catch (_simResetIncErr) { /* additive — never throws into critical flow */ }
   // ensure attackMode is force-disabled immediately when showing critical modal
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
   clearAllTanksFromCells(state);
@@ -12023,6 +12133,17 @@ function ensureProgressUI(){
     <div class="xpValue" id="xpText">0/0</div>
   `;
   topbar.appendChild(wrap);
+
+  // Item 2 — Отдельная панель «Перезагрузка симуляции: X раз» под xpWrap, тот же стиль .xpPanel.hudPanel.
+  if (!document.getElementById('simResetsWrap')) {
+    const simWrap = document.createElement('div');
+    simWrap.id = 'simResetsWrap';
+    simWrap.className = 'xpPanel hudPanel';
+    simWrap.innerHTML = `
+      <div class="xpLabel" id="simResetsText">${(t('supercomputerSimResetsInfo') || 'Перезагрузка симуляции: 0 раз').replace('{count}', 0)}</div>
+    `;
+    topbar.appendChild(simWrap);
+  }
 }
 
 function updateProgressUI(){
@@ -12036,6 +12157,22 @@ function updateProgressUI(){
   const pct = clamp(p.xp / need, 0, 1) * 100;
   const pctRounded = Math.round(pct * 10) / 10;
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
+  // Item 2 — обновляем «Перезагрузка симуляции» в терминале под строкой lvlText.
+  // Счётчик живёт в state.achievements.totalSimulationResets (инкремент в restartSimulationPartial).
+  try {
+    const _simResetsEl = document.getElementById('simResetsText');
+    if (_simResetsEl) {
+      const _ach = (state && state.achievements && typeof state.achievements === 'object') ? state.achievements : null;
+      const _resets = (_ach && Number.isFinite(_ach.totalSimulationResets))
+        ? Math.max(0, Math.floor(_ach.totalSimulationResets))
+        : 0;
+      const _tmpl = t('supercomputerSimResetsInfo');
+      const _txt = (_tmpl && _tmpl !== 'supercomputerSimResetsInfo')
+        ? _tmpl.replace('{count}', String(_resets))
+        : ('Перезагрузка симуляции: ' + _resets + ' раз');
+      if (_simResetsEl.textContent !== _txt) _simResetsEl.textContent = _txt;
+    }
+  } catch (_simResetsUiErr) { /* additive */ }
   const _hud2 = window.Game && window.Game.HudAdapter;
   if (_hud2 && _hud2.isInitialized()) {
     _hud2.updateText('lvlText', `${t('levelLabel')}: ${p.computerLevel}`);

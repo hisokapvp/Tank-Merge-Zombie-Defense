@@ -160,6 +160,21 @@
         // lastLoginDate — ISO yyyy-mm-dd (UTC) последнего засчитанного входа.
         totalLoginDays: 0,
         lastLoginDate: '',
+        // solo-pipeline-yandex-vk batch#? — zombie_slayer family.
+        // totalZombieKills — legacy mirror lifetime kill counter; canonical stats.zombieKillsTotal.
+        // Survives partial reset (pattern dustEarnedLifetime). Increments only via
+        // Game.Achievements.recordZombieKilled from flushZombieDeathFx batch seam.
+        totalZombieKills: 0,
+        // Item 2 — Сколько раз игрок выполнил «Перезагрузка симуляции» (partial reset).
+        // Канонический счётчик. Инкрементируется в Game.WorldReset.restartSimulationPartial
+        // ДО takeProgressSnapshot, поэтому переживает partial reset через snapshot.achievements.
+        totalSimulationResets: 0,
+        // Item 3 — survivor (Выживший) achievement.
+        // Legacy mirror lifetime счётчика волн, переживших полное разрушение всех фрагментов забора.
+        // Канонический stats.survivorWaveCompletionsCount; ensureStats нормализует пару.
+        // Поскольку достижение one-shot (target=1), partial reset не критичен после первого grant,
+        // но мы держим mirror для save schema parity.
+        totalSurvivorWaveCompletions: 0,
         completedModifierTechs: {},
         counters: {
           productionStorageSnapshot: { total: 0, level2: 0, level4: 0 },
@@ -188,6 +203,11 @@
         // solo-pipeline-yandex-vk batch#2 — daily_attendance canonical counter.
         // Инкремент только через Game.Achievements.recordDailyLoginTick (UTC-day idempotency).
         totalLoginDays: 0,
+        // solo-pipeline-yandex-vk — zombie_slayer canonical counter (lifetime).
+        // Инкремент только через Game.Achievements.recordZombieKilled из flushZombieDeathFx batch seam.
+        // Survives partial reset; clamp на MAX_SAFE_INTEGER. Source breakdown в zombieKillsBySource.
+        zombieKillsTotal: 0,
+        zombieKillsBySource: { tank: 0, drone: 0, talent: 0, wall: 0 },
       },
       ui: {
         talentsOpen: false,

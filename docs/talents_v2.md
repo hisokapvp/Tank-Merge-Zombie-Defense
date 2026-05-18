@@ -94,6 +94,32 @@
 
 `eco_buy_discount`, `eco_upgrade_discount`, `eco_repair_discount`, `eco_coins_kill_bonus`, `eco_coins_shot_bonus`, `eco_xp_bonus`, `eco_double_reward`, `eco_interest`, `eco_tax_relief`, `eco_voucher`, `eco_lottery`, `eco_clean_defense`, `eco_grey_to_damage_points`, `eco_crit_kill_bonus`, `eco_bulk_buy`, `eco_century_contract`, `eco_active_golden_hour`.
 
+## Описания узлов: канонический `{current}`-template (solo-pipeline-yandex-vk#1, 2026-05-18)
+
+Описания узлов в `src/i18n/{ru,en}.json` используют единый канон «Калибра»:
+
+> «Постоянно [увеличивает/снижает] [параметр] на X% за ранг. Текущая прибавка [параметра] - `{current}`%»
+
+Renderer `getTalentNodeDescriptionV2(node, rank)` (game.js, L12475+):
+
+- вычисляет `effectiveRank = appliedRank + pendingRank` (т.е. показывает «pending» применение в hangar до commit);
+- если у узла есть `effects[*].perRank` в `assets/balance/talentTree_v2.json`, `currentDisplay = round(perRank * 100 * effectiveRank)`;
+- иначе fallback: regex парсит `X%` из шаблона описания (поддерживает форматы «6% за ранг» / «+6% к ...»);
+- финально подставляется через `descText.replaceAll('{current}', String(currentDisplay))`.
+
+При `rank=0` подставляется `{current}=0` — это корректное поведение, отражающее «не вложено в этот узел».
+
+Узлы с обновлёнными описаниями (`{current}`-template): `off_fire_rate`, `off_range`, `off_aoe` (расширенное описание с crowd-бонусом), `off_orbit_speed`, `def_wall_hp`, `def_armor_flat`, `def_repair_cost`, `eco_buy_discount`, `eco_upgrade_discount`, `eco_repair_discount`.
+
+## Display rename: `off_orbit_speed` → «Реактивное топливо» (solo-pipeline-yandex-vk#1, 2026-05-18)
+
+Узел с runtime `id = off_orbit_speed` теперь отображается как:
+
+- RU: «Реактивное топливо» (бывш. «Разгон орбиты»);
+- EN: «Reactive Fuel» (formerly «Orbit Acceleration»).
+
+Runtime `id` не меняется — это сохраняет совместимость с сейвами и `MIGRATE_V1_TO_V2`. См. также [docs/migration_talents_v1_to_v2.md](migration_talents_v1_to_v2.md).
+
 ## Дефолтное распределение `tier` / `maxRank`
 
 - Tier-мэппинг и `maxRank` зафиксированы в `assets/balance/talentTree_v2.json` как baseline v2.

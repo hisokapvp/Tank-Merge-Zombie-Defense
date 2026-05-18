@@ -89,6 +89,11 @@
   "supercomputerModsHangarBtn": "Модификации ангара",
   "supercomputerModsTankWallBtn": "Модификации техники и стен",
   "supercomputerTalentsBtn": "Древо улучшений",
+  "supercomputerLevelInfo": "Уровень компьютера: {level}",
+  "supercomputerSimResetsInfo": "Перезагрузка симуляции: {count} раз",
+  "achievementSurvivor": "Выживший",
+  "achievementSurvivorDesc": "Пережить волну атаки, когда разрушены все фрагменты забора",
+  "achievementRewardSurvivor": "5 очков улучшений и 750 000 очков урона",
   "modsHangarTitle": "Улучшения ячеек ангара",
   "modsTankWallTitle": "Модификации техники и стен",
   "modsTabGuns": "Орудия",
@@ -197,7 +202,7 @@
   "achievementWaveSurvivor1": "Дежурный I",
   "achievementWaveSurvivor2": "Дежурный II",
   "achievementWaveSurvivor3": "Дежурный III",
-  "achievementWaveSurvivor4": "Дежурный IV",  "achievementWaveSurvivor5": "Дежурный V",  "achievementMetaHoarder1": "Коллекционер заслуг I",  "achievementMetaHoarder2": "Коллекционер заслуг II",  "achievementMetaHoarder3": "Коллекционер заслуг III",  "achievementBonusHunter1": "Военная помощь I",  "achievementBonusHunter2": "Военная помощь II",  "achievementBonusHunter3": "Военная помощь III",  "achievementDailyAttendance1": "Постоянный командир I",  "achievementDailyAttendance2": "Постоянный командир II",  "achievementDailyAttendance3": "Постоянный командир III",  "achievementDailyAttendance4": "Постоянный командир IV",  "achievementProductionLine1": "Сортировщик",  "achievementProductionLine2": "Логист",  "achievementProductionLine3": "Директор завода",  "achievementRepairCrew1": "Бригадир поддержки I",  "achievementRepairCrew2": "Бригадир поддержки II",  "achievementRepairCrew3": "Бригадир поддержки III",  "achievementTalentPath1": "Ученик I",  "achievementTalentPath2": "Ученик II",  "achievementTalentPath3": "Мастер ветви",  "achievementTalentPath4": "Древо познания",  "achievementBigSpender1": "Шопоголик I",  "achievementBigSpender2": "Шопоголик II",  "achievementBigSpender3": "Шопоголик III",  "achievementDustMaster1": "Пыльный сборщик",  "achievementDustMaster2": "Кремниевый магнат",  "achievementDustMaster3": "Кремниевая лихорадка",  "achievementFragmentCollector1": "Археолог I",  "achievementFragmentCollector2": "Археолог II",  "achievementFragmentCollector3": "Археолог III",  "achievementAutoMergeAddict1": "Супер сборщик I",
+  "achievementWaveSurvivor4": "Дежурный IV",  "achievementWaveSurvivor5": "Дежурный V",  "achievementMetaHoarder1": "Коллекционер заслуг I",  "achievementMetaHoarder2": "Коллекционер заслуг II",  "achievementMetaHoarder3": "Коллекционер заслуг III",  "achievementBonusHunter1": "Военная помощь I",  "achievementBonusHunter2": "Военная помощь II",  "achievementBonusHunter3": "Военная помощь III",  "achievementDailyAttendance1": "Постоянный командир I",  "achievementDailyAttendance2": "Постоянный командир II",  "achievementDailyAttendance3": "Постоянный командир III",  "achievementDailyAttendance4": "Постоянный командир IV",  "achievementZombieSlayer1": "Аннигилятор зомби I",  "achievementZombieSlayer2": "Аннигилятор зомби II",  "achievementZombieSlayer3": "Аннигилятор зомби III",  "achievementZombieSlayer4": "Аннигилятор зомби IV",  "achievementZombieSlayer5": "Аннигилятор зомби V",  "achievementProductionLine1": "Сортировщик",  "achievementProductionLine2": "Логист",  "achievementProductionLine3": "Директор завода",  "achievementRepairCrew1": "Бригадир поддержки I",  "achievementRepairCrew2": "Бригадир поддержки II",  "achievementRepairCrew3": "Бригадир поддержки III",  "achievementTalentPath1": "Ученик I",  "achievementTalentPath2": "Ученик II",  "achievementTalentPath3": "Мастер ветви",  "achievementTalentPath4": "Древо познания",  "achievementBigSpender1": "Шопоголик I",  "achievementBigSpender2": "Шопоголик II",  "achievementBigSpender3": "Шопоголик III",  "achievementDustMaster1": "Пыльный сборщик",  "achievementDustMaster2": "Кремниевый магнат",  "achievementDustMaster3": "Кремниевая лихорадка",  "achievementFragmentCollector1": "Археолог I",  "achievementFragmentCollector2": "Археолог II",  "achievementFragmentCollector3": "Археолог III",  "achievementAutoMergeAddict1": "Супер сборщик I",
   "achievementAutoMergeAddict2": "Супер сборщик II",
   "achievementAutoMergeAddict3": "Супер сборщик III",
   "achievementAutoMergeAddict4": "Супер сборщик IV",
@@ -273,6 +278,11 @@
   "achievementDailyAttendance2Desc": "Войдите в игру 7 разных дней",
   "achievementDailyAttendance3Desc": "Войдите в игру 14 разных дней",
   "achievementDailyAttendance4Desc": "Войдите в игру 30 разных дней",
+  "achievementZombieSlayer1Desc": "Убейте 1 000 зомби",
+  "achievementZombieSlayer2Desc": "Убейте 100 000 зомби",
+  "achievementZombieSlayer3Desc": "Убейте 1 млн зомби",
+  "achievementZombieSlayer4Desc": "Убейте 100 млн зомби",
+  "achievementZombieSlayer5Desc": "Убейте 1 млрд зомби",
   "achievementProductionLine1Desc": "Откройте 50 коробок производственного склада",
   "achievementProductionLine2Desc": "Откройте 150 коробок производственного склада",
   "achievementProductionLine3Desc": "Откройте 50 коробок производственного склада ур. 4",
@@ -363,7 +373,7 @@
   "achievementRewardWaveSurvivor1": "2000 монет",
   "achievementRewardWaveSurvivor2": "2 случайных чипа",
   "achievementRewardWaveSurvivor3": "3 очка улучшения",
-  "achievementRewardWaveSurvivor4": "1 дрон (ур. 5) и 5 случайных чипов",  "achievementRewardWaveSurvivor5": "10 очков улучшения и 1 000 000 очков урона",  "achievementRewardMetaHoarder1": "5 случайных чипов",  "achievementRewardMetaHoarder2": "3 очка улучшения и 500 000 очков урона",  "achievementRewardMetaHoarder3": "5 очков улучшения и 15 случайных чипов",  "achievementRewardBonusHunter1": "5 случайных фрагментов чипов",  "achievementRewardBonusHunter2": "5 случайных чипов и 50 кремниевой пыли",  "achievementRewardBonusHunter3": "3 очка улучшения и 3 дрона (ур. 3)",  "achievementRewardDailyAttendance1": "2 случайных чипа",  "achievementRewardDailyAttendance2": "1 дрон (ур. 5)",  "achievementRewardDailyAttendance3": "10 случайных чипов и 500 000 очков урона",  "achievementRewardDailyAttendance4": "3 очка улучшения и 3 дрона (ур. 9)",  "achievementRewardProductionLine1": "100 кремниевой пыли",  "achievementRewardProductionLine2": "50 случайных фрагментов чипов",  "achievementRewardProductionLine3": "5 очков улучшения и 3 дрона (ур. 7)",  "achievementRewardRepairCrew1": "5 случайных чипов",  "achievementRewardRepairCrew2": "3 дрона (ур. 3)",  "achievementRewardRepairCrew3": "1 дрон (ур. 9) и 3 очка улучшения",  "achievementRewardTalentPath1": "10 случайных фрагментов чипов",  "achievementRewardTalentPath2": "5 случайных чипов и 50 кремниевой пыли",  "achievementRewardTalentPath3": "3 очка улучшения",  "achievementRewardTalentPath4": "10 очков улучшения и 1 000 000 очков урона",  "achievementRewardBigSpender1": "10 000 очков урона",  "achievementRewardBigSpender2": "2 случайных чипа и 2 очка улучшения",  "achievementRewardBigSpender3": "5 очков улучшения и 5 случайных чипов",  "achievementRewardDustMaster1": "10 случайных фрагментов чипов",  "achievementRewardDustMaster2": "10 случайных чипов",  "achievementRewardDustMaster3": "3 очка улучшения и 3 дрона 7 уровня",  "achievementRewardFragmentCollector1": "50 кремниевой пыли",  "achievementRewardFragmentCollector2": "500 кремниевой пыли",  "achievementRewardFragmentCollector3": "3 очка улучшения и 3 дрона 7 уровня",  "achievementRewardAutoMergeAddict1": "25 кремниевой пыли и 10 случайных фрагментов чипа",
+  "achievementRewardWaveSurvivor4": "1 дрон (ур. 5) и 5 случайных чипов",  "achievementRewardWaveSurvivor5": "10 очков улучшения и 1 000 000 очков урона",  "achievementRewardMetaHoarder1": "5 случайных чипов",  "achievementRewardMetaHoarder2": "3 очка улучшения и 500 000 очков урона",  "achievementRewardMetaHoarder3": "5 очков улучшения и 15 случайных чипов",  "achievementRewardBonusHunter1": "5 случайных фрагментов чипов",  "achievementRewardBonusHunter2": "5 случайных чипов и 50 кремниевой пыли",  "achievementRewardBonusHunter3": "3 очка улучшения и 3 дрона (ур. 3)",  "achievementRewardDailyAttendance1": "2 случайных чипа",  "achievementRewardDailyAttendance2": "1 дрон (ур. 5)",  "achievementRewardDailyAttendance3": "10 случайных чипов и 500 000 очков урона",  "achievementRewardDailyAttendance4": "3 очка улучшения и 3 дрона (ур. 9)",  "achievementRewardZombieSlayer1": "25 кремниевой пыли",  "achievementRewardZombieSlayer2": "5 случайных чипов",  "achievementRewardZombieSlayer3": "2 очка улучшения и 100 000 очков урона",  "achievementRewardZombieSlayer4": "10 случайных чипов и 2 дрона (ур. 6)",  "achievementRewardZombieSlayer5": "10 очков улучшения и 1 500 000 очков урона",  "achievementRewardProductionLine1": "100 кремниевой пыли",  "achievementRewardProductionLine2": "50 случайных фрагментов чипов",  "achievementRewardProductionLine3": "5 очков улучшения и 3 дрона (ур. 7)",  "achievementRewardRepairCrew1": "5 случайных чипов",  "achievementRewardRepairCrew2": "3 дрона (ур. 3)",  "achievementRewardRepairCrew3": "1 дрон (ур. 9) и 3 очка улучшения",  "achievementRewardTalentPath1": "10 случайных фрагментов чипов",  "achievementRewardTalentPath2": "5 случайных чипов и 50 кремниевой пыли",  "achievementRewardTalentPath3": "3 очка улучшения",  "achievementRewardTalentPath4": "10 очков улучшения и 1 000 000 очков урона",  "achievementRewardBigSpender1": "10 000 очков урона",  "achievementRewardBigSpender2": "2 случайных чипа и 2 очка улучшения",  "achievementRewardBigSpender3": "5 очков улучшения и 5 случайных чипов",  "achievementRewardDustMaster1": "10 случайных фрагментов чипов",  "achievementRewardDustMaster2": "10 случайных чипов",  "achievementRewardDustMaster3": "3 очка улучшения и 3 дрона 7 уровня",  "achievementRewardFragmentCollector1": "50 кремниевой пыли",  "achievementRewardFragmentCollector2": "500 кремниевой пыли",  "achievementRewardFragmentCollector3": "3 очка улучшения и 3 дрона 7 уровня",  "achievementRewardAutoMergeAddict1": "25 кремниевой пыли и 10 случайных фрагментов чипа",
   "achievementRewardAutoMergeAddict2": "1 очко улучшения и 5 случайных чипов",
   "achievementRewardAutoMergeAddict3": "100 000 очков урона и 3 дрона (ур. 3)",
   "achievementRewardAutoMergeAddict4": "3 очка улучшения и 15 случайных чипов",
@@ -594,15 +604,15 @@
   ,"talent_off_caliber_name": "Калибр"
   ,"talent_off_caliber_desc": "Постоянно увеличивает урон танков на 7% за ранг. Текущая прибавка урона - {current}%"
   ,"talent_off_fire_rate_name": "Скорострельность"
-  ,"talent_off_fire_rate_desc": "+6% к скорострельности за ранг."
+  ,"talent_off_fire_rate_desc": "Постоянно увеличивает скорострельность на 6% за ранг. Текущая прибавка скорострельности - {current}%"
   ,"talent_off_range_name": "Дальность"
-  ,"talent_off_range_desc": "+7% к дальности атаки за ранг."
+  ,"talent_off_range_desc": "Постоянно увеличивает дальность атаки на 7% за ранг. Текущая прибавка дальности - {current}%"
   ,"talent_off_aoe_name": "Широкий взрыв"
-  ,"talent_off_aoe_desc": "+6% к радиусу AoE за ранг. Бонус толпы от 6 целей: +6% к AoE-урону за ранг."
+  ,"talent_off_aoe_desc": "Постоянно увеличивает радиус взрывов на 6% за ранг. Текущая прибавка радиуса - {current}%. Наносите на 6% больше урона за ранг при попадании по 6 целям и больше. Текущая прибавка - {current}%"
   ,"talent_off_multishot_name": "Мультивыстрел"
   ,"talent_off_multishot_desc": "Двойной выстрел: +4%/ранг (кап 45%). Тройной: +2%/ранг с 4 ранга (кап 12%)."
-  ,"talent_off_orbit_speed_name": "Разгон орбиты"
-  ,"talent_off_orbit_speed_desc": "+6% к скорости орбиты за ранг."
+  ,"talent_off_orbit_speed_name": "Реактивное топливо"
+  ,"talent_off_orbit_speed_desc": "Постоянно увеличивает скорость танков на 6% за ранг. Текущая прибавка скорости - {current}%"
   ,"talent_off_acid_dot_name": "Кислотный DoT"
   ,"talent_off_acid_dot_desc": "Открывает кислотный DoT. Шанс 5%, длительность 3с, множитель DPS +7% за ранг."
   ,"talent_off_mark_name": "Метка цели"
@@ -626,11 +636,11 @@
   ,"talent_off_active_barrage_name": "Активка: Шквал"
   ,"talent_off_active_barrage_desc": "Открывает активку атаки: 6с, 2 заряда, перезарядка 45с. x1.25 урон/AoE/скорострельность/орбита."
   ,"talent_def_wall_hp_name": "Прочность стен"
-  ,"talent_def_wall_hp_desc": "+6% к HP стен за ранг."
+  ,"talent_def_wall_hp_desc": "Постоянно увеличивает HP стен на 6% за ранг. Текущая прибавка HP стен - {current}%"
   ,"talent_def_armor_flat_name": "Композитная броня"
-  ,"talent_def_armor_flat_desc": "Увеличивает броню стены на 2% за ранг. Текущая прибавка - {current}%"
+  ,"talent_def_armor_flat_desc": "Постоянно увеличивает броню стены на 2% за ранг. Текущая прибавка брони - {current}%"
   ,"talent_def_repair_cost_name": "Логистика ремонта"
-  ,"talent_def_repair_cost_desc": "Множитель стоимости ремонта -6% за ранг (доп. clamp в runtime)."
+  ,"talent_def_repair_cost_desc": "Постоянно снижает стоимость ремонта на 6% за ранг. Текущая прибавка скидки - {current}%"
   ,"talent_def_resists_name": "Сопротивления"
   ,"talent_def_resists_desc": "Сопротивление огню/кислоте/взрыву +6% за ранг каждое (кап 30%)."
   ,"talent_def_regen_name": "Контур регена"
@@ -660,11 +670,11 @@
   ,"talent_def_active_dome_name": "Активка: Купол"
   ,"talent_def_active_dome_desc": "Открывает активку защиты: 6с, 2 заряда, перезарядка 60с. Входящий урон x0.15, авторемонт 3%/с."
   ,"talent_eco_buy_discount_name": "Скидка на покупку"
-  ,"talent_eco_buy_discount_desc": "Множитель цены покупки танка -6% за ранг (мин x0.50)."
+  ,"talent_eco_buy_discount_desc": "Постоянно снижает стоимость покупки танков на 6% за ранг. Текущая прибавка скидки - {current}%"
   ,"talent_eco_upgrade_discount_name": "Скидка на апгрейды"
-  ,"talent_eco_upgrade_discount_desc": "Множители цены апгрейдов SC/стен/орудий -5% за ранг."
+  ,"talent_eco_upgrade_discount_desc": "Постоянно снижает стоимость апгрейдов орудий, дронов и стен на 5% за ранг. Текущая прибавка скидки - {current}%"
   ,"talent_eco_repair_discount_name": "Скидка на ремонт"
-  ,"talent_eco_repair_discount_desc": "Множитель стоимости ремонта -6% за ранг."
+  ,"talent_eco_repair_discount_desc": "Постоянно снижает стоимость ремонта на 6% за ранг. Текущая прибавка скидки - {current}%"
   ,"talent_eco_coins_kill_bonus_name": "Доход за убийства"
   ,"talent_eco_coins_kill_bonus_desc": "+6% монет за убийство за ранг. Kill bounty с 3 ранга: шанс 1%, 5с, x1.30 монет, ICD 3с."
   ,"talent_eco_coins_shot_bonus_name": "Доход за выстрел"

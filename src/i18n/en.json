@@ -87,6 +87,11 @@
   "supercomputerModsHangarBtn": "Hangar Mods",
   "supercomputerModsTankWallBtn": "Vehicle and Wall Mods",
   "supercomputerTalentsBtn": "Upgrade Tree",
+  "supercomputerLevelInfo": "Computer level: {level}",
+  "supercomputerSimResetsInfo": "Simulation reset: {count} times",
+  "achievementSurvivor": "Survivor",
+  "achievementSurvivorDesc": "Survive an attack wave with every fence fragment destroyed",
+  "achievementRewardSurvivor": "5 upgrade points and 750,000 damage points",
   "modsHangarTitle": "Hangar Cell Upgrades",
   "modsTankWallTitle": "Vehicle and Wall Mods",
   "modsTabGuns": "Guns",
@@ -195,7 +200,7 @@
   "achievementWaveSurvivor1": "Sentinel I",
   "achievementWaveSurvivor2": "Sentinel II",
   "achievementWaveSurvivor3": "Sentinel III",
-  "achievementWaveSurvivor4": "Sentinel IV",  "achievementWaveSurvivor5": "Sentinel V",  "achievementMetaHoarder1": "Achievement Hoarder I",  "achievementMetaHoarder2": "Achievement Hoarder II",  "achievementMetaHoarder3": "Achievement Hoarder III",  "achievementBonusHunter1": "Military Aid I",  "achievementBonusHunter2": "Military Aid II",  "achievementBonusHunter3": "Military Aid III",  "achievementDailyAttendance1": "Loyal Commander I",  "achievementDailyAttendance2": "Loyal Commander II",  "achievementDailyAttendance3": "Loyal Commander III",  "achievementDailyAttendance4": "Loyal Commander IV",  "achievementProductionLine1": "Sorter",  "achievementProductionLine2": "Logistician",  "achievementProductionLine3": "Plant Director",  "achievementRepairCrew1": "Repair Crew I",  "achievementRepairCrew2": "Repair Crew II",  "achievementRepairCrew3": "Repair Crew III",  "achievementTalentPath1": "Apprentice I",  "achievementTalentPath2": "Apprentice II",  "achievementTalentPath3": "Branch Master",  "achievementTalentPath4": "Tree of Knowledge",  "achievementBigSpender1": "Spendthrift I",  "achievementBigSpender2": "Spendthrift II",  "achievementBigSpender3": "Spendthrift III",  "achievementDustMaster1": "Dust Collector",  "achievementDustMaster2": "Silicon Magnate",  "achievementDustMaster3": "Silicon Fever",  "achievementFragmentCollector1": "Archaeologist I",  "achievementFragmentCollector2": "Archaeologist II",  "achievementFragmentCollector3": "Archaeologist III",  "achievementAutoMergeAddict1": "Super Merger I",
+  "achievementWaveSurvivor4": "Sentinel IV",  "achievementWaveSurvivor5": "Sentinel V",  "achievementMetaHoarder1": "Achievement Hoarder I",  "achievementMetaHoarder2": "Achievement Hoarder II",  "achievementMetaHoarder3": "Achievement Hoarder III",  "achievementBonusHunter1": "Military Aid I",  "achievementBonusHunter2": "Military Aid II",  "achievementBonusHunter3": "Military Aid III",  "achievementDailyAttendance1": "Loyal Commander I",  "achievementDailyAttendance2": "Loyal Commander II",  "achievementDailyAttendance3": "Loyal Commander III",  "achievementDailyAttendance4": "Loyal Commander IV",  "achievementZombieSlayer1": "Zombie Annihilator I",  "achievementZombieSlayer2": "Zombie Annihilator II",  "achievementZombieSlayer3": "Zombie Annihilator III",  "achievementZombieSlayer4": "Zombie Annihilator IV",  "achievementZombieSlayer5": "Zombie Annihilator V",  "achievementProductionLine1": "Sorter",  "achievementProductionLine2": "Logistician",  "achievementProductionLine3": "Plant Director",  "achievementRepairCrew1": "Repair Crew I",  "achievementRepairCrew2": "Repair Crew II",  "achievementRepairCrew3": "Repair Crew III",  "achievementTalentPath1": "Apprentice I",  "achievementTalentPath2": "Apprentice II",  "achievementTalentPath3": "Branch Master",  "achievementTalentPath4": "Tree of Knowledge",  "achievementBigSpender1": "Spendthrift I",  "achievementBigSpender2": "Spendthrift II",  "achievementBigSpender3": "Spendthrift III",  "achievementDustMaster1": "Dust Collector",  "achievementDustMaster2": "Silicon Magnate",  "achievementDustMaster3": "Silicon Fever",  "achievementFragmentCollector1": "Archaeologist I",  "achievementFragmentCollector2": "Archaeologist II",  "achievementFragmentCollector3": "Archaeologist III",  "achievementAutoMergeAddict1": "Super Merger I",
   "achievementAutoMergeAddict2": "Super Merger II",
   "achievementAutoMergeAddict3": "Super Merger III",
   "achievementAutoMergeAddict4": "Super Merger IV",
@@ -271,6 +276,11 @@
   "achievementDailyAttendance2Desc": "Log in on 7 different days",
   "achievementDailyAttendance3Desc": "Log in on 14 different days",
   "achievementDailyAttendance4Desc": "Log in on 30 different days",
+  "achievementZombieSlayer1Desc": "Kill 1,000 zombies",
+  "achievementZombieSlayer2Desc": "Kill 100,000 zombies",
+  "achievementZombieSlayer3Desc": "Kill 1M zombies",
+  "achievementZombieSlayer4Desc": "Kill 100M zombies",
+  "achievementZombieSlayer5Desc": "Kill 1B zombies",
   "achievementProductionLine1Desc": "Open 50 production storage boxes",
   "achievementProductionLine2Desc": "Open 150 production storage boxes",
   "achievementProductionLine3Desc": "Open 50 production storage boxes (lv. 4)",
@@ -361,7 +371,7 @@
   "achievementRewardWaveSurvivor1": "2000 coins",
   "achievementRewardWaveSurvivor2": "2 random chips",
   "achievementRewardWaveSurvivor3": "3 upgrade points",
-  "achievementRewardWaveSurvivor4": "1 drone (lv. 5) and 5 random chips",  "achievementRewardWaveSurvivor5": "10 upgrade points and 1,000,000 damage points",  "achievementRewardMetaHoarder1": "5 random chips",  "achievementRewardMetaHoarder2": "3 upgrade points and 500,000 damage points",  "achievementRewardMetaHoarder3": "5 upgrade points and 15 random chips",  "achievementRewardBonusHunter1": "5 random chip fragments",  "achievementRewardBonusHunter2": "5 random chips and 50 silicon dust",  "achievementRewardBonusHunter3": "3 upgrade points and 3 drones (lv. 3)",  "achievementRewardDailyAttendance1": "2 random chips",  "achievementRewardDailyAttendance2": "1 drone (lv. 5)",  "achievementRewardDailyAttendance3": "10 random chips and 500,000 damage points",  "achievementRewardDailyAttendance4": "3 upgrade points and 3 drones (lv. 9)",  "achievementRewardProductionLine1": "100 silicon dust",  "achievementRewardProductionLine2": "50 random chip fragments",  "achievementRewardProductionLine3": "5 upgrade points and 3 drones (lv. 7)",  "achievementRewardRepairCrew1": "5 random chips",  "achievementRewardRepairCrew2": "3 drones (lv. 3)",  "achievementRewardRepairCrew3": "1 drone (lv. 9) and 3 upgrade points",  "achievementRewardTalentPath1": "10 random chip fragments",  "achievementRewardTalentPath2": "5 random chips and 50 silicon dust",  "achievementRewardTalentPath3": "3 upgrade points",  "achievementRewardTalentPath4": "10 upgrade points and 1,000,000 damage points",  "achievementRewardBigSpender1": "10,000 damage points",  "achievementRewardBigSpender2": "2 random chips and 2 upgrade points",  "achievementRewardBigSpender3": "5 upgrade points and 5 random chips",  "achievementRewardDustMaster1": "10 random chip fragments",  "achievementRewardDustMaster2": "10 random chips",  "achievementRewardDustMaster3": "3 upgrade points and 3 drones (lv. 7)",  "achievementRewardFragmentCollector1": "50 silicon dust",  "achievementRewardFragmentCollector2": "500 silicon dust",  "achievementRewardFragmentCollector3": "3 upgrade points and 3 drones (lv. 7)",  "achievementRewardAutoMergeAddict1": "25 silicon dust and 10 random chip fragments",
+  "achievementRewardWaveSurvivor4": "1 drone (lv. 5) and 5 random chips",  "achievementRewardWaveSurvivor5": "10 upgrade points and 1,000,000 damage points",  "achievementRewardMetaHoarder1": "5 random chips",  "achievementRewardMetaHoarder2": "3 upgrade points and 500,000 damage points",  "achievementRewardMetaHoarder3": "5 upgrade points and 15 random chips",  "achievementRewardBonusHunter1": "5 random chip fragments",  "achievementRewardBonusHunter2": "5 random chips and 50 silicon dust",  "achievementRewardBonusHunter3": "3 upgrade points and 3 drones (lv. 3)",  "achievementRewardDailyAttendance1": "2 random chips",  "achievementRewardDailyAttendance2": "1 drone (lv. 5)",  "achievementRewardDailyAttendance3": "10 random chips and 500,000 damage points",  "achievementRewardDailyAttendance4": "3 upgrade points and 3 drones (lv. 9)",  "achievementRewardZombieSlayer1": "25 silicon dust",  "achievementRewardZombieSlayer2": "5 random chips",  "achievementRewardZombieSlayer3": "2 upgrade points and 100,000 damage points",  "achievementRewardZombieSlayer4": "10 random chips and 2 drones (lv. 6)",  "achievementRewardZombieSlayer5": "10 upgrade points and 1,500,000 damage points",  "achievementRewardProductionLine1": "100 silicon dust",  "achievementRewardProductionLine2": "50 random chip fragments",  "achievementRewardProductionLine3": "5 upgrade points and 3 drones (lv. 7)",  "achievementRewardRepairCrew1": "5 random chips",  "achievementRewardRepairCrew2": "3 drones (lv. 3)",  "achievementRewardRepairCrew3": "1 drone (lv. 9) and 3 upgrade points",  "achievementRewardTalentPath1": "10 random chip fragments",  "achievementRewardTalentPath2": "5 random chips and 50 silicon dust",  "achievementRewardTalentPath3": "3 upgrade points",  "achievementRewardTalentPath4": "10 upgrade points and 1,000,000 damage points",  "achievementRewardBigSpender1": "10,000 damage points",  "achievementRewardBigSpender2": "2 random chips and 2 upgrade points",  "achievementRewardBigSpender3": "5 upgrade points and 5 random chips",  "achievementRewardDustMaster1": "10 random chip fragments",  "achievementRewardDustMaster2": "10 random chips",  "achievementRewardDustMaster3": "3 upgrade points and 3 drones (lv. 7)",  "achievementRewardFragmentCollector1": "50 silicon dust",  "achievementRewardFragmentCollector2": "500 silicon dust",  "achievementRewardFragmentCollector3": "3 upgrade points and 3 drones (lv. 7)",  "achievementRewardAutoMergeAddict1": "25 silicon dust and 10 random chip fragments",
   "achievementRewardAutoMergeAddict2": "1 upgrade point and 5 random chips",
   "achievementRewardAutoMergeAddict3": "100,000 damage points and 3 drones (lv. 3)",
   "achievementRewardAutoMergeAddict4": "3 upgrade points and 15 random chips",
@@ -593,15 +603,15 @@
   ,"talent_off_caliber_name": "Caliber"
   ,"talent_off_caliber_desc": "+7% damage per rank. Current damage bonus - {current}%"
   ,"talent_off_fire_rate_name": "Fire Rate"
-  ,"talent_off_fire_rate_desc": "+6% fire rate per rank."
+  ,"talent_off_fire_rate_desc": "Permanently increases fire rate by 6% per rank. Current fire rate bonus - {current}%"
   ,"talent_off_range_name": "Range"
-  ,"talent_off_range_desc": "+7% attack range per rank."
+  ,"talent_off_range_desc": "Permanently increases attack range by 7% per rank. Current range bonus - {current}%"
   ,"talent_off_aoe_name": "Wide Blast"
-  ,"talent_off_aoe_desc": "+6% AoE per rank. Crowd bonus from 6 targets: +6% AoE damage per rank."
+  ,"talent_off_aoe_desc": "Permanently increases explosion radius by 6% per rank. Current radius bonus - {current}%. Deal 6% more damage per rank when hitting 6 or more targets. Current bonus - {current}%"
   ,"talent_off_multishot_name": "Multishot"
   ,"talent_off_multishot_desc": "Double shot: +4%/rank (cap 45%). Triple shot: +2%/rank from rank 4 (cap 12%)."
-  ,"talent_off_orbit_speed_name": "Orbit Acceleration"
-  ,"talent_off_orbit_speed_desc": "+6% orbit speed per rank."
+  ,"talent_off_orbit_speed_name": "Reactive Fuel"
+  ,"talent_off_orbit_speed_desc": "Permanently increases tank speed by 6% per rank. Current speed bonus - {current}%"
   ,"talent_off_acid_dot_name": "Acid DoT"
   ,"talent_off_acid_dot_desc": "Unlocks acid DoT. Proc chance 5%, duration 3s, DPS multiplier +7% per rank."
   ,"talent_off_mark_name": "Target Mark"
@@ -625,11 +635,11 @@
   ,"talent_off_active_barrage_name": "Active: Barrage"
   ,"talent_off_active_barrage_desc": "Unlocks offense active: 6s, 2 charges, 45s recharge. x1.25 damage/AoE/fire rate/orbit."
   ,"talent_def_wall_hp_name": "Wall Integrity"
-  ,"talent_def_wall_hp_desc": "+6% wall HP per rank."
+  ,"talent_def_wall_hp_desc": "Permanently increases wall HP by 6% per rank. Current wall HP bonus - {current}%"
   ,"talent_def_armor_flat_name": "Composite Armor"
-  ,"talent_def_armor_flat_desc": "+2% wall armor per rank. Current bonus - {current}%"
+  ,"talent_def_armor_flat_desc": "Permanently increases wall armor by 2% per rank. Current armor bonus - {current}%"
   ,"talent_def_repair_cost_name": "Repair Logistics"
-  ,"talent_def_repair_cost_desc": "Repair cost multiplier -6% per rank (runtime clamp applies)."
+  ,"talent_def_repair_cost_desc": "Permanently reduces repair cost by 6% per rank. Current discount - {current}%"
   ,"talent_def_resists_name": "Elemental Resists"
   ,"talent_def_resists_desc": "Fire/Acid/Explosion resistance +6% per rank each (cap 30%)."
   ,"talent_def_regen_name": "Regen Circuit"
@@ -659,11 +669,11 @@
   ,"talent_def_active_dome_name": "Active: Dome"
   ,"talent_def_active_dome_desc": "Unlocks defense active: 6s, 2 charges, 60s recharge. Damage taken x0.15, auto-repair 3%/s."
   ,"talent_eco_buy_discount_name": "Purchase Discount"
-  ,"talent_eco_buy_discount_desc": "Tank buy cost multiplier -6% per rank (min x0.50)."
+  ,"talent_eco_buy_discount_desc": "Permanently reduces tank buy cost by 6% per rank. Current discount - {current}%"
   ,"talent_eco_upgrade_discount_name": "Upgrade Discount"
-  ,"talent_eco_upgrade_discount_desc": "SC/Wall/Guns upgrade cost multipliers -5% per rank."
+  ,"talent_eco_upgrade_discount_desc": "Permanently reduces guns, drones and walls upgrade cost by 5% per rank. Current discount - {current}%"
   ,"talent_eco_repair_discount_name": "Repair Discount"
-  ,"talent_eco_repair_discount_desc": "Repair cost multiplier -6% per rank."
+  ,"talent_eco_repair_discount_desc": "Permanently reduces repair cost by 6% per rank. Current discount - {current}%"
   ,"talent_eco_coins_kill_bonus_name": "Kill Income"
   ,"talent_eco_coins_kill_bonus_desc": "+6% kill coins per rank. Unlocks kill bounty from rank 3: 1% chance, 5s, x1.30 coins, 3s ICD."
   ,"talent_eco_coins_shot_bonus_name": "Shot Income"
