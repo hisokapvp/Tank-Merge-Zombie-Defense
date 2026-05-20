@@ -520,12 +520,74 @@
     }
   }
 
+  function _resolveDescTemplate(talent, uiInfo) {
+    var descKey = (uiInfo && uiInfo.descKey) ? uiInfo.descKey : '';
+    var raw = _translate ? (_translate(descKey) || '') : '';
+    if (!raw) return '';
+    var rank = 0;
+    try {
+      if (_api) {
+        var applied = (typeof _api.getRanks === 'function') ? (_api.getRanks() || {}) : {};
+        var pending = (typeof _api.getPendingRanks === 'function') ? (_api.getPendingRanks() || {}) : {};
+        var a = Math.max(0, Math.floor(Number(applied[talent.id]) || 0));
+        var p = Math.max(0, Math.floor(Number(pending[talent.id]) || 0));
+        rank = a + p;
+      }
+    } catch (_) {}
+    var effects = Array.isArray(talent.effects) ? talent.effects : [];
+    var format = (uiInfo && typeof uiInfo.currentFormat === 'string') ? uiInfo.currentFormat : 'percent';
+    var effectKey = (uiInfo && typeof uiInfo.currentEffectKey === 'string') ? uiInfo.currentEffectKey : null;
+    // Pre-parse % numbers from raw template as fallback for missing effects metadata.
+    var pctNumbers = [];
+    try {
+      var matches = raw.match(/(\d+(?:\.\d+)?)\s*%/g) || [];
+      pctNumbers = matches.map(function (m) { return Number(String(m).replace(/[^\d.]/g, '')); });
+    } catch (_) { pctNumbers = []; }
+    // Resolve single {current} via chosen-effect (preferred by effectKey) or first perRank fallback.
+    var current = 0;
+    var chosen = null;
+    for (var i = 0; i < effects.length; i++) {
+      var eff = effects[i];
+      if (!eff || typeof eff.perRank !== 'number') continue;
+      if (effectKey && (eff.stat === effectKey || eff.key === effectKey)) { chosen = eff; break; }
+      if (!chosen) chosen = eff;
+    }
+    if (chosen && typeof chosen.perRank === 'number') {
+      current = (format === 'flat') ? Math.round(chosen.perRank * rank) : Math.round(chosen.perRank * 100 * rank);
+    } else if (pctNumbers.length > 0 && rank > 0) {
+      current = Math.round(pctNumbers[0] * rank);
+    }
+    var out = raw;
+    try { out = out.replace(/\{current\}/gi, String(current)); } catch (_) {}
+    // Multi-placeholder support via ui.currentVars.
+    var currentVars = (uiInfo && uiInfo.currentVars && typeof uiInfo.currentVars === 'object') ? uiInfo.currentVars : null;
+    if (currentVars) {
+      var keys = Object.keys(currentVars);
+      keys.forEach(function (placeholder, idx) {
+        var targetKey = currentVars[placeholder];
+        if (typeof targetKey !== 'string' || !targetKey) return;
+        var perRankValue = NaN;
+        for (var j = 0; j < effects.length; j++) {
+          var e = effects[j];
+          if (!e || typeof e.perRank !== 'number') continue;
+          if (e.stat === targetKey || e.key === targetKey) { perRankValue = e.perRank * 100; break; }
+        }
+        if (!isFinite(perRankValue) && isFinite(pctNumbers[idx])) perRankValue = pctNumbers[idx];
+        if (isFinite(perRankValue)) {
+          var val = Math.round(perRankValue * rank);
+          var safe = String(placeholder).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          try { out = out.replace(new RegExp('\\{' + safe + '\\}', 'gi'), String(val)); } catch (_) {}
+        }
+      });
+    }
+    return out;
+  }
+
   function _showTooltip(scene, tx, ty, talent) {
     if (!_tooltipText || !_tooltipBg) return;
     var uiInfo = null;
     if (_api && typeof _api.getTalentUi === 'function') uiInfo = _api.getTalentUi(talent.id);
-    var descKey = (uiInfo && uiInfo.descKey) ? uiInfo.descKey : '';
-    var desc = _translate ? (_translate(descKey) || '') : '';
+    var desc = _resolveDescTemplate(talent, uiInfo);
     if (!desc) desc = talent.id;
     var costLine = (talent.costPerRank || 1) + ' ' + (_translate ? (_translate('talentCostPerRank') || 'per rank') : 'per rank');
     _tooltipText.setText(desc + '\n' + costLine);

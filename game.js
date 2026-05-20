@@ -1015,7 +1015,17 @@ function applyCannonUpgrade(level, statKey, pendingCount){
   const key = normalizeUpgradeStatKey(CANNON_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getCannonUpgradeTotalCost(lvl, key, count);
+  let totalCost = getCannonUpgradeTotalCost(lvl, key, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_guns).
+  // Применяем upgradeCostMul_guns к damagePoints cost через TalentsV2.onPurchase.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
+      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_guns', mods: getMods(), timeMs: Date.now() });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
@@ -1049,7 +1059,16 @@ function applyFenceUpgrade(level, statKey, pendingCount){
   const key = normalizeUpgradeStatKey(FENCE_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getFenceUpgradeTotalCost(lvl, key, count);
+  let totalCost = getFenceUpgradeTotalCost(lvl, key, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_wall) — fence stat upgrades.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
+      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_wall', mods: getMods(), timeMs: Date.now() });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
@@ -3734,7 +3753,18 @@ function applyDronUpgrade(level, statKey, pendingCount){
   const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
   const count = Number.isFinite(pendingCount) ? Math.max(0, Math.floor(pendingCount)) : 0;
   if (count <= 0) return { ok: false, error: 'no_pending' };
-  const totalCost = getDronUpgradeTotalCost(lvl, key, count);
+  let totalCost = getDronUpgradeTotalCost(lvl, key, count);
+  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_sc) — drone upgrades.
+  // Drones считаются SC-side upgrades; talent описание 'guns, drones and walls' 
+  // мапится: guns=cannon (upgrade_guns), walls=fence (upgrade_wall), drones=upgrade_sc.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
+      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_sc', mods: getMods(), timeMs: Date.now() });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
@@ -4231,12 +4261,20 @@ const noRepairAttackWaveRuntime = {
   // Item 3 — latch: в ходе текущей attack-волны все фрагменты забора были разрушены
   // одновременно. Сбрасывается в resetNoRepairAttackWaveRuntime(); читается в finalize ДО сброса.
   allFencesDestroyedThisWave: false,
+  // solo-pipeline-yandex-vk#1-followup-3: per-wave coin/xp accumulators для
+  // TalentsV2.onWaveEnd (eco_clean_defense bonus = baseCoins/baseXp * cleanDefense*Mul).
+  // Reset на begin, инкрементируется в zombie-death FX site после awarding,
+  // читается в finalize до сброса.
+  waveCoinsAccumulated: 0,
+  waveXpAccumulated: 0,
 };
 
 function resetNoRepairAttackWaveRuntime(){
   noRepairAttackWaveRuntime.activeEpisodeKey = null;
   noRepairAttackWaveRuntime.invalidated = false;
   noRepairAttackWaveRuntime.allFencesDestroyedThisWave = false;
+  noRepairAttackWaveRuntime.waveCoinsAccumulated = 0;
+  noRepairAttackWaveRuntime.waveXpAccumulated = 0;
 }
 
 function beginNoRepairAttackWaveEpisode(){
@@ -4245,6 +4283,17 @@ function beginNoRepairAttackWaveEpisode(){
     : noRepairAttackWaveRuntime.nextSyntheticEpisodeKey++;
   noRepairAttackWaveRuntime.activeEpisodeKey = runtimeEpisodeKey;
   noRepairAttackWaveRuntime.invalidated = false;
+  noRepairAttackWaveRuntime.waveCoinsAccumulated = 0;
+  noRepairAttackWaveRuntime.waveXpAccumulated = 0;
+  // solo-pipeline-yandex-vk#1-followup-3: notify TalentsV2 о начале волны.
+  // onWaveStart сбрасывает runRt.wave.damageToWalls=false; критично для
+  // eco_clean_defense gating (onWallDamage устанавливает damageToWalls=true).
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onWaveStart === 'function') {
+      talentsApi.onWaveStart();
+    }
+  } catch (_) {}
 }
 
 function completeNoRepairAttackWaveAchievementProgress(){
@@ -4323,6 +4372,36 @@ function finalizeNoRepairAttackWaveEpisode(){
   const shouldCount = !noRepairAttackWaveRuntime.invalidated;
   // Item 3 — захватываем latch ДО resetNoRepairAttackWaveRuntime, иначе будет сброшен.
   const survivorEligible = !!noRepairAttackWaveRuntime.allFencesDestroyedThisWave;
+  // solo-pipeline-yandex-vk#1-followup-3: захватываем wave-scoped
+  // coin/xp accumulators ДО reset, передаём в TalentsV2.onWaveEnd для
+  // расчёта eco_clean_defense (coinsMul/xpMul только если damageToWalls===false)
+  // и eco_grey_to_damage_points (greyDamage → damagePointsAdd).
+  const _waveBaseCoins = Math.max(0, Math.floor(noRepairAttackWaveRuntime.waveCoinsAccumulated || 0));
+  const _waveBaseXp = Math.max(0, Math.floor(noRepairAttackWaveRuntime.waveXpAccumulated || 0));
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onWaveEnd === 'function') {
+      const out = talentsApi.onWaveEnd({
+        baseCoins: _waveBaseCoins,
+        baseXp: _waveBaseXp,
+        baseDamagePoints: 0,
+        mods: getMods(),
+      });
+      if (out && Number.isFinite(out.coins) && out.coins > _waveBaseCoins) {
+        // Bonus = (output - base); base уже выдан per-kill, сюда только дельта.
+        state.coins += Math.floor(out.coins - _waveBaseCoins);
+      }
+      if (out && Number.isFinite(out.xp) && out.xp > _waveBaseXp) {
+        grantXP(Math.floor(out.xp - _waveBaseXp));
+      }
+      // eco_grey_to_damage_points: накопленный greyDamage конвертируется в
+      // damage points через addTankDamageDealt (тот же bucket, что и обычные
+      // damage-points-earning damage); UI refresh — встроен.
+      if (out && Number.isFinite(out.damagePointsAdd) && out.damagePointsAdd > 0) {
+        addTankDamageDealt(Math.floor(out.damagePointsAdd));
+      }
+    }
+  } catch (_) {}
   resetNoRepairAttackWaveRuntime();
   // wave_survivor: count every survived attack episode regardless of repair state
   completeAttackEpisodeAchievementProgress();
@@ -4891,7 +4970,7 @@ function performTankPurchaseOnce(opts){
   const options = opts && typeof opts === 'object' ? opts : null;
   const instant = !!(options && options.instant);
   const level = buyTankLevel();
-  const cost = buyTankCost(level);
+  let cost = buyTankCost(level);
   const Garage = window.Game && window.Game.Garage;
   const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c=>!c.tank)?.i ?? null);
 
@@ -4910,6 +4989,28 @@ function performTankPurchaseOnce(opts){
     if (undergroundIdx == null) return false; // both hangars full
     useUnderground = true;
   }
+
+  // solo-pipeline-yandex-vk#1-followup-2 E2: wire TalentsV2 onBuyTank into the
+  // canonical tank-purchase commit path. Legacy buyTankCost already includes
+  // tankBuyCostMul; the dispatcher applies stateful talent effects on top —
+  // eco_tax_relief (taxReliefCostMul + duration), eco_voucher discount (kill-
+  // accumulated counter), eco_lottery (icd-gated chance). Wired AFTER hangar
+  // checks but BEFORE state.coins affordability check so the player gets the
+  // discount reflected in the cost gate. Helper exists since batch #1 but was
+  // never reachable from runtime — same pattern as the multishot bug.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onBuyTank === 'function') {
+      const out = talentsApi.onBuyTank({
+        baseCost: cost,
+        level: level,
+        mods: getMods(),
+        timeMs: Date.now(),
+        rng: Math.random,
+      });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) cost = Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
 
   if (state.coins < cost) return false;
 
@@ -6037,7 +6138,7 @@ function adaptTalentsV2ModsToLegacy(v2Mods){
   const src = v2Mods && typeof v2Mods === 'object' ? v2Mods : {};
   const out = {
     dmgMul: 1, rangeMul: 1, aoeMul: 1, fireRateMul: 1,
-    doubleShotChance: 0, dotChance: 0, dotDpsMul: 1,
+    doubleShotChance: 0, tripleShotChance: 0, dotChance: 0, dotDpsMul: 1,
     orbitSpeedMul: 1, buyCostMul: 1, coinsMul: 1,
     xpMul: 1, activeCooldownMul: 1, activeBranches: new Set(),
   };
@@ -6055,10 +6156,24 @@ function adaptTalentsV2ModsToLegacy(v2Mods){
   out.coinsMul = (out.coinsKillMul + out.coinsShotMul) * 0.5;
   out.xpMul = asMul(src.xpMul, out.xpMul);
   out.doubleShotChance = clamp(Number.isFinite(src.doubleShotChance) ? src.doubleShotChance : out.doubleShotChance, 0, 0.9);
+  out.tripleShotChance = clamp(Number.isFinite(src.tripleShotChance) ? src.tripleShotChance : out.tripleShotChance, 0, 0.5);
   out.activeBranches = new Set();
   if (src.offenseActive) out.activeBranches.add(0);
   if (src.defenseActive) out.activeBranches.add(1);
   if (src.economyActive) out.activeBranches.add(2);
+
+  // Generic param passthrough: any finite numeric field from v2 mods that the
+  // explicit mappings above did not already populate (e.g. future param-type
+  // effects added to talentTree_v2.json) is forwarded as-is so it is not
+  // silently dropped by the adapter. Mirrors the same anti-pattern guard that
+  // tripleShotChance regression originally exposed (2026-05-20).
+  const srcKeys = Object.keys(src);
+  for (let i = 0; i < srcKeys.length; i++) {
+    const k = srcKeys[i];
+    if (Object.prototype.hasOwnProperty.call(out, k)) continue;
+    const v = src[k];
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
 
   return out;
 }
@@ -6073,7 +6188,7 @@ function getMods(){
   /* V2 not ready yet — return default neutral mods */
   return {
     dmgMul: 1, rangeMul: 1, aoeMul: 1, fireRateMul: 1,
-    doubleShotChance: 0, dotChance: 0, dotDpsMul: 1,
+    doubleShotChance: 0, tripleShotChance: 0, dotChance: 0, dotDpsMul: 1,
     orbitSpeedMul: 1, buyCostMul: 1, coinsMul: 1,
     xpMul: 1, activeCooldownMul: 1, activeBranches: new Set(),
   };
@@ -7847,8 +7962,21 @@ function getFenceSegmentMaxHp(){
   const base = Number.isFinite(levelCfg && levelCfg.segmentMaxHp) ? Math.max(1, Math.floor(levelCfg.segmentMaxHp)) : FENCE_DEFAULT_SEGMENT_HP;
   const level = getFenceLevelIndex() + 1;
   const applied = getAppliedFenceUpgradeLevel(level, 'segmentMaxHp');
-  const val = Math.round(base * Math.pow(FENCE_HP_MUL, applied));
-  return Math.max(1, val);
+  let val = base * Math.pow(FENCE_HP_MUL, applied);
+  // solo-pipeline-yandex-vk#1-followup-2: wire TalentsV2 wallHpMul (def_wall_hp).
+  // Mirror of wallArmorMul wire-up in getFenceArmorFlat — apply the talent mod
+  // as a final multiplier on top of base × level upgrades. Without this read,
+  // def_wall_hp ranks declared but never consumed at maxHp seed sites
+  // (clampFenceSegmentsToMaxHp, restoreFenceSegmentsToMaxHp, segment init).
+  try {
+    const talentsApi = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.getMods === 'function') {
+      const mods = talentsApi.getMods() || {};
+      const mul = Number(mods.wallHpMul);
+      if (Number.isFinite(mul) && mul > 0) val *= mul;
+    }
+  } catch (_) {}
+  return Math.max(1, Math.round(val));
 }
 
 function getFenceArmorFlat(){
@@ -7925,7 +8053,16 @@ function clampFenceSegmentsToMaxHp(maxHp){
 
 function tryUpgradeFenceLevel(){
   const stats = getFenceStats();
-  const cost = stats.upgradeCostDamagePoints || 0;
+  let cost = stats.upgradeCostDamagePoints || 0;
+  if (!Number.isFinite(cost) || cost <= 0) return false;
+  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_wall) — fence LEVEL upgrade.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
+      const out = talentsApi.onPurchase({ baseCost: cost, kind: 'upgrade_wall', mods: getMods(), timeMs: Date.now() });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) cost = Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
   if (!Number.isFinite(cost) || cost <= 0) return false;
   if (stats.availableDamagePoints < cost) return false;
 
@@ -8551,7 +8688,7 @@ function breakAdjacentFenceSegments(seg){
   return brokenCount;
 }
 
-function applyFenceSegmentDamage(seg, amount){
+function applyFenceSegmentDamage(seg, amount, attacker){
   if (!seg || seg.broken) return false;
   const incomingDamage = Math.max(0, amount || 0);
   if (incomingDamage <= 0) return false;
@@ -8565,6 +8702,24 @@ function applyFenceSegmentDamage(seg, amount){
       const domeMul = talentsApi.getActiveDomeDamageMul(Date.now());
       if (Number.isFinite(domeMul) && domeMul >= 0 && domeMul !== 1) {
         finalDamage = Math.max(0, finalDamage * domeMul);
+      }
+    }
+    // solo-pipeline-yandex-vk#1-followup F1: wire TalentsV2.onWallDamage into
+    // the canonical zombie→fence damage path. Without this call, defense talents
+    // (def_resists, def_shield, def_thorns, def_barrier, def_stun_on_hit,
+    // def_second_wind, immunityProc) silently do nothing — helper declared but
+    // never invoked (same pattern as the multishot bug fixed in batch #1).
+    if (talentsApi && typeof talentsApi.onWallDamage === 'function') {
+      const wallOut = talentsApi.onWallDamage({
+        seg: seg,
+        damage: finalDamage,
+        zombie: attacker || null,
+        zombies: Array.isArray(state && state.zombies) ? state.zombies : [],
+        timeMs: Date.now(),
+        damageType: (attacker && attacker.type && attacker.type.damageType) || null,
+      });
+      if (wallOut && Number.isFinite(wallOut.damageToHp)) {
+        finalDamage = Math.max(0, wallOut.damageToHp);
       }
     }
   } catch (_) {}
@@ -8678,7 +8833,35 @@ function tryRepairFenceSegmentAt(px, py){
   if (!repair || repair.enabled === false) return false;
   const seg = pickFenceSegmentByPoint(px, py);
   if (!seg || seg.hp >= seg.maxHp) return false;
-  const costCoins = getFenceRepairCostCoins();
+  let costCoins = getFenceRepairCostCoins();
+  // solo-pipeline-yandex-vk#1-followup-2 D2: wire TalentsV2 repairCostMul
+  // (def_repair_cost / eco_repair_discount-mul). Per user constraint we DO NOT
+  // call onRepair wholesale for pricing — apply repairCostMul directly to the
+  // existing pricing path BEFORE the discount-coupon consumption so coupon
+  // still works on the mul-adjusted cost (composes multiplicatively).
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.getMods === 'function') {
+      const mods = talentsApi.getMods() || {};
+      const repairCostMul = Number(mods.repairCostMul);
+      if (Number.isFinite(repairCostMul) && repairCostMul > 0 && repairCostMul !== 1) {
+        costCoins = Math.max(0, Math.floor(costCoins * repairCostMul));
+      }
+    }
+  } catch (_) {}
+  // solo-pipeline-yandex-vk#1-followup F1: consume TalentsV2 repair-discount
+  // coupon (def_repair_discount_timer / eco_repair_discount) before charging
+  // coins. Helper applyRepairDiscountCoupon already exists in talentsV2.js but
+  // was never reachable from runtime — same pattern as the multishot bug.
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.applyRepairCoupon === 'function') {
+      const coupon = talentsApi.applyRepairCoupon(costCoins, Date.now());
+      if (coupon && Number.isFinite(coupon.cost) && coupon.cost >= 0) {
+        costCoins = Math.max(0, Math.floor(coupon.cost));
+      }
+    }
+  } catch (_) {}
   if (state.coins < costCoins) {
     popText(px, py, t('fenceRepairNoCoins'), '#ff9c7a');
     return true;
@@ -8688,7 +8871,22 @@ function tryRepairFenceSegmentAt(px, py){
   if (!Number.isFinite(state.fenceRepairCount)) state.fenceRepairCount = 0;
   state.fenceRepairCount++;
   const wasBroken = !!seg.broken;
-  seg.hp = seg.maxHp;
+  // solo-pipeline-yandex-vk#1-followup-2 D3: wire TalentsV2 repairEfficiencyMul
+  // (def_repair_efficiency). Per user constraint: replace `seg.hp = seg.maxHp`
+  // with `seg.hp = min(seg.maxHp, seg.hp + seg.maxHp * repairEfficiencyMul)`.
+  // At mul = 1 legacy behavior preserved (any damaged hp restores to full);
+  // at mul < 1 partial restore (less heal per repair); at mul > 1 over-cap
+  // attempt clamped to maxHp. No state mutation if mod absent or invalid.
+  let repairEffMul = 1;
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.getMods === 'function') {
+      const mods = talentsApi.getMods() || {};
+      const m = Number(mods.repairEfficiencyMul);
+      if (Number.isFinite(m) && m > 0) repairEffMul = m;
+    }
+  } catch (_) {}
+  seg.hp = Math.min(seg.maxHp, seg.hp + seg.maxHp * repairEffMul);
   seg.broken = false;
   if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
   invalidateNoRepairAttackWaveEpisode();
@@ -8861,14 +9059,47 @@ function markZombieDying(z) {
   }
   z.corpseTimer = z.corpseTimerLeft;
 
-  const _killCoins = Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
-  state.coins += _killCoins;
-  state.kills += 1;
+  const _killCoinsBase = Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
+  // solo-pipeline-yandex-vk#1-followup-2 E1: wire TalentsV2 onKill into the
+  // canonical zombie-death coin/xp award site. Legacy multipliers (coinsKillMul,
+  // xpMul, zombieKill*Mul) stay in place; the dispatcher applies stateful
+  // talent effects on top — eco_crit_kill_bonus (critKillCoinsBonusFlat),
+  // eco_voucher (vouchersToNextDiscount accumulator), and any future kill-side
+  // additions. Helper exists in talentsV2.js since batch #1 but was never
+  // reachable from runtime — same pattern as the multishot bug.
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
-  grantXP(Math.floor(baseXp * mods.xpMul * activeMul * BAL.zombieKillXpMul));
+  const _baseXpAdjusted = Math.floor(baseXp * mods.xpMul * activeMul * BAL.zombieKillXpMul);
+  let _killCoins = _killCoinsBase;
+  let _killXp = _baseXpAdjusted;
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onKill === 'function') {
+      const out = talentsApi.onKill({
+        baseCoins: _killCoinsBase,
+        baseXp: _baseXpAdjusted,
+        isCrit: !!(z && z.lastHitWasCrit),
+        zombie: z,
+        mods,
+        timeMs: Date.now(),
+        rng: Math.random,
+      });
+      if (out && Number.isFinite(out.coins) && out.coins >= 0) _killCoins = Math.floor(out.coins);
+      if (out && Number.isFinite(out.xp) && out.xp >= 0) _killXp = Math.floor(out.xp);
+    }
+  } catch (_) {}
+  state.coins += _killCoins;
+  state.kills += 1;
+  grantXP(_killXp);
+  // solo-pipeline-yandex-vk#1-followup-3: per-wave accumulators для
+  // TalentsV2.onWaveEnd → eco_clean_defense (post-wave bonus coins/xp).
+  // Накапливаем только в активной attack-волне; idle-kills вне волны не учитываем.
+  if (noRepairAttackWaveRuntime.activeEpisodeKey) {
+    noRepairAttackWaveRuntime.waveCoinsAccumulated += _killCoins;
+    noRepairAttackWaveRuntime.waveXpAccumulated += _killXp;
+  }
 
   // Accumulate in kill-batch buffer (index-based write — no new object per kill)
   if (_killBatchLen < _killBatchBuf.length) {
@@ -9222,7 +9453,7 @@ function stepZombies(dt){
       if (!z.attackDidHit && z.attackAnimTimeSec >= attackHitTimeSec) {
         const hitTarget = selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget);
         if (hitTarget && hitTarget.kind === 'fence' && hitTarget.seg) {
-          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, effectiveFenceAttackDamageMul));
+          applyFenceSegmentDamage(hitTarget.seg, getZombieFinalAttackDamage(z, effectiveFenceAttackDamageMul), z);
           z.attackTargetId = hitTarget.seg.id || z.attackTargetId || null;
         } else if (hitTarget && hitTarget.kind === 'supercomputer') {
           applySupercomputerDamage(getZombieFinalAttackDamage(z, effectiveFenceAttackDamageMul));
@@ -9291,6 +9522,22 @@ function applyDamageToZombie(zombie, rawDamage, sourceKind){
   zombie.hp = nextHp;
   const appliedDamage = beforeHp - nextHp;
   if (sourceKind === 'tank') addTankDamageDealt(appliedDamage);
+  // solo-pipeline-yandex-vk#1-followup-3: wire TalentsV2.onOverkill для
+  // eco_grey_to_damage_points. Overkill = damage > zombie.hp на момент
+  // killing blow — сейчас beforeHp - appliedDamage всегда >= 0; реальный
+  // overkill = max(0, incomingDamage - appliedDamage), накапливается только
+  // на killing blow (nextHp === 0 && appliedDamage > 0).
+  if (nextHp === 0 && appliedDamage > 0) {
+    const overkill = Math.max(0, incomingDamage - appliedDamage);
+    if (overkill > 0) {
+      try {
+        const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+        if (talentsApi && typeof talentsApi.onOverkill === 'function') {
+          talentsApi.onOverkill({ amount: overkill, timeMs: Date.now() });
+        }
+      } catch (_) {}
+    }
+  }
   return appliedDamage;
 }
 
@@ -9303,7 +9550,15 @@ function stepTanks(dt){
     if (!tank || !tank.onTrack) continue;
     const balSpeedMul = getTankBalanceMul(tank.level, 'speedMul');
     const balAtkSpeedMul = getTankBalanceMul(tank.level, 'attackSpeedMul');
-    const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * balSpeedMul;
+    let barrageOrbit = 1;
+    if (isTalentsV2Ready()) {
+      const api = getTalentsV2Api();
+      if (api && typeof api.getBarrageMul === 'function') {
+        const b = api.getBarrageMul({ tank, timeMs: Date.now() });
+        if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0) barrageOrbit = b.orbit;
+      }
+    }
+    const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * balSpeedMul * barrageOrbit;
     if (cell.orbitPhase !== undefined) cell.orbitPhase += dt * angularSpeed;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
@@ -9707,12 +9962,39 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     }
   }
 
+  let pulseAoeMulNow = 1;
+  let barrageMul = { fireRate: 1, orbit: 1, aoe: 1, active: false };
   if (isTalentsV2Ready()) {
     const talentsApi = getTalentsV2Api();
     if (talentsApi && typeof talentsApi.onShotFired === 'function') {
       talentsApi.onShotFired({ tank, timeMs: Date.now(), rng: Math });
     }
+    // Pulse-shot AoE radius gate (item 3 / PA-3): every N-th shot widens
+    // bullet AoE by pulseAoeMul. Must be queried AFTER onShotFired so
+    // rt.counters.shots is already incremented. Same gate as pulse damage
+    // applied later in onHit (talentsV2.js L2832-2835).
+    if (talentsApi && typeof talentsApi.getPulseShotMultiplier === 'function') {
+      const mul = talentsApi.getPulseShotMultiplier({ tank, timeMs: Date.now() });
+      if (Number.isFinite(mul) && mul > 0) pulseAoeMulNow = mul;
+    }
+    // Barrage (Шквал / offense-active): while the buff is active, multiply
+    // bullet aoe and the post-shot cooldown by configured multipliers. Damage
+    // is already applied in talentsV2.onHit, orbit is applied in stepTanks /
+    // tankOrbitState / drag-release (see getBarrageMul callers).
+    if (talentsApi && typeof talentsApi.getBarrageMul === 'function') {
+      const b = talentsApi.getBarrageMul({ tank, timeMs: Date.now() });
+      if (b && b.active) {
+        if (Number.isFinite(b.fireRate) && b.fireRate > 0) barrageMul.fireRate = b.fireRate;
+        if (Number.isFinite(b.orbit) && b.orbit > 0) barrageMul.orbit = b.orbit;
+        if (Number.isFinite(b.aoe) && b.aoe > 0) barrageMul.aoe = b.aoe;
+        barrageMul.active = true;
+      }
+    }
   }
+  // Apply pulse-shot AoE radius multiplier and barrage AoE multiplier to all
+  // projectiles spawned by this shot (both base burst and chip extras /
+  // doubleShot / comboShots share the same shot-counter value).
+  const effectiveAoe = chipAoe * pulseAoeMulNow * barrageMul.aoe;
 
   // Barrel spread perpendicular to heading
   const heading = Math.atan2(tp.y - sy, tp.x - sx);
@@ -9743,7 +10025,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
           fromX: bx, fromY: by,
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
-          aoe: chipAoe, prof: stats.prof,
+          aoe: effectiveAoe, prof: stats.prof,
           bulletCfg,
           bulletCfgBase,
           effectIntensity: effectIntensity * chipSizeMul, shotId,
@@ -9766,7 +10048,7 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
           fromY: sy + perpY * (offsets[i] || 0),
           toZombieId: t.id, toX: tpos.x, toY: tpos.y,
           level: tank.level, dmg: splitDmg,
-          aoe: chipAoe, prof: stats.prof,
+          aoe: effectiveAoe, prof: stats.prof,
           bulletCfg,
           bulletCfgBase,
           effectIntensity: effectIntensity * chipSizeMul, shotId,
@@ -9783,9 +10065,31 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('shotFired', { level: tank.level });
   };
 
+  // Multishot talent (off_multishot): exclusive ladder — first roll triple,
+  // on miss roll double, otherwise single. Independent rolls would compound
+  // up to 1+0.45+0.12*2 ≈ 1.69 bullets/shot and trigger coin/Telemetry per
+  // extra burst twice; exclusive ladder caps expected projectiles at
+  // 1 + double*(1-triple) + triple*2 ≈ 1.416 at rank 5 (see
+  // tools/balance-shared.js:516 + docs/talents_v2.md). The chosen tier also
+  // drives the muzzle burst VFX below so the player can tell 1/2/3 apart.
+  let _multishotTier = 1;
+  const _tripleChance = Number.isFinite(mods.tripleShotChance) ? mods.tripleShotChance : 0;
+  const _doubleChance = Number.isFinite(mods.doubleShotChance) ? mods.doubleShotChance : 0;
   spawnBurst();
-  if (Math.random() < mods.doubleShotChance){
-    spawnBurst();
+  // Multishot inter-shot delay (user-directed rework 2026-05-20): экстра-залпы
+  // от double/triple должны быть видимо отдельными выстрелами с короткой
+  // задержкой между ними, а не одним залпом-«ёжиком». Используем тот же
+  // setTimeout-паттерн, что у комбо-чипа ниже (chipShotMods.comboShots).
+  // Задержки подобраны так, чтобы укладываться в обычное окно cooldown
+  // (минимально ~150ms на high fireRate), но при этом быть заметными.
+  const _multishotDelays = [80, 160];
+  if (_tripleChance > 0 && Math.random() < _tripleChance) {
+    _multishotTier = 3;
+    setTimeout(function(){ spawnBurst(); }, _multishotDelays[0]);
+    setTimeout(function(){ spawnBurst(); }, _multishotDelays[1]);
+  } else if (_doubleChance > 0 && Math.random() < _doubleChance) {
+    _multishotTier = 2;
+    setTimeout(function(){ spawnBurst(); }, _multishotDelays[0]);
   }
   // Mod 6 (combo counter): fire 3 extra rapid bursts at ×1.25 dmg with 0.15s interval
   if (chipShotMods && chipShotMods.comboShots > 0) {
@@ -9795,11 +10099,20 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
       })((ci + 1) * 150);
     }
   }
-  tank.cooldown = 1 / (stats.fr * speedMult());
+  // Barrage active: divide cooldown by barrageMul.fireRate (>1 -> shoots faster).
+  tank.cooldown = 1 / (stats.fr * speedMult() * (barrageMul.fireRate > 0 ? barrageMul.fireRate : 1));
   if (!isTankAttackingZombie){
-    const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity));
+    // Multishot VFX tier: tier 1 (single) → white default, tier 2 (double) →
+    // warm yellow + 1.4× particle count, tier 3 (triple) → orange + 1.8×.
+    // Uses existing burst() pool (no new allocations); count is still clamped
+    // by MAX_BURST_PARTICLES to protect mass-spawn frame budget.
+    const _multishotScale = _multishotTier === 3 ? 1.8 : (_multishotTier === 2 ? 1.4 : 1);
+    const burstCount = Math.min(MAX_BURST_PARTICLES, Math.round(5 * effectIntensity * _multishotScale));
     const burstAlpha = Math.min(0.85, 0.55 * (0.9 + 0.1 * effectIntensity));
-    burst(sx, sy, burstCount, `rgba(255,255,255,${burstAlpha})`);
+    const burstColor = _multishotTier === 3
+      ? `rgba(255,170,80,${burstAlpha})`
+      : (_multishotTier === 2 ? `rgba(255,225,140,${burstAlpha})` : `rgba(255,255,255,${burstAlpha})`);
+    burst(sx, sy, burstCount, burstColor);
     // Use chip-specific shoot SFX if configured, otherwise fallback to power-tier clip
     let shootClip = null;
     if (ChipFx && typeof ChipFx.resolveChipShotSfx === 'function') {
@@ -9810,6 +10123,23 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
       shootClip = powerTier <= 1 ? 'shootNormal' : powerTier <= 3 ? 'shootHeavy' : 'shootHeavy2';
     }
     playSfx(shootClip);
+    // Multishot delayed flashes (user-directed rework 2026-05-20): для каждого
+    // отложенного spawnBurst() рисуем дополнительную вспышку и проигрываем
+    // тот же shoot-клип, чтобы игрок видел и слышал «танк стреляет 2/3 раза»,
+    // а не одну вспышку с роем снарядов. Используем тот же burst() pool и тот
+    // же tier-coloured RGBA — без новых аллокаций на каждый кадр (setTimeout
+    // создаёт closure только при срабатывании multishot, а не на каждом
+    // выстреле).
+    if (_multishotTier > 1) {
+      const _extraBursts = _multishotTier === 3 ? 2 : 1;
+      for (let _mi = 0; _mi < _extraBursts; _mi++) {
+        const _delay = _multishotDelays[_mi];
+        setTimeout(function(){
+          burst(sx, sy, burstCount, burstColor);
+          playSfx(shootClip);
+        }, _delay);
+      }
+    }
   }
 }
 
@@ -9818,7 +10148,15 @@ function tankOrbitState(cell, timeSec){
   const offset = (cell.i / total) * Math.PI * 2;
   const mods = getMods();
   const activeSpeed = timeSec < state.activeEffects.speedUntil ? 1.35 : 1;
-  const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
+  let barrageOrbit = 1;
+  if (cell.tank && isTalentsV2Ready()) {
+    const api = getTalentsV2Api();
+    if (api && typeof api.getBarrageMul === 'function') {
+      const b = api.getBarrageMul({ tank: cell.tank, timeMs: Date.now() });
+      if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0) barrageOrbit = b.orbit;
+    }
+  }
+  const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * barrageOrbit;
   if (cell.tank?.onTrack && cell.orbitPhase !== undefined) {
     const angle = cell.orbitPhase + offset;
     return {
@@ -12512,6 +12850,18 @@ function getTalentNodeDescriptionV2(node, rank){
             // percent: perRank is a 0..1 ratio (e.g. 0.07 -> 7% per rank)
             currentDisplay = Math.round(chosen.perRank * 100 * effectiveRank);
           }
+          // Optional ui.currentMul: multiplies the displayed bonus. Used by
+          // off_ramp_up to surface the theoretical max bonus (rank × stackMax × perRank)
+          // instead of the per-stack-per-rank value. See PM-1 in continuity plan.
+          if (typeof uiMeta.currentMul === 'number' && uiMeta.currentMul > 0) {
+            currentDisplay = Math.round(currentDisplay * uiMeta.currentMul);
+          }
+          // Respect effect.max clamp when displaying as percent so tooltip
+          // matches runtime caps (e.g. ricochetChance max=0.30 -> 30%).
+          if (format !== 'flat' && typeof chosen.max === 'number' && chosen.max > 0) {
+            const maxPct = Math.round(chosen.max * 100);
+            if (currentDisplay > maxPct) currentDisplay = maxPct;
+          }
           vars.current = currentDisplay;
           currentResolved = true;
         }
@@ -12545,6 +12895,64 @@ function getTalentNodeDescriptionV2(node, rank){
       }
       try {
         descText = ('' + descText).replaceAll('{current}', String(currentDisplay));
+      } catch (_) {}
+      // Multi-placeholder support: ui.currentVars maps placeholder name -> effect key.
+      // Each resolves to round(effect.perRank * 100 * effectiveRank) and replaces {placeholder}.
+      try {
+        const currentVars = uiMeta && uiMeta.currentVars && typeof uiMeta.currentVars === 'object' ? uiMeta.currentVars : null;
+        if (currentVars) {
+          const placeholders = Object.keys(currentVars);
+          const effectsList = Array.isArray(node.effects) ? node.effects : [];
+          // Pre-parse "% numbers" from raw description template in order as fallback when effects missing.
+          let pctNumbers = null;
+          try {
+            const rawTemplate = (typeof descText === 'string') ? descText : '';
+            const matches = rawTemplate.match(/(\d+(?:\.\d+)?)\s*%/g) || [];
+            pctNumbers = matches.map((m) => Number(String(m).replace(/[^\d.]/g, '')));
+          } catch (_) { pctNumbers = []; }
+          placeholders.forEach((placeholder, idx) => {
+            const targetSpec = currentVars[placeholder];
+            // Support both string ("effectKey") and object ({ key, kind, max }) forms.
+            const targetKey = (typeof targetSpec === 'string')
+              ? targetSpec
+              : (targetSpec && typeof targetSpec.key === 'string' ? targetSpec.key : '');
+            const kind = (targetSpec && typeof targetSpec === 'object' && typeof targetSpec.kind === 'string')
+              ? targetSpec.kind
+              : 'percent';
+            if (!targetKey) return;
+            let chosenEff = null;
+            for (let i = 0; i < effectsList.length; i++) {
+              const eff = effectsList[i];
+              if (!eff) continue;
+              if (eff.stat === targetKey || eff.key === targetKey) { chosenEff = eff; break; }
+            }
+            let val = NaN;
+            if (kind === 'shotCount' && chosenEff) {
+              // off_pulse_aoe: pulseAoeEveryN = max(eff.min, eff.base + eff.perRank * rank)
+              const base = Number.isFinite(chosenEff.base) ? chosenEff.base : 0;
+              const perRank = Number.isFinite(chosenEff.perRank) ? chosenEff.perRank : 0;
+              const minVal = Number.isFinite(chosenEff.min) ? chosenEff.min : 0;
+              val = Math.max(minVal, base + perRank * effectiveRank);
+              val = Math.round(val);
+            } else if (chosenEff && typeof chosenEff.perRank === 'number') {
+              const perRankValue = chosenEff.perRank * 100;
+              val = Math.round(perRankValue * effectiveRank);
+              if (typeof chosenEff.max === 'number' && chosenEff.max > 0) {
+                const maxPct = Math.round(chosenEff.max * 100);
+                if (val > maxPct) val = maxPct;
+              }
+            } else if (Array.isArray(pctNumbers) && Number.isFinite(pctNumbers[idx])) {
+              val = Math.round(pctNumbers[idx] * effectiveRank);
+            }
+            if (Number.isFinite(val)) {
+              try {
+                // Case-insensitive placeholder replace to be robust to text-pipeline lowercasing.
+                const safeName = String(placeholder).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                descText = ('' + descText).replace(new RegExp('\\{' + safeName + '\\}', 'gi'), String(val));
+              } catch (_) {}
+            }
+          });
+        }
       } catch (_) {}
     }
   } catch (_) {}
@@ -13334,7 +13742,15 @@ canvas.addEventListener('pointerup', (e)=>{
     if (changed) {
       const mods = getMods();
       const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
-      from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed;
+      let barrageOrbit = 1;
+      if (from.tank && isTalentsV2Ready()) {
+        const api = getTalentsV2Api();
+        if (api && typeof api.getBarrageMul === 'function') {
+          const b = api.getBarrageMul({ tank: from.tank, timeMs: Date.now() });
+          if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0) barrageOrbit = b.orbit;
+        }
+      }
+      from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * barrageOrbit;
       popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
     }
     state.selectedHangarCellIndex = from.i;

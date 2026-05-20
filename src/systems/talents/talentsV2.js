@@ -176,6 +176,10 @@
     acidDotDpsMul: 1,
     pulseAoeDamageMul: 1,
     pulseAoeMul: 1,
+    // pulseRadiusMul: canonical alias for pulseAoeMul used by game.js bullet-AoE
+    // wiring. Resolved via getModNumber(mods, 'pulseRadiusMul', ['pulseAoeMul'], 1)
+    // — same alias-fallback pattern as pulseDamageMul/pulseAoeDamageMul (see L2835).
+    pulseRadiusMul: 1,
     ricochetDamageMul: 1,
     convertToDotPct: 0,
     convertToDotDurationMs: 0,
@@ -1044,6 +1048,9 @@
           nameKey: talent.ui.nameKey,
           descKey: talent.ui.descKey,
           icon: talent.ui.icon,
+          currentEffectKey: typeof talent.ui.currentEffectKey === 'string' ? talent.ui.currentEffectKey : undefined,
+          currentFormat: typeof talent.ui.currentFormat === 'string' ? talent.ui.currentFormat : undefined,
+          currentVars: talent.ui.currentVars && typeof talent.ui.currentVars === 'object' ? cloneObject(talent.ui.currentVars) : undefined,
         },
         effects: Array.isArray(talent.effects) ? talent.effects.map(function (effect) { return cloneObject(effect); }) : [],
       };
@@ -1757,6 +1764,9 @@
       nameKey: talent.ui.nameKey,
       descKey: talent.ui.descKey,
       icon: talent.ui.icon,
+      currentEffectKey: typeof talent.ui.currentEffectKey === 'string' ? talent.ui.currentEffectKey : undefined,
+      currentFormat: typeof talent.ui.currentFormat === 'string' ? talent.ui.currentFormat : undefined,
+      currentVars: talent.ui.currentVars && typeof talent.ui.currentVars === 'object' ? talent.ui.currentVars : undefined,
     };
   }
 
@@ -1817,7 +1827,11 @@
           nameKey: talent.ui.nameKey,
           descKey: talent.ui.descKey,
           icon: talent.ui.icon,
+          currentEffectKey: typeof talent.ui.currentEffectKey === 'string' ? talent.ui.currentEffectKey : undefined,
+          currentFormat: typeof talent.ui.currentFormat === 'string' ? talent.ui.currentFormat : undefined,
+          currentVars: talent.ui.currentVars && typeof talent.ui.currentVars === 'object' ? talent.ui.currentVars : undefined,
         } : null,
+        effects: Array.isArray(talent.effects) ? talent.effects.map(function (effect) { return cloneObject(effect); }) : [],
       });
     }
     return out;
@@ -2745,6 +2759,52 @@
     return rampState;
   }
 
+  // Returns AoE-radius multiplier to apply to the next bullet spawn for the
+  // given tank. Mirrors the pulse-damage gating at L2832-2835 (same modulo
+  // window: shots > 0 && shots % pulseEveryNShots === 0). Must be called AFTER
+  // onShotFired so rt.counters.shots is already incremented for the current shot.
+  // Returns 1 when pulseAoe is not unlocked or current shot is not a pulse shot.
+  function getPulseShotMultiplier(payload) {
+    var ctx = payload || {};
+    var tank = (ctx && ctx.tank) ? ctx.tank : payload;
+    if (!tank) return 1;
+    var rt = ensureTankRt(tank);
+    if (!rt) return 1;
+    var mods = (ctx && ctx.mods && typeof ctx.mods === 'object') ? ctx.mods : getMods();
+    var pulseEveryN = Math.max(0, toInt(getModNumber(mods, 'pulseEveryNShots', ['pulseAoeEveryN'], 0), 0));
+    if (pulseEveryN <= 0) return 1;
+    var shots = Math.max(0, toInt(rt.counters && rt.counters.shots, 0));
+    if (shots <= 0 || (shots % pulseEveryN) !== 0) return 1;
+    return Math.max(0, getModNumber(mods, 'pulseRadiusMul', ['pulseAoeMul'], 1));
+  }
+
+  // Returns barrage (offense-active) multipliers active for the given tank at
+  // timeMs. While the tank's offenseActive buff window is open, returns the
+  // configured multipliers for fireRate / orbitSpeed / aoe / damage. Otherwise
+  // each multiplier is 1. game.js wires fireRate into stats.fr, orbit into
+  // angularSpeed and aoe into the bullet aoe at spawn time. Damage is applied
+  // inside onHit (L2835) and is included here for completeness/diagnostics.
+  function getBarrageMul(payload) {
+    var ctx = payload || {};
+    var tank = (ctx && ctx.tank) ? ctx.tank : payload;
+    var out = { damage: 1, fireRate: 1, orbit: 1, aoe: 1, active: false };
+    if (!tank) return out;
+    var rt = ensureTankRt(tank);
+    if (!rt) return out;
+    var mods = (ctx && ctx.mods && typeof ctx.mods === 'object') ? ctx.mods : getMods();
+    var timeMs = toNumber(ctx.timeMs, runtime.nowMsFn());
+    var perTankUntil = toNumber(rt.buffs && rt.buffs.offenseActive && rt.buffs.offenseActive.untilMs, 0);
+    var runUntil = toNumber(ensureRunRt().actives.offense.untilMs, 0);
+    var until = Math.max(perTankUntil, runUntil);
+    if (timeMs >= until) return out;
+    out.active = true;
+    out.damage = Math.max(0, getModNumber(mods, 'offActiveDamageMul', ['offenseActiveDamageMul'], 1));
+    out.fireRate = Math.max(0, getModNumber(mods, 'offActiveFireRateMul', ['offenseActiveFireRateMul'], 1));
+    out.orbit = Math.max(0, getModNumber(mods, 'offActiveOrbitMul', ['offenseActiveOrbitMul'], 1));
+    out.aoe = Math.max(0, getModNumber(mods, 'offActiveAoeMul', ['offenseActiveAoeMul'], 1));
+    return out;
+  }
+
   function onHit(payload) {
     var ctx = payload || {};
     var tank = ctx.tank || null;
@@ -3105,6 +3165,18 @@
     runRt.eco.repairDiscountReady = false;
     runRt.eco.nextRepairDiscountAtMs = timeMs + periodMs;
     return { cost: cost, used: true };
+  }
+
+  // Public wrapper for game.js runtime: consume repair discount coupon against
+  // an externally-computed baseCost (FR.getFenceRepairCostCoins) without
+  // overriding the canonical pricing formula in fenceRepair.js.
+  // Returns { cost, used } where cost is the post-discount value.
+  // Idempotent only when called once per repair commit — coupon state mutates.
+  function applyRepairCoupon(baseCost, timeMs) {
+    var runRt = ensureRunRt();
+    var mods = getMods();
+    var nowMs = toNumber(timeMs, runtime.nowMsFn());
+    return applyRepairDiscountCoupon(runRt, mods, nowMs, baseCost);
   }
 
   function onUpdate(payload) {
@@ -4108,6 +4180,8 @@
     _onShotCounterAndRamp: _onShotCounterAndRamp,
     _applyDotDamage: _applyDotDamage,
     onShotFired: onShotFired,
+    getPulseShotMultiplier: getPulseShotMultiplier,
+    getBarrageMul: getBarrageMul,
     onHit: onHit,
     onWallDamage: onWallDamage,
     onZombieNearWall: onZombieNearWall,
@@ -4118,6 +4192,7 @@
     onWaveEnd: onWaveEnd,
     onOverkill: onOverkill,
     onRepair: onRepair,
+    applyRepairCoupon: applyRepairCoupon,
     onBuyTank: onBuyTank,
     onPurchase: onPurchase,
     clearRuntimeEffects: clearRuntimeEffects,

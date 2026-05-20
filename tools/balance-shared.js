@@ -513,7 +513,15 @@
     var modifiers = Object.assign(createIdentityModifiers(), scenario && scenario.modifiers ? scenario.modifiers : {});
     var talentMods = computeTalentMods(data && data.talents, scenario && scenario.talents);
     var chipEffect = computeChipEffect(scenario && scenario.chipModId);
-    var avgProjectiles = 1 + safeNumber(talentMods.doubleShotChance, 0) + safeNumber(talentMods.tripleShotChance, 0) * 2;
+    // Multishot talent uses exclusive-ladder rolls in runtime (game.js shoot
+    // path, 2026-05-20): triple is rolled first, double is rolled only when
+    // triple misses. Expected extra projectiles per shot therefore equal
+    // doubleChance * (1 - tripleChance) + tripleChance * 2, not the naive
+    // independent-rolls sum. Keep this formula in sync with the runtime path
+    // and docs/talents_v2.md, otherwise balance-sim drifts from real damage.
+    var _doubleP = safeNumber(talentMods.doubleShotChance, 0);
+    var _tripleP = safeNumber(talentMods.tripleShotChance, 0);
+    var avgProjectiles = 1 + _doubleP * (1 - _tripleP) + _tripleP * 2;
     var shotDamage = Math.max(0, tankBaseDamage + bulletAddDamage)
       * balanceDamageMul
       * (1 + cannonApplied * cannonDamagePerUpgrade)

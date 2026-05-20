@@ -71,7 +71,7 @@
 или
 
 ```json
-{ "type": "param", "key": "offenseActiveDurationMs", "value": 6000 }
+{ "type": "param", "key": "offenseActiveDurationMs", "value": 10000 }
 ```
 
 - Поддерживаемые поля параметризации:
@@ -312,6 +312,30 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - `doubleShotChance`, `tripleShotChance`, `ricochetChance`;
   - `doubleRewardChance` применяется к `doubleRewardChanceKill` и `doubleRewardChanceShot`;
   - `resistPct` применяется к `resistAcidPct`, `resistExplosionPct`, `resistFirePct`.
+
+### Multishot ladder (батч 2026-05-20)
+
+Талант `off_multishot` объявляет два независимых параметра, но runtime применяет их по **взаимоисключающей лестнице** (rank 4+ открывает triple):
+
+- сначала бросается `tripleShotChance`;
+- при провале — `doubleShotChance`;
+- двойной и тройной залп не могут сработать в одном выстреле.
+
+Тир сохраняется в локальную переменную `_multishotTier ∈ {1, 2, 3}` и используется для:
+
+- количества дополнительных `spawnBurst()` вызовов (1 → нет добора, 2 → +1, 3 → +2). **Экстра-залпы планируются через `setTimeout` с задержкой `[80ms, 160ms]`** (паттерн тот же, что у комбо-чипа `chipShotMods.comboShots`), чтобы игрок видел и слышал танк, стреляющий 2/3 раза подряд, а не один залп-«ёжик»;
+- усиления burst-VFX через `_multishotScale` (1 / 1.4 / 1.8) и `burstColor` (белый / тёплый жёлтый `rgba(255,225,140,*)` / оранжевый `rgba(255,170,80,*)`). **Для каждого отложенного залпа дополнительно рисуется burst + проигрывается тот же shoot-клип** — синхронно с задержкой spawnBurst, чтобы вспышка и звук совпадали со стартом снаряда;
+- частицы по-прежнему берутся из общего pool с clamp на `MAX_BURST_PARTICLES`; setTimeout-closure создаётся только когда multishot реально срабатывает, а не на каждом выстреле.
+
+В балансовом sim `tools/balance-shared.js` это отражено формулой
+`avgProjectiles = 1 + double*(1 - triple) + triple*2` — exclusive-ladder вместо прежнего independent-стека (1 + double + triple\*2).
+
+Адаптер (`game.js → adaptTalentsV2ModsToLegacy`) теперь:
+
+- явно прокидывает `tripleShotChance` с clamp `[0, 0.5]`;
+- добавляет в конце generic numeric-passthrough loop по всем `param`-effects, чтобы любые новые числовые ключи (`*Chance`, `*Pct`, `*Mul`, `*Ms` и т.д.) пробрасывались без отдельной правки адаптера.
+
+UI tooltip-template таланта поддерживает `ui.currentVars: { currentDouble, currentTriple }`, и i18n-строки `talent_off_multishot_desc` в `ru.json`/`en.json` используют `{currentDouble}` / `{currentTriple}` с пометкой «залпы взаимоисключающие».
 - Generic caps:
   - `caps.someKey` → верхняя граница `mods.someKey` (если ключ числовой);
   - `caps.someKeyMin` → нижняя граница `mods.someKey`.

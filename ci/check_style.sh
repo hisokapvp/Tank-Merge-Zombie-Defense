@@ -49,3 +49,7 @@ if (bad.length) {
 
 console.log('Style check passed.');
 NODE
+
+# solo-pipeline-yandex-vk#1-followup F3 — talent helper-callsite regression guard.
+echo "Running ci/check_talent_helpers.cjs..."
+node "$ROOT_DIR/ci/check_talent_helpers.cjs"
