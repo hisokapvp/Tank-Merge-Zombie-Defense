@@ -76,33 +76,54 @@
   function draw(ctx) {
     if (!Array.isArray(_fenceSegments) || !_fenceSegments.length) return;
 
-    var hasDamaged = false;
+    var hasVisible = false;
     for (var j = 0; j < _fenceSegments.length; j++) {
       var s = _fenceSegments[j];
-      if (s && s.hp < s.maxHp) { hasDamaged = true; break; }
+      if (!s) continue;
+      if (s.hp < s.maxHp) { hasVisible = true; break; }
+      if (Number.isFinite(s.shieldHp) && s.shieldHp > 0) { hasVisible = true; break; }
     }
-    if (!hasDamaged) return;
+    if (!hasVisible) return;
 
     ctx.save();
     ctx.translate(_centerX, _centerY);
 
     for (var i = 0; i < _fenceSegments.length; i++) {
       var seg = _fenceSegments[i];
-      if (!seg || !(seg.hp < seg.maxHp)) continue;
+      if (!seg) continue;
+      var damaged = seg.hp < seg.maxHp;
+      var hasShield = Number.isFinite(seg.shieldHp) && seg.shieldHp > 0
+        && Number.isFinite(seg.shieldHpMax) && seg.shieldHpMax > 0;
+      if (!damaged && !hasShield) continue;
 
-      var ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
-      var greenWidth = Math.round(_hpBarW * ratio);
       var barX = Math.round(seg.x - _hpBarW * 0.5);
       var barY = Math.round(seg.y + _hpBarOffsetY);
 
-      // Background
-      ctx.fillStyle = 'rgba(72,72,72,0.95)';
-      ctx.fillRect(barX, barY, _hpBarW, _hpBarH);
+      if (damaged) {
+        var ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
+        var greenWidth = Math.round(_hpBarW * ratio);
 
-      // Green health portion
-      if (greenWidth > 0) {
-        ctx.fillStyle = 'rgba(125,255,178,0.95)';
-        ctx.fillRect(barX, barY, greenWidth, _hpBarH);
+        // Background
+        ctx.fillStyle = 'rgba(72,72,72,0.95)';
+        ctx.fillRect(barX, barY, _hpBarW, _hpBarH);
+
+        // Green health portion
+        if (greenWidth > 0) {
+          ctx.fillStyle = 'rgba(125,255,178,0.95)';
+          ctx.fillRect(barX, barY, greenWidth, _hpBarH);
+        }
+      }
+
+      // Cumulative-shield (def_shield v3): yellow bar above HP bar.
+      // Visible only when seg.shieldHp > 0; width scales by shieldHp / shieldHpMax.
+      if (hasShield) {
+        var shieldRatio = clamp(seg.shieldHp / Math.max(1, seg.shieldHpMax), 0, 1);
+        var shieldWidth = Math.round(_hpBarW * shieldRatio);
+        var shieldY = barY - _hpBarH - 2;
+        if (shieldWidth > 0) {
+          ctx.fillStyle = 'rgba(255,224,102,0.95)';
+          ctx.fillRect(barX, shieldY, shieldWidth, _hpBarH);
+        }
       }
     }
 

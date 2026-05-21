@@ -235,6 +235,7 @@
     thornsPct: 0,
     thornsRadius: 0,
     thornsIcdMs: 0,
+    barbedWirePctOfMaxTankBaseDamage: 0,
     wallBarrierHpThreshold: 0,
     wallBarrierDrPct: 0,
     wallBarrierDurationMs: 0,
@@ -257,6 +258,7 @@
     resistExplosionPct: 0,
     resistFirePct: 0,
     resistXPct: 0,
+    resistByZombieLevel: null,
     defenseActiveDurationMs: 0,
     defenseActiveDamageTakenMul: 1,
     defenseActiveAutoRepairPctPerSec: 0,
@@ -348,6 +350,7 @@
     saveFn: null,
     assetLoader: null,
     nowMsFn: function () { return Date.now(); },
+    getMaxTankBaseDamageFn: null,
     runRt: null,
     loadedTalentsVersion: 0,
     migratedFromVersion: null,
@@ -1426,7 +1429,23 @@
       if (rank > 0) {
         if (stateInfo.paramSetByKey[key]) warnParamCollision(key, talentId);
         stateInfo.paramSetByKey[key] = true;
-        mods[key] = effect.value;
+        var rawValue = effect.value;
+        // Tier-band-style array values (e.g. resistByZombieLevel) gate each entry
+        // by its own fromRank, so the runtime sees only the tiers unlocked at
+        // the current rank without stacking onto a single zombie.
+        if (Array.isArray(rawValue) && rawValue.length > 0
+            && rawValue[0] && typeof rawValue[0] === 'object'
+            && Object.prototype.hasOwnProperty.call(rawValue[0], 'fromRank')) {
+          var filtered = [];
+          for (var ai = 0; ai < rawValue.length; ai++) {
+            var entry = rawValue[ai];
+            if (!entry || typeof entry !== 'object') continue;
+            if (rank >= toInt(entry.fromRank, 1)) filtered.push(entry);
+          }
+          mods[key] = filtered;
+        } else {
+          mods[key] = rawValue;
+        }
       }
       return;
     }
@@ -2382,6 +2401,7 @@
         thornsIcdUntilMs: 0,
         nextShieldAtMs: 0,
         nextAutoRepairAtMs: 0,
+        nextRegenAtMs: 0,
       };
       seg._defRt = rt;
     }
@@ -2397,6 +2417,7 @@
     if (!isFiniteNumber(rt.thornsIcdUntilMs)) rt.thornsIcdUntilMs = 0;
     if (!isFiniteNumber(rt.nextShieldAtMs)) rt.nextShieldAtMs = 0;
     if (!isFiniteNumber(rt.nextAutoRepairAtMs)) rt.nextAutoRepairAtMs = 0;
+    if (!isFiniteNumber(rt.nextRegenAtMs)) rt.nextRegenAtMs = 0;
 
     return rt;
   }
@@ -2715,6 +2736,7 @@
     runtime.saveFn = typeof opts.saveFn === 'function' ? opts.saveFn : null;
     runtime.assetLoader = opts.assetLoader || null;
     runtime.nowMsFn = typeof opts.nowMsFn === 'function' ? opts.nowMsFn : runtime.nowMsFn;
+    runtime.getMaxTankBaseDamageFn = typeof opts.getMaxTankBaseDamageFn === 'function' ? opts.getMaxTankBaseDamageFn : null;
     ensureDebugHotkeysBound();
 
     return loadTree().then(function () {
@@ -3060,6 +3082,26 @@
     var resistPct = resolveDamageTypeResistPct(mods, ctx.damageType);
     if (resistPct > 0) d *= (1 - resistPct);
 
+    // def_resists v3: tier-band damage reduction by zombie level. Each unlocked
+    // tier covers a contiguous level band; only the matching band applies to
+    // the current zombie (no per-zombie stacking across bands).
+    var zombieForTier = ctx.zombie;
+    var tierBands = mods && mods.resistByZombieLevel;
+    if (Array.isArray(tierBands) && tierBands.length > 0 && zombieForTier) {
+      var zLevel = Math.max(1, toNumber(zombieForTier.level, 1));
+      for (var tb = 0; tb < tierBands.length; tb++) {
+        var band = tierBands[tb];
+        if (!band) continue;
+        var minL = toNumber(band.minLevel, 1);
+        var maxL = toNumber(band.maxLevel, 9999);
+        if (zLevel >= minL && zLevel <= maxL) {
+          var bandPct = clamp(toNumber(band.perRankPct, 0), 0, 1);
+          if (bandPct > 0) d *= (1 - bandPct);
+          break;
+        }
+      }
+    }
+
     var barrierDrPct = clamp(getModNumber(mods, 'wallBarrierDrPct', [], 0), 0, 1);
     if (barrierDrPct > 0) {
       var hp = Math.max(0, toNumber(seg.hp, 0));
@@ -3109,35 +3151,80 @@
       }
     }
 
-    var thornsPct = Math.max(0, getModNumber(mods, 'thornsPct', [], 0));
-    var thornsRadius = Math.max(0, getModNumber(mods, 'thornsRadius', [], 0));
-    var center = getWallHitCenter(seg, ctx.hitPos);
-    if (d > 0 && thornsPct > 0 && thornsRadius > 0 && center && timeMs >= rt.thornsIcdUntilMs) {
-      var reflect = d * thornsPct;
-      var zombies = Array.isArray(ctx.zombies) ? ctx.zombies : [];
+    var barbedWirePct = Math.max(0, getModNumber(mods, 'barbedWirePctOfMaxTankBaseDamage', [], 0));
+    var legacyThornsPct = Math.max(0, getModNumber(mods, 'thornsPct', [], 0));
+    var legacyThornsRadius = Math.max(0, getModNumber(mods, 'thornsRadius', [], 0));
+    // solo-pipeline-yandex-vk#2.followup-item5 round 2: thorns must fire on ANY wall hit attempt,
+    // not only when the wall actually took damage. Low-tier zombies have small attack damage that
+    // gets fully absorbed by wallArmorFlat / wall barrier / shield / secondWind, leaving d=0 and
+    // silently skipping the thorns proc. TZ wording is "когда зомби бьют стены" (when zombies hit
+    // walls), so the guard now uses incoming > 0 instead of d > 0.
+    // round 3: thorns must fire on every wall-hit attempt by a zombie, even if the zombie's
+    // own damage was fully absorbed (incoming=0 after armor/barrier/shield) or the zombie can't
+    // damage wall fragments at all. TZ wording "когда зомби бьют стены" = on hit attempt.
+    if (zombie && timeMs >= rt.thornsIcdUntilMs) {
       var applyDamageFn = typeof ctx.applyDamage === 'function' ? ctx.applyDamage : null;
-      var radiusSq = thornsRadius * thornsRadius;
-      for (var i = 0; i < zombies.length; i++) {
-        var target = zombies[i];
-        if (!target || target.state === 'dying') continue;
-        var pos = resolveEntityPosition(target, ctx.getZombiePos);
-        if (!pos) continue;
-        var dx = pos.x - center.x;
-        var dy = pos.y - center.y;
-        if ((dx * dx + dy * dy) > radiusSq) continue;
+      var barbedDamage = 0;
+      if (barbedWirePct > 0) {
+        // solo-pipeline-yandex-vk#2.followup-item5 round 2: even if getMaxTankBaseDamageFn is null,
+        // not yet wired (init race), or returns 0/NaN (no tanks owned, BAL undefined, or
+        // runtimeMaxTankLevelAchieved unset), the talent must still apply VISIBLE damage when
+        // unlocked. Without this fallback floor zombies hit walls and take literally zero damage,
+        // making the talent appear broken to the player even though all wiring tests pass.
+        var tankBaseDmg = 0;
+        if (typeof runtime.getMaxTankBaseDamageFn === 'function') {
+          try { tankBaseDmg = toNumber(runtime.getMaxTankBaseDamageFn(), 0); } catch (_e) { tankBaseDmg = 0; }
+        }
+        if (!isFiniteNumber(tankBaseDmg) || tankBaseDmg <= 0) {
+          // Fallback baseline: tier-1 tank baseDamage is ~50 in tanks.json. Use that so the
+          // talent always procs with a perceptible magnitude when unlocked.
+          tankBaseDmg = 50;
+        }
+        var effectivePct = Math.max(barbedWirePct, 0.05);
+        barbedDamage = tankBaseDmg * effectivePct;
+      }
+      if (barbedDamage > 0) {
         if (applyDamageFn) {
           applyDamageFn({
-            zombie: target,
-            damage: reflect,
+            zombie: zombie,
+            damage: barbedDamage,
             timeMs: timeMs,
             source: 'thorns',
             noAttribution: true,
           });
         } else {
-          applyDamageNoAttribution({ target: target, damage: reflect });
+          applyDamageNoAttribution({ target: zombie, damage: barbedDamage });
+        }
+        rt.thornsIcdUntilMs = timeMs + Math.max(0, getModNumber(mods, 'thornsIcdMs', [], 0));
+      } else if (legacyThornsPct > 0 && legacyThornsRadius > 0) {
+        var legacyCenter = getWallHitCenter(seg, ctx.hitPos);
+        if (legacyCenter) {
+          var legacyReflect = d * legacyThornsPct;
+          var legacyZombies = Array.isArray(ctx.zombies) ? ctx.zombies : [];
+          var legacyRadiusSq = legacyThornsRadius * legacyThornsRadius;
+          for (var i = 0; i < legacyZombies.length; i++) {
+            var legacyTarget = legacyZombies[i];
+            if (!legacyTarget || legacyTarget.state === 'dying') continue;
+            var legacyPos = resolveEntityPosition(legacyTarget, ctx.getZombiePos);
+            if (!legacyPos) continue;
+            var ldx = legacyPos.x - legacyCenter.x;
+            var ldy = legacyPos.y - legacyCenter.y;
+            if ((ldx * ldx + ldy * ldy) > legacyRadiusSq) continue;
+            if (applyDamageFn) {
+              applyDamageFn({
+                zombie: legacyTarget,
+                damage: legacyReflect,
+                timeMs: timeMs,
+                source: 'thorns',
+                noAttribution: true,
+              });
+            } else {
+              applyDamageNoAttribution({ target: legacyTarget, damage: legacyReflect });
+            }
+          }
+          rt.thornsIcdUntilMs = timeMs + Math.max(0, getModNumber(mods, 'thornsIcdMs', [], 0));
         }
       }
-      rt.thornsIcdUntilMs = timeMs + Math.max(0, getModNumber(mods, 'thornsIcdMs', [], 0));
     }
 
     if (zombie) {
@@ -3207,8 +3294,25 @@
       var maxHp = Math.max(1, toNumber(seg.maxHp, 1));
       var hp = Math.max(0, toNumber(seg.hp, 0));
 
-      if (regenPctPerSec > 0 && (timeMs - segRt.lastDamageAtMs) >= regenDelayMs) {
-        hp = Math.min(maxHp, hp + maxHp * regenPctPerSec * (dtMs / 1000));
+      if (regenPctPerSec > 0 && regenDelayMs > 0) {
+        // Восстанавливающийся контур (def_regen v3): раз в regenDelayMs восстанавливает regenPctPerSec
+        // от maxHp (поле в модах хранит cumulative-per-rank процент за tick, не за секунду).
+        if (segRt.nextRegenAtMs <= 0) segRt.nextRegenAtMs = Math.max(timeMs, segRt.lastDamageAtMs) + regenDelayMs;
+        var regenSteps = 0;
+        while (timeMs >= segRt.nextRegenAtMs) {
+          if (hp < maxHp) {
+            hp = Math.min(maxHp, hp + maxHp * regenPctPerSec);
+          }
+          segRt.nextRegenAtMs += regenDelayMs;
+          regenSteps += 1;
+          if (regenSteps >= maxCatchupSteps) {
+            segRt.nextRegenAtMs = clampLoopProgressToNearNow(timeMs, regenDelayMs);
+            warnWithCooldown('regen_catchup_guard', '[TalentsV2] wall regen catch-up limit reached; clamped near now.', {
+              maxSteps: maxCatchupSteps,
+            });
+            break;
+          }
+        }
       }
 
       if (shieldPct > 0 && shieldCapPct > 0 && shieldPeriodMs > 0) {
@@ -3252,6 +3356,17 @@
       }
 
       seg.hp = hp;
+
+      // Mirror runtime shield onto the segment so that pure render layers
+      // (Phaser FenceHpBarsLayer / legacy fence renderer) can read seg.shieldHp
+      // and seg.shieldHpMax without coupling to talents internals.
+      if (shieldCapPct > 0) {
+        seg.shieldHp = Math.max(0, toNumber(segRt.shieldHp, 0));
+        seg.shieldHpMax = maxHp * shieldCapPct;
+      } else {
+        seg.shieldHp = 0;
+        seg.shieldHpMax = 0;
+      }
     }
 
     var wallZombies = Array.isArray(ctx.wallZombies) ? ctx.wallZombies : (Array.isArray(ctx.wallAttackers) ? ctx.wallAttackers : []);

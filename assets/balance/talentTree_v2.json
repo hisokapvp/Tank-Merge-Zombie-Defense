@@ -298,9 +298,13 @@
       "requires": [],
       "ui": { "nameKey": "talent_def_resists_name", "descKey": "talent_def_resists_desc", "icon": "resists" },
       "effects": [
-        { "type": "param", "key": "resistFirePct", "base": 0, "perRank": 0.06, "max": 0.3 },
-        { "type": "param", "key": "resistAcidPct", "base": 0, "perRank": 0.06, "max": 0.3 },
-        { "type": "param", "key": "resistExplosionPct", "base": 0, "perRank": 0.06, "max": 0.3 }
+        { "type": "param", "key": "resistByZombieLevel", "value": [
+          { "minLevel": 1,  "maxLevel": 20, "fromRank": 1, "perRankPct": 0.20 },
+          { "minLevel": 21, "maxLevel": 30, "fromRank": 2, "perRankPct": 0.15 },
+          { "minLevel": 31, "maxLevel": 40, "fromRank": 3, "perRankPct": 0.10 },
+          { "minLevel": 41, "maxLevel": 50, "fromRank": 4, "perRankPct": 0.07 },
+          { "minLevel": 51, "maxLevel": 60, "fromRank": 5, "perRankPct": 0.05 }
+        ] }
       ]
     },
     {
@@ -310,10 +314,15 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_regen_name", "descKey": "talent_def_regen_desc", "icon": "regen" },
+      "ui": {
+        "nameKey": "talent_def_regen_name",
+        "descKey": "talent_def_regen_desc",
+        "icon": "regen",
+        "currentVars": { "current": { "key": "wallRegenPctPerSec", "kind": "percent1" } }
+      },
       "effects": [
-        { "type": "param", "key": "regenDelayMs", "value": 4000 },
-        { "type": "param", "key": "regenPctPerSec", "base": 0, "perRank": 0.006 }
+        { "type": "param", "key": "wallRegenDelayMs", "value": 4000 },
+        { "type": "param", "key": "wallRegenPctPerSec", "base": 0, "perRank": 0.006 }
       ]
     },
     {
@@ -323,12 +332,20 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_shield_name", "descKey": "talent_def_shield_desc", "icon": "shield" },
+      "ui": {
+        "nameKey": "talent_def_shield_name",
+        "descKey": "talent_def_shield_desc",
+        "icon": "shield",
+        "currentVars": {
+          "currentPeriod": { "key": "wallShieldPeriodMs", "kind": "periodSeconds" },
+          "currentShieldPct": { "key": "wallShieldPct", "kind": "percent" }
+        }
+      },
       "effects": [
         { "type": "unlock", "key": "wallShield" },
-        { "type": "param", "key": "wallShieldPeriodMs", "base": 12000, "perRank": -1000, "min": 8000 },
+        { "type": "param", "key": "wallShieldPeriodMs", "base": 45000, "perRank": -5000, "min": 5000 },
         { "type": "param", "key": "wallShieldPct", "base": 0, "perRank": 0.02 },
-        { "type": "param", "key": "wallShieldCapPct", "value": 0.25 }
+        { "type": "param", "key": "wallShieldCapPct", "value": 0.30 }
       ]
     },
     {
@@ -338,10 +355,17 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_slow_field_name", "descKey": "talent_def_slow_field_desc", "icon": "slowField" },
+      "ui": {
+        "nameKey": "talent_def_slow_field_name",
+        "descKey": "talent_def_slow_field_desc",
+        "icon": "slowField",
+        "currentVars": {
+          "currentSlow": { "key": "wallSlowFieldPct", "kind": "percent" }
+        }
+      },
       "effects": [
         { "type": "unlock", "key": "slowField" },
-        { "type": "param", "key": "slowFieldPct", "base": 0, "perRank": 0.1 },
+        { "type": "param", "key": "wallSlowFieldPct", "base": 0, "perRank": 0.1 },
         { "type": "param", "key": "slowFieldRadius", "value": 140 }
       ]
     },
@@ -352,11 +376,17 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_thorns_name", "descKey": "talent_def_thorns_desc", "icon": "thorns" },
+      "ui": {
+        "nameKey": "talent_def_thorns_name",
+        "descKey": "talent_def_thorns_desc",
+        "icon": "thorns",
+        "currentVars": {
+          "currentBarbedWireDmg": { "key": "barbedWirePctOfMaxTankBaseDamage", "kind": "percent" }
+        }
+      },
       "effects": [
         { "type": "unlock", "key": "thorns" },
-        { "type": "param", "key": "thornsPct", "base": 0, "perRank": 0.05 },
-        { "type": "param", "key": "thornsRadius", "value": 120 },
+        { "type": "param", "key": "barbedWirePctOfMaxTankBaseDamage", "base": 0, "perRank": 0.02 },
         { "type": "param", "key": "thornsIcdMs", "value": 300 }
       ]
     },

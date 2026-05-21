@@ -6532,6 +6532,9 @@ async function initTalentsV2Runtime(){
         player: state.player,
       };
     },
+    getMaxTankBaseDamageFn: function () {
+      try { return getMaxOwnedTankBaseDamage(); } catch (_e) { return 0; }
+    },
     saveFn: function (payload) {
       const nextPayload = payload && typeof payload === 'object' ? payload : null;
       const nextTalents = nextPayload && nextPayload.talentsV2 && typeof nextPayload.talentsV2 === 'object'
@@ -7156,6 +7159,48 @@ const PROJECTILE_KINDS = CombatProfilesApi && CombatProfilesApi.PROJECTILE_KINDS
 function getTankConfigByLevel(level){
   if (!TankSprites || typeof TankSprites.getTank !== 'function') return null;
   return TankSprites.getTank(level);
+}
+
+// Returns the max-owned tank's effective baseDamage (with cannon-upgrade applied).
+// Used by talents v2 (Колючая проволока / barbed wire) to scale wall-hit damage by
+// the player's tank progression rather than by incoming zombie damage.
+function getMaxOwnedTankBaseDamage(){
+  const lvlRaw = state && Number.isFinite(state.runtimeMaxTankLevelAchieved)
+    ? state.runtimeMaxTankLevelAchieved
+    : (state && Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 1);
+  const level = Math.max(1, Math.floor(lvlRaw));
+  const tankCfg = getTankConfigByLevel(level);
+  let base = (tankCfg && tankCfg.stats && Number.isFinite(tankCfg.stats.baseDamage))
+    ? tankCfg.stats.baseDamage
+    : (BAL.dmgBase * Math.pow(BAL.dmgMultPerLevel, level - 1));
+  if (!Number.isFinite(base) || base < 0) base = 0;
+  // solo-pipeline-yandex-vk#2.followup-item5 round 4: include cannon upgrade additive step,
+  // bullet addDamage from current bullet config, and balance attackDamageMul (which already
+  // folds in cannon perUpgradeMul). Talent damage must scale with weapon upgrades — TZ wording:
+  // "урон Вашего танка максимального уровня" = full effective base damage of the highest tank.
+  if (typeof getAppliedCannonUpgradeLevel === 'function'
+    && BAL && BAL.cannonUpgradeStep && Number.isFinite(BAL.cannonUpgradeStep.baseDamage)) {
+    const steps = Math.max(0, Math.floor(getAppliedCannonUpgradeLevel(level, 'baseDamage') || 0));
+    base += steps * BAL.cannonUpgradeStep.baseDamage;
+  }
+  let bulletAdd = 0;
+  try {
+    if (typeof getBulletConfigForTankLevel === 'function') {
+      const info = getBulletConfigForTankLevel(level);
+      if (info && info.bulletCfg && Number.isFinite(info.bulletCfg.addDamage)) {
+        bulletAdd = Math.max(0, info.bulletCfg.addDamage);
+      }
+    }
+  } catch (_) {}
+  let balMul = 1;
+  try {
+    if (typeof getTankBalanceMul === 'function') {
+      const m = getTankBalanceMul(level, 'attackDamageMul');
+      if (Number.isFinite(m) && m > 0) balMul = m;
+    }
+  } catch (_) {}
+  const out = (base + bulletAdd) * balMul;
+  return Math.max(0, out);
 }
 
 function getBulletConfigForTankLevel(level){
@@ -8691,7 +8736,13 @@ function breakAdjacentFenceSegments(seg){
 function applyFenceSegmentDamage(seg, amount, attacker){
   if (!seg || seg.broken) return false;
   const incomingDamage = Math.max(0, amount || 0);
-  if (incomingDamage <= 0) return false;
+  // solo-pipeline-yandex-vk#2.followup-item5 round 3: thorns talent must fire on every wall-hit
+  // attempt by a zombie, even when zombie damage is fully blocked / zero. Previously this early
+  // return skipped Talents.onWallDamage entirely so low-attack zombies (or zombies whose damage
+  // got reduced to 0 by other modifiers) never triggered Колючая проволока at all. We still skip
+  // wall HP work below for zero-damage hits, but we always invoke the talents hook when there
+  // is an attacker.
+  if (incomingDamage <= 0 && !attacker) return false;
   const armorFlat = getFenceArmorFlat();
   let finalDamage = Math.max(0, incomingDamage - armorFlat);
   // Task 3 (Купол): apply active defense damage mul in the single zombie→fence damage path
@@ -8717,6 +8768,33 @@ function applyFenceSegmentDamage(seg, amount, attacker){
         zombies: Array.isArray(state && state.zombies) ? state.zombies : [],
         timeMs: Date.now(),
         damageType: (attacker && attacker.type && attacker.type.damageType) || null,
+        // solo-pipeline-yandex-vk#2 item 5 (Колючая проволока): bridge talents-side
+        // damage application back to game's canonical death pipeline so the attacker
+        // zombie actually dies via markZombieDying — applyDamageNoAttribution stub
+        // only touches z.hp and never triggers death animation / drops / kill counter.
+        applyDamage: function (payload) {
+          const tz = payload && payload.zombie;
+          const dmg = payload && Number.isFinite(payload.damage) ? Math.max(0, payload.damage) : 0;
+          if (!tz || tz.state === 'dying' || dmg <= 0) return 0;
+          const before = Math.max(0, Number.isFinite(tz.hp) ? tz.hp : 0);
+          if (before <= 0) return 0;
+          const after = Math.max(0, before - dmg);
+          tz.hp = after;
+          // solo-pipeline-yandex-vk#2.followup-item5: floating combat text for thorns / Колючая
+          // проволока procs. Visible feedback so the player can tell the talent is working even
+          // at small magnitudes. Other applyDamage sources currently route via canonical bullet
+          // damage path which already calls addDamageNumber, so we only spawn for source==='thorns'.
+          const dealt = before - after;
+          if (dealt > 0 && payload && payload.source === 'thorns'
+              && typeof addDamageNumber === 'function'
+              && Number.isFinite(tz.x) && Number.isFinite(tz.y)) {
+            try { addDamageNumber(tz.x, tz.y - 16, dealt, false); } catch (_e) {}
+          }
+          if (after <= 0 && typeof markZombieDying === 'function') {
+            try { markZombieDying(tz); } catch (_e) {}
+          }
+          return before - after;
+        },
       });
       if (wallOut && Number.isFinite(wallOut.damageToHp)) {
         finalDamage = Math.max(0, wallOut.damageToHp);
@@ -9301,6 +9379,22 @@ function stepZombies(dt){
       balSpeedMul *= Math.max(0.05, z.chipSlowFactor || 1);
     } else {
       z.chipSlowFactor = 1; // reset
+    }
+
+    // ── Talents v2: def_slow_field movement slow ──
+    // Reads zRt.cc.slowUntilMs / slowPct (set by talents api when zombie is near a wall
+    // segment within slowFieldRadius). Multiplicatively combined with chip + EMP slow so
+    // existing slowdown sources are preserved.
+    {
+      const zRt = z._statusRt;
+      const cc = zRt && zRt.cc ? zRt.cc : null;
+      if (cc && Number.isFinite(cc.slowUntilMs) && Number.isFinite(cc.slowPct) && cc.slowPct > 0) {
+        const nowMsForCc = Date.now();
+        if (nowMsForCc < cc.slowUntilMs) {
+          const sp = Math.max(0, Math.min(1, cc.slowPct));
+          if (sp > 0) balSpeedMul *= Math.max(0.05, 1 - sp);
+        }
+      }
     }
 
     const shouldMove = !holdPositionWhileCalmed
@@ -12934,6 +13028,27 @@ function getTalentNodeDescriptionV2(node, rank){
               const minVal = Number.isFinite(chosenEff.min) ? chosenEff.min : 0;
               val = Math.max(minVal, base + perRank * effectiveRank);
               val = Math.round(val);
+            } else if (kind === 'periodSeconds' && chosenEff) {
+              // def_shield: wallShieldPeriodMs = max(min, base + perRank * rank); display in seconds.
+              const baseS = Number.isFinite(chosenEff.base) ? chosenEff.base : 0;
+              const perRankS = Number.isFinite(chosenEff.perRank) ? chosenEff.perRank : 0;
+              const minValS = Number.isFinite(chosenEff.min) ? chosenEff.min : 0;
+              const ms = Math.max(minValS, baseS + perRankS * effectiveRank);
+              val = Math.round(ms / 1000);
+            } else if (kind === 'percent1' && chosenEff && typeof chosenEff.perRank === 'number') {
+              // def_regen: 1-decimal percent, ru-locale comma separator.
+              const raw = chosenEff.perRank * 100 * effectiveRank;
+              let rounded = Math.round(raw * 10) / 10;
+              if (typeof chosenEff.max === 'number' && chosenEff.max > 0) {
+                const maxPct1 = chosenEff.max * 100;
+                if (rounded > maxPct1) rounded = maxPct1;
+              }
+              const formatted = (Math.round(rounded * 10) / 10).toFixed(1).replace('.', ',');
+              try {
+                const safeName = String(placeholder).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                descText = ('' + descText).replace(new RegExp('\\{' + safeName + '\\}', 'gi'), formatted);
+              } catch (_) {}
+              return; // skip generic numeric path below
             } else if (chosenEff && typeof chosenEff.perRank === 'number') {
               const perRankValue = chosenEff.perRank * 100;
               val = Math.round(perRankValue * effectiveRank);
@@ -15512,7 +15627,7 @@ function drawFenceShields(){
   const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
   if (!talentsApi || typeof talentsApi.isDomeActive !== 'function') return;
   const nowMs = Date.now();
-  if (!talentsApi.isDomeActive(nowMs)) return;
+  const domeActive = !!talentsApi.isDomeActive(nowMs);
   if (!ShieldSprites.ready || !ShieldSprites.img) return;
   const sCfg = ShieldSprites.getConfig();
   if (!sCfg || !Array.isArray(sCfg.frames) || sCfg.frames.length === 0) return;
@@ -15533,6 +15648,11 @@ function drawFenceShields(){
   for (let i = 0; i < state.fenceSegments.length; i++) {
     const seg = state.fenceSegments[i];
     if (!seg || seg.broken) continue;
+    // Per-fragment barrier-trigger (item 6): render shield on this fragment when its
+    // local barrier is active, even if the global dome is not active.
+    const segRt = seg && seg._defRt;
+    const barrierActive = segRt && Number.isFinite(segRt.barrierUntilMs) && nowMs < segRt.barrierUntilMs;
+    if (!domeActive && !barrierActive) continue;
     ctx.save();
     ctx.translate(seg.x, seg.y);
     ctx.drawImage(
@@ -15558,22 +15678,39 @@ function renderFenceHpBars(){
   ctx.translate(center.x, center.y);
   for (let i = 0; i < state.fenceSegments.length; i++) {
     const seg = state.fenceSegments[i];
-    if (!seg || !(seg.hp < seg.maxHp)) continue;
-    const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
-    const greenWidth = Math.round(hpBar.w * ratio);
+    if (!seg) continue;
+    const damaged = seg.hp < seg.maxHp;
+    const hasShield = Number.isFinite(seg.shieldHp) && seg.shieldHp > 0
+      && Number.isFinite(seg.shieldHpMax) && seg.shieldHpMax > 0;
+    if (!damaged && !hasShield) continue;
     const barX = Math.round(seg.x - hpBar.w * 0.5);
     const barY = Math.round(seg.y + hpBar.offsetY);
-    if (scratch && typeof scratch.acquire === 'function') {
-      // Pre-allocated slot: reused between frames через frameEpoch. Mutates IN-PLACE.
-      const rect = scratch.acquire('fenceHp', seg.id || i, null);
-      rect.x = barX; rect.y = barY; rect.w = hpBar.w; rect.h = hpBar.h;
-      rect.ratio = ratio; rect.greenWidth = greenWidth;
+    if (damaged) {
+      const ratio = clamp(seg.hp / Math.max(1, seg.maxHp), 0, 1);
+      const greenWidth = Math.round(hpBar.w * ratio);
+      if (scratch && typeof scratch.acquire === 'function') {
+        // Pre-allocated slot: reused between frames через frameEpoch. Mutates IN-PLACE.
+        const rect = scratch.acquire('fenceHp', seg.id || i, null);
+        rect.x = barX; rect.y = barY; rect.w = hpBar.w; rect.h = hpBar.h;
+        rect.ratio = ratio; rect.greenWidth = greenWidth;
+      }
+      ctx.fillStyle = 'rgba(72,72,72,0.95)';
+      ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
+      if (greenWidth > 0) {
+        ctx.fillStyle = 'rgba(125,255,178,0.95)';
+        ctx.fillRect(barX, barY, greenWidth, hpBar.h);
+      }
     }
-    ctx.fillStyle = 'rgba(72,72,72,0.95)';
-    ctx.fillRect(barX, barY, hpBar.w, hpBar.h);
-    if (greenWidth > 0) {
-      ctx.fillStyle = 'rgba(125,255,178,0.95)';
-      ctx.fillRect(barX, barY, greenWidth, hpBar.h);
+    if (hasShield) {
+      // Накопительная прочность (def_shield v3): жёлтая полоса щита над HP-баром.
+      // Видна только при seg.shieldHp > 0; ширина пропорциональна shieldHp / shieldHpMax.
+      const shieldRatio = clamp(seg.shieldHp / Math.max(1, seg.shieldHpMax), 0, 1);
+      const shieldWidth = Math.round(hpBar.w * shieldRatio);
+      const shieldY = barY - hpBar.h - 2;
+      if (shieldWidth > 0) {
+        ctx.fillStyle = 'rgba(255,224,102,0.95)';
+        ctx.fillRect(barX, shieldY, shieldWidth, hpBar.h);
+      }
     }
   }
   ctx.restore();
@@ -17179,10 +17316,41 @@ function loop(now){
       const talentsApi = getTalentsV2Api();
       const nowMs = Date.now();
       if (talentsApi && typeof talentsApi.onUpdate === 'function') {
+        // Build a wall-attackers pool gated by slowFieldRadius so def_slow_field applies
+        // only to zombies actually near non-broken segments (item 4: real movement slow).
+        const wallZombies = [];
+        const segs = state.fenceSegments;
+        const mods = (typeof talentsApi.getMods === 'function') ? talentsApi.getMods() : null;
+        const slowRadiusRaw = mods && Number.isFinite(mods.slowFieldRadius) ? mods.slowFieldRadius : 0;
+        const slowPctRaw = mods
+          ? Math.max(
+              Number.isFinite(mods.wallSlowFieldPct) ? mods.wallSlowFieldPct : 0,
+              Number.isFinite(mods.slowFieldPct) ? mods.slowFieldPct : 0
+            )
+          : 0;
+        if (Array.isArray(segs) && segs.length > 0
+            && Array.isArray(state.zombies) && state.zombies.length > 0
+            && slowRadiusRaw > 0 && slowPctRaw > 0) {
+          const rSq = slowRadiusRaw * slowRadiusRaw;
+          for (let zi = 0; zi < state.zombies.length; zi++) {
+            const zz = state.zombies[zi];
+            if (!zz || zz.state === 'dying') continue;
+            const zx = center.x + Math.cos(zz.theta) * zz.r;
+            const zy = center.y + Math.sin(zz.theta) * zz.r;
+            for (let si = 0; si < segs.length; si++) {
+              const seg = segs[si];
+              if (!seg || seg.broken) continue;
+              const dx = (center.x + seg.x) - zx;
+              const dy = (center.y + seg.y) - zy;
+              if ((dx * dx + dy * dy) <= rSq) { wallZombies.push(zz); break; }
+            }
+          }
+        }
         talentsApi.onUpdate({
           timeMs: nowMs,
           dtMs: effDt * 1000,
           segments: state.fenceSegments,
+          wallZombies,
           state,
         });
       }
