@@ -14,9 +14,22 @@
   function initCanvas(canvas) {
     if (!canvas) return { ctx: null, viewport: { w: BASE_W, h: BASE_H, dpr: 1 } };
     var ctx = canvas.getContext('2d');
-    if (ctx) ctx.imageSmoothingEnabled = false;
     var dpr = getDpr();
-    var viewport = { w: canvas.width || BASE_W, h: canvas.height || BASE_H, dpr: dpr };
+    
+    var displayW = canvas.width || BASE_W;
+    var displayH = canvas.height || BASE_H;
+    
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = displayH + 'px';
+    canvas.width = Math.floor(displayW * dpr);
+    canvas.height = Math.floor(displayH * dpr);
+    
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+    }
+    
+    var viewport = { w: displayW, h: displayH, dpr: dpr };
     return { ctx: ctx, viewport: viewport };
   }
 

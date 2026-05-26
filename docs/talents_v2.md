@@ -123,7 +123,7 @@ Runtime `id` не меняется — это сохраняет совмест�
 ## Дефолтное распределение `tier` / `maxRank`
 
 - Tier-мэппинг и `maxRank` зафиксированы в `assets/balance/talentTree_v2.json` как baseline v2.
-- `maxRank = 1` для: `off_armor_piercing_proc`, `off_impulse_proc`, `off_active_barrage`, `def_barrier_trigger`, `def_second_wind`, `def_active_dome`, `eco_bulk_buy`, `eco_century_contract`, `eco_active_golden_hour`.
+- `maxRank = 1` для: `off_armor_piercing_proc`, `off_impulse_proc`, `off_active_barrage`, `def_barrier_trigger`, `def_second_wind`, `def_dome` (rebrand `def_active_dome` → `def_dome`, 2026-05-24, см. fence-upgrades-rework), `eco_bulk_buy`, `eco_century_contract`, `eco_active_golden_hour`.
 - Для остальных дефолт `maxRank = 5`.
 
 ## `ui.icon` ключи и ассеты
@@ -134,7 +134,9 @@ Runtime `id` не меняется — это сохраняет совмест�
 
 ### Canonical `ui.icon` keys (talents)
 
-`bullet`, `firerate`, `range`, `aoe`, `multishot`, `orbit`, `armorPiercing`, `impulse`, `acid`, `mark`, `execute`, `cc`, `ramp`, `pulse`, `convert`, `ricochet`, `activeOff`, `wallHp`, `armor`, `repair`, `resists`, `regen`, `shield`, `barrier`, `thorns`, `slowField`, `stun`, `secondWind`, `broken`, `autoRepair`, `repairEff`, `repairDiscount`, `immunity`, `activeDef`, `buy`, `bulk`, `contract`, `upgrade`, `coinsKill`, `coinsShot`, `xp`, `doubleReward`, `crit`, `interest`, `tax`, `clean`, `voucher`, `lottery`, `grey`, `activeEco`.
+`bullet`, `firerate`, `range`, `aoe`, `multishot`, `orbit`, `armorPiercing`, `impulse`, `acid`, `mark`, `execute`, `cc`, `ramp`, `pulse`, `convert`, `ricochet`, `activeOff`, `wallHp`, `armor`, `repair`, `resists`, `regen`, `shield`, `barrier`, `thorns`, `slowField`, `stun`, `secondWind`, `broken`, `autoRepair`, `repairEff`, `explosive`, `immunity`, `activeDef`, `buy`, `bulk`, `contract`, `upgrade`, `coinsKill`, `coinsShot`, `xp`, `doubleReward`, `crit`, `interest`, `tax`, `clean`, `voucher`, `lottery`, `grey`, `activeEco`.
+
+> Rebrand 2026-05-24 (fence-upgrades-rework, batch `solo-pipeline-yandex-vk#1`): иконка `repairDiscount` заменена на `explosive` после перевода таланта `def_repair_discount_timer` → `def_explosive_base` («Взрывное основание»). Display name `immunityProc` → «Случайная неразрушимость»; `def_active_dome` → `def_dome` («Купол»). Runtime `id` талантов остаются стабильными для save-compat через `MIGRATE_V1_TO_V2`.
 
 ### Canonical status keys
 
@@ -275,13 +277,14 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - `taxReliefCostMul`, `voucherDiscountMul`,
   - `brokenSegmentDamageMul`, `markDamageTakenMul`,
   - `acidDotDpsMul`, `pulseAoeDamageMul`, `pulseAoeMul`, `ricochetDamageMul`,
-  - `impulseProcFireRateMul`, `repairEfficiencyMul`, `repairDiscountTimerCostMul`,
+  - `impulseProcFireRateMul`, `repairEfficiencyMul`, `repairDiscountTimerCostMul` (legacy, оставлен после rebrand 2026-05-24 для backward-compat сохранений; новый `def_explosive_base` его не использует),
   - `defenseActiveDamageTakenMul`, `killBountyCoinsMul`,
   - `economyActiveCoinsMul`, `economyActiveXpMul`, `crowdAoeDamageMul`,
   - `offenseActiveDamageMul`, `offenseActiveFireRateMul`, `offenseActiveOrbitMul`, `offenseActiveAoeMul`.
 - **Additive / chances / percents** (нейтральное значение `0`):
   - все `*Chance`, `*Pct`, `*Flat`, `*Threshold`, `*Radius`, `*EveryN`, `*Max`, `*Need`, `*Cap`, `*Bonus*`, `*Bounces*`;
   - `executeDamageMul` (в `onHit` применяется как `1 + executeDamageMul`).
+  - Numeric params `def_explosive_base` (rebrand 2026-05-24): `explosiveBaseDamagePerRank` (default `100000`, additive per rank), `explosiveBaseRadiusPx` (default `300`, world-pixels AoE radius), `explosiveBaseDamageCapPerFrame` (default `600000`, безопасный потолок суммарного урона за один тик детонации). Все три читаются helper-ом `applyExplosiveBaseDetonation` в `src/systems/talents/talentsV2.js` L3347+; вызывается из `game.js` в fragment-destroyed seams L3347 / L4484 / L8902-8938.
 - **Durations / timers** (нейтральное значение `0`):
   - все `*DurationMs`, `*PeriodMs`, `*IcdMs`, `*RechargeMs`, `*DelayMs`, `*TickMs`, `*GraceMs`.
 - **Modes**:
@@ -289,7 +292,7 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
 - **Unlock flags** (нейтральное значение `false`):
   - `offenseActive`, `defenseActive`, `economyActive`,
   - `acidDot`, `armorPiercingProc`, `impulseProc`, `mark`, `execute`, `ccMicro`, `rampUp`, `pulseAoe`, `convertToDot`, `ricochet`,
-  - `wallShield`, `slowField`, `thorns`, `wallBarrier`, `stunOnWallHit`, `secondWind`, `autoRepair`, `repairDiscountTimer`, `immunityProc`,
+  - `wallShield`, `slowField`, `thorns`, `wallBarrier`, `stunOnWallHit`, `secondWind`, `autoRepair`, `explosiveBase` (rebrand 2026-05-24, был `repairDiscountTimer`; runtime id таланта `def_explosive_base`), `immunityProc` (display «Случайная неразрушимость»),
   - `bulkBuy`, `centuryContract`, `cleanDefense`, `greyToDamagePoints`, `interest`, `taxRelief`, `voucher`, `lottery`, `killBounty`.
 
 ## Effect application rules (PACK 2)
@@ -397,14 +400,25 @@ seg._defRt = {
   barrierUntilMs: 0,
   barrierIcdUntilMs: 0,
   lastDamageAtMs: 0,
-  secondWindUsed: false,
+  // batch solo-pipeline-yandex-vk#1 (wall-upgrades rebrand, 2026-05-23):
+  // secondWind перешёл с one-shot flag на per-segment serialized cooldown.
+  // Cooldown timestamp хранится на `seg.secondWindReadyAtMs` (НЕ внутри _defRt),
+  // чтобы пережить save/load: см. talentsV2.js → `getSecondWindReadyAt(seg)`.
   immunityUntilMs: 0,
   immunityIcdUntilMs: 0,
   stunIcdUntilMs: 0,
   thornsIcdUntilMs: 0,
   nextShieldAtMs: 0,
-  nextAutoRepairAtMs: 0
+  nextAutoRepairAtMs: 0,
+  // protectAhead phase scheduler (item 3 batch solo-pipeline-yandex-vk#1).
+  // Две non-overlapping фазы: analyze [now..analyzeUntilMs] → buff [analyzeUntilMs..buffUntilMs].
+  // По истечении buff фазы стартует новый analyze. Армор-бонус читается damage-path,
+  // только когда `protectAheadBuffUntilMs > timeMs`.
+  protectAheadAnalyzeUntilMs: 0,
+  protectAheadBuffUntilMs: 0
 };
+// На самом seg (вне _defRt), save-surviving:
+seg.secondWindReadyAtMs = 0;
 ```
 
 ### Run runtime (global per run, PACK 5)
@@ -420,8 +434,8 @@ TalentsV2._runRt = {
     interestNextAtMs: 0,
     taxReliefUntilMs: 0,
     greyDamage: 0,
-    repairDiscountReady: false,
-    nextRepairDiscountAtMs: 0
+    repairDiscountReady: false, // legacy, оставлен после rebrand `def_repair_discount_timer` → `def_explosive_base` (2026-05-24); новый AoE-талант их не пишет и не читает, поля сохранены ради save-compat и потенциального возврата старой механики
+    nextRepairDiscountAtMs: 0 // legacy, см. комментарий выше
   },
   actives: {
     defense: { untilMs: 0, charges: 0, nextRechargeAtMs: 0 },
@@ -664,3 +678,18 @@ Runtime-поля сущностей (`_talentRt`, `_statusRt`, `_defRt`) не в
 - `wallArmorFlat` → `wallArmorMul` для таланта "Композитная броня": теперь 2% за ранг (`stat_mul`, perRank:0.02). Итоговая броня в `getFenceArmorFlat` (`game.js`): `Math.round(base * wallArmorMul)`. Зеркалит `tools/balance-shared.js` L548.
 - Купол: применение множителя урона `defActiveDamageTakenMul` перенесено в единую точку `applyFenceSegmentDamage` (`game.js` L7716) через `window.Game.TalentsV2.getActiveDomeDamageMul(nowMs)`. Иммунно к "обновлению" зомби.
 - `getTalentNodeDescriptionV2` (`game.js` L10946): резолвит rank через `api.getRanks()+api.getPendingRanks()` если caller передал 0/undefined; поддерживает `ui.currentFormat = 'percent'|'flat'`. Это чинит "ТЕКУЩАЯ ПРИБАВКА - 0%" в модалке "Древо улучшений".
+
+
+## Обновление 2026-05-23 (solo-pipeline-yandex-vk#1, wall-upgrades rebrand)
+
+Пять defense-талантов получили новые отображаемые имена + переработанное поведение. Runtime `id` сохранён ради совместимости с сейвами и `MIGRATE_V1_TO_V2`.
+
+| Runtime id | Новое имя (RU) | Новое поведение |
+|---|---|---|
+| `def_stun_on_hit` | Стены под напряжением | Stun атакующего зомби 0.5s, ICD 2s. Write: `cc.stunUntilMs = Math.max(prev, nowMs+500)`; consume в `stepZombies` через `Date.now()` гейт перед `shouldMove` и перед dispatch attack. |
+| `def_second_wind` | Экстренное восстановление | Per-segment serialized cooldown 3 мин (вместо one-shot flag). Готовность хранится на `seg.secondWindReadyAtMs` (вне `_defRt`), переживает save/load. Восстанавливает 20% HP. |
+| `def_broken_dr` | Повреждения во благо | Tiered non-stacking armor bonus: ранги 1–5 дают +6/12/18/24/30% брони фрагментам с HP <75/50/25/15/7%. Резолвится в damage-path через `mods.damageBlessingTiers` (наивысший подходящий tier, без аддитивного стека). Талант больше **не** DESIGN-DEAD. |
+| `def_auto_repair` | Защита на опережение | Phase scheduler: фаза анализа 8s ↔ фаза действия брони 8s (`protectAheadAnalyzeUntilMs` / `protectAheadBuffUntilMs` в `seg._defRt`). Армор-бонус +3% за ранг применяется в damage-path только когда `protectAheadBuffUntilMs > timeMs`. Фазы не overlap'аются. Бонус **additive** с `damageBlessing` и с `wallArmorFlat`. |
+| `def_repair_efficiency` | Адаптация под дронов | +2% за ранг к скорости ремонта дронами (`droneTalentSpeedBonus` mod). Snapshot'ится в `finalRepairMult` в `src/mechanics/drones.js`; tap = full HP сохраняется (бонус не аннулирует instant tap-repair). Не heal-multiplier для cost-based ремонта. |
+
+Mod-ключи добавлены в шаблон mods: `damageBlessingTiers` (Array<{hpThreshold:number, armorMul:number}>), `protectAheadAnalyzeMs`, `protectAheadBuffMs`, `protectAheadArmorPerRank`, `droneTalentSpeedBonus`, `protectAhead` (unlock flag). UI таланта 3 («Повреждения во благо») использует `ui.currentVars` для рендера 5-уровневой лестницы вместо single `{current}` placeholder.

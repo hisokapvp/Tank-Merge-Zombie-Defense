@@ -439,7 +439,7 @@ body::after{
   position:fixed;
   top:15px;
   left:8px;
-  z-index:4;
+  z-index:10000;
   width:60px;
   height:60px;
   padding:4px 10px;
@@ -9289,3 +9289,168 @@ button.hangarChipInvItem{
 #hudShopButton.hudShopButton.hidden{
   display: none !important;
 }
+
+/* =========================================================================
+   Batch #2 Visual Upgrades (Items 6, 7, 8)
+   ========================================================================= */
+
+/* ─── Cyberpunk HUD & Hangar Gradients (Item 6) ─── */
+.hudItem, .hudPanel {
+  background: linear-gradient(135deg, rgba(20, 10, 35, 0.85) 0%, rgba(10, 5, 20, 0.95) 100%) !important;
+  border: 1.5px solid #00f0ff !important;
+  box-shadow: 0 0 calc(12px * var(--ui-scale)) rgba(0, 240, 255, 0.25), inset 0 0 calc(6px * var(--ui-scale)) rgba(0, 240, 255, 0.1) !important;
+}
+
+.xpPanel {
+  background: linear-gradient(135deg, rgba(20, 10, 35, 0.9) 0%, rgba(5, 5, 15, 0.95) 100%) !important;
+  border: 1px solid #ff00ff !important;
+  box-shadow: 0 0 calc(10px * var(--ui-scale)) rgba(255, 0, 255, 0.2) !important;
+}
+
+.xpBar {
+  background: rgba(15, 5, 20, 0.6) !important;
+  border: 1px solid rgba(255, 0, 255, 0.3) !important;
+}
+
+.xpFill {
+  background: linear-gradient(90deg, #ff00ff 0%, #00ffff 100%) !important;
+  box-shadow: 0 0 calc(12px * var(--ui-scale)) #ff00ff, 0 0 calc(4px * var(--ui-scale)) #00ffff !important;
+}
+
+#workshopPanelChipUpgrade .chipUpgradeCard, .chipUpgradeCard {
+  background: linear-gradient(135deg, rgba(25, 10, 45, 0.85) 0%, rgba(12, 5, 24, 0.95) 100%) !important;
+  border: 2px solid #ff00ff !important;
+  box-shadow: 0 0 calc(14px * var(--ui-scale)) rgba(255, 0, 255, 0.25), 3px 3px 0 #000 !important;
+  transition: transform 150ms ease, box-shadow 150ms ease !important;
+}
+
+#workshopPanelChipUpgrade .chipUpgradeCard:hover, .chipUpgradeCard:hover {
+  transform: translateY(calc(-4px * var(--ui-scale))) scale(1.02) !important;
+  border-color: #00ffff !important;
+  box-shadow: 0 0 calc(20px * var(--ui-scale)) rgba(0, 240, 255, 0.45), 4px 4px 0 #000 !important;
+}
+
+.hangarSlotView {
+  background: linear-gradient(135deg, rgba(15, 15, 30, 0.9) 0%, rgba(5, 5, 15, 0.98) 100%) !important;
+  border: 2.5px solid #00f0ff !important;
+  box-shadow: 0 0 calc(16px * var(--ui-scale)) rgba(0, 240, 255, 0.3), inset 0 0 calc(8px * var(--ui-scale)) rgba(0, 240, 255, 0.15) !important;
+}
+
+/* ─── Animated Wave Banner (Item 8) ─── */
+.wave-alert-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 1000ms ease;
+}
+
+.wave-alert-overlay.fade-out {
+  opacity: 0;
+}
+
+.wave-alert-banner {
+  position: relative;
+  background: linear-gradient(90deg, rgba(255, 0, 50, 0) 0%, rgba(255, 0, 50, 0.85) 25%, rgba(255, 0, 50, 0.85) 75%, rgba(255, 0, 50, 0) 100%);
+  border-top: 3px solid #ff0055;
+  border-bottom: 3px solid #ff0055;
+  padding: calc(20px * var(--ui-scale)) calc(100px * var(--ui-scale));
+  text-align: center;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  box-shadow: 0 0 30px rgba(255, 0, 85, 0.4);
+  transform: scaleY(0);
+  animation: slideBannerIn 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards, pulseGlow 1.8s ease-in-out infinite alternate 400ms;
+}
+
+.wave-alert-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255, 0, 85, 0.3) 0%, rgba(255, 0, 85, 0) 70%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.wave-alert-title {
+  font-size: calc(32px * var(--ui-scale));
+  font-weight: 900;
+  letter-spacing: calc(6px * var(--ui-scale));
+  text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055, 0 0 30px #ff00ff;
+  margin-bottom: calc(6px * var(--ui-scale));
+  animation: zoomText 600ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 150ms both;
+}
+
+.wave-alert-subtitle {
+  font-size: clamp(12px, calc(15px * var(--ui-scale)), calc(18px * var(--ui-scale)));
+  font-weight: bold;
+  letter-spacing: calc(1.2px * var(--ui-scale));
+  text-shadow: 0 0 8px #00ffff;
+  color: #00ffff;
+  max-width: min(90vw, calc(680px * var(--ui-scale)));
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+  word-break: keep-all;
+  padding: 0 calc(8px * var(--ui-scale));
+  animation: zoomText 600ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 250ms both;
+}
+
+@keyframes slideBannerIn {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes pulseGlow {
+  from {
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+    border-color: #ff0055;
+  }
+  to {
+    box-shadow: 0 0 45px rgba(255, 0, 85, 0.7);
+    border-color: #00ffff;
+  }
+}
+
+@keyframes zoomText {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Domino Chip Merge Particle CSS (Item 7) ─── */
+.dom-merge-spark {
+  position: fixed;
+  width: calc(6px * var(--ui-scale));
+  height: calc(6px * var(--ui-scale));
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(0, 0) scale(1.5);
+  box-shadow: 0 0 10px currentColor;
+  animation: domSparkMove 750ms cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes domSparkMove {
+  0% {
+    transform: translate(0, 0) scale(1.5);
+    opacity: 1;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0);
+    opacity: 0;
+  }
+}
+

@@ -413,11 +413,18 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_stun_on_hit_name", "descKey": "talent_def_stun_on_hit_desc", "icon": "stun" },
+      "ui": {
+        "nameKey": "talent_def_stun_on_hit_name",
+        "descKey": "talent_def_stun_on_hit_desc",
+        "icon": "stun",
+        "currentVars": {
+          "currentValue": { "key": "stunOnWallHitChance", "kind": "percent" }
+        }
+      },
       "effects": [
         { "type": "unlock", "key": "stunOnWallHit" },
         { "type": "param", "key": "stunOnWallHitChance", "base": 0, "perRank": 0.06 },
-        { "type": "param", "key": "stunOnWallHitDurationMs", "value": 200 },
+        { "type": "param", "key": "stunOnWallHitDurationMs", "value": 500 },
         { "type": "param", "key": "stunOnWallHitIcdMs", "value": 2000 }
       ]
     },
@@ -431,7 +438,8 @@
       "ui": { "nameKey": "talent_def_second_wind_name", "descKey": "talent_def_second_wind_desc", "icon": "secondWind" },
       "effects": [
         { "type": "unlock", "key": "secondWind" },
-        { "type": "param", "key": "secondWindRestorePct", "value": 0.2 }
+        { "type": "param", "key": "secondWindRestorePct", "value": 0.2 },
+        { "type": "param", "key": "secondWindCooldownMs", "value": 180000 }
       ]
     },
     {
@@ -442,7 +450,15 @@
       "costPerRank": 1,
       "requires": [],
       "ui": { "nameKey": "talent_def_broken_dr_name", "descKey": "talent_def_broken_dr_desc", "icon": "broken" },
-      "effects": [{ "type": "param", "key": "brokenSegmentDamageMul", "base": 1, "perRank": -0.06 }]
+      "effects": [
+        { "type": "param", "key": "damageBlessingTiers", "value": [
+          { "rank": 1, "hpRatioMax": 0.75, "armorBonus": 0.06 },
+          { "rank": 2, "hpRatioMax": 0.50, "armorBonus": 0.12 },
+          { "rank": 3, "hpRatioMax": 0.25, "armorBonus": 0.18 },
+          { "rank": 4, "hpRatioMax": 0.15, "armorBonus": 0.24 },
+          { "rank": 5, "hpRatioMax": 0.07, "armorBonus": 0.30 }
+        ] }
+      ]
     },
     {
       "id": "def_auto_repair",
@@ -451,11 +467,19 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_auto_repair_name", "descKey": "talent_def_auto_repair_desc", "icon": "autoRepair" },
+      "ui": {
+        "nameKey": "talent_def_auto_repair_name",
+        "descKey": "talent_def_auto_repair_desc",
+        "icon": "autoRepair",
+        "currentVars": {
+          "currentValue": { "key": "protectAheadArmorPerRank", "kind": "percent" }
+        }
+      },
       "effects": [
-        { "type": "unlock", "key": "autoRepair" },
-        { "type": "param", "key": "autoRepairPeriodMs", "value": 8000 },
-        { "type": "param", "key": "autoRepairPct", "base": 0, "perRank": 0.02 }
+        { "type": "unlock", "key": "protectAhead" },
+        { "type": "param", "key": "protectAheadAnalyzeMs", "value": 8000 },
+        { "type": "param", "key": "protectAheadBuffMs", "value": 8000 },
+        { "type": "param", "key": "protectAheadArmorPerRank", "base": 0, "perRank": 0.03 }
       ]
     },
     {
@@ -465,51 +489,73 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_repair_efficiency_name", "descKey": "talent_def_repair_efficiency_desc", "icon": "repairEff" },
-      "effects": [{ "type": "param", "key": "repairEfficiencyMul", "base": 1, "perRank": 0.1 }]
+      "ui": {
+        "nameKey": "talent_def_repair_efficiency_name",
+        "descKey": "talent_def_repair_efficiency_desc",
+        "icon": "repairEff",
+        "currentVars": {
+          "currentValue": { "key": "droneRepairSpeedBonusPerRank", "kind": "percent" }
+        }
+      },
+      "effects": [{ "type": "param", "key": "droneRepairSpeedBonusPerRank", "base": 0, "perRank": 0.02 }]
     },
     {
-      "id": "def_repair_discount_timer",
+      "id": "def_explosive_base",
       "branch": "defense",
       "tier": 4,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_repair_discount_timer_name", "descKey": "talent_def_repair_discount_timer_desc", "icon": "repairDiscount" },
+      "ui": {
+        "nameKey": "talent_def_explosive_base_name",
+        "descKey": "talent_def_explosive_base_desc",
+        "icon": "repairDiscount",
+        "currentVars": {
+          "currentValue": { "key": "explosiveBaseDamagePerRank", "kind": "raw" }
+        }
+      },
       "effects": [
-        { "type": "unlock", "key": "repairDiscountTimer" },
-        { "type": "param", "key": "repairDiscountTimerPeriodMs", "value": 30000 },
-        { "type": "param", "key": "repairDiscountTimerCostMul", "base": 1, "perRank": -0.1 }
+        { "type": "unlock", "key": "explosiveBase" },
+        { "type": "param", "key": "explosiveBaseDamagePerRank", "base": 0, "perRank": 100000 },
+        { "type": "param", "key": "explosiveBaseRadiusPx", "value": 300 },
+        { "type": "param", "key": "explosiveBaseDamageCapPerFrame", "value": 600000 }
       ]
     },
     {
-      "id": "def_immunity_proc",
+      "id": "def_random_invuln",
       "branch": "defense",
       "tier": 4,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_immunity_proc_name", "descKey": "talent_def_immunity_proc_desc", "icon": "immunity" },
+      "ui": {
+        "nameKey": "talent_def_random_invuln_name",
+        "descKey": "talent_def_random_invuln_desc",
+        "icon": "immunity",
+        "currentVars": {
+          "currentValue": { "key": "immunityProcChance", "kind": "percent" }
+        }
+      },
       "effects": [
         { "type": "unlock", "key": "immunityProc" },
-        { "type": "param", "key": "immunityProcChance", "base": 0, "perRank": 0.04 },
-        { "type": "param", "key": "immunityProcDurationMs", "value": 1000 },
-        { "type": "param", "key": "immunityProcIcdMs", "value": 25000 }
+        { "type": "param", "key": "immunityProcChance", "base": 0, "perRank": 0.01 },
+        { "type": "param", "key": "immunityProcDurationMs", "value": 2000 },
+        { "type": "param", "key": "immunityProcIcdMs", "value": 15000 }
       ]
     },
     {
-      "id": "def_active_dome",
+      "id": "def_dome",
       "branch": "defense",
       "tier": 5,
       "maxRank": 1,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_def_active_dome_name", "descKey": "talent_def_active_dome_desc", "icon": "activeDef" },
+      "ui": { "nameKey": "talent_def_dome_name", "descKey": "talent_def_dome_desc", "icon": "activeDef" },
       "effects": [
         { "type": "unlock", "key": "defenseActive" },
-        { "type": "param", "key": "defenseActiveDurationMs", "value": 6000 },
+        { "type": "param", "key": "defenseActiveDurationMs", "value": 10000 },
         { "type": "param", "key": "defenseActiveCharges", "value": 2 },
-        { "type": "param", "key": "defenseActiveRechargeMs", "value": 60000 },
+        { "type": "param", "key": "defenseActiveRechargeMs", "value": 90000 },
         { "type": "param", "key": "defenseActiveDamageTakenMul", "value": 0.15 },
         { "type": "param", "key": "defenseActiveAutoRepairPctPerSec", "value": 0.03 }
       ]
@@ -533,9 +579,10 @@
       "requires": [],
       "ui": { "nameKey": "talent_eco_upgrade_discount_name", "descKey": "talent_eco_upgrade_discount_desc", "icon": "upgrade" },
       "effects": [
-        { "type": "param", "key": "upgradeCostMul_sc", "base": 1, "perRank": -0.05 },
-        { "type": "param", "key": "upgradeCostMul_wall", "base": 1, "perRank": -0.05 },
-        { "type": "param", "key": "upgradeCostMul_guns", "base": 1, "perRank": -0.05 }
+        { "type": "param", "key": "upgradeCostMul_sc", "base": 1, "perRank": -0.05, "min": 0.5 },
+        { "type": "param", "key": "upgradeCostMul_wall", "base": 1, "perRank": -0.05, "min": 0.5 },
+        { "type": "param", "key": "upgradeCostMul_guns", "base": 1, "perRank": -0.05, "min": 0.5 },
+        { "type": "param", "key": "upgradeCostMul_drone", "base": 1, "perRank": -0.05, "min": 0.5 }
       ]
     },
     {
@@ -562,7 +609,7 @@
         { "type": "param", "key": "killBountyChance", "value": 0.01, "fromRank": 3 },
         { "type": "param", "key": "killBountyDurationMs", "value": 5000, "fromRank": 3 },
         { "type": "param", "key": "killBountyCoinsMul", "value": 1.3, "fromRank": 3 },
-        { "type": "param", "key": "killBountyIcdMs", "value": 3000, "fromRank": 3 }
+        { "type": "param", "key": "killBountyIcdMs", "value": 5000, "fromRank": 3 }
       ]
     },
     {

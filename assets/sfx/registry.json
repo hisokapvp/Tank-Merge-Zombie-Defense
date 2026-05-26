@@ -19,7 +19,8 @@
     "uiSliderPreview": "ui",
     "levelUp": "ui",
     "mergeNewMaxLevel": "ui",
-    "applyTalents": "ui"
+    "applyTalents": "ui",
+    "fenceExplosion": "gameplay"
   },
   "sources": {
     "shootNormal": "assets/sfx/shoot_normal.ogg",
@@ -38,6 +39,7 @@
     "applyTalents": "assets/sfx/apply_talents.ogg",
     "activeAbility": "assets/sfx/active_ability.ogg",
     "thunder": ["assets/sfx/thunder.ogg", "assets/sfx/thunder.wav"],
-    "rainLoop": ["assets/sfx/rain_loop.ogg", "assets/sfx/rain_loop.wav"]
+    "rainLoop": ["assets/sfx/rain_loop.ogg", "assets/sfx/rain_loop.wav"],
+    "fenceExplosion": ["assets/sfx/fence_explosion.ogg", "assets/sfx/fence_explosion.mp3"]
   }
 }

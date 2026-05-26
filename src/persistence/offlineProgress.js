@@ -108,8 +108,16 @@
 
     function coinsPerKill(level) {
       var lvl = Math.max(1, Math.floor(level || 1));
-      var base = coinsKillBase + coinsKillMul * Math.max(0, lvl - 1);
-      return base * killCoinsMul;
+      // Per spec item 4 (offline parity): per-kill reward = max(1, floor(coinsPerShot(level) * 0.10)).
+      // coinsKillBase/coinsKillMul retained above as legacy DEFAULTS fallback only.
+      var shotBase = coinsPerShot(lvl);
+      if (!Number.isFinite(shotBase) || shotBase < 0) shotBase = 0;
+      var base = Math.max(1, Math.floor(shotBase * 0.10));
+      // solo-pipeline-yandex-vk batch#2 item#4 followup: mirror runtime min-$1
+      // floor at the offline catch-up award site. Without the outer Math.max,
+      // ZOMBIE_KILL_COINS_MUL=0.5 collapses L1 award to floor(1*0.5)=0,
+      // diverging from runtime per-kill reward parity.
+      return Math.max(1, Math.floor(base * killCoinsMul));
     }
 
     function xpPerKill(level) {

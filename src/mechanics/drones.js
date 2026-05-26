@@ -527,7 +527,21 @@
 
     var baseRepairSec = Number.isFinite(dronConfig && dronConfig.baseRepairSec) && dronConfig.baseRepairSec > 0 ? dronConfig.baseRepairSec : 5;
     var repairSpeedMult = Number.isFinite(levelCfg.repairSpeedMult) && levelCfg.repairSpeedMult > 0 ? levelCfg.repairSpeedMult : 1;
-    var repairDurationSec = baseRepairSec / repairSpeedMult;
+    // solo-pipeline-yandex-vk item 5.A: talent "Адаптация под дронов" / "Drone-Adapted Walls"
+    // grants +2% drone repair speed per rank. The bonus is snapshotted at repair start (here in
+    // computeRepairPlan) and stays fixed for the duration of the active repair task — no mid-
+    // repair recalc, which keeps per-repair budgets deterministic against rank changes.
+    var droneTalentSpeedBonus = 0;
+    try {
+      var talentsApiD = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+      if (talentsApiD && typeof talentsApiD.getMods === 'function') {
+        var dmods = talentsApiD.getMods() || {};
+        var bonus = Number(dmods.droneRepairSpeedBonusPerRank);
+        if (Number.isFinite(bonus) && bonus > 0) droneTalentSpeedBonus = bonus;
+      }
+    } catch (_) {}
+    var finalRepairMult = repairSpeedMult * (1 + Math.max(0, droneTalentSpeedBonus));
+    var repairDurationSec = baseRepairSec / Math.max(0.0001, finalRepairMult);
 
     return {
       startHp: hp,
@@ -800,6 +814,14 @@
       repair = drone.repair;
       if (!repair) return;
     }
+
+    // Spawn bright Directed Welding Sparks from Drone coordinates to Fence Segment target coordinates
+    try {
+      var target = getSegmentWorldTarget(seg, runtimeOptions);
+      if (target && global.Game && typeof global.Game.spawnDroneWeldingSparks === 'function') {
+        global.Game.spawnDroneWeldingSparks(drone.pos.x, drone.pos.y, target.x, target.y);
+      }
+    } catch (_) {}
 
     var duration = Math.max(0.01, Number(repair.repairDurationSec) || 0.01);
     var t = clamp((nowSec - repair.repairStartTimeSec) / duration, 0, 1);

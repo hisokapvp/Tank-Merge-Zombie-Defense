@@ -52,9 +52,9 @@
 | `def_broken_dr` | `brokenSegmentDamageMul` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `def_auto_repair` | `autoRepair*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `def_repair_efficiency` | `repairEfficiencyMul` | helper не найден | BROKEN_OR_UNCERTAIN |
-| `def_repair_discount_timer` | `repairDiscountTimer*` | `applyRepairDiscountCoupon` (**не вызывается**) | **BROKEN_HELPER_NOT_CALLED** |
-| `def_immunity_proc` | `immunityProc*` | helper не найден | BROKEN_OR_UNCERTAIN |
-| `def_active_dome` | `defenseActive*` | `getActiveState`, `getActiveDomeDamageMul` (вызываются) | OK_HELPER |
+| `def_explosive_base` (rebrand 2026-05-24, был `def_repair_discount_timer`) | `explosiveBase`, `explosiveBaseDamagePerRank`, `explosiveBaseRadiusPx`, `explosiveBaseDamageCapPerFrame` | `applyExplosiveBaseDetonation` (`src/systems/talents/talentsV2.js` L3347+) — вызывается из `game.js` в fragment-destroyed seams L3347 / L4484 / L8902-8938 (AoE 300px, 100k dmg/rank, per-frame cap 600k, polar→cartesian iteration по `state.zombies`) | **WIRED_OK** |
+| `def_immunity_proc` (display «Случайная неразрушимость», 2026-05-24) | `immunityProc`, chance `1%/rank`, duration `2s`, ICD `15s` | `onWallDamage` (`game.js` L3083-3096) — пишет `segRt.immunityUntilMs` (L2411/L2434); render seam `ProcShieldSprites` + `drawFenceProcShields()` в `game.js` (preload в boot, рисует overlay пока `segRt.immunityUntilMs > nowMs`); `assets/fence.json` root-block `procShields` (atlas=proc_shields.png placeholder, visibleWhile="immunityActive") | **WIRED_OK** |
+| `def_dome` (rebrand 2026-05-24, был `def_active_dome`, display «Купол») | `defenseActive*` (`durationMs=10000`, `rechargeMs=90000`, `damageTakenMul=0.15`, `autoRepairPctPerSec=0.03`, `charges=2`) | `getActiveState`, `getActiveDomeDamageMul`, `isDomeActive` (вызываются); render через существующий `shields` overlay (`visibleWhile="defenseActive"`); i18n + tooltip синхронизированы | **WIRED_OK** |
 | `eco_buy_discount` | `tankBuyCostMul` | `mods.buyCostMul` | OK_DIRECT_MOD |
 | `eco_upgrade_discount` | `upgradeCostMul_sc`, `upgradeCostMul_wall` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_repair_discount` | `repairCostMul` | helper `applyRepairDiscountCoupon` (вызывается через активку?) | BROKEN_OR_UNCERTAIN |
@@ -85,12 +85,23 @@
 
 ## High-confidence findings (паттерн «как у Мультивыстрела»)
 
-Это 4 таланта, где helper в `talentsV2.js` объявлен, но в runtime никем не вызывается — это **точно тот же паттерн**, который ломал `tripleShotChance` до этого батча:
+Это **3 таланта** (после rebrand 2026-05-24), где helper в `talentsV2.js` объявлен, но в runtime никем не вызывается — это **точно тот же паттерн**, который ломал `tripleShotChance` до этого батча:
 
 1. **`off_acid_dot`** — `getDotState` определён, но `game.js` его не вызывает. DoT-стек, длительность, dps-множитель не применяются.
 2. **`off_convert_to_dot`** — тот же `getDotState`, тот же провал.
 3. **`def_resists`** — `getModNumber('resistFirePct'/'resistAcidPct'/'resistExplosionPct')` — на damage-receive path стена/танк не вычитают этот процент.
-4. **`def_repair_discount_timer`** — `applyRepairDiscountCoupon` определён, но coupon-логика не активируется в ремонтном пайплайне.
+
+> Resolved 2026-05-24 (fence-upgrades-rework): `def_repair_discount_timer` → `def_explosive_base` (полный rebrand, новый WIRED_OK AoE-механизм). Legacy helper `applyRepairDiscountCoupon` и runtime поля `repairDiscountReady` / `nextRepairDiscountAtMs` оставлены в коде ради backward-compat сохранений (sub-Orchestrator решил не удалять); они больше не считаются finding, см. `docs/talents_v2.md`.
+
+## Coord-space contract для AoE-хелперов (lesson learned, 2026-05-24)
+
+> Round 5 root-cause fix для item 1 (Взрывное основание) — обязательный контракт для всех новых AoE-механик на стене:
+
+- `state.zombies[*]` хранятся в **полярных** координатах относительно центра арены: `z.r` (радиус) + `z.theta` (угол).
+- `seg.x` / `seg.y` сегментов забора хранятся в **центр-относительных** координатах (см. `src/render/fenceLayout.js` L190: углы в `±halfSide`, рендер через двойной `ctx.translate(center.x, center.y)` затем `ctx.translate(seg.x, seg.y)` в `renderFenceBase` L15775+).
+- Любой helper, который сравнивает зомби с точкой пробоя по радиусу, **обязан принимать `centerX` / `centerY` от вызывающей стороны** (либо в `ctx.originX` / `ctx.originY`, либо как явные аргументы) и конвертировать зомби-полярки в декартовы координаты: `wx = centerX + z.r * cos(z.theta)`, `wy = centerY + z.r * sin(z.theta)`.
+- Прямое сравнение `(z.x - seg.x)² + (z.y - seg.y)²` с `radius²` **некорректно** для зомби в полярных координатах и приводит либо к нулевому радиусу, либо к single-target hit (это был root cause багa «AoE не наносит урон по области» в round 3).
+- Helper `applyExplosiveBaseDetonation` (`src/systems/talents/talentsV2.js` L3347+) реализует контракт правильно: предпочитает `ctx.originX` / `ctx.originY`, fallback на `seg.x` / `seg.y` для backward-compat. Call site в `game.js` L8969 вычисляет `segWorldX = center.x + seg.x`, `segWorldY = center.y + seg.y` (с `Number.isFinite` guard) перед вызовом.
 
 ## Uncertain (требуют ручного follow-up batch)
 
@@ -404,3 +415,43 @@ Still in ALLOWED_UNWIRED_TODO (3): `onShotReward` (eco_coins_shot_bonus — от
 ### Резюме одной строкой
 
 **50 из 51 талантов реально работают в текущем runtime. Единственный не-wired талант — `def_broken_dr` — является DESIGN-DEAD (несовместим с текущей damage-model для broken сегментов), и его судьба — отдельный design-вопрос: удалить, переинтерпретировать на near-broken сегменты, либо изменить damage-model.**
+
+
+---
+
+## Append-only update от batch `solo-pipeline-yandex-vk#1` (wall-upgrades rebrand, 2026-05-23)
+
+Пять defense-талантов rebranded в этом батче. Runtime `id` сохранён, обновлены display names + behaviour. Это меняет статусы из предыдущих итераций аудита.
+
+### Реклассификация
+
+| Runtime id | Новое имя (RU) | Старая запись аудита | Новая запись |
+|---|---|---|---|
+| `def_stun_on_hit` | Стены под напряжением | WIRED via `onWallDamage` (FU1) | **WIRED via `onWallDamage` + `stepZombies` consume gate** — write `cc.stunUntilMs = Math.max(prev, nowMs+500)` в `talentsV2.js:3215`, consume в `game.js → stepZombies` через `Date.now()` перед `shouldMove` и перед dispatch attack. До этого батча stun писался, но движение/атака зомби его не читали (movement+attack gate отсутствовал). |
+| `def_second_wind` | Экстренное восстановление | WIRED via `onWallDamage` (FU1, secondWindUsed flag) | **WIRED via per-segment serialized cooldown** — флаг `seg._defRt.secondWindUsed = true` заменён на `seg.secondWindReadyAtMs` (на самом `seg`, не внутри `_defRt`). Cooldown 3 мин, восстанавливает 20% HP. Save-surviving: хранится прямо на segment, переживает save/load. |
+| `def_broken_dr` | Повреждения во благо | **DESIGN-DEAD** (брак: damage-model отбрасывает damage по `seg.broken`) | **WIRED** (репурпос: tiered non-stacking armor bonus). Damage-path читает `mods.damageBlessingTiers` (Array<{hpThreshold, armorMul}>). Резолюшн — наивысший подходящий tier по живому `seg.hp/seg.maxHp` (не аддитивный стек). 5 рангов: +6/12/18/24/30% брони при HP < 75/50/25/15/7%. **Талант больше не DESIGN-DEAD.** |
+| `def_auto_repair` | Защита на опережение | FALSE-POSITIVE via `onUpdate` (autoRepairPeriodMs heal-tick) | **WIRED via `onUpdate` phase scheduler** — старый periodic HP heal заменён на armor-phase scheduler. Две non-overlapping фазы: analyze 8s ↔ buff (armor +3% per rank) 8s, переключаемые через `segRt.protectAheadAnalyzeUntilMs` / `segRt.protectAheadBuffUntilMs`. Damage-path читает `mods.protectAheadArmorPerRank` ТОЛЬКО когда `protectAheadBuffUntilMs > timeMs`. Армор-бонус **additive** с `damageBlessingTiers` и `wallArmorFlat`. |
+| `def_repair_efficiency` | Адаптация под дронов | WIRED via `tryRepairFenceSegmentAt` (heal multiplier, FU2) | **WIRED via `droneTalentSpeedBonus` в `src/mechanics/drones.js`** — старый `repairEfficiencyMul` heal-multiplier удалён из `tryRepairFenceSegmentAt`. Новый mod `droneTalentSpeedBonus` snapshot'ится в `finalRepairMult` (drones.js), tap = full HP сохраняется. Теперь талант ускоряет drone repair speed (per-rank +2%), а не меняет heal-amount cost-based ремонта. |
+
+### Side-effect: ранее DESIGN-DEAD класс пуст
+
+После этого батча `def_broken_dr` переведён из DESIGN-DEAD в WIRED. **DESIGN-DEAD категория теперь содержит 0 талантов** из 51. Effective wire-up coverage = **51/51 = 100%**.
+
+### Mod schema additions
+
+В `getMods()` шаблоне зарезервированы новые нейтральные ключи (используются rebranded талантами):
+
+- `damageBlessingTiers: Array<{hpThreshold:number, armorMul:number}> | null` — список лестничных tier-ов, отсортированных по убыванию `armorMul`. Damage-path выбирает наивысший подходящий по живому `seg.hp/seg.maxHp` (non-stacking).
+- `protectAheadAnalyzeMs: number` (по умолчанию 0) — длительность analyze фазы.
+- `protectAheadBuffMs: number` (по умолчанию 0) — длительность buff фазы.
+- `protectAheadArmorPerRank: number` (по умолчанию 0) — armor-бонус, применяемый damage-path внутри buff фазы.
+- `droneTalentSpeedBonus: number` (по умолчанию 0) — additive bonus к скорости ремонта дронами (snapshot в `finalRepairMult`).
+- `protectAhead: boolean` (по умолчанию false) — unlock flag.
+
+### Save-surface change
+
+- `seg.secondWindReadyAtMs` теперь сериализуется как часть segment state. `seg._defRt.secondWindUsed` удалён. Backward-compat: legacy сейвы без поля корректно начинают с 0 (готово к выдаче).
+
+### Регрессионный guard после батча
+
+`ci/check_talent_helpers.cjs` не меняет статус: все 5 талантов всё ещё доступны через канонические dispatcher-ы (`onWallDamage`, `onUpdate`). Wire-up matrix остаётся прежней.

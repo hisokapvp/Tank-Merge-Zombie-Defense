@@ -56,3 +56,28 @@ Fallback-правила:
 - Рантайм: `ShieldSprites` (в `game.js`) грузит атлас в boot после `GroundSprites.load()`. Рендер выполняется в `renderFenceBase` поверх целого сегмента забора, только пока `TalentsV2.isDomeActive(nowMs)` возвращает true.
 - Sprite порядок сохранён: `fenceBase → zombies/corpses → fenceHpBars → projectiles/effects`. Shields рисуется внутри fenceBase-фазы, после основного кадра сегмента, но до HP-баров.
 - Анимация выбирается по `floor(now / (1000/frameRate)) % frames.length`; размер — через `BAL.fenceWidth` с scale из конфига.
+
+## Обновление 2026-05-24 — procShields overlay + explosionShake (fence-upgrades-rework)
+
+Batch `solo-pipeline-yandex-vk#1`, items 1–3 (fence-upgrades-rework).
+
+### `procShields` root-block
+
+- В `assets/fence.json` добавлен корневой объект `procShields`, параллельный `shields` (не пересекается с активкой «Купол»).
+- Контракт полей:
+  - `atlas` (строка) — имя файла атласа (placeholder в `assets/fence/proc_shields.png`, art-pass pending; runtime-копия со `shields.png`).
+  - `grid` / `frames[]` — порядок кадров анимации, аналогично `shields`.
+  - `frameRate` (число) — частота смены кадров.
+  - `scale` (число) — множитель размера относительно `BAL.fenceWidth`.
+  - `anchor` (`{x,y}`) — точка привязки оверлея к центру сегмента.
+  - `visibleWhile` (строка, ожидаемое значение `"immunityActive"`) — runtime-флаг, отличает proc-шилд от dome-шилда.
+- Рантайм-гейт: оверлей рисуется на сегменте только пока `segRt.immunityUntilMs > nowMs`. `immunityUntilMs` пишется в `game.js` L2411/L2434 (segRt allocation/reset) и обновляется в `onWallDamage` L3083-3096 при срабатывании `immunityProc` (chance `1%/rank`, длительность `2s`, ICD `15s`).
+- Рендер-сим: в `game.js` зеркалит `shields`-путь — отдельный loader `ProcShieldSprites` (preload в boot после `ShieldSprites.load()`), отдельный `drawFenceProcShields()`-проход внутри `renderFenceBase` после основного кадра сегмента, но до HP-баров. Sprite порядок не нарушается: `fenceBase → zombies/corpses → fenceHpBars → projectiles/effects`.
+- Cull: рисуется per-segment, без allocations на hot-path; анимация выбирается тем же `floor(now / (1000/frameRate)) % frames.length`.
+
+### `explosionShake` (под `screenShake`)
+
+- В `assets/fence.json` под существующим `screenShake`-блоком добавлено поле `explosionShake` — конфиг для шейка от детонации `def_explosive_base` («Взрывное основание»).
+- Семантика: shake-событие от взрыва не добавляется отдельной волной поверх обычного `thresholdShake` от пробоя сегмента, а **сливается** с уже активным screen-shake через max-merge по амплитуде / длительности (предотвращает компаундирование джиттера, когда фрагмент сначала ломается, а затем сразу же детонирует AoE-помеха).
+- Поле читается в `game.js` AoE detonation seam (L8902-8938), где helper `applyExplosiveBaseDetonation` уже вернул `hits > 0` и есть подтверждённый взрыв.
+- Контракт минимальных значений (placeholder, art-pass pending): `amplitudePx`, `durationMs`, `frequencyHz` — формат идентичен `thresholdShake`, чтобы merge выполнялся компонент-wise.

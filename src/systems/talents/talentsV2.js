@@ -168,6 +168,7 @@
     upgradeCostMul_guns: 1,
     upgradeCostMul_sc: 1,
     upgradeCostMul_wall: 1,
+    upgradeCostMul_drone: 1,
     taxReliefCostMul: 1,
     voucherDiscountMul: 1,
     brokenSegmentDamageMul: 1,
@@ -244,13 +245,22 @@
     stunOnWallHitDurationMs: 0,
     stunOnWallHitIcdMs: 0,
     secondWindRestorePct: 0,
+    secondWindCooldownMs: 0,
     autoRepairPct: 0,
     autoRepairPeriodMs: 0,
     repairEfficiencyMul: 1,
+    droneRepairSpeedBonusPerRank: 0,
+    damageBlessingTiers: null,
+    protectAheadAnalyzeMs: 0,
+    protectAheadBuffMs: 0,
+    protectAheadArmorPerRank: 0,
     repairDiscountTimerPeriodMs: 0,
     repairDiscountTimerCostMul: 1,
     repairDiscountPeriodMs: 0,
     repairDiscountMul: 1,
+    explosiveBaseDamagePerRank: 0,
+    explosiveBaseRadiusPx: 0,
+    explosiveBaseDamageCapPerFrame: 0,
     immunityProcChance: 0,
     immunityProcDurationMs: 0,
     immunityProcIcdMs: 0,
@@ -311,7 +321,9 @@
     stunOnWallHit: false,
     secondWind: false,
     autoRepair: false,
+    protectAhead: false,
     repairDiscountTimer: false,
+    explosiveBase: false,
     immunityProc: false,
     bulkBuy: false,
     centuryContract: false,
@@ -2036,7 +2048,7 @@
   var TALENT_PATH_BRANCH_IDS = ['offense', 'defense', 'economy'];
   var TALENT_PATH_ACTIVE_TALENT_BY_BRANCH = {
     offense: 'off_active_barrage',
-    defense: 'def_active_dome',
+    defense: 'def_dome',
     economy: 'eco_active_golden_hour',
   };
 
@@ -2395,6 +2407,8 @@
         barrierIcdUntilMs: 0,
         lastDamageAtMs: 0,
         secondWindUsed: false,
+        // solo-pipeline-yandex-vk item 2: per-segment secondWind cooldown (serialized).
+        secondWindReadyAtMs: 0,
         immunityUntilMs: 0,
         immunityIcdUntilMs: 0,
         stunIcdUntilMs: 0,
@@ -2402,6 +2416,12 @@
         nextShieldAtMs: 0,
         nextAutoRepairAtMs: 0,
         nextRegenAtMs: 0,
+        // solo-pipeline-yandex-vk item 3: protectAhead phase cycle.
+        // Phase semantics: analyzing during [now .. analyzeUntilMs], then buff active during
+        // [analyzeUntilMs .. buffUntilMs]; on buff expiry a new analyze window starts. Not
+        // serialized — savescum allowed per user decision (phases re-init on load).
+        protectAheadAnalyzeUntilMs: 0,
+        protectAheadBuffUntilMs: 0,
       };
       seg._defRt = rt;
     }
@@ -2411,6 +2431,7 @@
     if (!isFiniteNumber(rt.barrierIcdUntilMs)) rt.barrierIcdUntilMs = 0;
     if (!isFiniteNumber(rt.lastDamageAtMs)) rt.lastDamageAtMs = 0;
     if (typeof rt.secondWindUsed !== 'boolean') rt.secondWindUsed = false;
+    if (!isFiniteNumber(rt.secondWindReadyAtMs)) rt.secondWindReadyAtMs = 0;
     if (!isFiniteNumber(rt.immunityUntilMs)) rt.immunityUntilMs = 0;
     if (!isFiniteNumber(rt.immunityIcdUntilMs)) rt.immunityIcdUntilMs = 0;
     if (!isFiniteNumber(rt.stunIcdUntilMs)) rt.stunIcdUntilMs = 0;
@@ -2418,6 +2439,8 @@
     if (!isFiniteNumber(rt.nextShieldAtMs)) rt.nextShieldAtMs = 0;
     if (!isFiniteNumber(rt.nextAutoRepairAtMs)) rt.nextAutoRepairAtMs = 0;
     if (!isFiniteNumber(rt.nextRegenAtMs)) rt.nextRegenAtMs = 0;
+    if (!isFiniteNumber(rt.protectAheadAnalyzeUntilMs)) rt.protectAheadAnalyzeUntilMs = 0;
+    if (!isFiniteNumber(rt.protectAheadBuffUntilMs)) rt.protectAheadBuffUntilMs = 0;
 
     return rt;
   }
@@ -3122,6 +3145,44 @@
 
     d *= (1 - clamp(getModNumber(mods, 'wallDrPct', [], 0), 0, 1));
 
+    // solo-pipeline-yandex-vk items 3+4: tiered damageBlessing armor (non-stacking) + protectAhead
+    // buff armor (additive between the two talents). Pre-damage HP snapshot is used for tier
+    // selection so the talent picks the threshold that matches the segment's CURRENT HP before
+    // applying this hit. The two armor sources sum additively per user decision.
+    var segHpSnapshotForArmor = Math.max(0, toNumber(seg.hp, 0));
+    var segMaxHpForArmor = Math.max(1, toNumber(seg.maxHp, 1));
+    var hpRatioForArmor = segHpSnapshotForArmor / segMaxHpForArmor;
+    var combinedArmorBonus = 0;
+    var damageBlessingTiers = mods && mods.damageBlessingTiers;
+    if (Array.isArray(damageBlessingTiers) && damageBlessingTiers.length > 0) {
+      var blessingRank = Math.max(0, toInt(runtime.ranksById && runtime.ranksById['def_broken_dr'], 0));
+      if (blessingRank > 0) {
+        // Iterate from highest tier down: pick the deepest unlocked tier that matches current HP.
+        // Tiers are non-stacking — only one bonus is granted at a time.
+        var pickedBonus = 0;
+        for (var dbI = damageBlessingTiers.length - 1; dbI >= 0; dbI--) {
+          var tierEntry = damageBlessingTiers[dbI];
+          if (!tierEntry) continue;
+          var tierRank = toInt(tierEntry.rank, 0);
+          var tierHpMax = toNumber(tierEntry.hpRatioMax, 0);
+          var tierArmor = toNumber(tierEntry.armorBonus, 0);
+          if (tierRank <= blessingRank && hpRatioForArmor < tierHpMax) {
+            pickedBonus = tierArmor;
+            break;
+          }
+        }
+        combinedArmorBonus += Math.max(0, pickedBonus);
+      }
+    }
+    // protectAhead buff phase armor (item 3). Phase state is owned by segRt.protectAheadBuffUntilMs,
+    // updated in onUpdate. During buff phase the armor adds to combinedArmorBonus.
+    if (toNumber(rt.protectAheadBuffUntilMs, 0) > timeMs) {
+      combinedArmorBonus += Math.max(0, getModNumber(mods, 'protectAheadArmorPerRank', [], 0));
+    }
+    if (combinedArmorBonus > 0) {
+      d *= (1 - clamp(combinedArmorBonus, 0, 0.95));
+    }
+
     var absorbedByShield = Math.min(Math.max(0, rt.shieldHp), d);
     rt.shieldHp = Math.max(0, rt.shieldHp - absorbedByShield);
     d = Math.max(0, d - absorbedByShield);
@@ -3130,9 +3191,18 @@
       var segHp = Math.max(0, toNumber(seg.hp, 0));
       var segMaxHp = Math.max(1, toNumber(seg.maxHp, 1));
       var secondWindRestorePct = Math.max(0, getModNumber(mods, 'secondWindRestorePct', [], 0));
-      if ((segHp - d) <= 0 && secondWindRestorePct > 0 && !rt.secondWindUsed) {
-        rt.secondWindUsed = true;
+      var secondWindCooldownMs = Math.max(0, getModNumber(mods, 'secondWindCooldownMs', [], 0));
+      // solo-pipeline-yandex-vk item 2: per-segment cooldown (serialized).
+      // Independent processing — each fragment owns its own cooldown timer; repair does NOT reset it.
+      // Stored directly on `seg.secondWindReadyAtMs` (NOT inside _defRt) so it survives save/load:
+      // docs/talents_v2.md explicitly excludes _defRt from save payload, but seg-level fields persist
+      // via the segment serializer (saveSchema.json additionalProperties:true allows the new field).
+      var segReadyAt = toNumber(seg.secondWindReadyAtMs, 0);
+      if ((segHp - d) <= 0 && secondWindRestorePct > 0 && timeMs >= segReadyAt) {
         seg.hp = Math.max(1, segMaxHp * secondWindRestorePct);
+        seg.secondWindReadyAtMs = timeMs + secondWindCooldownMs;
+        // Legacy boolean kept in-sync for any read-only fallback consumers; not authoritative anymore.
+        rt.secondWindUsed = true;
         prevented = true;
         d = 0;
       }
@@ -3145,7 +3215,9 @@
       if (rollChance(rng, stunChance, 'stun')) {
         var zRt = ensureZombieRt(zombie);
         if (zRt && zRt.cc) {
-          zRt.cc.stunUntilMs = timeMs + Math.max(0, getModNumber(mods, 'stunOnWallHitDurationMs', [], 0));
+          // solo-pipeline-yandex-vk item 1.B: max() stacking — do not shorten an active longer stun.
+          var newStunUntil = timeMs + Math.max(0, getModNumber(mods, 'stunOnWallHitDurationMs', [], 0));
+          zRt.cc.stunUntilMs = Math.max(toNumber(zRt.cc.stunUntilMs, 0), newStunUntil);
         }
         rt.stunIcdUntilMs = timeMs + Math.max(0, getModNumber(mods, 'stunOnWallHitIcdMs', [], 0));
       }
@@ -3266,6 +3338,104 @@
     return applyRepairDiscountCoupon(runRt, mods, nowMs, baseCost);
   }
 
+  // solo-pipeline-yandex-vk#1 item 1 (Взрывное основание): pure-logic AoE detonation helper.
+  // Invoked by game.js fence-destruction seam when a fragment fully breaks. Reads explosiveBase
+  // rank + per-rank damage + radius + per-frame cap from mods, iterates ctx.zombies, applies
+  // damage via ctx.applyDamage (canonical death pipeline). Screen-shake / SFX are NOT triggered
+  // here; the caller side is expected to dispatch them via window.Game.ScreenEffects and the
+  // 'fenceExplosion' SFX channel (assets/sfx/registry.json) after a positive result.
+  // Returns { detonated, damageDealt, hits, damagePerHit, radius }.
+  function applyExplosiveBaseDetonation(payload) {
+    var ctx = payload || {};
+    var seg = ctx.seg;
+    if (!seg) return { detonated: false, damageDealt: 0, hits: 0, damagePerHit: 0, radius: 0 };
+    var mods = (ctx.mods && typeof ctx.mods === 'object') ? ctx.mods : getMods();
+    var ranksById = runtime.ranksById || {};
+    var rank = Math.max(0, toInt(ranksById['def_explosive_base'], 0));
+    var perRank = Math.max(0, getModNumber(mods, 'explosiveBaseDamagePerRank', [], 0));
+    var radius = Math.max(0, getModNumber(mods, 'explosiveBaseRadiusPx', [], 0));
+    var cap = Math.max(0, getModNumber(mods, 'explosiveBaseDamageCapPerFrame', [], 0));
+    if (rank <= 0) return { detonated: false, damageDealt: 0, hits: 0, damagePerHit: 0, radius: 0 };
+    if (perRank <= 0 || radius <= 0) return { detonated: false, damageDealt: 0, hits: 0, damagePerHit: 0, radius: radius };
+    var damage = perRank * rank;
+    if (cap > 0 && damage > cap) damage = cap;
+    // solo-pipeline-yandex-vk#1 round 5 fix: zombies в TMZD хранятся в ПОЛЯРНЫХ координатах
+    // (z.r — расстояние от центра, z.theta — угол). У них нет полей z.x/z.y, поэтому ранее
+    // dist всегда вычислялся от (0,0) и ни один зомби не попадал в радиус (round-4 evidence:
+    // zx=undefined, dx=-1244, dist=1456 ≫ 300). Конвертируем zombie polar→world cartesian
+    // используя centerX/centerY от вызывающей стороны (в game.js это `center.x`, `center.y` —
+    // глобальный центр canvas). Origin (ctx.originX/Y) уже передаётся в world-space
+    // (game.js делает `center.x + seg.x`), так что сравниваем оба значения в одном
+    // абсолютном пространстве. Также передаём в applyDamage callback worldX/worldY,
+    // чтобы каллер мог отрисовать damage number в правильной точке.
+    var hasOriginX = Number.isFinite(ctx.originX);
+    var hasOriginY = Number.isFinite(ctx.originY);
+    var sx = hasOriginX ? toNumber(ctx.originX, 0) : toNumber(seg.x, 0);
+    var sy = hasOriginY ? toNumber(ctx.originY, 0) : toNumber(seg.y, 0);
+    var centerX = toNumber(ctx.centerX, 0);
+    var centerY = toNumber(ctx.centerY, 0);
+    var radiusSq = radius * radius;
+    var zombies = Array.isArray(ctx.zombies) ? ctx.zombies : [];
+    var applyDamageFn = (typeof ctx.applyDamage === 'function') ? ctx.applyDamage : null;
+    var timeMs = toNumber(ctx.timeMs, runtime.nowMsFn());
+    var hits = 0;
+    var totalDealt = 0;
+    for (var i = 0; i < zombies.length; i++) {
+      var z = zombies[i];
+      if (!z || z.state === 'dying') continue;
+      var zhp = toNumber(z.hp, 0);
+      if (zhp <= 0) continue;
+      // Polar→world cartesian. Если каллер уже выставил z.x/z.y (например тесты),
+      // используем их напрямую как world coords; иначе считаем из r/theta вокруг центра.
+      var wx, wy;
+      if (Number.isFinite(z.x) && Number.isFinite(z.y)) {
+        wx = toNumber(z.x, 0);
+        wy = toNumber(z.y, 0);
+      } else {
+        var zr = toNumber(z.r, 0);
+        var zt = toNumber(z.theta, 0);
+        wx = centerX + zr * Math.cos(zt);
+        wy = centerY + zr * Math.sin(zt);
+      }
+      var dx = wx - sx;
+      var dy = wy - sy;
+      if ((dx * dx + dy * dy) > radiusSq) continue;
+      if (applyDamageFn) {
+        var dealt = applyDamageFn({
+          zombie: z,
+          damage: damage,
+          timeMs: timeMs,
+          source: 'explosiveBase',
+          noAttribution: true,
+          worldX: wx,
+          worldY: wy,
+        });
+        totalDealt += (Number.isFinite(dealt) ? dealt : 0);
+      } else {
+        applyDamageNoAttribution({ target: z, damage: damage });
+        totalDealt += damage;
+      }
+      hits++;
+    }
+    // solo-pipeline-yandex-vk#1 round 3: optional diagnostic gate. Enable in console
+    // via `window.__debugExplosiveBase = true` to log per-detonation summary.
+    try {
+      if (typeof global !== 'undefined' && global && global.__debugExplosiveBase) {
+        var dbg = (typeof global.console === 'object' && global.console) ? global.console : null;
+        if (dbg && typeof dbg.log === 'function') {
+          dbg.log('[ExplosiveBase]', {
+            rank: rank, perRank: perRank, radius: radius, cap: cap,
+            damagePerHit: damage, hits: hits, totalDealt: totalDealt,
+            zombieCount: zombies.length, originX: sx, originY: sy,
+            centerX: centerX, centerY: centerY,
+            originOverride: hasOriginX || hasOriginY,
+          });
+        }
+      }
+    } catch (_e) {}
+    return { detonated: true, damageDealt: totalDealt, hits: hits, damagePerHit: damage, radius: radius };
+  }
+
   function onUpdate(payload) {
     var ctx = payload || {};
     var timing = resolveDebugFrameTime('onUpdate', toNumber(ctx.timeMs, runtime.nowMsFn()), Math.max(0, toNumber(ctx.dtMs, 0)));
@@ -3349,6 +3519,50 @@
             break;
           }
         }
+      }
+
+      // solo-pipeline-yandex-vk item 3: protectAhead phase scheduler. Two non-overlapping phases
+      // (analyze 8s -> buff 8s -> analyze 8s ...). HP is NOT restored anywhere — this only updates
+      // segRt.protectAheadBuffUntilMs which the damage path checks for the armor bonus.
+      // Phase timestamps are not serialized: on load both fields are 0 and the cycle restarts here.
+      var protectAheadArmorPerRank = Math.max(0, getModNumber(mods, 'protectAheadArmorPerRank', [], 0));
+      var protectAheadAnalyzeMs = Math.max(0, getModNumber(mods, 'protectAheadAnalyzeMs', [], 0));
+      var protectAheadBuffMs = Math.max(0, getModNumber(mods, 'protectAheadBuffMs', [], 0));
+      if (protectAheadArmorPerRank > 0 && protectAheadAnalyzeMs > 0 && protectAheadBuffMs > 0) {
+        // Bootstrap on first tick or after load: start with analyze phase.
+        if (segRt.protectAheadAnalyzeUntilMs <= 0 && segRt.protectAheadBuffUntilMs <= 0) {
+          segRt.protectAheadAnalyzeUntilMs = timeMs + protectAheadAnalyzeMs;
+          segRt.protectAheadBuffUntilMs = 0;
+        }
+        var paSteps = 0;
+        // Advance phase boundaries without HP side effects. Catch-up loop respects maxCatchupSteps.
+        while (paSteps < maxCatchupSteps) {
+          if (segRt.protectAheadBuffUntilMs > 0 && timeMs >= segRt.protectAheadBuffUntilMs) {
+            // Buff phase ended -> start new analyze phase.
+            segRt.protectAheadBuffUntilMs = 0;
+            segRt.protectAheadAnalyzeUntilMs = timeMs + protectAheadAnalyzeMs;
+            paSteps += 1;
+            continue;
+          }
+          if (segRt.protectAheadAnalyzeUntilMs > 0 && timeMs >= segRt.protectAheadAnalyzeUntilMs) {
+            // Analyze phase ended -> start buff phase.
+            segRt.protectAheadAnalyzeUntilMs = 0;
+            segRt.protectAheadBuffUntilMs = timeMs + protectAheadBuffMs;
+            paSteps += 1;
+            continue;
+          }
+          break;
+        }
+        if (paSteps >= maxCatchupSteps) {
+          warnWithCooldown('protect_ahead_catchup_guard', '[TalentsV2] protectAhead catch-up limit reached; clamped near now.', {
+            maxSteps: maxCatchupSteps,
+          });
+        }
+      } else {
+        // Talent absent or insufficient params -> clear phase state so old timestamps from a
+        // prior session do not linger and accidentally grant armor.
+        if (segRt.protectAheadBuffUntilMs !== 0) segRt.protectAheadBuffUntilMs = 0;
+        if (segRt.protectAheadAnalyzeUntilMs !== 0) segRt.protectAheadAnalyzeUntilMs = 0;
       }
 
       if (defenseActiveOn && defAutoRepairPctPerSec > 0 && dtMs > 0) {
@@ -3637,10 +3851,11 @@
     var cost = baseCost + inflation * repairCount;
     cost *= Math.max(0, getModNumber(mods, 'repairCostMul', [], 1));
     var heal = Math.max(0, toNumber(ctx.baseHeal, 0));
-    var repairEfficiencyMul = Math.max(0, getModNumber(mods, 'repairEfficiencyMul', [], 1));
-    if (repairEfficiencyMul > 0) {
-      heal *= repairEfficiencyMul;
-    }
+    // solo-pipeline-yandex-vk item 5: legacy repairEfficiencyMul intentionally removed. The
+    // rebranded "Адаптация под дронов" / "Drone-Adapted Walls" talent no longer affects player
+    // manual repair heal — it only adjusts drone repair speed (see drones stepRepair consumer).
+    // The default registry still holds repairEfficiencyMul:1 for backward compatibility, but no
+    // talent writes to it anymore and the heal value passes through unchanged.
 
     var coupon = applyRepairDiscountCoupon(runRt, mods, timeMs, cost);
     cost = coupon.cost;
@@ -3725,6 +3940,8 @@
       cost *= Math.max(0, getModNumber(mods, 'upgradeCostMul_wall', [], 1));
     } else if (kind === 'upgrade_guns') {
       cost *= Math.max(0, getModNumber(mods, 'upgradeCostMul_guns', [], 1));
+    } else if (kind === 'upgrade_drone') {
+      cost *= Math.max(0, getModNumber(mods, 'upgradeCostMul_drone', [], 1));
     } else if (kind === 'repair') {
       cost *= Math.max(0, getModNumber(mods, 'repairCostMul', [], 1));
       cost = applyRepairDiscountCoupon(runRt, mods, timeMs, cost).cost;
@@ -4308,6 +4525,7 @@
     onOverkill: onOverkill,
     onRepair: onRepair,
     applyRepairCoupon: applyRepairCoupon,
+    applyExplosiveBaseDetonation: applyExplosiveBaseDetonation,
     onBuyTank: onBuyTank,
     onPurchase: onPurchase,
     clearRuntimeEffects: clearRuntimeEffects,

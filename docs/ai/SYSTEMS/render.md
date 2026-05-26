@@ -1,6 +1,18 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-04-28.
+> Обновлено: 2026-05-22.
+
+## Post-merge update (2026-05-22, batch solo-pipeline-yandex-vk#1)
+- Тряска экрана теперь привязана к порогам HP, без слепых триггеров:
+	- **Fence**: `Game.ScreenEffects.triggerFenceThresholdShake(seg, prevRatio, curRatio)` срабатывает только при down-crossing 50% → 25% → 10% → 0% HP сегмента. Несколько сегментов на одном кадре сливаются per-frame coalescer-ом (`flushFenceThresholdShakeFrame()`). Конфиг — `screenShake` в [assets/fence.json](../../../assets/fence.json) (enabled, thresholds[at,amplitude,duration]). Reset на репаре через `resetSegmentPrevRatio(seg)`.
+	- **Supercomputer**: `Game.ScreenEffects.triggerSupercomputerThresholdShake(prevRatio, curRatio)` срабатывает при пересечении любого порога каждые 5% потерянного HP (0.95, 0.90, ..., 0.05). Амплитуда/длительность растут от 5.5 px/0.22 с до 9.0 px/0.36 с по мере падения HP — тряска заметно ощутимее fence-тряски. Вызывается из `applySupercomputerDamage()` в [game.js](../../../game.js) c реальными prevRatio/curRatio до и после применения урона.
+	- **Critical state**: `Game.ScreenEffects.triggerCriticalStateShake()` — самая сильная и продолжительная тряска (amplitude 14, duration 5 секунд), вызывается ровно один раз при показе модалки «Критическое состояние» в clamp-ветке `applySupercomputerDamage()`.
+	- Все остальные ранее существовавшие callsite `ScreenEffects.triggerShake()` удалены (включая boss-death). В репо `triggerShake(` встречается только внутри `src/render/screenEffects.js` (defin/flush/heavy-pick).
+- Banner «Атака началась» теперь читает строки через `t()`:
+	- Заголовок — ключ `attackBannerTitle`, подзаголовок — `attackBannerSubtitle` с `{wave}`-подстановкой. Russian/English: [src/i18n/ru.json](../../../src/i18n/ru.json), [src/i18n/en.json](../../../src/i18n/en.json). Стиль `.wave-alert-subtitle` в [style.css](../../../style.css) расширен (`clamp` font-size, `max-width`, `text-wrap: balance`) чтобы вместить длинную русскую подсказку без поломки `zoomText` анимации.
+- Self-heal стен после «Перезагрузки симуляции»:
+	- Новый helper `recomputeMaxTankLevelFromCells(stateRef)` в [game.js](../../../game.js) пересчитывает `runtimeMaxTankLevelAchieved`/`maxTankLevelAchieved` из реальных `state.cells[i].tank.level` после restore. Helper никогда не понижает уже сохранённый максимум (`Math.max`).
+	- Вызывается из `finalizePartialRestartPostRestore()` (обе ветки: `resetPurchaseProgress` и `forceFenceRuntimeReset`) и из `forceFenceRuntimeResetOnLoad()`. После recompute идёт `getFenceTierForTankLevel(...)` + `syncFenceTierWithMaxTankLevel(targetState, {force:true})` + `FenceSprites.ensureLevel(...)`, поэтому level 60 танков сразу даёт нужный fence-tier, а не «всегда tier 1».
 
 ## Post-merge update (2026-04-28, rework #1 — corner tower non-interrupt anim)
 - `Game.CornerTowers.notifyZombieKill()` больше **не перезапускает** `work` анимацию, если она уже играет: текущий цикл всегда доигрывает до конца, после чего вышка возвращается в `idle` (через `animations.work.returnTo`). Mid-play kills по умолчанию игнорируются.

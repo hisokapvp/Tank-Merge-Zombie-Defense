@@ -227,6 +227,26 @@
 
   function el(id) { return _doc ? _doc.getElementById(id) : null; }
 
+  function triggerChipMergeExplosion(x, y) {
+    if (!_doc || !_doc.body) return;
+    var colors = ['#00ffff', '#d38bfe', '#ff00ff', '#ffffff', '#00f0ff'];
+    for (var i = 0; i < 40; i++) {
+      var p = _doc.createElement('div');
+      p.className = 'dom-merge-spark';
+      p.style.background = colors[Math.floor(Math.random() * colors.length)];
+      var rx = (Math.random() * 2 - 1) * 110;
+      var ry = (Math.random() * 2 - 1) * 110;
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      p.style.setProperty('--tx', rx + 'px');
+      p.style.setProperty('--ty', ry + 'px');
+      _doc.body.appendChild(p);
+      (function(elem) {
+        setTimeout(function() { elem.remove(); }, 800);
+      })(p);
+    }
+  }
+
   /**
    * Generate a chip SVG icon composed of 3 sub-triangles.
    * Each sub-triangle has a colored fill matching the modifier type.
@@ -3466,6 +3486,14 @@
       '</div>' +
       '</div>';
     modal.style.display = 'flex';
+
+    if (success) {
+      try {
+        var cx = global.innerWidth / 2;
+        var cy = global.innerHeight / 2;
+        triggerChipMergeExplosion(cx, cy);
+      } catch (_) {}
+    }
   }
 
   function _showCraftRiskConfirmModal(craftPayload) {
@@ -4844,6 +4872,7 @@
         if (targetChipId === drag.chipId && targetLevel === drag.level) {
           var newLevel = mergeChips(drag.chipId, drag.level);
           if (newLevel > 0) {
+            triggerChipMergeExplosion(evt.clientX, evt.clientY);
             if (global.Game && global.Game.Toast && typeof global.Game.Toast.show === 'function') {
               global.Game.Toast.show(t('workshopChipMerged', 'Чип улучшен до ур. {level}!').replace('{level}', newLevel), 1800);
             }

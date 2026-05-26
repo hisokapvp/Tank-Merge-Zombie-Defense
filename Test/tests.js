@@ -196,7 +196,7 @@ test('T4-7: level=21 → cap (2^20)', () => {
 });
 
 test('T4-8: level=30 → cap (2^20)', () => {
-  assertEqual(coinsForShot(30), MAX_COIN_PER_SHOT);
+  assertEqual(coinsForShot(30), 536870912);
 });
 
 test('T4-9: level=0 → 0 (invalid)', () => {
@@ -211,8 +211,8 @@ test('T4-11: level=null → 0 (invalid)', () => {
   assertEqual(coinsForShot(null), 0);
 });
 
-test('T4-12: MAX_COIN_PER_SHOT = 2^20', () => {
-  assertEqual(MAX_COIN_PER_SHOT, 1048576);
+test('T4-12: MAX_COIN_PER_SHOT = Number.MAX_SAFE_INTEGER', () => {
+  assertEqual(MAX_COIN_PER_SHOT, Number.MAX_SAFE_INTEGER);
 });
 
 // ═══════════════════════════════════════════════

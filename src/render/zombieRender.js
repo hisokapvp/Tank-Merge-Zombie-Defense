@@ -175,6 +175,9 @@
       }
 
       var scale = getZombieDeathScale(z, usesCommonDeathAtlas) * BAL.zombieScaleMul * deps.zombieLevelScale(z);
+      if (z.isBoss) {
+        scale *= 1.4;
+      }
       var shadowScale = getZombieShadowScale(z);
       var baseW = hasDeathAnim ? z.deathAnim.w : (hasAttackAnim ? t.attack.w : f.w);
       var baseH = hasDeathAnim ? z.deathAnim.h : (hasAttackAnim ? t.attack.h : f.h);

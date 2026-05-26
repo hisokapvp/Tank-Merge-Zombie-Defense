@@ -930,12 +930,27 @@ function getFenceUpgradeCostBase(level, statKey){
   return 0;
 }
 
+function applyTalentUpgradeDiscount(baseCost, kind){
+  // solo-pipeline-yandex-vk#1: single source of truth for eco_upgrade_discount.
+  // Applied here so that UI render (step cost) and apply path produce identical values.
+  if (!Number.isFinite(baseCost) || baseCost <= 0) return baseCost;
+  try {
+    const talentsApi = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
+      const mods = (typeof getMods === 'function') ? getMods() : (talentsApi.getMods ? talentsApi.getMods() : {});
+      const out = talentsApi.onPurchase({ baseCost: baseCost, kind: kind, mods: mods, timeMs: Date.now() });
+      if (out && Number.isFinite(out.cost) && out.cost >= 0) return Math.max(0, Math.floor(out.cost));
+    }
+  } catch (_) {}
+  return baseCost;
+}
+
 function getCannonUpgradeStepCost(level, statKey, appliedIndex){
-  return getProgressiveUpgradeStepCost(getCannonUpgradeCostBase(level, statKey), appliedIndex);
+  return applyTalentUpgradeDiscount(getProgressiveUpgradeStepCost(getCannonUpgradeCostBase(level, statKey), appliedIndex), 'upgrade_guns');
 }
 
 function getFenceUpgradeStepCost(level, statKey, appliedIndex){
-  return getProgressiveUpgradeStepCost(getFenceUpgradeCostBase(level, statKey), appliedIndex);
+  return applyTalentUpgradeDiscount(getProgressiveUpgradeStepCost(getFenceUpgradeCostBase(level, statKey), appliedIndex), 'upgrade_wall');
 }
 
 function getCannonUpgradeIconFrames(level){
@@ -1017,16 +1032,8 @@ function applyCannonUpgrade(level, statKey, pendingCount){
   if (count <= 0) return { ok: false, error: 'no_pending' };
   let totalCost = getCannonUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
-  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_guns).
-  // Применяем upgradeCostMul_guns к damagePoints cost через TalentsV2.onPurchase.
-  try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
-    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
-      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_guns', mods: getMods(), timeMs: Date.now() });
-      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
-    }
-  } catch (_) {}
-  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  // solo-pipeline-yandex-vk#1: eco_upgrade_discount (upgrade_guns) already baked
+  // into per-step cost via applyTalentUpgradeDiscount in getCannonUpgradeStepCost.
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
   const applied = ensureCannonUpgradesAppliedState();
@@ -1061,15 +1068,8 @@ function applyFenceUpgrade(level, statKey, pendingCount){
   if (count <= 0) return { ok: false, error: 'no_pending' };
   let totalCost = getFenceUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
-  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_wall) — fence stat upgrades.
-  try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
-    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
-      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_wall', mods: getMods(), timeMs: Date.now() });
-      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
-    }
-  } catch (_) {}
-  if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
+  // solo-pipeline-yandex-vk#1: eco_upgrade_discount (upgrade_wall) already baked
+  // into per-step cost via applyTalentUpgradeDiscount in getFenceUpgradeStepCost.
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
   const applied = ensureFenceUpgradesAppliedState();
@@ -2499,6 +2499,73 @@ const ShieldSprites = {
 };
 if (typeof window !== 'undefined') { window.Game = window.Game || {}; window.Game.ShieldSprites = ShieldSprites; }
 
+// solo-pipeline-yandex-vk#1 item 2 (Случайная неразрушимость): per-fragment overlay
+// rendered while segRt.immunityUntilMs is in the future. Mirrors ShieldSprites but reads
+// FenceSprites.config.procShields (fence.json -> root `procShields`) and loads
+// assets/proc_shields.png. Graceful fallback: missing atlas / empty frames just skips
+// rendering — the per-segment immunity buff still works.
+const ProcShieldSprites = {
+  ready: false,
+  error: '',
+  img: null,
+  _framesCache: null,
+  _framesCacheKey: '',
+  async load() {
+    try {
+      if (typeof Image === 'undefined') { this.error = 'Image constructor unavailable'; return; }
+      const img = new Image();
+      const done = new Promise((resolve) => {
+        img.onload = () => { this.ready = true; this.img = img; resolve(); };
+        img.onerror = (e) => { this.error = 'failed to load assets/proc_shields.png'; this.ready = false; resolve(); };
+      });
+      img.src = 'assets/proc_shields.png';
+      await done;
+    } catch (e) { this.error = String(e && e.message || e); }
+  },
+  getConfig() {
+    try {
+      const cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+      if (!cfg || !cfg.procShields || typeof cfg.procShields !== 'object') return null;
+      const base = cfg.procShields;
+      const explicit = Array.isArray(base.frames) ? base.frames.filter((f) => f && Number.isFinite(f.w) && Number.isFinite(f.h)) : [];
+      if (explicit.length > 1) return base;
+      const grid = base.grid && typeof base.grid === 'object' ? base.grid : null;
+      const cols = grid && Number.isFinite(grid.cols) && grid.cols > 0 ? Math.floor(grid.cols) : 0;
+      const rows = grid && Number.isFinite(grid.rows) && grid.rows > 0 ? Math.floor(grid.rows) : 0;
+      if (cols > 0 && rows > 0 && this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+        const fw = Number.isFinite(grid.frameWidth) && grid.frameWidth > 0
+          ? Math.floor(grid.frameWidth)
+          : Math.floor(this.img.naturalWidth / cols);
+        const fh = Number.isFinite(grid.frameHeight) && grid.frameHeight > 0
+          ? Math.floor(grid.frameHeight)
+          : Math.floor(this.img.naturalHeight / rows);
+        const key = `${cols}x${rows}@${fw}x${fh}:${this.img.naturalWidth}x${this.img.naturalHeight}`;
+        if (this._framesCacheKey !== key || !Array.isArray(this._framesCache)) {
+          const arr = new Array(cols * rows);
+          let idx = 0;
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              arr[idx++] = { x: c * fw, y: r * fh, w: fw, h: fh };
+            }
+          }
+          this._framesCache = arr;
+          this._framesCacheKey = key;
+        }
+        return Object.assign({}, base, { frames: this._framesCache });
+      }
+      if (explicit.length === 1) return base;
+      if (this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+        return Object.assign({}, base, {
+          frames: [{ x: 0, y: 0, w: this.img.naturalWidth, h: this.img.naturalHeight }],
+        });
+      }
+      return base;
+    } catch (_) {}
+    return null;
+  },
+};
+if (typeof window !== 'undefined') { window.Game = window.Game || {}; window.Game.ProcShieldSprites = ProcShieldSprites; }
+
 const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoaders.GroundSprites : {
   ready: false,
   error: 'SpriteLoaders module is unavailable',
@@ -2824,14 +2891,17 @@ function finalizePartialRestartPostRestore(stateRef, options){
     if (!preserveProgression || resetPurchaseProgress) {
       targetState.buyCounts = {};
       targetState.buyPrices = {};
-      targetState.maxTankLevelAchieved = 1;
-      targetState.runtimeMaxTankLevelAchieved = 1;
-      targetState.currentFenceTierApplied = 1;
-      targetState.fenceLevel = 1;
+      // Item 3: не зануляем maxTankLevelAchieved — после "Перезагрузки симуляции"
+      // танки остаются на поле, и fence-тир должен отражать их уровень.
+      // Пересчитываем из реальных cells, чтобы fence сразу матчился с танками.
+      recomputeMaxTankLevelFromCells(targetState);
+      targetState.currentFenceTierApplied = getFenceTierForTankLevel(targetState.runtimeMaxTankLevelAchieved || 1);
+      targetState.fenceLevel = targetState.currentFenceTierApplied;
     } else if (forceFenceRuntimeReset) {
-      targetState.runtimeMaxTankLevelAchieved = 1;
-      targetState.currentFenceTierApplied = 1;
-      targetState.fenceLevel = 1;
+      // Тот же self-heal на путь forceFenceRuntimeReset (используется при load).
+      recomputeMaxTankLevelFromCells(targetState);
+      targetState.currentFenceTierApplied = getFenceTierForTankLevel(targetState.runtimeMaxTankLevelAchieved || 1);
+      targetState.fenceLevel = targetState.currentFenceTierApplied;
     }
     syncFenceTierWithMaxTankLevel(targetState, { force: true });
   }
@@ -3665,7 +3735,7 @@ function getAppliedDronUpgradeLevel(level){
 }
 
 function getDronUpgradeStepCost(level, statKey, appliedIndex){
-  return getProgressiveUpgradeStepCost(getDronUpgradeCostBase(level, statKey), appliedIndex);
+  return applyTalentUpgradeDiscount(getProgressiveUpgradeStepCost(getDronUpgradeCostBase(level, statKey), appliedIndex), 'upgrade_drone');
 }
 
 // solo-pipeline-yandex-vk batch#3 items 4+7:
@@ -3755,16 +3825,9 @@ function applyDronUpgrade(level, statKey, pendingCount){
   if (count <= 0) return { ok: false, error: 'no_pending' };
   let totalCost = getDronUpgradeTotalCost(lvl, key, count);
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
-  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_sc) — drone upgrades.
-  // Drones считаются SC-side upgrades; talent описание 'guns, drones and walls' 
-  // мапится: guns=cannon (upgrade_guns), walls=fence (upgrade_wall), drones=upgrade_sc.
-  try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
-    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
-      const out = talentsApi.onPurchase({ baseCost: totalCost, kind: 'upgrade_sc', mods: getMods(), timeMs: Date.now() });
-      if (out && Number.isFinite(out.cost) && out.cost >= 0) totalCost = Math.max(0, Math.floor(out.cost));
-    }
-  } catch (_) {}
+  // solo-pipeline-yandex-vk#1: eco_upgrade_discount (upgrade_drone) already baked
+  // into per-step cost via applyTalentUpgradeDiscount in getDronUpgradeStepCost.
+  // Note: drone upgrades use canonical kind 'upgrade_drone' (was 'upgrade_sc').
   if (totalCost <= 0) return { ok: false, error: 'invalid_cost' };
   if (getAvailableDamagePoints() < totalCost) return { ok: false, error: 'not_enough_points', totalCost: totalCost };
 
@@ -3819,6 +3882,38 @@ function ensureFenceTierRuntimeState(stateRef){
   if (!Number.isFinite(targetState.currentFenceTierApplied)) {
     targetState.currentFenceTierApplied = getFenceTierForTankLevel(targetState.runtimeMaxTankLevelAchieved);
   }
+}
+
+/**
+ * Item 3 self-heal: пересчитывает maxTankLevelAchieved/runtimeMaxTankLevelAchieved
+ * из реальных танков на поле. Используется после reset-точек, которые ранее
+ * зеро­или эти счётчики, из-за чего после "Перезагрузки симуляции" fence-тир
+ * оставался на 1 несмотря на L60 танки в ангаре.
+ * Helper НЕ понижает уже зафиксированный maxTankLevelAchieved — только
+ * подтягивает его вверх до фактического максимума на поле.
+ * @param {object} stateRef
+ * @returns {number} итоговый maxTankLevelAchieved (>=1)
+ */
+function recomputeMaxTankLevelFromCells(stateRef){
+  var targetState = stateRef && typeof stateRef === 'object' ? stateRef : state;
+  if (!targetState || typeof targetState !== 'object') return 1;
+  var observedMax = 1;
+  var cells = Array.isArray(targetState.cells) ? targetState.cells : null;
+  if (cells) {
+    for (var i = 0; i < cells.length; i++) {
+      var cell = cells[i];
+      var tank = cell && cell.tank;
+      var level = tank && Number.isFinite(tank.level) ? Math.floor(tank.level) : 0;
+      if (level > observedMax) observedMax = level;
+    }
+  }
+  var currentMax = Number.isFinite(targetState.maxTankLevelAchieved)
+    ? Math.max(1, Math.floor(targetState.maxTankLevelAchieved))
+    : 1;
+  var nextMax = Math.max(currentMax, observedMax, 1);
+  targetState.maxTankLevelAchieved = nextMax;
+  targetState.runtimeMaxTankLevelAchieved = nextMax;
+  return nextMax;
 }
 
 function syncFenceTierWithMaxTankLevel(stateRef, options){
@@ -4294,7 +4389,46 @@ function beginNoRepairAttackWaveEpisode(){
       talentsApi.onWaveStart();
     }
   } catch (_) {}
+
+  // Trigger cyber wave banner
+  try {
+    const waveNum = (state.stats && typeof state.stats.attackWavesCompletedCount === 'number')
+      ? state.stats.attackWavesCompletedCount + 1
+      : 1;
+    if (window.Game && typeof window.Game.onWaveStart === 'function') {
+      window.Game.onWaveStart(waveNum);
+    }
+  } catch (_) {}
 }
+
+// Default Wave Start Banner handler
+if (!window.Game) window.Game = {};
+window.Game.onWaveStart = function(waveNumber) {
+  const waveValue = waveNumber || 1;
+  const title = (typeof t === 'function') ? t('attackBannerTitle') : 'АТАКА НАЧАЛАСЬ!';
+  const subtitle = (typeof t === 'function')
+    ? t('attackBannerSubtitle', { wave: waveValue })
+    : `Началась ${waveValue} волна нападения. Выживете любой ценой!`;
+
+  let activeBanner = document.querySelector('.wave-alert-overlay');
+  if (activeBanner) activeBanner.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'wave-alert-overlay';
+  overlay.innerHTML = `
+    <div class="wave-alert-banner">
+      <div class="wave-alert-glow"></div>
+      <div class="wave-alert-title">${title}</div>
+      <div class="wave-alert-subtitle">${subtitle}</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  setTimeout(() => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 1000);
+  }, 3500);
+};
 
 function completeNoRepairAttackWaveAchievementProgress(){
   let unlocked = [];
@@ -5823,9 +5957,26 @@ function coinsForShot(level){
 }
 
 function coinsForKill(level, rewardMul=1){
+  const MAX_COIN_PER_SHOT = Math.pow(2, 20);
   const mods = getMods();
   const coinsKillMul = Number.isFinite(mods.coinsKillMul) ? Math.max(0, mods.coinsKillMul) : Math.max(0, mods.coinsMul);
-  const base = BAL.coinsPerKillBase + BAL.coinsPerKillLevelMul * Math.max(0, level - 1);
+  // Per spec item 4: per-kill reward = max(1, floor(coinsPerShot(level) * 0.10)).
+  // shotBase is the raw per-shot reward for a tank of the zombie's level, WITHOUT talent multipliers
+  // and WITHOUT economyActiveMul — this preserves the deterministic example (L6 → 32 → 3).
+  // min-$1 clamp is applied to base BEFORE talent multipliers (coinsKillMul) and active/income multipliers.
+  let shotBase;
+  if (ProgressionApi && typeof ProgressionApi.coinsPerShot === 'function') {
+    shotBase = ProgressionApi.coinsPerShot(level, BAL, LevelRewardConfig);
+    if (!Number.isFinite(shotBase) || shotBase < 0) shotBase = 0;
+    if (shotBase > MAX_COIN_PER_SHOT && !(LevelRewardConfig && LevelRewardConfig.coinsPerShot
+        && LevelRewardConfig.coinsPerShot.perLevel
+        && Number.isFinite(LevelRewardConfig.coinsPerShot.perLevel[String(level)]))) {
+      shotBase = MAX_COIN_PER_SHOT;
+    }
+  } else {
+    shotBase = Math.min(Math.pow(2, Math.max(1, Math.floor(level)) - 1), MAX_COIN_PER_SHOT);
+  }
+  const base = Math.max(1, Math.floor(shotBase * 0.10));
   const activeMul = nowSec() < state.activeEffects.economyUntil ? 1.6 : 1;
   return base * rewardMul * incomeMult() * coinsKillMul * activeMul;
 }
@@ -6020,7 +6171,7 @@ const TALENTS_V2_BRANCH_IDS = ['offense', 'defense', 'economy'];
 const TALENT_LAYOUT = [];
 const TALENTS_V2_ACTIVE_ID_BY_BRANCH = {
   offense: 'off_active_barrage',
-  defense: 'def_active_dome',
+  defense: 'def_dome',
   economy: 'eco_active_golden_hour',
 };
 
@@ -6950,12 +7101,16 @@ function restoreFullState(saved){
     state.savedFenceState = null;
     state.buyCounts = {};
     state.buyPrices = {};
-    state.maxTankLevelAchieved = 1;
-    state.runtimeMaxTankLevelAchieved = 1;
-    state.currentFenceTierApplied = 1;
-    state.fenceLevel = 1;
+    // Item 3 self-heal: вместо обнуления maxTankLevelAchieved пересчитываем
+    // его из реальных tanks в state.cells. Это устраняет баг, при котором
+    // после "Перезагрузки симуляции" + сохранения/загрузки fence-тир
+    // оставался на уровне 1, хотя в ангаре танки L60.
+    recomputeMaxTankLevelFromCells(state);
+    state.currentFenceTierApplied = getFenceTierForTankLevel(state.runtimeMaxTankLevelAchieved || 1);
+    state.fenceLevel = state.currentFenceTierApplied;
+    syncFenceTierWithMaxTankLevel(state, { force: true });
     if (FenceSprites && typeof FenceSprites.ensureLevel === 'function') {
-      try { FenceSprites.ensureLevel(1); } catch (e) {}
+      try { FenceSprites.ensureLevel(state.currentFenceTierApplied); } catch (e) {}
     }
   }
   // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
@@ -7437,7 +7592,11 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
       * (1 + (Math.random()*2-1)*BAL.zombieHpVar)
       * zombieHpMultiplier(level)
       * (t?.hpMul ?? 1.0);
-  const zombieMaxHp = baseHp * getZombieWaveHpMult();
+  var zombieMaxHp = baseHp * getZombieWaveHpMult();
+  var isBoss = (level >= 10 && Math.random() < 0.1) || (level % 10 === 0 && level > 0);
+  if (isBoss) {
+    zombieMaxHp *= 2.5;
+  }
   // Zombies no longer orbit; omegaBase is 0 (they approach the fence directly)
   const baseOmega = 0;
   const joinSpeed = fromEdge ? BAL.edgeJoinSpeed * (0.6 + Math.random() * 0.2) : BAL.edgeJoinSpeed * 1.4;
@@ -7463,7 +7622,8 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     joinSpeed,
     hp: zombieMaxHp,
     maxHp: zombieMaxHp,
-    rewardMul: (t?.rewardMul ?? 1.0),
+    isBoss: isBoss,
+    rewardMul: (t?.rewardMul ?? 1.0) * (isBoss ? 2.5 : 1.0),
     anim: Math.random() * (t?.frames ?? 1),
     walkAnimFrame: Math.random() * (t?.frames ?? 1),
     attackAnimTimeSec: 0,
@@ -8100,14 +8260,9 @@ function tryUpgradeFenceLevel(){
   const stats = getFenceStats();
   let cost = stats.upgradeCostDamagePoints || 0;
   if (!Number.isFinite(cost) || cost <= 0) return false;
-  // solo-pipeline-yandex-vk#1-followup-3: eco_upgrade_discount (upgrade_wall) — fence LEVEL upgrade.
-  try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
-    if (talentsApi && typeof talentsApi.onPurchase === 'function') {
-      const out = talentsApi.onPurchase({ baseCost: cost, kind: 'upgrade_wall', mods: getMods(), timeMs: Date.now() });
-      if (out && Number.isFinite(out.cost) && out.cost >= 0) cost = Math.max(0, Math.floor(out.cost));
-    }
-  } catch (_) {}
+  // solo-pipeline-yandex-vk#1: eco_upgrade_discount (upgrade_wall) for fence LEVEL
+  // upgrade is already baked into stats.upgradeCostDamagePoints via discounted
+  // getFenceUpgradeStepCost (see applyTalentUpgradeDiscount).
   if (!Number.isFinite(cost) || cost <= 0) return false;
   if (stats.availableDamagePoints < cost) return false;
 
@@ -8803,11 +8958,85 @@ function applyFenceSegmentDamage(seg, amount, attacker){
   } catch (_) {}
   if (finalDamage <= 0) return false;
   const wasBroken = !!seg.broken;
+  const prevHp = seg.hp;
+  const segMaxHp = seg.maxHp > 0 ? seg.maxHp : 1;
+  const prevRatio = clamp(prevHp / segMaxHp, 0, 1);
   seg.hp = clamp(seg.hp - finalDamage, 0, seg.maxHp);
   seg.broken = seg.hp <= 0;
+  const curRatio = clamp(seg.hp / segMaxHp, 0, 1);
   if (seg.broken !== wasBroken) {
     syncFenceBreachForSegment(seg);
-    if (seg.broken) breakAdjacentFenceSegments(seg);
+    if (seg.broken) {
+      breakAdjacentFenceSegments(seg);
+      // Talents V2 — Взрывное основание: AoE-детонация при полном разрушении фрагмента.
+      try {
+        const tv2 = (window.Game && window.Game.TalentsV2) || null;
+        if (tv2 && typeof tv2.applyExplosiveBaseDetonation === 'function') {
+          const zArr = (state && Array.isArray(state.zombies)) ? state.zombies : [];
+          const nowMs = (typeof performance !== 'undefined' && performance.now)
+            ? performance.now() : Date.now();
+          // solo-pipeline-yandex-vk#1 round 5 fix: zombies в TMZD хранятся в
+          // полярных координатах (z.r, z.theta) относительно глобального центра.
+          // Передаём centerX/centerY в helper, чтобы он мог перевести каждого
+          // зомби в world-cartesian (см. talentsV2.applyExplosiveBaseDetonation).
+          // seg.x/seg.y хранятся в center-relative координатах фрагмента забора;
+          // конвертируем origin в world-space так же, как помещаем зомби.
+          const cX = (center && Number.isFinite(center.x)) ? Number(center.x) : 0;
+          const cY = (center && Number.isFinite(center.y)) ? Number(center.y) : 0;
+          const segWorldX = cX + (Number.isFinite(seg.x) ? Number(seg.x) : 0);
+          const segWorldY = cY + (Number.isFinite(seg.y) ? Number(seg.y) : 0);
+          const result = tv2.applyExplosiveBaseDetonation({
+            seg: seg,
+            originX: segWorldX,
+            originY: segWorldY,
+            centerX: cX,
+            centerY: cY,
+            zombies: zArr,
+            timeMs: nowMs,
+            applyDamage: function (opts) {
+              const z = opts && opts.zombie;
+              if (!z || !Number.isFinite(opts.damage) || opts.damage <= 0) return 0;
+              const before = Number.isFinite(z.hp) ? z.hp : 0;
+              if (before <= 0) return 0;
+              z.hp = Math.max(0, before - opts.damage);
+              const dealt = before - z.hp;
+              // Damage number в world-coords, переданных helper'ом (он уже
+              // конвертировал polar→cartesian, либо использовал z.x/z.y если они
+              // были выставлены каллером/тестами).
+              const wx = Number.isFinite(opts.worldX) ? opts.worldX
+                : (Number.isFinite(z.x) ? z.x : null);
+              const wy = Number.isFinite(opts.worldY) ? opts.worldY
+                : (Number.isFinite(z.y) ? z.y : null);
+              if (dealt > 0 && typeof addDamageNumber === 'function'
+                  && wx !== null && wy !== null) {
+                try { addDamageNumber(wx, wy - 16, dealt, false, 'explosion'); } catch (_e) {}
+              }
+              if (z.hp <= 0 && typeof markZombieDying === 'function') {
+                try { markZombieDying(z); } catch (_e) {}
+              }
+              return dealt;
+            },
+          });
+          if (result && result.detonated) {
+            // Экранная встряска по конфигу fence.json.explosionShake
+            try {
+              const fenceCfg = (FenceSprites && FenceSprites.config) ? FenceSprites.config : null;
+              const shakeCfg = (fenceCfg && fenceCfg.explosionShake) || null;
+              if (shakeCfg && shakeCfg.enabled !== false
+                  && window.Game && window.Game.ScreenEffects
+                  && typeof window.Game.ScreenEffects.triggerShake === 'function') {
+                window.Game.ScreenEffects.triggerShake(
+                  Number(shakeCfg.amplitude) || 12,
+                  Number(shakeCfg.duration) || 0.35
+                );
+              }
+            } catch (_e) {}
+            // SFX взрыва (канал fenceExplosion). Если файла нет — pool тихо игнорирует.
+            try { playSfx('fenceExplosion', { channel: 'gameplay' }); } catch (_e) {}
+          }
+        }
+      } catch (_e) {}
+    }
     // Item 3 — фиксируем moment, когда в ходе текущей attack-волны
     // все фрагменты забора разрушены. Latch одноразовый и живёт
     // до конца эпизода (resetNoRepairAttackWaveRuntime сбрасывает его при finalize).
@@ -8822,6 +9051,10 @@ function applyFenceSegmentDamage(seg, amount, attacker){
         if (allBroken) noRepairAttackWaveRuntime.allFencesDestroyedThisWave = true;
       }
     }
+  }
+  if (finalDamage > 0 && window.Game && window.Game.ScreenEffects
+      && typeof window.Game.ScreenEffects.triggerFenceThresholdShake === 'function') {
+    window.Game.ScreenEffects.triggerFenceThresholdShake(seg, prevRatio, curRatio);
   }
   return true;
 }
@@ -8949,22 +9182,12 @@ function tryRepairFenceSegmentAt(px, py){
   if (!Number.isFinite(state.fenceRepairCount)) state.fenceRepairCount = 0;
   state.fenceRepairCount++;
   const wasBroken = !!seg.broken;
-  // solo-pipeline-yandex-vk#1-followup-2 D3: wire TalentsV2 repairEfficiencyMul
-  // (def_repair_efficiency). Per user constraint: replace `seg.hp = seg.maxHp`
-  // with `seg.hp = min(seg.maxHp, seg.hp + seg.maxHp * repairEfficiencyMul)`.
-  // At mul = 1 legacy behavior preserved (any damaged hp restores to full);
-  // at mul < 1 partial restore (less heal per repair); at mul > 1 over-cap
-  // attempt clamped to maxHp. No state mutation if mod absent or invalid.
-  let repairEffMul = 1;
-  try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
-    if (talentsApi && typeof talentsApi.getMods === 'function') {
-      const mods = talentsApi.getMods() || {};
-      const m = Number(mods.repairEfficiencyMul);
-      if (Number.isFinite(m) && m > 0) repairEffMul = m;
-    }
-  } catch (_) {}
-  seg.hp = Math.min(seg.maxHp, seg.hp + seg.maxHp * repairEffMul);
+  // solo-pipeline-yandex-vk item 5.B: legacy repairEfficiencyMul lookup removed.
+  // Manual player repair now always fully restores the segment to maxHp regardless of
+  // talents. The drone repair speed bonus lives in src/mechanics/drones.js stepRepair
+  // (see droneRepairSpeedBonusPerRank). The "Адаптация под дронов" talent no longer
+  // alters tap-repair heal value or efficiency.
+  seg.hp = seg.maxHp;
   seg.broken = false;
   if (seg.broken !== wasBroken) syncFenceBreachForSegment(seg);
   invalidateNoRepairAttackWaveEpisode();
@@ -9077,6 +9300,9 @@ function markZombieDying(z) {
   z.deathProgress = 0;
   z.hp = 0;
 
+  // Item 2: убран triggerShake при смерти боссов — тряска экрана теперь
+  // срабатывает только на пересечении HP-порогов сегментов забора.
+
   // Select death animation using deterministic helper (70% personal, 30% common)
   const personalDeath = z.type?.death || null;
   const commonDeath = ZombieSprites.deathCommon || null;
@@ -9137,7 +9363,13 @@ function markZombieDying(z) {
   }
   z.corpseTimer = z.corpseTimerLeft;
 
-  const _killCoinsBase = Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul);
+  // solo-pipeline-yandex-vk batch#2 item#4 followup: enforce min-$1 floor at the
+  // canonical zombie-kill coin award site. coinsForKill() already returns
+  // max(1, floor(coinsPerShot(level)*0.10)) per item#4 contract, but
+  // BAL.zombieKillCoinsMul=0.5 would otherwise collapse L1 award to floor(1*0.5)=0.
+  // Wrap with Math.max(1, ...) so the documented "min-$1 BEFORE talent muls" floor
+  // survives into the TalentsV2 onKill dispatcher.
+  const _killCoinsBase = Math.max(1, Math.floor(coinsForKill(z.level ?? 1, z.rewardMul) * BAL.zombieKillCoinsMul));
   // solo-pipeline-yandex-vk#1-followup-2 E1: wire TalentsV2 onKill into the
   // canonical zombie-death coin/xp award site. Legacy multipliers (coinsKillMul,
   // xpMul, zombieKill*Mul) stay in place; the dispatcher applies stateful
@@ -9397,7 +9629,17 @@ function stepZombies(dt){
       }
     }
 
-    const shouldMove = !holdPositionWhileCalmed
+    // solo-pipeline-yandex-vk item 1.D round 2: stun must actually freeze zombie behaviour.
+    // Prior to this fix `cc.stunUntilMs` was set by TalentsV2.onWallDamage but only consumed by
+    // the debuff-icon overlay (game.js L14376) — no movement or attack code respected it, so
+    // players never observed a stun. Now we read the per-zombie stun timer once and gate both
+    // movement and attack progression below. Time source is Date.now() to match TalentsV2's
+    // wall-clock timeMs convention.
+    const nowMsForStun = Date.now();
+    const isStunned = !!(z._statusRt && z._statusRt.cc
+      && Number.isFinite(z._statusRt.cc.stunUntilMs)
+      && nowMsForStun < z._statusRt.cc.stunUntilMs);
+    const shouldMove = !isStunned && !holdPositionWhileCalmed
       && (!effectiveShouldAttackTargets || z.attackState !== 'attack' || (!!z.breached && scCoordsValid));
     const prevTheta = z.theta;
     const prevX = center.x + Math.cos(prevTheta) * z.r;
@@ -9515,14 +9757,24 @@ function stepZombies(dt){
 
     maybeTeleportZombieNearFence(z, now);
 
-    const targetNow = effectiveShouldAttackTargets
+    const targetNow = (effectiveShouldAttackTargets && !isStunned)
       ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget)
       : null;
     z.debugAttackTargetId = targetNow ? (targetNow.kind === 'fence' ? (targetNow.seg ? targetNow.seg.id : null) : 'supercomputer') : null;
 
     const resumedFromCalm = syncZombieCalmSuppressionState(z, isCalmed, targetNow);
 
-    if (!effectiveShouldAttackTargets && !resumedFromCalm) {
+    if (isStunned) {
+      // solo-pipeline-yandex-vk item 1.D round 2: while stunned, force the zombie into a
+      // frozen walk-state. We do not advance the attack animation timer and do not let an
+      // in-progress 'attack' state fire a hit — otherwise the stun would only suppress
+      // movement while still allowing damage ticks.
+      z.attackState = 'walk';
+      z.attackAnimTimeSec = 0;
+      z.attackCooldownTimerSec = 0;
+      z.attackDidHit = false;
+      z.attackTargetId = null;
+    } else if (!effectiveShouldAttackTargets && !resumedFromCalm) {
       z.attackState = 'walk';
       z.attackAnimTimeSec = 0;
       z.attackCooldownTimerSec = 0;
@@ -10304,6 +10556,13 @@ function spawnProjectile(p){
   b.isMatryoshkaChild = p.isMatryoshkaChild || false;
   b.isChainChild = p.isChainChild || false;
   b.isCascadeChild = p.isCascadeChild || false;
+  
+  if (!b.isMatryoshkaChild && !b.isChainChild && !b.isCascadeChild) {
+    if (typeof spawnMuzzleFlash === 'function') {
+      spawnMuzzleFlash(b.x, b.y, b.rotation, b.color);
+    }
+  }
+
   state.projectiles.push(b);
 }
 
@@ -10504,12 +10763,12 @@ function impactAt(x,y,b,opts){
             if (extraDamage <= 0) continue;
             applyDamageToZombie(extra.zombie, extraDamage, 'tank');
             const extraPos = zombiePos(extra.zombie);
-            addDamageNumber(extraPos.x, extraPos.y, extraDamage, false);
+            addDamageNumber(extraPos.x, extraPos.y, extraDamage, false, b.kind);
           }
         }
       }
       applyDamageToZombie(z, dmgRounded, 'tank');
-      addDamageNumber(p.x, p.y, dmgRounded, isCrit);
+      addDamageNumber(p.x, p.y, dmgRounded, isCrit, b.kind);
       if (Math.random() < mods.dotChance){
         z.dotUntil = nowSec() + 4;
         z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
@@ -10545,6 +10804,9 @@ function impactAt(x,y,b,opts){
     const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
     if (_shouldSpawnImpact) {
       state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind,bulletCfg:b.bulletCfg||null});
+      if (typeof spawnImpactSparks === 'function') {
+        spawnImpactSparks(x, y, b.rotation, b.glow || b.color);
+      }
     }
     burst(x, y, impactCount, b.glow);
     if (b.dmg > 80 && (!_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn())){
@@ -10625,14 +10887,29 @@ function chainLightning(x,y,b,opts){
     const finalChainDmg = (baseChainDmg * (isCrit ? 1.5 : 1)) / damageMul;
     const dmgRounded = Math.round(finalChainDmg);
     applyDamageToZombie(best, dmgRounded, 'tank');
-    addDamageNumber(p.x, p.y, dmgRounded, isCrit);
+    addDamageNumber(p.x, p.y, dmgRounded, isCrit, b.kind);
     curX = p.x;
     curY = p.y;
   }
 }
 
-const MAX_DAMAGE_NUMBERS = 24;
+const MAX_DAMAGE_NUMBERS = 32;
 let _damageNumberWriteIndex = 0;
+const _damageNumberPool = [];
+for (let i = 0; i < 64; i++) {
+  _damageNumberPool.push({
+    x: 0,
+    y: 0,
+    value: '',
+    life: 0,
+    max: 1,
+    vx: 0,
+    vy: 0,
+    isCrit: false,
+    damageType: 'physical'
+  });
+}
+let _damageNumberPoolIndex = 0;
 
 function formatDamageNumber(value){
   if (window.Game && window.Game.NumberFormat) return window.Game.NumberFormat.formatCompactRu(Math.round(value));
@@ -10646,31 +10923,32 @@ function formatDamageNumber(value){
   return (m === Math.floor(m) ? m : m.toFixed(1).replace('.', ',')) + 'м';
 }
 
-function addDamageNumber(x, y, value, isCrit = false){
-  // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 3): user-tunable
-  // visual density × cap floor for damage popups. Crit popups always render
-  // (gameplay-readability whitelist); regular popups gated stochastically
-  // when density<1. Cap floor=6 keeps the most recent popups visible even at
-  // density=0 so crit stream remains legible. Behavior at density=1 is 1:1.
+function addDamageNumber(x, y, value, isCrit = false, damageType = 'physical'){
   const _Fx = window.Game && window.Game.FxDensity;
   if (!isCrit && _Fx && typeof _Fx.shouldSpawn === 'function' && !_Fx.shouldSpawn()) return;
   const cap = (_Fx && typeof _Fx.scaleCap === 'function')
-    ? _Fx.scaleCap(MAX_DAMAGE_NUMBERS, 6)
+    ? _Fx.scaleCap(MAX_DAMAGE_NUMBERS, 8)
     : MAX_DAMAGE_NUMBERS;
   const arr = state.damageNumbers;
-  if (arr.length > cap) {
-    arr.length = cap;
-  }
+  
   const jitter = 8;
-  const entry = {
-    x: x + (Math.random() * 2 - 1) * jitter,
-    y: y + (Math.random() * 2 - 1) * jitter,
-    value: formatDamageNumber(value),
-    life: 1,
-    max: 1,
-    vy: -28,
-    isCrit: !!isCrit,
-  };
+  const entry = _damageNumberPool[_damageNumberPoolIndex];
+  _damageNumberPoolIndex = (_damageNumberPoolIndex + 1) % _damageNumberPool.length;
+  
+  entry.x = x + (Math.random() * 2 - 1) * jitter;
+  entry.y = y + (Math.random() * 2 - 1) * jitter;
+  entry.value = formatDamageNumber(value);
+  entry.life = 0.75;
+  entry.max = 0.75;
+  entry.vy = -45 - Math.random() * 15;
+  entry.vx = (Math.random() * 2 - 1) * 15;
+  entry.isCrit = !!isCrit;
+  entry.damageType = damageType || 'physical';
+
+  if (arr.indexOf(entry) !== -1) {
+    return;
+  }
+  
   if (arr.length < cap) {
     arr.push(entry);
     _damageNumberWriteIndex = arr.length % Math.max(1, cap);
@@ -10688,7 +10966,9 @@ function stepDamageNumbers(dt){
     const d = arr[r];
     d.life -= dt;
     if (d.life <= 0) continue;
+    d.x += d.vx * dt;
     d.y += d.vy * dt;
+    d.vy += 45 * dt; // Gravity pull
     arr[w++] = d;
   }
   arr.length = w;
@@ -10944,6 +11224,78 @@ function burst(x,y,count,color){
   const scaledCount = Math.max(1, Math.round(count * scale * density));
   burstRaw(x, y, scaledCount, color);
 }
+
+function spawnMuzzleFlash(x, y, rotation, color) {
+  const flashColor = color || '#fff099';
+  const count = 4;
+  for (let i = 0; i < count; i++) {
+    const angle = rotation + (Math.random() * 2 - 1) * 0.25;
+    const speed = 40 + Math.random() * 80;
+    const p = particlePool ? particlePool.acquire() : {};
+    p.kind = 'particle';
+    p.x = x;
+    p.y = y;
+    p.r = Math.random() * 3 + 2;
+    p.color = flashColor;
+    p.life = Math.random() * 0.12 + 0.08;
+    p.max = p.life;
+    p.vx = Math.cos(angle) * speed;
+    p.vy = Math.sin(angle) * speed;
+    p.text = '';
+    state.particles.push(p);
+  }
+}
+
+function spawnImpactSparks(x, y, rotation, color) {
+  const sparkColor = color || '#ff9933';
+  const count = 6;
+  const bounceAngle = rotation + Math.PI;
+  for (let i = 0; i < count; i++) {
+    const angle = bounceAngle + (Math.random() * 2 - 1) * 0.5;
+    const speed = 60 + Math.random() * 90;
+    const p = particlePool ? particlePool.acquire() : {};
+    p.kind = 'particle';
+    p.x = x;
+    p.y = y;
+    p.r = Math.random() * 1.5 + 1.0;
+    p.color = sparkColor;
+    p.life = Math.random() * 0.16 + 0.08;
+    p.max = p.life;
+    p.vx = Math.cos(angle) * speed;
+    p.vy = Math.sin(angle) * speed;
+    p.text = '';
+    state.particles.push(p);
+  }
+}
+
+function spawnDroneWeldingSparks(x, y, targetX, targetY) {
+  const dx = targetX - x;
+  const dy = targetY - y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const angle = dist > 0.01 ? Math.atan2(dy, dx) : 0;
+  
+  // Bright blue-white and cyan welding sparks
+  const colors = ['#00ffff', '#ffffff', '#8bd3ff', '#99f0ff'];
+  const count = 3 + Math.floor(Math.random() * 4); // 3 to 6 particles per tick
+  for (let i = 0; i < count; i++) {
+    const pAngle = angle + (Math.random() * 2 - 1) * 0.45; // directed spray towards target
+    const speed = 50 + Math.random() * 85;
+    const p = particlePool ? particlePool.acquire() : {};
+    p.kind = 'particle';
+    p.x = x;
+    p.y = y;
+    p.r = Math.random() * 1.4 + 1.0;
+    p.color = colors[Math.floor(Math.random() * colors.length)];
+    p.life = Math.random() * 0.18 + 0.1;
+    p.max = p.life;
+    p.vx = Math.cos(pAngle) * speed;
+    p.vy = Math.sin(pAngle) * speed;
+    p.text = '';
+    state.particles.push(p);
+  }
+}
+window.Game = window.Game || {};
+window.Game.spawnDroneWeldingSparks = spawnDroneWeldingSparks;
 
 function popText(x,y,text,color){
   // R6 (solo-pipeline-yandex-vk rework3): popText — UI hint channel ALWAYS-SHOW
@@ -14250,6 +14602,11 @@ function draw(){
   }
   ctx.clearRect(0,0,viewSize.w,viewSize.h);
 
+  ctx.save();
+  if (window.Game && window.Game.ScreenEffects) {
+    window.Game.ScreenEffects.applyShake(ctx);
+  }
+
   // HUD scratch pool contract (docs/ai/SYSTEMS/hud.md): begin-of-frame reset.
   // Lazy init: attach singleton to ctx as `ctx.__hudScratch` (canonical renderCtx slot).
   // draw() only — scratch pool writes из step*/update запрещены (P2.4).
@@ -14342,6 +14699,8 @@ function draw(){
   if (!_RR || _RR.isLegacy('projectilesEffects')) renderProjectilesAndEffects();
   // Task 10 (rework-cycle-2): shields drawn above zombies/corpses and projectiles but BELOW drone bodies.
   drawFenceShields();
+  // solo-pipeline-yandex-vk#1 item 2: per-fragment immunity overlay, same render slot as shields.
+  drawFenceProcShields();
   // ── Drone bodies: above projectiles, above zombies ──
   if (_RR && _RR.isPhaser('drones') && _PLM) _PLM.drawLayer('drones', ctx);
   if (!_RR || _RR.isLegacy('drones')) drawDroneBodies();
@@ -14373,6 +14732,7 @@ function draw(){
     window.Game.ZombieAnimPreview.renderPreview(ctx, viewSize.w, viewSize.h, previewDt);
   }
   if (!_RR || _RR.isLegacy('hpBarOverlay')) drawSupercomputerHpBarOverlay();
+  ctx.restore();
 }
 
 function drawZombieAttackOverlay(){
@@ -15666,6 +16026,49 @@ function drawFenceShields(){
   ctx.restore();
 }
 
+// solo-pipeline-yandex-vk#1 item 2 (Случайная неразрушимость): per-fragment overlay
+// rendered while segRt.immunityUntilMs is in the future. Mirrors drawFenceShields but
+// reads ProcShieldSprites + fence.json `procShields`. Visible only when a fragment is
+// under immunity proc; ignores global dome.
+function drawFenceProcShields(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  if (!ProcShieldSprites.ready || !ProcShieldSprites.img) return;
+  const sCfg = ProcShieldSprites.getConfig();
+  if (!sCfg || !Array.isArray(sCfg.frames) || sCfg.frames.length === 0) return;
+  if (sCfg.visibleWhile && sCfg.visibleWhile !== 'immunityActive') return;
+  const nowMs = Date.now();
+  const frameRate = Number.isFinite(sCfg.frameRate) && sCfg.frameRate > 0 ? sCfg.frameRate : 8;
+  const frames = sCfg.frames;
+  const sFrameIdx = Math.floor(nowMs / (1000 / frameRate)) % frames.length;
+  const sFrame = frames[sFrameIdx];
+  if (!sFrame || !Number.isFinite(sFrame.w) || !Number.isFinite(sFrame.h)) return;
+  const sScale = Number.isFinite(sCfg.scale) && sCfg.scale > 0 ? sCfg.scale : 1.0;
+  const sAx = sCfg.anchor && Number.isFinite(sCfg.anchor.x) ? sCfg.anchor.x : 0.5;
+  const sAy = sCfg.anchor && Number.isFinite(sCfg.anchor.y) ? sCfg.anchor.y : 0.5;
+  const baseMul = (BAL.fenceWidth / Math.max(sFrame.w, sFrame.h)) * 1.2 * sScale;
+  const drawW = baseMul * sFrame.w;
+  const drawH = baseMul * sFrame.h;
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg || seg.broken) continue;
+    const segRt = seg && seg._defRt;
+    const immuneActive = segRt && Number.isFinite(segRt.immunityUntilMs) && nowMs < segRt.immunityUntilMs;
+    if (!immuneActive) continue;
+    ctx.save();
+    ctx.translate(seg.x, seg.y);
+    ctx.drawImage(
+      ProcShieldSprites.img,
+      sFrame.x || 0, sFrame.y || 0, sFrame.w, sFrame.h,
+      -drawW * sAx, -drawH * sAy,
+      drawW, drawH
+    );
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 function renderFenceHpBars(){
   if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
   const hpBar = getFenceHealthBarConfig();
@@ -16610,8 +17013,12 @@ function drawZombieEntity(z, x, y){
 function drawProjectiles(){
   if (!state.projectiles.length) return;
 
+  let glowCount = 0;
   for (const b of state.projectiles){
     if (b.isTankAttackingZombie === true) continue;
+    
+    const shouldGlow = glowCount < 10 && (b.kind === 'tesla' || b.kind === 'toxic' || b.kind === 'laser' || b.kind === 'plasma');
+
     const bulletSprite = b.bulletCfg && b.bulletCfg.bulletSprite ? b.bulletCfg.bulletSprite : null;
     const ChipFxB = window.Game && window.Game.ChipEffects;
     const bulletAtlasImg = bulletSprite && bulletSprite.src && ChipFxB && typeof ChipFxB.getChipAtlasImage === 'function'
@@ -16631,10 +17038,17 @@ function drawProjectiles(){
       if (imgW > 0 && sx + sw > imgW) sw = Math.max(0, imgW - sx);
       if (imgH > 0 && sy + sh > imgH) sh = Math.max(0, imgH - sy);
       if (sw <= 0 || sh <= 0) { // frame completely outside atlas — fallback to circle
+        ctx.save();
+        if (shouldGlow) {
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = b.color || '#00f0ff';
+          glowCount++;
+        }
         ctx.fillStyle = b.color;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         continue;
       }
       const anchor = bulletSprite.anchor || { x: 0.5, y: 0.5 };
@@ -16645,6 +17059,11 @@ function drawProjectiles(){
       const bulletSizeConstant = bulletSprite.bulletSizeConstant !== false;
       const scale = bulletSizeConstant ? baseScale : baseScale * (b.effectIntensity ?? 1);
       ctx.save();
+      if (shouldGlow) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = b.color || '#00f0ff';
+        glowCount++;
+      }
       ctx.translate(b.x, b.y);
       ctx.rotate(Number.isFinite(b.rotation) ? b.rotation : 0);
       ctx.drawImage(
@@ -16662,10 +17081,17 @@ function drawProjectiles(){
       continue;
     }
 
+    ctx.save();
+    if (shouldGlow) {
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = b.color || '#00f0ff';
+      glowCount++;
+    }
     ctx.fillStyle = b.color;
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -16948,9 +17374,6 @@ function drawDecals(){
 }
 
 function drawDamageNumbers(){
-  // solo-pipeline-yandex-vk#3 (B2): off-screen cull (margin 32px) + batched
-  // text-state to drop per-particle ctx.save/restore. globalAlpha is the
-  // only per-element state that varies; we restore canonical state once.
   const arr = state.damageNumbers;
   if (!arr || !arr.length) return;
   const cullMarginX = 32;
@@ -16960,18 +17383,46 @@ function drawDamageNumbers(){
   const minY = -cullMarginY;
   const maxY = (viewSize ? viewSize.h : 0) + cullMarginY;
   ctx.save();
-  ctx.font = '11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   let lastFill = null;
   for (let i = 0; i < arr.length; i++){
     const d = arr[i];
     if (d.x < minX || d.x > maxX || d.y < minY || d.y > maxY) continue;
-    const t = d.life / d.max;
-    const alpha = t <= 0.2 ? t / 0.2 : (t >= 0.6 ? 1 : (t - 0.2) / 0.4);
-    const fill = d.isCrit ? '#c03030' : '#fff8e0';
+    const lifeRatio = d.life / d.max;
+    const age = 1.0 - lifeRatio;
+    
+    let scale = 1.0;
+    if (age < 0.15) {
+      scale = 1.0 + (0.15 - age) * 4.0;
+    }
+    
+    const baseSize = d.isCrit ? 15 : 10;
+    const currentSize = Math.round(baseSize * scale);
+    ctx.font = (d.isCrit ? 'bold ' : '') + currentSize + 'px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+
+    let fill = '#fff8e0';
+    if (d.isCrit) {
+      fill = '#ff2a4b';
+    } else if (d.damageType === 'toxic' || d.damageType === 'poison') {
+      fill = '#1edd88';
+    } else if (d.damageType === 'tesla' || d.damageType === 'lightning') {
+      fill = '#f1c40f';
+    } else if (d.damageType === 'he' || d.damageType === 'fire') {
+      fill = '#ff7675';
+    } else if (d.damageType === 'cold' || d.damageType === 'ice') {
+      fill = '#2ee1ff';
+    }
+
     if (fill !== lastFill){ ctx.fillStyle = fill; lastFill = fill; }
-    ctx.globalAlpha = clamp(alpha, 0, 1) * (0.5 + 0.5 * t);
+    
+    const alpha = lifeRatio <= 0.25 ? lifeRatio / 0.25 : 1.0;
+    ctx.globalAlpha = clamp(alpha, 0, 1);
+    
+    // Draw robust black outline for maximum visibility on all maps/backgrounds
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = d.isCrit ? 3 : 2;
+    ctx.strokeText(d.value, d.x, d.y);
     ctx.fillText(d.value, d.x, d.y);
   }
   ctx.restore();
@@ -17137,6 +17588,8 @@ function applySupercomputerDamage(baseDamage){
   const armorFlat = Number.isFinite(sc.armorFlat) ? Math.max(0, sc.armorFlat) : 0;
   const finalDamage = Math.max(0, incoming - armorFlat);
   const prevHp = Number.isFinite(sc.hp) ? Math.max(0, sc.hp) : 0;
+  // User-directed rework: пороговая тряска каждые 5% потерянного HP суперкомпьютера.
+  const prevRatio = prevHp / maxHp;
 
   if (!flags.wasCritical && prevHp > hpThreshold && (prevHp - finalDamage) <= hpThreshold) {
     const appliedToThreshold = Math.max(0, prevHp - hpThreshold);
@@ -17145,21 +17598,41 @@ function applySupercomputerDamage(baseDamage){
     savePreRetryPayloadToAutoSlot();
     criticalFlowActive = true;
     openCriticalModal();
+    // Самая сильная и продолжительная тряска (5 сек) при показе "Критическое состояние".
+    try {
+      var FX1 = window.Game && window.Game.ScreenEffects;
+      if (FX1 && typeof FX1.triggerCriticalStateShake === 'function') {
+        FX1.triggerCriticalStateShake();
+      }
+    } catch (_) {}
     return { finalDamage: appliedToThreshold, hp: sc.hp, destroyedNow: false, clampedCritical: true };
   }
 
+  let damageResult;
   if (supercomputerController && supercomputerController.applyDamage) {
-    return supercomputerController.applyDamage(sc, baseDamage, SupercomputerSprites.config);
+    damageResult = supercomputerController.applyDamage(sc, baseDamage, SupercomputerSprites.config);
+  } else {
+    sc.hp = Math.max(0, prevHp - finalDamage);
+    const destroyedNow = prevHp > 0 && sc.hp === 0;
+    if (destroyedNow) {
+      sc.state = 'destroyed';
+      sc.wantsBuildTank = false;
+      sc.pendingBuildTank = false;
+    }
+    damageResult = { finalDamage, hp: sc.hp, destroyedNow };
   }
 
-  sc.hp = Math.max(0, prevHp - finalDamage);
-  const destroyedNow = prevHp > 0 && sc.hp === 0;
-  if (destroyedNow) {
-    sc.state = 'destroyed';
-    sc.wantsBuildTank = false;
-    sc.pendingBuildTank = false;
-  }
-  return { finalDamage, hp: sc.hp, destroyedNow };
+  // Пороговая тряска по фактическому изменению HP (читаем sc.hp после применения урона).
+  try {
+    var FX2 = window.Game && window.Game.ScreenEffects;
+    if (FX2 && typeof FX2.triggerSupercomputerThresholdShake === 'function') {
+      var curHp = Number.isFinite(sc.hp) ? Math.max(0, sc.hp) : 0;
+      var curRatio = curHp / maxHp;
+      FX2.triggerSupercomputerThresholdShake(prevRatio, curRatio);
+    }
+  } catch (_) {}
+
+  return damageResult;
 }
 
 function stepSupercomputer(dt){
@@ -17219,6 +17692,9 @@ function loop(now){
   lastFrameTs = now;
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
+  if (window.Game && window.Game.ScreenEffects && typeof window.Game.ScreenEffects.update === 'function') {
+    window.Game.ScreenEffects.update(dt);
+  }
   fpsAvg = fpsAvg * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
   const fxLevel = getFxLevel();
   // solo-pipeline-yandex-vk#3 (B3): hysteresis — drop into qualityLow when
@@ -18025,6 +18501,8 @@ async function boot(){
     await GroundSprites.load().catch(function () {});
     // Task 10: preload shields.png on boot (non-blocking failure path)
     try { await ShieldSprites.load(); } catch (_) {}
+    // solo-pipeline-yandex-vk#1 item 2: preload proc_shields.png (non-blocking failure path)
+    try { await ProcShieldSprites.load(); } catch (_) {}
     rebuildGroundLayer();
     // solo-pipeline-yandex-vk#3 (B2): sprite atlas pre-warm — render each
     // loaded zombie/tank atlas once off-screen so the GPU uploads the
