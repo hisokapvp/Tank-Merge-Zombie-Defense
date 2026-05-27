@@ -164,12 +164,13 @@
     wallArmorFlat: 0,
     wallArmorMul: 1,
     tankBuyCostMul: 1,
+    mergeExtraLevelChance: 0,
     repairCostMul: 1,
     upgradeCostMul_guns: 1,
     upgradeCostMul_sc: 1,
     upgradeCostMul_wall: 1,
     upgradeCostMul_drone: 1,
-    taxReliefCostMul: 1,
+    /* taxReliefCostMul: removed in solo-pipeline-yandex-vk#1 item 4 (Гениальный инженер) — legacy field. */
     voucherDiscountMul: 1,
     brokenSegmentDamageMul: 1,
     executeDamageMul: 0,
@@ -276,12 +277,11 @@
     defenseActiveRechargeMs: 0,
     interestPct: 0,
     interestPeriodMs: 0,
-    interestCapPerTick: 0,
     voucherKillsNeed: 0,
     voucherCap: 0,
-    lotteryChance: 0,
-    lotteryIcdMs: 0,
-    lotteryLimitPerRun: 0,
+    lotterySameLevelChance: 0,
+    lotteryPlus5Chance: 0,
+    lotteryDroneL1Chance: 0,
     cleanDefenseCoinsMul: 1,
     cleanDefenseXpMul: 1,
     greyToDamagePointsMul: 0,
@@ -290,7 +290,7 @@
     killBountyCoinsMul: 1,
     killBountyDurationMs: 0,
     killBountyIcdMs: 0,
-    taxReliefDurationMs: 0,
+    /* taxReliefDurationMs: removed in solo-pipeline-yandex-vk#1 item 4 (Гениальный инженер) — legacy field. */
     critKillXpMul: 1,
     economyActiveDurationMs: 0,
     economyActiveCoinsMul: 1,
@@ -330,7 +330,7 @@
     cleanDefense: false,
     greyToDamagePoints: false,
     interest: false,
-    taxRelief: false,
+    mergeExtraLevel: false,
     voucher: false,
     lottery: false,
     killBounty: false,
@@ -627,8 +627,6 @@
       eco: {
         vouchers: 0,
         voucherKills: 0,
-        lotteryUsed: 0,
-        lotteryIcdUntilMs: 0,
         interestNextAtMs: 0,
         taxReliefUntilMs: 0,
         greyDamage: 0,
@@ -661,8 +659,6 @@
     if (!runRt.eco || typeof runRt.eco !== 'object') runRt.eco = {};
     if (!isFiniteNumber(runRt.eco.vouchers)) runRt.eco.vouchers = 0;
     if (!isFiniteNumber(runRt.eco.voucherKills)) runRt.eco.voucherKills = 0;
-    if (!isFiniteNumber(runRt.eco.lotteryUsed)) runRt.eco.lotteryUsed = 0;
-    if (!isFiniteNumber(runRt.eco.lotteryIcdUntilMs)) runRt.eco.lotteryIcdUntilMs = 0;
     if (!isFiniteNumber(runRt.eco.interestNextAtMs)) runRt.eco.interestNextAtMs = 0;
     if (!isFiniteNumber(runRt.eco.taxReliefUntilMs)) runRt.eco.taxReliefUntilMs = 0;
     if (!isFiniteNumber(runRt.eco.greyDamage)) runRt.eco.greyDamage = 0;
@@ -3661,6 +3657,18 @@
     var interestPeriodMs = Math.max(0, getModNumber(mods, 'interestPeriodMs', [], 0));
     var interestPct = Math.max(0, getModNumber(mods, 'interestPct', [], 0));
     if (interestPeriodMs > 0 && interestPct > 0) {
+      // Pause-gate: when the game is paused (menu/tab inactive/critical), defer interest accrual.
+      // Reset the schedule to "now + period" so re-opening doesn't trigger a catch-up burst.
+      var gamePauseApi = (global.Game && global.Game.pauseManager) ? global.Game.pauseManager : null;
+      var isPausedNow = false;
+      try {
+        if (gamePauseApi && typeof gamePauseApi.isPaused === 'function') {
+          isPausedNow = !!gamePauseApi.isPaused();
+        }
+      } catch (_) { isPausedNow = false; }
+      if (isPausedNow) {
+        runRt.eco.interestNextAtMs = timeMs + interestPeriodMs;
+      } else {
       var coins = NaN;
       if (ctx.state && isFiniteNumber(ctx.state.coins)) coins = toNumber(ctx.state.coins, 0);
       else if (isFiniteNumber(ctx.coins)) coins = toNumber(ctx.coins, 0);
@@ -3673,8 +3681,6 @@
         var interestSteps = 0;
         while (timeMs >= runRt.eco.interestNextAtMs) {
           var add = coins * interestPct;
-          var capPerTick = Math.max(0, getModNumber(mods, 'interestCapPerTick', [], 0));
-          if (capPerTick > 0) add = Math.min(add, capPerTick);
           add = Math.max(0, add);
           coins += add;
           interestDelta += add;
@@ -3694,6 +3700,7 @@
           else if (typeof ctx.setCoins === 'function') ctx.setCoins(coins);
           else ctx.coins = coins;
         }
+      }
       }
     }
 
@@ -3894,34 +3901,65 @@
     var runRt = ensureRunRt();
     var timeMs = toNumber(ctx.timeMs, runtime.nowMsFn());
     var rng = ctx.rng || ctx.random;
+    var commit = !!(ctx.confirmed || ctx.success || ctx.committed);
 
-    var cost = Math.max(0, toNumber(ctx.baseCost, 0)) * Math.max(0, getModNumber(mods, 'tankBuyCostMul', [], 1));
-    if (timeMs < runRt.eco.taxReliefUntilMs) {
-      cost *= Math.max(0, getModNumber(mods, 'taxReliefCostMul', [], 1));
-    }
+    // solo-pipeline-yandex-vk#1 followup2-item2 — dry-run overrides for bulk preview.
+    // The bulk-buy label has to call the SAME pricing path as the actual purchase
+    // loop, otherwise the displayed total and the deducted total diverge (the bug
+    // the player reported: button shows 638 gold, deduction is 440 gold). When the
+    // caller supplies overrides, we treat them as virtual eco state for this single
+    // quote (no mutation), so preview can walk N consecutive iterations and stay
+    // identical to the real loop.
+    var hasVouchersOverride = isFiniteNumber(ctx.vouchersOverride);
+    var availableVouchers = hasVouchersOverride
+      ? Math.max(0, toInt(ctx.vouchersOverride, 0))
+      : runRt.eco.vouchers;
 
-    if (runRt.eco.vouchers > 0) {
+    // solo-pipeline-yandex-vk#1 item 1 fix (2026-05-27) — DOUBLE-DISCOUNT FIX.
+    // All callers (`buyTankCost`, `performTankPurchaseOnce`, `calculateAffordableBuyCount`,
+    // HUD `updateUI` quote) pre-compute baseCost with `tankBuyCostMul` already applied
+    // (via `buyTankCost(level)` or mirrored formula `base * tankBuyCostMul * expMul`).
+    // Re-applying the multiplier here caused a 0.7 × 0.7 = 0.49 double-discount,
+    // visible to the player as button=35$/debit=24$ on a 50$ base after rank-5 talent.
+    // Voucher discount remains the only purchase-time multiplier inside onBuyTank.
+    var cost = Math.max(0, toNumber(ctx.baseCost, 0));
+
+    // Voucher: discount is always reflected in the returned cost so the caller can
+    // perform a correct affordability check. The voucher counter is only decremented
+    // when the caller commits (commit === true), so failed purchases don't burn a coupon.
+    var voucherUsed = false;
+    if (availableVouchers > 0) {
       cost *= Math.max(0, getModNumber(mods, 'voucherDiscountMul', [], 1));
-      runRt.eco.vouchers = Math.max(0, runRt.eco.vouchers - 1);
+      voucherUsed = true;
+      if (commit && !hasVouchersOverride) {
+        runRt.eco.vouchers = Math.max(0, runRt.eco.vouchers - 1);
+      }
     }
 
-    var applyFreeDuplicate = false;
-    var lotteryLimit = Math.max(0, toInt(getModNumber(mods, 'lotteryLimitPerRun', [], 0), 0));
-    var lotteryChance = resolveChance(getModNumber(mods, 'lotteryChance', [], 0), 'lottery');
-    if (runRt.eco.lotteryUsed < lotteryLimit && timeMs >= runRt.eco.lotteryIcdUntilMs && lotteryChance > 0 && rollChance(rng, lotteryChance, 'lottery')) {
-      applyFreeDuplicate = true;
-      runRt.eco.lotteryUsed += 1;
-      runRt.eco.lotteryIcdUntilMs = timeMs + Math.max(0, getModNumber(mods, 'lotteryIcdMs', [], 0));
-    }
-
-    if (ctx.confirmed || ctx.success || ctx.committed) {
-      runRt.eco.taxReliefUntilMs = timeMs + Math.max(0, getModNumber(mods, 'taxReliefDurationMs', [], 0));
+    // Lottery: three independent rolls, no ICD, no per-run limit. Rolls only happen
+    // on commit so a quote call doesn't waste RNG state and never grants bonuses
+    // for a purchase that fails affordability.
+    var lotterySameLevel = false;
+    var lotteryPlus5 = false;
+    var lotteryDroneL1 = false;
+    if (commit) {
+      var sameLevelChance = resolveChance(getModNumber(mods, 'lotterySameLevelChance', [], 0), 'lottery_same');
+      var plus5Chance = resolveChance(getModNumber(mods, 'lotteryPlus5Chance', [], 0), 'lottery_plus5');
+      var droneL1Chance = resolveChance(getModNumber(mods, 'lotteryDroneL1Chance', [], 0), 'lottery_drone');
+      if (sameLevelChance > 0 && rollChance(rng, sameLevelChance, 'lottery_same')) lotterySameLevel = true;
+      if (plus5Chance > 0 && rollChance(rng, plus5Chance, 'lottery_plus5')) lotteryPlus5 = true;
+      if (droneL1Chance > 0 && rollChance(rng, droneL1Chance, 'lottery_drone')) lotteryDroneL1 = true;
     }
 
     return {
       cost: finalizeRewardValue(cost),
-      applyFreeDuplicate: applyFreeDuplicate,
+      // Back-compat: callers that used `applyFreeDuplicate` get the same-level lottery flag.
+      applyFreeDuplicate: lotterySameLevel,
+      voucherUsed: voucherUsed,
       vouchersLeft: Math.max(0, toInt(runRt.eco.vouchers, 0)),
+      lotterySameLevel: lotterySameLevel,
+      lotteryPlus5: lotteryPlus5,
+      lotteryDroneL1: lotteryDroneL1,
     };
   }
 

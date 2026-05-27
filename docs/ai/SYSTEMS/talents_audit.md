@@ -63,7 +63,7 @@
 | `eco_xp_bonus` | `xpMul` | `mods.xpMul` | OK_DIRECT_MOD |
 | `eco_double_reward` | `doubleRewardChanceKill/Box/Wave` | direct-mod path | OK_DIRECT_MOD |
 | `eco_interest` | `interest*` | helper не найден | BROKEN_OR_UNCERTAIN |
-| `eco_tax_relief` | `taxRelief*` | helper не найден | BROKEN_OR_UNCERTAIN |
+| `eco_tax_relief` | `mergeExtraLevelChance` | `_applyMergeLevelBonus` (game.js) | WIRED (rebrand 2026-05-27) |
 | `eco_voucher` | `voucher*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_lottery` | `lottery*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_clean_defense` | `cleanDefense*` | helper не найден | BROKEN_OR_UNCERTAIN |
@@ -223,7 +223,7 @@
 | `eco_crit_kill_bonus` | `critKillCoinsBonusFlat` | UNCERTAIN | **WIRED** | `onKill` теперь вызывается в death-FX coin-award site (game.js:~8909). Передаются `baseCoins`, `baseXp`, `isCrit`, `zombie`. |
 | `eco_voucher` (kill-side) | `voucherKillsNeed/Cap/DiscountMul` | UNCERTAIN | **WIRED** | Через `onKill` (счётчик аккумулируется) |
 | `eco_voucher` (buy-side) | (то же) | UNCERTAIN | **WIRED** | Через `onBuyTank` (скидка применяется при покупке) |
-| `eco_tax_relief` | `taxReliefCostMul/DurationMs` | UNCERTAIN | **WIRED** | `onBuyTank` теперь вызывается в `performTankPurchaseOnce` (game.js:~4894) после hangar-check, перед affordability-check |
+| `eco_tax_relief` | `mergeExtraLevelChance` | UNCERTAIN | **WIRED (rebrand 2026-05-27)** | После rebrand «Налоговая льгота» → «Гениальный инженер» эффект применяется не через `onBuyTank`, а через `game.js._applyMergeLevelBonus()` на merge sites (`performMerge`, `_performUndergroundMerge`, `_performCrossHangarMerge`) с clamp по `MAX_TANK_LEVEL`. Старые `taxReliefCostMul/DurationMs/UntilMs` удалены из активных hot paths; runtime state поле `taxReliefUntilMs` оставлено только для save-compat. |
 | `eco_lottery` | `lotteryChance/IcdMs/LimitPerRun` | UNCERTAIN | **WIRED** | Через `onBuyTank` |
 | `eco_clean_defense` | `cleanDefenseCoinsMul/XpMul` | UNCERTAIN | **DEFERRED** | wired в `onWaveEnd` (talentsV2.js:3469–3470), но `onWaveEnd` не имеет callsite в game.js. Wave-end transitions используют `finalizeNoRepairAttackWaveEpisode` (game.js:4321), нужна интеграция. **F3 follow-up.** |
 | `eco_grey_to_damage_points` | `greyToDamagePointsMul` | UNCERTAIN | **DEFERRED** | wired в `onOverkill` + `onWaveEnd`, оба callsite-а отсутствуют. **F3 follow-up.** |
@@ -320,7 +320,7 @@ Still in ALLOWED_UNWIRED_TODO (3): `onShotReward` (eco_coins_shot_bonus — от
 | `def_repair_cost` | defense | `tryRepairFenceSegmentAt`: `costCoins *= repairCostMul` перед `applyRepairCoupon` (FU2) |
 | `eco_repair_discount` | economy | тот же `repairCostMul` read в `tryRepairFenceSegmentAt` (FU2, shared mod) |
 | `eco_crit_kill_bonus` | economy | death-FX coin-award site → `talentsApi.onKill(...)` с `isCrit` (FU2) |
-| `eco_tax_relief` | economy | `performTankPurchaseOnce` → `talentsApi.onBuyTank(...)` (FU2) |
+| `eco_tax_relief` | economy | `performMerge` / `_performUndergroundMerge` / `_performCrossHangarMerge` → `_applyMergeLevelBonus(level)` (game.js, rebrand 2026-05-27 «Гениальный инженер») |
 | `eco_voucher` | economy | через `onKill` (kill-side counter) + `onBuyTank` (buy-side discount apply) (FU2) |
 | `eco_lottery` | economy | через `onBuyTank` (FU2) |
 | `eco_clean_defense` | economy | `beginNoRepairAttackWaveEpisode` (`onWaveStart`) + zombie-death FX (accumulators) + `finalizeNoRepairAttackWaveEpisode` (`onWaveEnd`) (FU3) |

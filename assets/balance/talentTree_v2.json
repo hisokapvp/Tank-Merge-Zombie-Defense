@@ -652,12 +652,11 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_interest_name", "descKey": "talent_eco_interest_desc", "icon": "interest" },
+      "ui": { "nameKey": "talent_eco_interest_name", "descKey": "talent_eco_interest_desc", "icon": "interest", "currentVars": { "value": { "key": "interestPct", "kind": "percent1" } } },
       "effects": [
         { "type": "unlock", "key": "interest" },
-        { "type": "param", "key": "interestPeriodMs", "value": 20000 },
-        { "type": "param", "key": "interestPct", "base": 0, "perRank": 0.002 },
-        { "type": "param", "key": "interestCapPerTick", "base": 0, "perRank": 20 }
+        { "type": "param", "key": "interestPeriodMs", "value": 30000 },
+        { "type": "param", "key": "interestPct", "base": 0, "perRank": 0.002 }
       ]
     },
     {
@@ -669,9 +668,8 @@
       "requires": [],
       "ui": { "nameKey": "talent_eco_tax_relief_name", "descKey": "talent_eco_tax_relief_desc", "icon": "tax" },
       "effects": [
-        { "type": "unlock", "key": "taxRelief" },
-        { "type": "param", "key": "taxReliefDurationMs", "value": 10000 },
-        { "type": "param", "key": "taxReliefCostMul", "base": 1, "perRank": -0.03 }
+        { "type": "unlock", "key": "mergeExtraLevel" },
+        { "type": "param", "key": "mergeExtraLevelChance", "base": 0, "perRank": 0.002 }
       ]
     },
     {
@@ -681,12 +679,12 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_voucher_name", "descKey": "talent_eco_voucher_desc", "icon": "voucher" },
+      "ui": { "nameKey": "talent_eco_voucher_name", "descKey": "talent_eco_voucher_desc", "icon": "voucher", "currentVars": { "kills": { "key": "voucherKillsNeed", "kind": "shotCount" } } },
       "effects": [
         { "type": "unlock", "key": "voucher" },
-        { "type": "param", "key": "voucherKillsNeed", "base": 25, "perRank": -3, "min": 10 },
+        { "type": "param", "key": "voucherKillsNeed", "base": 1000, "perRank": -100, "min": 100 },
         { "type": "param", "key": "voucherDiscountMul", "value": 0.8 },
-        { "type": "param", "key": "voucherCap", "value": 3 }
+        { "type": "param", "key": "voucherCap", "value": 10 }
       ]
     },
     {
@@ -696,12 +694,12 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_lottery_name", "descKey": "talent_eco_lottery_desc", "icon": "lottery" },
+      "ui": { "nameKey": "talent_eco_lottery_name", "descKey": "talent_eco_lottery_desc", "icon": "lottery", "currentVars": { "sameLevel": { "key": "lotterySameLevelChance", "kind": "percent1" }, "plus5": { "key": "lotteryPlus5Chance", "kind": "percent1" }, "droneL1": { "key": "lotteryDroneL1Chance", "kind": "percent1" } } },
       "effects": [
         { "type": "unlock", "key": "lottery" },
-        { "type": "param", "key": "lotteryChance", "base": 0, "perRank": 0.01 },
-        { "type": "param", "key": "lotteryIcdMs", "value": 60000 },
-        { "type": "param", "key": "lotteryLimitPerRun", "value": 3 }
+        { "type": "param", "key": "lotterySameLevelChance", "base": 0, "perRank": 0.005 },
+        { "type": "param", "key": "lotteryPlus5Chance", "base": 0, "perRank": 0.0025 },
+        { "type": "param", "key": "lotteryDroneL1Chance", "base": 0, "perRank": 0.001 }
       ]
     },
     {

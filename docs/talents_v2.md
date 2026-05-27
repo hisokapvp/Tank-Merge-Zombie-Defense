@@ -92,7 +92,7 @@
 
 ### Economy (17)
 
-`eco_buy_discount`, `eco_upgrade_discount`, `eco_repair_discount`, `eco_coins_kill_bonus`, `eco_coins_shot_bonus`, `eco_xp_bonus`, `eco_double_reward`, `eco_interest`, `eco_tax_relief`, `eco_voucher`, `eco_lottery`, `eco_clean_defense`, `eco_grey_to_damage_points`, `eco_crit_kill_bonus`, `eco_bulk_buy`, `eco_century_contract`, `eco_active_golden_hour`.
+`eco_buy_discount`, `eco_upgrade_discount`, `eco_repair_discount`, `eco_coins_kill_bonus`, `eco_coins_shot_bonus`, `eco_xp_bonus`, `eco_double_reward`, `eco_interest`, `eco_tax_relief` (rebrand «Гениальный инженер»: эффект `param mergeExtraLevelChance`, base 0 / perRank 0.002, max rank 5; +0.2%/rank к шансу получить танк на уровень выше при merge, без cost-discount), `eco_voucher`, `eco_lottery`, `eco_clean_defense`, `eco_grey_to_damage_points` (rebrand «Безотходное накопление»: тот же контракт `greyToDamagePoints` + `greyToDamageBonus`, описание обновлено в `talent_eco_grey_to_damage_points_desc`), `eco_crit_kill_bonus`, `eco_bulk_buy`, `eco_century_contract`, `eco_active_golden_hour`.
 
 ## Описания узлов: канонический `{current}`-template (solo-pipeline-yandex-vk#1, 2026-05-18)
 
@@ -274,7 +274,7 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - `coinsKillMul`, `coinsShotMul`, `xpMul`,
   - `wallHpMul`, `tankBuyCostMul`, `repairCostMul`,
   - `upgradeCostMul_guns`, `upgradeCostMul_sc`, `upgradeCostMul_wall`,
-  - `taxReliefCostMul`, `voucherDiscountMul`,
+  - `voucherDiscountMul` (rebrand 2026-05-27 удалил `taxReliefCostMul`: «Гениальный инженер» больше не даёт buy-discount, использует `mergeExtraLevelChance` в additive-блоке),
   - `brokenSegmentDamageMul`, `markDamageTakenMul`,
   - `acidDotDpsMul`, `pulseAoeDamageMul`, `pulseAoeMul`, `ricochetDamageMul`,
   - `impulseProcFireRateMul`, `repairEfficiencyMul`, `repairDiscountTimerCostMul` (legacy, оставлен после rebrand 2026-05-24 для backward-compat сохранений; новый `def_explosive_base` его не использует),
@@ -432,7 +432,7 @@ TalentsV2._runRt = {
     lotteryUsed: 0,
     lotteryIcdUntilMs: 0,
     interestNextAtMs: 0,
-    taxReliefUntilMs: 0,
+    taxReliefUntilMs: 0, // legacy после rebrand 2026-05-27 «Налоговая льгота» → «Гениальный инженер»; runtime больше не пишет/читает поле, сохранено только для save-compat. Новый эффект `mergeExtraLevelChance` применяется в `game.js` через `_applyMergeLevelBonus()` на merge sites без runtime-state.
     greyDamage: 0,
     repairDiscountReady: false, // legacy, оставлен после rebrand `def_repair_discount_timer` → `def_explosive_base` (2026-05-24); новый AoE-талант их не пишет и не читает, поля сохранены ради save-compat и потенциального возврата старой механики
     nextRepairDiscountAtMs: 0 // legacy, см. комментарий выше
@@ -542,10 +542,11 @@ Runtime-поля сущностей (`_talentRt`, `_statusRt`, `_defRt`) не в
 - `onShotReward({ tank, baseCoins, baseXp, timeMs, rng? }) -> { coins, xp }`
   - Применяет `coinsShotMul`, `doubleRewardChanceShot`, economy active.
 
-- `onBuyTank({ tankTypeId, baseCost, timeMs, confirmed?, rng? }) -> { cost, applyFreeDuplicate, vouchersLeft }`
-  - Цена: `tankBuyCostMul` + `taxReliefCostMul` (если active) + voucher discount.
-  - Lottery: шанс/ICD/лимит (`lotteryChance/lotteryIcdMs/lotteryLimitPerRun`) -> `applyFreeDuplicate=true`.
-  - При `confirmed=true` обновляет tax-relief окно: `taxReliefUntilMs = now + taxReliefDurationMs` (refresh, без stack).
+- `onBuyTank({ tankTypeId, baseCost, timeMs, confirmed?, rng?, vouchersOverride? }) -> { cost, applyFreeDuplicate, vouchersLeft }`
+  - Цена: `tankBuyCostMul` + voucher discount. После rebrand 2026-05-27 убран `taxReliefCostMul`: «Гениальный инженер» больше не даёт buy-discount.
+  - Quote-mode: при `confirmed=false` voucher не сжигается; `vouchersOverride` позволяет dry-run quote для HUD-цены ×1/×N.
+  - Lottery: три независимых roll'а в commit-pass (`lotteryChance/lotteryLevelPlusFiveChance/lotteryDroneChance`), без ICD.
+  - Эффект rebranded `eco_tax_relief` («Гениальный инженер») применяется не здесь, а в `game.js._applyMergeLevelBonus()` на merge sites (`performMerge`, `_performUndergroundMerge`, `_performCrossHangarMerge`) с clamp по `MAX_TANK_LEVEL`.
 
 - `onPurchase({ kind, baseCost, timeMs }) -> { cost }`
   - `kind: 'upgrade_sc'|'upgrade_wall'|'upgrade_guns'|'repair'`.

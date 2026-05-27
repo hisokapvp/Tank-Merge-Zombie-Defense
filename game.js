@@ -5037,19 +5037,58 @@ function calculateAffordableBuyCount(limit){
   if (freeSlots <= 0 || maxAttempts <= 0) return { count: 0, totalCost: 0 };
 
   const level = buyTankLevel();
-  const mul = getBuyCostMul();
+  const mods = getMods();
+  const exp = window.Game && window.Game.Experiments ? window.Game.Experiments.getVariant('economy_curve') : 'control';
+  const expMul = exp === 'soft' ? 0.92 : 1;
+  const buyCostMul = Number.isFinite(mods.tankBuyCostMul) ? Math.max(0, mods.tankBuyCostMul) : Math.max(0, mods.buyCostMul);
   let virtualPrice = ensureBuyPrice(level);
   let coins = state.coins;
   let totalCost = 0;
   let count = 0;
   const cap = Math.min(freeSlots, maxAttempts);
 
+  // solo-pipeline-yandex-vk#1 followup2-item2 — preview MUST mirror the actual
+  // purchase pricing path exactly, otherwise the button label and the deducted
+  // amount diverge. We drive the preview through `talentsApi.onBuyTank` quote
+  // pass with `vouchersOverride`, so the preview total equals Σ(perTankActual)
+  // by construction. (Tax-relief override removed in solo-pipeline-yandex-vk#1
+  // item 4 — talent repurposed to «Гениальный инженер».)
+  const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+  const timeMs = Date.now();
+  let virtualVouchers = 0;
+  try {
+    if (talentsApi && talentsApi._runRt && talentsApi._runRt.eco) {
+      const eco = talentsApi._runRt.eco;
+      if (Number.isFinite(eco.vouchers)) virtualVouchers = Math.max(0, Math.floor(eco.vouchers));
+    }
+  } catch (_) {}
+
   for (let i = 0; i < cap; i++) {
-    const cost = Math.max(1, Math.round(virtualPrice * mul));
+    // Mirror buyTankCost(level): round(base * tankBuyCostMul * expMul).
+    const baseCostForQuote = Math.max(1, Math.round(virtualPrice * buyCostMul * expMul));
+    let cost = baseCostForQuote;
+    let voucherConsumed = false;
+    if (talentsApi && typeof talentsApi.onBuyTank === 'function') {
+      try {
+        const quote = talentsApi.onBuyTank({
+          baseCost: baseCostForQuote,
+          level: level,
+          mods: mods,
+          timeMs: timeMs,
+          vouchersOverride: virtualVouchers,
+        });
+        if (quote && Number.isFinite(quote.cost) && quote.cost >= 0) {
+          cost = Math.max(0, Math.floor(quote.cost));
+        }
+        if (quote && quote.voucherUsed) voucherConsumed = true;
+      } catch (_) {}
+    }
     if (coins < cost) break;
     coins -= cost;
     totalCost += cost;
     count += 1;
+    if (voucherConsumed && virtualVouchers > 0) virtualVouchers -= 1;
+    // Mirror bumpBuyPrice escalation for the next iteration.
     virtualPrice += Math.max(1, Math.ceil(virtualPrice * 0.001));
   }
   return { count, totalCost };
@@ -5124,25 +5163,30 @@ function performTankPurchaseOnce(opts){
     useUnderground = true;
   }
 
-  // solo-pipeline-yandex-vk#1-followup-2 E2: wire TalentsV2 onBuyTank into the
-  // canonical tank-purchase commit path. Legacy buyTankCost already includes
-  // tankBuyCostMul; the dispatcher applies stateful talent effects on top —
-  // eco_tax_relief (taxReliefCostMul + duration), eco_voucher discount (kill-
-  // accumulated counter), eco_lottery (icd-gated chance). Wired AFTER hangar
-  // checks but BEFORE state.coins affordability check so the player gets the
-  // discount reflected in the cost gate. Helper exists since batch #1 but was
-  // never reachable from runtime — same pattern as the multishot bug.
+  // solo-pipeline-yandex-vk#1 — Talents rework (Tank-Bank, Discount Coupon, Lottery).
+  // The TalentsV2 onBuyTank dispatcher is now split into quote/commit:
+  //   * quote (default)  — returns discounted cost, leaves voucher counter intact,
+  //                        does NOT roll the lottery, does NOT set the tax timer.
+  //   * commit (confirmed: true) — decrements voucher, performs 3 independent lottery
+  //                        rolls (same-level tank, +5-level tank, L1 drone), sets tax timer.
+  // This fixes the bug where a failed affordability check still burned a voucher.
+  let voucherUsedThisPurchase = false;
+  let lotterySameLevel = false;
+  let lotteryPlus5 = false;
+  let lotteryDroneL1 = false;
+  const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
   try {
-    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
     if (talentsApi && typeof talentsApi.onBuyTank === 'function') {
-      const out = talentsApi.onBuyTank({
+      const quote = talentsApi.onBuyTank({
         baseCost: cost,
         level: level,
         mods: getMods(),
         timeMs: Date.now(),
         rng: Math.random,
+        // No commit flag — pure pricing pass.
       });
-      if (out && Number.isFinite(out.cost) && out.cost >= 0) cost = Math.max(0, Math.floor(out.cost));
+      if (quote && Number.isFinite(quote.cost) && quote.cost >= 0) cost = Math.max(0, Math.floor(quote.cost));
+      voucherUsedThisPurchase = !!(quote && quote.voucherUsed);
     }
   } catch (_) {}
 
@@ -5180,9 +5224,80 @@ function performTankPurchaseOnce(opts){
     bumpBuyPrice(level);
   }
 
+  // Commit pass — purchase succeeded, so it's safe to mutate run-scope eco state:
+  // burn the voucher (if used), roll the 3 independent lottery chances, set tax timer.
+  try {
+    if (talentsApi && typeof talentsApi.onBuyTank === 'function') {
+      const commit = talentsApi.onBuyTank({
+        baseCost: buyTankCost(level), // commit uses fresh base so cost mirrors quote
+        level: level,
+        mods: getMods(),
+        timeMs: Date.now(),
+        rng: Math.random,
+        confirmed: true,
+      });
+      if (commit) {
+        lotterySameLevel = !!commit.lotterySameLevel;
+        lotteryPlus5 = !!commit.lotteryPlus5;
+        lotteryDroneL1 = !!commit.lotteryDroneL1;
+      }
+    }
+  } catch (_) {}
+
+  // Apply lottery rewards. Each roll is independent (no shared ICD, no per-run limit).
+  // Spawning failures (e.g. both hangars full) silently degrade — the player keeps
+  // the purchased tank, and the missed bonus is just not granted (no refund mechanic
+  // is part of the spec).
+  try {
+    if (lotterySameLevel) _grantLotteryBonusTank(level, instant);
+    if (lotteryPlus5) {
+      const plus5Level = Math.max(1, Math.min(MAX_TANK_LEVEL, level + 5));
+      _grantLotteryBonusTank(plus5Level, instant);
+    }
+    if (lotteryDroneL1) {
+      const DronesPub = window.Game && window.Game.Drones;
+      if (DronesPub && typeof DronesPub.addDron === 'function') {
+        DronesPub.addDron(state, 1, {});
+      }
+    }
+  } catch (_) {}
+
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('buyTank');
-  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level });
+  if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('buyTank', { level: level, voucher: voucherUsedThisPurchase, lotterySameLevel: lotterySameLevel, lotteryPlus5: lotteryPlus5, lotteryDroneL1: lotteryDroneL1 });
   return true;
+}
+
+// Helper for the eco_lottery talent: spawn a free bonus tank at `bonusLevel` into
+// the first free main-hangar cell, falling back to the underground hangar.
+// Silently no-ops when both hangars are full.
+function _grantLotteryBonusTank(bonusLevel, instant) {
+  const Garage = window.Game && window.Game.Garage;
+  const lvl = Math.max(1, Math.min(MAX_TANK_LEVEL, Math.floor(bonusLevel || 1)));
+  const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c => !c.tank)?.i ?? null);
+  if (freeIdx != null) {
+    const empty = state.cells[freeIdx];
+    if (empty && !empty.tank && !(state.crate && state.crate.cellIndex === empty.i)) {
+      empty.tank = makeTank(lvl, false, instant ? { enableStamp: false } : null);
+      recordTankLevel(lvl);
+      if (typeof popText === 'function') {
+        popText(empty.x + empty.w / 2, empty.y + empty.h / 2, t('popTank'), '#ffd24a');
+      }
+      return true;
+    }
+  }
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ughCells = state.undergroundHangar && state.undergroundHangar.cells;
+  if (ughCells) {
+    for (let ui = 0; ui < ughCells.length; ui++) {
+      if (_isUndergroundCellEmpty(ughCells[ui])) {
+        ughCells[ui].tank = makeTank(lvl, false, instant ? { enableStamp: false } : null);
+        recordTankLevel(lvl);
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function tryBuyTank(opts){
@@ -5198,16 +5313,81 @@ function buyBulkMode(){
   return 'none';
 }
 
+function _voucherBulkDebugEnabled(){
+  try {
+    return !!(window.Game && window.Game.Debug && window.Game.Debug.voucherBulk);
+  } catch (_) { return false; }
+}
+
+function _voucherBulkSnapshot(){
+  try {
+    const talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (!talentsApi || !talentsApi._runRt || !talentsApi._runRt.eco) return null;
+    const eco = talentsApi._runRt.eco;
+    return {
+      vouchers: Number.isFinite(eco.vouchers) ? eco.vouchers : null,
+    };
+  } catch (_) { return null; }
+}
+
 function tryBuyBulk(opts){
   const mode = buyBulkMode();
   if (mode === 'none') return;
   const plan = getBulkBuyPlanByMode(mode);
   if (plan.disabled || plan.x <= 0) return;
   const countToBuy = plan.x;
+  // solo-pipeline-yandex-vk#1 followup2-item2 — runtime diagnostic that captures
+  // BOTH the preview total (from the plan) AND the actual deduction, so we can
+  // confirm `previewTotal === Σ(perTankActual)` once the fix lands. Gated behind
+  // window.Game.Debug.voucherBulk so production behavior is untouched.
+  const debug = _voucherBulkDebugEnabled();
+  const previewTotal = debug ? Math.max(0, Math.round(Number(plan.totalCost) || 0)) : 0;
+  const snapBefore = debug ? _voucherBulkSnapshot() : null;
+  const coinsBefore = debug ? state.coins : 0;
+  const perTankCosts = debug ? [] : null;
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
-    if (!performTankPurchaseOnce(opts)) return;
+    const coinsPre = debug ? state.coins : 0;
+    if (!performTankPurchaseOnce(opts)) {
+      if (debug) {
+        try {
+          console.warn('[voucherBulk] aborted at i=' + i + ' (insufficient coins or full hangar)', {
+            countToBuy: countToBuy,
+            purchased: purchased,
+            previewTotal: previewTotal,
+            perTankCosts: perTankCosts,
+            coinsLeft: state.coins,
+          });
+        } catch (_) {}
+      }
+      return;
+    }
     purchased += 1;
+    if (debug) {
+      perTankCosts.push(coinsPre - state.coins);
+    }
+  }
+  if (debug) {
+    const snapAfter = _voucherBulkSnapshot();
+    const totalSpend = coinsBefore - state.coins;
+    const divergence = previewTotal - totalSpend;
+    try {
+      console.log('[voucherBulk] tryBuyBulk completed', {
+        countToBuy: countToBuy,
+        purchased: purchased,
+        coinsBefore: coinsBefore,
+        coinsAfter: state.coins,
+        previewTotal: previewTotal,
+        totalSpend: totalSpend,
+        divergence: divergence,
+        vouchersBefore: snapBefore && snapBefore.vouchers,
+        vouchersAfter: snapAfter && snapAfter.vouchers,
+        perTankCosts: perTankCosts,
+      });
+      if (divergence !== 0) {
+        console.warn('[voucherBulk] DIVERGENCE detected: previewTotal=' + previewTotal + ', actualSpend=' + totalSpend + ', delta=' + divergence);
+      }
+    } catch (_) {}
   }
   if (purchased === countToBuy) {
     processAchievementProgress('purchases', purchased);
@@ -5303,6 +5483,25 @@ function clearMergeFxQueue(){
   }
 }
 
+// solo-pipeline-yandex-vk#1 followup item 4 — «Гениальный инженер».
+// On every merge, roll mods.mergeExtraLevelChance (0.2% per rank). On success
+// and if the bumped level still respects MAX_TANK_LEVEL, return baseLvl + 1;
+// otherwise return baseLvl unchanged. The helper centralizes the contract for
+// performMerge, _performUndergroundMerge and _performCrossHangarMerge so the
+// behaviour is uniform across hangars.
+function _applyMergeLevelBonus(baseLvl){
+  try {
+    if (typeof getMods !== 'function') return baseLvl;
+    const _m = getMods();
+    if (!_m) return baseLvl;
+    const chance = Math.max(0, Number(_m.mergeExtraLevelChance) || 0);
+    if (chance <= 0) return baseLvl;
+    if (baseLvl + 1 > MAX_TANK_LEVEL) return baseLvl;
+    if (Math.random() < chance) return baseLvl + 1;
+  } catch (_) {}
+  return baseLvl;
+}
+
 function performMerge(fromIdx, toIdx, opts){
   const options = opts || {};
   const placeResult = options.placeResult === 'hangar' ? 'hangar' : 'original';
@@ -5314,7 +5513,9 @@ function performMerge(fromIdx, toIdx, opts){
   if (a.tank.level !== b.tank.level) return false;
   if (a.tank.level >= MAX_TANK_LEVEL) return false;
   const fromLevel = a.tank.level;
-  const lvl = fromLevel + 1;
+  // solo-pipeline-yandex-vk#1 followup item 4 — «Гениальный инженер»:
+  // shanc na +1 уровень при самом merge (0.2% за ранг), clamp по MAX_TANK_LEVEL.
+  let lvl = _applyMergeLevelBonus(fromLevel + 1);
   if (lvl > MAX_TANK_LEVEL) return false;
 
   const resultCellIndex = resolveMergeResultCellIndex(fromIdx, toIdx, placeResult);
@@ -5367,7 +5568,9 @@ function _performUndergroundMerge(fromIdx, toIdx){
   if (!a || !b || !a.tank || !b.tank) return false;
   if (a.tank.level !== b.tank.level) return false;
   if (a.tank.level >= MAX_TANK_LEVEL) return false;
-  const lvl = a.tank.level + 1;
+  // solo-pipeline-yandex-vk#1 followup item 4 — «Гениальный инженер» roll in underground hangar merge.
+  let lvl = _applyMergeLevelBonus(a.tank.level + 1);
+  if (lvl > MAX_TANK_LEVEL) return false;
   b.tank = makeTank(lvl, false);
   a.tank = null;
   processAchievementProgress('merges', 1);
@@ -5387,7 +5590,9 @@ function _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx){
   if (!srcCell || !tgtCell || !srcCell.tank || !tgtCell.tank) return false;
   if (srcCell.tank.level !== tgtCell.tank.level) return false;
   if (srcCell.tank.level >= MAX_TANK_LEVEL) return false;
-  const lvl = srcCell.tank.level + 1;
+  // solo-pipeline-yandex-vk#1 followup item 4 — «Гениальный инженер» roll in cross-hangar merge.
+  let lvl = _applyMergeLevelBonus(srcCell.tank.level + 1);
+  if (lvl > MAX_TANK_LEVEL) return false;
   tgtCell.tank = makeTank(lvl, false);
   srcCell.tank = null;
   processAchievementProgress('merges', 1);
@@ -12377,7 +12582,30 @@ function a11yClose(modalEl){
 function updateUI(){
   const nowMs = Date.now();
   const level = buyTankLevel();
-  const cost = buyTankCost(level);
+  // solo-pipeline-yandex-vk#1 followup item 2 — HUD x1 buy button MUST reflect
+  // voucher discount: deduction uses onBuyTank quote (vouchersOverride consumes
+  // a voucher), so the displayed price has to come from the same quote path,
+  // otherwise the label shows 35$ while the deduction is 24$.
+  let cost = buyTankCost(level);
+  try {
+    const _talentsApi = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (_talentsApi && typeof _talentsApi.onBuyTank === 'function') {
+      let _voucherCount = 0;
+      if (_talentsApi._runRt && _talentsApi._runRt.eco && Number.isFinite(_talentsApi._runRt.eco.vouchers)) {
+        _voucherCount = Math.max(0, Math.floor(_talentsApi._runRt.eco.vouchers));
+      }
+      const _quote = _talentsApi.onBuyTank({
+        baseCost: cost,
+        level: level,
+        mods: getMods(),
+        timeMs: nowMs,
+        vouchersOverride: _voucherCount,
+      });
+      if (_quote && Number.isFinite(_quote.cost) && _quote.cost >= 0) {
+        cost = Math.max(0, Math.floor(_quote.cost));
+      }
+    }
+  } catch (_) {}
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   bindAchievementChipCraftEvents();
   syncCurrentBalanceAchievements();
@@ -12418,6 +12646,39 @@ function updateUI(){
       if (ui.buyBulk.disabled !== plan.disabled) ui.buyBulk.disabled = plan.disabled;
     }
   }
+
+  // solo-pipeline-yandex-vk#1 — Скидочный купон UI hook.
+  // Mirror the live voucher count from TalentsV2 run-runtime onto the buy buttons:
+  //  * A small "x N" badge so the player can see how many coupons they have stacked.
+  //  * An `is-coupon-ready` modifier class for CSS to recolor the button when the
+  //    next purchase would consume a coupon.
+  // No DOM is allocated when the talent is not in play (count stays at 0).
+  try {
+    let voucherCount = 0;
+    const talentsApiHud = (window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
+    if (talentsApiHud && talentsApiHud._runRt && talentsApiHud._runRt.eco && Number.isFinite(talentsApiHud._runRt.eco.vouchers)) {
+      voucherCount = Math.max(0, Math.floor(talentsApiHud._runRt.eco.vouchers));
+    }
+    const _renderCouponBadge = (btn) => {
+      if (!btn) return;
+      let badge = btn.querySelector('.couponBadge');
+      if (voucherCount > 0) {
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'couponBadge';
+          btn.appendChild(badge);
+        }
+        const label = 'x' + voucherCount;
+        if (badge.textContent !== label) badge.textContent = label;
+        if (!btn.classList.contains('is-coupon-ready')) btn.classList.add('is-coupon-ready');
+      } else {
+        if (badge && badge.parentNode === btn) btn.removeChild(badge);
+        if (btn.classList.contains('is-coupon-ready')) btn.classList.remove('is-coupon-ready');
+      }
+    };
+    _renderCouponBadge(ui.buy);
+    _renderCouponBadge(ui.buyBulk);
+  } catch (_) {}
 
   refreshAutoMergeButton();
   updateAchievementToastState();
