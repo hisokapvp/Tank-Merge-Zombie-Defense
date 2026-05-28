@@ -220,8 +220,23 @@
   // ─── Cost progression ─────────────────────────────────────
   function killCostForBox(boxIndex) {
     const idx = Math.max(0, Math.floor(boxIndex));
-    const cost = BASE_KILL_COST * Math.pow(COST_MULTIPLIER, idx);
-    return Math.min(cost, MAX_KILL_COST);
+    let cost = BASE_KILL_COST * Math.pow(COST_MULTIPLIER, idx);
+    if (cost > MAX_KILL_COST) cost = MAX_KILL_COST;
+    // solo-pipeline-yandex-vk#1 batch#1 item 3 (Толковый кладовщик, rebrand
+    // eco_crit_kill_bonus): сокращает количество зомби, необходимое для
+    // производства одной коробки, на 4% за ранг (cap 40%). Множитель читается
+    // из TalentsV2.getBoxReagentMul() и применяется ПОСЛЕ MAX_KILL_COST cap,
+    // так что талант одинаково работает и на ранних, и на capped поздних
+    // коробках. Если talents API ещё не инициализирован (early bootstrap),
+    // силент-fallback на mul=1 — оригинальное поведение.
+    const tv2 = (global.Game && global.Game.TalentsV2) ? global.Game.TalentsV2 : null;
+    if (tv2 && typeof tv2.getBoxReagentMul === 'function') {
+      let mul = 1;
+      try { mul = Number(tv2.getBoxReagentMul()); } catch (_e) { mul = 1; }
+      if (!Number.isFinite(mul) || mul <= 0) mul = 1;
+      cost *= mul;
+    }
+    return Math.max(1, Math.ceil(cost));
   }
 
   // ─── State helpers ─────────────────────────────────────────

@@ -869,6 +869,32 @@
       } else if (global.Game && global.Game.Achievements && typeof global.Game.Achievements.recordDroneRepairCompleted === 'function') {
         global.Game.Achievements.recordDroneRepairCompleted(state);
       }
+      // solo-pipeline-yandex-vk#1 batch#1 item 2 (Мастер-ремонтник): шанс полного
+      // ремонта ВСЕХ оставшихся фрагментов забора бесплатно после завершения
+      // drone-repair. Использует тот же state.fenceSegments массив и тот же
+      // onFenceSegmentStateChanged hook, что и стандартный завершающий fragment.
+      try {
+        var tv2 = global.Game && global.Game.TalentsV2;
+        if (tv2 && typeof tv2.applyFullRepairRoll === 'function') {
+          var out = tv2.applyFullRepairRoll({ trigger: 'drone' });
+          if (out && out.triggered && Array.isArray(state.fenceSegments)) {
+            for (var fri = 0; fri < state.fenceSegments.length; fri++) {
+              var sFr = state.fenceSegments[fri];
+              if (!sFr) continue;
+              if (sFr === seg) continue;
+              var curFr = Number(sFr.hp) || 0;
+              var maxFr = Number(sFr.maxHp) || 0;
+              if (maxFr <= 0 || curFr >= maxFr) continue;
+              var wbFr = !!sFr.broken;
+              sFr.hp = maxFr;
+              sFr.broken = false;
+              if (sFr.broken !== wbFr && typeof runtimeOptions.onFenceSegmentStateChanged === 'function') {
+                runtimeOptions.onFenceSegmentStateChanged(sFr);
+              }
+            }
+          }
+        }
+      } catch (_) {}
       clearTargetAndClaim(state, drone);
       if (!tryAcquireRepairTarget(state, drone, runtimeOptions)) {
         drone.substate = SUBSTATE_REPAIR_PATROL;

@@ -5031,7 +5031,7 @@ function debugSetTotalMerges(rawValue){
   };
 }
 
-function calculateAffordableBuyCount(limit){
+function calculateAffordableBuyCount(limit, options){
   const freeSlots = getAvailableTankSlotCount();
   const maxAttempts = Math.max(0, Math.floor(Number(limit) || 0));
   if (freeSlots <= 0 || maxAttempts <= 0) return { count: 0, totalCost: 0 };
@@ -5041,6 +5041,11 @@ function calculateAffordableBuyCount(limit){
   const exp = window.Game && window.Game.Experiments ? window.Game.Experiments.getVariant('economy_curve') : 'control';
   const expMul = exp === 'soft' ? 0.92 : 1;
   const buyCostMul = Number.isFinite(mods.tankBuyCostMul) ? Math.max(0, mods.tankBuyCostMul) : Math.max(0, mods.buyCostMul);
+  // solo-pipeline-yandex-vk#2 item 5 (eco_bulk_buy): bulk-only discount via mods.bulkBuyCostMul.
+  // Apply ONCE per tank cost so preview total mirrors actual deduction (label == Σ(perTankActual)).
+  const bulkBuyCostMul = (options && Number.isFinite(options.bulkBuyCostMul) && options.bulkBuyCostMul > 0)
+    ? options.bulkBuyCostMul
+    : 1;
   let virtualPrice = ensureBuyPrice(level);
   let coins = state.coins;
   let totalCost = 0;
@@ -5083,6 +5088,7 @@ function calculateAffordableBuyCount(limit){
         if (quote && quote.voucherUsed) voucherConsumed = true;
       } catch (_) {}
     }
+    if (bulkBuyCostMul !== 1) cost = Math.max(0, Math.round(cost * bulkBuyCostMul));
     if (coins < cost) break;
     coins -= cost;
     totalCost += cost;
@@ -5117,7 +5123,11 @@ function getBulkBuyPlanByMode(mode){
   const maxByTier = resolvedMode === 'buy2'
     ? 2
     : (resolvedMode === 'buy5' ? 5 : Math.max(0, freeSlots));
-  const affordable = calculateAffordableBuyCount(maxByTier);
+  // solo-pipeline-yandex-vk#2 item 5: pull bulkBuyCostMul from active mods so the
+  // preview shows the discounted total in the button label.
+  const planMods = getMods();
+  const planBulkMul = Math.max(0, Number(planMods.bulkBuyCostMul) || 1);
+  const affordable = calculateAffordableBuyCount(maxByTier, { bulkBuyCostMul: planBulkMul });
   const maxAffordableByCoins = affordable.count;
   const x = Math.min(maxByTier, freeSlots, maxAffordableByCoins);
   const xDisplay = Math.max(2, x);
@@ -5142,8 +5152,14 @@ function getBulkBuyPlanByMode(mode){
 function performTankPurchaseOnce(opts){
   const options = opts && typeof opts === 'object' ? opts : null;
   const instant = !!(options && options.instant);
+  // solo-pipeline-yandex-vk#2 item 5: bulk path passes opts.bulkBuyCostMul; single-buy
+  // path leaves it undefined, so cost stays at baseline buyTankCost(level).
+  const bulkBuyCostMul = (options && Number.isFinite(options.bulkBuyCostMul) && options.bulkBuyCostMul > 0)
+    ? options.bulkBuyCostMul
+    : 1;
   const level = buyTankLevel();
   let cost = buyTankCost(level);
+  if (bulkBuyCostMul !== 1) cost = Math.max(0, Math.round(cost * bulkBuyCostMul));
   const Garage = window.Game && window.Game.Garage;
   const freeIdx = Garage ? Garage.findFreeCell(state) : (state.cells.find(c=>!c.tank)?.i ?? null);
 
@@ -5228,8 +5244,11 @@ function performTankPurchaseOnce(opts){
   // burn the voucher (if used), roll the 3 independent lottery chances, set tax timer.
   try {
     if (talentsApi && typeof talentsApi.onBuyTank === 'function') {
+      const commitBaseCost = bulkBuyCostMul !== 1
+        ? Math.max(0, Math.round(buyTankCost(level) * bulkBuyCostMul))
+        : buyTankCost(level);
       const commit = talentsApi.onBuyTank({
-        baseCost: buyTankCost(level), // commit uses fresh base so cost mirrors quote
+        baseCost: commitBaseCost, // commit uses fresh base so cost mirrors quote (incl. bulk discount)
         level: level,
         mods: getMods(),
         timeMs: Date.now(),
@@ -5335,6 +5354,13 @@ function tryBuyBulk(opts){
   if (mode === 'none') return;
   const plan = getBulkBuyPlanByMode(mode);
   if (plan.disabled || plan.x <= 0) return;
+  // solo-pipeline-yandex-vk#2 item 5: forward bulkBuyCostMul to each single-tank step
+  // so the preview total (plan.totalCost) matches Σ(actualDeduction) per tank.
+  const tryBuyBulkMods = getMods();
+  const tryBuyBulkMul = Math.max(0, Number(tryBuyBulkMods.bulkBuyCostMul) || 1);
+  const purchaseOpts = tryBuyBulkMul === 1
+    ? opts
+    : Object.assign({}, opts || {}, { bulkBuyCostMul: tryBuyBulkMul });
   const countToBuy = plan.x;
   // solo-pipeline-yandex-vk#1 followup2-item2 — runtime diagnostic that captures
   // BOTH the preview total (from the plan) AND the actual deduction, so we can
@@ -5348,7 +5374,7 @@ function tryBuyBulk(opts){
   let purchased = 0;
   for (let i = 0; i < countToBuy; i++) {
     const coinsPre = debug ? state.coins : 0;
-    if (!performTankPurchaseOnce(opts)) {
+    if (!performTankPurchaseOnce(purchaseOpts)) {
       if (debug) {
         try {
           console.warn('[voucherBulk] aborted at i=' + i + ' (insufficient coins or full hangar)', {
@@ -6529,6 +6555,12 @@ function adaptTalentsV2ModsToLegacy(v2Mods){
     if (Object.prototype.hasOwnProperty.call(out, k)) continue;
     const v = src[k];
     if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    // solo-pipeline-yandex-vk#2 item 4 fix: forward boolean unlock flags
+    // (chipMania, bulkBuy, voucher, interest, etc.) so V2 unlock keys survive
+    // the legacy adapter and reach downstream onKill/onShot dispatchers. Before
+    // this passthrough adaptTalentsV2ModsToLegacy silently dropped all boolean
+    // unlocks, leaving mods.chipMania === undefined in game.js → onKill site.
+    else if (typeof v === 'boolean') out[k] = v;
   }
 
   return out;
@@ -9398,6 +9430,33 @@ function tryRepairFenceSegmentAt(px, py){
   invalidateNoRepairAttackWaveEpisode();
   processAchievementProgress('manualFenceRepairs', 1);
   popText(px, py, t('fenceRepairDone'), '#7dffb2');
+  // solo-pipeline-yandex-vk#1 batch#1 item 2 (Мастер-ремонтник): шанс полного
+  // ремонта ВСЕХ фрагментов забора бесплатно при manual repair. Состояние:
+  // fullRepairChancePerRank (talent eco_double_reward rebrand). Бросок не
+  // зависит от того, был ли фрагмент сломан, — оплата уже совершена выше,
+  // дополнительные фрагменты восстанавливаются бесплатно.
+  try {
+    const tv2 = window.Game && window.Game.TalentsV2;
+    if (tv2 && typeof tv2.applyFullRepairRoll === 'function') {
+      const out = tv2.applyFullRepairRoll({ trigger: 'manual' });
+      if (out && out.triggered && Array.isArray(state.fenceSegments)) {
+        for (let i = 0; i < state.fenceSegments.length; i++) {
+          const s = state.fenceSegments[i];
+          if (!s) continue;
+          if (s === seg) continue;
+          const curHp = Number(s.hp) || 0;
+          const maxHp = Number(s.maxHp) || 0;
+          if (maxHp <= 0 || curHp >= maxHp) continue;
+          const wb = !!s.broken;
+          s.hp = maxHp;
+          s.broken = false;
+          if (s.broken !== wb) syncFenceBreachForSegment(s);
+        }
+        try { invalidateNoRepairAttackWaveEpisode(); } catch (_) {}
+        try { popText(px, py, t('talent_master_repairman_proc') || 'Полный ремонт стен!', '#7dffb2'); } catch (_) {}
+      }
+    }
+  } catch (_) {}
   return true;
 }
 
@@ -9578,10 +9637,12 @@ function markZombieDying(z) {
   // solo-pipeline-yandex-vk#1-followup-2 E1: wire TalentsV2 onKill into the
   // canonical zombie-death coin/xp award site. Legacy multipliers (coinsKillMul,
   // xpMul, zombieKill*Mul) stay in place; the dispatcher applies stateful
-  // talent effects on top — eco_crit_kill_bonus (critKillCoinsBonusFlat),
-  // eco_voucher (vouchersToNextDiscount accumulator), and any future kill-side
-  // additions. Helper exists in talentsV2.js since batch #1 but was never
-  // reachable from runtime — same pattern as the multishot bug.
+  // talent effects on top — critKillXpMul (eco_crit_kill_bonus legacy XP path
+  // уже переформирован в production-line reduction via boxReagentReductionPerRank —
+  // solo-pipeline-yandex-vk#1 batch#1 item 3), eco_voucher (vouchersToNextDiscount
+  // accumulator), and any future kill-side additions. Helper exists in talentsV2.js
+  // since batch #1 but was never reachable from runtime — same pattern as the
+  // multishot bug.
   const mods = getMods();
   const lvl = z.level ?? 1;
   const baseXp = 9 * Math.pow(2, lvl - 1);

@@ -10,7 +10,8 @@
     "doubleShotChance": 0.45,
     "tripleShotChance": 0.12,
     "ricochetChance": 0.3,
-    "doubleRewardChance": 0.2,
+    "fullRepairChance": 0.02,
+    "boxReagentReduction": 0.4,
     "convertToDotPct": 0.2,
     "resistPct": 0.3,
     "tankBuyCostMulMin": 0.5
@@ -639,10 +640,9 @@
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_double_reward_name", "descKey": "talent_eco_double_reward_desc", "icon": "doubleReward" },
+      "ui": { "nameKey": "talent_eco_double_reward_name", "descKey": "talent_eco_double_reward_desc", "icon": "doubleReward", "currentVars": { "current": { "key": "fullRepairChancePerRank", "kind": "percent1" } } },
       "effects": [
-        { "type": "param", "key": "doubleRewardChanceKill", "base": 0, "perRank": 0.02, "max": 0.2 },
-        { "type": "param", "key": "doubleRewardChanceShot", "base": 0, "perRank": 0.01, "max": 0.1 }
+        { "type": "param", "key": "fullRepairChancePerRank", "base": 0, "perRank": 0.002, "max": 0.02 }
       ]
     },
     {
@@ -737,7 +737,7 @@
       "costPerRank": 1,
       "requires": [],
       "ui": { "nameKey": "talent_eco_crit_kill_bonus_name", "descKey": "talent_eco_crit_kill_bonus_desc", "icon": "crit" },
-      "effects": [{ "type": "param", "key": "critKillCoinsBonusFlat", "base": 0, "perRank": 2 }]
+      "effects": [{ "type": "param", "key": "boxReagentReductionPerRank", "base": 0, "perRank": 0.04, "max": 0.4 }]
     },
     {
       "id": "eco_bulk_buy",
@@ -749,7 +749,7 @@
       "ui": { "nameKey": "talent_eco_bulk_buy_name", "descKey": "talent_eco_bulk_buy_desc", "icon": "bulk" },
       "effects": [
         { "type": "unlock", "key": "bulkBuy" },
-        { "type": "param", "key": "tankBuyCostMul", "value": 0.75 }
+        { "type": "param", "key": "bulkBuyCostMul", "value": 0.75 }
       ]
     },
     {
@@ -761,8 +761,8 @@
       "requires": [],
       "ui": { "nameKey": "talent_eco_century_contract_name", "descKey": "talent_eco_century_contract_desc", "icon": "contract" },
       "effects": [
-        { "type": "unlock", "key": "centuryContract" },
-        { "type": "param", "key": "tankBuyCostMul", "value": 0.65 }
+        { "type": "unlock", "key": "chipMania" },
+        { "type": "param", "key": "chipManiaFragmentChance", "value": 0.0005 }
       ]
     },
     {
@@ -775,11 +775,11 @@
       "ui": { "nameKey": "talent_eco_active_golden_hour_name", "descKey": "talent_eco_active_golden_hour_desc", "icon": "activeEco" },
       "effects": [
         { "type": "unlock", "key": "economyActive" },
-        { "type": "param", "key": "economyActiveDurationMs", "value": 6000 },
+        { "type": "param", "key": "economyActiveDurationMs", "value": 10000 },
         { "type": "param", "key": "economyActiveCharges", "value": 3 },
-        { "type": "param", "key": "economyActiveRechargeMs", "value": 40000 },
-        { "type": "param", "key": "economyActiveCoinsMul", "value": 1.45 },
-        { "type": "param", "key": "economyActiveXpMul", "value": 1.25 }
+        { "type": "param", "key": "economyActiveRechargeMs", "value": 60000 },
+        { "type": "param", "key": "economyActiveCoinsMul", "value": 1.25 },
+        { "type": "param", "key": "economyActiveXpMul", "value": 1.50 }
       ]
     }
   ]

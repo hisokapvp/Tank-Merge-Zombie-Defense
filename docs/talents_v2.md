@@ -293,7 +293,7 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
   - `offenseActive`, `defenseActive`, `economyActive`,
   - `acidDot`, `armorPiercingProc`, `impulseProc`, `mark`, `execute`, `ccMicro`, `rampUp`, `pulseAoe`, `convertToDot`, `ricochet`,
   - `wallShield`, `slowField`, `thorns`, `wallBarrier`, `stunOnWallHit`, `secondWind`, `autoRepair`, `explosiveBase` (rebrand 2026-05-24, был `repairDiscountTimer`; runtime id таланта `def_explosive_base`), `immunityProc` (display «Случайная неразрушимость»),
-  - `bulkBuy`, `centuryContract`, `cleanDefense`, `greyToDamagePoints`, `interest`, `taxRelief`, `voucher`, `lottery`, `killBounty`.
+  - `bulkBuy`, `chipMania`, `cleanDefense`, `greyToDamagePoints`, `interest`, `taxRelief`, `voucher`, `lottery`, `killBounty`.
 
 ## Effect application rules (PACK 2)
 
@@ -313,7 +313,8 @@ Runtime модуль: `src/systems/talents/talentsV2.js`.
 
 - Точечные caps:
   - `doubleShotChance`, `tripleShotChance`, `ricochetChance`;
-  - `doubleRewardChance` применяется к `doubleRewardChanceKill` и `doubleRewardChanceShot`;
+  - `doubleRewardChance` cap в talentTree_v2.json удалён (solo-pipeline-yandex-vk#1 batch#1 item 2 — rebrand `eco_double_reward` → «Мастер-ремонтник», новый caps key `fullRepairChance` + mod `fullRepairChancePerRank`);
+  - `boxReagentReduction` cap и mod `boxReagentReductionPerRank` добавлены в batch#1 item 3 (rebrand `eco_crit_kill_bonus` → «Толковый кладовщик»);
   - `resistPct` применяется к `resistAcidPct`, `resistExplosionPct`, `resistFirePct`.
 
 ### Multishot ladder (батч 2026-05-20)
@@ -536,11 +537,17 @@ Runtime-поля сущностей (`_talentRt`, `_statusRt`, `_defRt`) не в
 ### Economy hooks
 
 - `onKill({ tank, zombie, baseCoins, baseXp, timeMs, isCrit, rng? }) -> { coins, xp }`
-  - Применяет `coinsKillMul/xpMul`, `killBounty` баф танка, `doubleRewardChanceKill` (удваивает только coins), crit-бонусы, economy active множители.
+  - Применяет `coinsKillMul/xpMul`, `killBounty` баф танка, crit XP множитель, economy active множители. С batch#1 (solo-pipeline-yandex-vk#1) apply-paths для `doubleRewardChanceKill` и `critKillCoinsBonusFlat` удалены: `eco_double_reward` rebrand на full-repair chance, `eco_crit_kill_bonus` rebrand на production-line reagent reduction.
   - Ведёт runtime voucher progress: `voucherKills`, выдача ваучера по `voucherKillsNeed`, cap `voucherCap`.
 
 - `onShotReward({ tank, baseCoins, baseXp, timeMs, rng? }) -> { coins, xp }`
-  - Применяет `coinsShotMul`, `doubleRewardChanceShot`, economy active.
+  - Применяет `coinsShotMul`, economy active. `doubleRewardChanceShot` apply-path удалён вместе с batch#1.
+
+- `getFullRepairChance() -> number` и `applyFullRepairRoll({ trigger, rng?, timeMs? }) -> { triggered, chance }`
+  - solo-pipeline-yandex-vk#1 batch#1 item 2. Читают `mods.fullRepairChancePerRank` (cap `fullRepairChance`). `applyFullRepairRoll` вызывается из manual repair seam (`tryRepairFenceSegmentAt` в game.js) и drone repair completion (`stepRepair` в src/mechanics/drones.js). При `triggered=true` runtime бесплатно восстанавливает все фрагменты `state.fenceSegments` до `maxHp` и пересинхронизирует `broken`-флаги через `syncFenceBreachForSegment` / `runtimeOptions.onFenceSegmentStateChanged`.
+
+- `getBoxReagentMul() -> number`
+  - solo-pipeline-yandex-vk#1 batch#1 item 3. Читает `mods.boxReagentReductionPerRank` (cap `boxReagentReduction`) и возвращает множитель [0..1] для `killCostForBox` в `src/mechanics/productionLine.js`. Применяется ПОСЛЕ `MAX_KILL_COST` cap и final `Math.ceil`, чтобы cap не «съедал» эффект таланта на поздних коробках.
 
 - `onBuyTank({ tankTypeId, baseCost, timeMs, confirmed?, rng?, vouchersOverride? }) -> { cost, applyFreeDuplicate, vouchersLeft }`
   - Цена: `tankBuyCostMul` + voucher discount. После rebrand 2026-05-27 убран `taxReliefCostMul`: «Гениальный инженер» больше не даёт buy-discount.

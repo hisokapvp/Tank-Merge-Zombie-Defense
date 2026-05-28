@@ -189,8 +189,13 @@
     doubleShotChance: 0,
     tripleShotChance: 0,
     ricochetChance: 0,
-    doubleRewardChanceKill: 0,
-    doubleRewardChanceShot: 0,
+    // solo-pipeline-yandex-vk#1 batch#1 item 2 (Мастер-ремонтник): шанс полного
+    // ремонта всех фрагментов забора при manual или drone repair (0,2%/rank, cap 2%).
+    // Старые ключи doubleRewardChanceKill/Shot удалены вместе с их apply-paths.
+    fullRepairChancePerRank: 0,
+    // solo-pipeline-yandex-vk#1 batch#1 item 3 (Толковый кладовщик): сокращение
+    // killCostForBox(boxIndex) на 4% за ранг (cap 40%). Множитель=1-clamp(reduction,0,cap).
+    boxReagentReductionPerRank: 0,
     acidDotChance: 0,
     acidDotDurationMs: 0,
     armorPiercingProcChance: 0,
@@ -285,7 +290,9 @@
     cleanDefenseCoinsMul: 1,
     cleanDefenseXpMul: 1,
     greyToDamagePointsMul: 0,
-    critKillCoinsBonusFlat: 0,
+    /* critKillCoinsBonusFlat: removed in solo-pipeline-yandex-vk#1 batch#1 item 3 (rebrand
+       eco_crit_kill_bonus -> Толковый кладовщик). Old flat crit-coin bonus apply-path in
+       onKill deleted; replaced by boxReagentReductionPerRank consumed in productionLine. */
     killBountyChance: 0,
     killBountyCoinsMul: 1,
     killBountyDurationMs: 0,
@@ -326,7 +333,9 @@
     explosiveBase: false,
     immunityProc: false,
     bulkBuy: false,
-    centuryContract: false,
+    chipMania: false,
+    bulkBuyCostMul: 1,
+    chipManiaFragmentChance: 0,
     cleanDefense: false,
     greyToDamagePoints: false,
     interest: false,
@@ -1485,9 +1494,11 @@
     if (isFiniteNumber(caps.ricochetChance)) {
       mods.ricochetChance = Math.min(mods.ricochetChance, caps.ricochetChance);
     }
-    if (isFiniteNumber(caps.doubleRewardChance)) {
-      mods.doubleRewardChanceKill = Math.min(mods.doubleRewardChanceKill, caps.doubleRewardChance);
-      mods.doubleRewardChanceShot = Math.min(mods.doubleRewardChanceShot, caps.doubleRewardChance);
+    if (isFiniteNumber(caps.fullRepairChance)) {
+      mods.fullRepairChancePerRank = Math.min(mods.fullRepairChancePerRank, caps.fullRepairChance);
+    }
+    if (isFiniteNumber(caps.boxReagentReduction)) {
+      mods.boxReagentReductionPerRank = Math.min(mods.boxReagentReductionPerRank, caps.boxReagentReduction);
     }
     if (isFiniteNumber(caps.resistPct)) {
       mods.resistAcidPct = Math.min(mods.resistAcidPct, caps.resistPct);
@@ -3081,7 +3092,11 @@
     var incoming = Math.max(0, toNumber(ctx.damage, 0));
     var prevented = false;
 
-    runRt.wave.damageToWalls = true;
+    // solo-pipeline-yandex-vk#1 batch#1 item 1 (Награда за стойкость): runRt.wave.damageToWalls
+    // больше НЕ устанавливается eagerly при вызове onWallDamage. Per ТЗ §1: бонус выдаётся,
+    // только если зомби не нанесли реального урона фрагментам, а не просто «коснулись» стены.
+    // Гейт перенесён в final return path — если итоговый d > 0 (после armor/resist/shield/
+    // secondWind), только тогда фиксируем «волне нанесли урон стенам».
     rt.lastDamageAtMs = timeMs;
 
     if (timeMs < rt.immunityUntilMs) {
@@ -3299,6 +3314,14 @@
       onZombieNearWall({ zombie: zombie, timeMs: timeMs, mods: mods });
     }
 
+    // solo-pipeline-yandex-vk#1 batch#1 item 1: гейт «волне нанесли урон стенам» только
+    // если итоговый damageToHp > 0 (после armor/resist/shield/secondWind). Иначе бонус
+    // eco_clean_defense (rebranded -> «Награда за стойкость») должен выдаваться, как если
+    // бы зомби не наносили урона: касания/полностью поглощённые хиты не считаются.
+    if (d > 0) {
+      runRt.wave.damageToWalls = true;
+    }
+
     return {
       damageToHp: Math.max(0, d),
       absorbedByShield: Math.max(0, absorbedByShield),
@@ -3332,6 +3355,38 @@
     var mods = getMods();
     var nowMs = toNumber(timeMs, runtime.nowMsFn());
     return applyRepairDiscountCoupon(runRt, mods, nowMs, baseCost);
+  }
+
+  // solo-pipeline-yandex-vk#1 batch#1 item 2 (Мастер-ремонтник, rebrand eco_double_reward):
+  // возвращает текущий шанс (0..1) полного ремонта всех фрагментов забора при manual
+  // или drone repair. Прочитывает fullRepairChancePerRank из mods (уже проходит через
+  // applyCaps и cap caps.fullRepairChance).
+  function getFullRepairChance() {
+    var mods = getMods();
+    return Math.max(0, Math.min(1, toNumber(mods.fullRepairChancePerRank, 0)));
+  }
+
+  // applyFullRepairRoll({ trigger, rng, timeMs }) -> { triggered, chance }
+  // Бросает RNG по fullRepairChancePerRank. Не мутирует состояние забора напрямую —
+  // caller (game.js / drones.js) обязан выполнить фактическое восстановление всех
+  // фрагментов забора бесплатно при triggered=true. trigger фиксирует источник для telemetry
+  // и может быть 'manual' | 'drone'.
+  function applyFullRepairRoll(payload) {
+    var ctx = payload || {};
+    var chance = getFullRepairChance();
+    if (chance <= 0) return { triggered: false, chance: 0 };
+    var rng = ctx.rng || ctx.random;
+    var triggered = rollChance(rng, chance, 'fullrepair');
+    return { triggered: !!triggered, chance: chance };
+  }
+
+  // solo-pipeline-yandex-vk#1 batch#1 item 3 (Толковый кладовщик, rebrand eco_crit_kill_bonus):
+  // возвращает множитель (в диапазоне [1-cap, 1]) для killCostForBox в
+  // src/mechanics/productionLine.js. При ранге 5 и perRank=0.04 cap 0.4 → mul = 0.6.
+  function getBoxReagentMul() {
+    var mods = getMods();
+    var reduction = Math.max(0, Math.min(1, toNumber(mods.boxReagentReductionPerRank, 0)));
+    return Math.max(0, 1 - reduction);
   }
 
   // solo-pipeline-yandex-vk#1 item 1 (Взрывное основание): pure-logic AoE detonation helper.
@@ -3732,12 +3787,11 @@
       coins *= Math.max(0, getModNumber(mods, 'killBountyCoinsMul', [], 1));
     }
 
-    if (rollChance(rng, getModNumber(mods, 'doubleRewardChanceKill', [], 0), 'doublerewardkill')) {
-      coins *= 2;
-    }
-
+    // solo-pipeline-yandex-vk#1 batch#1 item 2 & 3: legacy doubleRewardChanceKill +
+    // critKillCoinsBonusFlat apply-paths удалены. eco_double_reward теперь управляет
+    // full-repair roll при ремонте стен (applyFullRepairRoll), eco_crit_kill_bonus —
+    // сокращением стоимости production-line коробок (getBoxReagentMul).
     if (ctx.isCrit) {
-      coins += Math.max(0, getModNumber(mods, 'critKillCoinsBonusFlat', [], 0));
       xp *= Math.max(0, getModNumber(mods, 'critKillXpMul', [], 1));
     }
 
@@ -3756,6 +3810,26 @@
       }
     }
 
+    // solo-pipeline-yandex-vk#2 item 4 (eco_century_contract rebranded → «Чипо-мания»):
+    // при включённом chipMania unlock каждый kill катит ролл chipManiaFragmentChance (базовый
+    // 0.0001 = 0.01%). На успехе выдаём случайный tier-1 фрагмент чипа через HangarChipsUI.
+    try {
+      if (mods && mods.chipMania) {
+        var chipManiaChance = Math.max(0, getModNumber(mods, 'chipManiaFragmentChance', [], 0));
+        if (chipManiaChance > 0) {
+          var chipRoll = (typeof rng === 'function') ? rng() : Math.random();
+          if (chipRoll < chipManiaChance) {
+            var chipsUi = (global && global.Game && global.Game.HangarChipsUI) ? global.Game.HangarChipsUI : null;
+            if (chipsUi && typeof chipsUi.addPlayerFragment === 'function') {
+              var fragmentRoll = (typeof rng === 'function') ? rng() : Math.random();
+              var fragmentId = Math.floor(fragmentRoll * 14) + 1;
+              chipsUi.addPlayerFragment(fragmentId, 1);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     return {
       coins: finalizeRewardValue(coins),
       xp: finalizeRewardValue(xp),
@@ -3772,9 +3846,8 @@
     var coins = Math.max(0, toNumber(ctx.baseCoins, 0)) * Math.max(0, getModNumber(mods, 'coinsShotMul', [], 1));
     var xp = Math.max(0, toNumber(ctx.baseXp, 0)) * Math.max(0, getModNumber(mods, 'xpMul', [], 1));
 
-    if (rollChance(rng, getModNumber(mods, 'doubleRewardChanceShot', [], 0), 'doublerewardshot')) {
-      coins *= 2;
-    }
+    // solo-pipeline-yandex-vk#1 batch#1 item 2: doubleRewardChanceShot apply-path удалён.
+    // eco_double_reward перепрофилирован в Мастер-ремонтника (полный ремонт стен с шансом).
 
     if (timeMs < toNumber(runRt.actives.economy.untilMs, 0)) {
       coins *= Math.max(0, getModNumber(mods, 'ecoActiveCoinsMul', ['economyActiveCoinsMul'], 1));
@@ -4563,6 +4636,9 @@
     onOverkill: onOverkill,
     onRepair: onRepair,
     applyRepairCoupon: applyRepairCoupon,
+    getFullRepairChance: getFullRepairChance,
+    applyFullRepairRoll: applyFullRepairRoll,
+    getBoxReagentMul: getBoxReagentMul,
     applyExplosiveBaseDetonation: applyExplosiveBaseDetonation,
     onBuyTank: onBuyTank,
     onPurchase: onPurchase,

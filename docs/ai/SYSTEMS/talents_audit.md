@@ -61,16 +61,16 @@
 | `eco_coins_kill_bonus` | `coinsKillMul`, `killBounty*` | `mods.coinsKillMul` + bounty-path | OK_DIRECT_MOD |
 | `eco_coins_shot_bonus` | `coinsShotMul` | `mods.coinsShotMul` | OK_DIRECT_MOD |
 | `eco_xp_bonus` | `xpMul` | `mods.xpMul` | OK_DIRECT_MOD |
-| `eco_double_reward` | `doubleRewardChanceKill/Box/Wave` | direct-mod path | OK_DIRECT_MOD |
+| `eco_double_reward` | `fullRepairChancePerRank` | helper `applyFullRepairRoll` (manual + drone) | WIRED (rebrand batch solo-pipeline-yandex-vk#1) |
 | `eco_interest` | `interest*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_tax_relief` | `mergeExtraLevelChance` | `_applyMergeLevelBonus` (game.js) | WIRED (rebrand 2026-05-27) |
 | `eco_voucher` | `voucher*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_lottery` | `lottery*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_clean_defense` | `cleanDefense*` | helper не найден | BROKEN_OR_UNCERTAIN |
 | `eco_grey_to_damage_points` | `greyToDamagePoints*` | helper не найден | BROKEN_OR_UNCERTAIN |
-| `eco_crit_kill_bonus` | `critKillCoinsBonusFlat` | helper не найден | BROKEN_OR_UNCERTAIN |
-| `eco_bulk_buy` | `bulkBuy`, `tankBuyCostMul` | direct-mod path | OK_DIRECT_MOD |
-| `eco_century_contract` | `centuryContract`, `tankBuyCostMul` | direct-mod path | OK_DIRECT_MOD |
+| `eco_crit_kill_bonus` | `boxReagentReductionPerRank` | helper `getBoxReagentMul` (productionLine) | WIRED (rebrand batch solo-pipeline-yandex-vk#1) |
+| `eco_bulk_buy` | `bulkBuy`, `bulkBuyCostMul` | direct-mod path (game.js bulk buttons) | OK_DIRECT_MOD |
+| `eco_century_contract` | `chipMania`, `chipManiaFragmentChance` | onKill dispatcher → HangarChipsUI.addPlayerFragment (rebrand «Чипо-мания» 2026-05-28) | OK_DIRECT_MOD |
 | `eco_active_golden_hour` | `economyActive*` | `getActiveState` | OK_HELPER |
 
 ## Сводка
@@ -220,7 +220,9 @@
 | ID | Mod | До follow-up-2 | После | Wire-up location |
 |---|---|---|---|---|
 | `eco_interest` | `interestPct/PeriodMs/CapPerTick` | UNCERTAIN | **OK_FALSE_POSITIVE** | wired через `onUpdate` interest-tick (talentsV2.js:3340+) |
-| `eco_crit_kill_bonus` | `critKillCoinsBonusFlat` | UNCERTAIN | **WIRED** | `onKill` теперь вызывается в death-FX coin-award site (game.js:~8909). Передаются `baseCoins`, `baseXp`, `isCrit`, `zombie`. |
+| `eco_crit_kill_bonus` | `boxReagentReductionPerRank` | UNCERTAIN | **REBRANDED & WIRED** | solo-pipeline-yandex-vk#1 batch#1 item 3: rename  «Крит-бонус за убийство» → «Толковый кладовщик». Новый эффект: −4% за ранг к стоимости коробки (cap 40%). Helper `getBoxReagentMul` вызывается из `killCostForBox` в `src/mechanics/productionLine.js` ПОСЛЕ `MAX_KILL_COST` cap. Старый `critKillCoinsBonusFlat` и его onKill apply-path удалены. |
+| `eco_double_reward` | `fullRepairChancePerRank` | UNCERTAIN | **REBRANDED & WIRED** | solo-pipeline-yandex-vk#1 batch#1 item 2: rename «Двойная награда» → «Мастер-ремонтник». Новый эффект: шанс 0,2% за ранг на полный ремонт всех фрагментов забора бесплатно (cap 2%). Helper `applyFullRepairRoll({trigger})` вызывается из `tryRepairFenceSegmentAt` в game.js (trigger `manual`) и `stepRepair` в src/mechanics/drones.js (trigger `drone`). Старые `doubleRewardChanceKill/Shot` и их apply-paths в onKill/onShotReward удалены. |
+| `eco_clean_defense` | `cleanDefenseCoinsMul`, `cleanDefenseXpMul`, `wave damage gate` | UNCERTAIN | **REBRANDED & TIGHTENED** | solo-pipeline-yandex-vk#1 batch#1 item 1: rename «Чистая оборона» → «Награда за стойкость» + новое описание («если зомби не смогли повредить стены»). Гейт `wave.damageToWalls = true` в `onWallDamage` теперь выставляется ТОЛЬКО если final `damageToHp > 0` (после armor/zone-cap редукций), а не при любом вызове. Сами эффекты `cleanDefenseCoinsMul/XpMul` в этом батче не менялись. |
 | `eco_voucher` (kill-side) | `voucherKillsNeed/Cap/DiscountMul` | UNCERTAIN | **WIRED** | Через `onKill` (счётчик аккумулируется) |
 | `eco_voucher` (buy-side) | (то же) | UNCERTAIN | **WIRED** | Через `onBuyTank` (скидка применяется при покупке) |
 | `eco_tax_relief` | `mergeExtraLevelChance` | UNCERTAIN | **WIRED (rebrand 2026-05-27)** | После rebrand «Налоговая льгота» → «Гениальный инженер» эффект применяется не через `onBuyTank`, а через `game.js._applyMergeLevelBonus()` на merge sites (`performMerge`, `_performUndergroundMerge`, `_performCrossHangarMerge`) с clamp по `MAX_TANK_LEVEL`. Старые `taxReliefCostMul/DurationMs/UntilMs` удалены из активных hot paths; runtime state поле `taxReliefUntilMs` оставлено только для save-compat. |
@@ -351,7 +353,7 @@ Still in ALLOWED_UNWIRED_TODO (3): `onShotReward` (eco_coins_shot_bonus — от
 
 Эти таланты wired с момента появления адаптера `adaptTalentsV2ModsToLegacy` — у них нет helper-функции, runtime читает их через `mods.<key>` или `talentMods.<key>` в hot-path:
 
-`off_caliber` (damageMul), `off_fire_rate` (fireRateMul), `off_range` (rangeMul), `off_aoe` (aoeMul + crowd-*), `off_orbit_speed` (orbitSpeedMul), `def_armor_flat` (wallArmorMul), `eco_buy_discount` (tankBuyCostMul), `eco_coins_kill_bonus` (coinsKillMul + killBounty), `eco_coins_shot_bonus` (coinsShotMul), `eco_xp_bonus` (xpMul), `eco_double_reward` (doubleRewardChanceKill/Shot), `eco_bulk_buy` (bulkBuy + tankBuyCostMul=0.75), `eco_century_contract` (centuryContract + tankBuyCostMul=0.65).
+`off_caliber` (damageMul), `off_fire_rate` (fireRateMul), `off_range` (rangeMul), `off_aoe` (aoeMul + crowd-*), `off_orbit_speed` (orbitSpeedMul), `def_armor_flat` (wallArmorMul), `eco_buy_discount` (tankBuyCostMul), `eco_coins_kill_bonus` (coinsKillMul + killBounty), `eco_coins_shot_bonus` (coinsShotMul), `eco_xp_bonus` (xpMul), `eco_bulk_buy` (bulkBuy + bulkBuyCostMul=0.75 — применяется ТОЛЬКО к bulk buttons в game.js), `eco_century_contract` (chipMania + chipManiaFragmentChance=0.0001 — onKill ролл случайного tier-1 фрагмента чипа; rebrand «Чипо-мания» 2026-05-28). (`eco_double_reward` выведен из OK_DIRECT_MOD baseline в batch solo-pipeline-yandex-vk#1: теперь helper-driven.)
 
 #### OK_HELPER baseline (4) — активки и pulse / barrage, wired с baseline
 
