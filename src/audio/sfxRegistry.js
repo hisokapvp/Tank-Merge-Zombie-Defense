@@ -24,6 +24,7 @@
     version: 0,
     channels: null,
     sources: null,
+    music: null,
     pendingPromise: null,
   };
 
@@ -92,7 +93,16 @@
       if (isSourceShape(src)) sources[id] = Array.isArray(src) ? src.slice() : src;
     });
 
-    return { version: version, channels: channels, sources: sources };
+    var music = {};
+    var rawMusic = json.music && typeof json.music === 'object' ? json.music : null;
+    if (rawMusic) {
+      Object.keys(rawMusic).forEach(function (id) {
+        var src = rawMusic[id];
+        if (isSourceShape(src)) music[id] = Array.isArray(src) ? src.slice() : src;
+      });
+    }
+
+    return { version: version, channels: channels, sources: sources, music: music };
   }
 
   function load(opts) {
@@ -120,6 +130,7 @@
         _state.version = parsed.version;
         _state.channels = parsed.channels;
         _state.sources = parsed.sources;
+        _state.music = parsed.music || {};
         _state.pendingPromise = null;
         safeInfo('manifest loaded v' + parsed.version + ': ' +
           Object.keys(parsed.sources).length + ' sources, ' +
@@ -153,6 +164,10 @@
 
   function getChannels() {
     return _state.channels ? Object.assign({}, _state.channels) : null;
+  }
+
+  function getMusic() {
+    return _state.music ? Object.assign({}, _state.music) : null;
   }
 
   /*
@@ -238,6 +253,7 @@
     load: load,
     getSources: getSources,
     getChannels: getChannels,
+    getMusic: getMusic,
     getSnapshot: getSnapshot,
     validate: validate,
     logValidationReport: logValidationReport,

@@ -1,0 +1,86 @@
+# packaging/capacitor/codemagic.yaml
+# solo-pipeline-yandex-vk#2 / Phase 4 — cloud macOS build for iOS / App Store.
+#
+# There is no local Mac in this project's environment, so the iOS archive,
+# code-signing and TestFlight/App Store upload run on a Codemagic cloud macOS
+# instance. The cross-platform preparation (clean web bundle + cap sync ios +
+# RevenueCat bridge injection) is done by packaging/scripts/build-ios.mjs; this
+# workflow re-runs the same prepare step on the Mac, then archives and ships.
+#
+# One-time setup in the Codemagic dashboard / via "codemagic --reuse":
+#   • Connect the repo and create application -> note TMZD_CODEMAGIC_APP_ID.
+#   • Add an App Store Connect API key integration (for signing + upload).
+#   • Create an environment group "tmzd_ios" with the secret variables below.
+#
+# Secrets (mark "Secure"); never commit these:
+#   TMZD_REVENUECAT_IOS_KEY     RevenueCat public SDK key (App Store)
+#   APP_STORE_CONNECT_KEY_ID    App Store Connect API key id
+#   APP_STORE_CONNECT_ISSUER_ID App Store Connect issuer id
+#   APP_STORE_CONNECT_PRIVATE_KEY  .p8 private key contents
+#   CERTIFICATE_PRIVATE_KEY     (auto-managed signing) distribution cert key
+#
+# Trigger: push a tag matching ios-v* (e.g. ios-v1.0.0), or start manually,
+# or via REST from packaging/scripts/build-ios.mjs (TMZD_CODEMAGIC_TOKEN).
+
+workflows:
+  ios-appstore:
+    name: TMZD iOS App Store
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      groups:
+        - tmzd_ios
+      vars:
+        BUNDLE_ID: "com.tmzd.game"
+        XCODE_WORKSPACE: "packaging/capacitor/ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        APP_STORE_APPLE_ID: "0000000000" # replace with the App Store Connect numeric app id
+      node: 20
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+    scripts:
+      - name: Install packaging deps (npm isolated to packaging/)
+        script: |
+          cd packaging
+          npm ci
+      - name: Prepare web bundle + capacitor ios + RevenueCat bridge
+        script: |
+          # Re-uses the exact cross-platform prepare path; --prepare-only so the
+          # Mac does NOT try to trigger a nested cloud build.
+          node packaging/scripts/build-ios.mjs --skip-tests --prepare-only
+      - name: CocoaPods install
+        script: |
+          cd packaging/capacitor/ios/App
+          pod install
+      - name: Set up code signing (automatic, App Store Connect API key)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Bump build number
+        script: |
+          cd packaging/capacitor/ios/App
+          agvtool new-version -all "$(($(date +%s) / 60))"
+      - name: Archive + export IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Flip to true (and add release_type) when you are ready to ship to the store:
+        submit_to_app_store: false

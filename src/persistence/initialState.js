@@ -165,9 +165,10 @@
         // Survives partial reset (pattern dustEarnedLifetime). Increments only via
         // Game.Achievements.recordZombieKilled from flushZombieDeathFx batch seam.
         totalZombieKills: 0,
-        // Item 2 — Сколько раз игрок выполнил «Перезагрузка симуляции» (partial reset).
-        // Канонический счётчик. Инкрементируется в Game.WorldReset.restartSimulationPartial
-        // ДО takeProgressSnapshot, поэтому переживает partial reset через snapshot.achievements.
+        // Item 2 — Сколько раз игрок вошёл в critical-state перезагрузки симуляции.
+        // Канонический счётчик. Инкрементируется один раз на critical-entry до
+        // pre-retry autosave, поэтому и restart, и save-exit используют одно и то же
+        // значение через payload.achievements / snapshot.achievements.
         totalSimulationResets: 0,
         // Item 3 — survivor (Выживший) achievement.
         // Legacy mirror lifetime счётчика волн, переживших полное разрушение всех фрагментов забора.

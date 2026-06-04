@@ -18,7 +18,7 @@
     shootHeavy2: 'assets/sfx/shoot_heavy2.ogg',
     levelUp: 'assets/sfx/level_up.ogg',
     applyTalents: 'assets/sfx/apply_talents.ogg',
-    activeAbility: 'assets/sfx/active_ability.ogg',
+    activeAbility: ['assets/sfx/active_ability.ogg', 'assets/sfx/active_ability.mp3'],
     uiHover: ['assets/sfx/ui_hover.ogg', 'assets/sfx/ui_hover.mp3'],
     uiClickOnEnabled: ['assets/sfx/ui_click_enabled.ogg', 'assets/sfx/ui_click_enabled.mp3'],
     uiClickOnDisable: ['assets/sfx/ui_click_disabled.ogg', 'assets/sfx/ui_click_disabled.mp3'],

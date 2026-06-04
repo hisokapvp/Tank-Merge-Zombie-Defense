@@ -131,8 +131,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 2,
-      "attackSpeed": 2
+      "baseDamage": 230,
+      "attackSpeed": 230
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -243,8 +243,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 2,
-      "attackSpeed": 2
+      "baseDamage": 230,
+      "attackSpeed": 230
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -355,8 +355,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 3,
-      "attackSpeed": 3
+      "baseDamage": 240,
+      "attackSpeed": 240
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -467,8 +467,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 3,
-      "attackSpeed": 3
+      "baseDamage": 240,
+      "attackSpeed": 240
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -579,8 +579,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 4,
-      "attackSpeed": 4
+      "baseDamage": 280,
+      "attackSpeed": 280
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -691,8 +691,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 4,
-      "attackSpeed": 4
+      "baseDamage": 330,
+      "attackSpeed": 330
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -791,8 +791,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 5,
-      "attackSpeed": 5
+      "baseDamage": 380,
+      "attackSpeed": 380
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -903,8 +903,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 5,
-      "attackSpeed": 5
+      "baseDamage": 430,
+      "attackSpeed": 430
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1015,8 +1015,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 6,
-      "attackSpeed": 6
+      "baseDamage": 480,
+      "attackSpeed": 480
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1127,8 +1127,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 6,
-      "attackSpeed": 6
+      "baseDamage": 530,
+      "attackSpeed": 530
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1239,8 +1239,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 7,
-      "attackSpeed": 7
+      "baseDamage": 530,
+      "attackSpeed": 530
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1351,8 +1351,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 7,
-      "attackSpeed": 7
+      "baseDamage": 540,
+      "attackSpeed": 540
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1463,8 +1463,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 8,
-      "attackSpeed": 8
+      "baseDamage": 540,
+      "attackSpeed": 540
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1575,8 +1575,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 8,
-      "attackSpeed": 8
+      "baseDamage": 540,
+      "attackSpeed": 540
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1687,8 +1687,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 9,
-      "attackSpeed": 9
+      "baseDamage": 550,
+      "attackSpeed": 550
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1799,8 +1799,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 9,
-      "attackSpeed": 9
+      "baseDamage": 570,
+      "attackSpeed": 570
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -1911,8 +1911,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 10,
-      "attackSpeed": 10
+      "baseDamage": 600,
+      "attackSpeed": 600
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2023,8 +2023,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 10,
-      "attackSpeed": 10
+      "baseDamage": 640,
+      "attackSpeed": 640
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2135,8 +2135,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 11,
-      "attackSpeed": 11
+      "baseDamage": 670,
+      "attackSpeed": 670
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2247,8 +2247,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 11,
-      "attackSpeed": 11
+      "baseDamage": 980,
+      "attackSpeed": 980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2359,8 +2359,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 12,
-      "attackSpeed": 12
+      "baseDamage": 1110,
+      "attackSpeed": 1110
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2471,8 +2471,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 12,
-      "attackSpeed": 12
+      "baseDamage": 1160,
+      "attackSpeed": 1160
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2583,8 +2583,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 13,
-      "attackSpeed": 13
+      "baseDamage": 1210,
+      "attackSpeed": 1210
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2695,8 +2695,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 13,
-      "attackSpeed": 13
+      "baseDamage": 1260,
+      "attackSpeed": 1260
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2807,8 +2807,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 14,
-      "attackSpeed": 14
+      "baseDamage": 1310,
+      "attackSpeed": 1310
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -2919,8 +2919,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 14,
-      "attackSpeed": 14
+      "baseDamage": 1370,
+      "attackSpeed": 1370
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3031,8 +3031,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 15,
-      "attackSpeed": 15
+      "baseDamage": 1420,
+      "attackSpeed": 1420
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3143,8 +3143,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 15,
-      "attackSpeed": 15
+      "baseDamage": 1470,
+      "attackSpeed": 1470
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3255,8 +3255,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 16,
-      "attackSpeed": 16
+      "baseDamage": 1520,
+      "attackSpeed": 1520
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3367,8 +3367,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 16,
-      "attackSpeed": 16
+      "baseDamage": 1520,
+      "attackSpeed": 1520
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3479,8 +3479,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 17,
-      "attackSpeed": 17
+      "baseDamage": 1540,
+      "attackSpeed": 1540
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3591,8 +3591,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 17,
-      "attackSpeed": 17
+      "baseDamage": 1590,
+      "attackSpeed": 1590
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3703,8 +3703,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 18,
-      "attackSpeed": 18
+      "baseDamage": 1640,
+      "attackSpeed": 1640
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3815,8 +3815,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 18,
-      "attackSpeed": 18
+      "baseDamage": 1690,
+      "attackSpeed": 1690
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -3927,8 +3927,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 19,
-      "attackSpeed": 19
+      "baseDamage": 1740,
+      "attackSpeed": 1740
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4039,8 +4039,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 19,
-      "attackSpeed": 19
+      "baseDamage": 1780,
+      "attackSpeed": 1780
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4151,8 +4151,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 20,
-      "attackSpeed": 20
+      "baseDamage": 1830,
+      "attackSpeed": 1830
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4263,8 +4263,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 20,
-      "attackSpeed": 20
+      "baseDamage": 1880,
+      "attackSpeed": 1880
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4375,8 +4375,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 21,
-      "attackSpeed": 21
+      "baseDamage": 1930,
+      "attackSpeed": 1930
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4487,8 +4487,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 21,
-      "attackSpeed": 21
+      "baseDamage": 1980,
+      "attackSpeed": 1980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4599,8 +4599,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 22,
-      "attackSpeed": 22
+      "baseDamage": 1980,
+      "attackSpeed": 1980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4711,8 +4711,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 22,
-      "attackSpeed": 22
+      "baseDamage": 1980,
+      "attackSpeed": 1980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4823,8 +4823,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 23,
-      "attackSpeed": 23
+      "baseDamage": 1980,
+      "attackSpeed": 1980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -4935,8 +4935,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 23,
-      "attackSpeed": 23
+      "baseDamage": 1980,
+      "attackSpeed": 1980
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5047,8 +5047,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 24,
-      "attackSpeed": 24
+      "baseDamage": 2000,
+      "attackSpeed": 2000
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5159,8 +5159,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 24,
-      "attackSpeed": 24
+      "baseDamage": 2040,
+      "attackSpeed": 2040
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5271,8 +5271,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 25,
-      "attackSpeed": 25
+      "baseDamage": 2090,
+      "attackSpeed": 2090
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5383,8 +5383,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 25,
-      "attackSpeed": 25
+      "baseDamage": 2130,
+      "attackSpeed": 2130
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5495,8 +5495,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 26,
-      "attackSpeed": 26
+      "baseDamage": 2170,
+      "attackSpeed": 2170
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5607,8 +5607,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 26,
-      "attackSpeed": 26
+      "baseDamage": 2210,
+      "attackSpeed": 2210
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5719,8 +5719,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 27,
-      "attackSpeed": 27
+      "baseDamage": 2210,
+      "attackSpeed": 2210
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5831,8 +5831,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 27,
-      "attackSpeed": 27
+      "baseDamage": 2210,
+      "attackSpeed": 2210
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -5943,8 +5943,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 28,
-      "attackSpeed": 28
+      "baseDamage": 2210,
+      "attackSpeed": 2210
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6055,8 +6055,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 28,
-      "attackSpeed": 28
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6167,8 +6167,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 2,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 29,
-      "attackSpeed": 29
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6279,8 +6279,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 29,
-      "attackSpeed": 29
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6391,8 +6391,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 30,
-      "attackSpeed": 30
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6503,8 +6503,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 30,
-      "attackSpeed": 30
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6615,8 +6615,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 31,
-      "attackSpeed": 31
+      "baseDamage": 2220,
+      "attackSpeed": 2220
     },
     "aura1": {
       "src": "tanks/Aura1.png",
@@ -6727,8 +6727,8 @@
     "bulletId": "bullet_base",
     "bulletLevel": 1,
     "upgradeDamagePointsCosts": {
-      "baseDamage": 31,
-      "attackSpeed": 31
+      "baseDamage": 2230,
+      "attackSpeed": 2230
     },
     "aura1": {
       "src": "tanks/Aura1.png",

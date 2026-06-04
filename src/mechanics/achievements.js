@@ -1648,14 +1648,27 @@
     var entry = table[def.rewardMode] || LOCAL_SELF_MANAGED_REWARD_TABLE[def.rewardMode];
     if (!entry) return false;
 
+    // Re-entrancy guard: commit the rewarded flag BEFORE dispensing items.
+    // Fragment/dust granters route through HangarChipsUI seams
+    // (addPlayerFragment / creditSiliconDust) that synchronously re-enter the
+    // achievement pipeline: _triggerAchievementSweep -> recalculateUnlocks ->
+    // ensureState -> reconcileSelfManagedRewards -> grantSelfManagedReward.
+    // If the flag were set only after granting, that nested pass would re-grant
+    // the same reward, recursing until the JS stack overflows and inflating the
+    // fragment count to ~1500. Marking first makes the early-return guard above
+    // catch the re-entrant call; the flag is rolled back if the grant fails.
+    achievementState.rewarded[achievementId] = true;
+
     var granted = false;
     if (entry.type === 'fragments')      granted = grantAchievementFragments(entry.amount);
     else if (entry.type === 'dust')      granted = grantAchievementSiliconDust(entry.amount);
     else if (entry.type === 'randomChips') granted = grantAchievementRandomChips(entry.amount);
     else if (entry.type === 'upgradePoints') granted = grantAchievementUpgradePoints(state, entry.amount);
 
-    if (!granted) return false;
-    achievementState.rewarded[achievementId] = true;
+    if (!granted) {
+      achievementState.rewarded[achievementId] = false;
+      return false;
+    }
     return true;
   }
 

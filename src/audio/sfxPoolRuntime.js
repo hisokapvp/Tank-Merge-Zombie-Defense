@@ -1,6 +1,17 @@
 (function (global) {
   'use strict';
 
+  // Global SFX duck factor (0..1). Default 1 = no attenuation. Music ducking
+  // (Game.MusicManager) lowers this while menu music is active so all SFX whose
+  // volume passes through resolveSfxPlaybackVolume fade down together. Shared
+  // across controllers; mutating it never touches the draw() hot-path.
+  var _sfxDuckFactor = 1;
+  function _clampDuck(v) {
+    v = Number(v);
+    if (!isFinite(v)) return 1;
+    return v < 0 ? 0 : (v > 1 ? 1 : v);
+  }
+
   function createController(deps) {
     deps = deps || {};
 
@@ -25,6 +36,8 @@
       activeAbility: 'gameplay',
       thunder: 'gameplay',
       rainLoop: 'gameplay',
+      zombieAttackLoop: 'gameplay',
+      zombieWanderLoop: 'gameplay',
       uiHover: 'ui',
       uiClickOnEnabled: 'ui',
       uiClickOnDisable: 'ui',
@@ -50,9 +63,11 @@
       levelUp: 'assets/sfx/level_up.ogg',
       mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
       applyTalents: 'assets/sfx/apply_talents.ogg',
-      activeAbility: 'assets/sfx/active_ability.ogg',
+      activeAbility: ['assets/sfx/active_ability.ogg', 'assets/sfx/active_ability.mp3'],
       thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
       rainLoop: (deps.getDefaultRainLoopSources() || []).slice(),
+      zombieAttackLoop: ['assets/music/ataka-zombi.ogg', 'assets/music/ataka-zombi.mp3'],
+      zombieWanderLoop: ['assets/music/zombi-bredut.ogg', 'assets/music/zombi-bredut.mp3'],
     };
 
     function getDefaultSettings() {
@@ -198,7 +213,7 @@
     }
 
     function resolveSfxPlaybackVolume(id, volumeMul) {
-      return deps.resolveSfxPlaybackVolume(id, volumeMul);
+      return deps.resolveSfxPlaybackVolume(id, volumeMul) * _sfxDuckFactor;
     }
 
     function playLoopSfx(id, volumeMul) {
@@ -300,5 +315,7 @@
   global.Game = global.Game || {};
   global.Game.SfxPoolRuntime = {
     createController: createController,
+    setDuckFactor: function (f) { _sfxDuckFactor = _clampDuck(f); },
+    getDuckFactor: function () { return _sfxDuckFactor; },
   };
 })(typeof window !== 'undefined' ? window : this);

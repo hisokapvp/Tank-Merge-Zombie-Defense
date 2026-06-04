@@ -13,6 +13,8 @@
     "activeAbility": "gameplay",
     "thunder": "gameplay",
     "rainLoop": "gameplay",
+    "zombieAttackLoop": "gameplay",
+    "zombieWanderLoop": "gameplay",
     "uiHover": "ui",
     "uiClickOnEnabled": "ui",
     "uiClickOnDisable": "ui",
@@ -37,9 +39,17 @@
     "levelUp": "assets/sfx/level_up.ogg",
     "mergeNewMaxLevel": ["assets/sfx/merge_new_max_level.ogg", "assets/sfx/merge_new_max_level.mp3"],
     "applyTalents": "assets/sfx/apply_talents.ogg",
-    "activeAbility": "assets/sfx/active_ability.ogg",
+    "activeAbility": ["assets/sfx/active_ability.ogg", "assets/sfx/active_ability.mp3"],
     "thunder": ["assets/sfx/thunder.ogg", "assets/sfx/thunder.wav"],
     "rainLoop": ["assets/sfx/rain_loop.ogg", "assets/sfx/rain_loop.wav"],
+    "zombieAttackLoop": ["assets/music/ataka-zombi.ogg", "assets/music/ataka-zombi.mp3"],
+    "zombieWanderLoop": ["assets/music/zombi-bredut.ogg", "assets/music/zombi-bredut.mp3"],
     "fenceExplosion": ["assets/sfx/fence_explosion.ogg", "assets/sfx/fence_explosion.mp3"]
+  },
+  "$musicComment": "Music channels for Game.MusicManager. Separate from SFX sources/channels (no drift check). Each track lists ogg-then-mp3 with cross-format fallback. *_TEMPLATE files are silent/placeholder stubs to be replaced with final compositions.",
+  "music": {
+    "menuTheme": ["assets/music/menu_theme_TEMPLATE.ogg", "assets/music/menu_theme_TEMPLATE.mp3"],
+    "battleCalm": ["assets/music/battle_calm_TEMPLATE.ogg", "assets/music/battle_calm_TEMPLATE.mp3"],
+    "battleWave": ["assets/music/battle_wave_TEMPLATE.ogg", "assets/music/battle_wave_TEMPLATE.mp3"]
   }
 }

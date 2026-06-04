@@ -62,16 +62,17 @@
       ]
     },
     {
-      "id": "off_multishot",
+      "id": "off_execute",
       "branch": "offense",
       "tier": 2,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_off_multishot_name", "descKey": "talent_off_multishot_desc", "icon": "multishot", "currentEffectKey": "doubleShotChance", "currentVars": { "currentDouble": "doubleShotChance", "currentTriple": "tripleShotChance" } },
+      "ui": { "nameKey": "talent_off_execute_name", "descKey": "talent_off_execute_desc", "icon": "execute" },
       "effects": [
-        { "type": "param", "key": "doubleShotChance", "base": 0, "perRank": 0.04, "max": 0.45 },
-        { "type": "param", "key": "tripleShotChance", "base": 0, "perRank": 0.02, "fromRank": 4, "max": 0.12 }
+        { "type": "unlock", "key": "execute" },
+        { "type": "param", "key": "executeHpThreshold", "value": 0.3 },
+        { "type": "param", "key": "executeDamageMul", "base": 0, "perRank": 0.06 }
       ]
     },
     {
@@ -115,22 +116,6 @@
       ]
     },
     {
-      "id": "off_armor_piercing_proc",
-      "branch": "offense",
-      "tier": 3,
-      "maxRank": 1,
-      "costPerRank": 1,
-      "requires": [],
-      "ui": { "nameKey": "talent_off_armor_piercing_proc_name", "descKey": "talent_off_armor_piercing_proc_desc", "icon": "armorPiercing" },
-      "effects": [
-        { "type": "unlock", "key": "armorPiercingProc" },
-        { "type": "param", "key": "armorPiercingProcChance", "value": 0.01 },
-        { "type": "param", "key": "armorPiercingProcDurationMs", "value": 5000 },
-        { "type": "param", "key": "armorPiercingProcDamageMul", "value": 1.3 },
-        { "type": "param", "key": "armorPiercingProcIcdMs", "value": 10000 }
-      ]
-    },
-    {
       "id": "off_impulse_proc",
       "branch": "offense",
       "tier": 3,
@@ -147,17 +132,32 @@
       ]
     },
     {
-      "id": "off_execute",
+      "id": "off_armor_piercing_proc",
+      "branch": "offense",
+      "tier": 3,
+      "maxRank": 1,
+      "costPerRank": 1,
+      "requires": [],
+      "ui": { "nameKey": "talent_off_armor_piercing_proc_name", "descKey": "talent_off_armor_piercing_proc_desc", "icon": "armorPiercing" },
+      "effects": [
+        { "type": "unlock", "key": "armorPiercingProc" },
+        { "type": "param", "key": "armorPiercingProcChance", "value": 0.01 },
+        { "type": "param", "key": "armorPiercingProcDurationMs", "value": 5000 },
+        { "type": "param", "key": "armorPiercingProcDamageMul", "value": 1.3 },
+        { "type": "param", "key": "armorPiercingProcIcdMs", "value": 10000 }
+      ]
+    },
+    {
+      "id": "off_multishot",
       "branch": "offense",
       "tier": 3,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_off_execute_name", "descKey": "talent_off_execute_desc", "icon": "execute" },
+      "ui": { "nameKey": "talent_off_multishot_name", "descKey": "talent_off_multishot_desc", "icon": "multishot", "currentEffectKey": "doubleShotChance", "currentVars": { "currentDouble": "doubleShotChance", "currentTriple": "tripleShotChance" } },
       "effects": [
-        { "type": "unlock", "key": "execute" },
-        { "type": "param", "key": "executeHpThreshold", "value": 0.3 },
-        { "type": "param", "key": "executeDamageMul", "base": 0, "perRank": 0.06 }
+        { "type": "param", "key": "doubleShotChance", "base": 0, "perRank": 0.04, "max": 0.45 },
+        { "type": "param", "key": "tripleShotChance", "base": 0, "perRank": 0.02, "fromRank": 4, "max": 0.12 }
       ]
     },
     {
@@ -309,44 +309,42 @@
       ]
     },
     {
-      "id": "def_regen",
+      "id": "def_repair_efficiency",
       "branch": "defense",
       "tier": 2,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
       "ui": {
-        "nameKey": "talent_def_regen_name",
-        "descKey": "talent_def_regen_desc",
-        "icon": "regen",
-        "currentVars": { "current": { "key": "wallRegenPctPerSec", "kind": "percent1" } }
+        "nameKey": "talent_def_repair_efficiency_name",
+        "descKey": "talent_def_repair_efficiency_desc",
+        "icon": "repairEff",
+        "currentVars": {
+          "currentValue": { "key": "droneRepairSpeedBonusPerRank", "kind": "percent" }
+        }
       },
-      "effects": [
-        { "type": "param", "key": "wallRegenDelayMs", "value": 4000 },
-        { "type": "param", "key": "wallRegenPctPerSec", "base": 0, "perRank": 0.006 }
-      ]
+      "effects": [{ "type": "param", "key": "droneRepairSpeedBonusPerRank", "base": 0, "perRank": 0.02 }]
     },
     {
-      "id": "def_shield",
+      "id": "def_auto_repair",
       "branch": "defense",
       "tier": 2,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
       "ui": {
-        "nameKey": "talent_def_shield_name",
-        "descKey": "talent_def_shield_desc",
-        "icon": "shield",
+        "nameKey": "talent_def_auto_repair_name",
+        "descKey": "talent_def_auto_repair_desc",
+        "icon": "autoRepair",
         "currentVars": {
-          "currentPeriod": { "key": "wallShieldPeriodMs", "kind": "periodSeconds" },
-          "currentShieldPct": { "key": "wallShieldPct", "kind": "percent" }
+          "currentValue": { "key": "protectAheadArmorPerRank", "kind": "percent" }
         }
       },
       "effects": [
-        { "type": "unlock", "key": "wallShield" },
-        { "type": "param", "key": "wallShieldPeriodMs", "base": 45000, "perRank": -5000, "min": 5000 },
-        { "type": "param", "key": "wallShieldPct", "base": 0, "perRank": 0.02 },
-        { "type": "param", "key": "wallShieldCapPct", "value": 0.30 }
+        { "type": "unlock", "key": "protectAhead" },
+        { "type": "param", "key": "protectAheadAnalyzeMs", "value": 8000 },
+        { "type": "param", "key": "protectAheadBuffMs", "value": 8000 },
+        { "type": "param", "key": "protectAheadArmorPerRank", "base": 0, "perRank": 0.03 }
       ]
     },
     {
@@ -462,43 +460,45 @@
       ]
     },
     {
-      "id": "def_auto_repair",
+      "id": "def_shield",
       "branch": "defense",
       "tier": 4,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
       "ui": {
-        "nameKey": "talent_def_auto_repair_name",
-        "descKey": "talent_def_auto_repair_desc",
-        "icon": "autoRepair",
+        "nameKey": "talent_def_shield_name",
+        "descKey": "talent_def_shield_desc",
+        "icon": "shield",
         "currentVars": {
-          "currentValue": { "key": "protectAheadArmorPerRank", "kind": "percent" }
+          "currentPeriod": { "key": "wallShieldPeriodMs", "kind": "periodSeconds" },
+          "currentShieldPct": { "key": "wallShieldPct", "kind": "percent" }
         }
       },
       "effects": [
-        { "type": "unlock", "key": "protectAhead" },
-        { "type": "param", "key": "protectAheadAnalyzeMs", "value": 8000 },
-        { "type": "param", "key": "protectAheadBuffMs", "value": 8000 },
-        { "type": "param", "key": "protectAheadArmorPerRank", "base": 0, "perRank": 0.03 }
+        { "type": "unlock", "key": "wallShield" },
+        { "type": "param", "key": "wallShieldPeriodMs", "base": 45000, "perRank": -5000, "min": 5000 },
+        { "type": "param", "key": "wallShieldPct", "base": 0, "perRank": 0.02 },
+        { "type": "param", "key": "wallShieldCapPct", "value": 0.30 }
       ]
     },
     {
-      "id": "def_repair_efficiency",
+      "id": "def_regen",
       "branch": "defense",
       "tier": 4,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
       "ui": {
-        "nameKey": "talent_def_repair_efficiency_name",
-        "descKey": "talent_def_repair_efficiency_desc",
-        "icon": "repairEff",
-        "currentVars": {
-          "currentValue": { "key": "droneRepairSpeedBonusPerRank", "kind": "percent" }
-        }
+        "nameKey": "talent_def_regen_name",
+        "descKey": "talent_def_regen_desc",
+        "icon": "regen",
+        "currentVars": { "current": { "key": "wallRegenPctPerSec", "kind": "percent1" } }
       },
-      "effects": [{ "type": "param", "key": "droneRepairSpeedBonusPerRank", "base": 0, "perRank": 0.02 }]
+      "effects": [
+        { "type": "param", "key": "wallRegenDelayMs", "value": 4000 },
+        { "type": "param", "key": "wallRegenPctPerSec", "base": 0, "perRank": 0.006 }
+      ]
     },
     {
       "id": "def_explosive_base",
@@ -660,16 +660,16 @@
       ]
     },
     {
-      "id": "eco_tax_relief",
+      "id": "eco_grey_to_damage_points",
       "branch": "economy",
       "tier": 3,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_tax_relief_name", "descKey": "talent_eco_tax_relief_desc", "icon": "tax" },
+      "ui": { "nameKey": "talent_eco_grey_to_damage_points_name", "descKey": "talent_eco_grey_to_damage_points_desc", "icon": "grey" },
       "effects": [
-        { "type": "unlock", "key": "mergeExtraLevel" },
-        { "type": "param", "key": "mergeExtraLevelChance", "base": 0, "perRank": 0.002 }
+        { "type": "unlock", "key": "greyToDamagePoints" },
+        { "type": "param", "key": "greyToDamagePointsMul", "base": 1, "perRank": 0.1 }
       ]
     },
     {
@@ -717,16 +717,16 @@
       ]
     },
     {
-      "id": "eco_grey_to_damage_points",
+      "id": "eco_tax_relief",
       "branch": "economy",
       "tier": 4,
       "maxRank": 5,
       "costPerRank": 1,
       "requires": [],
-      "ui": { "nameKey": "talent_eco_grey_to_damage_points_name", "descKey": "talent_eco_grey_to_damage_points_desc", "icon": "grey" },
+      "ui": { "nameKey": "talent_eco_tax_relief_name", "descKey": "talent_eco_tax_relief_desc", "icon": "tax" },
       "effects": [
-        { "type": "unlock", "key": "greyToDamagePoints" },
-        { "type": "param", "key": "greyToDamagePointsMul", "base": 1, "perRank": 0.1 }
+        { "type": "unlock", "key": "mergeExtraLevel" },
+        { "type": "param", "key": "mergeExtraLevelChance", "base": 0, "perRank": 0.002 }
       ]
     },
     {

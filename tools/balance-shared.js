@@ -551,6 +551,77 @@
     };
   }
 
+  function getTankDamagePointProvenance() {
+    return [
+      'assets/tanks.json -> tank_lvlN.stats.baseDamage / attackSpeed / bulletLevel',
+      'assets/bullet.json -> bullets.<bulletId>.levels[].addDamage'
+    ];
+  }
+
+  function getTankDamagePointMetrics(data, levels, scenarioFactory) {
+    var requestedLevels = Array.isArray(levels) && levels.length ? levels.slice() : null;
+    var safeLevels = requestedLevels || [];
+    var result = {
+      rows: [],
+      diagnostics: [],
+      provenance: getTankDamagePointProvenance(),
+      formula: 'shotDamage = baseDamage + bullet.addDamage; shotsPerMinute = attackSpeed × 60; damagePointsPerMinute = rawDamagePerMinute / 10000'
+    };
+    if (!safeLevels.length) {
+      for (var index = 1; index <= 60; index++) safeLevels.push(index);
+    }
+
+    safeLevels.forEach(function (levelValue) {
+      var level = clamp(Math.floor(safeNumber(levelValue, 1)), 1, 60);
+      var tankKey = 'tank_lvl' + level;
+      var tankCfg = data && data.tanks ? data.tanks[tankKey] : null;
+      var tankStats = tankCfg && tankCfg.stats ? tankCfg.stats : null;
+      var bulletId = tankCfg && tankCfg.bulletId ? tankCfg.bulletId : 'bullet_base';
+      var bulletLevel = tankCfg && Number.isFinite(tankCfg.bulletLevel) ? Math.max(1, Math.floor(tankCfg.bulletLevel)) : 1;
+      var bulletLevels = getNestedValue(data || {}, ['bullet', 'bullets', bulletId, 'levels']);
+      var bulletCfg;
+      var attackSpeed;
+      var shotDamage;
+      var shotsPerMinute;
+      var rawDamagePerMinute;
+
+      if (!tankCfg) {
+        result.diagnostics.push('L' + level + ': отсутствует ' + tankKey + ' в assets/tanks.json.');
+        return;
+      }
+      if (!Number.isFinite(getNestedValue(tankStats, 'baseDamage'))) {
+        result.diagnostics.push('L' + level + ': отсутствует tanks.' + tankKey + '.stats.baseDamage в assets/tanks.json.');
+        return;
+      }
+      if (!(Number.isFinite(getNestedValue(tankStats, 'attackSpeed')) && getNestedValue(tankStats, 'attackSpeed') > 0)) {
+        result.diagnostics.push('L' + level + ': отсутствует или некорректен tanks.' + tankKey + '.stats.attackSpeed в assets/tanks.json.');
+        return;
+      }
+      if (!Array.isArray(bulletLevels) || !bulletLevels.length) {
+        result.diagnostics.push('L' + level + ': отсутствует bullets.' + bulletId + '.levels в assets/bullet.json.');
+        return;
+      }
+      if (bulletLevel > bulletLevels.length) {
+        result.diagnostics.push('L' + level + ': отсутствует bullets.' + bulletId + '.levels[' + (bulletLevel - 1) + '] в assets/bullet.json.');
+        return;
+      }
+      bulletCfg = bulletLevels[bulletLevel - 1] || null;
+      attackSpeed = getNestedValue(tankStats, 'attackSpeed');
+      shotDamage = Math.max(0, safeNumber(getNestedValue(tankStats, 'baseDamage'), 0) + safeNumber(bulletCfg && bulletCfg.addDamage, 0));
+      shotsPerMinute = Math.max(0, attackSpeed * 60);
+      rawDamagePerMinute = shotDamage * shotsPerMinute;
+      result.rows.push({
+        level: level,
+        shotDamage: round(shotDamage, 3),
+        shotsPerMinute: round(shotsPerMinute, 3),
+        rawDamagePerMinute: round(rawDamagePerMinute, 3),
+        damagePointsPerMinute: round(rawDamagePerMinute / 10000, 4)
+      });
+    });
+
+    return result;
+  }
+
   function getZombieStats(data, scenario) {
     var runtime = getRuntimeConstants(data);
     var level = clamp(Math.floor(safeNumber(scenario && scenario.zombieLevel, 1)), 1, 60);
@@ -905,6 +976,8 @@
     createDefaultLabState: createDefaultLabState,
     buildRuntimeData: buildRuntimeData,
     getTankStats: getTankStats,
+    getTankDamagePointMetrics: getTankDamagePointMetrics,
+    getTankDamagePointProvenance: getTankDamagePointProvenance,
     getZombieStats: getZombieStats,
     getWallStats: getWallStats,
     getDroneStats: getDroneStats,

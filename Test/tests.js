@@ -74,6 +74,8 @@ loadModule('src/render/fenceLayout.js');
 // Load ground modules
 loadModule('src/render/groundGen.js');
 loadModule('src/render/groundLayer.js');
+// Load achievement rewards
+loadModule('src/mechanics/achievementRewards.js');
 
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...
@@ -213,6 +215,41 @@ test('T4-11: level=null → 0 (invalid)', () => {
 
 test('T4-12: MAX_COIN_PER_SHOT = Number.MAX_SAFE_INTEGER', () => {
   assertEqual(MAX_COIN_PER_SHOT, Number.MAX_SAFE_INTEGER);
+});
+
+// ═══════════════════════════════════════════════
+// T-ACH: achievement reward grant regressions
+// ═══════════════════════════════════════════════
+console.log('\n── T-ACH: achievement reward / restart seam regressions ──');
+
+test('T-ACH-1: top-level drones reward mode grants drones and marks reward as granted', () => {
+  const rewards = Game.AchievementRewards;
+  assert(!!rewards && typeof rewards.grant === 'function', 'AchievementRewards.grant must exist');
+  const prevAddDron = Game._productionLineAddDron;
+  let grantedCount = 0;
+  Game._productionLineAddDron = function(level) {
+    grantedCount += 1;
+    return { level };
+  };
+  try {
+    const state = { achievements: { rewarded: {} } };
+    const def = { id: 'drone_brigadier_1', rewardMode: 'droneBrigadierDrones2L2' };
+    const granted = rewards.grant(state, def);
+    assertEqual(granted, true, 'top-level drones reward should be granted');
+    assertEqual(grantedCount, 2, 'drone reward should grant 2 drones');
+    assert(!!state.achievements.rewarded.drone_brigadier_1, 'rewarded marker should be set');
+  } finally {
+    Game._productionLineAddDron = prevAddDron;
+  }
+});
+
+test('T-ACH-2: simulation reset counter increments in actual restart seams, not at modal open', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '..', 'game.js'), 'utf-8');
+  assert(gameJs.includes("incrementSimulationResetCounter(state, { logSource: 'critical-state-entry' });"), 'critical entry must increment counter');
+  assert(gameJs.indexOf("incrementSimulationResetCounter(state, { logSource: 'critical-state-entry' });") < gameJs.indexOf('savePreRetryPayloadToAutoSlot();'), 'critical-entry increment must happen before pre-retry autosave');
+  assert(!gameJs.includes("incrementSimulationResetCounter(state, { logSource: 'performCriticalRestart' });"), 'performCriticalRestart must not increment counter');
+  assert(!gameJs.includes("incrementSimulationResetCounter(state, { logSource: 'restartSimulationPartial' });"), 'restartSimulationPartial must not increment counter');
+  assert(!/function openCriticalModal\([\s\S]*state\.achievements\.totalSimulationResets\s*=\s*_prevResets\s*\+\s*1;/.test(gameJs), 'openCriticalModal must not own counter increment');
 });
 
 // ═══════════════════════════════════════════════

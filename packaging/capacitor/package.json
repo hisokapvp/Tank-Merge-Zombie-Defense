@@ -1,0 +1,19 @@
+{
+  "name": "tmzd-capacitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capacitor project root for Tank Merge Zombie Defense (Android + iOS). Native deps are installed in ../node_modules and resolved via Node module walk-up; this manifest exists only so the Capacitor CLI recognizes a valid npm package root in this directory.",
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/ios": "^6.1.0",
+    "@capacitor/preferences": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@revenuecat/purchases-capacitor": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.0"
+  }
+}

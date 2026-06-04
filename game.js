@@ -182,6 +182,59 @@ function getTankWallStorageKeys(tabKey, fallbackKeys){
   return Array.isArray(fallbackKeys) ? fallbackKeys.slice() : [];
 }
 
+// solo-pipeline-yandex-vk#1: read per-upgrade stat growth from the shared catalog
+// (single source of truth). attackSpeed = flat +0.01 per upgrade (no percent);
+// wall segmentMaxHp = compounding ×1.01 per upgrade. Fallbacks keep runtime safe
+// if the catalog module is unavailable.
+function getTankWallStatGrowth(tabKey, statKey){
+  const catalog = window.Game && window.Game.TankWallStatCatalog;
+  if (catalog && typeof catalog.getStatGrowth === 'function') {
+    return catalog.getStatGrowth(tabKey, statKey);
+  }
+  return null;
+}
+
+function getWeaponAttackSpeedStep(){
+  const growth = getTankWallStatGrowth('weapons', 'attackSpeed');
+  if (growth && growth.kind === 'flatAdd' && Number.isFinite(growth.step)) return growth.step;
+  return 0.01;
+}
+
+function getWallHpCompoundFactor(){
+  const growth = getTankWallStatGrowth('walls', 'segmentMaxHp');
+  if (growth && growth.kind === 'mulCompound' && Number.isFinite(growth.factor) && growth.factor > 0) return growth.factor;
+  return 1.01;
+}
+
+// solo-pipeline-yandex-vk#2 item 4: per-upgrade armor growth factor (default +1%).
+function getWallArmorCompoundFactor(){
+  const growth = getTankWallStatGrowth('walls', 'armorFlat');
+  if (growth && growth.kind === 'mulCompound' && Number.isFinite(growth.factor) && growth.factor > 0) return growth.factor;
+  return 1.01;
+}
+
+// solo-pipeline-yandex-vk#2 item 4: minimum absolute armor added per upgrade (default +1).
+function getWallArmorCompoundFloor(){
+  const growth = getTankWallStatGrowth('walls', 'armorFlat');
+  if (growth && Number.isFinite(growth.floor) && growth.floor > 0) return growth.floor;
+  return 1;
+}
+
+// solo-pipeline-yandex-vk#2 item 4: segment armor grows +1% compounding off the current
+// armor, but never less than +1 unit per upgrade. The floor makes growth path-dependent,
+// so it is computed iteratively instead of a closed-form pow().
+function computeWallArmorCompound(baseArmor, appliedCount){
+  let val = Number.isFinite(baseArmor) ? Math.max(0, Math.floor(baseArmor)) : 0;
+  const steps = Number.isFinite(appliedCount) ? Math.max(0, Math.floor(appliedCount)) : 0;
+  if (steps <= 0) return val;
+  const pct = Math.max(0, getWallArmorCompoundFactor() - 1);
+  const floor = getWallArmorCompoundFloor();
+  for (let i = 0; i < steps; i++) {
+    val += Math.max(floor, val * pct);
+  }
+  return val;
+}
+
 const CANNON_UPGRADE_STAT_KEYS = getTankWallStorageKeys('weapons', ['baseDamage', 'attackSpeed']);
 const DRON_UPGRADE_STAT_KEYS = getTankWallStorageKeys('drones', ['moveSpeedPxSec', 'repairSpeedMult', 'costMult']);
 const FENCE_UPGRADE_STAT_KEYS = getTankWallStorageKeys('walls', ['segmentMaxHp', 'armorFlat']);
@@ -527,8 +580,9 @@ const BASE_BAL = {
   crateSize: 34,
 };
 
-const FENCE_HP_MUL = 1.05;
-const FENCE_ARMOR_MUL = 1.05;
+// solo-pipeline-yandex-vk#1 item 2: wall segment HP grows +1% (×1.01) per upgrade,
+// compounding off the current segment HP. Sourced from the shared stat-growth catalog.
+const FENCE_HP_MUL = getWallHpCompoundFactor();
 
 let BalanceConfig = { zombie: {}, zombieOverrides: {}, tank: {}, tankOverrides: {} };
 let LevelRewardConfig = null;
@@ -548,13 +602,14 @@ function getTankBalanceMul(level, key) {
   if (key !== 'attackDamageMul' && key !== 'attackSpeedMul') {
     return baseMul;
   }
+  // solo-pipeline-yandex-vk#1 item 1: attackSpeed upgrades are flat-additive on the
+  // fire rate (+0.01 per upgrade, applied in tankStats), NOT a percent multiplier here.
+  if (key === 'attackSpeedMul') return baseMul;
   const row = getCannonUpgradeRow(level);
   if (!row) return baseMul;
-  const applied = key === 'attackDamageMul'
-    ? getAppliedCannonUpgradeLevel(level, 'baseDamage')
-    : getAppliedCannonUpgradeLevel(level, 'attackSpeed');
+  const applied = getAppliedCannonUpgradeLevel(level, 'baseDamage');
   if (applied <= 0) return baseMul;
-  const perUpgradeMul = key === 'attackDamageMul' ? Number(row[3]) : Number(row[4]);
+  const perUpgradeMul = Number(row[3]);
   if (!Number.isFinite(perUpgradeMul) || perUpgradeMul <= 0) return baseMul;
   return baseMul * (1 + applied * perUpgradeMul);
 }
@@ -568,6 +623,12 @@ const audioDefaultsFromApi = GameApi?.AudioSettings?.DEFAULT_SETTINGS;
 const audioUiConfig = GameApi?.Config?.AudioUi ?? null;
 const TRACK_LOOP_ID = 'trackLoop';
 const DEFAULT_TRACK_LOOP_SOURCES = ['assets/sfx/TankDrive.ogg', 'assets/sfx/TankDrive.mp3'];
+// Zombie-mode ambience loops (SFX channel → controlled by the "Эффекты" slider).
+// They switch between each other as the zombie behaviour mode changes.
+const ZOMBIE_ATTACK_LOOP_ID = 'zombieAttackLoop';
+const ZOMBIE_WANDER_LOOP_ID = 'zombieWanderLoop';
+const DEFAULT_ZOMBIE_ATTACK_LOOP_SOURCES = ['assets/music/ataka-zombi.ogg', 'assets/music/ataka-zombi.mp3'];
+const DEFAULT_ZOMBIE_WANDER_LOOP_SOURCES = ['assets/music/zombi-bredut.ogg', 'assets/music/zombi-bredut.mp3'];
 const TRACK_LOOP_CODE_VOLUME_MUL = Number.isFinite(audioUiConfig?.TANK_DRIVE_VOLUME_MULT)
   ? Math.max(0, Number(audioUiConfig.TANK_DRIVE_VOLUME_MULT))
   : 3;
@@ -914,7 +975,25 @@ function getDronUpgradeCostBase(level, statKey){
   const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
   const entry = DronStatUpgradeCostsByLevel[lvl];
   if (entry && Number.isFinite(entry[key])) return Math.max(0, Math.floor(entry[key]));
+  // solo-pipeline-yandex-vk#2 item 6: the drone cost ladder is defined per drone level in
+  // dron.json. If a level beyond the ladder has no explicit cost, reuse the last defined
+  // drone cost level instead of the cannon row, which would mis-price drone upgrades.
+  const lastDefined = getLastDefinedDronUpgradeCostBase(key);
+  if (Number.isFinite(lastDefined) && lastDefined > 0) return lastDefined;
   return getFallbackUpgradeCostBase(lvl);
+}
+
+function getLastDefinedDronUpgradeCostBase(statKey){
+  const key = normalizeUpgradeStatKey(DRON_UPGRADE_STAT_KEYS, statKey);
+  const keys = Object.keys(DronStatUpgradeCostsByLevel);
+  let bestLevel = 0;
+  for (let i = 0; i < keys.length; i++) {
+    const lvl = Math.floor(Number(keys[i]) || 0);
+    if (lvl > bestLevel && DronStatUpgradeCostsByLevel[lvl]) bestLevel = lvl;
+  }
+  if (bestLevel <= 0) return 0;
+  const entry = DronStatUpgradeCostsByLevel[bestLevel];
+  return entry && Number.isFinite(entry[key]) ? Math.max(0, Math.floor(entry[key])) : 0;
 }
 
 function getFenceUpgradeCostBase(level, statKey){
@@ -1587,6 +1666,18 @@ function applyAudioSettings(){
   const sfxVolume = clamp(settings.sfxVolume ?? DEFAULT_SETTINGS.sfxVolume, 0, 1);
   settings.musicVolume = musicVolume;
   settings.sfxVolume = sfxVolume;
+  // Keep the background MusicManager (menu/battle tracks) in sync with the
+  // music volume setting; lazy-init on first apply. Best-effort, never throws.
+  try {
+    const mm = (window.Game && window.Game.MusicManager) ? window.Game.MusicManager : null;
+    if (mm) {
+      mm.init({ musicVolume: musicVolume });
+      mm.setMusicVolume(musicVolume);
+      // Sync the initial menu state (e.g. the startup big main menu) so the menu
+      // theme — not battle music — is the default while a menu is on screen.
+      if (typeof mm.setMenuActive === 'function') mm.setMenuActive(isAnyMenuPauseOpen());
+    }
+  } catch (_) {}
   const criticalPolicy = getCriticalAudioPolicy();
   const muteMusicForCritical = criticalAudioActive && criticalPolicy.muteAllOnCritical;
   const criticalTrackId = criticalPolicy.criticalMusic.enabled ? criticalPolicy.criticalMusic.trackId : '';
@@ -1634,6 +1725,8 @@ const SFX_CHANNELS = {
   activeAbility: 'gameplay',
   thunder: 'gameplay',
   rainLoop: 'gameplay',
+  zombieAttackLoop: 'gameplay',
+  zombieWanderLoop: 'gameplay',
   uiHover: 'ui',
   uiClickOnEnabled: 'ui',
   uiClickOnDisable: 'ui',
@@ -1802,11 +1895,22 @@ function setSimulationPaused(nextPaused, reasons){
   }
 }
 
+function isAnyMenuPauseOpen(){
+  return !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+}
+
 function recomputeMenuPauseLock(){
-  var lockOpen = !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  var lockOpen = isAnyMenuPauseOpen();
   if (pauseManager && typeof pauseManager.setMenuOpen === 'function') {
     pauseManager.setMenuOpen(lockOpen);
   }
+  // Background music: any open menu/window plays the menu theme (and ducks SFX);
+  // closing the last one returns to battle music. Driven by this single aggregate
+  // boolean so nested/overlapping modals can never leave the menu theme stuck on.
+  try {
+    var mm = window.Game && window.Game.MusicManager;
+    if (mm && typeof mm.setMenuActive === 'function') mm.setMenuActive(lockOpen);
+  } catch (_) { /* music is best-effort; never block pause flow */ }
 }
 
 /* Fix 4: Expose function for tech timer pause check.
@@ -2143,6 +2247,43 @@ function syncTrackLoopSfxState(paused){
   }
 }
 
+// Zombie-mode ambience loops mirror the zombie behaviour state and switch
+// between each other:
+//  - 'attack' → ataka-zombi loop. Active when full attackMode is on, OR — while
+//    attackMode is off — during the idle-wave 'attack' phase where zombies press
+//    and hit the fence (shouldZombieAttemptAttack() covers both cases).
+//  - 'wander' → zombi-bredut loop. Active during the idle-wave 'wander' phase
+//    where zombies retreat from the walls and roam nearby.
+//  - 'none'   → both stopped (between/inactive phases or while paused).
+// Both loops are gameplay-channel SFX, so the "Эффекты" volume slider controls them.
+let zombieModeSfxState = 'none';
+
+function stopZombieModeSfxImmediate(){
+  stopLoopSfx(ZOMBIE_ATTACK_LOOP_ID);
+  stopLoopSfx(ZOMBIE_WANDER_LOOP_ID);
+  zombieModeSfxState = 'none';
+}
+
+function desiredZombieModeSfxState(){
+  if (shouldZombieAttemptAttack()) return 'attack';
+  if (getZombieIdleWavePhase() === 'wander') return 'wander';
+  return 'none';
+}
+
+function syncZombieModeSfxState(paused){
+  const desired = paused ? 'none' : desiredZombieModeSfxState();
+  if (desired === zombieModeSfxState) {
+    if (desired === 'attack') setLoopSfxVolume(ZOMBIE_ATTACK_LOOP_ID, 1);
+    else if (desired === 'wander') setLoopSfxVolume(ZOMBIE_WANDER_LOOP_ID, 1);
+    return;
+  }
+  if (zombieModeSfxState === 'attack') stopLoopSfx(ZOMBIE_ATTACK_LOOP_ID);
+  else if (zombieModeSfxState === 'wander') stopLoopSfx(ZOMBIE_WANDER_LOOP_ID);
+  if (desired === 'attack') playLoopSfx(ZOMBIE_ATTACK_LOOP_ID, 1);
+  else if (desired === 'wander') playLoopSfx(ZOMBIE_WANDER_LOOP_ID, 1);
+  zombieModeSfxState = desired;
+}
+
 const SFX_SOURCES = {
   shootNormal: 'assets/sfx/shoot_normal.ogg',
   // shoot_heavy.ogg (no number) is missing on disk; alias to shoot_heavy1.ogg
@@ -2161,9 +2302,11 @@ const SFX_SOURCES = {
   levelUp: 'assets/sfx/level_up.ogg',
   mergeNewMaxLevel: ['assets/sfx/merge_new_max_level.ogg', 'assets/sfx/merge_new_max_level.mp3'],
   applyTalents: 'assets/sfx/apply_talents.ogg',
-  activeAbility: 'assets/sfx/active_ability.ogg',
+  activeAbility: ['assets/sfx/active_ability.ogg', 'assets/sfx/active_ability.mp3'],
   thunder: ['assets/sfx/thunder.ogg', 'assets/sfx/thunder.wav'],
   rainLoop: DEFAULT_RAIN_LOOP_SOURCES.slice(),
+  zombieAttackLoop: DEFAULT_ZOMBIE_ATTACK_LOOP_SOURCES.slice(),
+  zombieWanderLoop: DEFAULT_ZOMBIE_WANDER_LOOP_SOURCES.slice(),
 };
 
 // Canonical SFX manifest (assets/sfx/registry.json) is the source-of-truth for
@@ -2565,6 +2708,186 @@ const ProcShieldSprites = {
   },
 };
 if (typeof window !== 'undefined') { window.Game = window.Game || {}; window.Game.ProcShieldSprites = ProcShieldSprites; }
+
+// solo-pipeline-yandex-vk#1 items 1+2: fence overlay atlases that stack ON TOP of the
+// existing fence-fragment sprites (never replacing them).
+//   - explosionOverlay  → one-shot blast animation when an "Взрывное основание" fragment
+//     fully detonates (gated by def_explosive_base rank>0 via the detonation seam).
+//   - destructionOverlay → persistent damage-stage overlay selected by seg.hp/maxHp
+//     against destructionOverlay.thresholds (50/25/10/0).
+// Both mirror the ShieldSprites/ProcShieldSprites loader contract (atlas / grid / frames /
+// frameRate / scale / anchor) so the user can author them the same way in fence.json and
+// swap the placeholder atlas template later. Atlas loads exactly once on boot — never in
+// the draw() hot-path. Missing atlas / empty frames just skips rendering (graceful).
+function makeFenceOverlaySprites(atlasPath, configKey) {
+  return {
+    ready: false,
+    error: '',
+    img: null,
+    _framesCache: null,
+    _framesCacheKey: '',
+    async load() {
+      try {
+        if (typeof Image === 'undefined') { this.error = 'Image constructor unavailable'; return; }
+        const img = new Image();
+        const done = new Promise((resolve) => {
+          img.onload = () => { this.ready = true; this.img = img; resolve(); };
+          img.onerror = () => { this.error = 'failed to load assets/' + atlasPath; this.ready = false; resolve(); };
+        });
+        img.src = 'assets/' + atlasPath;
+        await done;
+      } catch (e) { this.error = String(e && e.message || e); }
+    },
+    getConfig() {
+      try {
+        const cfg = FenceSprites && FenceSprites.config ? FenceSprites.config : null;
+        if (!cfg || !cfg[configKey] || typeof cfg[configKey] !== 'object') return null;
+        const base = cfg[configKey];
+        const explicit = Array.isArray(base.frames) ? base.frames.filter((f) => f && Number.isFinite(f.w) && Number.isFinite(f.h)) : [];
+        if (explicit.length > 1) return base;
+        const grid = base.grid && typeof base.grid === 'object' ? base.grid : null;
+        const cols = grid && Number.isFinite(grid.cols) && grid.cols > 0 ? Math.floor(grid.cols) : 0;
+        const rows = grid && Number.isFinite(grid.rows) && grid.rows > 0 ? Math.floor(grid.rows) : 0;
+        if (cols > 0 && rows > 0 && this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+          const fw = Number.isFinite(grid.frameWidth) && grid.frameWidth > 0
+            ? Math.floor(grid.frameWidth)
+            : Math.floor(this.img.naturalWidth / cols);
+          const fh = Number.isFinite(grid.frameHeight) && grid.frameHeight > 0
+            ? Math.floor(grid.frameHeight)
+            : Math.floor(this.img.naturalHeight / rows);
+          const key = `${cols}x${rows}@${fw}x${fh}:${this.img.naturalWidth}x${this.img.naturalHeight}`;
+          if (this._framesCacheKey !== key || !Array.isArray(this._framesCache)) {
+            const arr = new Array(cols * rows);
+            let idx = 0;
+            for (let r = 0; r < rows; r++) {
+              for (let c = 0; c < cols; c++) {
+                arr[idx++] = { x: c * fw, y: r * fh, w: fw, h: fh };
+              }
+            }
+            this._framesCache = arr;
+            this._framesCacheKey = key;
+          }
+          return Object.assign({}, base, { frames: this._framesCache });
+        }
+        if (explicit.length === 1) return base;
+        if (this.img && this.img.naturalWidth > 0 && this.img.naturalHeight > 0) {
+          return Object.assign({}, base, {
+            frames: [{ x: 0, y: 0, w: this.img.naturalWidth, h: this.img.naturalHeight }],
+          });
+        }
+        return base;
+      } catch (_) {}
+      return null;
+    },
+  };
+}
+const ExplosionOverlaySprites = makeFenceOverlaySprites('fence_explosion_overlay_atlas.png', 'explosionOverlay');
+// solo-pipeline-yandex-vk#1 item 2 (round-6 rework, round-7 lazy-config fix): per-stage animated
+// destruction overlay. Каждое состояние повреждения (50/25/10/0) имеет ОТДЕЛЬНЫЙ анимированный
+// атлас (динамический дым), проигрывается в цикле, пока доля HP сегмента в (minRatio, maxRatio].
+// ВАЖНО (root cause round-7): config резолвится ЛЕНИВО в draw, как у ShieldSprites/ProcShieldSprites/
+// ExplosionOverlaySprites.getConfig(). Если читать FenceSprites.config только в load() на boot,
+// а конфиг ещё не готов — stages остаются пустыми навсегда и overlay не рисуется. Поэтому слоты
+// атласов кэшируются по имени atlas (Object), Image создаётся один раз на atlas, async onload
+// заполняет img. ensureStages() в draw идемпотентен и без аллокаций в steady state.
+function makeFenceStageOverlaySprites(configKey) {
+  return {
+    ready: false,
+    _slots: Object.create(null), // atlas -> { img, error, loading, _framesCache, _framesCacheKey }
+    // Создаёт (один раз на atlas) слот и запускает async-загрузку Image. Возвращает слот.
+    _resolveSlot(atlas) {
+      if (!atlas || typeof atlas !== 'string') return null;
+      let slot = this._slots[atlas];
+      if (slot) return slot;
+      slot = { img: null, error: '', loading: false, _framesCache: null, _framesCacheKey: '' };
+      this._slots[atlas] = slot;
+      if (typeof Image !== 'undefined') {
+        try {
+          slot.loading = true;
+          const img = new Image();
+          img.onload = () => { slot.img = img; slot.loading = false; };
+          img.onerror = () => { slot.error = 'failed to load assets/' + atlas; slot.loading = false; };
+          img.src = 'assets/' + atlas;
+        } catch (e) { slot.error = String(e && e.message || e); slot.loading = false; }
+      }
+      return slot;
+    },
+    _configDefs() {
+      const cfg = FenceSprites && FenceSprites.config ? FenceSprites.config[configKey] : null;
+      return cfg && Array.isArray(cfg.stages) ? cfg.stages : null;
+    },
+    // Boot preload: запускает загрузку всех сконфигурированных атласов (если конфиг уже готов).
+    async load() {
+      try {
+        const defs = this._configDefs();
+        if (defs) {
+          for (let i = 0; i < defs.length; i++) {
+            const d = defs[i];
+            if (d && typeof d.atlas === 'string') this._resolveSlot(d.atlas);
+          }
+        }
+      } catch (e) { this.error = String(e && e.message || e); }
+      this.ready = true;
+    },
+    // Ленивая дозагрузка: гарантирует слот для каждого атласа из текущего конфига.
+    // Аллокаций нет в steady state (только property-lookup); Image создаётся один раз на atlas.
+    ensureStages(defs) {
+      if (!Array.isArray(defs)) return;
+      for (let i = 0; i < defs.length; i++) {
+        const d = defs[i];
+        if (d && typeof d.atlas === 'string' && !this._slots[d.atlas]) this._resolveSlot(d.atlas);
+      }
+    },
+    getStageImg(def) {
+      const atlas = def && typeof def.atlas === 'string' ? def.atlas : '';
+      const slot = this._slots[atlas];
+      return slot && slot.img ? slot.img : null;
+    },
+    // Кадры stage по его def (auto grid-slice, кэш на слоте по atlas).
+    getStageFrames(def) {
+      const atlas = def && typeof def.atlas === 'string' ? def.atlas : '';
+      const slot = this._slots[atlas];
+      if (!slot || !slot.img || !(slot.img.naturalWidth > 0) || !(slot.img.naturalHeight > 0)) return null;
+      const explicit = Array.isArray(def.frames)
+        ? def.frames.filter((f) => f && Number.isFinite(f.w) && Number.isFinite(f.h)) : [];
+      if (explicit.length > 1) return explicit;
+      const grid = def.grid && typeof def.grid === 'object' ? def.grid : null;
+      const cols = grid && Number.isFinite(grid.cols) && grid.cols > 0 ? Math.floor(grid.cols) : 0;
+      const rows = grid && Number.isFinite(grid.rows) && grid.rows > 0 ? Math.floor(grid.rows) : 0;
+      if (cols > 0 && rows > 0) {
+        const fw = Number.isFinite(grid.frameWidth) && grid.frameWidth > 0
+          ? Math.floor(grid.frameWidth) : Math.floor(slot.img.naturalWidth / cols);
+        const fh = Number.isFinite(grid.frameHeight) && grid.frameHeight > 0
+          ? Math.floor(grid.frameHeight) : Math.floor(slot.img.naturalHeight / rows);
+        const key = `${cols}x${rows}@${fw}x${fh}:${slot.img.naturalWidth}x${slot.img.naturalHeight}`;
+        if (slot._framesCacheKey !== key || !Array.isArray(slot._framesCache)) {
+          const arr = new Array(cols * rows);
+          let idx = 0;
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              arr[idx++] = { x: c * fw, y: r * fh, w: fw, h: fh };
+            }
+          }
+          slot._framesCache = arr;
+          slot._framesCacheKey = key;
+        }
+        return slot._framesCache;
+      }
+      if (explicit.length === 1) return explicit;
+      return [{ x: 0, y: 0, w: slot.img.naturalWidth, h: slot.img.naturalHeight }];
+    },
+  };
+}
+const DestructionOverlaySprites = makeFenceStageOverlaySprites('destructionOverlay');
+if (typeof window !== 'undefined') {
+  window.Game = window.Game || {};
+  window.Game.ExplosionOverlaySprites = ExplosionOverlaySprites;
+  window.Game.DestructionOverlaySprites = DestructionOverlaySprites;
+}
+// solo-pipeline-yandex-vk#1 item 1: active one-shot fence-explosion overlay instances.
+// Pushed from the detonation seam (rare event), drained when their animation completes.
+// Kept module-level so the draw pass never allocates per-frame in the hot path.
+const fenceExplosionOverlays = [];
 
 const GroundSprites = spriteLoaders && spriteLoaders.GroundSprites ? spriteLoaders.GroundSprites : {
   ready: false,
@@ -4390,6 +4713,9 @@ function beginNoRepairAttackWaveEpisode(){
     }
   } catch (_) {}
 
+  // Battle music wave crossfade is driven from the rain start/stop seam in
+  // worldEventsRuntime (user follow-up: wave music synced to the rain), not here.
+
   // Trigger cyber wave banner
   try {
     const waveNum = (state.stats && typeof state.stats.attackWavesCompletedCount === 'number')
@@ -4503,6 +4829,8 @@ function invalidateNoRepairAttackWaveEpisode(){
 
 function finalizeNoRepairAttackWaveEpisode(){
   if (!noRepairAttackWaveRuntime.activeEpisodeKey) return;
+  // Battle music wave->calm crossfade is driven from the rain stop seam in
+  // worldEventsRuntime (user follow-up: wave music ends with the rain sound).
   const shouldCount = !noRepairAttackWaveRuntime.invalidated;
   // Item 3 — захватываем latch ДО resetNoRepairAttackWaveRuntime, иначе будет сброшен.
   const survivorEligible = !!noRepairAttackWaveRuntime.allFencesDestroyedThisWave;
@@ -6232,7 +6560,11 @@ function tankStats(level){
     ? bulletInfo.bulletCfg.addDamage
     : 0;
   const shotBaseDamage = Math.max(0, tankBaseDamage + bulletAddDamage);
-  const fr = tankAttackSpeed;
+  // solo-pipeline-yandex-vk#1 item 1: each applied attackSpeed upgrade adds a flat
+  // +0.01 to the fire rate (no percent bonus). Sourced from the shared growth catalog.
+  const appliedAttackSpeedUpgrades = Math.max(0, getAppliedCannonUpgradeLevel(level, 'attackSpeed'));
+  const upgradedAttackSpeed = tankAttackSpeed + appliedAttackSpeedUpgrades * getWeaponAttackSpeedStep();
+  const fr = upgradedAttackSpeed;
   const Combat = window.Game && window.Game.Combat;
   const range = Combat ? Combat.getShootRange({ level }, state) : (BAL.rangeBase + BAL.rangePerLevel*(level-1));
   const prof = projectileProfile(level, bulletInfo.bulletCfg);
@@ -6759,6 +7091,7 @@ function useActiveAbility(branch){
     updateUI();
     return;
   }
+  playSfx('activeAbility');
   const nowSecValue = nowSec();
   let untilSec = 0;
   const branchId = getTalentV2BranchIdByIndex(branch);
@@ -8388,7 +8721,7 @@ function getFenceStatsForLevel(level, appliedIndex){
           armorFlat: getAppliedFenceUpgradeLevel(lvl, 'armorFlat'),
         });
   const currentHp = Math.max(1, Math.round(baseHp * Math.pow(FENCE_HP_MUL, Math.max(0, Math.floor(appliedCounts.segmentMaxHp || 0)))));
-  const currentArmor = Math.max(0, Math.round(baseArmor * Math.pow(FENCE_ARMOR_MUL, Math.max(0, Math.floor(appliedCounts.armorFlat || 0)))));
+  const currentArmor = Math.max(0, Math.round(computeWallArmorCompound(baseArmor, Math.max(0, Math.floor(appliedCounts.armorFlat || 0)))));
   return {
     baseHp: baseHp,
     baseArmor: baseArmor,
@@ -8426,7 +8759,7 @@ function getFenceArmorFlat(){
   const base = Number.isFinite(levelCfg && levelCfg.armorFlat) ? Math.max(0, Math.floor(levelCfg.armorFlat)) : 0;
   const level = getFenceLevelIndex() + 1;
   const applied = getAppliedFenceUpgradeLevel(level, 'armorFlat');
-  let val = base * Math.pow(FENCE_ARMOR_MUL, applied);
+  let val = computeWallArmorCompound(base, applied);
   // Task 9 (Композитная броня): apply wallArmorMul talent mod (% per rank) on top of base armor.
   try {
     const talentsApi = (typeof window !== 'undefined' && window.Game && window.Game.TalentsV2) ? window.Game.TalentsV2 : null;
@@ -9270,6 +9603,16 @@ function applyFenceSegmentDamage(seg, amount, attacker){
             } catch (_e) {}
             // SFX взрыва (канал fenceExplosion). Если файла нет — pool тихо игнорирует.
             try { playSfx('fenceExplosion', { channel: 'gameplay' }); } catch (_e) {}
+            // solo-pipeline-yandex-vk#1 item 1: queue the one-shot blast overlay для этого
+            // фрагмента. Координаты seg.x/seg.y заданы относительно center (как и в draw-pass).
+            // Аллокация только на редком событии детонации, не в hot-path.
+            try {
+              fenceExplosionOverlays.push({
+                x: Number.isFinite(seg.x) ? seg.x : 0,
+                y: Number.isFinite(seg.y) ? seg.y : 0,
+                startMs: nowMs,
+              });
+            } catch (_e) {}
           }
         }
       } catch (_e) {}
@@ -11603,6 +11946,7 @@ function setMenuOpen(open){
   var canOpenSmallMenu = sessionStartGate === 'unlocked';
   var shouldOpen = !!open && canOpenSmallMenu;
   if (shouldOpen) stopTrackLoopSfxImmediate();
+  if (shouldOpen) stopZombieModeSfxImmediate();
   if (shouldOpen) syncVolumeUIFromSettings();
   setMenuPauseSource('settings', shouldOpen);
   if (UIModals && typeof UIModals.setMenuOpen === 'function') {
@@ -11675,6 +12019,7 @@ function ensureBigMenuRuntimeController(){
 
 function setBigMenuOpen(open){
   if (open) stopTrackLoopSfxImmediate();
+  if (open) stopZombieModeSfxImmediate();
   ensureBigMenuRuntimeController()?.setBigMenuOpen(open);
   _notifyModal('bigMenu', !!open);
 }
@@ -11981,6 +12326,7 @@ function setBigMenuActionButtonsDisabled(disabled){
 function stopAndResetSessionToBigMenu(){
   sessionRuntimeStopped = true;
   stopTrackLoopSfxImmediate();
+  stopZombieModeSfxImmediate();
   RuntimeTasks.suspendAll();
   if (mainLoopRafId) {
     cancelAnimationFrame(mainLoopRafId);
@@ -12311,6 +12657,37 @@ function closeCriticalModal(){
   exitCriticalPause();
 }
 
+function incrementSimulationResetCounter(targetState, options){
+  const runtimeState = targetState && typeof targetState === 'object' ? targetState : state;
+  if (!runtimeState || typeof runtimeState !== 'object') return 0;
+  if (!runtimeState.achievements || typeof runtimeState.achievements !== 'object') {
+    runtimeState.achievements = {};
+  }
+  const prev = Number.isFinite(runtimeState.achievements.totalSimulationResets)
+    ? Math.max(0, Math.floor(runtimeState.achievements.totalSimulationResets))
+    : 0;
+  const next = prev + 1;
+  runtimeState.achievements.totalSimulationResets = next;
+
+  const opts = options && typeof options === 'object' ? options : null;
+  if (opts && opts.logSource) {
+    try {
+      const diag = window.Game && window.Game.Diagnostics;
+      if (diag && typeof diag.reportSaveUnknownKeys === 'function') {
+        diag.reportSaveUnknownKeys({
+          source: 'simulation-reset-counter',
+          phase: opts.logSource,
+          totalSimulationResets: next,
+        });
+      } else if (typeof console !== 'undefined' && console && typeof console.debug === 'function') {
+        console.debug('[simulation-reset-counter]', { phase: opts.logSource, totalSimulationResets: next });
+      }
+    } catch (_) { /* additive */ }
+  }
+
+  return next;
+}
+
 function resetWorldRuntimeState(){
   if (WorldResetApi && typeof WorldResetApi.resetWorldRuntimeState === 'function') {
     WorldResetApi.resetWorldRuntimeState({
@@ -12346,6 +12723,7 @@ function finalizePartialRestartRestore(){
 
 function restartSimulationPartial(){
   stopTrackLoopSfxImmediate();
+  stopZombieModeSfxImmediate();
   if (WorldResetApi && typeof WorldResetApi.restartSimulationPartial === 'function') {
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
@@ -12501,18 +12879,6 @@ function handleCriticalCloseToMenu(){
 function openCriticalModal(){
   const controller = getCriticalModalController();
   if (!controller || typeof controller.open !== 'function') return;
-  // Item 2 — Инкремент счётчика «Перезагрузка симуляции» при показе модалки «Критическое состояние».
-  // Считается каждый показ критической модалки (= каждая перезагрузка симуляции),
-  // сохраняется немедленно в localStorage и обновляется в HUD-терминале.
-  try {
-    if (!state.achievements || typeof state.achievements !== 'object') state.achievements = {};
-    const _prevResets = Number.isFinite(state.achievements.totalSimulationResets)
-      ? Math.max(0, Math.floor(state.achievements.totalSimulationResets))
-      : 0;
-    state.achievements.totalSimulationResets = _prevResets + 1;
-    try { saveProgress(); } catch (_simResetSaveErr) { /* additive */ }
-    try { updateProgressUI(); } catch (_simResetUiErr) { /* additive */ }
-  } catch (_simResetIncErr) { /* additive — never throws into critical flow */ }
   // ensure attackMode is force-disabled immediately when showing critical modal
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
   clearAllTanksFromCells(state);
@@ -12538,6 +12904,7 @@ function resetGameState(options){
     try { wasTutorialDisabled = localStorage.getItem('tutorialGlobalDisabled') === '1'; } catch (_) {}
   }
   stopTrackLoopSfxImmediate();
+  stopZombieModeSfxImmediate();
   silenceAllTanksTrackSfx(reason === 'reset' ? 'reset' : 'restore');
   closeCriticalModal();
   criticalFlowActive = false;
@@ -13264,7 +13631,8 @@ function updateProgressUI(){
   const pctRounded = Math.round(pct * 10) / 10;
   const fmt = window.Game && window.Game.NumberFormat ? window.Game.NumberFormat.formatCompactRu : (n)=>String(Math.round(n));
   // Item 2 — обновляем «Перезагрузка симуляции» в терминале под строкой lvlText.
-  // Счётчик живёт в state.achievements.totalSimulationResets (инкремент в restartSimulationPartial).
+  // Счётчик живёт в state.achievements.totalSimulationResets и инкрементируется
+  // один раз при входе в critical state до autosave / modal display.
   try {
     const _simResetsEl = document.getElementById('simResetsText');
     if (_simResetsEl) {
@@ -14946,6 +15314,9 @@ function draw(){
   if (!_RR || _RR.isLegacy('tankTrack')) drawTankTrack();
   if (_RR && _RR.isPhaser('fenceBase') && _PLM) _PLM.drawLayer('fenceBase', ctx);
   if (!_RR || _RR.isLegacy('fenceBase')) renderFenceBase();
+  // solo-pipeline-yandex-vk#1 item 2: damage-stage overlay (50/25/10/0) drawn on top of the
+  // fence fragment sprites and below zombies — it is part of the wall's visual state.
+  if (!_RR || _RR.isLegacy('fenceBase')) drawFenceDestructionOverlays();
   if (_RR && _RR.isPhaser('board') && _PLM) _PLM.drawLayer('board', ctx);
   if (!_RR || _RR.isLegacy('board')) drawBoard();
   if (_RR && _RR.isPhaser('orbitingTanks') && _PLM) _PLM.drawLayer('orbitingTanks', ctx);
@@ -15023,6 +15394,9 @@ function draw(){
   drawFenceShields();
   // solo-pipeline-yandex-vk#1 item 2: per-fragment immunity overlay, same render slot as shields.
   drawFenceProcShields();
+  // solo-pipeline-yandex-vk#1 item 1: one-shot blast overlay for detonated "Взрывное основание"
+  // fragments — drawn above zombies/projectiles so the explosion VFX stays visible.
+  drawFenceExplosionOverlays();
   // ── Drone bodies: above projectiles, above zombies ──
   if (_RR && _RR.isPhaser('drones') && _PLM) _PLM.drawLayer('drones', ctx);
   if (!_RR || _RR.isLegacy('drones')) drawDroneBodies();
@@ -16391,6 +16765,126 @@ function drawFenceProcShields(){
   ctx.restore();
 }
 
+// solo-pipeline-yandex-vk#1 item 2 (Постепенное разрушение 50/25/10/0): persistent overlay
+// drawn ON TOP of each fence-fragment sprite (never replacing it). The damage stage is read
+// LIVE from seg.hp/seg.maxHp every frame and mapped to a frame via fence.json
+// destructionOverlay.thresholds (down-crossing bands). No allocation in the hot path.
+function drawFenceDestructionOverlays(){
+  if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
+  if (!DestructionOverlaySprites.ready) return;
+  const cfg = (FenceSprites && FenceSprites.config) ? FenceSprites.config.destructionOverlay : null;
+  if (!cfg || typeof cfg !== 'object') return;
+  if (cfg.visibleWhile && cfg.visibleWhile !== 'destroying') return;
+  const stageDefs = Array.isArray(cfg.stages) ? cfg.stages : null;
+  if (!stageDefs || !stageDefs.length) return;
+  // Ленивая дозагрузка атласов, если конфиг приехал после boot (root-cause round-7 fix).
+  DestructionOverlaySprites.ensureStages(stageDefs);
+  // Цикличная анимация (динамический дым): один общий тик времени на кадр для всех
+  // сегментов — фаза синхронна, аллокаций нет.
+  const nowMs = (typeof performance !== 'undefined' && performance.now)
+    ? performance.now() : Date.now();
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  for (let i = 0; i < state.fenceSegments.length; i++) {
+    const seg = state.fenceSegments[i];
+    if (!seg) continue;
+    const maxHp = Number.isFinite(seg.maxHp) && seg.maxHp > 0 ? seg.maxHp : 1;
+    const hp = Number.isFinite(seg.hp) ? seg.hp : (seg.broken ? 0 : maxHp);
+    const ratio = clamp(hp / maxHp, 0, 1);
+    // Выбираем stage, чей диапазон (minRatio, maxRatio] содержит текущий ratio.
+    // Полностью целый сегмент (ratio > наибольшего maxRatio) — overlay не показываем.
+    let def = null;
+    for (let s = 0; s < stageDefs.length; s++) {
+      const d = stageDefs[s];
+      if (!d) continue;
+      const maxR = Number.isFinite(d.maxRatio) ? d.maxRatio : 1;
+      const minR = Number.isFinite(d.minRatio) ? d.minRatio : -1;
+      if (ratio <= maxR && ratio > minR) { def = d; break; }
+    }
+    if (!def) continue; // фрагмент целый или вне диапазонов — overlay не нужен
+    const frames = DestructionOverlaySprites.getStageFrames(def);
+    if (!frames || !frames.length) continue; // атлас стадии не задан/не загружен — graceful skip
+    const img = DestructionOverlaySprites.getStageImg(def);
+    if (!img) continue;
+    const frameRate = Number.isFinite(def.frameRate) && def.frameRate > 0 ? def.frameRate : 0;
+    const frameIdx = frameRate > 0
+      ? (Math.floor(nowMs / (1000 / frameRate)) % frames.length)
+      : 0; // frameRate=0 → статический первый кадр стадии
+    const sFrame = frames[frameIdx];
+    if (!sFrame || !Number.isFinite(sFrame.w) || !Number.isFinite(sFrame.h)) continue;
+    const sScale = Number.isFinite(def.scale) && def.scale > 0 ? def.scale : 1.0;
+    const sAx = def.anchor && Number.isFinite(def.anchor.x) ? def.anchor.x : 0.5;
+    const sAy = def.anchor && Number.isFinite(def.anchor.y) ? def.anchor.y : 0.5;
+    const baseMul = (BAL.fenceWidth / Math.max(sFrame.w, sFrame.h)) * 1.2 * sScale;
+    const drawW = baseMul * sFrame.w;
+    const drawH = baseMul * sFrame.h;
+    ctx.save();
+    ctx.translate(seg.x, seg.y);
+    ctx.drawImage(
+      img,
+      sFrame.x || 0, sFrame.y || 0, sFrame.w, sFrame.h,
+      -drawW * sAx, -drawH * sAy,
+      drawW, drawH
+    );
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// solo-pipeline-yandex-vk#1 item 1 (Взрывное основание): one-shot blast overlays queued in
+// fenceExplosionOverlays by the detonation seam. Each entry {x,y,startMs} animates through the
+// atlas frames once and is then drained. Compaction is in-place (write-index) → no per-frame alloc.
+function drawFenceExplosionOverlays(){
+  if (!fenceExplosionOverlays.length) return;
+  if (!ExplosionOverlaySprites.ready || !ExplosionOverlaySprites.img) { fenceExplosionOverlays.length = 0; return; }
+  const sCfg = ExplosionOverlaySprites.getConfig();
+  if (!sCfg || !Array.isArray(sCfg.frames) || sCfg.frames.length === 0) { fenceExplosionOverlays.length = 0; return; }
+  if (sCfg.visibleWhile && sCfg.visibleWhile !== 'explosiveBaseDetonation') { fenceExplosionOverlays.length = 0; return; }
+  const frames = sCfg.frames;
+  const frameRate = Number.isFinite(sCfg.frameRate) && sCfg.frameRate > 0 ? sCfg.frameRate : 12;
+  const frameMs = 1000 / frameRate;
+  const sScale = Number.isFinite(sCfg.scale) && sCfg.scale > 0 ? sCfg.scale : 1.0;
+  const sAx = sCfg.anchor && Number.isFinite(sCfg.anchor.x) ? sCfg.anchor.x : 0.5;
+  const sAy = sCfg.anchor && Number.isFinite(sCfg.anchor.y) ? sCfg.anchor.y : 0.5;
+  // ВАЖНО: clock parity с detonation seam. Триггер пишет startMs через
+  // performance.now() (game.js ~L9320), поэтому здесь обязан использоваться тот же
+  // источник времени. Раньше тут стоял Date.now() (epoch ~1.7e12) против
+  // performance.now() (~тысячи ms) → elapsed ≈ триллион → frameIdx >= frames.length
+  // на первом кадре → overlay отбрасывался мгновенно и анимация взрыва не рисовалась.
+  const nowMs = (typeof performance !== 'undefined' && performance.now)
+    ? performance.now() : Date.now();
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  let write = 0;
+  for (let i = 0; i < fenceExplosionOverlays.length; i++) {
+    const ov = fenceExplosionOverlays[i];
+    if (!ov) continue;
+    const elapsed = nowMs - ov.startMs;
+    const frameIdx = elapsed < 0 ? 0 : Math.floor(elapsed / frameMs);
+    if (frameIdx >= frames.length) continue; // анимация завершена — отбрасываем
+    const sFrame = frames[frameIdx];
+    if (sFrame && Number.isFinite(sFrame.w) && Number.isFinite(sFrame.h)) {
+      const baseMul = (BAL.fenceWidth / Math.max(sFrame.w, sFrame.h)) * 1.2 * sScale;
+      const drawW = baseMul * sFrame.w;
+      const drawH = baseMul * sFrame.h;
+      ctx.save();
+      ctx.translate(ov.x, ov.y);
+      ctx.drawImage(
+        ExplosionOverlaySprites.img,
+        sFrame.x || 0, sFrame.y || 0, sFrame.w, sFrame.h,
+        -drawW * sAx, -drawH * sAy,
+        drawW, drawH
+      );
+      ctx.restore();
+    }
+    // keep alive: compact toward the front (in-place, no alloc)
+    if (write !== i) fenceExplosionOverlays[write] = ov;
+    write++;
+  }
+  fenceExplosionOverlays.length = write;
+  ctx.restore();
+}
+
 function renderFenceHpBars(){
   if (!Array.isArray(state.fenceSegments) || !state.fenceSegments.length) return;
   const hpBar = getFenceHealthBarConfig();
@@ -17098,10 +17592,11 @@ function drawTank(x,y,tank,ghost=false,rotation=0,showLevelLabel=true,isDragPrev
   const drawX = x + renderOffsetX;
   const drawY = y + renderOffsetY;
   if (!isDragPreview){
-    // Chip-based aura sprites (resolveTankAuraVisual / drawTankAuraSprite) полностью отключены —
-    // пользователь явно просил убрать ауры со всех уровней (включая 56-60), оставив только
-    // процедурный эффект «3 фиолетовых огонька». Orb-эффект конфигурируется через
-    // assets/tanks.json → auraOrbs (см. computeAuraBand / drawTankAura).
+    const chipAura = resolveTankAuraVisual(cellIndex, level);
+    if (chipAura) drawTankAuraSprite(drawX, drawY, chipAura);
+
+    // Процедурный orb-эффект остаётся отдельным top-tier overlay и не заменяет
+    // chip-based aura sprites для танков в ячейках с установленными чипами.
     const auraBand = computeAuraBand(level);
     if (auraBand != null) drawTankAura(drawX, drawY, auraBand);
   }
@@ -17917,6 +18412,7 @@ function applySupercomputerDamage(baseDamage){
     const appliedToThreshold = Math.max(0, prevHp - hpThreshold);
     sc.hp = hpThreshold;
     flags.wasCritical = true;
+    incrementSimulationResetCounter(state, { logSource: 'critical-state-entry' });
     savePreRetryPayloadToAutoSlot();
     criticalFlowActive = true;
     openCriticalModal();
@@ -18101,6 +18597,7 @@ function loop(now){
     );
   setSimulationPaused(paused, pauseManager && pauseManager.getReasons ? pauseManager.getReasons() : { menuOpen: !!state.ui.menuOpen, tabInactive: false, criticalPause: false });
   syncTrackLoopSfxState(paused);
+  syncZombieModeSfxState(paused);
   if (!paused){
     updateWorldEvents(effDt);
     ensureZombieCount();
@@ -18343,6 +18840,8 @@ function initDebugPanel(){
 
 // ---------- Phase 3b: ModalAdapter notification bridge ----------
 function _notifyModal(id, isOpen, data) {
+  // Menu music is driven by the aggregate menu-pause lock (recomputeMenuPauseLock),
+  // not per-id ref-counting here, so nested/overlapping modal ids cannot desync it.
   const ma = window.Game && window.Game.ModalAdapter;
   if (!ma || !ma.isInitialized()) return;
   if (isOpen) ma.notifyOpen(id, data);
@@ -18688,6 +19187,32 @@ async function boot(){
           merge: balData.merge || {},
           perf: balData.perf || {},
         };
+        // solo-pipeline-yandex-vk#1 item 3 (postmortem 7): dev-only sanity warning. Корневой
+        // источник завышенного урона танков 2/3 ур. — глобальный tank.attackDamageMul, который
+        // НЕ совпадает с per-level override (level_1=1), из-за чего остальные уровни молча
+        // множатся. Сигналим о расхождении в DEBUG, не трогая hot-path и не падая в release.
+        try {
+          if (window.Game && window.Game.DEBUG === true) {
+            const _gMul = BalanceConfig.tank && Number.isFinite(BalanceConfig.tank.attackDamageMul)
+              ? BalanceConfig.tank.attackDamageMul : null;
+            const _ovr = BalanceConfig.tankOverrides || {};
+            const _mismatched = [];
+            for (const _k in _ovr) {
+              if (!Object.prototype.hasOwnProperty.call(_ovr, _k)) continue;
+              const _o = _ovr[_k];
+              if (_o && Number.isFinite(_o.attackDamageMul) && _gMul !== null
+                  && _o.attackDamageMul !== _gMul) {
+                _mismatched.push(_k + '=' + _o.attackDamageMul);
+              }
+            }
+            if (_gMul !== null && _mismatched.length) {
+              console.warn('[Balance] tank.attackDamageMul=' + _gMul
+                + ' расходится с per-level override(ами): ' + _mismatched.join(', ')
+                + '. Уровни без override молча множатся на ' + _gMul
+                + ' — проверьте balance.json, если урон танков завышен.');
+            }
+          }
+        } catch (_balWarnErr) { /* dev-only, never throws into boot */ }
         // Item 6 (solo-pipeline-yandex-vk#2): прокинуть merge-конфиг (maxMergeTier) в Game.Balance,
         // чтобы autoMerge.findMergePairs мог фильтровать tier-60 танки.
         GameApi.Balance = GameApi.Balance || {};
@@ -18825,6 +19350,10 @@ async function boot(){
     try { await ShieldSprites.load(); } catch (_) {}
     // solo-pipeline-yandex-vk#1 item 2: preload proc_shields.png (non-blocking failure path)
     try { await ProcShieldSprites.load(); } catch (_) {}
+    // solo-pipeline-yandex-vk#1 items 1+2: preload fence overlay atlases (placeholders until
+    // the user replaces them). Non-blocking — missing atlas just disables the overlay.
+    try { await ExplosionOverlaySprites.load(); } catch (_) {}
+    try { await DestructionOverlaySprites.load(); } catch (_) {}
     rebuildGroundLayer();
     // solo-pipeline-yandex-vk#3 (B2): sprite atlas pre-warm — render each
     // loaded zombie/tank atlas once off-screen so the GPU uploads the

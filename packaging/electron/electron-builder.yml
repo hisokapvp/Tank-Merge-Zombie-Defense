@@ -1,0 +1,53 @@
+# packaging/electron/electron-builder.yml
+# solo-pipeline-yandex-vk#1 / Phase 2 — desktop packaging targets.
+#
+# The packaged app ships:
+#   • electron/main.js + preload.js (the native shell)
+#   • dist/native/web/**            (the web bundle built by build-web-bundle.mjs)
+#
+# Build order is enforced by package.json scripts (build:web runs first).
+appId: com.tmzd.tankmergezombiedefense
+productName: Tank Merge Zombie Defense
+copyright: Copyright (c) 2026
+
+directories:
+  output: ../../dist/native/desktop
+  buildResources: build
+
+# Files relative to packaging/ (this config's cwd).
+files:
+  - electron/**/*
+  - package.json
+
+# The web bundle lives outside packaging/, so pull it in as an extra resource
+# placed at <app>/dist/native/web — main.js resolves it via ../../dist/native/web.
+extraResources:
+  - from: ../../dist/native/web
+    to: ../dist/native/web
+    filter:
+      - "**/*"
+
+asar: true
+
+win:
+  target:
+    - nsis
+    - portable
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.games
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+linux:
+  target:
+    - AppImage
+  category: Game
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

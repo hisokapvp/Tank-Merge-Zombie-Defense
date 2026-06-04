@@ -446,10 +446,23 @@
       if (!prevWeatherEnabled && rainActive) {
         worldEventsState.rainBlend = 0;
         deps.playLoopSfx('rainLoop', 0);
+        // Battle music: crossfade calm -> wave track exactly when the rain starts
+        // (user follow-up: wave music must begin together with the rain). Fires only
+        // on this transition edge, so no steady-state per-tick work is added.
+        try {
+          var mmRainOn = global.Game && global.Game.MusicManager;
+          if (mmRainOn && typeof mmRainOn.onWaveStart === 'function') mmRainOn.onWaveStart();
+        } catch (eMmOn) { /* music is best-effort */ }
       }
       if (prevWeatherEnabled && !rainActive) {
         worldEventsState.rainBlend = 0;
         deps.stopLoopSfx('rainLoop');
+        // Battle music: crossfade wave -> calm track exactly when the rain stops
+        // (user follow-up: wave music must end together with the rain sound).
+        try {
+          var mmRainOff = global.Game && global.Game.MusicManager;
+          if (mmRainOff && typeof mmRainOff.onWaveEnd === 'function') mmRainOff.onWaveEnd();
+        } catch (eMmOff) { /* music is best-effort */ }
       }
 
       if (rainActive) {

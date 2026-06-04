@@ -417,6 +417,16 @@
       return Array.isArray(fallbackKeys) ? fallbackKeys.slice() : [];
     }
 
+    // solo-pipeline-yandex-vk#1 item 1: attackSpeed preview must mirror the runtime
+    // flat-additive growth (+0.01 per upgrade, no percent). Single source of truth.
+    function getWeaponAttackSpeedStep() {
+      if (tankWallStatCatalog && typeof tankWallStatCatalog.getStatGrowth === 'function') {
+        var growth = tankWallStatCatalog.getStatGrowth('weapons', 'attackSpeed');
+        if (growth && growth.kind === 'flatAdd' && Number.isFinite(growth.step)) return growth.step;
+      }
+      return 0.01;
+    }
+
     function getTankWallActionAttr(tabKey, fallbackAttr) {
       if (tankWallStatCatalog && typeof tankWallStatCatalog.getActionAttr === 'function') {
         var actionAttr = tankWallStatCatalog.getActionAttr(tabKey);
@@ -1455,7 +1465,6 @@
         var level = i + 1;
         var rowCfg = cfg[i] || [level, 0, 0, 0, 0];
         var damageMulPer = Number(rowCfg[3]) || 0;
-        var speedMulPer = Number(rowCfg[4]) || 0;
         var pendingEntry = normalizePendingEntry(getPendingEntry(state.pendingUpgradesByLevel, level, CANNON_STAT_KEYS), CANNON_STAT_KEYS);
         var appliedByStat = {
           attackSpeed: toSafeNonNegativeInt(getAppliedCannonUpgradeLevel(level, 'attackSpeed')),
@@ -1465,7 +1474,7 @@
         var baseAttackSpeed = viewData.baseAttackSpeed;
         var baseDamage = viewData.baseDamage;
         var currentAttackSpeed = Number.isFinite(baseAttackSpeed)
-          ? baseAttackSpeed * (1 + (appliedByStat.attackSpeed + pendingEntry.attackSpeed) * speedMulPer)
+          ? baseAttackSpeed + (appliedByStat.attackSpeed + pendingEntry.attackSpeed) * getWeaponAttackSpeedStep()
           : null;
         var currentDamage = Number.isFinite(baseDamage)
           ? baseDamage * (1 + (appliedByStat.baseDamage + pendingEntry.baseDamage) * damageMulPer)

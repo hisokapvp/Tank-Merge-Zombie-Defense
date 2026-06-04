@@ -529,6 +529,7 @@
     if (entry.type === 'randomChips') return grantAchievementRandomChips(entry.amount, randomFn);
     if (entry.type === 'upgradePoints') return grantAchievementUpgradePoints(state, entry.amount);
     if (entry.type === 'damagePoints') return grantAchievementDamagePoints(state, entry.amount);
+    if (entry.type === 'drones') return grantAchievementDrones(entry.amount, entry.level, state);
     return false;
   }
 

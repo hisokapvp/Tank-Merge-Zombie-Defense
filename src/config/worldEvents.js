@@ -43,9 +43,9 @@
       idleWave: {
         enabled: true,
         attackDamageMul: 0.01,
-        betweenWavesSec: 15,
-        attackDurationSec: 20,
-        wanderDurationSec: 10,
+        betweenWavesSec: 0,
+        attackDurationSec: 30,
+        wanderDurationSec: 30,
         retreatDistanceMinPx: 20,
         retreatDistanceMaxPx: 40,
       },

@@ -1,6 +1,9 @@
 ﻿# Система: Render
 
-> Обновлено: 2026-05-22.
+> Обновлено: 2026-06-04.
+
+## Post-merge update (2026-06-04)
+- Regression fix для танковых аур: `drawTank()` снова вызывает `resolveTankAuraVisual(cellIndex, level)` и `drawTankAuraSprite()` до procedural orb path. Это возвращает `aura1/aura2/aura3` для танка в ячейке с установленными чипами, при этом `computeAuraBand()` / `drawTankAura()` остаются отдельным top-tier overlay и не подменяют chip-aura routing: [game.js](../../../game.js#L17351-L17580).
 
 ## Post-merge update (2026-05-22, batch solo-pipeline-yandex-vk#1)
 - Тряска экрана теперь привязана к порогам HP, без слепых триггеров:

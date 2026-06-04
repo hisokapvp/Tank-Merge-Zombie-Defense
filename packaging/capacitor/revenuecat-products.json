@@ -1,0 +1,23 @@
+{
+  "_comment": "solo-pipeline-yandex-vk#2 / Phase 3 — mapping of game shop bundles (assets/shop.json bundles[].id == yandexProductId) to RevenueCat product identifiers. RevenueCat unifies Google Play + App Store IAP behind one product/offering id. The mobile native bridge (packaging/capacitor/native-bridge.js) reads this file to translate a bundle purchase request into a RevenueCat product purchase. To add a SKU: add the bundle in assets/shop.json AND register the SAME product identifier in the Google Play Console + App Store Connect + RevenueCat dashboard, then add a row here. revenueCatProductId is the store product identifier configured identically on both stores; offeringId is optional (RevenueCat Offering grouping for remote price experiments).",
+  "products": [
+    {
+      "shopBundleId": "small_chip_pack",
+      "revenueCatProductId": "small_chip_pack",
+      "offeringId": "default",
+      "type": "consumable"
+    },
+    {
+      "shopBundleId": "medium_chip_pack",
+      "revenueCatProductId": "medium_chip_pack",
+      "offeringId": "default",
+      "type": "consumable"
+    },
+    {
+      "shopBundleId": "large_chip_pack",
+      "revenueCatProductId": "large_chip_pack",
+      "offeringId": "default",
+      "type": "consumable"
+    }
+  ]
+}

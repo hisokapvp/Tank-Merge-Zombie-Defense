@@ -65,6 +65,10 @@ systems:
     files:
       - game.js
       - src/audio/settingsAudio.js
+      - src/audio/sfxPoolRuntime.js
+      - src/audio/sfxRegistry.js
+      - src/audio/musicManager.js
+      - src/systems/worldEventsRuntime.js
       - src/systems/pauseManager.js
   assets:
     doc: docs/ai/SYSTEMS/assets.md

@@ -65,9 +65,9 @@
       "repairSpeedMult": 1,
       "costMult": 0.1,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 2,
-        "repairSpeedMult": 2,
-        "costMult": 2
+        "moveSpeedPxSec": 690,
+        "repairSpeedMult": 690,
+        "costMult": 690
       }
     },
     "2": {
@@ -75,9 +75,9 @@
       "repairSpeedMult": 1.08,
       "costMult": 1.02,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 2,
-        "repairSpeedMult": 2,
-        "costMult": 2
+        "moveSpeedPxSec": 1590,
+        "repairSpeedMult": 1590,
+        "costMult": 1590
       }
     },
     "3": {
@@ -85,9 +85,9 @@
       "repairSpeedMult": 1.16,
       "costMult": 1.04,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 3,
-        "repairSpeedMult": 3,
-        "costMult": 3
+        "moveSpeedPxSec": 2940,
+        "repairSpeedMult": 2940,
+        "costMult": 2940
       }
     },
     "4": {
@@ -95,9 +95,9 @@
       "repairSpeedMult": 1.24,
       "costMult": 1.06,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 3,
-        "repairSpeedMult": 3,
-        "costMult": 3
+        "moveSpeedPxSec": 3930,
+        "repairSpeedMult": 3930,
+        "costMult": 3930
       }
     },
     "5": {
@@ -105,9 +105,9 @@
       "repairSpeedMult": 1.32,
       "costMult": 1.08,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 4,
-        "repairSpeedMult": 4,
-        "costMult": 4
+        "moveSpeedPxSec": 4560,
+        "repairSpeedMult": 4560,
+        "costMult": 4560
       }
     },
     "6": {
@@ -115,9 +115,9 @@
       "repairSpeedMult": 1.4,
       "costMult": 1.1,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 4,
-        "repairSpeedMult": 4,
-        "costMult": 4
+        "moveSpeedPxSec": 5220,
+        "repairSpeedMult": 5220,
+        "costMult": 5220
       }
     },
     "7": {
@@ -125,9 +125,9 @@
       "repairSpeedMult": 1.48,
       "costMult": 1.12,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 5,
-        "repairSpeedMult": 5,
-        "costMult": 5
+        "moveSpeedPxSec": 5940,
+        "repairSpeedMult": 5940,
+        "costMult": 5940
       }
     },
     "8": {
@@ -135,9 +135,9 @@
       "repairSpeedMult": 1.56,
       "costMult": 1.14,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 5,
-        "repairSpeedMult": 5,
-        "costMult": 5
+        "moveSpeedPxSec": 6000,
+        "repairSpeedMult": 6000,
+        "costMult": 6000
       }
     },
     "9": {
@@ -145,9 +145,9 @@
       "repairSpeedMult": 1.64,
       "costMult": 1.16,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 6,
-        "repairSpeedMult": 6,
-        "costMult": 6
+        "moveSpeedPxSec": 6630,
+        "repairSpeedMult": 6630,
+        "costMult": 6630
       }
     },
     "10": {
@@ -155,9 +155,9 @@
       "repairSpeedMult": 1.72,
       "costMult": 1.18,
       "upgradeDamagePointsCosts": {
-        "moveSpeedPxSec": 6,
-        "repairSpeedMult": 6,
-        "costMult": 6
+        "moveSpeedPxSec": 10000,
+        "repairSpeedMult": 10000,
+        "costMult": 10000
       }
     }
   }

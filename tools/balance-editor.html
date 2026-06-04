@@ -69,6 +69,7 @@ table.data-table input.changed { background: var(--changed); }
 .diff-add { color: var(--green); }
 .diff-del { color: var(--red); }
 .analytics-table td.metric { text-align: right; font-variant-numeric: tabular-nums; }
+#tableDamagePoints th, #tableDamagePoints td { text-align: center; }
 </style>
 </head>
 <body>
@@ -127,10 +128,13 @@ table.data-table input.changed { background: var(--changed); }
   <div id="tab-damage-points" class="tab-content">
     <h3 class="section-title">Танки — Damage Points Per Minute</h3>
     <div class="info-box">
-      Аналитика считает именно очки урона, а не grey damage: в runtime 1 очко урона = 10000 raw damage.
-      Выстрел считается как <code>baseDamage + bullet addDamage</code> с множителем <code>attackDamageMul</code>,
-      а fire rate берётся из runtime-кривой <code>0.85 + 0.075 × (lvl-1)</code> с множителем <code>attackSpeedMul</code>.
+      Вкладка читает текущие рабочие копии из <code>assets/tanks.json</code> и <code>assets/bullet.json</code>
+      через shared seam balance lab без отдельного manual runtime fallback.
+      Формула синхронизирована с текущими source-файлами: <code>baseDamage + bullet.addDamage</code>
+      и <code>attackSpeed × 60</code>; затем <code>rawDamagePerMinute / 10000</code> даёт очки урона в минуту.
     </div>
+    <div id="damagePointsSource" class="info-box"></div>
+    <div id="damagePointsDiagnostic" class="info-box" style="display:none; border:1px solid #6b2b2b; color:#ffb8b8"></div>
     <div class="chart-container"><canvas id="chartDamagePoints" class="chart"></canvas></div>
     <div class="scroll-wrap">
       <table class="data-table analytics-table" id="tableDamagePoints">
@@ -288,7 +292,7 @@ table.data-table input.changed { background: var(--changed); }
   <span id="statusText"></span>
 </div>
 
-<script src="./balance-shared.js?v=20260405-5"></script>
+<script src="./balance-shared.js?v=20260529-1"></script>
 <script src="./balance-registry.js?v=20260405-5"></script>
 <script src="./balance-optimizer.js?v=20260405-5"></script>
 <script src="./balance-lab.js?v=20260405-5"></script>
@@ -595,65 +599,62 @@ function getBulletConfigForTankLevel(level) {
 }
 
 function getTankShotDamage(level) {
-  const Shared = window.BalanceLab && window.BalanceLab.Shared;
-  if (Shared) {
-    const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
-    return stats.shotDamage;
-  }
-  const bulletInfo = getBulletConfigForTankLevel(level);
-  const tankBaseDamage = Number.isFinite(bulletInfo.tankCfg && bulletInfo.tankCfg.stats && bulletInfo.tankCfg.stats.baseDamage)
-    ? bulletInfo.tankCfg.stats.baseDamage
-    : 0;
-  const bulletAddDamage = Number.isFinite(bulletInfo.bulletCfg && bulletInfo.bulletCfg.addDamage)
-    ? bulletInfo.bulletCfg.addDamage
-    : 0;
-  return Math.max(0, tankBaseDamage + bulletAddDamage) * getTankBalanceMultiplier(level, 'attackDamageMul');
+  const metricState = getTankDamagePointMetrics([level]);
+  return metricState.rows && metricState.rows[0] ? metricState.rows[0].shotDamage : 0;
 }
 
 function getTankShotsPerMinute(level) {
-  const Shared = window.BalanceLab && window.BalanceLab.Shared;
-  if (Shared) {
-    const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(level));
-    return stats.shotsPerMinute;
-  }
-  const tankCfg = EDIT.tanks['tank_lvl' + level] || {};
-  const fireRate = Number.isFinite(tankCfg && tankCfg.stats && tankCfg.stats.attackSpeed) && tankCfg.stats.attackSpeed > 0
-    ? tankCfg.stats.attackSpeed
-    : ANALYTICS_RUNTIME.tankFireRateBase;
-  return Math.max(0, fireRate * getTankBalanceMultiplier(level, 'attackSpeedMul') * 60);
+  const metricState = getTankDamagePointMetrics([level]);
+  return metricState.rows && metricState.rows[0] ? metricState.rows[0].shotsPerMinute : 0;
 }
 
-function getTankDamagePointMetrics() {
+function getTankDamagePointMetrics(levels) {
   const Shared = window.BalanceLab && window.BalanceLab.Shared;
-  if (Shared) {
-    return getTankLevels().map(function (tank) {
-      const stats = Shared.getTankStats(getEditorDataBundle(), getSharedAnalyticsScenario(tank.level));
-      return {
-        level: tank.level,
-        shotDamage: stats.shotDamage,
-        shotsPerMinute: stats.shotsPerMinute,
-        rawDamagePerMinute: stats.rawDamagePerMinute,
-        damagePointsPerMinute: stats.damagePointsPerMinute,
-      };
-    });
+  if (Shared && typeof Shared.getTankDamagePointMetrics === 'function') {
+    return Shared.getTankDamagePointMetrics(
+      getEditorDataBundle(),
+      Array.isArray(levels) && levels.length ? levels : getTankLevels().map(function (tank) { return tank.level; }),
+      getSharedAnalyticsScenario
+    );
   }
-  return getTankLevels().map(function (tank) {
-    const shotDamage = getTankShotDamage(tank.level);
-    const shotsPerMinute = getTankShotsPerMinute(tank.level);
-    const rawDamagePerMinute = shotDamage * shotsPerMinute;
-    return {
-      level: tank.level,
-      shotDamage: shotDamage,
-      shotsPerMinute: shotsPerMinute,
-      rawDamagePerMinute: rawDamagePerMinute,
-      damagePointsPerMinute: rawDamagePerMinute / ANALYTICS_RUNTIME.tankDamagePointDivisor,
-    };
-  });
+  return {
+    rows: [],
+    diagnostics: ['Shared helper BalanceLab.Shared.getTankDamagePointMetrics недоступен. Вкладка не использует manual fallback, чтобы не показывать устаревшие значения.'],
+    provenance: ['Shared seam balance-shared.js не загрузился; требуется перезагрузка страницы или актуальный tools/balance-shared.js.'],
+    formula: 'shared seam unavailable'
+  };
 }
 
 function renderDamagePoints() {
-  const rows = getTankDamagePointMetrics();
+  const metricState = getTankDamagePointMetrics();
+  const rows = metricState.rows || [];
   const tbody = document.querySelector('#tableDamagePoints tbody');
+  const sourceEl = document.getElementById('damagePointsSource');
+  const diagnosticEl = document.getElementById('damagePointsDiagnostic');
+  const chartCanvas = document.getElementById('chartDamagePoints');
+  if (sourceEl) {
+    sourceEl.innerHTML = '<strong>Источник метрик:</strong> ' + (metricState.provenance || []).map(function (item) {
+      return '<code>' + escapeHtml(item) + '</code>';
+    }).join(' | ');
+  }
+  if (diagnosticEl) {
+    if (metricState.diagnostics && metricState.diagnostics.length) {
+      diagnosticEl.style.display = 'block';
+      diagnosticEl.innerHTML = '<strong>Diagnostic:</strong> ' + metricState.diagnostics.map(function (item) {
+        return escapeHtml(item);
+      }).join('<br>');
+    } else {
+      diagnosticEl.style.display = 'none';
+      diagnosticEl.innerHTML = '';
+    }
+  }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#ffb8b8">Нет валидных source-данных для расчёта. См. diagnostic выше.</td></tr>';
+    if (chartCanvas && chartCanvas.getContext) {
+      chartCanvas.getContext('2d').clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+    }
+    return;
+  }
   tbody.innerHTML = rows.map(function (row) {
     return '<tr>' +
       '<td>' + row.level + '</td>' +
@@ -664,7 +665,7 @@ function renderDamagePoints() {
       '</tr>';
   }).join('');
   drawLineChart(
-    document.getElementById('chartDamagePoints'),
+    chartCanvas,
     rows.map(function (row) { return row.level; }),
     [{ label: 'Damage points / min', data: rows.map(function (row) { return row.damagePointsPerMinute; }), color: '#53a8b6' }],
     'Танки — Очки урона в минуту'

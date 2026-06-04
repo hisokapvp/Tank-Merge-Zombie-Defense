@@ -15,7 +15,7 @@
   "tank": {
     "speedMul": 1,
     "attackSpeedMul": 1,
-    "attackDamageMul": 2.5
+    "attackDamageMul": 1
   },  "tankOverrides": {
     "level_1": {
       "speedMul": 1,

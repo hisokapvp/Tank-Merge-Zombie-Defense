@@ -55,6 +55,37 @@
     return result;
   }
 
+  // solo-pipeline-yandex-vk#1: single source of truth for per-upgrade stat growth.
+  // attackSpeed grows flat additively (+0.01 per upgrade, no percent); segmentMaxHp
+  // grows by compounding 1% (×1.01) to current segment HP. UI preview (supercomputerMenu)
+  // and runtime apply (game.js) must read this contract instead of duplicating formulas.
+  // solo-pipeline-yandex-vk#2 item 4: walls.armorFlat grows by +1% (×1.01) compounding to
+  // the current segment armor, but never less than +1 unit per upgrade (floor: 1). Because
+  // the floor makes growth path-dependent, game.js applies it iteratively, not via pow().
+  var STAT_GROWTH = {
+    weapons: {
+      attackSpeed: { kind: 'flatAdd', step: 0.01 },
+    },
+    walls: {
+      segmentMaxHp: { kind: 'mulCompound', factor: 1.01 },
+      armorFlat: { kind: 'mulCompound', factor: 1.01, floor: 1 },
+    },
+  };
+
+  function getStatGrowth(tabKey, statKey) {
+    if (typeof tabKey !== 'string' || !tabKey) return null;
+    if (typeof statKey !== 'string' || !statKey) return null;
+    var tab = STAT_GROWTH[tabKey];
+    if (!tab) return null;
+    var growth = tab[statKey];
+    if (!growth) return null;
+    var result = { kind: growth.kind };
+    if (Number.isFinite(growth.step)) result.step = growth.step;
+    if (Number.isFinite(growth.factor)) result.factor = growth.factor;
+    if (Number.isFinite(growth.floor)) result.floor = growth.floor;
+    return result;
+  }
+
   function getTabConfig(tabKey) {
     if (typeof tabKey !== 'string' || !tabKey) return null;
     return TAB_CONFIG[tabKey] || null;
@@ -163,6 +194,7 @@
   global.Game = global.Game || {};
   global.Game.TankWallStatCatalog = {
     getTabConfig: getTabConfig,
+    getStatGrowth: getStatGrowth,
     getStorageKeys: getStorageKeys,
     getRenderStats: getRenderStats,
     getActionAttr: getActionAttr,

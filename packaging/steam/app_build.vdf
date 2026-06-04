@@ -1,0 +1,37 @@
+// packaging/steam/app_build.vdf
+// solo-pipeline-yandex-vk#1 / Phase 2 — Steam build/upload template.
+//
+// Fill in the placeholders before uploading with steamcmd:
+//   steamcmd +login <builder_account> +run_app_build \
+//     "<abs-path>/packaging/steam/app_build.vdf" +quit
+//
+// Replace 0000000 with your real Steam App ID and 0000001 with the Depot ID
+// from Steamworks > App Admin > Depots.
+"AppBuild"
+{
+	"AppID" "0000000"
+	"Desc"  "TMZD desktop build"
+
+	// Where steamcmd writes its build logs / output (relative to this file).
+	"BuildOutput" "./output/"
+
+	// Root that ContentRoot paths below are relative to. Point this at the
+	// packaged desktop output produced by electron-builder, e.g.
+	// dist/native/desktop/win-unpacked (Windows) — adjust per platform.
+	"ContentRoot" "../../dist/native/desktop/"
+
+	"Depots"
+	{
+		"0000001"
+		{
+			"FileMapping"
+			{
+				// Upload everything from the unpacked desktop build.
+				"LocalPath" "./win-unpacked/*"
+				"DepotPath" "."
+				"recursive" "1"
+			}
+			"FileExclusion" "*.pdb"
+		}
+	}
+}

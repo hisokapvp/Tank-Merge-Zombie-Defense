@@ -80,6 +80,25 @@
     var clearBefore = config.clearBeforeRender !== undefined
       ? !!config.clearBeforeRender : true;
 
+    // solo-pipeline-yandex-vk#1 / Phase 0: per-platform render hint. This is a
+    // settings point, not a rewrite of the renderer — Game.Platform supplies
+    // recommended overrides (antialias off on mobile, high-performance GPU
+    // hint, fps cap) and we merge them onto the defaults below. Absent the
+    // module (or on plain web) the defaults are preserved unchanged.
+    var platformRender = null;
+    try {
+      var plat = global.Game && global.Game.Platform;
+      if (plat && typeof plat.getRenderConfig === 'function') {
+        platformRender = plat.getRenderConfig();
+      }
+    } catch (_) { platformRender = null; }
+    var renderAntialias = (platformRender && typeof platformRender.antialias === 'boolean')
+      ? platformRender.antialias : true;
+    var fpsTarget = (platformRender && platformRender.fpsTarget > 0)
+      ? platformRender.fpsTarget : 60;
+    var powerPreference = (platformRender && platformRender.powerPreference)
+      ? platformRender.powerPreference : 'default';
+
     var phaserConfig = {
       type: Phaser.CANVAS,
       canvas: config.canvas || null,
@@ -96,8 +115,9 @@
       scene: sceneList,
       render: {
         pixelArt: false,
-        antialias: true,
+        antialias: renderAntialias,
         roundPixels: false,
+        powerPreference: powerPreference,
       },
       scale: {
         mode: Phaser.Scale.NONE, // We manage canvas size ourselves
@@ -113,7 +133,7 @@
       },
       disableContextMenu: true,
       fps: {
-        target: 60,
+        target: fpsTarget,
         forceSetTimeOut: false,
       },
       callbacks: {

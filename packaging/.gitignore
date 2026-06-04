@@ -1,0 +1,7 @@
+# packaging/ build artifacts and deps — never committed.
+node_modules/
+output/
+*.log
+
+# electron-builder + steamcmd outputs (also covered by repo-level dist ignore).
+/../dist/native/
