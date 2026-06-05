@@ -1251,9 +1251,11 @@
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
 
-          var atlasName = data && data.atlas ? data.atlas : 'boost_icons_atlas.png';
-          var atlasPath = 'assets/' + atlasName;
-          var img = await loadImage(atlasPath);
+          var atlasName = data && typeof data.atlas === 'string' && data.atlas ? data.atlas : '';
+          var img = null;
+          if (atlasName) {
+            img = await loadImage('assets/' + atlasName);
+          }
 
           function normalizeFrame(raw) {
             if (!raw || typeof raw !== 'object') return null;
@@ -1278,16 +1280,43 @@
             return out;
           }
 
+          function normalizeImagePath(rawPath) {
+            return typeof rawPath === 'string' && rawPath ? rawPath : '';
+          }
+
+          var iconImagePaths = {};
           var boosts = {};
           var rawBoosts = data && data.boosts && typeof data.boosts === 'object' ? data.boosts : {};
           var boostIds = Object.keys(rawBoosts);
           for (var b = 0; b < boostIds.length; b++) {
             var boostId = boostIds[b];
             var src = rawBoosts[boostId] && typeof rawBoosts[boostId] === 'object' ? rawBoosts[boostId] : {};
+            var iconImagePath = normalizeImagePath(src.iconImage || src.iconImagePath || src.image);
+            if (iconImagePath && !Object.prototype.hasOwnProperty.call(iconImagePaths, iconImagePath)) {
+              iconImagePaths[iconImagePath] = null;
+            }
             boosts[boostId] = {
+              iconImagePath: iconImagePath,
+              iconImage: null,
               iconFrames: normalizeFrameList(src.iconFrames),
               cooldownOverlayFrames: normalizeFrameList(src.cooldownOverlayFrames),
             };
+          }
+
+          var iconImageKeys = Object.keys(iconImagePaths);
+          for (var iconIndex = 0; iconIndex < iconImageKeys.length; iconIndex++) {
+            var iconPath = iconImageKeys[iconIndex];
+            try {
+              iconImagePaths[iconPath] = await loadImage('assets/' + iconPath);
+            } catch (_iconError) {
+              iconImagePaths[iconPath] = null;
+            }
+          }
+
+          for (var boostIndex = 0; boostIndex < boostIds.length; boostIndex++) {
+            var loadedBoost = boosts[boostIds[boostIndex]];
+            if (!loadedBoost || !loadedBoost.iconImagePath) continue;
+            loadedBoost.iconImage = iconImagePaths[loadedBoost.iconImagePath] || null;
           }
 
           this.config = {

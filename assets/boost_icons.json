@@ -11,21 +11,15 @@
       ]
     },
     "attackBoost": {
-      "iconFrames": [
-        { "x": 0, "y": 0, "w": 124, "h": 124 }
-      ],
+      "iconImage": "active_attack.png",
       "cooldownOverlayFrames": []
     },
     "defenseBoost": {
-      "iconFrames": [
-        { "x": 0, "y": 0, "w": 124, "h": 124 }
-      ],
+      "iconImage": "active_defense.png",
       "cooldownOverlayFrames": []
     },
     "economyBoost": {
-      "iconFrames": [
-        { "x": 0, "y": 0, "w": 124, "h": 124 }
-      ],
+      "iconImage": "active_economy.png",
       "cooldownOverlayFrames": []
     }
   }

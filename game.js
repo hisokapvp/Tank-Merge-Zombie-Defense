@@ -16392,7 +16392,7 @@ function isValidBoostFrame(frame){
 }
 
 function drawSupercomputerBoostIcons(){
-  if (!BoostIconsSprites || !BoostIconsSprites.ready || !BoostIconsSprites.atlasImg || !BoostIconsSprites.boosts) return;
+  if (!BoostIconsSprites || !BoostIconsSprites.ready || !BoostIconsSprites.boosts) return;
 
   const layoutResult = ensureSupercomputerBoostLayout(nowSec());
   if (!layoutResult || layoutResult.activeCount <= 0) return;
@@ -16419,6 +16419,7 @@ function drawSupercomputerBoostIcons(){
     if (remainingSec <= 0) continue;
 
     const boostCfg = boostsConfig[def.boostId] || null;
+  const iconImage = boostCfg && boostCfg.iconImage ? boostCfg.iconImage : null;
     const iconFrames = boostCfg && Array.isArray(boostCfg.iconFrames) ? boostCfg.iconFrames : null;
     const overlayFrames = boostCfg && Array.isArray(boostCfg.cooldownOverlayFrames) ? boostCfg.cooldownOverlayFrames : null;
     const iconFrame = iconFrames && iconFrames.length > 0 ? iconFrames[0] : null;
@@ -16429,7 +16430,15 @@ function drawSupercomputerBoostIcons(){
     rr(ctx, x - iconSize * 0.5, y - iconSize * 0.5, iconSize, iconSize, Math.max(4, Math.round(5 * balScale)));
     ctx.fill();
 
-    if (isValidBoostFrame(iconFrame)) {
+    if (iconImage) {
+      ctx.drawImage(
+        iconImage,
+        x - iconSize * 0.5,
+        y - iconSize * 0.5,
+        iconSize,
+        iconSize
+      );
+    } else if (atlas && isValidBoostFrame(iconFrame)) {
       ctx.drawImage(
         atlas,
         iconFrame.x,
@@ -16443,7 +16452,7 @@ function drawSupercomputerBoostIcons(){
       );
     }
 
-    if (overlayFrames && overlayFrames.length >= 2 && Number.isFinite(def.secondsTotal) && def.secondsTotal > 0) {
+    if (atlas && overlayFrames && overlayFrames.length >= 2 && Number.isFinite(def.secondsTotal) && def.secondsTotal > 0) {
       const p = clamp(1 - (remainingSec / def.secondsTotal), 0, 1);
       const overlayIndex = Math.floor(p * (overlayFrames.length - 1));
       const overlayFrame = overlayFrames[overlayIndex];

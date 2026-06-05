@@ -78,17 +78,17 @@
       "w": 191,
       "h": 204,
       "frames": 15,
-      "frameRateFps": 10,
+      "frameRateFps": 15,
       "scale": 0.5
     },
     {
       "x": 0,
       "y": 589,
-      "w": 84,
-      "h": 126,
-      "frames": 11,
-      "frameRateFps": 5,
-      "scale": 0.5
+      "w": 32,
+      "h": 39,
+      "frames": 8,
+      "frameRateFps": 8,
+      "scale": 1
     },
     {
       "x": 1408,
@@ -96,7 +96,7 @@
       "w": 72,
       "h": 65,
       "frames": 5,
-      "frameRateFps": 10,
+      "frameRateFps": 5,
       "scale": 0.6
     },
     {
@@ -105,7 +105,7 @@
       "w": 64,
       "h": 31,
       "frames": 5,
-      "frameRateFps": 10,
+      "frameRateFps": 5,
       "scale": 1
     }
   ],

@@ -91,6 +91,7 @@
 
 ## `assets/supercomputer.json` (боевой рендер + production line)
 - Root-конфиг суперкомпьютера: [assets/supercomputer.json](../../../assets/supercomputer.json#L1-L123).
+- `assets/boost_icons.json` — companion-config активных иконок над суперкомпьютером. Legacy path остаётся atlas-based через `iconFrames[]`, но для branch-active иконок допустим и прямой file binding `boosts.<id>.iconImage` / `iconImagePath` / `image` (путь относительно `assets/`); loader поднимает PNG отдельно и `game.js drawSupercomputerBoostIcons()` предпочитает этот image before atlas frame. Это позволяет подключать отдельные арты `active_attack.png`, `active_defense.png`, `active_economy.png` без пересборки общего atlas: [assets/boost_icons.json](../../../assets/boost_icons.json#L1-L23), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L1246-L1319), [game.js](../../../game.js#L16345-L16422).
 - Для `animations.{idle,work,glitch,buildTank,destroy}` сохранены legacy-поля клипа (`x/y/w/h/frames/frameRateFps/loop`) и добавлены:
 	- `scale` — дополнительный множитель масштаба конкретной анимации; применяется поверх root `renderScale`.
 	- `effects` — массив описателей эффекта. Допустимы строка-пресет или объект с `preset`/`type` и override-полями `amplitudeX`, `amplitudeY`, `angleDeg`, `scaleMul`, `frequencyHz`, `phase`, `offsetX`, `offsetY`.
