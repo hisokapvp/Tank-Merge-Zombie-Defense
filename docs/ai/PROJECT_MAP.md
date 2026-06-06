@@ -1,6 +1,6 @@
 # Tank Merge Zombie Defense — Project Map
 
-> Документ для агентов. Обновлён: 2026-04-30.
+> Документ для агентов. Обновлён: 2026-06-06.
 > Навигация: раздел → файл документации → строки кода.
 
 ## О проекте
@@ -55,8 +55,8 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | Точка входа | Файл | Строки | Назначение |
 |---|---|---|---|
 | `boot()` | [game.js](../../game.js#L11714-L11885) | 11714–11885 | Загрузка баланса, спрайтов, bootstrap UI/runtime |
-| `loop()` | [game.js](../../game.js#L11460-L11713) | 11460–11713 | Главный simulation loop: step → draw → telemetry |
-| `draw()` | [game.js](../../game.js#L11127-L11200) | 11127–11200 | Главный render-orchestrator world/HUD; z-order: board перед supercomputer/productionLine |
+| `loop()` | [game.js](../../game.js#L18538-L18807) | 18538–18807 | Главный simulation loop: step → draw → telemetry; perf-capture frame lifecycle (`Profiler.beginFrame()`/`endFrame()` + `PerfCapture.onFrame()`) |
+| `draw()` | [game.js](../../game.js#L15295-L15443) | 15295–15443 | Главный render-orchestrator world/HUD; z-order: board перед supercomputer/productionLine |
 | `resetGameState()` | [game.js](../../game.js#L7875-L7952) | 7875–7952 | Full reset; path `new_game` сбрасывает свободные очки и компьютер к baseline L0 |
 | `Game.SupercomputerBuildTankFx.start()` | [src/ui/supercomputerBuildTankFx.js](../../src/ui/supercomputerBuildTankFx.js#L41-L53) | 41–53 | Таймер root-анимации `buildTank` на время печати танка |
 | `Game.FontFloor` | [src/ui/fontFloor.js](../../src/ui/fontFloor.js#L18-L270) | 18–270 | Глобальный floor `10px` для canvas/DOM текста; DOM path хранит original inline font state, восстанавливает его на skip, экспортирует canonical `SKIP_SELECTORS` и даёт `getSchedulerMetrics()` для очереди observer scheduler |
@@ -69,6 +69,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | `Game.I18n.pluralize()` | [src/i18n/pluralize.js](../../src/i18n/pluralize.js#L17-L33) | 17–33 | Russian/English number pluralization (mod10/mod100 логика); используется в `getTankWordKey()` и `getDismantleTankCountText()` |
 | `Game.FenceRepair` | [src/mechanics/fenceRepair.js](../../src/mechanics/fenceRepair.js#L1-L178) | 1–178 | Fence repair pricing source-of-truth: async `loadTankPrices()`, config-first base-cost resolution из `assets/fence.json`, cumulative `computeRepairCost(fenceLevel, repairCount)`, public `getFenceRepairCostCoins()` |
 | `Game.FxDensity` / `Game.Settings.fxDensity` | [src/perf/fxDensity.js](../../src/perf/fxDensity.js#L1-L320) | 1–320 | User-configurable visual effect density (0..100): cached scalar `getDensity()`, `shouldSpawn(weight)`, per-zombie `shouldSpawnFor(key, weight)`, `scaleCount/scaleCap`; persistence — shallow-merge в `localStorage['settings']`; mobile first-run default = 60, desktop = 100 через `Game.MobileMode`; на init инсталлируется noop-safe shim до основного IIFE |
+| `Game.PerfCapture.onFrame()` | [src/perf/perfCapture.js](../../src/perf/perfCapture.js#L181-L209) | 181–209 | Real-time perf-диагностика (perf-capture tool): per-frame collector поверх `Game.Profiler`, O(1) early-out вне capture; экспорт отчёта schema `tmzd.perfCapture.report` (Markdown+JSON). Карта — [PERF_CAPTURE_MAP.md](PERF_CAPTURE_MAP.md); вызов из `loop()` ([game.js](../../game.js#L18799)); активация — Perf-вкладка `src/ui/debugPanel.js` под `?debug=1` |
 | `Game.TelemetryLogger` | [src/telemetry/telemetry.js](../../src/telemetry/telemetry.js#L1-L149) | 1–149 | Analytics taxonomy `tmzd-analytics-taxonomy.v1`, consent/privacy gate, adapter registration и limited/default event rules |
 | `Game.TelemetryLogger.getHealthSnapshot()` | [src/telemetry/telemetry.js](../../src/telemetry/telemetry.js#L628-L759) | 628–759 | Rollout health/read-back/manual smoke/weekly review snapshot со stale reasons для operator verification |
 | `Game.AnalyticsCollector` | [src/analytics/collector.js](../../src/analytics/collector.js#L1-L372) | 1–372 | Local aggregate analytics summary и mirrored rollout snapshot/staleness |
@@ -97,6 +98,7 @@ Repo-local VS Code Copilot support surface здесь ограничен `.githu
 | `src/ui/supercomputerMenu.js` map | [SUPERCOMPUTER_MENU_MAP.md](SUPERCOMPUTER_MENU_MAP.md) | [HOT] |
 | `src/render/spriteLoaders.js` map | [SPRITE_LOADERS_MAP.md](SPRITE_LOADERS_MAP.md) | [HOT] |
 | `src/render/productionLineRender.js` map | [PRODUCTION_LINE_RENDER_MAP.md](PRODUCTION_LINE_RENDER_MAP.md) | |
+| `src/perf/perfCapture.js` map (perf-capture tool) | [PERF_CAPTURE_MAP.md](PERF_CAPTURE_MAP.md) | |
 
 ### Phaser 3 migration
 | Подраздел | Файл документации | Hotspot |

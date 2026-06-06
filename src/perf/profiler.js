@@ -42,6 +42,17 @@
   var _BUDGET_EMIT_THROTTLE_MS = 1000;
   var _lastBudgetEmitMs = Object.create(null);
 
+  // perf-capture-tool: per-frame SUM accumulator. Unlike `stats` (cumulative
+  // over the whole session) `frameMs` holds the summed duration of each phase
+  // WITHIN the current frame. This is correct for phases that run multiple
+  // times per frame (drawTank×N, impactAt×N) where a single getStats() avg is
+  // not representative of the per-frame cost. Game.PerfCapture reads it via
+  // getFrameMs()/forEachFrameMs() once per frame. Zero-alloc steady state:
+  // beginFrame() zeroes existing keys in place (no delete / no realloc); a new
+  // phase name adds a key once (warmup) and the object shape is stable after.
+  var frameMs = Object.create(null);
+  var frameActive = false;
+
   function ensureStat(name) {
     if (!stats[name]) {
       stats[name] = { count: 0, totalMs: 0, minMs: Infinity, maxMs: 0, lastMs: 0 };
@@ -57,6 +68,12 @@
     stat.lastMs = duration;
     if (duration < stat.minMs) stat.minMs = duration;
     if (duration > stat.maxMs) stat.maxMs = duration;
+    // perf-capture-tool: accumulate into the current-frame SUM. Only while a
+    // frame window is open (beginFrame() called) — otherwise zero overhead.
+    if (frameActive) {
+      var fprev = frameMs[name];
+      frameMs[name] = (typeof fprev === 'number' ? fprev : 0) + duration;
+    }
     // Budget threshold check (postmortem item 11): emit on Game.Events so
     // on-device diagnostics can surface a real signal instead of noise.
     // Solo-pipeline-yandex-vk#2 / item 8: throttle emits per-phase to avoid
@@ -166,6 +183,10 @@
     // tests / regression checks that call reset() observe deterministic
     // emit behavior on the very first overrun after reset.
     _lastBudgetEmitMs = Object.create(null);
+    // perf-capture-tool: drop the per-frame accumulator so a fresh capture
+    // starts from a clean slate.
+    frameMs = Object.create(null);
+    frameActive = false;
   }
 
   function report() {
@@ -199,6 +220,29 @@
     return enabled;
   }
 
+  // perf-capture-tool: per-frame window control + readers.
+  // beginFrame() opens the window and zeroes the accumulator in place; record()
+  // sums each phase into frameMs while open; endFrame() closes the window.
+  function beginFrame() {
+    if (!enabled) return;
+    frameActive = true;
+    for (var k in frameMs) frameMs[k] = 0;
+  }
+
+  function endFrame() {
+    frameActive = false;
+  }
+
+  function getFrameMs(name) {
+    var v = frameMs[name];
+    return (typeof v === 'number') ? v : 0;
+  }
+
+  function forEachFrameMs(cb) {
+    if (typeof cb !== 'function') return;
+    for (var k in frameMs) cb(k, frameMs[k]);
+  }
+
   global.Game = global.Game || {};
   global.Game.Profiler = {
     start: start,
@@ -213,6 +257,11 @@
     // Solo-pipeline-yandex-vk#1 step-1 extensions:
     setBudget: setBudget,
     setBudgets: setBudgets,
-    getBudgets: getBudgets
+    getBudgets: getBudgets,
+    // perf-capture-tool extensions (per-frame SUM accumulator):
+    beginFrame: beginFrame,
+    endFrame: endFrame,
+    getFrameMs: getFrameMs,
+    forEachFrameMs: forEachFrameMs
   };
 })(typeof window !== 'undefined' ? window : this);

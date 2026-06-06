@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-04-30.
+> Обновлено: 2026-06-06.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -20,6 +20,7 @@
 - `docs/ai/PRODUCTION_LINE_RENDER_MAP.md` — atlas-driven conveyor/storage/box render рядом с суперкомпьютером.
 - `docs/ai/CHIP_EFFECTS_MAP.md` — боевой runtime чип-модификаторов.
 - `docs/ai/TALENTS_V2_MAP.md` — монолит talents v2.
+- `docs/ai/PERF_CAPTURE_MAP.md` — `Game.PerfCapture` real-time perf-диагностика (perf-capture tool, `src/perf/perfCapture.js`).
 
 ## Карта систем
 - **Phaser 3 migration**: `docs/ai/SYSTEMS/phaser.md` (runtime, scenes, layers, rollout)
@@ -37,14 +38,17 @@
 - Audio: `docs/ai/SYSTEMS/audio.md`
 - Telemetry/Flags: `docs/ai/SYSTEMS/telemetry.md`
 - Input: `docs/ai/SYSTEMS/input.md`
-- Performance: `docs/ai/SYSTEMS/perf.md` (FX density owner `src/perf/fxDensity.js` + B2/B3/B4 canon: DPR cap mobileUltraLite, atlas pre-warm, `qualityLow` hysteresis, `saveProgress` safety, auto-suspend visibilitychange-only)
+- Performance: `docs/ai/SYSTEMS/perf.md` (FX density owner `src/perf/fxDensity.js` + B2/B3/B4 canon: DPR cap mobileUltraLite, atlas pre-warm, `qualityLow` hysteresis, `saveProgress` safety, auto-suspend visibilitychange-only) + perf-capture tool `Game.PerfCapture` (`src/perf/perfCapture.js` → `docs/ai/PERF_CAPTURE_MAP.md`) + Profiler per-frame accumulator; диагностика лага — `docs/ai/PLAYBOOKS/debug-lag.md`
 - Tutorial runtime: `docs/ai/SYSTEMS/tutorial-runtime.md`
 - Yandex SDK / sanitiser allowlist: `docs/ai/SYSTEMS/yandex.md`
 - Yandex Chip-Bundle Shop: `docs/ai/SYSTEMS/shop.md` (last-updated: 2026-05-04) → playbook `docs/ai/PLAYBOOKS/shop-add-bundle.md` (как добавить новый бандл) → user-facing мануал `docs/SHOP_GUIDE_RU.md`
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-04-30
+## Фокус документации на 2026-06-06
+- **perf-capture tool (real-time лаг-диагностика)**: новый `Game.PerfCapture` (`src/perf/perfCapture.js`, 889 строк, карта `docs/ai/PERF_CAPTURE_MAP.md`) — слой поверх `Game.Profiler`, включается кнопкой Start в Perf-вкладке debug-панели (`?debug=1`). Собирает frame-time перцентили (`p50/p95/p99/max` + jank), per-phase агрегаты с `%-of-frame`/over-budget, entity drill-down (zombies by type id, projectiles/particles/impacts/decals/damageNumbers, tanks, drones), `performance.memory` (Chromium-only, guarded) и env-снимок; экспортирует **один** отчёт (Markdown + fenced ```json`, schema `tmzd.perfCapture.report`) в буфер + скачиваемый `.json`. `src/perf/profiler.js` получил zero-alloc per-frame accumulator (`beginFrame`/`endFrame`/`getFrameMs`/`forEachFrameMs`, чистится в `reset()`); маркеры в `game.js` (`loop`/`draw`/`stepProjectiles`/`impactAt`/`drawZombies`/`drawTank` + sub-фазы) теперь резолвятся через `Profiler.isEnabled()` (release zero-overhead, default `Game.DEBUG===true`) вместо inline `DEBUG===true`. `assets/balance.json` → `perf.profilerBudgetsMs` расширен на каждую новую фазу (оригинальные 5 не тронуты). UI — Perf-вкладка в `src/ui/debugPanel.js` (Start/Stop/Reset/Copy AI report/Download JSON + DevTools-timeline чекбокс + live `<pre>` readout ~400ms). Тест: `Test/pack5/perfCaptureReport.test.js` (в `ci/run_tests.sh`). Читать: `docs/ai/SYSTEMS/perf.md`, `docs/ai/PERF_CAPTURE_MAP.md`, `docs/ai/PLAYBOOKS/debug-lag.md`.
+
+### Предыдущий фокус (2026-04-30)
 - **Solo-pipeline-yandex-vk perf optimisation + FX density slider feature**: новый owner-модуль `src/perf/fxDensity.js` экспонирует `Game.FxDensity` (cached scalar, no-alloc hot-path) и `Game.Settings.{getFxDensity,setFxDensity}` facade поверх существующего `localStorage['settings']` blob; mobile first-run default = 60%, desktop = 100% через `Game.MobileMode`. Слайдер живёт в `index.html` (`#bigMenuSoundPanel` + smallMenu row), wiring — `src/ui/bigMenuRuntime.js` и `src/core/bootstrap.js`. Hot-path gates: `drawParticles`, `drawDamageNumbers`, `drawImpacts`, `drawTankAura`, `drawScaledZombieDebuffOverlays`, `drawTankTrack`, `drawDecals`, `chipEffects.codeVisualEnabled`, render-side `zombieRender/cornerTowers/tankHangarAnimation`, `supercomputerBuildTankFx`. Gameplay-critical whitelist (всегда spawn): `popText` UI hints + tutorial bubbles + projectiles + drones + fence HP bars + Aura1/2/3. Quantity-scaled debuff icons используют per-zombie `FxDensity.shouldSpawnFor(zombieKey, ...)`. B2/B3/B4 канон: DPR cap mobileUltraLite, atlas pre-warm в `boot()`, `qualityLow` hysteresis (drop<45 / recover≥55 hold 5s), `saveProgress()` try/catch + 30s toast, pool length=0 cleanup в `src/core/worldReset.js`, fail-soft `tools/saveSchemaValidator.js`. **Auto-suspend в `src/core/runtimeTasks.js` использует только `document.visibilitychange`** — `window.blur`/`window.focus` намеренно НЕ слушаются (Windows resize handle / taskbar peek дают ложные blur events). Читать: `docs/ai/SYSTEMS/perf.md` (canon FX density + B2/B3/B4), `docs/ai/PROJECT_MAP.md`, `docs/ai/GAME_JS_MAP.md`. Бейзлайн: `artifacts/perf-baseline-2026-04-30.md`.
 
 ### Предыдущий фокус (2026-04-06)

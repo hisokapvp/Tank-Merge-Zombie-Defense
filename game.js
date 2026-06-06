@@ -11180,8 +11180,13 @@ function stepProjectiles(dt){
   // Profiler markers are DEBUG-guarded so release-mirror has zero overhead.
   // The double check (Game.DEBUG === true && Game.Profiler) ensures dead-code
   // elimination friendliness and avoids any property access in release.
-  const _profStep = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  // perf-capture-tool: gate on Profiler.isEnabled() (defaults to Game.DEBUG===true
+  // so release stays zero-overhead) — lets the ?debug=1 Perf tool turn markers on
+  // at runtime via Profiler.setEnabled(true).
+  const _profStep = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   if (_profStep) _profStep.start('stepProjectiles');
+  // perf-capture-tool: deep sub-phase 'gridRebuild' (zmap fill + collision grid).
+  if (_profStep) _profStep.start('stepProjectiles.gridRebuild');
   // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): reuse module-scope Map
   // across frames instead of `new Map(state.zombies.map(...))` per frame.
   // Eliminates per-frame allocation of N pairs + Map instance.
@@ -11198,10 +11203,13 @@ function stepProjectiles(dt){
   // called downstream from this function and from stepZombies (which runs
   // immediately after stepProjectiles in the canonical loop order).
   rebuildZombieCollisionGrid();
+  if (_profStep) _profStep.end('stepProjectiles.gridRebuild');
   const prev = state.projectiles;
   const next = projectilesNext;
   next.length = 0;
 
+  // perf-capture-tool: deep sub-phase 'bullets' (projectile integrate + impact dispatch).
+  if (_profStep) _profStep.start('stepProjectiles.bullets');
   for (let i = 0; i < prev.length; i++){
     const b = prev[i];
     b.life -= dt;
@@ -11264,6 +11272,7 @@ function stepProjectiles(dt){
     next.push(b);
   }
 
+  if (_profStep) _profStep.end('stepProjectiles.bullets');
   projectilesNext = prev;
   state.projectiles = next;
   if (_profStep) _profStep.end('stepProjectiles');
@@ -11276,8 +11285,8 @@ function critChanceFromTankLevel(level){
 }
 
 function impactAt(x,y,b,opts){
-  // Solo-pipeline-yandex-vk#1 step-5 (postmortem 11, 15): DEBUG-guarded marker.
-  const _profImpact = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  // perf-capture-tool: gate on Profiler.isEnabled() (defaults to Game.DEBUG===true).
+  const _profImpact = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   if (_profImpact) _profImpact.start('impactAt');
   const suppressCombatFx = !!(opts && opts.suppressCombatFx);
   const mods = getMods();
@@ -15285,6 +15294,8 @@ function drawScaledZombieDebuffOverlays(ctx, talentsApi, zombies, nowMs, debuffI
 // ---------- Render ----------
 function draw(){
   const _RR = window.Game && window.Game.RenderRegistry;
+  // perf-capture-tool: draw-side sub-phase markers (null = zero overhead).
+  const _profDraw = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   // Phase 2b: Phaser renderer resets ctx transform to identity after each
   // frame; restore DPR scaling before legacy draw calls.
   if (phaserLoopActive) {
@@ -15313,7 +15324,7 @@ function draw(){
   if (_RR && _RR.isPhaser('tankTrack') && _PLM) _PLM.drawLayer('tankTrack', ctx);
   if (!_RR || _RR.isLegacy('tankTrack')) drawTankTrack();
   if (_RR && _RR.isPhaser('fenceBase') && _PLM) _PLM.drawLayer('fenceBase', ctx);
-  if (!_RR || _RR.isLegacy('fenceBase')) renderFenceBase();
+  if (!_RR || _RR.isLegacy('fenceBase')) { if (_profDraw) _profDraw.start('renderFenceBase'); renderFenceBase(); if (_profDraw) _profDraw.end('renderFenceBase'); }
   // solo-pipeline-yandex-vk#1 item 2: damage-stage overlay (50/25/10/0) drawn on top of the
   // fence fragment sprites and below zombies — it is part of the wall's visual state.
   if (!_RR || _RR.isLegacy('fenceBase')) drawFenceDestructionOverlays();
@@ -15350,7 +15361,7 @@ function draw(){
     });
     _PLM.drawLayer('fenceHpBars', ctx);
   }
-  if (!_RR || _RR.isLegacy('fenceHpBars')) renderFenceHpBars();
+  if (!_RR || _RR.isLegacy('fenceHpBars')) { if (_profDraw) _profDraw.start('renderFenceHpBars'); renderFenceHpBars(); if (_profDraw) _profDraw.end('renderFenceHpBars'); }
   if ((!_RR || _RR.isLegacy('talentStatusIcons')) && isTalentsV2Ready()) {
     const talentsApi = getTalentsV2Api();
     if (talentsApi && typeof talentsApi.renderStatusIcons === 'function') {
@@ -15592,9 +15603,10 @@ function drawDecorZombieLayer(){
   // that release-mirror (Game.DEBUG !== true) pays zero overhead. try/finally
   // guarantees Profiler.end() is called even on early-return paths inside
   // sort or sprite resolve.
-  const _profDZL = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  const _profDZL = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   if (_profDZL) _profDZL.start('drawZombies');
   try {
+  if (_profDZL) _profDZL.start('drawZombies.buildSort');
   _decorZombieItems.length = 0;
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): off-screen culling.
   // Viewport AABB with margin covering zombie sprite half + debuff icons (~96px).
@@ -15633,11 +15645,14 @@ function drawDecorZombieLayer(){
     }
   }
   _decorZombieItems.sort(_compareDecorZombieItems);
+  if (_profDZL) _profDZL.end('drawZombies.buildSort');
+  if (_profDZL) _profDZL.start('drawZombies.drawEntities');
   for (let i = 0; i < _decorZombieItems.length; i++) {
     const item = _decorZombieItems[i];
     if (item.kind === 'decor') drawDecorSpriteAt(item.ref);
     else if (item.kind === 'zombie') drawZombieEntity(item.ref, item.x, item.zY);
   }
+  if (_profDZL) _profDZL.end('drawZombies.drawEntities');
   } finally {
     if (_profDZL) _profDZL.end('drawZombies');
   }
@@ -15648,11 +15663,23 @@ function renderZombiesAndCorpses(){
 }
 
 function renderProjectilesAndEffects(){
+  // perf-capture-tool: per-effect-layer sub-phase markers (null = zero overhead).
+  const _profRPE = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
+  if (_profRPE) _profRPE.start('drawDecals');
   drawDecals();
+  if (_profRPE) _profRPE.end('drawDecals');
+  if (_profRPE) _profRPE.start('drawProjectiles');
   drawProjectiles();
+  if (_profRPE) _profRPE.end('drawProjectiles');
+  if (_profRPE) _profRPE.start('drawImpacts');
   drawImpacts();
+  if (_profRPE) _profRPE.end('drawImpacts');
+  if (_profRPE) _profRPE.start('drawParticles');
   drawParticles();
+  if (_profRPE) _profRPE.end('drawParticles');
+  if (_profRPE) _profRPE.start('drawDamageNumbers');
   drawDamageNumbers();
+  if (_profRPE) _profRPE.end('drawDamageNumbers');
 }
 
 function drawTankTrack(){
@@ -17240,7 +17267,7 @@ function drawOrbitingTanks(){
   // so that release-mirror (Game.DEBUG !== true) pays zero overhead.
   // try/finally guarantees Profiler.end() is called even on early-return
   // paths inside drawTank / orbit math.
-  const _profDOT = (window.Game && window.Game.DEBUG === true && window.Game.Profiler) ? window.Game.Profiler : null;
+  const _profDOT = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   if (_profDOT) _profDOT.start('drawTank');
   try {
   const t = nowSec();
@@ -18519,6 +18546,11 @@ function loop(now){
   lastFrameTs = now;
   const dt = Math.min(0.033, (now - last) / 1000);
   last = now;
+  // perf-capture-tool: open the Profiler per-frame window. _profLoop is null
+  // (zero overhead) unless the Profiler is enabled (Game.DEBUG or the ?debug=1
+  // Perf tool calling Profiler.setEnabled(true)).
+  const _profLoop = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
+  if (_profLoop) _profLoop.beginFrame();
   if (window.Game && window.Game.ScreenEffects && typeof window.Game.ScreenEffects.update === 'function') {
     window.Game.ScreenEffects.update(dt);
   }
@@ -18596,6 +18628,7 @@ function loop(now){
 
   updateCenterNotification();
 
+  if (_profLoop) _profLoop.start('loop.update');
   const effDt = dt * (state.timeScale ?? 1);
   normalizeActiveEffectsTimestamps();
   const paused = pauseManager && typeof pauseManager.isPaused === 'function'
@@ -18611,11 +18644,16 @@ function loop(now){
     updateWorldEvents(effDt);
     ensureZombieCount();
     maybeSpawnCrate();
+    if (_profLoop) _profLoop.start('stepZombies');
     stepZombies(effDt);
+    if (_profLoop) _profLoop.end('stepZombies');
+    if (_profLoop) _profLoop.start('cornerTowers.update');
     {
       const _CT = window.Game && window.Game.CornerTowers;
       if (_CT && typeof _CT.update === 'function') _CT.update(effDt);
     }
+    if (_profLoop) _profLoop.end('cornerTowers.update');
+    if (_profLoop) _profLoop.start('talents.update');
     if (isTalentsV2Ready()) {
       const talentsApi = getTalentsV2Api();
       const nowMs = Date.now();
@@ -18665,10 +18703,16 @@ function loop(now){
         });
       }
     }
+    if (_profLoop) _profLoop.end('talents.update');
+    if (_profLoop) _profLoop.start('stepTanks');
     stepTanks(effDt);
+    if (_profLoop) _profLoop.end('stepTanks');
     stepProjectiles(effDt);
+    if (_profLoop) _profLoop.start('stepDecals');
     stepDecals(effDt);
+    if (_profLoop) _profLoop.end('stepDecals');
     // ── Chip effects tick (electro nodes, laser marks) ──
+    if (_profLoop) _profLoop.start('chipEffects.step');
     {
       const _ChipFxStep = window.Game && window.Game.ChipEffects;
       if (_ChipFxStep && typeof _ChipFxStep.stepChipEffects === 'function') {
@@ -18681,25 +18725,41 @@ function loop(now){
         });
       }
     }
+    if (_profLoop) _profLoop.end('chipEffects.step');
+    if (_profLoop) _profLoop.start('stepCrate');
     stepCrate(effDt);
+    if (_profLoop) _profLoop.end('stepCrate');
+    if (_profLoop) _profLoop.start('cleanupKills');
     cleanupKills();
+    if (_profLoop) _profLoop.end('cleanupKills');
+    if (_profLoop) _profLoop.start('stepImpacts');
     stepImpacts(effDt);
+    if (_profLoop) _profLoop.end('stepImpacts');
+    if (_profLoop) _profLoop.start('stepParticles');
     stepParticles(effDt);
+    if (_profLoop) _profLoop.end('stepParticles');
+    if (_profLoop) _profLoop.start('stepDamageNumbers');
     stepDamageNumbers(effDt);
+    if (_profLoop) _profLoop.end('stepDamageNumbers');
+    if (_profLoop) _profLoop.start('stepSupercomputer');
     stepSupercomputer(effDt);
+    if (_profLoop) _profLoop.end('stepSupercomputer');
     // ── Production Line step ──
+    if (_profLoop) _profLoop.start('productionLine.step');
     {
       const _PL = window.Game && window.Game.ProductionLine;
       if (_PL && typeof _PL.step === 'function') {
         _PL.step(state, effDt);
       }
     }
+    if (_profLoop) _profLoop.end('productionLine.step');
     {
       const _PLR = window.Game && window.Game.ProductionLineRender;
       if (_PLR && typeof _PLR.syncState === 'function') {
         _PLR.syncState(state, effDt);
       }
     }
+    if (_profLoop) _profLoop.start('drones.step');
     if (DronesApi && typeof DronesApi.step === 'function') {
       const repairHpSnapshot = captureFenceHpSnapshotForNoRepairTracking();
       DronesApi.step({
@@ -18715,6 +18775,7 @@ function loop(now){
       });
       invalidateNoRepairAttackWaveOnDroneRepair(repairHpSnapshot);
     }
+    if (_profLoop) _profLoop.end('drones.step');
   }
 
   syncFenceTierWithMaxTankLevel(state);
@@ -18724,9 +18785,19 @@ function loop(now){
     const _UH = window.Game && window.Game.UndergroundHangar;
     if (_UH && typeof _UH.stepAnimation === 'function') _UH.stepAnimation(dt);
   }
+  if (_profLoop) _profLoop.end('loop.update');
 
+  if (_profLoop) _profLoop.start('loop.ui');
   updateUI();
+  if (_profLoop) _profLoop.end('loop.ui');
+  if (_profLoop) _profLoop.start('loop.draw');
   draw();
+  if (_profLoop) _profLoop.end('loop.draw');
+  if (_profLoop) {
+    _profLoop.endFrame();
+    const _PC = window.Game && window.Game.PerfCapture;
+    if (_PC && typeof _PC.onFrame === 'function') _PC.onFrame(now, dt, state);
+  }
 
   scheduleMainLoop();
 }
@@ -18780,6 +18851,22 @@ function safeDebug(fn, fallbackMsg){
 }
 
 function initDebugPanel(){
+  // perf-capture-tool: give Game.PerfCapture a snapshot accessor for game-local
+  // quality/env state (closure over qualityLow / getFxLevel / BAL / viewSize).
+  // Reachable only from here, i.e. only under ?debug=1.
+  if (window.Game && window.Game.PerfCapture && typeof window.Game.PerfCapture.setEnvProvider === 'function') {
+    window.Game.PerfCapture.setEnvProvider(function () {
+      return {
+        qualityLow: qualityLow,
+        fxLevel: (typeof getFxLevel === 'function') ? getFxLevel() : null,
+        maxParticles: BAL ? BAL.maxParticles : null,
+        maxDecals: BAL ? BAL.maxDecals : null,
+        dpr: viewSize ? viewSize.dpr : null,
+        canvasW: viewSize ? viewSize.w : null,
+        canvasH: viewSize ? viewSize.h : null
+      };
+    });
+  }
   const getWaveInfo = function () {
     const now = nowSec();
     const attackCfg = getWorldEventsAttackCfg();

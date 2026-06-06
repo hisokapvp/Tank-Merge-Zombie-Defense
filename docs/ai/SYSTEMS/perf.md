@@ -1,7 +1,11 @@
 ﻿# Система: Performance
 
+> Обновлён: 2026-06-06 (добавлен perf-capture tool + Profiler per-frame accumulator).
+
 ## Где править
-- Профилирование: `src/perf/profiler.js`
+- Профилирование (markers + budgets + per-frame accumulator): `src/perf/profiler.js`
+- Real-time perf-диагностика (`Game.PerfCapture`): `src/perf/perfCapture.js` → карта [PERF_CAPTURE_MAP.md](../PERF_CAPTURE_MAP.md)
+- Debug-панель Perf-вкладка (Start/Stop/Reset/Copy/Download): `src/ui/debugPanel.js`
 - Пулы: `src/perf/objectPool.js`
 - Мобайл-режим: `src/perf/mobileMode.js`
 - Hot-path в `game.js`: `loop`, `draw`, `stepTanks`, `stepZombies`, `stepProjectiles`, `stepParticles`, `impactAt`, `selectZombieFenceTarget`, `selectZombieAttackTargetForZombie`, `pickFenceSegmentByPoint`.
@@ -9,6 +13,57 @@
 ## Правила
 - Любые изменения в `loop`/`draw`/`step*` делать без мусора в куче.
 - Проверять CPU/GPU-нагрузку и частоту кадров на слабых устройствах.
+
+## Perf-capture tool + Profiler per-frame accumulator (perf-capture-tool / 2026-06-06)
+
+End-to-end диагностика лага из браузера: см. playbook [PLAYBOOKS/debug-lag.md](../PLAYBOOKS/debug-lag.md).
+Полная структурная карта модуля — [PERF_CAPTURE_MAP.md](../PERF_CAPTURE_MAP.md).
+
+### `Game.PerfCapture` (`src/perf/perfCapture.js`, 889 строк)
+
+- **Что делает**: слой поверх `Game.Profiler`. Пока идёт capture, собирает за окно лага: распределение frame-time (перцентили `p50/p95/p99/max`, jank-count), per-phase агрегаты с `%-of-frame` и over-budget флагами, entity drill-down (zombies total/alive/dying + by type id; projectiles/particles/impacts/decals/damageNumbers; tanks; drones), memory-сэмплы (`performance.memory`: start/end/peak/growth/GC-эвенты; Chromium-only, guarded) и quality/env-снимок.
+- **Экспорт = один отчёт**: `buildReport()` ([perfCapture.js](../../src/perf/perfCapture.js#L606-L698)) отдаёт `{markdown, json, payload}`. Clipboard-пейлоад = Markdown-резюме + self-describing fenced ```json` блок; schema id — строковый контракт **`tmzd.perfCapture.report`** ([perfCapture.js](../../src/perf/perfCapture.js#L630)). Плюс скачиваемый `.json` (`downloadJson()`, L834).
+- **Overlay**: минимальный fixed-corner (FPS / frame ms / top-3 фазы), обновляется post-draw и троттлится `OVERLAY_THROTTLE_MS=150` (L283–337).
+- **Hooks**: `setEnvProvider(fn)` (L402) — game-local env-снимок; регистрируется в `game.js` ([game.js](../../game.js#L18857-L18869)). `__test` seam (L874) — pure-Node ring/percentile/report-верификация.
+- **Zero-overhead контракт** ⚠️: вся сборка только при `isCapturing()===true`; `onFrame(now,dt,state)` ([perfCapture.js](../../src/perf/perfCapture.js#L181-L209)) делает O(1) early-out вне capture; ring-буферы `Float32Array` pre-allocated; на `stop()` Profiler возвращается к release-дефолту. Достижим только через debug-панель (`?debug=1`).
+- **Вызов из кадра**: `game.js` `loop()` после `endFrame()` зовёт `PerfCapture.onFrame(now, dt, state)` ([game.js](../../game.js#L18799)).
+
+### Profiler per-frame accumulator API (`src/perf/profiler.js`)
+
+Zero-alloc per-frame **SUM**-аккумулятор поверх существующих markers — нужен, чтобы суммировать multi-call фазы (`drawTank×N`, `impactAt×N`) за кадр:
+
+| API | Строки | Назначение |
+|---|---|---|
+| `beginFrame()` | [profiler.js](../../src/perf/profiler.js#L226-L231) | Открывает frame-окно; обнуляет аккумулятор in-place (без `delete`/realloc) |
+| `record()` суммирует во `frameMs` | [profiler.js](../../src/perf/profiler.js#L63-L103) | Пока окно открыто — `start/end`/`measure` добавляют ms в per-phase sum; вне окна — zero overhead |
+| `endFrame()` | [profiler.js](../../src/perf/profiler.js#L232-L235) | Закрывает frame-окно |
+| `getFrameMs(name)` | [profiler.js](../../src/perf/profiler.js#L236-L240) | Сумма ms фазы за последний кадр |
+| `forEachFrameMs(cb)` | [profiler.js](../../src/perf/profiler.js#L241-L246) | Итерация `(name, ms)` по всем фазам кадра (используется `PerfCapture._accumPhase`) |
+
+- Аккумулятор `frameMs` чистится в `reset()` ([profiler.js](../../src/perf/profiler.js#L186-L187)) и экспортирован в `Game.Profiler` (L247–266).
+- `isEnabled()` ([profiler.js](../../src/perf/profiler.js#L219-L222)) по-прежнему дефолтит к `Game.DEBUG === true` (`_enabledDefault`, L20) — release-mirror без оверхеда.
+
+### Изменение gate маркеров ⚠️
+
+Маркеры теперь резолвят profiler через `Profiler.isEnabled()` (а не inline `Game.DEBUG === true`), что позволяет PerfCapture включать профилирование на лету, сохраняя release zero-overhead (в release `isEnabled()` = false). Паттерн: `const _prof = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;`
+
+| Маркер / фаза | Файл, строки |
+|---|---|
+| `_profLoop` + `beginFrame`/`endFrame`, umbrella `loop.update`/`loop.ui`/`loop.draw`, per-step (`stepZombies`, `cornerTowers.update`, `talents.update`, `stepTanks`, `stepDecals`, `chipEffects.step`, `stepCrate`, `cleanupKills`, `stepImpacts`, `stepParticles`, `stepDamageNumbers`, `stepSupercomputer`, `productionLine.step`, `drones.step`) | [game.js](../../game.js#L18552-L18800) (`loop()` 18538–18807) |
+| `_profStep` (`stepProjectiles` + `.gridRebuild` + `.bullets`) | [game.js](../../game.js#L11186-L11278) |
+| `_profImpact` (`impactAt`) | [game.js](../../game.js#L11289-L11460) |
+| `_profDraw` (`renderFenceBase`, `renderFenceHpBars`) | [game.js](../../game.js#L15298-L15364) (`draw()` 15295–15443) |
+| `_profRPE` (`drawDecals`, `drawProjectiles`, `drawImpacts`, `drawParticles`, `drawDamageNumbers`) | [game.js](../../game.js#L15665-L15682) (`renderProjectilesAndEffects()`) |
+| `_profDZL` (`drawZombies` + `.buildSort` + `.drawEntities`) | [game.js](../../game.js#L15606-L15657) (`drawDecorZombieLayer()`) |
+| `_profDOT` (`drawTank`) | [game.js](../../game.js#L17270-L17288) (`drawOrbitingTanks()`) |
+
+### `assets/balance.json` → `perf.profilerBudgetsMs`
+
+Расширен бюджетами (мс) на **каждую** новую фазу/под-фазу ([balance.json](../../assets/balance.json#L75-L109)); оригинальные 5 (`stepProjectiles`/`impactAt`/`drawZombies`/`drawTank`/`chipEffectsSpawn`, L76–80) не тронуты. Превышение бюджета по-прежнему эмитит `perf.budget.exceeded` в `Game.Events`. Top-level фазы: `loop.update`=8.0, `loop.ui`=3.0, `loop.draw`=9.0.
+
+### Подключение и тест
+- [index.html](../../index.html#L961): `src/perf/perfCapture.js` сразу после `src/perf/profiler.js` (L960).
+- Тест: `Test/pack5/perfCaptureReport.test.js` (registered в `ci/run_tests.sh`) — ring wraparound, percentile math, report schema, budget flagging, `onFrame` zero-overhead.
 
 ## Канон hot-path zero-alloc (solo-pipeline-yandex-vk#3 / 2026-04-28)
 

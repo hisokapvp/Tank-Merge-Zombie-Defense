@@ -77,7 +77,7 @@
       { id: 'economy', key: 'economyUntil', label: 'Economy +60%' },
     ];
 
-    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n      <button type="button" class="debugTab" data-tab="chips">Chips</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#fdd835">Learn Technology (instant)</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel" for="debugLearnTechSelect">Technology</label>\n          <select id="debugLearnTechSelect" class="debugSelect" style="max-width:200px"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugLearnTechApply" style="margin-top:6px">Learn selected tech</button>\n        <div id="debugLearnTechStatus" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n      <div id="debugSectionChips" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Cell index (0–15)</label>\n          <select id="debugChipCell" class="debugSelect"></select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Slot</label>\n          <select id="debugChipSlot" class="debugSelect">\n            <option value="red-0">Red 0 (top)</option>\n            <option value="red-1">Red 1 (bottom)</option>\n            <option value="yellow-0">Yellow 0 (TL)</option>\n            <option value="yellow-1">Yellow 1 (TR)</option>\n            <option value="yellow-2">Yellow 2 (BL)</option>\n            <option value="yellow-3">Yellow 3 (BR)</option>\n          </select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key (e.g. 1-2-3)</label>\n          <input type="text" id="debugChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugChipInstall" style="margin-top:6px">Install chip</button>\n        <button type="button" class="debugBtn" id="debugChipRemove" style="margin-top:4px">Remove chip from slot</button>\n        <button type="button" class="debugBtn" id="debugChipClear" style="margin-top:4px">Clear entire cell</button>\n        <div id="debugChipStatus" class="debugRow" style="margin-top:8px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#4af626">Inventory</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key</label>\n          <input type="text" id="debugInvChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Level</label>\n          <input type="number" id="debugInvChipLevel" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugInvChipCount" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugInvAddChip" style="margin-top:6px">Add chip to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugInvQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugInvQuickAdd" style="margin-left:4px">Add random</button>\n        </div>\n        <div id="debugInvStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#e53935">Fragments (куски чипов)</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Fragment modId (1–30)</label>\n          <input type="number" id="debugFragModId" class="debugSelect" min="1" max="30" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugFragCount" class="debugSelect" min="1" step="1" value="3" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugFragAdd" style="margin-top:6px">Add fragment to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugFragQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugFragQuickAdd" style="margin-left:4px">Add random frags</button>\n        </div>\n        <div id="debugFragStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
+    panel.innerHTML = '\n    <div class="debugPanelHeader">\n      <span class="debugPanelTitle">Debug (?debug=1)</span>\n      <button type="button" class="debugCollapseBtn" id="debugCollapse">Collapse</button>\n    </div>\n    <div class="debugTabs">\n      <button type="button" class="debugTab active" data-tab="tanks">Tanks</button>\n      <button type="button" class="debugTab" data-tab="effects">Effects</button>\n      <button type="button" class="debugTab" data-tab="updates">Updates</button>\n      <button type="button" class="debugTab" data-tab="waveInfo">wave info</button>\n      <button type="button" class="debugTab" data-tab="logs">Logs&Tools</button>\n      <button type="button" class="debugTab" data-tab="chips">Chips</button>\n      <button type="button" class="debugTab" data-tab="perf">Perf</button>\n    </div>\n    <div class="debugPanelBody">\n      <div id="debugSectionTanks" class="debugSection active">\n        <div class="debugRow">\n          <label class="debugLabel">Tank level (1–' + DEBUG_MAX_TANK_LEVEL + ')</label>\n          <select id="debugTankLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugSpawnTank">Spawn in free slot</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Dron level (1–' + DEBUG_MAX_DRON_LEVEL + ')</label>\n          <select id="debugDronLevel" class="debugSelect"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugAddDron">Add Dron</button>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel">Hangar — select target</label>\n          <div id="debugHangarList"></div>\n        </div>\n        <div id="debugTankComposition" class="debugRow" style="margin-top:6px;font-size:11px"></div>\n        <div id="debugMergePossible" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <div id="debugAuraBand" class="debugRow" style="margin-top:4px;font-size:11px"></div>\n        <button type="button" class="debugBtn" id="debugDismantleBtn" style="margin-top:6px">Dismantle selected tank</button>\n        <button type="button" class="debugBtn" id="debugOpenSettings">Open Settings</button>\n      </div>\n      <div id="debugSectionEffects" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Category</label>\n          <select id="debugEffectCategory" class="debugSelect">\n            <option value="all">All</option>\n            <option value="status">Status</option>\n          </select>\n        </div>\n        <div id="debugEffectList"></div>\n      </div>\n      <div id="debugSectionUpdates" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel" for="debugAddTalentPointsInput">Talent points (+)</label>\n          <input type="number" id="debugAddTalentPointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddTalentPointsApply">Окей</button>\n        </div>\n        <div id="debugTalentPointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <div class="debugRow" style="margin-top:8px">\n          <label class="debugLabel" for="debugAddDamagePointsInput">Damage points (+)</label>\n          <input type="number" id="debugAddDamagePointsInput" class="debugSelect" min="0" step="1" style="max-width:140px" value="1" />\n          <button type="button" class="debugBtn" id="debugAddDamagePointsApply">Окей</button>\n        </div>\n        <div id="debugDamagePointsValue" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#fdd835">Learn Technology (instant)</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel" for="debugLearnTechSelect">Technology</label>\n          <select id="debugLearnTechSelect" class="debugSelect" style="max-width:200px"></select>\n        </div>\n        <button type="button" class="debugBtn" id="debugLearnTechApply" style="margin-top:6px">Learn selected tech</button>\n        <div id="debugLearnTechStatus" class="debugRow" style="font-size:11px;margin-top:4px"></div>\n      </div>\n      <div id="debugSectionWaveInfo" class="debugSection">\n        <div class="debugRow"><span class="debugLabel" style="margin-bottom:6px">wave info</span></div>\n        <div id="debugWaveInfoTable" class="debugRow" style="font-size:11px;line-height:1.5"></div>\n      </div>\n      <div id="debugSectionLogs" class="debugSection">\n        <div id="debugTelemetryMount"></div>\n      </div>\n      <div id="debugSectionChips" class="debugSection">\n        <div class="debugRow">\n          <label class="debugLabel">Cell index (0–15)</label>\n          <select id="debugChipCell" class="debugSelect"></select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Slot</label>\n          <select id="debugChipSlot" class="debugSelect">\n            <option value="red-0">Red 0 (top)</option>\n            <option value="red-1">Red 1 (bottom)</option>\n            <option value="yellow-0">Yellow 0 (TL)</option>\n            <option value="yellow-1">Yellow 1 (TR)</option>\n            <option value="yellow-2">Yellow 2 (BL)</option>\n            <option value="yellow-3">Yellow 3 (BR)</option>\n          </select>\n        </div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key (e.g. 1-2-3)</label>\n          <input type="text" id="debugChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugChipInstall" style="margin-top:6px">Install chip</button>\n        <button type="button" class="debugBtn" id="debugChipRemove" style="margin-top:4px">Remove chip from slot</button>\n        <button type="button" class="debugBtn" id="debugChipClear" style="margin-top:4px">Clear entire cell</button>\n        <div id="debugChipStatus" class="debugRow" style="margin-top:8px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#4af626">Inventory</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Chip key</label>\n          <input type="text" id="debugInvChipKey" class="debugSelect" placeholder="1-2-3" style="max-width:120px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Level</label>\n          <input type="number" id="debugInvChipLevel" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugInvChipCount" class="debugSelect" min="1" step="1" value="1" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugInvAddChip" style="margin-top:6px">Add chip to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugInvQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugInvQuickAdd" style="margin-left:4px">Add random</button>\n        </div>\n        <div id="debugInvStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n        <hr style="border-color:#444;margin:10px 0">\n        <div class="debugRow"><strong style="color:#e53935">Fragments (куски чипов)</strong></div>\n        <div class="debugRow" style="margin-top:6px">\n          <label class="debugLabel">Fragment modId (1–30)</label>\n          <input type="number" id="debugFragModId" class="debugSelect" min="1" max="30" step="1" value="1" style="max-width:80px" />\n        </div>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Count</label>\n          <input type="number" id="debugFragCount" class="debugSelect" min="1" step="1" value="3" style="max-width:80px" />\n        </div>\n        <button type="button" class="debugBtn" id="debugFragAdd" style="margin-top:6px">Add fragment to inventory</button>\n        <div class="debugRow" style="margin-top:4px">\n          <label class="debugLabel">Quick add (random)</label>\n          <input type="number" id="debugFragQuickCount" class="debugSelect" min="1" step="1" value="10" style="max-width:80px" />\n          <button type="button" class="debugBtn" id="debugFragQuickAdd" style="margin-left:4px">Add random frags</button>\n        </div>\n        <div id="debugFragStatus" class="debugRow" style="margin-top:6px;font-size:11px;line-height:1.5"></div>\n      </div>\n    </div>\n    <div class="debugLogWrap">\n      <div id="debugLog"></div>\n    </div>\n  ';
 
     var tankLevelSelect = panel.querySelector('#debugTankLevel');
     for (var l = 1; l <= DEBUG_MAX_TANK_LEVEL; l++) {
@@ -106,6 +106,7 @@
         if (tab === 'waveInfo') refreshDebugWaveInfo();
         if (tab === 'logs') refreshDebugAchievementsTools();
         if (tab === 'chips') refreshDebugChipsSection();
+        if (tab === 'perf') refreshDebugPerfSection();
       });
     });
 
@@ -862,6 +863,125 @@
 
     if (debugChipCellSelect) {
       debugChipCellSelect.addEventListener('change', refreshDebugChipsSection);
+    }
+
+    // perf-capture-tool: live readout for the Perf tab (reads Game.PerfCapture).
+    function refreshDebugPerfSection() {
+      var P = global.Game && global.Game.PerfCapture;
+      var section = panel.querySelector('#debugSectionPerf');
+      if (!section) return;
+      var pre = section.querySelector('#debugPerfReadout');
+      if (pre) {
+        pre.textContent = (P && typeof P.getStatusText === 'function')
+          ? P.getStatusText()
+          : 'Game.PerfCapture is not loaded (check src/perf/perfCapture.js script tag).';
+      }
+      var startB = section.querySelector('#debugPerfStart');
+      var stopB = section.querySelector('#debugPerfStop');
+      if (P && startB && stopB && typeof P.isCapturing === 'function') {
+        var cap = !!P.isCapturing();
+        startB.disabled = cap;
+        stopB.disabled = !cap;
+      }
+    }
+
+    // perf-capture-tool: build the Perf section + wire Game.PerfCapture controls.
+    var perfBody = panel.querySelector('.debugPanelBody');
+    if (perfBody && !panel.querySelector('#debugSectionPerf')) {
+      var perfSection = document.createElement('div');
+      perfSection.id = 'debugSectionPerf';
+      perfSection.className = 'debugSection';
+      perfSection.innerHTML = [
+        '<div class="debugRow"><span class="debugLabel">Real-time perf capture</span></div>',
+        '<div class="debugRow" style="font-size:11px;line-height:1.4;opacity:.85">',
+        'Press Start, reproduce the lag, then Stop. "Copy AI report" puts a Markdown + JSON',
+        ' payload on the clipboard for an AI agent; "Download JSON" saves the same data.',
+        ' A minimal corner overlay shows FPS / frame ms / top phases while capturing.',
+        '</div>',
+        '<div class="debugRow" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">',
+        '<button type="button" class="debugBtn" id="debugPerfStart">Start</button>',
+        '<button type="button" class="debugBtn" id="debugPerfStop">Stop</button>',
+        '<button type="button" class="debugBtn" id="debugPerfReset">Reset</button>',
+        '</div>',
+        '<div class="debugRow" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">',
+        '<button type="button" class="debugBtn" id="debugPerfCopy">Copy AI report</button>',
+        '<button type="button" class="debugBtn" id="debugPerfDownload">Download JSON</button>',
+        '</div>',
+        '<div class="debugRow" style="margin-top:6px">',
+        '<label style="font-size:11px"><input type="checkbox" id="debugPerfUserTiming" /> DevTools timeline (performance.measure)</label>',
+        '</div>',
+        '<pre id="debugPerfReadout" style="margin-top:6px;font-size:11px;line-height:1.35;white-space:pre-wrap;max-height:240px;overflow:auto;background:rgba(0,0,0,.25);padding:6px;border-radius:4px"></pre>'
+      ].join('');
+      perfBody.appendChild(perfSection);
+
+      var perfStartBtn = perfSection.querySelector('#debugPerfStart');
+      if (perfStartBtn) perfStartBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (!P) { debugLog('error', 'PerfCapture not loaded.'); return; }
+          P.start();
+          debugLog('info', 'Perf capture started.');
+          refreshDebugPerfSection();
+        }, 'Perf start failed ');
+      });
+
+      var perfStopBtn = perfSection.querySelector('#debugPerfStop');
+      if (perfStopBtn) perfStopBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (!P) { debugLog('error', 'PerfCapture not loaded.'); return; }
+          P.stop();
+          debugLog('info', 'Perf capture stopped.');
+          refreshDebugPerfSection();
+        }, 'Perf stop failed ');
+      });
+
+      var perfResetBtn = perfSection.querySelector('#debugPerfReset');
+      if (perfResetBtn) perfResetBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (!P) { debugLog('error', 'PerfCapture not loaded.'); return; }
+          P.reset();
+          debugLog('info', 'Perf capture reset.');
+          refreshDebugPerfSection();
+        }, 'Perf reset failed ');
+      });
+
+      var perfCopyBtn = perfSection.querySelector('#debugPerfCopy');
+      if (perfCopyBtn) perfCopyBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (!P) { debugLog('error', 'PerfCapture not loaded.'); return; }
+          var payload = P.copyReport();
+          debugLog('info', 'AI report copied to clipboard (' + (payload ? payload.length : 0) + ' chars).');
+        }, 'Perf copy failed ');
+      });
+
+      var perfDownloadBtn = perfSection.querySelector('#debugPerfDownload');
+      if (perfDownloadBtn) perfDownloadBtn.addEventListener('click', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (!P) { debugLog('error', 'PerfCapture not loaded.'); return; }
+          P.downloadJson();
+          debugLog('info', 'Perf JSON download triggered.');
+        }, 'Perf download failed ');
+      });
+
+      var perfUserTiming = perfSection.querySelector('#debugPerfUserTiming');
+      if (perfUserTiming) perfUserTiming.addEventListener('change', function () {
+        safeDebug(function () {
+          var P = global.Game && global.Game.PerfCapture;
+          if (P && typeof P.setUserTiming === 'function') P.setUserTiming(!!perfUserTiming.checked);
+        }, 'Perf timeline toggle failed ');
+      });
+
+      if (typeof global.setInterval === 'function') {
+        global.setInterval(function () {
+          var sec = panel.querySelector('#debugSectionPerf');
+          if (!sec || !sec.classList.contains('active')) return;
+          refreshDebugPerfSection();
+        }, 400);
+      }
     }
 
     state.debug.refreshHangarList = refreshDebugHangarList;

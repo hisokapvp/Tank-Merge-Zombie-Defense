@@ -1,5 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-06-06
+- **perf-capture tool — docs pass** (`docs/ai/PERF_CAPTURE_MAP.md` [new], `docs/ai/SYSTEMS/perf.md`, `docs/ai/PLAYBOOKS/debug-lag.md`, `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/index.yaml`)
+  - Создан `docs/ai/PERF_CAPTURE_MAP.md` — функциональная карта `src/perf/perfCapture.js` (`Game.PerfCapture`, 889 строк > порога 500): tunables (`RING_CAP=600`, `JANK_MS=50`), `PHASE_LOCATIONS`, hot-path `onFrame()` (L181–209), `_sampleMemory`/`_sampleEntities`, lifecycle `start/stop/reset`, `buildReport()` (schema `tmzd.perfCapture.report`, L606–698), overlay, `__test` seam.
+  - `docs/ai/SYSTEMS/perf.md`: новая секция «Perf-capture tool + Profiler per-frame accumulator» — `Game.PerfCapture` (что собирает, report schema id, zero-overhead контракт), Profiler API `beginFrame`/`endFrame`/`getFrameMs`/`forEachFrameMs` (чистится в `reset()`, L186–187), gate-маркеры теперь через `Profiler.isEnabled()` (default `Game.DEBUG===true`, release zero-overhead) с точными строками `game.js`, расширение `perf.profilerBudgetsMs`.
+  - `docs/ai/PLAYBOOKS/debug-lag.md`: end-to-end workflow (`?debug=1` → Perf tab → Start → repro → Stop → Copy AI report / Download JSON; Reset + DevTools-timeline чекбокс + live readout).
+  - Реестры: `index.yaml` (PERF_CAPTURE_MAP в maps, `perfCapture.js`/`debugPanel.js` в perf.files, `updated_at`), `INDEX.md` (Главные карты + Performance system line + focus 2026-06-06), `PROJECT_MAP.md` (исправлены устаревшие строки entrypoints `loop()` 18538–18807 и `draw()` 15295–15443, добавлены `Game.PerfCapture` entrypoint + map-table row).
+  - Документация only: runtime-код, тесты и config не изменялись.
+
 ## 2026-06-04
 - **Achievements + critical restart counter — solo-pipeline-yandex-vk batch #1 (indices 1-2)** (`src/mechanics/achievementRewards.js`, `game.js`, `src/persistence/initialState.js`, `Test/tests.js`, `docs/ai/SYSTEMS/achievements.md`, `docs/ai/SYSTEMS/save.md`)
   - `drone_brigadier_1` снова выдаёт награду: root cause был в `AchievementRewards.grantByTable()`, который поддерживал `drones` только как composite sub-item и silently возвращал `false` для top-level `REWARD_TABLE` entry `droneBrigadierDrones2L2`. Fix: top-level `type='drones'` теперь grant'ится напрямую через `grantAchievementDrones(...)`, а `rewarded[id]` ставится в том же one-shot contract.

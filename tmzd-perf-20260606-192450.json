@@ -1,0 +1,511 @@
+{
+  "schema": "tmzd.perfCapture.report",
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-06T12:24:50.455Z",
+  "legend": {
+    "purpose": "Real-time frame profile captured from the TMZD main loop during a laggy moment. Use it to locate the bottleneck phase/entity and propose fixes.",
+    "frameCpu": "Per-frame CPU time = loop.update + loop.ui + loop.draw (ms). Excludes raf idle gap.",
+    "interval": "Real wall-clock gap between frames (ms). fps derives from this.",
+    "phases": "Leaf instrumentation phases, ranked by totalMs. pctOfFrameAvg = avgMs / frameCpu.avg * 100. Phases may nest (e.g. drawZombies.* inside loop.draw); umbrella loop.* phases are reported separately as frameSplit.",
+    "budgets": "budgetMs comes from assets/balance.json perf.profilerBudgetsMs. overBudget = avg >= budget; peakOverBudget = max >= budget.",
+    "entities": "Entity counts sampled ~5Hz. current/peak/avg over samples. zombiePeakComposition is the per-type breakdown at the busiest sample.",
+    "memory": "Chromium performance.memory only. growthMB = last - start. gcDrops = count of large heap-size drops between samples (GC heuristic)."
+  },
+  "units": {
+    "time": "ms",
+    "fps": "frames/second",
+    "memory": "MB",
+    "pct": "% of frame CPU"
+  },
+  "capture": {
+    "durationSec": 0,
+    "frames": 84,
+    "ringCapacity": 600,
+    "userTimingEmitted": false,
+    "note": "Instrumentation is active only while capturing; release/non-?debug=1 sessions have zero overhead."
+  },
+  "frame": {
+    "cpuMs": {
+      "avg": 81.445,
+      "p50": 74.6,
+      "p95": 136.675,
+      "p99": 174.666,
+      "max": 224.3,
+      "min": 34.5
+    },
+    "intervalMs": {
+      "avg": 83.421,
+      "p50": 80,
+      "p95": 133.385,
+      "p99": 182.395,
+      "max": 226.8
+    },
+    "fps": {
+      "avg": 12,
+      "p1Low": 5.5
+    },
+    "split": {
+      "updateMs": 68.962,
+      "uiMs": 0.539,
+      "drawMs": 11.944
+    },
+    "jankFrames": 79,
+    "longFrames": 82,
+    "jankThresholdMs": 50,
+    "longFrameThresholdMs": 33.33
+  },
+  "phases": [
+    {
+      "name": "stepProjectiles",
+      "file": "game.js: stepProjectiles()",
+      "totalMs": 4403,
+      "avgMs": 52.4167,
+      "maxMs": 187.5,
+      "minMs": 7.7,
+      "frames": 84,
+      "pctOfFrameAvg": 64.4,
+      "budgetMs": 2.5,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "stepProjectiles.bullets",
+      "file": "game.js: stepProjectiles() bullet loop",
+      "totalMs": 4390.7,
+      "avgMs": 52.2702,
+      "maxMs": 187.4,
+      "minMs": 7.6,
+      "frames": 84,
+      "pctOfFrameAvg": 64.2,
+      "budgetMs": 2,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "impactAt",
+      "file": "game.js: impactAt()",
+      "totalMs": 4381.9,
+      "avgMs": 52.1655,
+      "maxMs": 187.3,
+      "minMs": 7.6,
+      "frames": 84,
+      "pctOfFrameAvg": 64,
+      "budgetMs": 1.5,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "stepDecals",
+      "file": "game.js: stepDecals()",
+      "totalMs": 603.9,
+      "avgMs": 7.1893,
+      "maxMs": 8.5,
+      "minMs": 6.1,
+      "frames": 84,
+      "pctOfFrameAvg": 8.8,
+      "budgetMs": 1,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "stepZombies",
+      "file": "game.js: stepZombies()",
+      "totalMs": 453,
+      "avgMs": 5.3929,
+      "maxMs": 8.5,
+      "minMs": 4.5,
+      "frames": 84,
+      "pctOfFrameAvg": 6.6,
+      "budgetMs": 3,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "stepTanks",
+      "file": "game.js: stepTanks()",
+      "totalMs": 181.2,
+      "avgMs": 2.1571,
+      "maxMs": 9.2,
+      "minMs": 1.2,
+      "frames": 84,
+      "pctOfFrameAvg": 2.6,
+      "budgetMs": 2,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "drawZombies",
+      "file": "game.js: drawDecorZombieLayer()",
+      "totalMs": 152,
+      "avgMs": 1.8095,
+      "maxMs": 2.4,
+      "minMs": 1.5,
+      "frames": 84,
+      "pctOfFrameAvg": 2.2,
+      "budgetMs": 3,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawZombies.drawEntities",
+      "file": "game.js: drawDecorZombieLayer() entity draw loop",
+      "totalMs": 127,
+      "avgMs": 1.5119,
+      "maxMs": 2.1,
+      "minMs": 1.2,
+      "frames": 84,
+      "pctOfFrameAvg": 1.9,
+      "budgetMs": 2.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawDecals",
+      "file": "game.js: drawDecals()",
+      "totalMs": 108.3,
+      "avgMs": 1.2893,
+      "maxMs": 5,
+      "minMs": 0.1,
+      "frames": 84,
+      "pctOfFrameAvg": 1.6,
+      "budgetMs": 1,
+      "overBudget": true,
+      "peakOverBudget": true
+    },
+    {
+      "name": "cleanupKills",
+      "file": "game.js: cleanupKills()",
+      "totalMs": 51.3,
+      "avgMs": 0.6333,
+      "maxMs": 1.7,
+      "minMs": 0.1,
+      "frames": 81,
+      "pctOfFrameAvg": 0.8,
+      "budgetMs": 0.8,
+      "overBudget": false,
+      "peakOverBudget": true
+    },
+    {
+      "name": "talents.update",
+      "file": "talents v2 onUpdate()/tickStatuses() (loop)",
+      "totalMs": 41.2,
+      "avgMs": 0.4905,
+      "maxMs": 0.8,
+      "minMs": 0.3,
+      "frames": 84,
+      "pctOfFrameAvg": 0.6,
+      "budgetMs": 2,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawTank",
+      "file": "game.js: drawOrbitingTanks()/drawTank()",
+      "totalMs": 38.5,
+      "avgMs": 0.4583,
+      "maxMs": 0.7,
+      "minMs": 0.3,
+      "frames": 84,
+      "pctOfFrameAvg": 0.6,
+      "budgetMs": 2,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "chipEffects.step",
+      "file": "src/mechanics/chipEffects.js stepChipEffects()",
+      "totalMs": 28,
+      "avgMs": 0.3415,
+      "maxMs": 0.8,
+      "minMs": 0.1,
+      "frames": 82,
+      "pctOfFrameAvg": 0.4,
+      "budgetMs": 1.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawZombies.buildSort",
+      "file": "game.js: drawDecorZombieLayer() items build + sort",
+      "totalMs": 24.8,
+      "avgMs": 0.2952,
+      "maxMs": 0.5,
+      "minMs": 0.1,
+      "frames": 84,
+      "pctOfFrameAvg": 0.4,
+      "budgetMs": 1,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawDamageNumbers",
+      "file": "game.js: drawDamageNumbers()",
+      "totalMs": 20.1,
+      "avgMs": 0.2716,
+      "maxMs": 11,
+      "minMs": 0.1,
+      "frames": 74,
+      "pctOfFrameAvg": 0.3,
+      "budgetMs": 1,
+      "overBudget": false,
+      "peakOverBudget": true
+    },
+    {
+      "name": "drawParticles",
+      "file": "game.js: drawParticles()",
+      "totalMs": 14.5,
+      "avgMs": 0.179,
+      "maxMs": 0.4,
+      "minMs": 0.1,
+      "frames": 81,
+      "pctOfFrameAvg": 0.2,
+      "budgetMs": 2,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawProjectiles",
+      "file": "game.js: drawProjectiles()",
+      "totalMs": 12.6,
+      "avgMs": 0.1575,
+      "maxMs": 0.4,
+      "minMs": 0.1,
+      "frames": 80,
+      "pctOfFrameAvg": 0.2,
+      "budgetMs": 1.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "stepProjectiles.gridRebuild",
+      "file": "game.js: stepProjectiles() zmap fill + rebuildZombieCollisionGrid()",
+      "totalMs": 12.2,
+      "avgMs": 0.1584,
+      "maxMs": 0.3,
+      "minMs": 0.1,
+      "frames": 77,
+      "pctOfFrameAvg": 0.2,
+      "budgetMs": 1,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drawImpacts",
+      "file": "game.js: drawImpacts()",
+      "totalMs": 10.9,
+      "avgMs": 0.1434,
+      "maxMs": 0.3,
+      "minMs": 0.1,
+      "frames": 76,
+      "pctOfFrameAvg": 0.2,
+      "budgetMs": 1.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "drones.step",
+      "file": "src/mechanics Drones.step()",
+      "totalMs": 9.1,
+      "avgMs": 0.1247,
+      "maxMs": 0.3,
+      "minMs": 0.1,
+      "frames": 73,
+      "pctOfFrameAvg": 0.2,
+      "budgetMs": 1.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "renderFenceBase",
+      "file": "game.js: renderFenceBase()",
+      "totalMs": 7,
+      "avgMs": 0.1094,
+      "maxMs": 0.2,
+      "minMs": 0.1,
+      "frames": 64,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 2,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "stepParticles",
+      "file": "game.js: stepParticles()",
+      "totalMs": 3.5,
+      "avgMs": 0.1029,
+      "maxMs": 0.2,
+      "minMs": 0.1,
+      "frames": 34,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 2,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "renderFenceHpBars",
+      "file": "game.js: renderFenceHpBars()",
+      "totalMs": 2.7,
+      "avgMs": 0.1038,
+      "maxMs": 0.2,
+      "minMs": 0.1,
+      "frames": 26,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 1.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "stepImpacts",
+      "file": "game.js: stepImpacts()",
+      "totalMs": 0.9,
+      "avgMs": 0.1125,
+      "maxMs": 0.2,
+      "minMs": 0.1,
+      "frames": 8,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 1,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "productionLine.step",
+      "file": "src/systems ProductionLine.step()",
+      "totalMs": 0.6,
+      "avgMs": 0.1,
+      "maxMs": 0.1,
+      "minMs": 0.1,
+      "frames": 6,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 1,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "stepSupercomputer",
+      "file": "game.js: stepSupercomputer()",
+      "totalMs": 0.4,
+      "avgMs": 0.1,
+      "maxMs": 0.1,
+      "minMs": 0.1,
+      "frames": 4,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 0.8,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "stepCrate",
+      "file": "game.js: stepCrate()",
+      "totalMs": 0.3,
+      "avgMs": 0.1,
+      "maxMs": 0.1,
+      "minMs": 0.1,
+      "frames": 3,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 0.5,
+      "overBudget": false,
+      "peakOverBudget": false
+    },
+    {
+      "name": "cornerTowers.update",
+      "file": "src/mechanics CornerTowers.update()",
+      "totalMs": 0.2,
+      "avgMs": 0.1,
+      "maxMs": 0.1,
+      "minMs": 0.1,
+      "frames": 2,
+      "pctOfFrameAvg": 0.1,
+      "budgetMs": 0.8,
+      "overBudget": false,
+      "peakOverBudget": false
+    }
+  ],
+  "entities": {
+    "zombies": {
+      "current": 993,
+      "peak": 1007,
+      "avg": 991.7931034482758
+    },
+    "zombiesAlive": {
+      "current": 957,
+      "peak": 957,
+      "avg": 931.3793103448276
+    },
+    "zombiesDying": {
+      "current": 36,
+      "peak": 74,
+      "avg": 60.41379310344828
+    },
+    "projectiles": {
+      "current": 143,
+      "peak": 143,
+      "avg": 117.82758620689656
+    },
+    "particles": {
+      "current": 803,
+      "peak": 924,
+      "avg": 845.8620689655172
+    },
+    "impacts": {
+      "current": 259,
+      "peak": 267,
+      "avg": 204.72413793103448
+    },
+    "decals": {
+      "current": 71,
+      "peak": 71,
+      "avg": 71
+    },
+    "damageNumbers": {
+      "current": 32,
+      "peak": 32,
+      "avg": 32
+    },
+    "tanksOnBoard": {
+      "current": 15,
+      "peak": 15,
+      "avg": 15
+    },
+    "drones": {
+      "current": 9,
+      "peak": 9,
+      "avg": 9
+    },
+    "zombiePeakComposition": {
+      "zombie_lvl60": 1007
+    },
+    "zombiePeakTotal": 1007
+  },
+  "memory": {
+    "supported": true,
+    "startMB": 54.57,
+    "lastMB": 48.08,
+    "peakMB": 71.32,
+    "minMB": 24.4,
+    "growthMB": -6.49,
+    "gcDrops": 35,
+    "samples": 84,
+    "heapLimitMB": 4096
+  },
+  "environment": {
+    "qualityLow": true,
+    "fxLevel": 0,
+    "maxParticles": 900,
+    "maxDecals": 70,
+    "dpr": 1,
+    "canvas": {
+      "w": 1920,
+      "h": 945
+    },
+    "fxDensity": 100,
+    "fpsCap": 0,
+    "renderEngine": "legacy",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "hardwareConcurrency": 20,
+    "deviceMemory": 32
+  },
+  "verdict": {
+    "likelyBottleneck": "Likely bottleneck: stepProjectiles (~64% of frame CPU, avg 52.42ms, total 4403ms) — game.js: stepProjectiles().",
+    "memory": "used 48.1MB (start 54.6, peak 71.3), growth -6.5MB over 84 samples, 35 GC-like drops."
+  }
+}

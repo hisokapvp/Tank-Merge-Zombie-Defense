@@ -35,6 +35,12 @@ loadModule('src/perf/profiler.js');
 
 const Profiler = global.Game.Profiler;
 
+// The profiler defaults to disabled unless Game.DEBUG === true (release-mirror
+// zero-overhead contract). This pure-Node harness has no DEBUG flag, so it must
+// opt in explicitly at boot for start/end/measure to record stats. (Documented
+// in src/perf/profiler.js.)
+Profiler.setEnabled(true);
+
 console.log('\n── Pack 4: Profiler ──');
 
 test('PROF-1: Profiler exists', () => {
