@@ -1266,27 +1266,60 @@
     }
   }
 
+  function _forEachZombieInRadius(opts, x, y, radius, preserveOrder, callback) {
+    if (typeof preserveOrder === 'function') {
+      callback = preserveOrder;
+      preserveOrder = false;
+    }
+    var zombies = opts && opts.zombies;
+    var getPos = opts && opts.getZombiePos;
+    if (!Array.isArray(zombies) || typeof getPos !== 'function' || typeof callback !== 'function') return;
+
+    if (typeof opts.queryZombieIndicesInRadius === 'function') {
+      var indices = opts.queryZombieIndicesInRadius(x, y, radius, preserveOrder !== false);
+      var radiusSq = radius * radius;
+      for (var i = 0; i < indices.length; i++) {
+        var z = zombies[indices[i]];
+        if (!z) continue;
+        var p = getPos(z);
+        var dx = p.x - x;
+        var dy = p.y - y;
+        var dSq = dx * dx + dy * dy;
+        if (dSq > radiusSq) continue;
+        callback(z, p, Math.sqrt(dSq));
+      }
+      return;
+    }
+
+    for (var j = 0; j < zombies.length; j++) {
+      var zombie = zombies[j];
+      if (!zombie) continue;
+      var pos = getPos(zombie);
+      var dist = Math.hypot(pos.x - x, pos.y - y);
+      if (dist > radius) continue;
+      callback(zombie, pos, dist);
+    }
+  }
+
   /* ─── chain jumps (mod 2) — spawn a projectile to a different target ─── */
   function _applyChainJumps(x, y, b, jumps, opts) {
-    var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     if (!opts.spawnProjectile) return;
 
     // Find nearest alive zombie at least 12px from impact point
-    var best = null, bestD = Infinity;
-    for (var j = 0; j < zombies.length; j++) {
-      var z = zombies[j];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
-      if (d >= 120 && d <= 300 && d < bestD) { best = z; bestD = d; }
-    }
+    var best = null, bestD = Infinity, bestPos = null;
+    _forEachZombieInRadius(opts, x, y, 300, true, function (z, p, d) {
+      if (z.state === 'dying') return;
+      if (d < 120 || d > 300 || d >= bestD) return;
+      best = z;
+      bestD = d;
+      bestPos = p;
+    });
     if (!best) return;
 
     // Resolve chain-specific mod ID for visual isolation (task 2)
     var chainVisualModIds = _extractModIdsOfKind(b.chipShotMods, [2, 17, 18]);
 
-    var tp = getPos(best);
+    var tp = bestPos || opts.getZombiePos(best);
     // spawn chain projectile that flies to new target
     opts.spawnProjectile({
       fromX: x, fromY: y,
@@ -1386,18 +1419,12 @@
   /* Zombies use polar coordinates (z.r, z.theta) around center.
      Push = increase z.r (away from center = away from fence). */
   function _applyPushPull(x, y, b, distance, extraDmgMul, pushRadius, direction, opts) {
-    var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     var applyDmg = opts.applyDamage;
     var addNum = opts.addDamageNumber;
     var effectRadius = pushRadius > 0 ? pushRadius : (b.aoe || 0);
 
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
-      if (d > effectRadius) continue;
+    _forEachZombieInRadius(opts, x, y, effectRadius, function (z, p, d) {
+      if (z.state === 'dying') return;
 
       /* Distance falloff: closer zombies get more push, farther get less */
       var falloff = effectRadius > 0 ? Math.max(0.3, 1 - d / effectRadius) : 1;
@@ -1414,22 +1441,16 @@
       if (Number.isFinite(z.r)) {
         z.r = Math.max(0, z.r + actualDistance);
       }
-    }
+    });
   }
 
   /* ─── vacuum (mod 5) — pull all zombies in radius toward impact point ─── */
   function _applyVacuum(x, y, b, pullRadius, extraDmgMul, opts) {
-    var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     var applyDmg = opts.applyDamage;
     var addNum = opts.addDamageNumber;
 
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
-      if (d > pullRadius || d < 1) continue;
+    _forEachZombieInRadius(opts, x, y, pullRadius, function (z, p, d) {
+      if (z.state === 'dying' || d < 1) return;
 
       // extra damage
       if (extraDmgMul > 0) {
@@ -1453,25 +1474,19 @@
         z.r = Math.max(0, Math.hypot(newX - cx, newY - cy));
         z.theta = Math.atan2(newY - cy, newX - cx);
       }
-    }
+    });
   }
 
   /* ─── calming (mod 9) ─── */
   function _applyCalming(x, y, b, duration, calmRadius, opts) {
-    var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     var now = Number.isFinite(opts.nowSec) ? opts.nowSec : _now();
     var effectRadius = (calmRadius > 0) ? calmRadius : (b.aoe || 40);
 
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      if (z.attackState !== 'attack' && z.attackState !== 'cooldown') continue;
-      if (z.calmRecoveryPendingAttack) continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
-      if (d > effectRadius) continue;
-      if (Number.isFinite(z.calmImmuneUntil) && now < z.calmImmuneUntil) continue;
+    _forEachZombieInRadius(opts, x, y, effectRadius, function (z) {
+      if (z.state === 'dying') return;
+      if (z.attackState !== 'attack' && z.attackState !== 'cooldown') return;
+      if (z.calmRecoveryPendingAttack) return;
+      if (Number.isFinite(z.calmImmuneUntil) && now < z.calmImmuneUntil) return;
       if (!Number.isFinite(z.calmHitCount) || z.calmHitCount < 0) z.calmHitCount = 0;
       z.calmRecoveryPendingAttack = true;
       z.calmHitCount += 1;
@@ -1480,7 +1495,7 @@
         z.calmHitCount = 0;
         z.calmImmuneUntil = now + CALM_IMMUNITY_SEC;
       }
-    }
+    });
   }
 
   /* ================== STEP TICK (called every frame) ================== */
@@ -1511,18 +1526,15 @@
       if (node.timer <= 0) {
         node.timer = node.interval;
         // zap nearest
-        var zombies = opts.zombies;
-        var getPos = opts.getZombiePos;
-        var best = null, bestD = Infinity;
-        for (var j = 0; j < zombies.length; j++) {
-          var z = zombies[j];
-          if (z.state === 'dying') continue;
-          var p = getPos(z);
-          var d = Math.hypot(p.x - node.x, p.y - node.y);
-          if (d <= node.range && d < bestD) { best = z; bestD = d; }
-        }
+        var best = null, bestD = Infinity, bestPos = null;
+        _forEachZombieInRadius(opts, node.x, node.y, node.range, true, function (z, p, d) {
+          if (z.state === 'dying' || d >= bestD) return;
+          best = z;
+          bestD = d;
+          bestPos = p;
+        });
         if (best) {
-          var bp = getPos(best);
+          var bp = bestPos || opts.getZombiePos(best);
           var dmg = Math.round(node.dmg);
           if (opts.applyDamage) opts.applyDamage(best, dmg, 'tank');
           if (opts.addDamageNumber) opts.addDamageNumber(bp.x, bp.y, dmg, false);
@@ -1576,23 +1588,17 @@
    */
   function stepChipDecal(d, dt, opts) {
     if (d.kind !== 'chipPool') return;
-    var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
+    var decalNow = Number.isFinite(opts.nowSec) ? opts.nowSec : _now();
 
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var dist = Math.hypot(p.x - d.x, p.y - d.y);
-      if (dist > d.r) continue;
+    _forEachZombieInRadius(opts, d.x, d.y, d.r, function (z) {
+      if (z.state === 'dying') return;
 
       // slow from ice or acid
       if (d.slowFactor && d.slowFactor > 0) {
-        var decalNow = Number.isFinite(opts.nowSec) ? opts.nowSec : _now();
         z.chipSlowUntil = decalNow + 0.2; // re-apply each frame
         z.chipSlowFactor = Math.min(z.chipSlowFactor || 1, 1 - d.slowFactor);
       }
-    }
+    });
   }
 
   /* ================== RESET (on wave / game reset) ================== */

@@ -107,7 +107,7 @@
 | Supercomputer state / sim clock / API refs | [game.js](../../game.js#L816-L1013) | `getComputerState()`, seeds, debug flag, world helpers |
 | i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L2335) | language, audio, `SupercomputerSprites`, loader wiring |
 | Board / layout / production line placement | [game.js](../../game.js#L2742-L2820) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
-| Core combat pipeline | [game.js](../../game.js#L8209-L9700) | `stepZombies`, `stepTanks`, `spawnProjectile`, `impactAt`, `markZombieDying`, `flushZombieDeathFx`, `cleanupKills` |
+| Core combat pipeline | [game.js](../../game.js#L10165-L11756) | `stepZombies`, `stepTanks`, `stepProjectiles`, `impactAt`, `stepDecals`, `markZombieDying`, `flushZombieDeathFx`, `cleanupKills` |
 | Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L9750-L11900) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
 | Chip aura routing / HUD hover helpers | [game.js](../../game.js#L8102-L8159) | Installed chip count → aura variant selection |
 | World render | [game.js](../../game.js#L12656-L12729) | `draw()`: z-order: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay |
@@ -155,10 +155,10 @@
 | Функция | Строки | Назначение |
 |---|---|---|
 | `restoreFullState()` | [game.js](../../game.js#L4179-L4580) | Полное восстановление сейва / post-restore sync |
-| `stepZombies()` | [game.js](../../game.js#L8209-L8442) | Zombie AI / movement / fence interaction / unstick mechanism |
+| `stepZombies()` | [game.js](../../game.js#L10165-L10536) | Zombie AI / movement / fence interaction / unstick mechanism; per-type balance/attack/anim lookups are cached once per type per frame |
 | `stepTanks()` | [game.js](../../game.js#L8495-L8866) | Танки, таргетинг, стрельба |
 | `spawnProjectile()` | [game.js](../../game.js#L9035-L9134) | Projectile pool / init |
-| `impactAt()` | [game.js](../../game.js#L9175-L9496) | Impact effects / damage application |
+| `impactAt()` | [game.js](../../game.js#L11341-L11523) | Impact effects / damage application; grid-filtered AoE victims, cached zombie snapshot coords (`z._sx/_sy`), hoisted `timeMs` for TalentsV2, crit-first per-impact damage-number queue via `BAL.maxDamageNumbersPerImpact`, ChipEffects radius-query handoff |
 | `cleanupKills()` | [game.js](../../game.js#L9546-L9691) | Награды за убийство, XP, conveyor work trigger; write-index compaction + batched death-fx flush |
 
 ### UI / reset / menus
@@ -232,9 +232,11 @@
 | 5850 | `fireTankProjectile(tank, cell, target)` |
 | 9035 | `spawnProjectile(opts)` |
 | 9075 | `stepProjectiles(dt)` |
-| 6028 | `critChanceFromTankLevel(level)` |
-| 9175 | `impactAt(x, y, b, opts)` |
-| 6096 | `chainLightning(x, y, b, opts)` |
+| 10755 | `queryZombieIndicesInRadius(cx, cy, r, sortResults = true)` |
+| 11216 | `stepProjectiles(dt)` |
+| 11319 | `critChanceFromTankLevel(level)` |
+| 11341 | `impactAt(x, y, b, opts)` |
+| 11524 | `chainLightning(x, y, b, opts)` |
 
 ### Зомби
 | Строка | Функция |
@@ -250,7 +252,7 @@
 | 8330 | `markZombieDying(z)` |
 | 8426 | `flushZombieDeathFx()` |
 | 8530 | `startZombieDying(z)` (wrapper: split orchestration) |
-| 8209 | `stepZombies(dt)` |
+| 10165 | `stepZombies(dt)` |
 | 5715 | `zombieFenceLimit(z)` |
 
 ### Танки
@@ -278,7 +280,7 @@
 | 9741 | `addDamageNumber(x, y, value, isCrit)` (ring-buffer overwrite, no `shift()`) |
 | 9776 | `stepDamageNumbers(dt)` (write-index in-place compaction) |
 | 6175 | `addDecal(d)` |
-| 6188 | `stepDecals(dt)` |
+| 11691 | `stepDecals(dt)` |
 
 ### Ящики (Crates)
 | Строка | Функция |

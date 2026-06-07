@@ -532,6 +532,7 @@ const BAL = {
   maxParticles: 1600,
   deathBurstFrameBudget: 240,
   deathClusterRadiusPx: 256,
+  maxDamageNumbersPerImpact: 8,
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
 
@@ -10158,8 +10159,12 @@ function startZombieDying(z){
   flushZombieDeathFx();
 }
 
+const _stepZombieTypeConfigCache = new Map();
+let _stepZombieTypeConfigCacheStamp = 0;
+
 
 function stepZombies(dt){
+  _stepZombieTypeConfigCacheStamp++;
   const now = nowSec();
   const slow = (state.empUntil && now < state.empUntil) ? 0.5 : 1;
   const attackMult = getZombieAttackMultipliers();
@@ -10196,12 +10201,47 @@ function stepZombies(dt){
     }
     if (!Number.isFinite(z.attackAnimTimeSec) || z.attackAnimTimeSec < 0) z.attackAnimTimeSec = 0;
     if (!Number.isFinite(z.attackCooldownTimerSec) || z.attackCooldownTimerSec < 0) z.attackCooldownTimerSec = 0;
-    if (!Number.isFinite(z.attackRangePx) || z.attackRangePx <= 0) z.attackRangePx = getZombieAttackConfig(z).attackRangePx;
-    if (!Number.isFinite(z.attackCooldownSec) || z.attackCooldownSec <= 0) z.attackCooldownSec = getZombieAttackConfig(z).attackCooldownSec;
-    if (!Number.isFinite(z.attackHitAt)) z.attackHitAt = getZombieAttackConfig(z).attackHitAt;
+    const typeObj = z.type || null;
+    const typeId = typeObj?.id || '';
+    const typeCacheKey = typeObj || typeId;
+    let typeCfg = _stepZombieTypeConfigCache.get(typeCacheKey);
+    if (!typeCfg) {
+      typeCfg = {
+        stamp: 0,
+        typeId: '',
+        speedMul: 1,
+        attackSpeedMul: 1,
+        attackRangePx: ZOMBIE_DEFAULT_ATTACK_RANGE_PX,
+        attackCooldownSec: ZOMBIE_DEFAULT_ATTACK_COOLDOWN_SEC,
+        attackHitAt: ZOMBIE_DEFAULT_ATTACK_HIT_AT,
+        walkFps: ZOMBIE_DEFAULT_WALK_FPS,
+        attackFps: ZOMBIE_DEFAULT_ATTACK_FPS,
+        attackFrames: 1,
+        walkAnimMul: 1,
+      };
+      _stepZombieTypeConfigCache.set(typeCacheKey, typeCfg);
+    }
+    if (typeCfg.stamp !== _stepZombieTypeConfigCacheStamp || typeCfg.typeId !== typeId) {
+      const attackCfg = getZombieAttackConfig(z);
+      const animCfg = getZombieAnimConfig(z);
+      typeCfg.stamp = _stepZombieTypeConfigCacheStamp;
+      typeCfg.typeId = typeId;
+      typeCfg.speedMul = getZombieBalanceMul(typeId, 'speedMul');
+      typeCfg.attackSpeedMul = getZombieBalanceMul(typeId, 'attackSpeedMul');
+      typeCfg.attackRangePx = attackCfg.attackRangePx;
+      typeCfg.attackCooldownSec = attackCfg.attackCooldownSec;
+      typeCfg.attackHitAt = attackCfg.attackHitAt;
+      typeCfg.walkFps = animCfg.walkFps;
+      typeCfg.attackFps = animCfg.attackFps;
+      typeCfg.attackFrames = Math.max(1, Number.isFinite(typeObj?.attack?.frames) ? typeObj.attack.frames : 1);
+      typeCfg.walkAnimMul = typeObj?.animSpeed ?? 1.0;
+    }
+    if (!Number.isFinite(z.attackRangePx) || z.attackRangePx <= 0) z.attackRangePx = typeCfg.attackRangePx;
+    if (!Number.isFinite(z.attackCooldownSec) || z.attackCooldownSec <= 0) z.attackCooldownSec = typeCfg.attackCooldownSec;
+    if (!Number.isFinite(z.attackHitAt)) z.attackHitAt = typeCfg.attackHitAt;
     z.attackHitAt = clamp01(z.attackHitAt, ZOMBIE_DEFAULT_ATTACK_HIT_AT);
-    if (!Number.isFinite(z.walkFrameRateFps) || z.walkFrameRateFps <= 0) z.walkFrameRateFps = getZombieAnimConfig(z).walkFps;
-    if (!Number.isFinite(z.attackFrameRateFps) || z.attackFrameRateFps <= 0) z.attackFrameRateFps = getZombieAnimConfig(z).attackFps;
+    if (!Number.isFinite(z.walkFrameRateFps) || z.walkFrameRateFps <= 0) z.walkFrameRateFps = typeCfg.walkFps;
+    if (!Number.isFinite(z.attackFrameRateFps) || z.attackFrameRateFps <= 0) z.attackFrameRateFps = typeCfg.attackFps;
     if (!Number.isFinite(z.walkAnimFrame)) z.walkAnimFrame = 0;
     const isCalmed = !!z.calmUntil && now < z.calmUntil;
     const calmAttackWindowOverride = !!z.calmSuppressionActive || !!z.calmResumeOverrideActive;
@@ -10210,10 +10250,8 @@ function stepZombies(dt){
       ? (shouldAttackTargets ? fenceAttackDamageMul : 1)
       : 0;
     const holdPositionWhileCalmed = shouldZombieHoldPositionWhileCalmed(z, isCalmed);
-
-    const typeId = z.type?.id || '';
-    let balSpeedMul = getZombieBalanceMul(typeId, 'speedMul');
-    const balAtkSpd = getZombieBalanceMul(typeId, 'attackSpeedMul');
+    let balSpeedMul = typeCfg.speedMul;
+    const balAtkSpd = typeCfg.attackSpeedMul;
 
     // ── Chip: slow from ice/acid pools (mods 11, 14) ──
     if (z.chipSlowUntil && now < z.chipSlowUntil) {
@@ -10342,7 +10380,7 @@ function stepZombies(dt){
       const targetHeading = moving ? clamp(dTheta * 4.2, -0.25, 0.25) : 0;
       z.heading = smoothAngle(z.heading ?? 0, targetHeading, dt * 6);
 
-      const walkAnimMul = z.type?.animSpeed ?? 1.0;
+      const walkAnimMul = typeCfg.walkAnimMul;
       const walkAnimAdvance = dt * walkAnimMul * (1.4 + radialSpeed * 2.0) * slow * speedMul * balSpeedMul;
       z.walkAnimFrame += walkAnimAdvance * Math.max(0.01, z.walkFrameRateFps) / Math.max(1, ZOMBIE_DEFAULT_WALK_FPS);
     }
@@ -10400,7 +10438,7 @@ function stepZombies(dt){
       }
     } else if (z.attackState === 'attack') {
       z.attackAnimTimeSec += dt;
-      const attackFrames = Math.max(1, Number.isFinite(z.type?.attack?.frames) ? z.type.attack.frames : 1);
+      const attackFrames = typeCfg.attackFrames;
       const attackRateFps = Math.max(0.01, z.attackFrameRateFps * (Number.isFinite(balAtkSpd) ? balAtkSpd : 1));
       const attackDurationSec = attackFrames / attackRateFps;
       const attackHitTimeSec = attackDurationSec * z.attackHitAt;
@@ -10699,6 +10737,8 @@ function rebuildZombieCollisionGrid(){
     // Inline zombiePos to avoid {x,y} allocation per zombie.
     const px = cx + Math.cos(z.theta) * z.r;
     const py = cy + Math.sin(z.theta) * z.r;
+    z._sx = px;
+    z._sy = py;
     const gx = Math.floor(px / cell);
     const gy = Math.floor(py / cell);
     const key = gy * 100003 + gx;
@@ -10711,10 +10751,11 @@ function rebuildZombieCollisionGrid(){
   }
 }
 
-// Fills `_zombieGridQueryScratch` with zombie indices (state.zombies order)
-// whose cell overlaps the AABB [cx-r, cx+r] × [cy-r, cy+r]. Caller must use the
-// returned array immediately — it is reused on the next call.
-function queryZombieIndicesInRadius(cx, cy, r){
+// Fills `_zombieGridQueryScratch` with zombie indices whose cell overlaps the
+// AABB [cx-r, cx+r] × [cy-r, cy+r]. Caller must use the returned array
+// immediately — it is reused on the next call. `sortResults=false` skips the
+// final ascending sort for callers that do not depend on state.zombies order.
+function queryZombieIndicesInRadius(cx, cy, r, sortResults = true){
   const out = _zombieGridQueryScratch;
   out.length = 0;
   const cell = _ZOMBIE_GRID_CELL_PX;
@@ -10741,7 +10782,7 @@ function queryZombieIndicesInRadius(cx, cy, r){
   // Sort ascending so consumers iterate in the same order as `state.zombies`.
   // Buckets are pushed row-major, so ordering across cells differs from array
   // order — explicit sort preserves behavior 1:1 with the legacy full-scan loops.
-  out.sort((a, b) => a - b);
+  if (sortResults !== false) out.sort((a, b) => a - b);
   return out;
 }
 
@@ -11284,6 +11325,64 @@ function critChanceFromTankLevel(level){
   return percent / 100;
 }
 
+const _impactCandidateIndicesScratch = [];
+const _impactVictimIndicesScratch = [];
+const _impactDamageNumberXs = [];
+const _impactDamageNumberYs = [];
+const _impactDamageNumberValues = [];
+const _impactDamageNumberCrits = [];
+const _impactDamageNumberTypes = [];
+const _impactTalentsHitCtx = {
+  tank: null,
+  zombie: null,
+  timeMs: 0,
+  damage: 0,
+  source: 'direct',
+  isAoe: false,
+  aoeVictimsCount: 0,
+  zombies: null,
+  getZombiePos: null,
+  rng: Math,
+  mods: null,
+};
+
+function queueImpactDamageNumber(x, y, value, isCrit, damageType){
+  const idx = _impactDamageNumberValues.length;
+  _impactDamageNumberXs[idx] = x;
+  _impactDamageNumberYs[idx] = y;
+  _impactDamageNumberValues[idx] = value;
+  _impactDamageNumberCrits[idx] = !!isCrit;
+  _impactDamageNumberTypes[idx] = damageType || 'physical';
+}
+
+function resetImpactDamageNumberQueue(){
+  _impactDamageNumberXs.length = 0;
+  _impactDamageNumberYs.length = 0;
+  _impactDamageNumberValues.length = 0;
+  _impactDamageNumberCrits.length = 0;
+  _impactDamageNumberTypes.length = 0;
+}
+
+function flushImpactDamageNumbers(cap){
+  if (!Number.isFinite(cap) || cap <= 0) {
+    resetImpactDamageNumberQueue();
+    return;
+  }
+  let shown = 0;
+  const total = _impactDamageNumberValues.length;
+  for (let i = 0; i < total && shown < cap; i++) {
+    if (!_impactDamageNumberCrits[i]) continue;
+    addDamageNumber(_impactDamageNumberXs[i], _impactDamageNumberYs[i], _impactDamageNumberValues[i], true, _impactDamageNumberTypes[i]);
+    shown += 1;
+  }
+  for (let i = 0; i < total && shown < cap; i++) {
+    if (_impactDamageNumberCrits[i]) continue;
+    addDamageNumber(_impactDamageNumberXs[i], _impactDamageNumberYs[i], _impactDamageNumberValues[i], false, _impactDamageNumberTypes[i]);
+    shown += 1;
+  }
+  resetImpactDamageNumberQueue();
+}
+
 function impactAt(x,y,b,opts){
   // perf-capture-tool: gate on Profiler.isEnabled() (defaults to Game.DEBUG===true).
   const _profImpact = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
@@ -11312,87 +11411,104 @@ function impactAt(x,y,b,opts){
   const _aoeSq = b.aoe * b.aoe;
   const _ax = center.x;
   const _ay = center.y;
-  const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe);
-  // Snapshot indices into a per-impact local array so subsequent grid queries
-  // (e.g. from talents/chip onHit callbacks) cannot clobber
-  // `_zombieGridQueryScratch` mid-iteration. Behavior 1:1: same indices, same
-  // ascending iteration order (queryZombieIndicesInRadius ascending sort
-  // preserved — hard invariant).
-  // Perf (solo-pipeline-yandex-vk#2 / item 6, postmortem item 12):
-  // Per-impact local buffer (Array.prototype.slice) — NOT a pool. Keeps the
-  // snapshot contract correct under any future async/parallel impactAt path
-  // while avoiding premature pool infrastructure (impactAt is sync today).
+  const _impactDamageNumberCap = Number.isFinite(BAL.maxDamageNumbersPerImpact)
+    ? Math.max(0, Math.floor(BAL.maxDamageNumbersPerImpact))
+    : 8;
+  resetImpactDamageNumberQueue();
+  const _impactNowMs = hasTalentsHit ? Date.now() : 0;
+  const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe, false);
   const _aoeCount = _aoeCandidates.length;
-  const _impactAoeIndices = _aoeCandidates.slice(0, _aoeCount);
-  let aoeVictimsCount = 0;
-  {
-    const _aZs = state.zombies;
-    for (let _ci = 0; _ci < _aoeCount; _ci++){
-      const _ai = _impactAoeIndices[_ci];
-      const _az = _aZs[_ai];
-      if (!_az || _az.state === 'dying') continue;
-      const _apx = _ax + Math.cos(_az.theta) * _az.r;
-      const _apy = _ay + Math.sin(_az.theta) * _az.r;
-      const _adx = _apx - x;
-      const _ady = _apy - y;
-      if (_adx * _adx + _ady * _ady <= _aoeSq) aoeVictimsCount++;
+  const _impactAoeIndices = _impactCandidateIndicesScratch;
+  _impactAoeIndices.length = _aoeCount;
+  for (let _ci = 0; _ci < _aoeCount; _ci++) {
+    _impactAoeIndices[_ci] = _aoeCandidates[_ci];
+  }
+  const _zArr = state.zombies;
+  const _impactVictimIndices = _impactVictimIndicesScratch;
+  _impactVictimIndices.length = 0;
+  for (let _ci = 0; _ci < _aoeCount; _ci++){
+    const _ai = _impactAoeIndices[_ci];
+    const _az = _zArr[_ai];
+    if (!_az || _az.state === 'dying') continue;
+    const _apx = _az._sx;
+    const _apy = _az._sy;
+    const _adx = _apx - x;
+    const _ady = _apy - y;
+    if (_adx * _adx + _ady * _ady <= _aoeSq) {
+      _impactVictimIndices.push(_ai);
     }
   }
+  const aoeVictimsCount = _impactVictimIndices.length;
   const tankLevel = b.level ?? 1;
   const critChance = critChanceFromTankLevel(tankLevel);
-  const _zArr = state.zombies;
-  for (let _ci = 0; _ci < _aoeCount; _ci++){
-    const _zi = _impactAoeIndices[_ci];
+  const _talentsHitCtx = hasTalentsHit ? _impactTalentsHitCtx : null;
+  if (_talentsHitCtx) {
+    _talentsHitCtx.tank = b.tank || null;
+    _talentsHitCtx.source = 'direct';
+    _talentsHitCtx.isAoe = b.aoe > 0;
+    _talentsHitCtx.aoeVictimsCount = aoeVictimsCount;
+    _talentsHitCtx.zombies = _zArr;
+    _talentsHitCtx.getZombiePos = zombiePos;
+    _talentsHitCtx.rng = Math;
+    _talentsHitCtx.mods = mods;
+  }
+  for (let _ci = 0; _ci < aoeVictimsCount; _ci++){
+    const _zi = _impactVictimIndices[_ci];
     const z = _zArr[_zi];
     if (!z || z.state === 'dying') continue;
-    const p = zombiePos(z);
-    // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): squared-distance skip
-    // before the full sqrt — Math.hypot only when zombie is actually within AOE.
-    const _dxZ = p.x - x;
-    const _dyZ = p.y - y;
+    const _zx = z._sx;
+    const _zy = z._sy;
+    const _dxZ = _zx - x;
+    const _dyZ = _zy - y;
     const _dSqZ = _dxZ * _dxZ + _dyZ * _dyZ;
-    if (_dSqZ > _aoeSq) continue;
     const d = Math.sqrt(_dSqZ);
-    {
-      const falloff = 0.55 + 0.45*(1 - d/b.aoe);
-      const baseDmg = b.dmg * falloff;
-      const isCrit = Math.random() < critChance;
-      const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
-      let dmgRounded = Math.round(finalDmg);
-      if (hasTalentsHit) {
-        const hitOut = talentsApi.onHit({
-          tank: b.tank || null,
-          zombie: z,
-          timeMs: Date.now(),
-          damage: finalDmg,
-          source: 'direct',
-          isAoe: b.aoe > 0,
-          aoeVictimsCount,
-          zombies: state.zombies,
-          getZombiePos: zombiePos,
-          rng: Math,
-        }) || { damage: finalDmg };
-        dmgRounded = Math.max(0, Math.round(hitOut.damage || 0));
-        if (Array.isArray(hitOut.extraHits) && hitOut.extraHits.length) {
-          for (let i = 0; i < hitOut.extraHits.length; i++) {
-            const extra = hitOut.extraHits[i];
-            if (!extra || !extra.zombie) continue;
-            const extraDamage = Math.max(0, Math.round(extra.damage || 0));
-            if (extraDamage <= 0) continue;
-            applyDamageToZombie(extra.zombie, extraDamage, 'tank');
-            const extraPos = zombiePos(extra.zombie);
-            addDamageNumber(extraPos.x, extraPos.y, extraDamage, false, b.kind);
+    const falloff = 0.55 + 0.45*(1 - d/b.aoe);
+    const baseDmg = b.dmg * falloff;
+    const isCrit = Math.random() < critChance;
+    const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
+    let dmgRounded = Math.round(finalDmg);
+    if (hasTalentsHit) {
+      _talentsHitCtx.zombie = z;
+      _talentsHitCtx.timeMs = _impactNowMs;
+      _talentsHitCtx.damage = finalDmg;
+      const hitOut = talentsApi.onHit(_talentsHitCtx) || { damage: finalDmg };
+      dmgRounded = Math.max(0, Math.round(hitOut.damage || 0));
+      if (Array.isArray(hitOut.extraHits) && hitOut.extraHits.length) {
+        for (let i = 0; i < hitOut.extraHits.length; i++) {
+          const extra = hitOut.extraHits[i];
+          const extraZombie = extra && extra.zombie;
+          if (!extraZombie) continue;
+          const extraDamage = Math.max(0, Math.round(extra.damage || 0));
+          if (extraDamage <= 0) continue;
+          applyDamageToZombie(extraZombie, extraDamage, 'tank');
+          const extraX = extraZombie._sx;
+          const extraY = extraZombie._sy;
+          if (_impactDamageNumberCap > 0) {
+            queueImpactDamageNumber(extraX, extraY, extraDamage, false, b.kind);
           }
         }
       }
-      applyDamageToZombie(z, dmgRounded, 'tank');
-      addDamageNumber(p.x, p.y, dmgRounded, isCrit, b.kind);
-      if (Math.random() < mods.dotChance){
-        z.dotUntil = nowSec() + 4;
-        z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
-      }
+    }
+    applyDamageToZombie(z, dmgRounded, 'tank');
+    if (_impactDamageNumberCap > 0) {
+      queueImpactDamageNumber(_zx, _zy, dmgRounded, isCrit, b.kind);
+    }
+    if (Math.random() < mods.dotChance){
+      z.dotUntil = nowSec() + 4;
+      z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
     }
   }
+  if (_talentsHitCtx) {
+    _talentsHitCtx.tank = null;
+    _talentsHitCtx.zombie = null;
+    _talentsHitCtx.timeMs = 0;
+    _talentsHitCtx.damage = 0;
+    _talentsHitCtx.aoeVictimsCount = 0;
+    _talentsHitCtx.zombies = null;
+    _talentsHitCtx.getZombiePos = null;
+    _talentsHitCtx.mods = null;
+  }
+  flushImpactDamageNumbers(_impactDamageNumberCap);
 
   // Extra effects per kind
   if (b.kind === 'toxic'){
@@ -11442,6 +11558,7 @@ function impactAt(x,y,b,opts){
         shotMods: b.chipShotMods,
         zombies: state.zombies,
         getZombiePos: zombiePos,
+        queryZombieIndicesInRadius,
         applyDamage: applyDamageToZombie,
         addDecal,
         burst,
@@ -11451,7 +11568,6 @@ function impactAt(x,y,b,opts){
         nowSec: nowSec(),
       });
     }
-    // Play chip-specific impact SFX if configured
     if (ChipFxI && typeof ChipFxI.resolveChipImpactSfx === 'function') {
       const chipImpactSfx = ChipFxI.resolveChipImpactSfx(b.chipShotMods);
       if (chipImpactSfx) playSfx(chipImpactSfx);
@@ -11630,16 +11746,22 @@ function addDecal(d){
 function stepDecals(dt){
   const next = [];
   const ChipFxD = window.Game && window.Game.ChipEffects;
+  const _ax = center.x;
+  const _ay = center.y;
   for (const d of state.decals){
     d.life -= dt;
     if (d.life <= 0) continue;
 
     if (d.kind === 'pool' && d.dps > 0){
       // Apply DOT inside pool
-      for (const z of state.zombies){
-        const p = zombiePos(z);
-        const dist = Math.hypot(p.x-d.x, p.y-d.y);
-        if (dist <= d.r){
+      const poolCandidates = queryZombieIndicesInRadius(d.x, d.y, d.r, false);
+      const poolRadiusSq = d.r * d.r;
+      for (let i = 0; i < poolCandidates.length; i++) {
+        const z = state.zombies[poolCandidates[i]];
+        if (!z) continue;
+        const dx = (_ax + Math.cos(z.theta) * z.r) - d.x;
+        const dy = (_ay + Math.sin(z.theta) * z.r) - d.y;
+        if (dx * dx + dy * dy <= poolRadiusSq){
           applyDamageToZombie(z, d.dps * dt, 'tank');
         }
       }
@@ -11651,11 +11773,15 @@ function stepDecals(dt){
       if (d.dps > 0) {
         if (d._dmgAccum == null) { d._dmgAccum = 0; d._dmgTimer = 0; }
         d._dmgTimer -= dt;
-        for (const z of state.zombies) {
+        const chipPoolCandidates = queryZombieIndicesInRadius(d.x, d.y, d.r, false);
+        const chipPoolRadiusSq = d.r * d.r;
+        for (let i = 0; i < chipPoolCandidates.length; i++) {
+          const z = state.zombies[chipPoolCandidates[i]];
+          if (!z) continue;
           if (z.state === 'dying') continue;
-          const p = zombiePos(z);
-          const dist = Math.hypot(p.x - d.x, p.y - d.y);
-          if (dist <= d.r) {
+          const dx = (_ax + Math.cos(z.theta) * z.r) - d.x;
+          const dy = (_ay + Math.sin(z.theta) * z.r) - d.y;
+          if (dx * dx + dy * dy <= chipPoolRadiusSq) {
             const tickDmg = d.dps * dt;
             applyDamageToZombie(z, tickDmg, 'tank');
             d._dmgAccum += tickDmg;
@@ -11669,7 +11795,12 @@ function stepDecals(dt){
       }
       // Slow effect (ice, acid) — delegate to ChipEffects
       if (ChipFxD && typeof ChipFxD.stepChipDecal === 'function') {
-        ChipFxD.stepChipDecal(d, dt, { zombies: state.zombies, getZombiePos: zombiePos, nowSec: nowSec() });
+        ChipFxD.stepChipDecal(d, dt, {
+          zombies: state.zombies,
+          getZombiePos: zombiePos,
+          queryZombieIndicesInRadius,
+          nowSec: nowSec(),
+        });
       }
     }
 
@@ -18719,6 +18850,7 @@ function loop(now){
         _ChipFxStep.stepChipEffects(effDt, {
           zombies: state.zombies,
           getZombiePos: zombiePos,
+          queryZombieIndicesInRadius,
           applyDamage: applyDamageToZombie,
           addDamageNumber,
           impacts: state.impacts,
@@ -19340,6 +19472,10 @@ async function boot(){
             _PR.setBudgets(_budgets);
           }
         } catch (_perfErr) { /* additive, never throws into boot */ }
+
+        if (Number.isFinite(balData.perf && balData.perf.maxDamageNumbersPerImpact)) {
+          BAL.maxDamageNumbersPerImpact = Math.max(0, Math.floor(balData.perf.maxDamageNumbersPerImpact));
+        }
 
         if (Number.isFinite(balData.deathBurstFrameBudget)) {
           BAL.deathBurstFrameBudget = Math.max(0, Math.floor(balData.deathBurstFrameBudget));

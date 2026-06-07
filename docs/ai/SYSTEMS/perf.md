@@ -208,11 +208,12 @@ Batch 3 of `solo-pipeline-yandex-vk` (items 9, 10, 11) добавил render+sta
 - **Pool length=0 cleanup в `src/core/worldReset.js`**: после `opts.resetWorldRuntime()` обнуляются `length` у `state.particles`, `decals`, `impacts`, `damageNumbers`, `projectiles`. Wrapped в try/catch — additive.
 - **`tools/saveSchemaValidator.js` fail-soft**: `loadSchemaSync()` возвращает `null` + `console.warn` при I/O / parse error; `safeValidate(payload, schema)` при null schema → `{valid:true, errors:[]}` (fail-open для CI). `main()` exit-code 3 если schema unavailable. Хард-инвариант: НЕ менять exit-code 3.
 
-## Snapshot contract (updated — solo-pipeline-yandex-vk#2 / 2026-04-28)
+## Snapshot contract (updated — 2026-06-07 / impactAt lag pass)
 
-- **Per-impact local AoE buffer**: внутри `impactAt` массив индексов жертв AOE — это **per-call local** копия (`_aoeCandidates.slice(0, _aoeCount)`), а не reused module-scope buffer. Снимок изолирован от любых re-entrant grid-query из `talentsApi.onHit` / chip onHit callbacks **и** корректен под будущие async/parallelized impactAt-варианты (web worker), где shared module-scope буфер сразу бы поломался.
-- **Что НЕ делать**: не возвращать old pattern `const _impactAoeIndices = []` в module scope; не строить full per-impact AoE pool с reuse-инфраструктурой, пока `impactAt` остаётся sync (postmortem item 12 — преждевременная оптимизация без runtime-выгоды). Lightweight slice — каноничный путь.
-- **Order preservation**: `queryZombieIndicesInRadius` сортирует ascending; `slice` сохраняет порядок 1:1. Менять sort на bucket-order запрещено (talents side-effects порядок-чувствительны — hard invariant).
+- **Per-impact AoE snapshot без slice-allocation**: `queryZombieIndicesInRadius(...)` по-прежнему пишет в shared scratch, но `impactAt` сразу копирует индексы кандидатов в reused `_impactCandidateIndicesScratch` до входа в `talentsApi.onHit` / chip callbacks. Это сохраняет re-entrant safety без `slice()` на каждый impact.
+- **Zombie position snapshot**: `rebuildZombieCollisionGrid()` теперь не только строит buckets, но и записывает per-zombie world snapshot в `z._sx / z._sy`. `impactAt` и extra-hit popup path читают эти поля вместо повторного `Math.cos/Math.sin`. Контракт безопасен, пока `impactAt` вызывается из `stepProjectiles()` после rebuild того же кадра.
+- **Caller-specific sort contract**: default helper всё ещё умеет `sortResults=true` для order-sensitive consumers, но `impactAt` теперь сознательно зовёт `queryZombieIndicesInRadius(..., false)` ради CPU. Это допускает bucket-order drift для RNG/proc sequencing внутри `onHit`; использовать unsorted path можно только там, где такой drift принят как допустимый perf tradeoff.
+- **Per-impact damage number cap**: `BAL.maxDamageNumbersPerImpact` (runtime seed из `assets/balance.json -> perf.maxDamageNumbersPerImpact`) ограничивает popup-спам на один impact. Damage numbers сначала складываются в reused queue, затем флешатся с приоритетом критов и только после этого проходят через обычный `addDamageNumber`/FxDensity path. Урон и onHit-порядок не меняются.
 
 ## Канон mass-death batching (solo-pipeline-yandex-vk#4 / 2026-05-01)
 

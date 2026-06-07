@@ -1,6 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
 ## 2026-06-06
+- **Runtime perf hot-path pass** (`game.js`, `src/systems/talents/talentsV2.js`, `src/mechanics/chipEffects.js`, `docs/ai/GAME_JS_MAP.md`)
+  - `impactAt()` больше не делает `slice()` и per-victim object construction: grid-candidates копируются в scratch-буфер, точные жертвы собираются отдельным проходом, позиции зомби инлайнятся без `zombiePos()`-аллокаций, а `TalentsV2.onHit()` получает переиспользуемый ctx с уже вычисленным `mods`.
+  - `TalentsV2.onHit()` лениво создаёт `extraHits` только при реальном ricochet-hit вместо пустого массива на каждый вызов.
+  - `queryZombieIndicesInRadius()` получил optional `sortResults`; `stepDecals()` теперь берёт `pool` / `chipPool` кандидатов через collision grid и повторно использует её же seam для `ChipEffects.stepChipDecal()` и `ChipEffects.stepChipEffects()`.
+  - `stepZombies()` кэширует `getZombieBalanceMul()` / `getZombieAttackConfig()` / `getZombieAnimConfig()` по типу на кадр; `ChipEffects` сужает `chain/push/pull/vacuum/calming/electro/decal` до nearby-candidates с сохранением exact-distance checks.
+  - Verification: Node parse OK для `game.js`, `src/mechanics/chipEffects.js`, `src/systems/talents/talentsV2.js`; `node Test/tests.js` → 87 passed, 0 failed. `ci/check_style.sh` и `ci/run_tests.sh` падают на pre-existing issues вне scope этой задачи: trailing whitespace в `src/render/canvasRoot.js`, `T5-13`, `P8-1/P8-2`, `BOL-12`, `BCR-3`.
+
 - **perf-capture tool — docs pass** (`docs/ai/PERF_CAPTURE_MAP.md` [new], `docs/ai/SYSTEMS/perf.md`, `docs/ai/PLAYBOOKS/debug-lag.md`, `docs/ai/INDEX.md`, `docs/ai/PROJECT_MAP.md`, `docs/ai/index.yaml`)
   - Создан `docs/ai/PERF_CAPTURE_MAP.md` — функциональная карта `src/perf/perfCapture.js` (`Game.PerfCapture`, 889 строк > порога 500): tunables (`RING_CAP=600`, `JANK_MS=50`), `PHASE_LOCATIONS`, hot-path `onFrame()` (L181–209), `_sampleMemory`/`_sampleEntities`, lifecycle `start/stop/reset`, `buildReport()` (schema `tmzd.perfCapture.report`, L606–698), overlay, `__test` seam.
   - `docs/ai/SYSTEMS/perf.md`: новая секция «Perf-capture tool + Profiler per-frame accumulator» — `Game.PerfCapture` (что собирает, report schema id, zero-overhead контракт), Profiler API `beginFrame`/`endFrame`/`getFrameMs`/`forEachFrameMs` (чистится в `reset()`, L186–187), gate-маркеры теперь через `Profiler.isEnabled()` (default `Game.DEBUG===true`, release zero-overhead) с точными строками `game.js`, расширение `perf.profilerBudgetsMs`.

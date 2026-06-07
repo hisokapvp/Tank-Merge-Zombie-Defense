@@ -2944,7 +2944,7 @@
 
     var finalDamage = Math.max(0, d);
     var directAfterConvert = finalDamage;
-    var extraHits = [];
+    var extraHits = null;
 
     if (!isRicochetSource && zRt) {
       var acidChance = resolveChance(getModNumber(mods, 'acidDotChance', [], 0), 'acid');
@@ -3003,6 +3003,7 @@
             markVisitedEntity(visited, next);
             var extraDamage = Math.max(0, finalDamage * ricochetDamageMul);
             if (extraDamage > 0) {
+              if (!extraHits) extraHits = [];
               extraHits.push({
                 tank: tank,
                 zombie: next,
@@ -3033,7 +3034,7 @@
       }
     }
 
-    if (extraHits.length > 0) {
+    if (extraHits && extraHits.length > 0) {
       return { damage: directAfterConvert, extraHits: extraHits };
     }
     return { damage: directAfterConvert };
