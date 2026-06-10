@@ -771,7 +771,7 @@
   ,"workshopChipTooltipCount": "Count: {count}"
   ,"chipReprogramResultTooltip": "Reprogramming result"
   ,"chipModifierDesc_1": "Fires two projectiles"
-  ,"chipModifierDesc_2": "Chain lightning with 2 jumps"
+  ,"chipModifierDesc_2": "Projectile chains to hit 2 additional targets"
   ,"chipModifierDesc_3": "Matryoshka: large (×2) -> small (×1)"
   ,"chipModifierDesc_4": "Shockwave: ×0.5 damage, 10px knockback"
   ,"chipModifierDesc_5": "Vacuum: ×0.5 damage, 50px pull radius"

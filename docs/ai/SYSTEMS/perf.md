@@ -51,7 +51,7 @@ Zero-alloc per-frame **SUM**-аккумулятор поверх существ�
 |---|---|
 | `_profLoop` + `beginFrame`/`endFrame`, umbrella `loop.update`/`loop.ui`/`loop.draw`, per-step (`stepZombies`, `cornerTowers.update`, `talents.update`, `stepTanks`, `stepDecals`, `chipEffects.step`, `stepCrate`, `cleanupKills`, `stepImpacts`, `stepParticles`, `stepDamageNumbers`, `stepSupercomputer`, `productionLine.step`, `drones.step`) | [game.js](../../game.js#L18552-L18800) (`loop()` 18538–18807) |
 | `_profStep` (`stepProjectiles` + `.gridRebuild` + `.bullets`) | [game.js](../../game.js#L11186-L11278) |
-| `_profImpact` (`impactAt`) | [game.js](../../game.js#L11289-L11460) |
+| `_profImpact` (`impactAt` + `.query` + `.damageLoop` + `.talents` + `.chipFx` + `.visualFx` + `.chainLightning`) | [game.js](../../game.js#L11386-L11590) |
 | `_profDraw` (`renderFenceBase`, `renderFenceHpBars`) | [game.js](../../game.js#L15298-L15364) (`draw()` 15295–15443) |
 | `_profRPE` (`drawDecals`, `drawProjectiles`, `drawImpacts`, `drawParticles`, `drawDamageNumbers`) | [game.js](../../game.js#L15665-L15682) (`renderProjectilesAndEffects()`) |
 | `_profDZL` (`drawZombies` + `.buildSort` + `.drawEntities`) | [game.js](../../game.js#L15606-L15657) (`drawDecorZombieLayer()`) |
@@ -88,6 +88,13 @@ Zero-alloc per-frame **SUM**-аккумулятор поверх существ�
 | `impactAt` damage | `Math.hypot` для skip | squared-distance early-skip | (N_zombies - N_victims) hypot/impact |
 | `stepParticles` | `const next = []` + push | write-index in-place compaction | до ~1600 push на новый array/кадр |
 | `selectZombieFenceTarget` | `const candidate = {seg, index, distance, isCorner}` per seg | inline 4 best-vars, allocate only return | ~N_zombies × N_segments объектов/кадр в attack mode |
+
+- `impactAt()` теперь пишет эксклюзивные subphase samples `impactAt.query`, `impactAt.damageLoop`, `impactAt.talents`, `impactAt.chipFx`, `impactAt.visualFx`, `impactAt.chainLightning`, поэтому PerfCapture может отделять базовый AoE hit loop от on-hit hooks и чисто визуальных побочных эффектов ([game.js](../../game.js#L11386-L11590)).
+- `chainLightning()` переведён на `queryZombieIndicesInRadius(..., false)` + snapshot `z._sx/_sy`; under `qualityLow` только первый bolt держит visual state push, а весь урон/jumps сохраняется ([game.js](../../game.js#L11592-L11682)).
+- `stepZombies()` кэширует один `Date.now()` на тик, читает предыдущую позицию из `z._sx/_sy` и обновляет snapshot для downstream consumers ([game.js](../../game.js#L10166-L10498)).
+- `stepDecals()` больше не пересчитывает `Math.cos/Math.sin` для `pool` / `chipPool`, если свежий zombie snapshot уже есть; fallback на trig остаётся для stale / pre-grid callers ([game.js](../../game.js#L11781-L11850)).
+- `cleanupKills()` сохранил write-index compaction, но теперь может досрочно завершить corpse-limit prepass, как только overflow уже доказан ([game.js](../../game.js#L11907-L12103)).
+- `ChipEffects` cascade/matryoshka target selection теперь сначала идёт через radius-query seam, а полный scan остаётся только редким fallback, если широкий query window не дал цели ([chipEffects.js](../../src/mechanics/chipEffects.js#L816-L876), [chipEffects.js](../../src/mechanics/chipEffects.js#L1345-L1433)).
 | `selectZombieAttackTargetForZombie` | `const p = zombiePos(z)` | inline cos/sin | N_zombies {x,y}/кадр в attack mode |
 | `pickFenceSegmentByPoint` | `Math.hypot(dx, dy)` per seg | squared distance | N_segments hypot per breached zombie/кадр |
 

@@ -367,7 +367,7 @@
         "h": 35,
         "frames": 9
       },
-      "attackDamage": 54,
+      "attackDamage": 225,
       "animations": {
         "walk": {
           "frameRateFps": 70

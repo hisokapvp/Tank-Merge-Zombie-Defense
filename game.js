@@ -10166,6 +10166,9 @@ let _stepZombieTypeConfigCacheStamp = 0;
 function stepZombies(dt){
   _stepZombieTypeConfigCacheStamp++;
   const now = nowSec();
+  const nowMs = Date.now();
+  const centerX = center.x;
+  const centerY = center.y;
   const slow = (state.empUntil && now < state.empUntil) ? 0.5 : 1;
   const attackMult = getZombieAttackMultipliers();
   const speedMul = attackMult.speedMult;
@@ -10268,8 +10271,7 @@ function stepZombies(dt){
       const zRt = z._statusRt;
       const cc = zRt && zRt.cc ? zRt.cc : null;
       if (cc && Number.isFinite(cc.slowUntilMs) && Number.isFinite(cc.slowPct) && cc.slowPct > 0) {
-        const nowMsForCc = Date.now();
-        if (nowMsForCc < cc.slowUntilMs) {
+        if (nowMs < cc.slowUntilMs) {
           const sp = Math.max(0, Math.min(1, cc.slowPct));
           if (sp > 0) balSpeedMul *= Math.max(0.05, 1 - sp);
         }
@@ -10282,18 +10284,17 @@ function stepZombies(dt){
     // players never observed a stun. Now we read the per-zombie stun timer once and gate both
     // movement and attack progression below. Time source is Date.now() to match TalentsV2's
     // wall-clock timeMs convention.
-    const nowMsForStun = Date.now();
     const isStunned = !!(z._statusRt && z._statusRt.cc
       && Number.isFinite(z._statusRt.cc.stunUntilMs)
-      && nowMsForStun < z._statusRt.cc.stunUntilMs);
+      && nowMs < z._statusRt.cc.stunUntilMs);
     const shouldMove = !isStunned && !holdPositionWhileCalmed
       && (!effectiveShouldAttackTargets || z.attackState !== 'attack' || (!!z.breached && scCoordsValid));
     const prevTheta = z.theta;
-    const prevX = center.x + Math.cos(prevTheta) * z.r;
-    const prevY = center.y + Math.sin(prevTheta) * z.r;
+    const prevX = Number.isFinite(z._sx) ? z._sx : (centerX + Math.cos(prevTheta) * z.r);
+    const prevY = Number.isFinite(z._sy) ? z._sy : (centerY + Math.sin(prevTheta) * z.r);
     z.side = getSideByPosition(prevX, prevY);
-    const prevLocalX = prevX - center.x;
-    const prevLocalY = prevY - center.y;
+    const prevLocalX = prevX - centerX;
+    const prevLocalY = prevY - centerY;
     const nearestBreach = z.breached
       ? null
       : getNearestKnownBreachForZombie(z.side, prevLocalX, prevLocalY, breachAwarenessRadiusPx);
@@ -10309,14 +10310,14 @@ function stepZombies(dt){
         const desiredY = scMoveTarget.y;
         const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
         const clampedMove = clampPointOutsideSupercomputerHitbox(moved.x, moved.y, scTarget, zombieCollisionRadius(z) * 0.35, z.theta);
-        const relX = clampedMove.x - center.x;
-        const relY = clampedMove.y - center.y;
+        const relX = clampedMove.x - centerX;
+        const relY = clampedMove.y - centerY;
         const movedR = Math.hypot(relX, relY);
         if (Number.isFinite(movedR) && movedR > 0) {
           z.theta = Math.atan2(relY, relX);
           z.anchorTheta = z.theta;
           z.r = movedR;
-          z.targetR = Math.hypot(scTarget.x - center.x, scTarget.y - center.y);
+          z.targetR = Math.hypot(scTarget.x - centerX, scTarget.y - centerY);
         }
         // Push breached zombie off intact fence segments (bottom corners fix):
         // If the zombie's new position overlaps an intact fence segment,
@@ -10359,11 +10360,11 @@ function stepZombies(dt){
         if (z.targetR < fenceLimit) z.targetR = fenceLimit;
         if (z.r < fenceLimit) z.r = fenceLimit;
 
-        const desiredX = center.x + Math.cos(z.theta) * z.r;
-        const desiredY = center.y + Math.sin(z.theta) * z.r;
+        const desiredX = centerX + Math.cos(z.theta) * z.r;
+        const desiredY = centerY + Math.sin(z.theta) * z.r;
         const moved = resolveZombieWallMove(z, prevX, prevY, desiredX, desiredY, dt);
-        const relX = moved.x - center.x;
-        const relY = moved.y - center.y;
+        const relX = moved.x - centerX;
+        const relY = moved.y - centerY;
         const movedR = Math.hypot(relX, relY);
         if (Number.isFinite(movedR) && movedR > 0) {
           z.theta = Math.atan2(relY, relX);
@@ -10371,7 +10372,7 @@ function stepZombies(dt){
           z.r = Math.max(movedR, zombieFenceLimit(z));
           if (z.targetR < zombieFenceLimit(z)) z.targetR = zombieFenceLimit(z);
         }
-        z.side = getSideByPosition(center.x + relX, center.y + relY);
+        z.side = getSideByPosition(centerX + relX, centerY + relY);
         radialSpeed = Math.abs(desiredR - z.r) + Math.abs(swayOffset) * 2;
       }
 
@@ -10481,6 +10482,8 @@ function stepZombies(dt){
     }
 
     z.anim = z.walkAnimFrame;
+    z._sx = centerX + Math.cos(z.theta) * z.r;
+    z._sy = centerY + Math.sin(z.theta) * z.r;
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
@@ -10681,12 +10684,9 @@ const _zombieCollisionGrid = new Map();
 const _zombieGridBucketPool = [];
 let _zombieGridBucketPoolUsed = 0;
 const _zombieGridQueryScratch = [];
-// Perf (solo-pipeline-yandex-vk#2 / item 6, postmortem item 12):
-// Module-scope `_impactAoeIndices` snapshot was removed. Each `impactAt` call
-// now allocates a per-impact local buffer (lightweight slice — NOT a worker
-// pool). This keeps the snapshot contract correct under any future async or
-// parallelized impactAt path while avoiding pool infrastructure that would be
-// premature while impactAt remains synchronous.
+// impactAt filters query scratch into its own victim scratch before any
+// re-entrant talent/chip callbacks run. This keeps the shared
+// `_zombieGridQueryScratch` safe without per-impact slice allocation.
 
 function _acquireZombieGridBucket(){
   if (_zombieGridBucketPoolUsed < _zombieGridBucketPool.length) {
@@ -11325,8 +11325,8 @@ function critChanceFromTankLevel(level){
   return percent / 100;
 }
 
-const _impactCandidateIndicesScratch = [];
 const _impactVictimIndicesScratch = [];
+const _chainLightningHitIdsScratch = [];
 const _impactDamageNumberXs = [];
 const _impactDamageNumberYs = [];
 const _impactDamageNumberValues = [];
@@ -11404,30 +11404,29 @@ function impactAt(x,y,b,opts){
 
   const talentsApi = isTalentsV2Ready() ? getTalentsV2Api() : null;
   const hasTalentsHit = !!(talentsApi && typeof talentsApi.onHit === 'function');
+  if (_profImpact) _profImpact.start('impactAt.query');
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): spatial-hash query
   // narrows the AOE candidate list to ~9 cells instead of N zombies. The grid
   // is rebuilt once per frame in stepProjectiles; consumers below filter dying
   // zombies and re-check exact distance, so behavior is 1:1.
-  const _aoeSq = b.aoe * b.aoe;
-  const _ax = center.x;
-  const _ay = center.y;
+  const aoe = b.aoe;
+  const baseDamage = b.dmg;
+  const bulletKind = b.kind;
+  const _aoeSq = aoe * aoe;
   const _impactDamageNumberCap = Number.isFinite(BAL.maxDamageNumbersPerImpact)
     ? Math.max(0, Math.floor(BAL.maxDamageNumbersPerImpact))
     : 8;
   resetImpactDamageNumberQueue();
   const _impactNowMs = hasTalentsHit ? Date.now() : 0;
+  const _impactDotChance = mods.dotChance;
+  const _impactDotDpsMul = mods.dotDpsMul;
+  const _impactDotUntil = _impactDotChance > 0 ? nowSec() + 4 : 0;
   const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe, false);
-  const _aoeCount = _aoeCandidates.length;
-  const _impactAoeIndices = _impactCandidateIndicesScratch;
-  _impactAoeIndices.length = _aoeCount;
-  for (let _ci = 0; _ci < _aoeCount; _ci++) {
-    _impactAoeIndices[_ci] = _aoeCandidates[_ci];
-  }
   const _zArr = state.zombies;
   const _impactVictimIndices = _impactVictimIndicesScratch;
   _impactVictimIndices.length = 0;
-  for (let _ci = 0; _ci < _aoeCount; _ci++){
-    const _ai = _impactAoeIndices[_ci];
+  for (let _ci = 0; _ci < _aoeCandidates.length; _ci++){
+    const _ai = _aoeCandidates[_ci];
     const _az = _zArr[_ai];
     if (!_az || _az.state === 'dying') continue;
     const _apx = _az._sx;
@@ -11439,6 +11438,7 @@ function impactAt(x,y,b,opts){
     }
   }
   const aoeVictimsCount = _impactVictimIndices.length;
+  if (_profImpact) _profImpact.end('impactAt.query');
   const tankLevel = b.level ?? 1;
   const critChance = critChanceFromTankLevel(tankLevel);
   const _talentsHitCtx = hasTalentsHit ? _impactTalentsHitCtx : null;
@@ -11456,18 +11456,21 @@ function impactAt(x,y,b,opts){
     const _zi = _impactVictimIndices[_ci];
     const z = _zArr[_zi];
     if (!z || z.state === 'dying') continue;
+    if (_profImpact) _profImpact.start('impactAt.damageLoop');
     const _zx = z._sx;
     const _zy = z._sy;
     const _dxZ = _zx - x;
     const _dyZ = _zy - y;
     const _dSqZ = _dxZ * _dxZ + _dyZ * _dyZ;
     const d = Math.sqrt(_dSqZ);
-    const falloff = 0.55 + 0.45*(1 - d/b.aoe);
-    const baseDmg = b.dmg * falloff;
+    const falloff = 0.55 + 0.45 * (1 - d / aoe);
+    const baseDmg = baseDamage * falloff;
     const isCrit = Math.random() < critChance;
     const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
     let dmgRounded = Math.round(finalDmg);
+    if (_profImpact) _profImpact.end('impactAt.damageLoop');
     if (hasTalentsHit) {
+      if (_profImpact) _profImpact.start('impactAt.talents');
       _talentsHitCtx.zombie = z;
       _talentsHitCtx.timeMs = _impactNowMs;
       _talentsHitCtx.damage = finalDmg;
@@ -11488,15 +11491,18 @@ function impactAt(x,y,b,opts){
           }
         }
       }
+      if (_profImpact) _profImpact.end('impactAt.talents');
     }
+    if (_profImpact) _profImpact.start('impactAt.damageLoop');
     applyDamageToZombie(z, dmgRounded, 'tank');
     if (_impactDamageNumberCap > 0) {
-      queueImpactDamageNumber(_zx, _zy, dmgRounded, isCrit, b.kind);
+      queueImpactDamageNumber(_zx, _zy, dmgRounded, isCrit, bulletKind);
     }
-    if (Math.random() < mods.dotChance){
-      z.dotUntil = nowSec() + 4;
-      z.dotDps = Math.max(z.dotDps || 0, b.dmg * 0.25 * mods.dotDpsMul);
+    if (Math.random() < _impactDotChance){
+      z.dotUntil = _impactDotUntil;
+      z.dotDps = Math.max(z.dotDps || 0, baseDamage * 0.25 * _impactDotDpsMul);
     }
+    if (_profImpact) _profImpact.end('impactAt.damageLoop');
   }
   if (_talentsHitCtx) {
     _talentsHitCtx.tank = null;
@@ -11511,22 +11517,25 @@ function impactAt(x,y,b,opts){
   flushImpactDamageNumbers(_impactDamageNumberCap);
 
   // Extra effects per kind
-  if (b.kind === 'toxic'){
+  if (bulletKind === 'toxic'){
     addDecal({
       kind:'pool',
       x, y,
-      r: b.aoe*0.70,
+      r: aoe * 0.70,
       life: b.prof?.poolLife ?? 3.6,
-      dps: b.dmg * (b.prof?.poolDpsMul ?? 0.20),
+      dps: baseDamage * (b.prof?.poolDpsMul ?? 0.20),
       color:'rgba(184,255,59,.16)'
     });
   }
 
-  if (b.kind === 'tesla'){
+  if (bulletKind === 'tesla'){
+    if (_profImpact) _profImpact.start('impactAt.chainLightning');
     chainLightning(x,y,b, { suppressCombatFx });
+    if (_profImpact) _profImpact.end('impactAt.chainLightning');
   }
 
   if (!suppressCombatFx){
+    if (_profImpact) _profImpact.start('impactAt.visualFx');
     // Visual impact rings (scale by effectIntensity)
     // FxDensity (solo-pipeline-yandex-vk batch1-followup / item 4): primary
     // и overflow ring spawn × density через shouldSpawn. burst() уже сам gated
@@ -11535,22 +11544,25 @@ function impactAt(x,y,b,opts){
     const _FxImp = window.Game && window.Game.FxDensity;
     const _shouldSpawnImpact = !_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn();
     const ei = b.effectIntensity ?? 1;
-    const impactCount = Math.min(40, Math.round((b.kind === 'he' ? 30 : 22) * ei));
+    const impactCount = Math.min(40, Math.round((bulletKind === 'he' ? 30 : 22) * ei));
+    const allowSecondaryImpactFx = !qualityLow;
     if (_shouldSpawnImpact) {
-      state.impacts.push({x,y,r:0,maxR:b.aoe,life:0.30,max:0.30,kind:b.kind,bulletCfg:b.bulletCfg||null});
-      if (typeof spawnImpactSparks === 'function') {
+      state.impacts.push({x,y,r:0,maxR:aoe,life:0.30,max:0.30,kind:bulletKind,bulletCfg:b.bulletCfg||null});
+      if (allowSecondaryImpactFx && typeof spawnImpactSparks === 'function') {
         spawnImpactSparks(x, y, b.rotation, b.glow || b.color);
       }
     }
     burst(x, y, impactCount, b.glow);
-    if (b.dmg > 80 && (!_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn())){
-      state.impacts.push({x,y,r:0,maxR:b.aoe * 1.4,life:0.18,max:0.18,kind:'overflow',bulletCfg:b.bulletCfg||null});
+    if (allowSecondaryImpactFx && baseDamage > 80 && (!_FxImp || typeof _FxImp.shouldSpawn !== 'function' || _FxImp.shouldSpawn())){
+      state.impacts.push({x,y,r:0,maxR:aoe * 1.4,life:0.18,max:0.18,kind:'overflow',bulletCfg:b.bulletCfg||null});
     }
+    if (_profImpact) _profImpact.end('impactAt.visualFx');
   }
 
   // ── Chip impact effects (mods 2–14) + cascade spawning ──
   // Cascade, chain and matryoshka children reuse chipShotMods when present.
   if (b.chipShotMods) {
+    if (_profImpact) _profImpact.start('impactAt.chipFx');
     const ChipFxI = window.Game && window.Game.ChipEffects;
     if (ChipFxI && typeof ChipFxI.applyImpactEffects === 'function') {
       ChipFxI.applyImpactEffects({
@@ -11572,6 +11584,7 @@ function impactAt(x,y,b,opts){
       const chipImpactSfx = ChipFxI.resolveChipImpactSfx(b.chipShotMods);
       if (chipImpactSfx) playSfx(chipImpactSfx);
     }
+    if (_profImpact) _profImpact.end('impactAt.chipFx');
   }
   if (_profImpact) _profImpact.end('impactAt');
 }
@@ -11581,27 +11594,48 @@ function chainLightning(x,y,b,opts){
   const attackMult = getZombieAttackMultipliers();
   const damageMul = attackMult.damageMult;
   const range = b.prof?.chainRange ?? 84;
+  const rangeSq = range * range;
   const jumps = b.prof?.chainJumps ?? 3;
   const mul = b.prof?.chainMul ?? 0.45;
 
   let curX = x, curY = y;
-  const hit = new Set();
+  const hitIds = _chainLightningHitIdsScratch;
+  hitIds.length = 0;
+  let hitCount = 0;
 
   for (let i=0;i<jumps;i++){
     let best = null;
-    let bestD = Infinity;
+    let bestDSq = Infinity;
+    let bestX = 0;
+    let bestY = 0;
+    const candidates = queryZombieIndicesInRadius(curX, curY, range, false);
 
-    for (const z of state.zombies){
-      if (z.state === 'dying') continue;
-      if (hit.has(z.id)) continue;
-      const p = zombiePos(z);
-      const d = Math.hypot(p.x-curX, p.y-curY);
-      if (d <= range && d < bestD){ best = z; bestD = d; }
+    for (let ci = 0; ci < candidates.length; ci++){
+      const z = state.zombies[candidates[ci]];
+      if (!z || z.state === 'dying') continue;
+      let alreadyHit = false;
+      for (let hi = 0; hi < hitCount; hi++) {
+        if (hitIds[hi] === z.id) {
+          alreadyHit = true;
+          break;
+        }
+      }
+      if (alreadyHit) continue;
+      const px = Number.isFinite(z._sx) ? z._sx : center.x + Math.cos(z.theta) * z.r;
+      const py = Number.isFinite(z._sy) ? z._sy : center.y + Math.sin(z.theta) * z.r;
+      const dx = px - curX;
+      const dy = py - curY;
+      const dSq = dx * dx + dy * dy;
+      if (dSq <= rangeSq && dSq < bestDSq){
+        best = z;
+        bestDSq = dSq;
+        bestX = px;
+        bestY = py;
+      }
     }
     if (!best) break;
 
-    hit.add(best.id);
-    const p = zombiePos(best);
+    hitIds[hitCount++] = best.id;
 
     if (!suppressCombatFx){
       // visual bolt
@@ -11609,8 +11643,9 @@ function chainLightning(x,y,b,opts){
       // bolt — pure visual; gameplay damage application (applyDamageToZombie
       // ниже) НЕ зависит от gate. При density=0 ущерб всё равно проходит.
       const _FxBolt = window.Game && window.Game.FxDensity;
-      if (!_FxBolt || typeof _FxBolt.shouldSpawn !== 'function' || _FxBolt.shouldSpawn()) {
-        state.impacts.push({x:curX,y:curY,tx:p.x,ty:p.y,life:0.10,max:0.10,kind:'bolt'});
+      const allowBoltVisual = !qualityLow || i === 0;
+      if (allowBoltVisual && (!_FxBolt || typeof _FxBolt.shouldSpawn !== 'function' || _FxBolt.shouldSpawn())) {
+        state.impacts.push({x:curX,y:curY,tx:bestX,ty:bestY,life:0.10,max:0.10,kind:'bolt'});
       }
     }
 
@@ -11621,9 +11656,9 @@ function chainLightning(x,y,b,opts){
     const finalChainDmg = (baseChainDmg * (isCrit ? 1.5 : 1)) / damageMul;
     const dmgRounded = Math.round(finalChainDmg);
     applyDamageToZombie(best, dmgRounded, 'tank');
-    addDamageNumber(p.x, p.y, dmgRounded, isCrit, b.kind);
-    curX = p.x;
-    curY = p.y;
+    addDamageNumber(bestX, bestY, dmgRounded, isCrit, b.kind);
+    curX = bestX;
+    curY = bestY;
   }
 }
 
@@ -11759,8 +11794,10 @@ function stepDecals(dt){
       for (let i = 0; i < poolCandidates.length; i++) {
         const z = state.zombies[poolCandidates[i]];
         if (!z) continue;
-        const dx = (_ax + Math.cos(z.theta) * z.r) - d.x;
-        const dy = (_ay + Math.sin(z.theta) * z.r) - d.y;
+        const zx = Number.isFinite(z._sx) ? z._sx : (_ax + Math.cos(z.theta) * z.r);
+        const zy = Number.isFinite(z._sy) ? z._sy : (_ay + Math.sin(z.theta) * z.r);
+        const dx = zx - d.x;
+        const dy = zy - d.y;
         if (dx * dx + dy * dy <= poolRadiusSq){
           applyDamageToZombie(z, d.dps * dt, 'tank');
         }
@@ -11779,8 +11816,10 @@ function stepDecals(dt){
           const z = state.zombies[chipPoolCandidates[i]];
           if (!z) continue;
           if (z.state === 'dying') continue;
-          const dx = (_ax + Math.cos(z.theta) * z.r) - d.x;
-          const dy = (_ay + Math.sin(z.theta) * z.r) - d.y;
+          const zx = Number.isFinite(z._sx) ? z._sx : (_ax + Math.cos(z.theta) * z.r);
+          const zy = Number.isFinite(z._sy) ? z._sy : (_ay + Math.sin(z.theta) * z.r);
+          const dx = zx - d.x;
+          const dy = zy - d.y;
           if (dx * dx + dy * dy <= chipPoolRadiusSq) {
             const tickDmg = d.dps * dt;
             applyDamageToZombie(z, tickDmg, 'tank');
@@ -11869,16 +11908,22 @@ function cleanupKills(){
   const CORPSE_OVERFLOW_FADE_SEC = 0.2;
   const corpseMax = BAL.corpseMaxCount;
   let dyingCount = 0;
+  let limitCorpses = false;
   const zlen = state.zombies.length;
   if (Number.isFinite(corpseMax)){
     for (let i = 0; i < zlen; i++){
       const z = state.zombies[i];
       if (z.state !== 'dying') continue;
       const ttl = Number.isFinite(z.corpseTimerLeft) ? z.corpseTimerLeft : (Number.isFinite(z.corpseTimer) ? z.corpseTimer : z.deathTimer);
-      if (ttl > 0) dyingCount++;
+      if (ttl > 0) {
+        dyingCount++;
+        if (dyingCount > corpseMax) {
+          limitCorpses = true;
+          break;
+        }
+      }
     }
   }
-  const limitCorpses = Number.isFinite(corpseMax) && dyingCount > corpseMax;
   let keptDying = 0;
   let w = 0; // write-index for in-place compaction — no alive=[] allocation
   for (let i = 0; i < zlen; i++){

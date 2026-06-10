@@ -771,7 +771,7 @@
   ,"workshopChipTooltipCount": "Количество: {count}"
   ,"chipReprogramResultTooltip": "Результат перепрограммирования"
   ,"chipModifierDesc_1": "Танк стреляет двумя снарядами"
-  ,"chipModifierDesc_2": "Цепная молния с 2 перескоками"
+  ,"chipModifierDesc_2": "Снаряд по цепочке задевает ещё 2 цели."
   ,"chipModifierDesc_3": "Матрёшка: большой(×2) → малый(×1)"
   ,"chipModifierDesc_4": "Отталкивание: ×0.5 урона, 10px"
   ,"chipModifierDesc_5": "Вакуум: ×0.5 урона, радиус 50px"

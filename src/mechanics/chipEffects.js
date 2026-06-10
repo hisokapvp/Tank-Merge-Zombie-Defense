@@ -815,18 +815,15 @@
    */
   function _findCascadeTargets(x, y, count, opts) {
     var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     var candidates = [];
+    var fallbackCandidates = [];
 
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
+    _forEachZombieInRadius(opts, x, y, CASCADE_MAX_DIST, true, function (z, p, d) {
+      if (z.state === 'dying') return;
       if (d >= CASCADE_MIN_DIST && d <= CASCADE_MAX_DIST) {
         candidates.push({ z: z, d: d });
       }
-    }
+    });
 
     /* Sort by distance ascending — prefer closer for first picks */
     candidates.sort(function(a, b) { return a.d - b.d; });
@@ -842,15 +839,18 @@
       }
     }
 
-    /* Fallback: if not enough in preferred range, accept any alive zombie ≥50px */
+    /* Fallback: if not enough in preferred range, accept any alive zombie ≥50px. */
+    _forEachZombieInRadius(opts, x, y, 2400, true, function (z, p, d) {
+      if (z.state === 'dying') return;
+      if (usedIds[z.id]) return;
+      if (d < 50) return;
+      fallbackCandidates.push({ z: z, d: d });
+    });
+    fallbackCandidates.sort(function (a, b) { return a.d - b.d; });
     if (results.length < count) {
-      for (var k = 0; k < zombies.length && results.length < count; k++) {
-        var zf = zombies[k];
-        if (zf.state === 'dying') continue;
-        if (usedIds[zf.id]) continue;
-        var pf = getPos(zf);
-        var df = Math.hypot(pf.x - x, pf.y - y);
-        if (df >= 50) {
+      for (var k = 0; k < fallbackCandidates.length && results.length < count; k++) {
+        var zf = fallbackCandidates[k].z;
+        if (!usedIds[zf.id]) {
           results.push(zf);
           usedIds[zf.id] = true;
         }
@@ -1344,18 +1344,31 @@
   /* ─── matryoshka child (mod 3/19/20) — spawn child(ren) to DIFFERENT targets ─── */
   function _spawnMatryoshkaChild(x, y, b, opts) {
     var zombies = opts.zombies;
-    var getPos = opts.getZombiePos;
     // find nearest alive zombie at least 12px from impact point
-    var best = null, bestD = Infinity;
-    for (var i = 0; i < zombies.length; i++) {
-      var z = zombies[i];
-      if (z.state === 'dying') continue;
-      var p = getPos(z);
-      var d = Math.hypot(p.x - x, p.y - y);
-      if (d >= 50 && d < bestD) { best = z; bestD = d; }
+    var best = null, bestD = Infinity, bestPos = null;
+    _forEachZombieInRadius(opts, x, y, 2400, true, function (z, p, d) {
+      if (z.state === 'dying') return;
+      if (d >= 50 && d < bestD) {
+        best = z;
+        bestD = d;
+        bestPos = p;
+      }
+    });
+    if (!best) {
+      for (var i = 0; i < zombies.length; i++) {
+        var z = zombies[i];
+        if (z.state === 'dying') continue;
+        var p = opts.getZombiePos(z);
+        var d = Math.hypot(p.x - x, p.y - y);
+        if (d >= 50 && d < bestD) {
+          best = z;
+          bestD = d;
+          bestPos = p;
+        }
+      }
     }
     if (!best) return;
-    var tp = getPos(best);
+    var tp = bestPos || opts.getZombiePos(best);
 
     var sm = b.chipShotMods;
     var chain = sm && sm.matryoshkaChain;

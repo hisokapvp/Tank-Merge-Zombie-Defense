@@ -702,34 +702,22 @@
         "w": 333,
         "h": 333
       },
-      "frames": 3,
-      "animSpeed": 3,
-      "anchor": {
-        "x": 0.5,
-        "y": 0.5
-      },
-      "scale": 0.8
-    },
-    "aura2": {
-      "src": "tanks/Aura2.png",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 333,
-        "h": 333
-      },
-      "frames": 3,
+      "frames": 9,
       "animSpeed": 9,
       "anchor": {
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 0.8
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
     },
-    "aura3": {
-      "src": "tanks/Aura3.png",
+    "aura2": {
+      "src": "tanks/Aura1.png",
       "frame": {
-        "x": 666,
+        "x": 0,
         "y": 0,
         "w": 333,
         "h": 333
@@ -740,7 +728,31 @@
         "x": 0.5,
         "y": 0.5
       },
-      "scale": 2
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
+    },
+    "aura3": {
+      "src": "tanks/Aura1.png",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 333,
+        "h": 333
+      },
+      "frames": 9,
+      "animSpeed": 9,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "scale": 1,
+      "rotateSpeed": 1,
+      "pulseSpeed": 5,
+      "pulseMin": 0.95,
+      "pulseMax": 1.05
     }
   },
   "tank_lvl7": {
@@ -748,7 +760,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 4300
+      "baseDamage": 40000
     },
     "body": {
       "src": "tanks/body_all.png",
