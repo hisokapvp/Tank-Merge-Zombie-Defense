@@ -3515,6 +3515,11 @@
       var segRt = ensureSegRt(seg);
       var maxHp = Math.max(1, toNumber(seg.maxHp, 1));
       var hp = Math.max(0, toNumber(seg.hp, 0));
+      var destroyed = !!seg.broken || hp <= 0;
+      if (destroyed && hp !== 0) {
+        // A destroyed segment must stay at 0 HP until the canonical repair path revives it.
+        hp = 0;
+      }
 
       if (regenPctPerSec > 0 && regenDelayMs > 0) {
         // Восстанавливающийся контур (def_regen v3): раз в regenDelayMs восстанавливает regenPctPerSec
@@ -3522,7 +3527,7 @@
         if (segRt.nextRegenAtMs <= 0) segRt.nextRegenAtMs = Math.max(timeMs, segRt.lastDamageAtMs) + regenDelayMs;
         var regenSteps = 0;
         while (timeMs >= segRt.nextRegenAtMs) {
-          if (hp < maxHp) {
+          if (!destroyed && hp < maxHp) {
             hp = Math.min(maxHp, hp + maxHp * regenPctPerSec);
           }
           segRt.nextRegenAtMs += regenDelayMs;
@@ -3560,7 +3565,9 @@
         if (segRt.nextAutoRepairAtMs <= 0) segRt.nextAutoRepairAtMs = timeMs + autoRepairPeriodMs;
         var repairSteps = 0;
         while (timeMs >= segRt.nextAutoRepairAtMs) {
-          hp = Math.min(maxHp, hp + maxHp * autoRepairPct);
+          if (!destroyed && hp < maxHp) {
+            hp = Math.min(maxHp, hp + maxHp * autoRepairPct);
+          }
           segRt.nextAutoRepairAtMs += autoRepairPeriodMs;
           repairSteps += 1;
           if (repairSteps >= maxCatchupSteps) {
@@ -3617,7 +3624,7 @@
         if (segRt.protectAheadAnalyzeUntilMs !== 0) segRt.protectAheadAnalyzeUntilMs = 0;
       }
 
-      if (defenseActiveOn && defAutoRepairPctPerSec > 0 && dtMs > 0) {
+      if (!destroyed && defenseActiveOn && defAutoRepairPctPerSec > 0 && dtMs > 0) {
         hp = Math.min(maxHp, hp + maxHp * defAutoRepairPctPerSec * (dtMs / 1000));
       }
 
