@@ -54,6 +54,7 @@ run_test "Pack 11 (meta hoarder unlocks)" "Test/pack11/metaHoarderUnlocks.test.j
 run_test "Pack 11 (production line unlocks)" "Test/pack11/productionLineUnlocks.test.js"
 run_test "Pack 12 (hangar cell chip persistence)" "Test/pack12/hangarCellsPersistence.test.js"
 run_test "Pack 12 (chip craft + tech-upgrade match stability)" "Test/pack12/chipCraftAndTechMatch.test.js"
+run_test "Pack 13 (supercomputer viewport placement)" "Test/pack13/supercomputerViewportPlacement.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

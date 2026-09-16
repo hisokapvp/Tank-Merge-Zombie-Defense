@@ -3382,6 +3382,71 @@ function resizeCanvas(){
 }
 
 // ---------- Board ----------
+/**
+ * Canonical supercomputer placement.
+ *
+ * `sc.x` / `sc.y` / `sc.offsetY` are runtime-derived from the CURRENT board rect
+ * (which depends on the viewport size), NOT progression data. A save made while
+ * the browser was fullscreen must not pin the supercomputer to fullscreen
+ * coordinates when the game is later loaded in a windowed viewport — otherwise
+ * it drifts outside the fence.
+ *
+ * Single source of truth: called from `initBoard()` (resize / orientation) and
+ * from every restore path (`restoreFullState`, `applySavedProgress`) right after
+ * the save payload is merged into `state.supercomputer`.
+ *
+ * Returns the supercomputer state object. If `state.boardRect` is not yet
+ * initialized (pre-boot restore), the saved coordinates are left untouched and
+ * the next `initBoard()` will recompute them.
+ */
+function repositionSupercomputerFromBoard(){
+  const sc = getComputerState();
+  const boardRect = state.boardRect;
+  if (!boardRect
+    || !Number.isFinite(boardRect.x)
+    || !Number.isFinite(boardRect.y)
+    || !(boardRect.w > 0)
+    || !(boardRect.h > 0)) {
+    return sc;
+  }
+  const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
+  const layoutTuningSupercomputerOffset = Number.isFinite(layoutTuning.supercomputerOffsetY)
+    ? layoutTuning.supercomputerOffsetY
+    : 64;
+  const configOffset = Number.isFinite(SupercomputerSprites?.config?.offsetY)
+    ? SupercomputerSprites.config.offsetY
+    : layoutTuningSupercomputerOffset;
+  sc.offsetY = configOffset;
+  sc.x = boardRect.x + boardRect.w * 0.5;
+  sc.y = boardRect.y + boardRect.h + sc.offsetY;
+  return sc;
+}
+
+/**
+ * Refresh everything that is positioned relative to the supercomputer
+ * (production line render layout, HUD button, level-driven sprite sync).
+ * Must run after `repositionSupercomputerFromBoard()` so a viewport change or a
+ * save restore does not leave dependent UI pinned to stale coordinates.
+ */
+function syncSupercomputerDependentLayout(sc){
+  const scState = sc || getComputerState();
+  const _PLR = window.Game && window.Game.ProductionLineRender;
+  if (_PLR && typeof _PLR.updateLayout === 'function') {
+    const scSprite = SupercomputerSprites && SupercomputerSprites.config;
+    const scAnim = SupercomputerSprites && SupercomputerSprites.getAnimation
+      ? SupercomputerSprites.getAnimation(resolveSupercomputerVisualStateName(scState))
+      : null;
+    const scScale = resolveSupercomputerAnimationScale(scSprite, scAnim);
+    const scW = scAnim && Number.isFinite(scAnim.w) ? scAnim.w * scScale : 68 * balScale;
+    const scH = scAnim && Number.isFinite(scAnim.h) ? scAnim.h * scScale : 62 * balScale;
+    _PLR.updateLayout(scState.x, scState.y, scW, scH, balScale);
+  }
+  updateSupercomputerHudButtonPosition();
+  if (supercomputerController && supercomputerController.syncLevel) {
+    supercomputerController.syncLevel(scState, SupercomputerSprites.config);
+  }
+}
+
 function initBoard(){
   const existing = state.cells.slice();
   const totalW = BAL.cols*BAL.cellW + (BAL.cols-1)*BAL.cellGap + BAL.boardPad*2;
@@ -3401,8 +3466,6 @@ function initBoard(){
     }
   }
   state.boardRect = { x:x0, y:y0, w:totalW, h:totalH };
-  const hangarCenterX = state.boardRect.x + state.boardRect.w * 0.5;
-  const hangarBottomY = state.boardRect.y + state.boardRect.h;
 
   BAL.zombieTrackWidth = Math.max(12, 14 * balScale);
   const layoutTuning = (window.Game && window.Game.Config && window.Game.Config.LayoutTuning) || {};
@@ -3443,34 +3506,8 @@ function initBoard(){
     if (minFenceRadius > 0 && BAL.fenceRadius < minFenceRadius) BAL.fenceRadius = minFenceRadius;
     BAL.zombieTrackRadius = BAL.fenceRadius + BAL.fenceWidth * 0.5 + trackPad + BAL.zombieTrackWidth * 0.5;
   }
-  const sc = getComputerState();
-  const layoutTuningSupercomputerOffset = Number.isFinite(layoutTuning.supercomputerOffsetY)
-    ? layoutTuning.supercomputerOffsetY
-    : 64;
-  const configOffset = Number.isFinite(SupercomputerSprites?.config?.offsetY)
-    ? SupercomputerSprites.config.offsetY
-    : layoutTuningSupercomputerOffset;
-  sc.offsetY = configOffset;
-  sc.x = hangarCenterX;
-  sc.y = hangarBottomY + sc.offsetY;
-  // ── Production Line: update render layout relative to supercomputer ──
-  {
-    const _PLR = window.Game && window.Game.ProductionLineRender;
-    if (_PLR && typeof _PLR.updateLayout === 'function') {
-      const scSprite = SupercomputerSprites && SupercomputerSprites.config;
-      const scAnim = SupercomputerSprites && SupercomputerSprites.getAnimation
-        ? SupercomputerSprites.getAnimation(resolveSupercomputerVisualStateName(sc))
-        : null;
-      const scScale = resolveSupercomputerAnimationScale(scSprite, scAnim);
-      const scW = scAnim && Number.isFinite(scAnim.w) ? scAnim.w * scScale : 68 * balScale;
-      const scH = scAnim && Number.isFinite(scAnim.h) ? scAnim.h * scScale : 62 * balScale;
-      _PLR.updateLayout(sc.x, sc.y, scW, scH, balScale);
-    }
-  }
-  updateSupercomputerHudButtonPosition();
-  if (supercomputerController && supercomputerController.syncLevel) {
-    supercomputerController.syncLevel(sc, SupercomputerSprites.config);
-  }
+  const sc = repositionSupercomputerFromBoard();
+  syncSupercomputerDependentLayout(sc);
 
   // Preserve fence fragment HP across resize/orientation changes: snapshot HP-by-id
   // BEFORE clearing fenceSegments so the subsequent renderFenceBase rebuild can
@@ -7447,13 +7484,12 @@ function restoreFullState(saved){
   state.fenceRepairCount = Number.isFinite(saved.fenceRepairCount) ? Math.max(0, Math.floor(saved.fenceRepairCount)) : 0;
   if (saved.supercomputer && typeof saved.supercomputer === 'object') {
     var _scCurrent = getComputerState();
-    var _scPrevX = _scCurrent.x;
-    var _scPrevY = _scCurrent.y;
     Object.assign(_scCurrent, saved.supercomputer);
-    // Если в payload координаты нулевые/невалидные (pre-retry payload использует createInitialState как базу),
-    // восстанавливаем предыдущие валидные координаты чтобы избежать телепорта в (0,0).
-    if (!(saved.supercomputer.x > 0) && _scPrevX > 0) _scCurrent.x = _scPrevX;
-    if (!(saved.supercomputer.y > 0) && _scPrevY > 0) _scCurrent.y = _scPrevY;
+    // `x`/`y`/`offsetY` — runtime-derived от текущего boardRect, а не progression:
+    // сейв, сделанный в fullscreen, не должен прибивать суперкомпьютер к
+    // fullscreen-координатам при загрузке в оконном viewport. Пересчитываем
+    // позицию из актуального boardRect сразу после merge payload.
+    syncSupercomputerDependentLayout(repositionSupercomputerFromBoard());
   }
   if (saved.player) Object.assign(state.player, saved.player);
   ensureCannonUpgradesAppliedState();
@@ -7764,6 +7800,9 @@ function applySavedProgress(data){
   let reconcileAchievementRewardsAfterApply = false;
   if (supercomputer && typeof supercomputer === 'object') {
     Object.assign(getComputerState(), supercomputer);
+    // См. restoreFullState(): координаты суперкомпьютера runtime-derived от
+    // текущего boardRect и не должны восстанавливаться из payload как есть.
+    syncSupercomputerDependentLayout(repositionSupercomputerFromBoard());
   } else {
     const sc = getComputerState();
     if (Number.isFinite(computerLevel)) sc.computerLevel = Math.max(0, Math.floor(computerLevel));
