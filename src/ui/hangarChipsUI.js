@@ -3015,13 +3015,20 @@
   var _dustMode = false;       // true when "Распылить" flow is active
   var _dustSelected = {};      // { 'chip_<chipId>_<level>': count, 'frag_<fragId>': count }
   var _siliconDust = 0;        // player's silicon dust resource
-  var _craftReagentDust = 0;   // units of silicon dust to spend as reagent (0-5)
+  var _craftReagentDust = 0;   // units of silicon dust to spend as reagent (0..CRAFT_REAGENT_DUST_MAX)
   var _reprogramSourceFragmentId = null;
   var _reprogramTargetFragmentId = null;
+  var _reprogramFailStreak = 0; // consecutive reprogram failures since the last broken fragment
 
   var DUST_PER_CHIP = 10;
   var DUST_PER_FRAGMENT = 3;
   var REPROGRAM_DUST_COST = 2;
+  var CRAFT_CHANCE_BASE_PCT = 75;
+  var CRAFT_CHANCE_PER_DUST_PCT = 3;
+  var CRAFT_REAGENT_DUST_MAX = 5;
+  var REPROGRAM_SUCCESS_PCT = 75;
+  var REPROGRAM_BREAK_PCT = 10;
+  var REPROGRAM_BREAK_PITY = 10;
 
   function _resetCraftSlots() {
     _craftSlots = [null, null, null];
@@ -3194,6 +3201,7 @@
     _stopTechStudyTimer();
     _techStudying = null;
     _techAccelDustSelected = 0;
+    _reprogramFailStreak = 0;
     _resetDustMode();
     _resetReprogramState();
     resetTransientUiState();
@@ -3489,12 +3497,12 @@
   }
 
   function _getCraftChancePct() {
-    return Math.max(75, Math.min(100, 75 + _craftReagentDust * 5));
+    return Math.max(CRAFT_CHANCE_BASE_PCT, Math.min(100, CRAFT_CHANCE_BASE_PCT + _craftReagentDust * CRAFT_CHANCE_PER_DUST_PCT));
   }
 
   function _buildCraftReagentRowHtml() {
     var minusDisabled = _craftReagentDust <= 0;
-    var plusDisabled = _craftReagentDust >= 5 || _siliconDust <= _craftReagentDust;
+    var plusDisabled = _craftReagentDust >= CRAFT_REAGENT_DUST_MAX || _siliconDust <= _craftReagentDust;
     return '<div class="chipCraftReagentRow">' +
       '<span class="chipCraftReagentLabel">' + t('chipCraftSiliconDust', 'Кремниевая пыль') + ':</span>' +
       '<div class="chipCraftReagentControls">' +
@@ -3709,18 +3717,46 @@
       }
       return;
     }
-    if (!removePlayerFragment(state.sourceFragmentId, 1)) return;
-    addPlayerFragment(state.targetFragmentId, 1);
+    if (getFragmentCount(state.sourceFragmentId) <= 0) return;
+
+    /* Dust is always consumed by the attempt, regardless of the outcome. */
     _siliconDust = Math.max(0, _siliconDust - REPROGRAM_DUST_COST);
+
+    if (Math.random() * 100 < REPROGRAM_SUCCESS_PCT) {
+      if (!removePlayerFragment(state.sourceFragmentId, 1)) return;
+      addPlayerFragment(state.targetFragmentId, 1);
+      _reprogramFailStreak = 0;
+      _resetReprogramState();
+      renderChipCraftPanel();
+      renderChipUpgradeGrid();
+      if (global.Game && global.Game.Toast) {
+        global.Game.Toast.show(
+          t('chipReprogramSuccess', 'Фрагмент перепрограммирован: {from} → {to}')
+            .replace('{from}', modName(state.sourceFragmentId))
+            .replace('{to}', modName(state.targetFragmentId)),
+          2000
+        );
+      }
+      return;
+    }
+
+    /* Failure: honest 10% break chance, with a pity guarantee so that at most
+       REPROGRAM_BREAK_PITY consecutive failures can pass without a break. */
+    _reprogramFailStreak++;
+    var broke = _reprogramFailStreak >= REPROGRAM_BREAK_PITY || Math.random() * 100 < REPROGRAM_BREAK_PCT;
+    if (broke) {
+      removePlayerFragment(state.sourceFragmentId, 1);
+      _reprogramFailStreak = 0;
+    }
     _resetReprogramState();
     renderChipCraftPanel();
     renderChipUpgradeGrid();
     if (global.Game && global.Game.Toast) {
       global.Game.Toast.show(
-        t('chipReprogramSuccess', 'Фрагмент перепрограммирован: {from} → {to}')
-          .replace('{from}', modName(state.sourceFragmentId))
-          .replace('{to}', modName(state.targetFragmentId)),
-        2000
+        broke
+          ? t('chipReprogramBreak', 'Перепрограммирование не удалось. Фрагмент разрушен и потерян.')
+          : t('chipReprogramFail', 'Перепрограммирование не удалось. Потеряно 2 ед. кремниевой пыли.'),
+        2200
       );
     }
   }
@@ -4165,6 +4201,12 @@
               .replace('{have}', _siliconDust)
               .replace('{need}', REPROGRAM_DUST_COST) +
             '</div>';
+          html += '<div class="chipCraftReprogramDustInfo">' +
+            t('chipReprogramChance', 'Шанс успеха: {chance}%').replace('{chance}', REPROGRAM_SUCCESS_PCT) +
+            '</div>';
+          html += '<div class="chipCraftReprogramDustInfo">' +
+            t('chipReprogramBreakChance', 'При провале шанс потерять фрагмент: {chance}%').replace('{chance}', REPROGRAM_BREAK_PCT) +
+            '</div>';
           html += '</div>';
           html += '<div class="chipCraftReprogramColumn">';
           if (reprogramState && reprogramState.targetFragmentId) {
@@ -4429,7 +4471,7 @@
     var reagentPlus = pelq('chipCraftReagentPlus');
     if (reagentPlus) {
       reagentPlus.addEventListener('click', function () {
-        if (_craftReagentDust < 5 && _siliconDust > _craftReagentDust) {
+        if (_craftReagentDust < CRAFT_REAGENT_DUST_MAX && _siliconDust > _craftReagentDust) {
           _craftReagentDust++;
           renderChipCraftPanel();
         }
