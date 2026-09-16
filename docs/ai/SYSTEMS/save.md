@@ -54,7 +54,7 @@
 | `talentsV2` / `talentsApplied` | progression | V2 — собственный store; legacy `talentsApplied` только для migration V1→V2 | [src/systems/talents/talentsV2.js](../../../src/systems/talents/talentsV2.js) | V1 `talentsPending` / `activeCooldowns` deprecated, больше не сохраняются |
 | `supercomputer` | progression | `state.supercomputer` | [game.js](../../../game.js) supercomputer flow | `computerLevel = 0` baseline для new game |
 | `boostUntil`, `activeEffects` | world | `state.boostUntil`, `state.activeEffects` | [game.js](../../../game.js) | `0` / `[]` |
-| `fenceState` | world | `state.savedFenceState` | [game.js](../../../game.js) restore path | `{ segmentsPerSide: null, hpById: {} }` |
+| `fenceState` | world | `state.fenceSegments` (live) → fallback `state.savedFenceState` | [src/persistence/storage.js](../../../src/persistence/storage.js) writer; [game.js](../../../game.js) restore path | `{ segmentsPerSide: null, hpById: {} }` — **персистит повреждение забора**: `hpById[segmentId] = max(0, hp)`, `hp === 0` = пробитый сегмент. Fallback на `savedFenceState` нужен, т.к. `state.fenceSegments` пуст в окне resize / смены тира забора; ids из снапшота применяются только при совпадении `segmentsPerSide` |
 | `fenceRepairCount` | progression | `state.fenceRepairCount` | [game.js](../../../game.js) `tryRepairFenceSegmentAt()` | `0`; сбрасывается на partial/full reset |
 | `nextCrateAt`, `boostUntil`, `mapSeeds` | world | `state.*` | [game.js](../../../game.js), world init | сохраняются если присутствуют |
 | `maxTankLevelAchieved` | progression | `state.maxTankLevelAchieved` | [game.js](../../../game.js) | `1` baseline |

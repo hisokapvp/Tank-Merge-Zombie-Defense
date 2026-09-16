@@ -83,6 +83,7 @@
   "crateModalText": "To ensure successful mission completion, the command center has sent you an additional tank",
   "crateGet": "Claim",
   "crateAdLoading": "Watching ad...",
+  "crateUndergroundNoSpace": "No free slots left in the underground hangar",
   "talentsBtn": "Upgrade Tree",
   "supercomputerBtn": "Supercomputer",
   "supercomputerMenuTitle": "Supercomputer Menu",

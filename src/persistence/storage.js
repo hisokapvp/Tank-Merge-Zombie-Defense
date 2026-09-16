@@ -382,18 +382,49 @@
    */
   function serializeState(state) {
     if (!state) return {};
+    // Fence damage persistence:
+    // Live `state.fenceSegments` is authoritative when present, but it is transiently
+    // EMPTY after a resize / fence-tier change (see snapshotFenceHpById + fenceSegments
+    // reset in game.js). In that window a save would flatten every wall back to full HP.
+    // Fall back to `state.savedFenceState` (the snapshot taken right before the reset),
+    // but only when its `segmentsPerSide` matches the current segment grid, otherwise
+    // the ids would map onto a different layout.
+    var currentSegmentsPerSide = Number.isFinite(state.fenceSegmentsMeta && state.fenceSegmentsMeta.segmentsPerSide)
+      ? state.fenceSegmentsMeta.segmentsPerSide
+      : null;
     var fenceHpById = {};
+    var liveFenceSegmentCount = 0;
     if (Array.isArray(state.fenceSegments)) {
       for (var si = 0; si < state.fenceSegments.length; si++) {
         var seg = state.fenceSegments[si];
         if (!seg || !seg.id || !Number.isFinite(seg.hp)) continue;
         fenceHpById[seg.id] = Math.max(0, seg.hp);
+        liveFenceSegmentCount++;
+      }
+    }
+    var savedFenceState = state.savedFenceState && typeof state.savedFenceState === 'object'
+      ? state.savedFenceState
+      : null;
+    var savedSegmentsPerSide = Number.isFinite(savedFenceState && savedFenceState.segmentsPerSide)
+      ? Math.max(1, Math.floor(savedFenceState.segmentsPerSide))
+      : null;
+    var savedSegmentsPerSideMatches =
+      !savedFenceState ||
+      savedSegmentsPerSide == null ||
+      (liveFenceSegmentCount === 0 && currentSegmentsPerSide == null) ||
+      savedSegmentsPerSide === currentSegmentsPerSide;
+    if (savedFenceState && savedFenceState.hpById && typeof savedFenceState.hpById === 'object' && savedSegmentsPerSideMatches) {
+      var savedIds = Object.keys(savedFenceState.hpById);
+      for (var ssi = 0; ssi < savedIds.length; ssi++) {
+        var savedId = savedIds[ssi];
+        var savedHp = savedFenceState.hpById[savedId];
+        if (!Number.isFinite(savedHp)) continue;
+        if (Object.prototype.hasOwnProperty.call(fenceHpById, savedId)) continue;
+        fenceHpById[savedId] = Math.max(0, savedHp);
       }
     }
     var fenceState = {
-      segmentsPerSide: Number.isFinite(state.fenceSegmentsMeta && state.fenceSegmentsMeta.segmentsPerSide)
-        ? state.fenceSegmentsMeta.segmentsPerSide
-        : null,
+      segmentsPerSide: currentSegmentsPerSide != null ? currentSegmentsPerSide : savedSegmentsPerSide,
       hpById: fenceHpById,
     };
     var cells = [];
@@ -414,7 +445,14 @@
     }
     var crate = null;
     if (state.crate) {
-      crate = { cellIndex: state.crate.cellIndex, rewardLevel: state.crate.rewardLevel };
+      crate = {
+        cellIndex: state.crate.cellIndex,
+        rewardLevel: state.crate.rewardLevel,
+        // Underground-crate extension: a box that fell into the underground
+        // hangar keeps its reward target and visibility state across reloads.
+        hangar: state.crate.hangar === 'underground' ? 'underground' : 'main',
+        rewardHangarIndex: Number.isFinite(state.crate.rewardHangarIndex) ? state.crate.rewardHangarIndex : -1,
+      };
     }
     var mapSeeds = null;
     if (state.mapSeeds && typeof state.mapSeeds === 'object') {

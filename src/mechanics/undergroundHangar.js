@@ -16,6 +16,8 @@
   let _isHovered = false;
   let _isClosing = false;  // true while close anim plays after modal dismiss
   let _onAnimDone = null;  // callback when one-shot anim finishes
+  let _landingActive = false; // true while the crate landing choreography owns the FSM
+  let _crateLanding = { openHoldSec: 0.35, closeHoldSec: 0, timeoutSec: 3 };
 
   // Cached anim defs after config load
   let _anims = {
@@ -86,11 +88,26 @@
       _anims.close = parseAnim(rawAnims.close);
 
       _config = { scale: scale, anchor: anchor };
+
+      const rawLanding = data.crateLanding && typeof data.crateLanding === 'object' ? data.crateLanding : null;
+      if (rawLanding) {
+        if (Number.isFinite(rawLanding.openHoldSec) && rawLanding.openHoldSec >= 0) {
+          _crateLanding.openHoldSec = rawLanding.openHoldSec;
+        }
+        if (Number.isFinite(rawLanding.closeHoldSec) && rawLanding.closeHoldSec >= 0) {
+          _crateLanding.closeHoldSec = rawLanding.closeHoldSec;
+        }
+        if (Number.isFinite(rawLanding.timeoutSec) && rawLanding.timeoutSec > 0) {
+          _crateLanding.timeoutSec = rawLanding.timeoutSec;
+        }
+      }
+
       _ready = true;
     } catch (e) {
       _ready = false;
       _config = null;
       _atlasImg = null;
+      _landingActive = false;
     }
   }
 
@@ -102,6 +119,34 @@
     _animFrame = 0;
     _animTimer = 0;
     _onAnimDone = typeof onDone === 'function' ? onDone : null;
+  }
+
+  // Landing choreography needs to re-trigger the same anim name (e.g. two
+  // consecutive 'close' passes) and must never be short-circuited by the
+  // dedupe guard above.
+  function _forceSetAnim(name, onDone) {
+    _animState = name;
+    _animFrame = 0;
+    _animTimer = 0;
+    _onAnimDone = typeof onDone === 'function' ? onDone : null;
+  }
+
+  function getAnimFrameDurationSec(name) {
+    const anim = _anims[name];
+    if (!anim) return 0;
+    const fps = Math.max(0.01, Number(anim.frameRateFps) || 1);
+    const frames = Math.max(1, Number(anim.frames) || 1);
+    return frames / fps;
+  }
+
+  function getCrateLandingConfig() { return _crateLanding; }
+
+  // How long before touchdown the gates start opening. Only the 'click' clip is
+  // consumed as lead time, so the gates finish opening right as the box arrives —
+  // the crate still visibly falls, but into an already open hangar. The configured
+  // hold then covers the moment the box goes inside, before the 'close' pass.
+  function getLandingLeadSec() {
+    return getAnimFrameDurationSec('click');
   }
 
   function stepAnimation(dt) {
@@ -258,6 +303,7 @@
   // ─── Pointer interaction ───
 
   function handlePointerEnter() {
+    if (_landingActive) return;
     if (_isHovered) return;
     _isHovered = true;
     _isClosing = false;
@@ -268,6 +314,7 @@
   }
 
   function handlePointerLeave() {
+    if (_landingActive) return;
     if (!_isHovered) return;
     _isHovered = false;
     // Skip hover_end when close animation is already playing (modal dismiss)
@@ -285,12 +332,67 @@
   }
 
   function handleModalClose() {
+    // The landing choreography owns the close pass; the UI close callback must
+    // not restart it.
+    if (_landingActive) return;
     _isHovered = false;
     _isClosing = true;
     setAnim('close', function () {
       _isClosing = false;
       setAnim('idle');
     });
+  }
+
+  // ─── Crate landing choreography (crate fell into cell 15) ───
+  // strictly ordered: open -> (crate disappears) -> close -> idle.
+  // While it runs, hover enter/leave are suppressed so the sequence cannot be
+  // interrupted by pointer movement across the cell.
+
+  function isLandingActive() {
+    return _landingActive;
+  }
+
+  function playLandingOpen(onDone) {
+    _landingActive = true;
+    _isHovered = false;
+    _isClosing = false;
+    _forceSetAnim('click', function () {
+      var holdSec = Number.isFinite(_crateLanding.openHoldSec) ? _crateLanding.openHoldSec : 0;
+      if (holdSec > 0 && typeof global.setTimeout === 'function') {
+        global.setTimeout(function () {
+          if (!_landingActive) return;
+          if (typeof onDone === 'function') onDone();
+        }, holdSec * 1000);
+        return;
+      }
+      if (typeof onDone === 'function') onDone();
+    });
+  }
+
+  function playLandingClose(onDone) {
+    if (!_landingActive) return;
+    var holdSec = Number.isFinite(_crateLanding.closeHoldSec) ? _crateLanding.closeHoldSec : 0;
+    var runClose = function () {
+      _forceSetAnim('close', function () {
+        _landingActive = false;
+        _isClosing = false;
+        _forceSetAnim('idle');
+        if (typeof onDone === 'function') onDone();
+      });
+    };
+    if (holdSec > 0 && typeof global.setTimeout === 'function') {
+      global.setTimeout(runClose, holdSec * 1000);
+      return;
+    }
+    runClose();
+  }
+
+  function cancelLanding() {
+    if (!_landingActive) return;
+    _landingActive = false;
+    _isClosing = false;
+    _isHovered = false;
+    _forceSetAnim('idle');
   }
 
   // ─── State for underground hangar slots ───
@@ -345,6 +447,12 @@
     isReady: function () { return _ready; },
     getAnimState: function () { return _animState; },
     setAnim: setAnim,
+    isLandingActive: isLandingActive,
+    playLandingOpen: playLandingOpen,
+    playLandingClose: playLandingClose,
+    cancelLanding: cancelLanding,
+    getLandingConfig: getCrateLandingConfig,
+    getLandingLeadSec: getLandingLeadSec,
   };
 
 }(window));

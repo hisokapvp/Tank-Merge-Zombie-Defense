@@ -539,6 +539,10 @@ const BAL = {
   crateIntervalSec: 120,
   crateDropSpeed: 220,
   crateSize: 34,
+  // Underground-crate fallback timings (see src/mechanics/undergroundHangar.js
+  // crateLanding + stepCrate watchdog).
+  crateSpawnRetrySec: 5,
+  crateLandingTimeoutSec: 3,
 
   fenceSpriteIds: [],
 
@@ -7647,6 +7651,7 @@ function restoreFullState(saved){
   }
   if (saved.crate && state.cells[saved.crate.cellIndex]) {
     const cell = state.cells[saved.crate.cellIndex];
+    const isUndergroundCrate = saved.crate.hangar === 'underground';
     state.crate = {
       id: 'crate_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       x: cell.x + cell.w / 2,
@@ -7661,6 +7666,15 @@ function restoreFullState(saved){
       rewardLevel: saved.crate.rewardLevel ?? 1,
       cellIndex: saved.crate.cellIndex,
       claiming: false,
+      // A restored underground crate is already "inside" the hangar: it is not
+      // visible on the board and waits in the idle stage for the player to click
+      // cell 15 and claim the reward.
+      hangar: isUndergroundCrate ? 'underground' : 'main',
+      stage: 'idle',
+      rewardHangarIndex: Number.isFinite(saved.crate.rewardHangarIndex) ? saved.crate.rewardHangarIndex : -1,
+      visible: !isUndergroundCrate,
+      landedAt: 0,
+      nextRetryAtSec: 0,
     };
   } else state.crate = null;
   refreshTanksPowerTier();
@@ -7668,6 +7682,17 @@ function restoreFullState(saved){
   ensureFenceUpgradesAppliedState();
   ensureFenceTierRuntimeState(state);
   syncFenceTierWithMaxTankLevel(state, { force: true });
+  // syncFenceTierWithMaxTankLevel() internally calls snapshotFenceHpById(), which
+  // overwrites state.savedFenceState with the CURRENT session's fence HP (the walls
+  // that were on screen before the load). Re-apply the HP map from the save payload
+  // afterwards so persisted fence damage survives the load instead of being
+  // replaced by the pre-load session state.
+  if (saved.fenceState && typeof saved.fenceState === 'object') {
+    state.savedFenceState = {
+      segmentsPerSide: Number.isFinite(saved.fenceState.segmentsPerSide) ? Math.max(1, Math.floor(saved.fenceState.segmentsPerSide)) : null,
+      hpById: saved.fenceState.hpById && typeof saved.fenceState.hpById === 'object' ? { ...saved.fenceState.hpById } : {},
+    };
+  }
   if (forceFenceRuntimeResetOnLoad) {
     state.savedFenceState = null;
     state.buyCounts = {};
@@ -11861,6 +11886,14 @@ function ensureCrateRuntimeController(){
   return crateRuntimeController;
 }
 
+function pickUndergroundCrateRewardIndex(){
+  return ensureCrateRuntimeController()?.pickUndergroundRewardIndex(state) ?? -1;
+}
+
+function getUndergroundCrateCellIndex(){
+  return ensureCrateRuntimeController()?.getUndergroundCellIndex() ?? getUndergroundHangarReservedMainCellIndex();
+}
+
 // ---------- Crates ----------
 function pickCrateRewardLevel(){
   return ensureCrateRuntimeController()?.pickCrateRewardLevel() || 1;
@@ -12665,6 +12698,13 @@ function applyPreRetryRuntimeReset(targetState){
   targetState.dragging = null;
   targetState.crate = null;
   targetState.nextCrateAt = 0;
+  // Если сброс мира попал в середину landing-хореографии коробки, FSM подземного
+  // ангара остался бы в locked-состоянии (callbacks уже не сработают, т.к. crate
+  // обнулён) и hover на 15-й ячейке отключился бы до конца сессии.
+  {
+    const _UHreset = window.Game && window.Game.UndergroundHangar;
+    if (_UHreset && typeof _UHreset.cancelLanding === 'function') _UHreset.cancelLanding();
+  }
   targetState.boostUntil = 0;
   targetState.empUntil = 0;
   targetState.activeEffects = {
@@ -14698,11 +14738,56 @@ function grantCrateTank(level, preferredIndex = null){
   return true;
 }
 
+// Underground crate variant: the reward is granted into a storage cell of
+// `state.undergroundHangar.cells`, never into the upper hangar.
+function grantUndergroundCrateTank(level, preferredIndex = null){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  const ugh = state.undergroundHangar;
+  const cells = ugh && Array.isArray(ugh.cells) ? ugh.cells : null;
+  if (!cells || !cells.length) {
+    console.warn('[Crate] Underground hangar storage is unavailable, grant skipped.');
+    return false;
+  }
+
+  let targetIndex = Number.isFinite(preferredIndex) ? (preferredIndex | 0) : -1;
+  if (targetIndex >= 0 && targetIndex < cells.length && _isUndergroundCellEmpty(cells[targetIndex])) {
+    // Preferred slot is still free — use it.
+  } else {
+    // Safe fallback: the reward slot may have been taken while the modal was
+    // open. Pick the first free underground cell instead of losing the reward.
+    targetIndex = -1;
+    for (let i = 0; i < cells.length; i++) {
+      if (_isUndergroundCellEmpty(cells[i])) { targetIndex = i; break; }
+    }
+  }
+
+  if (targetIndex < 0) {
+    console.warn('[Crate] No free underground hangar slot left, reward dropped.', {
+      preferredIndex,
+      rewardLevel: level,
+    });
+    const Toast = window.Game && window.Game.Toast;
+    if (Toast && typeof Toast.show === 'function') {
+      Toast.show(t('crateUndergroundNoSpace'), 2200);
+    }
+    return false;
+  }
+
+  cells[targetIndex].tank = makeTank(level, false);
+  recordTankLevel(level);
+  return true;
+}
+
 function claimCrateReward(){
   if (!state.crate || state.crate.claiming) return;
   const crateSnapshot = state.crate;
   const crateId = crateSnapshot.id;
   const crateSlotId = crateSnapshot.cellIndex;
+  const isUndergroundCrate = crateSnapshot.hangar === 'underground';
+  const rewardHangarIndex = Number.isFinite(crateSnapshot.rewardHangarIndex)
+    ? (crateSnapshot.rewardHangarIndex | 0)
+    : -1;
   const rewardLevel = crateSnapshot.rewardLevel ?? 1;
 
   if (!Number.isFinite(crateSlotId) || !state.cells[crateSlotId]) {
@@ -14727,7 +14812,11 @@ function claimCrateReward(){
     }
     state.crate = null;
     state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
-    grantCrateTank(rewardLevel, crateSlotId);
+    if (isUndergroundCrate) {
+      grantUndergroundCrateTank(rewardLevel, rewardHangarIndex);
+    } else {
+      grantCrateTank(rewardLevel, crateSlotId);
+    }
     // solo-pipeline-yandex-vk batch#1 — box_hunter achievement family seam.
     // Канонический pipeline (как у onDroneRepairCompleted / completeAttackEpisode):
     // record -> unlocked[] -> reconcileAchievementRewards (composite payouts:
@@ -14735,6 +14824,7 @@ function claimCrateReward(){
     // bonus_hunter_3) -> queueAchievementPopup для UI. Без этого fix композит
     // молча терялся и popup не появлялся (тот же класс бага, что repair_crew
     // до починки).
+    if (isUndergroundCrate) refreshUndergroundHangarModalIfOpen();
     if (AchievementsApi && typeof AchievementsApi.recordBonusBoxOpened === 'function') {
       const unlockedBoxHunter = AchievementsApi.recordBonusBoxOpened(state) || [];
       if (unlockedBoxHunter.length) {
@@ -14744,6 +14834,14 @@ function claimCrateReward(){
     }
     closeCrateModal();
   }, 1200);
+}
+
+// Если подземная модалка открыта на момент grant-а — перерисуем её, чтобы
+// появившийся танк был виден сразу.
+function refreshUndergroundHangarModalIfOpen(){
+  const ughUi = window.Game && window.Game.UndergroundHangarUI;
+  if (!ughUi || typeof ughUi.isOpen !== 'function' || !ughUi.isOpen()) return;
+  if (typeof ughUi.render === 'function') ughUi.render();
 }
 
 function getSupercomputerMenuController(){
@@ -14927,6 +15025,24 @@ canvas.addEventListener('pointerdown', (e)=>{
     }
     openCrateModal();
     return;
+  }
+  // Underground crate: cell 15 is shared between the crate and the underground
+// hangar button. While a pending underground crate exists the crate wins the
+// click (identical flow to the upper hangar: modal -> rewarded ad -> grant);
+// during the landing choreography the click is swallowed entirely so the
+// open -> disappear -> close sequence cannot be interrupted.
+  {
+    const _UHcrate = window.Game && window.Game.UndergroundHangar;
+    if (state.crate && state.crate.hangar === 'underground'
+      && _UHcrate && typeof _UHcrate.hitTest === 'function'
+      && state.cells[_UHcrate.CELL_INDEX]
+      && _UHcrate.hitTest(p.x, p.y, state.cells[_UHcrate.CELL_INDEX])) {
+      if (state.crate.stage !== 'idle') return;
+      state.crate.isHover = true;
+      setCrateAnimationState(state.crate, 'press', true);
+      openCrateModal();
+      return;
+    }
   }
   const trackCell = tankOnTrackAt(p.x, p.y, nowSec());
   if (trackCell !== null){
@@ -18212,6 +18328,13 @@ function drawImpacts(){
 function drawCrate(){
   if (!state.crate) return;
   const c = state.crate;
+  // Underground crate that already "disappeared" into the hangar: the sprite is
+  // gone, but a compact pending-reward marker keeps the claim flow discoverable
+  // (click cell 15 -> "Военная помощь" modal -> rewarded ad -> grant).
+  if (c.hangar === 'underground' && c.visible === false && c.stage === 'idle') {
+    drawUndergroundCrateMarker(c);
+    return;
+  }
   const size = c.size;
   const half = size * 0.5;
   const pulse = 1 + Math.sin(c.pulse) * 0.04;
@@ -18278,6 +18401,34 @@ function drawCrate(){
   ctx.strokeStyle = 'rgba(0,0,0,.25)';
   ctx.strokeRect(-10, -8, 20, 16);
 
+  ctx.restore();
+}
+
+// Pending-reward marker for an underground crate that already vanished into the
+// hangar. Pure draw: reads state only, never mutates it.
+function drawUndergroundCrateMarker(c){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  const cellIndex = UH && Number.isFinite(UH.CELL_INDEX) ? UH.CELL_INDEX : 15;
+  const cell = state.cells[cellIndex];
+  if (!cell) return;
+  const cx = cell.x + cell.w / 2;
+  const radius = Math.max(7, Math.min(cell.w, cell.h) * 0.16);
+  const pulse = 0.72 + Math.sin((c.pulse || 0) * 0.9) * 0.22;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0.25, Math.min(1, pulse));
+  ctx.beginPath();
+  ctx.arc(cx, cell.y + radius + 3, radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffb43a';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(41, 18, 8, 0.85)';
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#2a1408';
+  ctx.font = 'bold ' + Math.max(9, Math.floor(radius * 1.25)) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('?', cx, cell.y + radius + 4);
   ctx.restore();
 }
 
@@ -19459,7 +19610,15 @@ async function boot(){
           tankOverrides: balData.tankOverrides || {},
           merge: balData.merge || {},
           perf: balData.perf || {},
+          crate: balData.crate || {},
         };
+        // Crate → underground hangar fallback tunables (assets/balance.json → crate).
+        if (Number.isFinite(BalanceConfig.crate.spawnRetrySec)) {
+          BAL.crateSpawnRetrySec = Math.max(0.5, BalanceConfig.crate.spawnRetrySec);
+        }
+        if (Number.isFinite(BalanceConfig.crate.landingTimeoutSec)) {
+          BAL.crateLandingTimeoutSec = Math.max(0.5, BalanceConfig.crate.landingTimeoutSec);
+        }
         // solo-pipeline-yandex-vk#1 item 3 (postmortem 7): dev-only sanity warning. Корневой
         // источник завышенного урона танков 2/3 ур. — глобальный tank.attackDamageMul, который
         // НЕ совпадает с per-level override (level_1=1), из-за чего остальные уровни молча

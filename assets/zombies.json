@@ -110,9 +110,9 @@
     }
   ],
   "spawn": {
-    "targetAlive": 250,
+    "targetAlive": 160,
     "sideCount": 4,
-    "perSideTarget": 60,
+    "perSideTarget": 40,
     "perSideTolerance": 5
   },
   "corpseDespawnSec": 1.5,
@@ -169,7 +169,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 14,
+      "attackDamage": 17,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -184,7 +184,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13370,
+      "Health": 16044,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -235,7 +235,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 27,
+      "attackDamage": 32,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -250,7 +250,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13640,
+      "Health": 16368,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -260,9 +260,9 @@
       "id": "zombie_lvl3",
       "fenceOffsetPxBySide": {
         "top": 10,
-        "right": 10,
-        "bottom": 0,
-        "left": 10
+        "right": 5,
+        "bottom": -10,
+        "left": 5
       },
       "frame": {
         "x": 0,
@@ -277,7 +277,7 @@
         "w": 27,
         "h": 27,
         "frames": 9,
-        "attackRangePx": 40,
+        "attackRangePx": 30,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
@@ -301,7 +301,7 @@
       "hitbox": {
         "r": 18
       },
-      "attackDamage": 41,
+      "attackDamage": 49,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -316,7 +316,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 13900,
+      "Health": 16680,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -367,7 +367,7 @@
         "h": 35,
         "frames": 9
       },
-      "attackDamage": 225,
+      "attackDamage": 65,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -382,7 +382,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 14160,
+      "Health": 16992,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -433,7 +433,7 @@
         "h": 24,
         "frames": 8
       },
-      "attackDamage": 68,
+      "attackDamage": 82,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -448,7 +448,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 16670,
+      "Health": 20004,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -499,7 +499,7 @@
         "h": 37,
         "frames": 9
       },
-      "attackDamage": 81,
+      "attackDamage": 97,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -514,7 +514,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 19550,
+      "Health": 23460,
       "anchor_shadow": {
         "x": 0,
         "y": -10
@@ -565,7 +565,7 @@
         "h": 32,
         "frames": 6
       },
-      "attackDamage": 95,
+      "attackDamage": 114,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -580,7 +580,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 22430,
+      "Health": 26916,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -631,7 +631,7 @@
         "h": 32,
         "frames": 12
       },
-      "attackDamage": 108,
+      "attackDamage": 130,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -646,7 +646,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 25360,
+      "Health": 30432,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -697,7 +697,7 @@
         "h": 34,
         "frames": 2
       },
-      "attackDamage": 122,
+      "attackDamage": 146,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -712,7 +712,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 28290,
+      "Health": 33948,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -763,7 +763,7 @@
         "h": 40,
         "frames": 4
       },
-      "attackDamage": 135,
+      "attackDamage": 162,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -778,7 +778,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 31230,
+      "Health": 37476,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -829,7 +829,7 @@
         "h": 48,
         "frames": 6
       },
-      "attackDamage": 149,
+      "attackDamage": 209,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -844,7 +844,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 33200,
+      "Health": 46480,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -895,7 +895,7 @@
         "h": 41,
         "frames": 6
       },
-      "attackDamage": 162,
+      "attackDamage": 227,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -910,7 +910,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 33530,
+      "Health": 46942,
       "anchor_shadow": {
         "x": 0,
         "y": -7
@@ -961,7 +961,7 @@
         "h": 32,
         "frames": 7
       },
-      "attackDamage": 176,
+      "attackDamage": 246,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -976,7 +976,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 33850,
+      "Health": 47390,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -1027,7 +1027,7 @@
         "h": 48,
         "frames": 2
       },
-      "attackDamage": 189,
+      "attackDamage": 265,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1042,7 +1042,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 34640,
+      "Health": 48496,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1093,7 +1093,7 @@
         "h": 64,
         "frames": 9
       },
-      "attackDamage": 203,
+      "attackDamage": 284,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1108,7 +1108,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 34990,
+      "Health": 48986,
       "anchor_shadow": {
         "x": 0,
         "y": -12
@@ -1159,7 +1159,7 @@
         "h": 32,
         "frames": 4
       },
-      "attackDamage": 216,
+      "attackDamage": 302,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1174,7 +1174,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 36180,
+      "Health": 50652,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -1225,7 +1225,7 @@
         "h": 48,
         "frames": 6
       },
-      "attackDamage": 230,
+      "attackDamage": 322,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1240,7 +1240,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 39080,
+      "Health": 54712,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1291,7 +1291,7 @@
         "h": 69,
         "frames": 6
       },
-      "attackDamage": 243,
+      "attackDamage": 340,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1306,7 +1306,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 41480,
+      "Health": 58072,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1357,7 +1357,7 @@
         "h": 59,
         "frames": 5
       },
-      "attackDamage": 257,
+      "attackDamage": 360,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1372,7 +1372,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 43590,
+      "Health": 61026,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1423,7 +1423,7 @@
         "h": 60,
         "frames": 5
       },
-      "attackDamage": 270,
+      "attackDamage": 378,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -1438,7 +1438,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 64430,
+      "Health": 90202,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -1489,7 +1489,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 284,
+      "attackDamage": 454,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -1504,7 +1504,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 78270,
+      "Health": 125232,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1555,7 +1555,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 297,
+      "attackDamage": 475,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -1570,7 +1570,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 81920,
+      "Health": 131072,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1621,7 +1621,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 311,
+      "attackDamage": 498,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1636,7 +1636,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 87260,
+      "Health": 139616,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1687,7 +1687,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 324,
+      "attackDamage": 518,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -1702,7 +1702,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 90700,
+      "Health": 145120,
       "anchor_shadow": {
         "x": 0,
         "y": 9
@@ -1753,7 +1753,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 338,
+      "attackDamage": 541,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1768,7 +1768,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 94800,
+      "Health": 151680,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1819,7 +1819,7 @@
         "h": 128,
         "frames": 5
       },
-      "attackDamage": 351,
+      "attackDamage": 562,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1834,7 +1834,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 100540,
+      "Health": 160864,
       "anchor_shadow": {
         "x": 0,
         "y": 10
@@ -1885,7 +1885,7 @@
         "h": 96,
         "frames": 5
       },
-      "attackDamage": 365,
+      "attackDamage": 584,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1900,7 +1900,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 104440,
+      "Health": 167104,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -1951,7 +1951,7 @@
         "h": 62,
         "frames": 4
       },
-      "attackDamage": 378,
+      "attackDamage": 605,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -1966,7 +1966,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 108370,
+      "Health": 173392,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2017,7 +2017,7 @@
         "h": 65,
         "frames": 4
       },
-      "attackDamage": 392,
+      "attackDamage": 627,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2032,7 +2032,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 114210,
+      "Health": 182736,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2083,7 +2083,7 @@
         "h": 46,
         "frames": 11
       },
-      "attackDamage": 405,
+      "attackDamage": 648,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2098,7 +2098,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 114880,
+      "Health": 183808,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2149,7 +2149,7 @@
         "h": 81,
         "frames": 2
       },
-      "attackDamage": 419,
+      "attackDamage": 754,
       "animations": {
         "walk": {
           "frameRateFps": 100
@@ -2164,7 +2164,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 124470,
+      "Health": 224046,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2215,7 +2215,7 @@
         "h": 59,
         "frames": 7
       },
-      "attackDamage": 432,
+      "attackDamage": 778,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2230,7 +2230,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 130670,
+      "Health": 235206,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2281,7 +2281,7 @@
         "h": 48,
         "frames": 6
       },
-      "attackDamage": 446,
+      "attackDamage": 803,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2296,7 +2296,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 135150,
+      "Health": 243270,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2347,7 +2347,7 @@
         "h": 42,
         "frames": 4
       },
-      "attackDamage": 459,
+      "attackDamage": 826,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2362,7 +2362,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 139660,
+      "Health": 251388,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -2413,7 +2413,7 @@
         "h": 36,
         "frames": 10
       },
-      "attackDamage": 473,
+      "attackDamage": 851,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2428,7 +2428,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 146740,
+      "Health": 264132,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2479,7 +2479,7 @@
         "h": 63,
         "frames": 4
       },
-      "attackDamage": 486,
+      "attackDamage": 875,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2494,7 +2494,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 151030,
+      "Health": 271854,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2545,7 +2545,7 @@
         "h": 42,
         "frames": 4
       },
-      "attackDamage": 500,
+      "attackDamage": 900,
       "animations": {
         "walk": {
           "frameRateFps": 60
@@ -2560,7 +2560,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 155730,
+      "Health": 280314,
       "anchor_shadow": {
         "x": 0,
         "y": -2
@@ -2611,7 +2611,7 @@
         "h": 37,
         "frames": 6
       },
-      "attackDamage": 513,
+      "attackDamage": 923,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2626,7 +2626,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 163350,
+      "Health": 294030,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2677,7 +2677,7 @@
         "h": 73,
         "frames": 11
       },
-      "attackDamage": 527,
+      "attackDamage": 949,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2692,7 +2692,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 168220,
+      "Health": 302796,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2743,7 +2743,7 @@
         "h": 53,
         "frames": 10
       },
-      "attackDamage": 1536,
+      "attackDamage": 2765,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2758,7 +2758,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 172740,
+      "Health": 310932,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -2809,7 +2809,7 @@
         "h": 63,
         "frames": 5
       },
-      "attackDamage": 554,
+      "attackDamage": 1108,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2824,7 +2824,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 174710,
+      "Health": 349420,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -2875,7 +2875,7 @@
         "h": 80,
         "frames": 5
       },
-      "attackDamage": 567,
+      "attackDamage": 1134,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2890,7 +2890,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 179630,
+      "Health": 359260,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -2941,7 +2941,7 @@
         "h": 63,
         "frames": 4
       },
-      "attackDamage": 581,
+      "attackDamage": 1162,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -2956,7 +2956,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 184570,
+      "Health": 369140,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3007,7 +3007,7 @@
         "h": 65,
         "frames": 4
       },
-      "attackDamage": 594,
+      "attackDamage": 1188,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3022,7 +3022,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 192670,
+      "Health": 385340,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3073,7 +3073,7 @@
         "h": 65,
         "frames": 5
       },
-      "attackDamage": 608,
+      "attackDamage": 1216,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3088,7 +3088,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 197810,
+      "Health": 395620,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3139,7 +3139,7 @@
         "h": 62,
         "frames": 6
       },
-      "attackDamage": 621,
+      "attackDamage": 1242,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3154,7 +3154,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 202990,
+      "Health": 405980,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3205,7 +3205,7 @@
         "h": 71,
         "frames": 5
       },
-      "attackDamage": 635,
+      "attackDamage": 1270,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3220,7 +3220,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 212100,
+      "Health": 424200,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3271,7 +3271,7 @@
         "h": 70,
         "frames": 5
       },
-      "attackDamage": 648,
+      "attackDamage": 1296,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3286,7 +3286,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 217060,
+      "Health": 434120,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3337,7 +3337,7 @@
         "h": 74,
         "frames": 6
       },
-      "attackDamage": 662,
+      "attackDamage": 1324,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3352,7 +3352,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 222470,
+      "Health": 444940,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3403,7 +3403,7 @@
         "h": 78,
         "frames": 5
       },
-      "attackDamage": 675,
+      "attackDamage": 1350,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3418,7 +3418,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 232230,
+      "Health": 464460,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3469,7 +3469,7 @@
         "h": 29,
         "frames": 5
       },
-      "attackDamage": 689,
+      "attackDamage": 1516,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3484,7 +3484,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 233850,
+      "Health": 514470,
       "anchor_shadow": {
         "x": 0,
         "y": -8
@@ -3535,7 +3535,7 @@
         "h": 71,
         "frames": 12
       },
-      "attackDamage": 702,
+      "attackDamage": 1544,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3550,7 +3550,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 238990,
+      "Health": 525778,
       "anchor_shadow": {
         "x": 0,
         "y": -5
@@ -3601,7 +3601,7 @@
         "h": 44,
         "frames": 6
       },
-      "attackDamage": 716,
+      "attackDamage": 1575,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3616,7 +3616,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 249260,
+      "Health": 548372,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -3667,7 +3667,7 @@
         "h": 32,
         "frames": 9
       },
-      "attackDamage": 729,
+      "attackDamage": 1604,
       "animations": {
         "walk": {
           "frameRateFps": 50
@@ -3682,7 +3682,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 255050,
+      "Health": 561110,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3733,7 +3733,7 @@
         "h": 50,
         "frames": 4
       },
-      "attackDamage": 743,
+      "attackDamage": 1635,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3748,7 +3748,7 @@
           "frameRateFps": 8
         }
       },
-      "Health": 260880,
+      "Health": 573936,
       "anchor_shadow": {
         "x": 0,
         "y": -3
@@ -3799,7 +3799,7 @@
         "h": 57,
         "frames": 5
       },
-      "attackDamage": 756,
+      "attackDamage": 1663,
       "animations": {
         "walk": {
           "frameRateFps": 90
@@ -3814,7 +3814,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 271410,
+      "Health": 597102,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3865,7 +3865,7 @@
         "h": 64,
         "frames": 10
       },
-      "attackDamage": 770,
+      "attackDamage": 1694,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3880,7 +3880,7 @@
           "frameRateFps": 20
         }
       },
-      "Health": 277470,
+      "Health": 610434,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3931,7 +3931,7 @@
         "h": 86,
         "frames": 10
       },
-      "attackDamage": 783,
+      "attackDamage": 1723,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -3946,7 +3946,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 283570,
+      "Health": 623854,
       "anchor_shadow": {
         "x": 0,
         "y": 0
@@ -3997,7 +3997,7 @@
         "h": 176,
         "frames": 6
       },
-      "attackDamage": 797,
+      "attackDamage": 1753,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -4012,7 +4012,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 295290,
+      "Health": 649638,
       "anchor_shadow": {
         "x": 0,
         "y": 5
@@ -4063,7 +4063,7 @@
         "h": 164,
         "frames": 8
       },
-      "attackDamage": 810,
+      "attackDamage": 1782,
       "animations": {
         "walk": {
           "frameRateFps": 70
@@ -4078,7 +4078,7 @@
           "frameRateFps": 10
         }
       },
-      "Health": 301170,
+      "Health": 662574,
       "anchor_shadow": {
         "x": 0,
         "y": 10

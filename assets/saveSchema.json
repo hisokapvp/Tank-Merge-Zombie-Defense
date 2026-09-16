@@ -81,7 +81,9 @@
           "additionalProperties": true,
           "properties": {
             "cellIndex": { "type": "integer", "minimum": 0 },
-            "rewardLevel": { "type": "integer", "minimum": 1 }
+            "rewardLevel": { "type": "integer", "minimum": 1 },
+            "hangar": { "type": "string", "enum": ["main", "underground"] },
+            "rewardHangarIndex": { "type": "integer", "minimum": -1 }
           }
         }
       ]

@@ -760,7 +760,7 @@
       "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
-      "baseDamage": 40000
+      "baseDamage": 4300
     },
     "body": {
       "src": "tanks/body_all.png",
@@ -2885,7 +2885,7 @@
   },
   "tank_lvl26": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 15250
@@ -2997,7 +2997,7 @@
   },
   "tank_lvl27": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 15800
@@ -3109,7 +3109,7 @@
   },
   "tank_lvl28": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 16350
@@ -3221,7 +3221,7 @@
   },
   "tank_lvl29": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 16900
@@ -3333,7 +3333,7 @@
   },
   "tank_lvl30": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 16950
@@ -3445,7 +3445,7 @@
   },
   "tank_lvl31": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 17200
@@ -3557,7 +3557,7 @@
   },
   "tank_lvl32": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 17700
@@ -3669,7 +3669,7 @@
   },
   "tank_lvl33": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 18250
@@ -3781,7 +3781,7 @@
   },
   "tank_lvl34": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 18800
@@ -3893,7 +3893,7 @@
   },
   "tank_lvl35": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 19350
@@ -5125,7 +5125,7 @@
   },
   "tank_lvl46": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 22725
@@ -5237,7 +5237,7 @@
   },
   "tank_lvl47": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 23225
@@ -5349,7 +5349,7 @@
   },
   "tank_lvl48": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 23675
@@ -5461,7 +5461,7 @@
   },
   "tank_lvl49": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24175
@@ -5573,7 +5573,7 @@
   },
   "tank_lvl50": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24650
@@ -5685,7 +5685,7 @@
   },
   "tank_lvl51": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24655
@@ -5797,7 +5797,7 @@
   },
   "tank_lvl52": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24660
@@ -5909,7 +5909,7 @@
   },
   "tank_lvl53": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24665
@@ -6021,7 +6021,7 @@
   },
   "tank_lvl54": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24670
@@ -6133,7 +6133,7 @@
   },
   "tank_lvl55": {
     "stats": {
-      "projectileCount": 3,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24675
@@ -6245,7 +6245,7 @@
   },
   "tank_lvl56": {
     "stats": {
-      "projectileCount": 4,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24690
@@ -6357,7 +6357,7 @@
   },
   "tank_lvl57": {
     "stats": {
-      "projectileCount": 4,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24715
@@ -6469,7 +6469,7 @@
   },
   "tank_lvl58": {
     "stats": {
-      "projectileCount": 4,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24740
@@ -6581,7 +6581,7 @@
   },
   "tank_lvl59": {
     "stats": {
-      "projectileCount": 4,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24765
@@ -6693,7 +6693,7 @@
   },
   "tank_lvl60": {
     "stats": {
-      "projectileCount": 4,
+      "projectileCount": 2,
       "moveSpeed": 1,
       "attackSpeed": 1,
       "baseDamage": 24790
