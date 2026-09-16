@@ -100,6 +100,10 @@
 
   /* ─── Chip drag-and-drop state (Workshop) ──────────────── */
   var _chipDragging = null; // { chipId, level, startX, startY, x, y, moved, ghostEl, sourceEl }
+  /* Cancels in-flight slot/chip drags. `_slotDragging` and `_cancelAllDrags`
+     are scoped inside `init()`, so `init()` registers its canceller here to let
+     `resetPlayerInventory()` clear a leaked drag/ghost on New Game. */
+  var _cancelDragsHook = null;
 
   /* ─── DOM refs (populated on init) ─────────────────────── */
   var dom = {};
@@ -665,8 +669,10 @@
   function _getChipMatchTargetLabels(cell, chipEntry, h) {
     var targets = [];
     if (!cell || !h || !chipEntry) return targets;
-    var chipDef = h.getChipById(h.allChips, chipEntry.chipId);
-    if (!chipDef) return targets;
+    /* Entry modIds are the source of truth for matching. Do NOT gate the hint on
+       a successful pool lookup: legacy / tier-crafted entries may carry a stale
+       chipId while their modIds still describe a perfectly valid chip. */
+    if (!Array.isArray(chipEntry.modIds) || chipEntry.modIds.length !== 3) return targets;
 
     if (chipEntry.chipColor === 'red') {
       for (var ri = 0; ri < RED_SLOT_KEYS.length; ri++) {
@@ -1488,6 +1494,41 @@
   function getPlayerChips() { return ensurePlayerChips(); }
 
   /**
+   * Heal one inventory entry whose `chipId` never resolved to a pool chip.
+   *
+   * Before the assemble fix, crafting from tech-upgraded fragments produced
+   * entries with `chipId: -1`, which no slot lookup could resolve. Such entries
+   * are repaired in place from their modIds (base-key fold), so legacy saves
+   * self-migrate on load without a schema bump. Entries with a valid chipId are
+   * left untouched.
+   *
+   * @param {object} entry — player chip inventory entry (mutated in place)
+   * @param {object} h — Game.HangarChips
+   * @returns {object} the same entry
+   */
+  function _healPlayerChipEntry(entry, h) {
+    if (!entry || typeof entry !== 'object') return entry;
+    var chipId = Number.isFinite(entry.chipId) ? Math.floor(entry.chipId) : 0;
+    if (chipId > 0) return entry;
+    if (!h || typeof h.resolveChipDefForModIds !== 'function') return entry;
+    var def = h.resolveChipDefForModIds(entry.modIds);
+    if (!def) return entry;
+    entry.chipId = def.chipId;
+    if (!entry.chipColor) entry.chipColor = def.chipColor;
+    if (!entry.sourceComboKey) entry.sourceComboKey = def.sourceComboKey;
+    return entry;
+  }
+
+  /** Apply `_healPlayerChipEntry` across a chip inventory snapshot. */
+  function _healPlayerChips(chips) {
+    if (!Array.isArray(chips) || !chips.length) return chips;
+    var h = hc();
+    if (!h) return chips;
+    for (var i = 0; i < chips.length; i++) _healPlayerChipEntry(chips[i], h);
+    return chips;
+  }
+
+  /**
    * Canonical write-path для playerChips. Все мутации инвентаря чипов обязаны идти через этот setter,
    * иначе drift между canonical owner (`Game.State`) и HangarChipsUI-derived view, а также пропуск
    * `Game.Events.playerChips.changed` event (P3.3).
@@ -1496,7 +1537,7 @@
    * @param {{reason?: string, changedIds?: Array, prevSnapshot?: Array}} [meta]
    */
   function setPlayerChips(chips, meta) {
-    var next = Array.isArray(chips) ? chips : [];
+    var next = _healPlayerChips(Array.isArray(chips) ? chips : []);
     var prevForEvent = null;
     try {
       var prev = ensurePlayerChips();
@@ -1646,8 +1687,11 @@
       level: lvl,
       count: 1
     };
+    /* Never store an unresolvable chipId — heal from modIds if the caller
+       handed us a def that the pool could not identify (legacy/edge paths). */
+    _healPlayerChipEntry(entry, h);
     chips.push(entry);
-    _emitPlayerChipsChanged(typeof reason === 'string' && reason ? reason : 'add', [chipDef.chipId]);
+    _emitPlayerChipsChanged(typeof reason === 'string' && reason ? reason : 'add', [entry.chipId]);
     return entry;
   }
 
@@ -2208,18 +2252,37 @@
 
   /* ─── Install chip into selected slot ──────────────────── */
 
+  /**
+   * Resolve a chip definition for an inventory entry or an installed slot record.
+   *
+   * Primary source is the static pool (`getChipById`). Legacy and tier-crafted
+   * entries can carry `chipId: -1` (or a chipId whose pool modIds no longer match
+   * the tech-upgraded ones), so fall back to assembling the record's modIds
+   * through `resolveChipDefForModIds` (base-key fold) before giving up.
+   *
+   * @param {object} h — Game.HangarChips
+   * @param {object} record — inventory entry or installed slot chip
+   * @param {number} [chipId] — explicit id to try first
+   * @returns {object|null}
+   */
+  function _resolveChipDefForEntry(h, record, chipId) {
+    if (!h || !record) return null;
+    var id = Number.isFinite(chipId) ? chipId : record.chipId;
+    var chipDef = Number.isFinite(id) && id > 0 ? h.getChipById(h.allChips, id) : null;
+    if (chipDef) return chipDef;
+    if (typeof h.resolveChipDefForModIds === 'function' && Array.isArray(record.modIds) && record.modIds.length === 3) {
+      var healed = h.resolveChipDefForModIds(record.modIds);
+      if (healed) return healed;
+    }
+    return null;
+  }
+
   function installChipAction(chipId, chipLevel) {
     var h = hc();
     if (!h || !_selectedSlot) return;
     var cells = ensureCells();
     var cell = cells[_selectedCell];
     if (!cell) return;
-    var chipDef = h.getChipById(h.allChips, chipId);
-    if (!chipDef) return;
-
-    /* validate color match */
-    if (_selectedSlot.type === 'red' && chipDef.chipColor !== 'red') return;
-    if (_selectedSlot.type === 'yellow' && chipDef.chipColor !== 'yellow') return;
 
     var lvl = (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1;
 
@@ -2238,6 +2301,13 @@
       }
       return;
     }
+
+    var chipDef = _resolveChipDefForEntry(h, invEntry, chipId);
+    if (!chipDef) return;
+
+    /* validate color match */
+    if (_selectedSlot.type === 'red' && chipDef.chipColor !== 'red') return;
+    if (_selectedSlot.type === 'yellow' && chipDef.chipColor !== 'yellow') return;
 
     var ok = h.installChip(cell, _selectedSlot.type, _selectedSlot.slotId, chipDef, lvl, invEntry.modIds);
     if (ok) {
@@ -2278,20 +2348,26 @@
     if (!cell) return;
     _activeSlotActions = null;
 
-    /* Return chip to inventory before removing from slot */
+    /* Return chip to inventory before removing from slot.
+       Fall back to the raw slot record when the pool lookup fails, so a chip
+       with a stale chipId is never silently destroyed on removal. */
     var chipData = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
     if (chipData) {
-      var chipDef = h.getChipById(h.allChips, chipData.chipId);
-      if (chipDef) {
-        /* Use slot's modIds (may have been upgraded by tech unlock) */
-        var returnDef = {
-          chipId: chipDef.chipId,
-          chipColor: chipDef.chipColor,
-          modIds: chipData.modIds || chipDef.modIds,
-          sourceComboKey: chipData.sourceComboKey || chipDef.sourceComboKey
-        };
-        addPlayerChip(returnDef, chipData.level || 1);
-      }
+      var chipDef = _resolveChipDefForEntry(h, chipData, chipData.chipId);
+      var returnDef = chipDef
+        ? {
+            chipId: chipDef.chipId,
+            chipColor: chipDef.chipColor,
+            modIds: chipData.modIds || chipDef.modIds,
+            sourceComboKey: chipData.sourceComboKey || chipDef.sourceComboKey
+          }
+        : {
+            chipId: Number.isFinite(chipData.chipId) ? chipData.chipId : -1,
+            chipColor: chipData.chipColor || null,
+            modIds: Array.isArray(chipData.modIds) ? chipData.modIds.slice() : [],
+            sourceComboKey: chipData.sourceComboKey || ''
+          };
+      addPlayerChip(returnDef, chipData.level || 1);
     }
 
     h.removeChip(cell, slotType, slotId);
@@ -3088,6 +3164,57 @@
     _resetCraftSlots();
   }
 
+  /**
+   * Full inventory reset for `New Game` (reason === 'new_game').
+   *
+   * Clears every module-level inventory resource that is owned by this UI module
+   * but is NOT part of `createInitialState()`:
+   *   - `playerChips`        → delegated to canonical owner (`Game.State` or fallback)
+   *   - `_playerFragments`   → chip shards inventory
+   *   - `_siliconDust`       → silicon dust resource
+   *   - `_techFeedProgress`  → per-tech fed-chip counters
+   *   - tech study in progress (`_techStudying` + its timer)
+   * and then resets transient workshop UI state.
+   *
+   * Why this seam exists: `resetGameState()` reassigns `state` via
+   * `createInitialState()`, so `state.playerChips` becomes `[]`. But the derived
+   * UI module keeps its own copies of chips/fragments/dust which are NOT derived
+   * from state — without an explicit reset they leak into the new run until the
+   * page is reloaded. See docs/ai/SYSTEMS/save.md → Player Chips.
+   */
+  function resetPlayerInventory(meta) {
+    var reason = (meta && typeof meta.reason === 'string' && meta.reason) || 'new_game';
+    /* Chips: route through the canonical writer so the canonical owner
+       (`Game.State.setPlayerChips`) and the fallback stay in sync and a single
+       `playerChips.changed` event is emitted for listeners/tutorial gate. */
+    setPlayerChips([], { reason: reason, changedIds: [] });
+    _playerFragments = [];
+    _siliconDust = 0;
+    _techFeedProgress = {};
+    _stopTechStudyTimer();
+    _techStudying = null;
+    _techAccelDustSelected = 0;
+    _resetDustMode();
+    _resetReprogramState();
+    resetTransientUiState();
+
+    /* Installed chips live in the module-owned cell grid (`_cells`), which is
+       rebuildable in-memory state and NOT part of `createInitialState()`. Without
+       rebuilding it, chips installed into hangar cells survive a New Game until
+       the page is reloaded, so the run does not start from a clean slate. */
+    _cancelDragsHook && _cancelDragsHook();
+    _selectedCell = 0;
+    _chipFilter = 'all';
+    _selectedSlot = null;
+    _visualSelectedSlot = null;
+    _activeSlotActions = null;
+    _cells = null;
+    ensureCells();
+    if (_initialized) {
+      try { render(); } catch (_) { /* defensive: overlay may be mid-teardown */ }
+    }
+  }
+
   function _calcDustTotal() {
     var total = 0;
     var keys = Object.keys(_dustSelected);
@@ -3415,10 +3542,25 @@
     };
   }
 
+  /**
+   * Normalise a craft payload result into a pool-resolvable chip definition.
+   *
+   * `assembleChip()` now folds tech tiers onto their base mods and always
+   * returns a real pool `chipId`, so this is a defensive seam only: it still
+   * heals any result carrying `chipId: -1` (or an unresolvable id) through the
+   * mechanics base-key resolver, so a crafted chip can never reach the inventory
+   * in a shape that no slot would accept.
+   */
   function _resolveCraftResultChipDef(result) {
     var h = hc();
     if (!result || !h) return result;
-    if (result.chipId !== -1) return result;
+    if (Number.isFinite(result.chipId) && result.chipId > 0 && h.getChipById(h.allChips, result.chipId)) {
+      return result;
+    }
+    if (typeof h.resolveChipDefForModIds === 'function') {
+      var healed = h.resolveChipDefForModIds(result.modIds);
+      if (healed) return healed;
+    }
     var found = h.getChipByKey(h.allChips, result.sourceComboKey);
     return found || result;
   }
@@ -4474,10 +4616,20 @@
   }
 
   /** Try to auto-install a chip into the first empty matching slot */
-  function autoInstall(chipId) {
+  function autoInstall(chipId, chipLevel) {
     var h = hc();
     if (!h) return;
-    var chipDef = h.getChipById(h.allChips, chipId);
+    var lvl = (Number.isFinite(chipLevel) && chipLevel >= 1) ? chipLevel : 1;
+    var chips = ensurePlayerChips();
+    var invEntry = null;
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].chipId === chipId && chips[i].level === lvl && chips[i].count > 0) {
+        invEntry = chips[i];
+        break;
+      }
+    }
+    if (!invEntry) return;
+    var chipDef = _resolveChipDefForEntry(h, invEntry, chipId);
     if (!chipDef) return;
     var cells = ensureCells();
     var cell = cells[_selectedCell];
@@ -4486,7 +4638,7 @@
     if (chipDef.chipColor === 'red') {
       for (var r = 0; r < h.RED_SLOT_KEYS.length; r++) {
         if (!cell.redSlots[h.RED_SLOT_KEYS[r]]) {
-          var ok = h.installChip(cell, 'red', h.RED_SLOT_KEYS[r], chipDef);
+          var ok = h.installChip(cell, 'red', h.RED_SLOT_KEYS[r], chipDef, lvl, invEntry.modIds);
           if (ok) { render(); return; }
         }
       }
@@ -4494,7 +4646,7 @@
       if (cell.uiState.yellowLocked) return;
       for (var y = 0; y < h.YELLOW_SLOT_KEYS.length; y++) {
         if (!cell.yellowSlots[h.YELLOW_SLOT_KEYS[y]]) {
-          var okY = h.installChip(cell, 'yellow', h.YELLOW_SLOT_KEYS[y], chipDef);
+          var okY = h.installChip(cell, 'yellow', h.YELLOW_SLOT_KEYS[y], chipDef, lvl, invEntry.modIds);
           if (okY) { render(); return; }
         }
       }
@@ -4807,21 +4959,25 @@
           /* If slot occupied, return existing chip to inventory */
           var existingChip = slotType === 'red' ? cell.redSlots[slotId] : cell.yellowSlots[slotId];
           if (existingChip) {
-            var existDef = h2.getChipById(h2.allChips, existingChip.chipId);
-            if (existDef) {
-              addPlayerChip({
-                chipId: existDef.chipId,
-                chipColor: existDef.chipColor,
-                modIds: existingChip.modIds || existDef.modIds,
-                sourceComboKey: existingChip.sourceComboKey || existDef.sourceComboKey
-              }, existingChip.level || 1);
-            }
+            var existDef = _resolveChipDefForEntry(h2, existingChip, existingChip.chipId);
+            var existReturnDef = existDef
+              ? {
+                  chipId: existDef.chipId,
+                  chipColor: existDef.chipColor,
+                  modIds: existingChip.modIds || existDef.modIds,
+                  sourceComboKey: existingChip.sourceComboKey || existDef.sourceComboKey
+                }
+              : {
+                  chipId: Number.isFinite(existingChip.chipId) ? existingChip.chipId : -1,
+                  chipColor: existingChip.chipColor || null,
+                  modIds: Array.isArray(existingChip.modIds) ? existingChip.modIds.slice() : [],
+                  sourceComboKey: existingChip.sourceComboKey || ''
+                };
+            addPlayerChip(existReturnDef, existingChip.level || 1);
             h2.removeChip(cell, slotType, slotId);
           }
 
-          /* Install new chip */
-          var chipDef = h2.getChipById(h2.allChips, sd.chipId);
-          if (!chipDef) return;
+          /* Install new chip — resolve from the inventory entry, not just the id. */
           var chips3 = ensurePlayerChips();
           var invE2 = null;
           for (var i3 = 0; i3 < chips3.length; i3++) {
@@ -4830,6 +4986,8 @@
             }
           }
           if (!invE2) return;
+          var chipDef = _resolveChipDefForEntry(h2, invE2, sd.chipId);
+          if (!chipDef) return;
           var ok2 = h2.installChip(cell, slotType, slotId, chipDef, sd.level, invE2.modIds);
           if (ok2) {
             notifyAchievementRuntimeHooks();
@@ -4911,6 +5069,7 @@
       }
 
       overlay.addEventListener('pointerleave', _cancelAllDrags);
+      _cancelDragsHook = _cancelAllDrags;
 
       /* Clean up on pointer cancel (touch drag interrupted by browser) */
       overlay.addEventListener('pointercancel', function(evt) {
@@ -4937,20 +5096,119 @@
 
   function getCells() { return _cells; }
 
+  /**
+   * Восстановить module-owned grid установленных чипов из save payload.
+   *
+   * Payload приходит из `storage.js → serializeHangarCells()` в виде «persisted
+   * subset»: только `{ id, redSlots, yellowSlots }` со slot-объектами
+   * `{ chipId, modIds, sourceComboKey, rotation, level }`. Derived-поля
+   * (`activeModifiers`, `uiState`) не сохраняются и пересчитываются здесь.
+   *
+   * Валидация fail-soft: неизвестный `chipId` или отсутствующий `modIds`
+   * отбрасываются, чтобы битый/легаси сейв не создавал «призрачные» чипы.
+   * Ячейка всегда приводится к канонической форме (`createEmptyCell`), поэтому
+   * частичный payload не оставит дырок в grid.
+   *
+   * @param {Array} savedCells — persisted subset из save payload
+   */
   function setCells(savedCells) {
     if (!Array.isArray(savedCells)) return;
-    _cells = savedCells;
     var h = hc();
+    /* If `Game.HangarChips` is unavailable (partial test harness), still build a
+       16-cell template so the grid keeps its canonical shape and `ensureCells()`
+       never leaves a zero-length `_cells`. */
+    var template = h ? h.createHangarCellsState() : createFallbackCellsTemplate();
+    var next = [];
+    for (var i = 0; i < template.length; i++) {
+      var cell = template[i];
+      var saved = savedCells[i];
+      if (saved && typeof saved === 'object') {
+        if (Number.isFinite(saved.id)) cell.id = Math.floor(saved.id);
+        cell.redSlots = restoreSavedSlots(saved.redSlots, h, 'red');
+        cell.yellowSlots = restoreSavedSlots(saved.yellowSlots, h, 'yellow');
+      }
+      next.push(cell);
+    }
+    _cells = next;
     if (h) {
-      for (var i = 0; i < _cells.length; i++) {
-        var cell = _cells[i];
-        if (!cell.uiState) cell.uiState = { yellowLocked: false, activeYellowSlotId: null, redMatchSuccess: null, yellowMatchSuccess: null, redMismatchReason: '' };
-        var r = h.calculateActiveModifiers(cell);
-        cell.activeModifiers = r.modifiers;
-        cell.uiState.redMatchSuccess = r.redMatchSuccess;
-        cell.uiState.yellowMatchSuccess = r.yellowMatchSuccess;
+      for (var ci = 0; ci < _cells.length; ci++) {
+        var c = _cells[ci];
+        var r = h.calculateActiveModifiers(c);
+        c.activeModifiers = r.modifiers;
+        c.uiState.redMatchSuccess = r.redMatchSuccess;
+        c.uiState.yellowMatchSuccess = r.yellowMatchSuccess;
       }
     }
+    /* Rebuild the visible grid when the overlay is already open, otherwise the
+       restored chips stay invisible until the modal is reopened. */
+    if (_initialized) {
+      try { render(); } catch (_) { /* defensive: overlay may be mid-teardown */ }
+    }
+  }
+
+  /**
+   * Минимальный шаблон 16 пустых ячеек на случай, если `Game.HangarChips`
+   * недоступен (unit-тесты / ранний bootstrap). Форма 1:1 повторяет
+   * `Game.HangarChips.createHangarCellsState()`.
+   * @returns {Array}
+   */
+  function createFallbackCellsTemplate() {
+    var out = [];
+    for (var i = 0; i < 16; i++) {
+      out.push({
+        id: i,
+        tankId: null,
+        redSlots: { slot1: null, slot2: null },
+        yellowSlots: { slot1: null, slot2: null, slot3: null, slot4: null },
+        activeModifiers: [],
+        uiState: {
+          yellowLocked: false,
+          activeYellowSlotId: null,
+          redMatchSuccess: null,
+          yellowMatchSuccess: null,
+          redMismatchReason: '',
+        },
+      });
+    }
+    return out;
+  }
+
+  /**
+   * Нормализовать одну карту slots из save payload.
+   * @param {object} savedSlots
+   * @param {object|null} h — Game.HangarChips
+   * @param {string} slotType — 'red' | 'yellow'
+   * @returns {object}
+   */
+  function restoreSavedSlots(savedSlots, h, slotType) {
+    var keys = slotType === 'red' ? RED_SLOT_KEYS : ['slot1', 'slot2', 'slot3', 'slot4'];
+    var out = {};
+    for (var k = 0; k < keys.length; k++) out[keys[k]] = null;
+    if (!savedSlots || typeof savedSlots !== 'object') return out;
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var chip = savedSlots[key];
+      if (!chip || typeof chip !== 'object') continue;
+      var modIds = Array.isArray(chip.modIds) ? chip.modIds.slice() : null;
+      if (!modIds || !modIds.length) continue;
+      var chipDef = (h && Number.isFinite(chip.chipId)) ? h.getChipById(h.allChips, chip.chipId) : null;
+      if (!chipDef && h && typeof h.resolveChipDefForModIds === 'function') {
+        chipDef = h.resolveChipDefForModIds(modIds);
+      }
+      if (!chipDef && !Number.isFinite(chip.chipId) && !chip.sourceComboKey) continue;
+      out[key] = {
+        chipId: chipDef
+          ? chipDef.chipId
+          : (Number.isFinite(chip.chipId) ? Math.floor(chip.chipId) : -1),
+        modIds: modIds,
+        sourceComboKey: typeof chip.sourceComboKey === 'string'
+          ? chip.sourceComboKey
+          : (chipDef ? chipDef.sourceComboKey : ''),
+        rotation: Number.isFinite(chip.rotation) ? ((Math.floor(chip.rotation) % 3) + 3) % 3 : 0,
+        level: Number.isFinite(chip.level) ? Math.max(1, Math.floor(chip.level)) : 1,
+      };
+    }
+    return out;
   }
 
   function show() {
@@ -5004,6 +5262,14 @@
     var cells = ensureCells();
     if (cellIdx < 0 || cellIdx >= cells.length) return 'Invalid cell index';
     var chipDef = h.getChipById(h.allChips, chipId);
+    if (!chipDef) {
+      var invChips = ensurePlayerChips();
+      for (var ii = 0; ii < invChips.length; ii++) {
+        if (invChips[ii].chipId !== chipId) continue;
+        chipDef = _resolveChipDefForEntry(h, invChips[ii], chipId);
+        break;
+      }
+    }
     if (!chipDef) return 'Chip not found: ' + chipId;
     var ok = h.installChip(cells[cellIdx], slotType, slotId, chipDef);
     if (!ok) return 'Install failed (color mismatch or slot occupied)';
@@ -5089,6 +5355,7 @@
       setTechStudying(obj);
       if (_techStudying) _startTechStudyTimer();
     },
+    resetPlayerInventory: resetPlayerInventory,
     getPlayerFragments: getPlayerFragments,
     setPlayerFragments: setPlayerFragments,
     addPlayerFragment: addPlayerFragment,

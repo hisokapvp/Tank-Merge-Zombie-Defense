@@ -139,6 +139,52 @@
   /** Check if a modId is a tech-unlockable mod (15–30) */
   function isTechMod(modId) { return modId >= 15 && modId <= 30; }
 
+  /**
+   * Reverse tech map: tech modId (15–30) → its base modId (1–14).
+   * Every tier of a chain folds back onto the same base mod, which makes
+   * chip identity and vertex order stable across tech unlocks.
+   */
+  var MOD_BASE_BY_MOD = Object.create(null);
+  (function () {
+    var keys = Object.keys(TECH_TREE);
+    for (var k = 0; k < keys.length; k++) {
+      var baseModId = Math.floor(Number(keys[k]));
+      var chain = TECH_TREE[keys[k]];
+      for (var c = 0; c < chain.length; c++) {
+        MOD_BASE_BY_MOD[chain[c].modId] = baseModId;
+      }
+    }
+  })();
+
+  /** Fold a (possibly tech-upgraded) modId back onto its base modId. */
+  function resolveBaseTechModId(modId) {
+    var current = Number.isFinite(modId) ? Math.floor(modId) : 0;
+    if (current <= 0) return current;
+    return MOD_BASE_BY_MOD[current] || current;
+  }
+
+  /**
+   * Order a modIds array by *base* modId (tech tiers sort as their base mod),
+   * returning the live modId values. Ties fall back to the live value and then
+   * to the original position so the result is fully deterministic.
+   */
+  function sortModIdsByBase(modIds) {
+    var entries = [];
+    var len = Array.isArray(modIds) ? modIds.length : 0;
+    for (var i = 0; i < len; i++) {
+      var value = Number.isFinite(modIds[i]) ? Math.floor(modIds[i]) : 0;
+      entries.push({ value: value, base: resolveBaseTechModId(value), index: i });
+    }
+    entries.sort(function (a, b) {
+      if (a.base !== b.base) return a.base - b.base;
+      if (a.value !== b.value) return a.value - b.value;
+      return a.index - b.index;
+    });
+    var ordered = [];
+    for (var j = 0; j < entries.length; j++) ordered.push(entries[j].value);
+    return ordered;
+  }
+
   function resolveLatestTechModId(modId) {
     var current = Number.isFinite(modId) ? Math.floor(modId) : 0;
     if (current <= 0) return current;
@@ -263,11 +309,15 @@
 
   /**
    * Red chip placement: vertices A (top-inner), B (bottom-inner), C (outer).
-   * Deterministic: sorted ascending → A=smallest, B=middle, C=largest.
+   * Deterministic: ordered by *base* modId ascending → A=smallest, B=middle, C=largest.
+   *
+   * Using the base modId (not the live tech tier) keeps the vertex layout stable:
+   * unlocking a tech tier (2 → 17) must not reshuffle A/B, otherwise two chips
+   * that shared A+B would stop syncing after the upgrade.
    */
   function normalizeRedPlacement(modIds) {
-    var s = modIds.slice().sort(function (a, b) { return a - b; });
-    return { A: s[0], B: s[1], C: s[2] };
+    var ordered = sortModIdsByBase(modIds);
+    return { A: ordered[0], B: ordered[1], C: ordered[2] };
   }
 
   /**
@@ -288,7 +338,8 @@
 
   /**
    * Yellow chip placement: X (outer, must be the special 10–14).
-   * Inner vertices get the two non-special mods, sorted ascending.
+   * Inner vertices get the two non-special mods, ordered by *base* modId
+   * (same stability rule as red chips — tech tiers must not flip innerA/innerB).
    */
   function normalizeYellowPlacement(modIds) {
     var specIdx = -1;
@@ -303,8 +354,8 @@
     for (var j = 0; j < modIds.length; j++) {
       if (j !== specIdx) inner.push(modIds[j]);
     }
-    inner.sort(function (a, b) { return a - b; });
-    return { innerA: inner[0], innerB: inner[1], X: modIds[specIdx] };
+    var orderedInner = sortModIdsByBase(inner);
+    return { innerA: orderedInner[0], innerB: orderedInner[1], X: modIds[specIdx] };
   }
 
   /**
@@ -616,31 +667,56 @@
 
   /**
    * Assemble 3 fragments into a chip. Validates the combination.
+   *
+   * Fragments may carry tech-upgraded modIds (15–30). Pool chips only encode
+   * base mods (1–14), so the combination is validated and matched on the *base*
+   * key (`2-3-4`), while the returned chip keeps the live tier modIds.
+   * Without this fold, crafting from tier II/III fragments produced a chip with
+   * `chipId: -1` that no slot could accept.
+   *
    * @param {array} fragmentModIds - array of 3 modIds
    * @returns {object|null} chip definition or null if invalid
    */
   function assembleChip(fragmentModIds) {
     if (!Array.isArray(fragmentModIds) || fragmentModIds.length !== 3) return null;
-    var sorted = fragmentModIds.slice().sort(function (a, b) { return a - b; });
-    // Check rules: no all-same, max 1 special
-    if (sorted[0] === sorted[1] && sorted[1] === sorted[2]) return null;
-    var specCount = countSpecials(sorted);
-    if (specCount > 1) return null;
-    // Find matching chip in pool
-    var key = sorted.join('-');
-    var chipDef = getChipByKey(_allChips, key);
-    if (!chipDef) {
-      // May contain tech-upgraded mods (15+), need to find base equivalent
-      // Build a chipDef on the fly
-      return {
-        chipId: -1, // will need to be resolved
-        sourceComboKey: key,
-        modIds: sorted,
-        chipColor: specCount === 0 ? 'red' : 'yellow',
-        specCount: specCount
-      };
+
+    var liveSorted = sortModIdsByBase(fragmentModIds);
+    var baseIds = [];
+    for (var bi = 0; bi < liveSorted.length; bi++) {
+      baseIds.push(resolveBaseTechModId(liveSorted[bi]));
     }
-    return chipDef;
+
+    /* Check rules against base mods: no all-same, max 1 special */
+    if (baseIds[0] === baseIds[1] && baseIds[1] === baseIds[2]) return null;
+    var specCount = countSpecials(baseIds);
+    if (specCount > 1) return null;
+
+    var key = baseIds.join('-');
+    var chipDef = getChipByKey(_allChips, key);
+    if (!chipDef) return null;
+
+    /* Return the pool chip identity (stable chipId/color/key) with live tier modIds. */
+    return {
+      chipId: chipDef.chipId,
+      sourceComboKey: chipDef.sourceComboKey,
+      modIds: liveSorted,
+      chipColor: chipDef.chipColor,
+      specCount: chipDef.specCount
+    };
+  }
+
+  /**
+   * Resolve a chip definition from a raw modIds array that may carry tech tiers,
+   * contain duplicates or arrive from a legacy save with `chipId: -1`.
+   * Used to self-heal inventory/slot entries without a save migration.
+   *
+   * @param {number[]} modIds - array of 3 modIds
+   * @returns {object|null} chip definition with live modIds, or null if unmatched
+   */
+  function resolveChipDefForModIds(modIds) {
+    if (!Array.isArray(modIds) || !modIds.length) return null;
+    if (modIds.length !== 3) return null;
+    return assembleChip(modIds);
   }
 
   /**
@@ -914,6 +990,9 @@
     ALL_FRAGMENT_IDS: ALL_FRAGMENT_IDS,
     disassembleChip: disassembleChip,
     assembleChip: assembleChip,
+    resolveChipDefForModIds: resolveChipDefForModIds,
+    resolveBaseTechModId: resolveBaseTechModId,
+    sortModIdsByBase: sortModIdsByBase,
     getFragmentAccelBonus: getFragmentAccelBonus,
     applyTechUpgradesToModIds: applyTechUpgradesToModIds,
     resolveLatestTechModId: resolveLatestTechModId,

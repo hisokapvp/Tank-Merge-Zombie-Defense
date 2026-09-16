@@ -380,6 +380,73 @@
    * @param {object} state
    * @returns {import('./serializedStateTypes').SerializedState}
    */
+  /**
+   * Нормализовать один slot-объект установленного чипа.
+   * Derived-поля (`activeModifiers`, `uiState`) НЕ пишутся — они пересчитываются
+   * `Game.HangarChipsUI.setCells()` на load (см. `calculateActiveModifiers`).
+   * @param {object} chip
+   * @returns {object|null}
+   */
+  function serializeHangarChipSlot(chip) {
+    if (!chip || typeof chip !== 'object') return null;
+    return {
+      chipId: Number.isFinite(chip.chipId) ? Math.floor(chip.chipId) : -1,
+      modIds: Array.isArray(chip.modIds) ? chip.modIds.slice() : [],
+      sourceComboKey: typeof chip.sourceComboKey === 'string' ? chip.sourceComboKey : '',
+      rotation: Number.isFinite(chip.rotation) ? ((Math.floor(chip.rotation) % 3) + 3) % 3 : 0,
+      level: Number.isFinite(chip.level) ? Math.max(1, Math.floor(chip.level)) : 1,
+    };
+  }
+
+  /**
+   * Нормализовать карту slot-key → chip (red: slot1/slot2, yellow: slot1..slot4).
+   * @param {object} slots
+   * @returns {object}
+   */
+  function serializeHangarChipSlots(slots) {
+    var out = {};
+    if (!slots || typeof slots !== 'object') return out;
+    var keys = Object.keys(slots);
+    for (var i = 0; i < keys.length; i++) {
+      out[keys[i]] = serializeHangarChipSlot(slots[keys[i]]);
+    }
+    return out;
+  }
+
+  /**
+   * Собрать persisted subset hangar-cell grid (16 ячеек с установленными чипами).
+   *
+   * Installed chips живут в module-owned grid `src/ui/hangarChipsUI.js`
+   * (`Game.HangarChipsUI.getCells()`), а НЕ в `state`. Зеркалим паттерн
+   * `playerChips`: читаем live-инвентарь, чтобы каждый save-путь (включая
+   * slot-save, который передаёт raw `state`) захватил актуальное содержимое.
+   * Fallback — `state.hangarCells` (если UI-модуль ещё не загружен).
+   *
+   * @param {object} state
+   * @returns {Array|null} массив ячеек или null, если grid недоступен
+   */
+  function serializeHangarCells(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getCells === 'function' ? chipsUi.getCells() : null;
+    } catch (_) { live = null; }
+    if (!Array.isArray(live)) {
+      live = state && Array.isArray(state.hangarCells) ? state.hangarCells : null;
+    }
+    if (!Array.isArray(live)) return null;
+    var cells = [];
+    for (var i = 0; i < live.length; i++) {
+      var cell = live[i];
+      cells.push({
+        id: cell && Number.isFinite(cell.id) ? Math.floor(cell.id) : i,
+        redSlots: serializeHangarChipSlots(cell && cell.redSlots),
+        yellowSlots: serializeHangarChipSlots(cell && cell.yellowSlots),
+      });
+    }
+    return cells;
+  }
+
   function serializeState(state) {
     if (!state) return {};
     // Fence damage persistence:
@@ -535,6 +602,7 @@
       forceFenceRuntimeResetOnLoad: !!state.forceFenceRuntimeResetOnLoad,
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
       productionLine: state.productionLine || null,
+      hangarCells: serializeHangarCells(state),
     };
   }
 

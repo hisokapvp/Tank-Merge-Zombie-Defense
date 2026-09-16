@@ -1,6 +1,6 @@
 ﻿# Архитектура (кратко)
 
-> Обновлено: 2026-03-30.
+> Обновлено: 2026-09-16.
 > Главная навигация: `docs/ai/PROJECT_MAP.md` → нужный `SYSTEMS/*.md` → `*_MAP.md` для больших файлов.
 
 ## Документационные entrypoints
@@ -31,6 +31,7 @@
 - Weather/attack world events runtime: `src/systems/worldEventsRuntime.js` (`Game.WorldEventsRuntime`)
 - Zombie render runtime: `src/render/zombieRender.js` (`Game.ZombieRender`)
 - Crate runtime: `src/mechanics/crateRuntime.js` (`Game.CrateRuntime`)
+- Track distribution runtime: `src/mechanics/trackDistribution.js` (`Game.TrackDistribution`)
 - Big menu runtime: `src/ui/bigMenuRuntime.js` (`Game.BigMenuRuntime`)
 - В `game.js` используются `ensure*RuntimeController()` с fallback на встроенную реализацию
 

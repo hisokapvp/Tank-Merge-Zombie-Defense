@@ -1,6 +1,6 @@
 ﻿# Индекс документации для агента
 
-> Обновлено: 2026-06-06.
+> Обновлено: 2026-09-16.
 
 ## Порядок чтения
 1. `docs/ai/STYLE.md`
@@ -45,7 +45,10 @@
 - Talents v2 runtime: `docs/talents_v2.md`
 - Talents v2 UI: `docs/ui_talents_v2.md`
 
-## Фокус документации на 2026-06-06
+## Фокус документации на 2026-09-16
+- **Равномерное распределение танков по треку**: новый модуль `src/mechanics/trackDistribution.js` (`Game.TrackDistribution`, 114 строк) — `computeSlotPlacement(cells, cellIndex, out?)`, `computeSlotOffsetRad(index, count) = index/count × 2π`, `isOnTrackTank`, `countOnTrackTanks`, `normalizePhase`, `TWO_PI`; zero-alloc `out`-контракт, порядок слотов по возрастанию `cell.i`. `game.js` получил единую фазу трека `_sharedTrackPhase` + `getSharedTrackPhase`/`seedSharedTrackPhase`/`ensureSharedTrackPhase` ([L10581-L10603](../../game.js#L10581-L10603)), `resolveTrackOrbitMul()` ([L11215](../../game.js#L11215)), `resolveTrackSlotOffsetRad()` + scratch `_trackSlotScratch` ([L11204-L11212](../../game.js#L11204-L11212)); `stepTanks(dt)` продвигает фазу один раз за кадр без per-level `balSpeedMul` и пишет её во все onTrack-ячейки ([L10609-L10617](../../game.js#L10609-L10617)); `tankOrbitState()` для onTrack-танка = `cell.orbitPhase + slot offset`, legacy `cell.i`-формула осталась только для hangar-превью ([L11232-L11262](../../game.js#L11232-L11262)). `index.html` подключает модуль после `trackQuery.js` и бампает entry-токен до `20260916-track-uniform-distribution`. Тесты: `Test/tests.js` группа `T10` (9 тестов, 96 passed / 0 failed). Save-schema и i18n не менялись. Читать: `docs/ai/SYSTEMS/combat.md`, `docs/ai/GAME_JS_MAP.md`, `docs/ai/PROJECT_MAP.md`.
+
+### Предыдущий фокус (2026-06-06)
 - **perf-capture tool (real-time лаг-диагностика)**: новый `Game.PerfCapture` (`src/perf/perfCapture.js`, 889 строк, карта `docs/ai/PERF_CAPTURE_MAP.md`) — слой поверх `Game.Profiler`, включается кнопкой Start в Perf-вкладке debug-панели (`?debug=1`). Собирает frame-time перцентили (`p50/p95/p99/max` + jank), per-phase агрегаты с `%-of-frame`/over-budget, entity drill-down (zombies by type id, projectiles/particles/impacts/decals/damageNumbers, tanks, drones), `performance.memory` (Chromium-only, guarded) и env-снимок; экспортирует **один** отчёт (Markdown + fenced ```json`, schema `tmzd.perfCapture.report`) в буфер + скачиваемый `.json`. `src/perf/profiler.js` получил zero-alloc per-frame accumulator (`beginFrame`/`endFrame`/`getFrameMs`/`forEachFrameMs`, чистится в `reset()`); маркеры в `game.js` (`loop`/`draw`/`stepProjectiles`/`impactAt`/`drawZombies`/`drawTank` + sub-фазы) теперь резолвятся через `Profiler.isEnabled()` (release zero-overhead, default `Game.DEBUG===true`) вместо inline `DEBUG===true`. `assets/balance.json` → `perf.profilerBudgetsMs` расширен на каждую новую фазу (оригинальные 5 не тронуты). UI — Perf-вкладка в `src/ui/debugPanel.js` (Start/Stop/Reset/Copy AI report/Download JSON + DevTools-timeline чекбокс + live `<pre>` readout ~400ms). Тест: `Test/pack5/perfCaptureReport.test.js` (в `ci/run_tests.sh`). Читать: `docs/ai/SYSTEMS/perf.md`, `docs/ai/PERF_CAPTURE_MAP.md`, `docs/ai/PLAYBOOKS/debug-lag.md`.
 
 ### Предыдущий фокус (2026-04-30)
@@ -109,6 +112,7 @@
 - Tutorial runtime выбирает first available incomplete tutorial step и держит отдельный completion-gate для переходных UI-шагов; основной источник по ordering/activation/completion/pause — `docs/ai/SYSTEMS/tutorial-runtime.md`.
 - `index.html` подключает `src/ui/fontFloor.js`: `Game.FontFloor` глобально поднимает floor `10px` для DOM/canvas-текста, но skip-список обязан исключать все close/remove-варианты (`.levelModal__close`, `.crateModal__close`, `.modalClose`, `.chipCraftSlotRemove`, `.lessonProgress__close`, `[data-font-floor-ignore="true"]`).
 - `New game` поднимает `productionLine.firstNewGameBoxGuaranteedPending`; первая коробка конвейера гарантированно резолвится в рабочий red `one_big_chip` уровня 1 с валидным `chipId`, отсортированным `sourceComboKey` и 3 уникальными base `modIds` (`1..9`).
+- `New game` обязан обнулять chip-инвентарь без перезагрузки страницы: `resetGameState({ reason: 'new_game' })` вызывает `Game.HangarChipsUI.resetPlayerInventory()`, который чистит `playerChips`, фрагменты, кремниевую пыль, tech-feed progress, активное tech study и пересоздаёт module-owned grid установленных в ячейки чипов (`_cells`); partial reset и загрузка сохранений инвентарь сохраняют.
 - `assets/zombies.json` держит явный числовой `Health` в каждом `types[]`; `ZombieSprites.load()` нормализует `Health/health` в `type.health`, а `makeZombie()` использует это значение раньше формулы из balance.
 - Achievements runtime: 12 семейств и 52 reward mappings в единой `REWARD_TABLE` внутри `src/mechanics/achievementRewards.js`; `early_capital` добавляет 5 current-balance tiers (`10K / 1M / 100M / 100B / 100T`) с reward ladder fragments/chips/damage/composite drones+upgradePoints; `stable_income` остаётся lifetime-income ladder, то есть `moneyEarned` и `currentBalance` теперь документированы как разные контракты прогресса.
 - `assets/levelreward.json` — data-driven конфиг наград за повышение уровня суперкомпьютера: gold formula (`tankCost` = `50*2^(L-1)` или `fixed`), per-level overrides, milestone upgrade points и damage points; загружается в `boot()`, передаётся через `LevelRewardConfig` в `progression.js` и `levelFlow.js`; при отсутствии файла fallback полностью backward-compatible.

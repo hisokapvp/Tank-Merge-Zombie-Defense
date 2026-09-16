@@ -7406,7 +7406,7 @@ const __KNOWN_PAYLOAD_KEYS = [
   'buyCounts','buyPrices','crate','nextCrateAt','maxTankLevelAchieved','boostUntil','activeEffects',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
   'playerFragments','techStudying','productionLine','talentsV2','talentsApplied','talentsPending',
-  'activeCooldowns','lastSeenAt'
+  'activeCooldowns','lastSeenAt','hangarCells'
 ];
 function reportUnknownPayloadKeys(payload, ctx){
   if (!payload || typeof payload !== 'object') return;
@@ -7612,6 +7612,15 @@ function restoreFullState(saved){
       }
     }
   }
+  /* Restore installed chips (hangar-cell grid). Runs AFTER `_unlockedTechs`
+     reconciliation above so `resolveLatestTechModId` maps legacy modIds to their
+     unlocked tiers during `calculateActiveModifiers`. Grid is module-owned in
+     HangarChipsUI, not part of `state`, so it needs an explicit restore — and an
+     explicit CLEAR when the payload has no `hangarCells` (legacy save / different
+     slot), otherwise chips from the previous session would leak into this run. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setCells === 'function') {
+    window.Game.HangarChipsUI.setCells(Array.isArray(saved.hangarCells) ? saved.hangarCells : []);
+  }
   /* Restore tech study state */
   if (saved.techStudying && typeof saved.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
     window.Game.HangarChipsUI.setTechStudying(saved.techStudying);
@@ -7648,6 +7657,19 @@ function restoreFullState(saved){
       cell.tank = makeTank(sc.tank.level, !!sc.tank.onTrack, { enableStamp: false });
       if (sc.tank.powerTier != null) cell.tank.powerTier = sc.tank.powerTier;
     } else cell.tank = null;
+  }
+  // Нормализуем общую фазу трека к фазе первого танка на треке, чтобы
+  // сохранённые per-cell фазы не разъезжались между уровнями.
+  {
+    _sharedTrackPhase = null;
+    for (let i = 0; i < state.cells.length; i++) {
+      const c = state.cells[i];
+      if (c.tank?.onTrack) {
+        seedSharedTrackPhase(Number.isFinite(c.orbitPhase) ? c.orbitPhase : 0);
+        c.orbitPhase = _sharedTrackPhase;
+        break;
+      }
+    }
   }
   if (saved.crate && state.cells[saved.crate.cellIndex]) {
     const cell = state.cells[saved.crate.cellIndex];
@@ -7892,6 +7914,15 @@ function applySavedProgress(data){
         }
       }
     }
+  }
+  /* Restore installed chips (hangar-cell grid). Runs AFTER `_unlockedTechs`
+     reconciliation above so `resolveLatestTechModId` maps legacy modIds to their
+     unlocked tiers during `calculateActiveModifiers`. Grid is module-owned in
+     HangarChipsUI, not part of `state`, so it needs an explicit restore — and an
+     explicit CLEAR when the payload has no `hangarCells` (legacy save / different
+     slot), otherwise chips from the previous session would leak into this run. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setCells === 'function') {
+    window.Game.HangarChipsUI.setCells(Array.isArray(data.hangarCells) ? data.hangarCells : []);
   }
   /* Restore tech study state */
   if (data.techStudying && typeof data.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
@@ -10563,24 +10594,45 @@ function applyDamageToZombie(zombie, rawDamage, sourceKind){
 }
 
 // ---------- Combat: visible projectiles ----------
+// Единая фаза трека: все танки на треке используют одно и то же значение,
+// поэтому расстояние между ними не зависит от уровня и от времени дропа.
+let _sharedTrackPhase = null;
+
+function getSharedTrackPhase(){
+  return _sharedTrackPhase;
+}
+
+function seedSharedTrackPhase(value){
+  _sharedTrackPhase = Number.isFinite(value) ? value : 0;
+}
+
+// Инициализирует единую фазу при первом кадре после загрузки/рестарта:
+// берёт фазу уже стоящего на треке танка, иначе 0.
+function ensureSharedTrackPhase(){
+  if (_sharedTrackPhase !== null) return _sharedTrackPhase;
+  for (const cell of state.cells){
+    if (cell.tank?.onTrack && Number.isFinite(cell.orbitPhase)) {
+      seedSharedTrackPhase(cell.orbitPhase);
+      return _sharedTrackPhase;
+    }
+  }
+  seedSharedTrackPhase(0);
+  return _sharedTrackPhase;
+}
+
 function stepTanks(dt){
   const mods = getMods();
   const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
+  // Единая скорость трека: без per-level balSpeedMul, чтобы танки не разъезжались.
+  const sharedAngularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * resolveTrackOrbitMul();
+  ensureSharedTrackPhase();
+  _sharedTrackPhase += dt * sharedAngularSpeed;
   for (const cell of state.cells){
     const tank = cell.tank;
     if (!tank || !tank.onTrack) continue;
-    const balSpeedMul = getTankBalanceMul(tank.level, 'speedMul');
     const balAtkSpeedMul = getTankBalanceMul(tank.level, 'attackSpeedMul');
-    let barrageOrbit = 1;
-    if (isTalentsV2Ready()) {
-      const api = getTalentsV2Api();
-      if (api && typeof api.getBarrageMul === 'function') {
-        const b = api.getBarrageMul({ tank, timeMs: Date.now() });
-        if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0) barrageOrbit = b.orbit;
-      }
-    }
-    const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * balSpeedMul * barrageOrbit;
-    if (cell.orbitPhase !== undefined) cell.orbitPhase += dt * angularSpeed;
+    // Синхронизируем фазу ячейки с общей фазой трека.
+    cell.orbitPhase = _sharedTrackPhase;
 
     tank.cooldown = Math.max(0, tank.cooldown - dt);
     const tankCfgForLevel = TankSprites?.getTank?.(tank.level);
@@ -11000,8 +11052,9 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
     }
     // Barrage (Шквал / offense-active): while the buff is active, multiply
     // bullet aoe and the post-shot cooldown by configured multipliers. Damage
-    // is already applied in talentsV2.onHit, orbit is applied in stepTanks /
-    // tankOrbitState / drag-release (see getBarrageMul callers).
+    // is already applied in talentsV2.onHit; orbit is applied once per frame
+    // to the whole track in stepTanks (resolveTrackOrbitMul) so tank spacing
+    // stays uniform.
     if (talentsApi && typeof talentsApi.getBarrageMul === 'function') {
       const b = talentsApi.getBarrageMul({ tank, timeMs: Date.now() });
       if (b && b.active) {
@@ -11164,11 +11217,67 @@ function fireTankProjectile({sx, sy, target, targets, tank, stats, mods, cellInd
   }
 }
 
+// Возвращает угловое смещение слота танка на треке (равный шаг 360°/N).
+// Zero-alloc: результат пишется в переиспользуемый scratch-объект.
+// Инлайн-fallback гарантирует инвариант равномерности даже если
+// src/mechanics/trackDistribution.js не подключён/не загрузился.
+const _trackSlotScratch = { index: -1, count: 0 };
+function resolveTrackSlotOffsetRad(cell){
+  const dist = window.Game && window.Game.TrackDistribution;
+  if (dist && typeof dist.computeSlotPlacement === 'function') {
+    const placement = dist.computeSlotPlacement(state.cells, cell.i, _trackSlotScratch);
+    if (placement.index < 0) return 0;
+    return dist.computeSlotOffsetRad(placement.index, placement.count);
+  }
+  let count = 0;
+  let slotIndex = 0;
+  let selfOnTrack = false;
+  for (let i = 0; i < state.cells.length; i++){
+    const c = state.cells[i];
+    if (!c || !c.tank || !c.tank.onTrack) continue;
+    count++;
+    const index = Number.isFinite(c.i) ? c.i : i;
+    if (index < cell.i) slotIndex++;
+    else if (index === cell.i) selfOnTrack = true;
+  }
+  if (!selfOnTrack || count <= 0) return 0;
+  return (slotIndex / count) * Math.PI * 2;
+}
+
+// Единая угловая скорость трека: не зависит от уровня танка, поэтому
+// расстояния между танками сохраняются. «Шквал» ускоряет весь трек, пока
+// активен хотя бы у одного танка на треке.
+function resolveTrackOrbitMul(){
+  let orbitMul = 1;
+  if (!isTalentsV2Ready()) return orbitMul;
+  const api = getTalentsV2Api();
+  if (!api || typeof api.getBarrageMul !== 'function') return orbitMul;
+  for (const cell of state.cells){
+    const tank = cell.tank;
+    if (!tank || !tank.onTrack) continue;
+    const b = api.getBarrageMul({ tank, timeMs: Date.now() });
+    if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0 && b.orbit > orbitMul) {
+      orbitMul = b.orbit;
+    }
+  }
+  return orbitMul;
+}
+
 function tankOrbitState(cell, timeSec){
-  const total = BAL.rows * BAL.cols;
-  const offset = (cell.i / total) * Math.PI * 2;
   const mods = getMods();
   const activeSpeed = timeSec < state.activeEffects.speedUntil ? 1.35 : 1;
+  if (cell.tank?.onTrack) {
+    const phase = Number.isFinite(cell.orbitPhase) ? cell.orbitPhase : ensureSharedTrackPhase();
+    const angle = phase + resolveTrackSlotOffsetRad(cell);
+    return {
+      x: center.x + Math.cos(angle) * getTankOrbitRadius(),
+      y: center.y + Math.sin(angle) * getTankOrbitRadius(),
+      heading: angle + Math.PI/2,
+    };
+  }
+  // Legacy/hangar-превью путь (танк не на треке): смещение по слоту + собственное вращение.
+  const total = Math.max(1, BAL.rows * BAL.cols);
+  const offset = (cell.i / total) * Math.PI * 2;
   let barrageOrbit = 1;
   if (cell.tank && isTalentsV2Ready()) {
     const api = getTalentsV2Api();
@@ -11178,14 +11287,6 @@ function tankOrbitState(cell, timeSec){
     }
   }
   const angularSpeed = BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * barrageOrbit;
-  if (cell.tank?.onTrack && cell.orbitPhase !== undefined) {
-    const angle = cell.orbitPhase + offset;
-    return {
-      x: center.x + Math.cos(angle) * getTankOrbitRadius(),
-      y: center.y + Math.sin(angle) * getTankOrbitRadius(),
-      heading: angle + Math.PI/2,
-    };
-  }
   const angle = timeSec * angularSpeed + offset;
   return {
     x: center.x + Math.cos(angle) * getTankOrbitRadius(),
@@ -13138,6 +13239,9 @@ function resetGameState(options){
     for (const p of state.projectiles) releaseProjectile(p);
   }
   state = createInitialState({ reason });
+  // Единая фаза трека сбрасывается вместе со state: новые/восстановленные
+  // ячейки не должны наследовать фазу предыдущей симуляции.
+  _sharedTrackPhase = null;
   if (wasTutorialDisabled && state.tutorial) {
     state.tutorial.disabled = true;
     state.tutorial.completed = true;
@@ -13161,6 +13265,15 @@ function resetGameState(options){
     const _HC_reset = window.Game && window.Game.HangarChips;
     if (_HC_reset && typeof _HC_reset.setUnlockedTechs === 'function') {
       _HC_reset.setUnlockedTechs({});
+    }
+    /* Full chip-inventory reset. `state` was just reassigned by
+       `createInitialState({ reason })`, so `state.playerChips` is already `[]`,
+       but HangarChipsUI owns its own chips/fragments/silicon-dust/tech-study
+       copies which would otherwise survive a New Game without a page reload.
+       Partial reset (reason === 'reset') intentionally preserves them. */
+    const _HCUI_reset = window.Game && window.Game.HangarChipsUI;
+    if (_HCUI_reset && typeof _HCUI_reset.resetPlayerInventory === 'function') {
+      _HCUI_reset.resetPlayerInventory({ reason: 'new_game' });
     }
   }
   ensureDamageProgressState();
@@ -15198,17 +15311,9 @@ canvas.addEventListener('pointerup', (e)=>{
   if (!state.dragging.moved){
     const changed = setTankOnTrackState(from.tank, true, { cause: 'user' });
     if (changed) {
-      const mods = getMods();
-      const activeSpeed = nowSec() < state.activeEffects.speedUntil ? 1.35 : 1;
-      let barrageOrbit = 1;
-      if (from.tank && isTalentsV2Ready()) {
-        const api = getTalentsV2Api();
-        if (api && typeof api.getBarrageMul === 'function') {
-          const b = api.getBarrageMul({ tank: from.tank, timeMs: Date.now() });
-          if (b && b.active && Number.isFinite(b.orbit) && b.orbit > 0) barrageOrbit = b.orbit;
-        }
-      }
-      from.orbitPhase = nowSec() * BAL.tankOrbitSpeed * speedMult() * mods.orbitSpeedMul * activeSpeed * barrageOrbit;
+      // Присоединяемся к общей фазе трека, чтобы новый танк не ломал равные
+      // расстояния между уже стоящими танками.
+      from.orbitPhase = ensureSharedTrackPhase();
       popText(from.x+from.w/2, from.y+from.h/2, t('popTrack'), '#bfe3ff');
     }
     state.selectedHangarCellIndex = from.i;

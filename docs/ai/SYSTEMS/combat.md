@@ -1,6 +1,6 @@
 ﻿# Система: Combat
 
-> Обновлено: 2026-04-06.
+> Обновлено: 2026-09-16.
 
 ## Где править
 - Бой и урон: `src/mechanics/combat.js`, `src/mechanics/combatProfiles.js`
@@ -14,6 +14,19 @@
 - Изменения DPS/скорострельности валидировать на низких и высоких уровнях.
 - Не ломать интеграцию с `worldEvents`, `supercomputer`, `fence`.
 - Чип-модификаторы: эффекты реализованы в `chipEffects.js`, визуал/звуки настраиваются через `assets/chips.json`.
+
+## Равномерное распределение танков по треку
+
+Танки с `tank.onTrack === true` делят полный круг на равные сектора `360°/N` независимо от уровня танка и от того, в каких ячейках ангара они стоят. Скорость вращения едина для всех танков, поэтому расстояние между соседними танками всегда равно `360°/N`.
+
+- Owner-модуль: `src/mechanics/trackDistribution.js` (`Game.TrackDistribution`) — `isOnTrackTank`, `countOnTrackTanks`, `computeSlotPlacement(cells, cellIndex, out?)`, `computeSlotOffsetRad(index, count)`, `normalizePhase`, `TWO_PI`. Порядок слотов детерминирован по возрастанию `cell.i`; `index = -1`, если ячейка не на треке. Zero-alloc контракт — `out`-объект опционален, hot-path не аллоцирует: [src/mechanics/trackDistribution.js](../../../src/mechanics/trackDistribution.js#L1-L114).
+- Единая фаза трека живёт в `game.js` (module-level `_sharedTrackPhase`) с хелперами `getSharedTrackPhase()` / `seedSharedTrackPhase(value)` / `ensureSharedTrackPhase()` (сидируется `orbitPhase` первого onTrack-танка, иначе `0`): [game.js](../../../game.js#L10581-L10603).
+- `stepTanks(dt)` считает `sharedAngularSpeed` один раз за кадр, продвигает фазу один раз и записывает `cell.orbitPhase = _sharedTrackPhase` во все onTrack-ячейки. Per-level `balSpeedMul` в угловой скорости трека больше не участвует, `balAtkSpeedMul` для `attackSpeedMul` сохранён: [game.js](../../../game.js#L10609-L10617).
+- Слот-смещение берётся через `resolveTrackSlotOffsetRad(cell)` из `Game.TrackDistribution` с переиспользуемым scratch-объектом `_trackSlotScratch`: [game.js](../../../game.js#L11204-L11212). «Шквал» ускоряет весь трек целиком через `resolveTrackOrbitMul()` (максимальный `orbit` среди onTrack-танков): [game.js](../../../game.js#L11215).
+- `tankOrbitState(cell, timeSec)`: onTrack-ветка = `cell.orbitPhase + resolveTrackSlotOffsetRad(cell)`; legacy/hangar-формула `(cell.i / (rows*cols)) * 2π` живёт только в ветке танка НЕ на треке (hangar-превью) и на трек не влияет: [game.js](../../../game.js#L11232-L11262).
+- Жизненный цикл фазы: drag-release на трек — `from.orbitPhase = ensureSharedTrackPhase()` [game.js](../../../game.js#L15273); full reset — `_sharedTrackPhase = null` [game.js](../../../game.js#L13210); restore сейва — `_sharedTrackPhase = null` + нормализация к фазе первого onTrack-танка [game.js](../../../game.js#L7646-L7662).
+- Save-schema и i18n НЕ менялись: `cell.orbitPhase` сохраняется/восстанавливается как раньше ([src/persistence/storage.js](../../../src/persistence/storage.js#L443)).
+- Регрессионное покрытие — `Test/tests.js` группа `T10` (метки `T10-1`..`T10-9`): [Test/tests.js](../../../Test/tests.js#L80-L172).
 
 ## Asset-driven combat stats
 - `tankStats()` теперь читает `stats.baseDamage`, `stats.attackSpeed` и optional `stats.projectileCount` из `assets/tanks.json`, а `fireTankProjectile()` использует этот per-tank barrel-count раньше legacy fallback `Combat.getProjectileCount(level)`. Это делает количество базовых снарядов authoring knob'ом конкретного `tank_lvlN`, при этом урон по-прежнему делится по базовому count и не переопределяет chip extra-projectile contract: [game.js](../../../game.js#L5047-L5089), [game.js](../../../game.js#L8284-L8303), [src/render/spriteLoaders.js](../../../src/render/spriteLoaders.js#L498-L530), [assets/tanks.json](../../../assets/tanks.json#L1-L3).

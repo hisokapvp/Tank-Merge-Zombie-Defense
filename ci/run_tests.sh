@@ -50,6 +50,10 @@ run_test "Pack 8 (balance curve repair)" "Test/pack8/balanceCurveRepair.test.js"
 run_test "Pack 8 (zombie fail-safe teleport)" "Test/pack8/zombieFailSafeTeleport.test.js"
 run_test "Pack 9 (offline modal UI/i18n)" "Test/pack9/offlineModal_ui_i18n.test.js"
 run_test "Pack 10 (FX density render parity)" "Test/pack10/fxDensityRender.test.js"
+run_test "Pack 11 (meta hoarder unlocks)" "Test/pack11/metaHoarderUnlocks.test.js"
+run_test "Pack 11 (production line unlocks)" "Test/pack11/productionLineUnlocks.test.js"
+run_test "Pack 12 (hangar cell chip persistence)" "Test/pack12/hangarCellsPersistence.test.js"
+run_test "Pack 12 (chip craft + tech-upgrade match stability)" "Test/pack12/chipCraftAndTechMatch.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

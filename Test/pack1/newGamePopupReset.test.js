@@ -238,6 +238,46 @@ test('T5-16: available hangar chips prioritize match-capable entries and keep st
   assert(uiJs.indexOf('chips = _sortAvailableChipsByMatchPriority(chips, canMatchMap);') !== -1, 'renderChipsList applies match-priority sorting');
 });
 
+// Test 17: New Game fully clears the chip inventory without a page reload
+test('T5-17: new_game resets player chip inventory (chips, fragments, dust, tech study)', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  const uiJs = fs.readFileSync(path.resolve(__dirname, '../../src/ui/hangarChipsUI.js'), 'utf-8');
+
+  // Seam exists and is exported from the UI module.
+  assert(uiJs.indexOf('function resetPlayerInventory(meta)') !== -1, 'HangarChipsUI exposes resetPlayerInventory');
+  assert(uiJs.indexOf('resetPlayerInventory: resetPlayerInventory') !== -1, 'resetPlayerInventory is in the public API');
+
+  // Seam clears every inventoried resource owned by the UI module.
+  const seamStart = uiJs.indexOf('function resetPlayerInventory(meta)');
+  const seamEnd = uiJs.indexOf('\n  function ', seamStart + 1);
+  const seamBody = seamStart !== -1 && seamEnd !== -1 ? uiJs.slice(seamStart, seamEnd) : '';
+  assert(seamBody.indexOf('setPlayerChips([],') !== -1, 'seam clears chips through the canonical writer');
+  assert(seamBody.indexOf('_playerFragments = [];') !== -1, 'seam clears fragment inventory');
+  assert(seamBody.indexOf('_siliconDust = 0;') !== -1, 'seam clears silicon dust');
+  assert(seamBody.indexOf('_techFeedProgress = {};') !== -1, 'seam clears tech feed progress');
+  assert(seamBody.indexOf('_stopTechStudyTimer();') !== -1, 'seam stops the running tech study timer');
+  assert(seamBody.indexOf('_techStudying = null;') !== -1, 'seam clears tech study state');
+  assert(seamBody.indexOf('resetTransientUiState();') !== -1, 'seam resets transient workshop UI state');
+
+  // Installed chips live in the module-owned `_cells` grid, not in `state`, so the
+  // seam must rebuild it — otherwise chips installed into hangar cells survive New Game.
+  assert(seamBody.indexOf('_cells = null;') !== -1, 'seam drops the module-owned hangar cell grid');
+  assert(seamBody.indexOf('ensureCells();') !== -1, 'seam rebuilds an empty hangar cell grid');
+  assert(seamBody.indexOf('_cancelDragsHook && _cancelDragsHook();') !== -1, 'seam cancels leaked slot/chip drags');
+  assert(seamBody.indexOf('_chipFilter = \'all\';') !== -1, 'seam resets sticky inventory filter');
+  assert(uiJs.indexOf("_cancelDragsHook = _cancelAllDrags;") !== -1, 'init() registers its drag canceller for the reset seam');
+
+  // resetGameState invokes the seam only on the new_game path (partial reset preserves chips).
+  const resetStart = gameJs.indexOf('function resetGameState(options)');
+  const newGameBranch = gameJs.indexOf("if (reason === 'new_game') {", resetStart);
+  const branchEnd = gameJs.indexOf('\n  }', newGameBranch);
+  const branchBody = newGameBranch !== -1 && branchEnd !== -1 ? gameJs.slice(newGameBranch, branchEnd) : '';
+  assert(branchBody.indexOf('resetPlayerInventory({ reason: \'new_game\' })') !== -1,
+    'resetGameState calls resetPlayerInventory on the new_game branch');
+  assert(gameJs.indexOf("HCUI.setPlayerChips(snap.playerChips.slice())") !== -1,
+    'partial reset still restores the chip snapshot');
+});
+
 // Summary
 console.log('\n═══════════════════════════');
 console.log('NewGamePopupReset: ' + passCount + ' passed, ' + failCount + ' failed');

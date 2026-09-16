@@ -53,8 +53,8 @@
 | 872–920 | Map seeds, debug panel flag, zombie overlay toggle |
 # game.js — карта монолита
 
-> Обновлено: 2026-04-30.
-> Текущая длина файла: ~16 372 строки. Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump.
+> Обновлено: 2026-09-16.
+> Диапазоны ниже точны для ключевых entrypoint'ов и «горячих» зон; для вторичных блоков держите в уме, что это рабочая карта, а не полный line-by-line dump. Часть вторичных range-таблиц могла устареть — сверяй anchor через grep по имени символа.
 
 ## Что это
 `game.js` остаётся главным bootstrap/runtime-монолитом проекта: здесь живут глобальные aliases `window.Game`, world loop, render orchestration, часть fallback-логики, UI wiring и интеграция всех extracted модулей из `src/*`.
@@ -81,6 +81,7 @@
 - Нужен `qualityLow` hysteresis → [loop() qualityLow drop/recover](../../game.js#L15437-L15690) (drop @ `fpsAvg < 45 || fxLevel >= 1` instant; recover требует `fpsAvg >= 55 && fxLevel < 1` непрерывно ≥ `5s`; константы `QUALITY_LOW_DROP_FPS=45`, `QUALITY_LOW_RECOVER_FPS=55`, `QUALITY_LOW_RECOVER_HOLD_SEC=5`)
 - Нужен `saveProgress()` safety wrapper → [loop() saveProgress try/catch + 30s toast](../../game.js#L15437-L15690) (`lastSaveErrorAt` module scope, throttle ≥ 30s, не уменьшать)
 - Нужен auto-suspend wiring → [boot() Game.RuntimeTasks.installAutoSuspend()](../../game.js#L11714-L11885); сама установка слушает **только `document.visibilitychange`**: [src/core/runtimeTasks.js](../../src/core/runtimeTasks.js#L133-L165) (window.blur/focus намеренно НЕ слушаются — Windows resize transient focus)
+- Нужно равномерное распределение танков по треку (общая фаза + слоты `360°/N`) → [stepTanks()](../../game.js#L10605), [getSharedTrackPhase()](../../game.js#L10581-L10603), [resolveTrackOrbitMul()](../../game.js#L11215), [resolveTrackSlotOffsetRad()](../../game.js#L11205), [tankOrbitState()](../../game.js#L11232), [src/mechanics/trackDistribution.js](../../src/mechanics/trackDistribution.js#L1-L114)
 
 ## Инварианты ⚠️
 - Новая логика по возможности живёт в `src/*`; `game.js` — bootstrap/fallback glue.
@@ -98,6 +99,7 @@
 - Visual gate ауры танка живёт здесь, а не в sprite loader: `resolveTankAuraVisual(cellIndex, level)` использует `getInstalledChipCountForCell(cellIndex)` для подсчёта реально установленных чипов (red + yellow slots), активирует `aura1/aura2/aura3` по count `1..3`, а `drawTankAuraSprite()` даёт variant-specific runtime treatment поверх спрайта. Procedural fallback `drawTankAura()` берёт `auraOrbs` через `getAuraOrbsConfig()` из live cached `TankSprites.config`, который может быть явно обновлён `TankSprites.refreshConfig()` вне render hot path. `drawTankAura()` не fetch'ит JSON, не нормализует raw config и не мутирует state: [game.js](../../game.js#L14621-L14829), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L233-L258), [src/render/spriteLoaders.js](../../src/render/spriteLoaders.js#L617-L644).
 - Browser input guard живёт здесь, а не в разрозненных DOM-модулях: `game.js` ставит document-level `contextmenu` suppression один раз на страницу и тем самым удерживает legacy-path в том же no-context-menu contract, что и Phaser bootstrap. Не дублировать этот guard в каждом overlay и не удалять его без синхронного изменения `src/phaser/phaserBootstrap.js`: [game.js](../../game.js#L11153-L11157), [src/phaser/phaserBootstrap.js](../../src/phaser/phaserBootstrap.js#L106-L116).
 - Canvas pointer path обязан оставаться touch-safe: `preventTouchPointerDefault()` вызывается только для cancelable touch events, pointer capture снимается через `releaseCanvasPointer()` на `up/cancel`, а drag-state не должен обновляться до общего порога `6px`, чтобы tap по canvas не превращался в ложный drag.
+- Равномерность трека держится на **единой** фазе: `_sharedTrackPhase` (module scope, [game.js](../../game.js#L10581)) продвигается ровно один раз за кадр в `stepTanks()` ([L10609-L10617](../../game.js#L10609-L10617)) и записывается во все `onTrack`-ячейки (`cell.orbitPhase = _sharedTrackPhase`). НЕ возвращать per-tank/per-level `balSpeedMul` в угловую скорость трека и НЕ вычислять угол onTrack-танка из `cell.i` — слот-смещение обязано идти только через `Game.TrackDistribution` ([resolveTrackSlotOffsetRad()](../../game.js#L11205), scratch `_trackSlotScratch` [L11204](../../game.js#L11204)). `_sharedTrackPhase` обязан сбрасываться в `null` при full reset ([L13210](../../game.js#L13210)) и при restore сейва ([L7646-L7662](../../game.js#L7646-L7662), нормализация к фазе первого onTrack-танка); drag-release на трек обязан присваивать `from.orbitPhase = ensureSharedTrackPhase()` ([L15273](../../game.js#L15273)).
 
 ## Ключевые блоки файла
 | Блок | Строки | Назначение |
@@ -107,7 +109,7 @@
 | Supercomputer state / sim clock / API refs | [game.js](../../game.js#L816-L1013) | `getComputerState()`, seeds, debug flag, world helpers |
 | i18n / settings / audio / sprite wiring | [game.js](../../game.js#L1014-L2335) | language, audio, `SupercomputerSprites`, loader wiring |
 | Board / layout / production line placement | [game.js](../../game.js#L2742-L2820) | `initBoard()`, SC world position, `ProductionLineRender.updateLayout()` |
-| Core combat pipeline | [game.js](../../game.js#L10165-L11756) | `stepZombies`, `stepTanks`, `stepProjectiles`, `impactAt`, `stepDecals`, `markZombieDying`, `flushZombieDeathFx`, `cleanupKills` |
+| Core combat pipeline | [game.js](../../game.js#L10165-L11756) | `stepZombies`, `stepTanks` (shared track phase L10609-L10617), `stepProjectiles`, `impactAt`, `stepDecals`, `markZombieDying`, `flushZombieDeathFx`, `cleanupKills` |
 | Menu / restore / critical restart / UI wiring | [game.js](../../game.js#L9750-L11900) | big menu, restartSimulationPartial, talents UI wiring, stage active HUD slots |
 | Chip aura routing / HUD hover helpers | [game.js](../../game.js#L8102-L8159) | Installed chip count → aura variant selection |
 | World render | [game.js](../../game.js#L12656-L12729) | `draw()`: z-order: background → tankTrack → fenceBase → **board** → orbitingTanks → supercomputer → productionLine → zombies/corpses → fenceHpBars → talents status → projectiles/effects → drones → crate → weather → SC boost icons → SC HP bar overlay |
@@ -156,7 +158,11 @@
 |---|---|---|
 | `restoreFullState()` | [game.js](../../game.js#L4179-L4580) | Полное восстановление сейва / post-restore sync |
 | `stepZombies()` | [game.js](../../game.js#L10165-L10536) | Zombie AI / movement / fence interaction / unstick mechanism; per-type balance/attack/anim lookups are cached once per type per frame |
-| `stepTanks()` | [game.js](../../game.js#L8495-L8866) | Танки, таргетинг, стрельба |
+| `stepTanks()` | [game.js](../../game.js#L10605) | Танки, таргетинг, стрельба; один раз за кадр продвигает единую фазу трека и пишет её во все `onTrack`-ячейки ([L10609-L10617](../../game.js#L10609-L10617)); per-level `balSpeedMul` в угловой скорости трека больше не используется |
+| `tankOrbitState()` | [game.js](../../game.js#L11232) | Позиция/heading танка; onTrack-ветка = `cell.orbitPhase + resolveTrackSlotOffsetRad(cell)` ([L11236-L11237](../../game.js#L11236-L11237)), legacy/hangar-ветка (танк не на треке) сохраняет `(cell.i / rows*cols) * 2π` + per-tank `barrageOrbit` ([L11245-L11262](../../game.js#L11245-L11262)) |
+| `getSharedTrackPhase()` / `seedSharedTrackPhase()` / `ensureSharedTrackPhase()` | [game.js](../../game.js#L10581-L10603) | `_sharedTrackPhase` (module scope) — единая фаза для всех танков; `ensure` сидируется `orbitPhase` первого существующего onTrack-танка, иначе `0` |
+| `resolveTrackOrbitMul()` | [game.js](../../game.js#L11215) | Максимальный `orbit` из `TalentsV2.getBarrageMul()` по всем onTrack-танкам: «Шквал» ускоряет весь трек целиком |
+| `resolveTrackSlotOffsetRad()` | [game.js](../../game.js#L11205) | Угловое смещение слота через `Game.TrackDistribution.computeSlotPlacement(state.cells, cell.i, _trackSlotScratch)` — zero-alloc, scratch объявлен в [L11204](../../game.js#L11204) |
 | `spawnProjectile()` | [game.js](../../game.js#L9035-L9134) | Projectile pool / init |
 | `impactAt()` | [game.js](../../game.js#L11341-L11523) | Impact effects / damage application; grid-filtered AoE victims, cached zombie snapshot coords (`z._sx/_sy`), hoisted `timeMs` for TalentsV2, crit-first per-impact damage-number queue via `BAL.maxDamageNumbersPerImpact`, ChipEffects radius-query handoff |
 | `cleanupKills()` | [game.js](../../game.js#L9546-L9691) | Награды за убийство, XP, conveyor work trigger; write-index compaction + batched death-fx flush |
@@ -258,8 +264,15 @@
 ### Танки
 | Строка | Функция |
 |---|---|
-| 8495 | `stepTanks(dt)` |
-| 5800 | `tankOrbitState(cell, timeSec)` |
+| 10581 | `_sharedTrackPhase` (module scope) |
+| 10583 | `getSharedTrackPhase()` |
+| 10587 | `seedSharedTrackPhase(value)` |
+| 10593 | `ensureSharedTrackPhase()` |
+| 10605 | `stepTanks(dt)` (shared track phase: 10609-10617) |
+| 11204 | `_trackSlotScratch` |
+| 11205 | `resolveTrackSlotOffsetRad(cell)` |
+| 11215 | `resolveTrackOrbitMul()` |
+| 11232 | `tankOrbitState(cell, timeSec)` |
 
 ### Fence
 | Строка | Функция |

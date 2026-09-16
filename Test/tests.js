@@ -76,6 +76,99 @@ loadModule('src/render/groundGen.js');
 loadModule('src/render/groundLayer.js');
 // Load achievement rewards
 loadModule('src/mechanics/achievementRewards.js');
+// Load track distribution (equal spacing of tanks on the track)
+loadModule('src/mechanics/trackDistribution.js');
+
+// ═══════════════════════════════════════════════
+// T10: TrackDistribution — равномерное распределение танков по треку
+// ═══════════════════════════════════════════════
+console.log('\n── T10: TrackDistribution (равный шаг 360°/N) ──');
+
+const TrackDistribution = Game.TrackDistribution;
+
+function makeCells(entries) {
+  const cells = [];
+  const total = 16;
+  for (let i = 0; i < total; i++) cells.push({ i, tank: null });
+  for (const e of entries) {
+    cells[e.i] = { i: e.i, tank: { id: 'tank_lvl' + (e.level || 1), level: e.level || 1, onTrack: true } };
+  }
+  return cells;
+}
+
+function placementOf(cells, cellIndex) {
+  return TrackDistribution.computeSlotPlacement(cells, cellIndex);
+}
+
+test('T10-1: 1 танк на треке занимает слот 0/1', () => {
+  const cells = makeCells([{ i: 5, level: 3 }]);
+  const p = placementOf(cells, 5);
+  assertEqual(p.index, 0);
+  assertEqual(p.count, 1);
+});
+
+test('T10-2: 2 танка делят круг на равные половины (0 и π)', () => {
+  const cells = makeCells([{ i: 2, level: 1 }, { i: 9, level: 30 }]);
+  const a = placementOf(cells, 2);
+  const b = placementOf(cells, 9);
+  assertEqual(a.index, 0);
+  assertEqual(b.index, 1);
+  assertEqual(a.count, 2);
+  assert(Math.abs(TrackDistribution.computeSlotOffsetRad(a.index, a.count) - 0) < 1e-9, 'слот 0 → 0 рад');
+  assert(Math.abs(TrackDistribution.computeSlotOffsetRad(b.index, b.count) - Math.PI) < 1e-9, 'слот 1 → π рад');
+});
+
+test('T10-3: 4 танка → шаг π/2 независимо от уровня', () => {
+  const cells = makeCells([{ i: 0, level: 1 }, { i: 4, level: 50 }, { i: 8, level: 12 }, { i: 12, level: 60 }]);
+  const offsets = [0, 4, 8, 12].map((i) => {
+    const p = placementOf(cells, i);
+    return TrackDistribution.computeSlotOffsetRad(p.index, p.count);
+  });
+  for (let k = 0; k < offsets.length; k++) {
+    assert(Math.abs(offsets[k] - k * (Math.PI / 2)) < 1e-9, 'шаг π/2 для слота ' + k);
+  }
+});
+
+test('T10-4: порядок слотов детерминирован по cell.i, а не по порядку массива', () => {
+  const cells = makeCells([{ i: 11, level: 2 }, { i: 3, level: 7 }]);
+  assertEqual(placementOf(cells, 3).index, 0, 'меньший cell.i → слот 0');
+  assertEqual(placementOf(cells, 11).index, 1, 'больший cell.i → слот 1');
+});
+
+test('T10-5: ячейка без танка на треке → index -1', () => {
+  const cells = makeCells([{ i: 1, level: 1 }]);
+  const p = placementOf(cells, 7);
+  assertEqual(p.index, -1);
+  assertEqual(p.count, 1);
+});
+
+test('T10-6: countOnTrackTanks считает только onTrack', () => {
+  const cells = makeCells([{ i: 1, level: 1 }, { i: 2, level: 1 }]);
+  cells[3] = { i: 3, tank: { id: 'tank_lvl1', level: 1, onTrack: false } };
+  assertEqual(TrackDistribution.countOnTrackTanks(cells), 2);
+});
+
+test('T10-7: normalizePhase приводит отрицательные и >2π углы в [0, 2π)', () => {
+  assert(Math.abs(TrackDistribution.normalizePhase(-Math.PI / 2) - (Math.PI * 1.5)) < 1e-9, '-π/2 → 3π/2');
+  assert(Math.abs(TrackDistribution.normalizePhase(Math.PI * 4.5) - (Math.PI * 0.5)) < 1e-9, '4.5π → 0.5π');
+});
+
+test('T10-8: computeSlotPlacement переиспользует out-объект (zero-alloc контракт)', () => {
+  const cells = makeCells([{ i: 6, level: 1 }, { i: 10, level: 1 }]);
+  const out = { index: -1, count: 0 };
+  const returned = TrackDistribution.computeSlotPlacement(cells, 10, out);
+  assert(returned === out, 'возвращается тот же out-объект');
+  assertEqual(out.index, 1);
+  assertEqual(out.count, 2);
+});
+
+test('T10-9: пустой трек не даёт валидного слота', () => {
+  const cells = makeCells([]);
+  const p = placementOf(cells, 0);
+  assertEqual(p.index, -1);
+  assertEqual(p.count, 0);
+  assertEqual(TrackDistribution.computeSlotOffsetRad(0, 0), 0);
+});
 
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...

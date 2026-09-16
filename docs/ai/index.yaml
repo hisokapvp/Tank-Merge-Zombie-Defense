@@ -1,5 +1,5 @@
 version: 2
-updated_at: 2026-06-06
+updated_at: 2026-09-16
 project_map: docs/ai/PROJECT_MAP.md
 maps:
   - docs/ai/GAME_JS_MAP.md
@@ -84,7 +84,7 @@ systems:
       - src/render/spriteLoaders.js
   combat:
     doc: docs/ai/SYSTEMS/combat.md
-    tags: [combat, projectile, damage, economy, progression, spawn]
+    tags: [combat, projectile, damage, economy, progression, spawn, track]
     files:
       - src/mechanics/combat.js
       - src/mechanics/combatProfiles.js
@@ -95,6 +95,7 @@ systems:
       - src/mechanics/progression.js
       - src/mechanics/garage.js
       - src/mechanics/levelFlow.js
+      - src/mechanics/trackDistribution.js
       - game.js
   achievements:
     doc: docs/ai/SYSTEMS/achievements.md
