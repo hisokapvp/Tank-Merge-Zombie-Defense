@@ -188,6 +188,11 @@
         modifierTechUnlocksCount: 0,
         droneAcquisitionsCount: 0,
         noRepairAttackWaveStreakCount: 0,
+        // Item — per-run «Текущая волна: X» HUD counter. Инкремент только через
+        // game.js incrementCurrentWaveCounter() на завершение волны атаки.
+        // Не входит в progress snapshot, поэтому partial reset («Перезагрузка
+        // симуляции») и New Game начинают с 0.
+        currentWaveCount: 0,
         moneyEarnedCount: 0,
         perfectFenceWavesCount: 0,
         hangarMasterLevelCount: 0,

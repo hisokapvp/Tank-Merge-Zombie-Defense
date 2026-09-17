@@ -1294,14 +1294,81 @@ body.menu-open .stageUi .hudItem{
 .crateModal__claimBtn{
   min-width:188px;
 }
+/* Voluntary refusal ("Отказаться") — deliberately red so it reads as the
+   destructive/opt-out choice against the green primary claim CTA. Lives on its
+   own row (sibling of .crateModal__actions) so the established 2-button layout
+   and the mobile column-reverse order stay untouched.
+   NOTE: the colour rules for this button live further down, right after
+   .btnSecondary — equal-specificity rules must come AFTER the base .btn block
+   to win the cascade. */
+.crateModal__declineBtn{
+  align-self:center;
+  min-width:188px;
+}
+/* In-panel confirm step for the refusal (never leaves the crate modal, so the
+   box keeps its own a11y/ModalAdapter state until the player decides). */
+.crateModal__declineConfirm{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px;
+  border-radius:inherit;
+  background:rgba(4,8,14,.82);
+  backdrop-filter:blur(2px);
+}
+.crateModal__declineConfirm.hidden{
+  display:none;
+}
+.crateModal__declineBox{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+  width:100%;
+  max-width:320px;
+  padding:18px 16px;
+  border-radius:14px;
+  border:1px solid rgba(255,86,66,.45);
+  background:linear-gradient(160deg, rgba(30,17,14,.98), rgba(12,7,6,.98));
+  box-shadow:0 3px 0 rgba(0,0,0,.4), 0 0 16px rgba(255,72,48,.14);
+  text-align:center;
+}
+.crateModal__declineText{
+  color:rgba(255,226,219,.92);
+  line-height:1.45;
+}
+.crateModal__declineActions{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:nowrap;
+  gap:10px;
+  width:100%;
+}
+.crateModal__declineActionBtn{
+  flex:1;
+  max-width:150px;
+  min-width:0;
+}
 @media (max-width: 480px){
   .crateModal__actions{
     flex-direction:column-reverse;
   }
   .crateModal__actions .btn,
-  .crateModal__claimBtn{
+  .crateModal__claimBtn,
+  .crateModal__declineBtn{
     width:100%;
     min-width:0;
+  }
+  .crateModal__declineActions{
+    flex-direction:column-reverse;
+  }
+  .crateModal__declineActionBtn{
+    width:100%;
+    max-width:none;
   }
 }
 
@@ -1790,6 +1857,28 @@ body.scmodal-open{
 }
 .btnSecondary{
   background:linear-gradient(to bottom, #2a2a2a 0%, #121212 100%);
+}
+/* Crate modal "Отказаться": red outer styling marking the opt-out/destructive
+   choice. Placed here (after .btn/.btnPrimary/.btnSecondary) so the colour rules
+   win the cascade against the base .btn block. */
+.crateModal__declineBtn{
+  border-color:rgba(255,86,66,.7);
+  background:linear-gradient(to bottom, #6d2119 0%, #3b0f0a 100%);
+  color:#ffd7cf;
+  box-shadow:0 0 8px rgba(255,72,48,.22), 2px 2px 0 #000;
+}
+.crateModal__declineBtn::after{
+  background:rgba(255,72,48,.08);
+}
+.crateModal__declineBtn:hover:not(:disabled){
+  border-color:rgba(255,140,120,.95);
+  color:#fff2ee;
+  box-shadow:0 0 14px rgba(255,72,48,.45), 2px 2px 0 #000;
+}
+.crateModal__declineBtn:focus-visible{
+  outline:none;
+  border-color:rgba(255,140,120,.95);
+  box-shadow:0 0 0 3px rgba(255,72,48,.28), 0 0 14px rgba(255,72,48,.35), 2px 2px 0 #000;
 }
 .scButton{
   padding:10px 14px;

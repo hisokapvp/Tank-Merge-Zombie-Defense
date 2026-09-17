@@ -162,17 +162,26 @@
     var titleEl = document.getElementById('crateTitle');
     var dismissBtn = document.getElementById('crateDismiss');
     var closeBtn = ui.crateClose || document.getElementById('crateClose');
+    var declineBtn = ui.crateDecline || document.getElementById('crateDecline');
     var claimLabelEl = ensureCrateClaimButtonContent(ui.crateGet);
 
     if (titleEl) titleEl.textContent = t('crateModalTitle');
     if (ui.crateText) ui.crateText.textContent = t('crateModalText');
     if (dismissBtn) dismissBtn.textContent = t('menuClose');
     if (closeBtn) closeBtn.setAttribute('aria-label', t('menuClose'));
+    if (declineBtn) {
+      declineBtn.textContent = t('crateDecline');
+      declineBtn.disabled = false;
+    }
     if (ui.crateGet) {
       ui.crateGet.disabled = false;
       if (claimLabelEl) claimLabelEl.textContent = t('crateGet');
       else ui.crateGet.textContent = t('crateGet');
     }
+
+    // The refusal confirm never survives a re-open: each fresh crate starts at
+    // the two-button view.
+    closeCrateDeclineConfirm({ ui: ui, a11yClose: opts.a11yClose });
 
     if (document && document.body) {
       document.body.classList.add('crate-open');
@@ -189,10 +198,50 @@
     var opts = options || {};
     var ui = opts.ui;
     if (!ui || !ui.crateModal) return;
+    closeCrateDeclineConfirm({ ui: ui, a11yClose: opts.a11yClose });
     if (document && document.body) {
       document.body.classList.remove('crate-open');
     }
     hideModal(ui.crateModal, opts.a11yClose);
+  }
+
+  function isCrateDeclineConfirmOpen(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var overlay = (ui && ui.crateDeclineConfirm) || document.getElementById('crateDeclineConfirm');
+    return !!(overlay && !overlay.classList.contains('hidden'));
+  }
+
+  // In-panel confirm step for the voluntary refusal ("Отказаться" -> "Отмена" /
+  // "Продолжить"). It is a child of the crate modal on purpose: refusing is not
+  // a separate dialog flow, the player is still deciding about the same box.
+  function openCrateDeclineConfirm(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var t = opts.t || function (k) { return k; };
+    var overlay = (ui && ui.crateDeclineConfirm) || document.getElementById('crateDeclineConfirm');
+    if (!overlay) return false;
+
+    var textEl = ui && ui.crateDeclineConfirmText
+      ? ui.crateDeclineConfirmText
+      : document.getElementById('crateDeclineConfirmText');
+    var cancelBtn = (ui && ui.crateDeclineCancel) || document.getElementById('crateDeclineCancel');
+    var confirmBtn = (ui && ui.crateDeclineConfirmYes) || document.getElementById('crateDeclineConfirmYes');
+
+    if (textEl) textEl.textContent = t('crateDeclineConfirmText');
+    if (cancelBtn) cancelBtn.textContent = t('crateDeclineCancel');
+    if (confirmBtn) confirmBtn.textContent = t('crateDeclineContinue');
+
+    showModal(overlay, opts.a11yOpen, cancelBtn || overlay, opts.onClose);
+    return true;
+  }
+
+  function closeCrateDeclineConfirm(options) {
+    var opts = options || {};
+    var ui = opts.ui;
+    var overlay = (ui && ui.crateDeclineConfirm) || document.getElementById('crateDeclineConfirm');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    hideModal(overlay, opts.a11yClose);
   }
 
   function closeDismantleModal(options) {
@@ -381,6 +430,9 @@
     closeTalentResetCooldownModal: closeTalentResetCooldownModal,
     openCrateModal: openCrateModal,
     closeCrateModal: closeCrateModal,
+    openCrateDeclineConfirm: openCrateDeclineConfirm,
+    closeCrateDeclineConfirm: closeCrateDeclineConfirm,
+    isCrateDeclineConfirmOpen: isCrateDeclineConfirmOpen,
     closeDismantleModal: closeDismantleModal,
     openLevelModal: openLevelModal,
     closeLevelModal: closeLevelModal,

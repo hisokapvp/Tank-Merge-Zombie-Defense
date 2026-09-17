@@ -18,7 +18,7 @@
   // ── Layout constants ──
   var PANEL = {
     width: 340,
-    height: 300,
+    height: 350,
     radius: 14,
     bgColor: 0x1a2332,
     bgAlpha: 0.96,
@@ -53,6 +53,27 @@
     hoverColor: 0x555555,
   };
 
+  // Voluntary refusal ("Отказаться") — red on purpose so it reads as the
+  // destructive/opt-out choice against the green primary claim CTA. Mirrors the
+  // DOM `.crateModal__declineBtn` styling in style.css.
+  var BTN_DECLINE = {
+    width: 180,
+    height: 34,
+    radius: 6,
+    bgColor: 0x6d2119,
+    hoverColor: 0x8f2c20,
+  };
+
+  var CONFIRM = {
+    width: 300,
+    height: 150,
+    radius: 10,
+    bgColor: 0x1e110e,
+    bgAlpha: 0.98,
+    borderColor: 0xff5642,
+    borderWidth: 2,
+  };
+
   // ── Scene-local state ──
   var _backdrop = null;
   var _panelBg = null;
@@ -65,8 +86,16 @@
   var _dismissBtnText = null;
   var _closeBtnBg = null;
   var _closeBtnText = null;
+  var _declineBtnBg = null;
+  var _declineBtnText = null;
+  var _confirmOpen = false;
+  var _confirmGroup = [];
+  var _confirmText = null;
+  var _confirmCancelText = null;
+  var _confirmYesText = null;
   var _onClaim = null;
   var _onDismiss = null;
+  var _onDecline = null;
 
   var CrateRewardScene = new Phaser.Class({
     Extends: Phaser.Scene,
@@ -88,6 +117,9 @@
       _backdrop.fillRect(0, 0, w, h);
       _backdrop.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
       _backdrop.on('pointerdown', function () {
+        // While the refusal confirm is up the box is still the player's to keep:
+        // a stray backdrop click must not silently dismiss it.
+        if (_confirmOpen) return;
         if (typeof _onDismiss === 'function') _onDismiss();
       });
 
@@ -113,6 +145,7 @@
       closeZone.on('pointerover', function () { _closeBtnText.setColor('#ffffff'); });
       closeZone.on('pointerout', function () { _closeBtnText.setColor('#cccccc'); });
       closeZone.on('pointerdown', function () {
+        if (_confirmOpen) return;
         if (typeof _onDismiss === 'function') _onDismiss();
       });
 
@@ -140,7 +173,7 @@
       });
 
       // ── Dismiss (secondary) button ──
-      var dismissY = cy + 115;
+      var dismissY = cy + 112;
       _dismissBtnBg = this.add.graphics();
       _drawBtn(_dismissBtnBg, cx, dismissY, BTN_SECONDARY.width, BTN_SECONDARY.height, BTN_SECONDARY.radius, BTN_SECONDARY.bgColor);
       _dismissBtnText = this.add.text(cx, dismissY, '', TEXT_STYLE.buttonSecondary).setOrigin(0.5);
@@ -149,8 +182,23 @@
       dismissZone.on('pointerover', function () { _drawBtn(_dismissBtnBg, cx, dismissY, BTN_SECONDARY.width, BTN_SECONDARY.height, BTN_SECONDARY.radius, BTN_SECONDARY.hoverColor); });
       dismissZone.on('pointerout', function () { _drawBtn(_dismissBtnBg, cx, dismissY, BTN_SECONDARY.width, BTN_SECONDARY.height, BTN_SECONDARY.radius, BTN_SECONDARY.bgColor); });
       dismissZone.on('pointerdown', function () {
+        if (_confirmOpen) return;
         if (typeof _onDismiss === 'function') _onDismiss();
       });
+
+      // ── Decline (red) button ──
+      var declineY = cy + 154;
+      _declineBtnBg = this.add.graphics();
+      _drawBtn(_declineBtnBg, cx, declineY, BTN_DECLINE.width, BTN_DECLINE.height, BTN_DECLINE.radius, BTN_DECLINE.bgColor);
+      _declineBtnText = this.add.text(cx, declineY, '', TEXT_STYLE.button).setOrigin(0.5);
+
+      var declineZone = this.add.zone(cx, declineY, BTN_DECLINE.width, BTN_DECLINE.height).setInteractive({ useHandCursor: true });
+      declineZone.on('pointerover', function () { _drawBtn(_declineBtnBg, cx, declineY, BTN_DECLINE.width, BTN_DECLINE.height, BTN_DECLINE.radius, BTN_DECLINE.hoverColor); });
+      declineZone.on('pointerout', function () { _drawBtn(_declineBtnBg, cx, declineY, BTN_DECLINE.width, BTN_DECLINE.height, BTN_DECLINE.radius, BTN_DECLINE.bgColor); });
+      declineZone.on('pointerdown', function () { _setConfirmOpen(true); });
+
+      // ── Refusal confirm sub-view ("Отмена" / "Продолжить") ──
+      _buildConfirmView(this, cx, cy);
 
       // Signal readiness
       var overlayMgr = global.Game && global.Game.SceneOverlayManager;
@@ -174,12 +222,14 @@
      * @param {number} [data.rewardLevel] — tank level for icon
      * @param {Function} [data.onClaim] — called when claim button pressed
      * @param {Function} [data.onDismiss] — called when dismiss/close pressed
+     * @param {Function} [data.onDecline] — called when the refusal is confirmed
      * @param {Function} [data.translate] — i18n function
      */
     show: function (data) {
       data = data || {};
       _onClaim = data.onClaim || null;
       _onDismiss = data.onDismiss || null;
+      _onDecline = data.onDecline || null;
       var t = data.translate || function (k) { return k; };
       var level = data.rewardLevel || 1;
 
@@ -187,6 +237,10 @@
       if (_bodyText) _bodyText.setText(t('crateModalText') || 'An additional tank has been sent');
       if (_claimBtnText) _claimBtnText.setText(t('crateGet') || 'Claim');
       if (_dismissBtnText) _dismissBtnText.setText(t('menuClose') || 'Close');
+      if (_declineBtnText) _declineBtnText.setText(t('crateDecline') || 'Decline');
+      if (_confirmText) _confirmText.setText(t('crateDeclineConfirmText') || 'Decline the reward?');
+      if (_confirmCancelText) _confirmCancelText.setText(t('crateDeclineCancel') || 'Cancel');
+      if (_confirmYesText) _confirmYesText.setText(t('crateDeclineContinue') || 'Continue');
 
       // Draw icon with level color
       if (_iconGraphics) {
@@ -195,13 +249,19 @@
         _drawIconPlaceholder(_iconGraphics, w / 2, h / 2 - 50, level);
       }
 
+      // Order matters: _setAllVisible(true) reveals every scene child, so the
+      // confirm sub-view must be folded back down afterwards, otherwise a fresh
+      // crate would open with the refusal dialog already on screen.
       this._setAllVisible(true);
+      _setConfirmOpen(false);
     },
 
     hide: function () {
+      _setConfirmOpen(false);
       this._setAllVisible(false);
       _onClaim = null;
       _onDismiss = null;
+      _onDecline = null;
     },
 
     shutdown: function () {
@@ -214,14 +274,108 @@
       _claimBtnText = null;
       _dismissBtnBg = null;
       _dismissBtnText = null;
+      _declineBtnBg = null;
+      _declineBtnText = null;
+      _confirmGroup = [];
+      _confirmOpen = false;
+      _confirmText = null;
+      _confirmCancelText = null;
+      _confirmYesText = null;
       _closeBtnBg = null;
       _closeBtnText = null;
       _onClaim = null;
       _onDismiss = null;
+      _onDecline = null;
     },
   });
 
   // ── Helpers ──
+
+  // Refusal confirm sub-view: a nested dialog drawn on top of the panel. It is
+  // kept inside this scene (and outside the scene child list) so `_setAllVisible`
+  // cannot reveal it together with the base modal.
+  function _buildConfirmView(scene, cx, cy) {
+    _confirmGroup = [];
+    _confirmOpen = false;
+
+    var bg = scene.add.graphics();
+    var px = cx - CONFIRM.width / 2;
+    var py = cy - CONFIRM.height / 2;
+    bg.fillStyle(PANEL.shadowColor, PANEL.shadowAlpha);
+    bg.fillRoundedRect(px + 3, py + 3, CONFIRM.width, CONFIRM.height, CONFIRM.radius);
+    bg.fillStyle(CONFIRM.bgColor, CONFIRM.bgAlpha);
+    bg.fillRoundedRect(px, py, CONFIRM.width, CONFIRM.height, CONFIRM.radius);
+    bg.lineStyle(CONFIRM.borderWidth, CONFIRM.borderColor, 1);
+    bg.strokeRoundedRect(px, py, CONFIRM.width, CONFIRM.height, CONFIRM.radius);
+    _confirmGroup.push(bg);
+
+    var zone = scene.add.zone(cx, cy, CONFIRM.width, CONFIRM.height).setInteractive();
+    zone.on('pointerdown', function (ptr, x, y, evt) { if (evt) evt.stopPropagation(); });
+    _confirmGroup.push(zone);
+
+    _confirmText = scene.add.text(cx, cy - 34, '', {
+      fontFamily: 'Arial, sans-serif', fontSize: '13px', color: '#ffe2db', align: 'center',
+      stroke: '#000', strokeThickness: 1, wordWrap: { width: CONFIRM.width - 40 },
+    }).setOrigin(0.5);
+    _confirmGroup.push(_confirmText);
+
+    var btnY = cy + 34;
+    var btnW = 118;
+    var btnH = 32;
+    var gap = 12;
+    var cancelX = cx - (btnW / 2) - (gap / 2);
+    var yesX = cx + (btnW / 2) + (gap / 2);
+
+    var cancelBg = scene.add.graphics();
+    _drawBtn(cancelBg, cancelX, btnY, btnW, btnH, BTN_SECONDARY.radius, BTN_SECONDARY.bgColor);
+    _confirmGroup.push(cancelBg);
+    _confirmCancelText = scene.add.text(cancelX, btnY, '', TEXT_STYLE.button).setOrigin(0.5);
+    _confirmGroup.push(_confirmCancelText);
+    var cancelZone = scene.add.zone(cancelX, btnY, btnW, btnH).setInteractive({ useHandCursor: true });
+    cancelZone.on('pointerover', function () { _drawBtn(cancelBg, cancelX, btnY, btnW, btnH, BTN_SECONDARY.radius, BTN_SECONDARY.hoverColor); });
+    cancelZone.on('pointerout', function () { _drawBtn(cancelBg, cancelX, btnY, btnW, btnH, BTN_SECONDARY.radius, BTN_SECONDARY.bgColor); });
+    cancelZone.on('pointerdown', function () { _setConfirmOpen(false); });
+    _confirmGroup.push(cancelZone);
+
+    var yesBg = scene.add.graphics();
+    _drawBtn(yesBg, yesX, btnY, btnW, btnH, BTN_DECLINE.radius, BTN_DECLINE.bgColor);
+    _confirmGroup.push(yesBg);
+    _confirmYesText = scene.add.text(yesX, btnY, '', TEXT_STYLE.button).setOrigin(0.5);
+    _confirmGroup.push(_confirmYesText);
+    var yesZone = scene.add.zone(yesX, btnY, btnW, btnH).setInteractive({ useHandCursor: true });
+    yesZone.on('pointerover', function () { _drawBtn(yesBg, yesX, btnY, btnW, btnH, BTN_DECLINE.radius, BTN_DECLINE.hoverColor); });
+    yesZone.on('pointerout', function () { _drawBtn(yesBg, yesX, btnY, btnW, btnH, BTN_DECLINE.radius, BTN_DECLINE.bgColor); });
+    yesZone.on('pointerdown', function () {
+      _setConfirmOpen(false);
+      if (typeof _onDecline === 'function') _onDecline();
+    });
+    _confirmGroup.push(yesZone);
+
+    _setConfirmVisible(false);
+  }
+
+  function _setConfirmVisible(visible) {
+    for (var i = 0; i < _confirmGroup.length; i++) {
+      var child = _confirmGroup[i];
+      if (child && typeof child.setVisible === 'function') child.setVisible(visible);
+    }
+  }
+
+  // Combined toggle: the base modal hides its own buttons while the confirm is
+  // up, so "Отказаться" cannot be pressed twice and "Получить" cannot be reached
+  // behind the dialog.
+  function _setConfirmOpen(open) {
+    _confirmOpen = !!open;
+    _setConfirmVisible(_confirmOpen);
+    var base = _confirmOpen ? false : true;
+    if (_claimBtnBg) _claimBtnBg.setVisible(base);
+    if (_claimBtnText) _claimBtnText.setVisible(base);
+    if (_dismissBtnBg) _dismissBtnBg.setVisible(base);
+    if (_dismissBtnText) _dismissBtnText.setVisible(base);
+    if (_declineBtnBg) _declineBtnBg.setVisible(base);
+    if (_declineBtnText) _declineBtnText.setVisible(base);
+  }
+
   function _drawPanel(gfx, cx, cy) {
     if (!gfx) return;
     gfx.clear();

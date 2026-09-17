@@ -171,7 +171,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260916-supercomputer-viewport-placement';
+      var token = '20260917-crate-decline-button';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -325,6 +325,10 @@
 
               <div class="xpPanel hudPanel" id="simResetsWrap">
                 <div class="xpLabel" id="simResetsText">Перезагрузка симуляции: 0 раз</div>
+              </div>
+
+              <div class="xpPanel hudPanel" id="currentWaveWrap">
+                <div class="xpLabel" id="currentWaveText">Текущая волна: 0</div>
               </div>
 
               <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
@@ -493,6 +497,20 @@
                   <span class="talentResetCooldownAdBtn__label">Получить</span>
                   <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
                 </button>
+              </div>
+              <!-- Voluntary refusal: the box disappears and the tank is NOT granted.
+                   Kept on its own row below the claim/close pair so the existing
+                   2-button layout (including the mobile column-reverse order) is
+                   untouched. Guarded by the #crateDeclineConfirm round-trip. -->
+              <button id="crateDecline" class="btn crateModal__declineBtn" type="button" data-i18n="crateDecline">Отказаться</button>
+            </div>
+            <div class="crateModal__declineConfirm hidden" id="crateDeclineConfirm">
+              <div class="crateModal__declineBox" role="alertdialog" aria-modal="true" aria-labelledby="crateDeclineConfirmText" tabindex="-1">
+                <div class="levelModal__line crateModal__declineText" id="crateDeclineConfirmText" data-i18n="crateDeclineConfirmText">Отказаться от награды? Бокс исчезнет, танк не будет получен.</div>
+                <div class="levelModal__actions crateModal__declineActions">
+                  <button id="crateDeclineCancel" class="btn btnSecondary crateModal__declineActionBtn" type="button" data-i18n="crateDeclineCancel">Отмена</button>
+                  <button id="crateDeclineConfirmYes" class="btn crateModal__declineActionBtn crateModal__declineBtn" type="button" data-i18n="crateDeclineContinue">Продолжить</button>
+                </div>
               </div>
             </div>
           </div>
@@ -964,7 +982,7 @@
   <script src="src/perf/mobileMode.js?v=20260609-release-195003"></script>
   <script src="src/perf/fxDensity.js?v=20260609-release-195003"></script>
   <script src="src/i18n/index.js?v=20260609-release-195003"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260609-release-195003"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260917-crate-decline-button"></script>
   <script src="src/i18n/pluralize.js?v=20260609-release-195003"></script>
   <script src="src/ui/adminFlags.js?v=20260609-release-195003"></script>
   <script src="src/ui/adminDamagePoints.js?v=20260609-release-195003"></script>
@@ -977,7 +995,7 @@
   <script src="src/mechanics/chipEffects.js?v=20260609-release-195003"></script>
   <script src="src/ui/chipCraftLayout.js?v=20260609-release-195003"></script>
   <script src="src/ui/hangarChipsUI.js?v=20260609-release-195003"></script>
-  <script src="src/ui/modals.js?v=20260609-release-195003"></script>
+  <script src="src/ui/modals.js?v=20260917-crate-decline-button"></script>
   <script src="src/ui/achievementsModal.js?v=20260609-release-195003"></script>
   <script src="src/ui/talentOverlayDom.js?v=20260609-release-195003"></script>
   <script src="src/ui/talentOverlayRenderer.js?v=20260609-release-195003"></script>
@@ -1048,7 +1066,7 @@
   <!-- Phase 3b: Modal overlay scenes -->
   <script src="src/phaser/scenes/PauseMenuScene.js?v=20260609-release-195003"></script>
   <script src="src/phaser/scenes/LevelUpScene.js?v=20260609-release-195003"></script>
-  <script src="src/phaser/scenes/CrateRewardScene.js?v=20260609-release-195003"></script>
+  <script src="src/phaser/scenes/CrateRewardScene.js?v=20260917-crate-decline-button"></script>
   <!-- Phase 3c: Progression & achievement overlay scenes -->
   <script src="src/phaser/scenes/BigMenuScene.js?v=20260609-release-195003"></script>
   <script src="src/phaser/scenes/AchievementsScene.js?v=20260609-release-195003"></script>

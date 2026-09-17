@@ -62,6 +62,9 @@
    * @property {number} modifierTechUnlocksCount — разблокированные модификаторы.
    * @property {number} droneAcquisitionsCount — приобретённые дроны.
    * @property {number} noRepairAttackWaveStreakCount — стрик волн без ручного ремонта.
+   * @property {number} currentWaveCount — per-run счётчик завершённых волн атаки для HUD «Текущая волна: X».
+   *   Инкремент только через `game.js` `incrementCurrentWaveCounter()` на finalize волны.
+   *   Не входит в progress snapshot, поэтому partial reset («Перезагрузка симуляции») и New Game начинают с 0.
    */
 
   /**

@@ -536,6 +536,8 @@
       modifierTechUnlocksCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.modifierTechUnlocksCount) ? state.stats.modifierTechUnlocksCount : achievements.totalModifierTechUnlocks),
       droneAcquisitionsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.droneAcquisitionsCount) ? state.stats.droneAcquisitionsCount : achievements.totalDroneAcquisitions),
       noRepairAttackWaveStreakCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.noRepairAttackWaveStreakCount) ? state.stats.noRepairAttackWaveStreakCount : achievements.totalNoRepairAttackWaveStreak),
+      // Item — per-run «Текущая волна» counter (no legacy mirror: fresh-start field).
+      currentWaveCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.currentWaveCount) ? state.stats.currentWaveCount : 0),
     };
     var drones = [];
     if (Array.isArray(state.drones)) {

@@ -345,6 +345,42 @@ test('T-ACH-2: simulation reset counter increments in actual restart seams, not 
   assert(!/function openCriticalModal\([\s\S]*state\.achievements\.totalSimulationResets\s*=\s*_prevResets\s*\+\s*1;/.test(gameJs), 'openCriticalModal must not own counter increment');
 });
 
+test('T-ACH-3: current-wave HUD counter is per-run and increments once per finished attack wave', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '..', 'game.js'), 'utf-8');
+  const initialStateJs = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'persistence', 'initialState.js'), 'utf-8');
+  const storageJs = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'persistence', 'storage.js'), 'utf-8');
+  const indexHtml = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf-8');
+  const ruJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'src', 'i18n', 'ru.json'), 'utf-8'));
+  const enJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'src', 'i18n', 'en.json'), 'utf-8'));
+
+  // HUD shell: отдельная панель под simResetsWrap, тот же класс .xpPanel.hudPanel
+  assert(indexHtml.includes('id="currentWaveWrap"'), 'index.html must contain currentWaveWrap panel');
+  assert(indexHtml.includes('id="currentWaveText"'), 'index.html must contain currentWaveText label');
+  assert(/id="simResetsWrap"[\s\S]*id="currentWaveWrap"/.test(indexHtml), 'currentWaveWrap must sit after simResetsWrap');
+  assert(gameJs.includes("document.getElementById('currentWaveWrap')"), 'ensureProgressUI must create currentWaveWrap fallback');
+
+  // Canonical per-run counter seeded in initialState + serialized
+  assert(initialStateJs.includes('currentWaveCount: 0'), 'createInitialState must seed stats.currentWaveCount = 0');
+  assert(storageJs.includes('currentWaveCount:'), 'serializeState must persist stats.currentWaveCount');
+
+  // Increment lives in the wave-finalize seam, not in begin/UI paths
+  assert(gameJs.includes('function incrementCurrentWaveCounter()'), 'incrementCurrentWaveCounter helper must exist');
+  const finalizeIdx = gameJs.indexOf('function finalizeNoRepairAttackWaveEpisode()');
+  const incrementCallIdx = gameJs.indexOf('incrementCurrentWaveCounter();', finalizeIdx);
+  assert(finalizeIdx !== -1 && incrementCallIdx !== -1, 'finalizeNoRepairAttackWaveEpisode must call incrementCurrentWaveCounter');
+  assert(gameJs.indexOf('incrementCurrentWaveCounter();', gameJs.indexOf('function beginNoRepairAttackWaveEpisode()')) === -1
+    || gameJs.indexOf('incrementCurrentWaveCounter();', gameJs.indexOf('function beginNoRepairAttackWaveEpisode()')) > finalizeIdx,
+    'wave counter must not increment on wave start');
+
+  // Per-run semantics: stats не входит в progress snapshot, поэтому partial reset обнуляет счётчик
+  const worldResetJs = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'core', 'worldReset.js'), 'utf-8');
+  assert(!worldResetJs.includes('currentWaveCount'), 'currentWaveCount must NOT be part of progress snapshot (per-run reset)');
+
+  // i18n parity
+  assertEqual(ruJson.supercomputerCurrentWaveInfo, 'Текущая волна: {count}', 'ru key must exist');
+  assertEqual(enJson.supercomputerCurrentWaveInfo, 'Current wave: {count}', 'en key must exist');
+});
+
 // ═══════════════════════════════════════════════
 // T-DA: pickDeathAnim — детерминированный выбор death-анимации
 // ═══════════════════════════════════════════════

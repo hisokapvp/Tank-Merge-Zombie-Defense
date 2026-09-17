@@ -110,6 +110,11 @@ const ui = {
   crateModal: document.getElementById('crateModal'),
   crateClose: document.getElementById('crateClose'),
   crateGet: document.getElementById('crateGet'),
+  crateDecline: document.getElementById('crateDecline'),
+  crateDeclineConfirm: document.getElementById('crateDeclineConfirm'),
+  crateDeclineConfirmText: document.getElementById('crateDeclineConfirmText'),
+  crateDeclineCancel: document.getElementById('crateDeclineCancel'),
+  crateDeclineConfirmYes: document.getElementById('crateDeclineConfirmYes'),
   crateIcon: document.getElementById('crateTankIcon'),
   crateText: document.getElementById('crateText'),
   levelModal: document.getElementById('levelModal'),
@@ -4604,6 +4609,8 @@ function getSerializedAchievementStats(){
     droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
     noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
     attackWavesCompletedCount: clampDevInt(Number.isFinite(stats.attackWavesCompletedCount) ? stats.attackWavesCompletedCount : ach.totalAttackWavesCompleted),
+    // Item — per-run «Текущая волна» counter (сбрасывается на New Game / partial reset).
+    currentWaveCount: clampDevInt(Number.isFinite(stats.currentWaveCount) ? stats.currentWaveCount : 0),
     coinsSpentTotal: clampDevInt(Number.isFinite(stats.coinsSpentTotal) ? stats.coinsSpentTotal : ach.totalCoinsSpent),
     coinsSpentBySource: (stats.coinsSpentBySource && typeof stats.coinsSpentBySource === 'object') ? stats.coinsSpentBySource : {},
     /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter +
@@ -4631,6 +4638,9 @@ function applySavedAchievementStats(savedStats){
     if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
     if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
     if (Number.isFinite(savedStats.attackWavesCompletedCount)) state.stats.attackWavesCompletedCount = clampDevInt(savedStats.attackWavesCompletedCount);
+    // Item — per-run «Текущая волна» counter: восстанавливается из payload, чтобы
+    // save/load внутри одного run не терял прогресс волн.
+    if (Number.isFinite(savedStats.currentWaveCount)) state.stats.currentWaveCount = clampDevInt(savedStats.currentWaveCount);
     if (Number.isFinite(savedStats.coinsSpentTotal)) state.stats.coinsSpentTotal = clampDevInt(savedStats.coinsSpentTotal);
     if (savedStats.coinsSpentBySource && typeof savedStats.coinsSpentBySource === 'object') state.stats.coinsSpentBySource = savedStats.coinsSpentBySource;
     /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter restore. */
@@ -4813,6 +4823,21 @@ function completeNoRepairAttackWaveAchievementProgress(){
   for (let i = 0; i < unlocked.length; i++) queueAchievementPopup(unlocked[i]);
 }
 
+// Item — «Текущая волна: X» (per-run HUD counter).
+// Инкрементируется ровно один раз на завершение волны атаки (attack active → inactive),
+// в том же seam, что и attackWavesCompletedCount. Живёт в state.stats.currentWaveCount,
+// поэтому сбрасывается в 0 на New Game и на «Перезагрузке симуляции»: partial reset
+// пересоздаёт state.stats через createInitialState(), а stats не входит в progress snapshot.
+function incrementCurrentWaveCounter(){
+  if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+  const prev = Number.isFinite(state.stats.currentWaveCount)
+    ? Math.max(0, Math.floor(state.stats.currentWaveCount))
+    : 0;
+  const next = prev + 1;
+  state.stats.currentWaveCount = next;
+  return next;
+}
+
 function completeAttackEpisodeAchievementProgress(){
   let unlocked = [];
   if (AchievementsApi && typeof AchievementsApi.recordAttackEpisodeCompleted === 'function') {
@@ -4909,6 +4934,8 @@ function finalizeNoRepairAttackWaveEpisode(){
   resetNoRepairAttackWaveRuntime();
   // wave_survivor: count every survived attack episode regardless of repair state
   completeAttackEpisodeAchievementProgress();
+  // Item — «Текущая волна: X»: инкремент ровно один раз на завершённую волну атаки.
+  incrementCurrentWaveCounter();
   // Item 3 — выдаём одноразовое достижение «Выживший», если в волне latch взвёлся.
   if (survivorEligible && AchievementsApi && typeof AchievementsApi.recordSurvivorWaveCompleted === 'function') {
     const unlocked = AchievementsApi.recordSurvivorWaveCompleted(state) || [];
@@ -13994,6 +14021,17 @@ function ensureProgressUI(){
     `;
     topbar.appendChild(simWrap);
   }
+
+  // Item — Отдельная панель «Текущая волна: X» под simResetsWrap, тот же стиль .xpPanel.hudPanel.
+  if (!document.getElementById('currentWaveWrap')) {
+    const waveWrap = document.createElement('div');
+    waveWrap.id = 'currentWaveWrap';
+    waveWrap.className = 'xpPanel hudPanel';
+    waveWrap.innerHTML = `
+      <div class="xpLabel" id="currentWaveText">${(t('supercomputerCurrentWaveInfo') || 'Текущая волна: 0').replace('{count}', 0)}</div>
+    `;
+    topbar.appendChild(waveWrap);
+  }
 }
 
 function updateProgressUI(){
@@ -14024,6 +14062,24 @@ function updateProgressUI(){
       if (_simResetsEl.textContent !== _txt) _simResetsEl.textContent = _txt;
     }
   } catch (_simResetsUiErr) { /* additive */ }
+  // Item — «Текущая волна: X» читает canonical per-run counter state.stats.currentWaveCount.
+  // Счётчик инкрементируется ровно один раз на завершение волны атаки (см.
+  // incrementCurrentWaveCounter в finalizeNoRepairAttackWaveEpisode) и сбрасывается
+  // в 0 на New Game и на «Перезагрузке симуляции».
+  try {
+    const _waveEl = document.getElementById('currentWaveText');
+    if (_waveEl) {
+      const _stats = (state && state.stats && typeof state.stats === 'object') ? state.stats : null;
+      const _waves = (_stats && Number.isFinite(_stats.currentWaveCount))
+        ? Math.max(0, Math.floor(_stats.currentWaveCount))
+        : 0;
+      const _waveTmpl = t('supercomputerCurrentWaveInfo');
+      const _waveTxt = (_waveTmpl && _waveTmpl !== 'supercomputerCurrentWaveInfo')
+        ? _waveTmpl.replace('{count}', String(_waves))
+        : ('Текущая волна: ' + _waves);
+      if (_waveEl.textContent !== _waveTxt) _waveEl.textContent = _waveTxt;
+    }
+  } catch (_waveUiErr) { /* additive */ }
   const _hud2 = window.Game && window.Game.HudAdapter;
   if (_hud2 && _hud2.isInitialized()) {
     _hud2.updateText('lvlText', `${t('levelLabel')}: ${p.computerLevel}`);
@@ -14847,6 +14903,11 @@ function openCrateModal(){
     ui.crateGet.disabled = false;
     ui.crateGet.textContent = t('crateGet');
   }
+  if (ui.crateDecline){
+    ui.crateDecline.disabled = false;
+    ui.crateDecline.textContent = t('crateDecline');
+  }
+  closeCrateDeclineConfirm();
   a11yOpen(ui.crateModal, { initialFocus: ui.crateGet, onClose: closeCrateModal });
   renderCrateIcon(state.crate.rewardLevel ?? 1);
   _notifyModal('crateReward', true, { rewardLevel: state.crate.rewardLevel ?? 1 });
@@ -14859,10 +14920,67 @@ function closeCrateModal(){
     return;
   }
   if (!ui.crateModal) return;
+  closeCrateDeclineConfirm();
   ui.crateModal.classList.add('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'true');
   a11yClose(ui.crateModal);
   _notifyModal('crateReward', false);
+}
+
+// Voluntary refusal flow ("Отказаться"): the confirm step is an in-panel overlay
+// inside the already-open crate modal, so the crate modal itself stays the top
+// a11y entry. The nested dialog is pushed on top and popped first in
+// closeCrateModal(), which keeps the Escape/focus-trap stack in sync.
+function isCrateDeclineConfirmOpen(){
+  if (UIModals && typeof UIModals.isCrateDeclineConfirmOpen === 'function') {
+    return UIModals.isCrateDeclineConfirmOpen({ ui });
+  }
+  return !!(ui.crateDeclineConfirm && !ui.crateDeclineConfirm.classList.contains('hidden'));
+}
+
+function openCrateDeclineConfirm(){
+  if (state.crate && state.crate.claiming) return;
+  if (UIModals && typeof UIModals.openCrateDeclineConfirm === 'function') {
+    UIModals.openCrateDeclineConfirm({
+      ui,
+      t,
+      a11yOpen,
+      onClose: closeCrateDeclineConfirm,
+    });
+    return;
+  }
+  var overlay = ui.crateDeclineConfirm;
+  if (!overlay) return;
+  if (ui.crateDeclineConfirmText) ui.crateDeclineConfirmText.textContent = t('crateDeclineConfirmText');
+  if (ui.crateDeclineCancel) ui.crateDeclineCancel.textContent = t('crateDeclineCancel');
+  if (ui.crateDeclineConfirmYes) ui.crateDeclineConfirmYes.textContent = t('crateDeclineContinue');
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  a11yOpen(overlay, { initialFocus: ui.crateDeclineCancel, onClose: closeCrateDeclineConfirm });
+}
+
+function closeCrateDeclineConfirm(){
+  if (UIModals && typeof UIModals.closeCrateDeclineConfirm === 'function') {
+    UIModals.closeCrateDeclineConfirm({ ui, a11yClose });
+    return;
+  }
+  var overlay = ui.crateDeclineConfirm;
+  if (!overlay || overlay.classList.contains('hidden')) return;
+  overlay.classList.add('hidden');
+  overlay.setAttribute('aria-hidden', 'true');
+  a11yClose(overlay);
+}
+
+// "Продолжить" in the refusal confirm: the box disappears without any reward.
+// Deliberately mirrors claimCrateReward() cleanup (crate removed + next-crate
+// timer restarted) but skips grantCrateTank()/grantUndergroundCrateTank(), the
+// recordTankLevel() call and the bonusBoxesOpened recorder — a declined box was
+// never opened, so the box_hunter achievement family must NOT advance.
+function declineCrateReward(){
+  if (!state.crate || state.crate.claiming) return;
+  state.crate = null;
+  state.nextCrateAt = nowSec() + BAL.crateIntervalSec;
+  closeCrateModal();
 }
 
 function grantCrateTank(level, preferredIndex = null){
@@ -15449,8 +15567,14 @@ document.getElementById('talentResetCooldownModal')?.addEventListener('click', (
 });
 ui.crateGet?.addEventListener('click', () => claimCrateReward());
 ui.crateClose?.addEventListener('click', () => closeCrateModal());
+ui.crateDecline?.addEventListener('click', () => openCrateDeclineConfirm());
+ui.crateDeclineCancel?.addEventListener('click', () => closeCrateDeclineConfirm());
+ui.crateDeclineConfirmYes?.addEventListener('click', () => declineCrateReward());
 ui.crateModal?.addEventListener('click', (e) => {
   if (e.target?.dataset?.crateClose){
+    // While the refusal confirm is up, the box is still the player's to keep:
+    // a stray click must not silently close the modal and dismiss the box.
+    if (isCrateDeclineConfirmOpen()) return;
     closeCrateModal();
   }
 });
