@@ -173,11 +173,11 @@ test('T10-9: пустой трек не даёт валидного слота',
 // ═══════════════════════════════════════════════
 // T2: Формат чисел K/M/B/T/...
 // ═══════════════════════════════════════════════
-// T1: computeBuyTankLevel (max-5, cap=55) — solo-pipeline-yandex-vk#2 item 4
+// T1: computeBuyTankLevel (max-5 base offset, cap=59) — tank_building batch
 // ═══════════════════════════════════════════════
-console.log('\n── T1: computeBuyTankLevel (max-5, cap=55) ──');
+console.log('\n── T1: computeBuyTankLevel (max-5 base offset, cap=59) ──');
 
-const { computeBuyTankLevel, MAX_BUY_TANK_LEVEL } = Game.Economy;
+const { computeBuyTankLevel, MAX_BUY_TANK_LEVEL, DEFAULT_BUY_LEVEL_OFFSET } = Game.Economy;
 const { computePowerTier, xpNeededForLevel } = Game.Progression;
 const { formatShortNumber, formatCompactRu } = Game.NumberFormat;
 
@@ -187,7 +187,7 @@ test('T1-1: max=6 → 1', () => {
 test('T1-2: max=7 → 2', () => {
   assertEqual(computeBuyTankLevel(7), 2);
 });
-test('T1-3: max=60 → 55 (cap raised)', () => {
+test('T1-3: max=60 → 55 (default offset 5)', () => {
   assertEqual(computeBuyTankLevel(60), 55);
 });
 test('T1-4: max=1 → 1', () => {
@@ -199,8 +199,26 @@ test('T1-5: max=0 → 1', () => {
 test('T1-6: max=55 → 50', () => {
   assertEqual(computeBuyTankLevel(55), 50);
 });
-test('T1-7: MAX_BUY_TANK_LEVEL constant = 55', () => {
-  assertEqual(MAX_BUY_TANK_LEVEL, 55);
+test('T1-7: MAX_BUY_TANK_LEVEL constant = 59', () => {
+  assertEqual(MAX_BUY_TANK_LEVEL, 59);
+});
+
+// tank_building family — параметризованный offset покупки.
+test('T1-7a: DEFAULT_BUY_LEVEL_OFFSET = 5', () => {
+  assertEqual(DEFAULT_BUY_LEVEL_OFFSET, 5);
+});
+test('T1-7b: max=60, offset=1 → 59 (награда IV тира достижима)', () => {
+  assertEqual(computeBuyTankLevel(60, 1), 59);
+});
+test('T1-7c: max=60, offset=4 → 56 (награда I тира)', () => {
+  assertEqual(computeBuyTankLevel(60, 4), 56);
+});
+test('T1-7d: max=60, offset=2 → 58 (награда III тира)', () => {
+  assertEqual(computeBuyTankLevel(60, 2), 58);
+});
+test('T1-7e: offset clamp — 0 → 1, 999 → уровень 1', () => {
+  assertEqual(computeBuyTankLevel(60, 0), 59);
+  assertEqual(computeBuyTankLevel(60, 999), 1);
 });
 
 test('T1-8: xpNeededForLevel(0) → 50', () => {

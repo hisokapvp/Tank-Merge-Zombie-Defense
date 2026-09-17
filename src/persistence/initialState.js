@@ -213,6 +213,12 @@
         // Инкремент только через Game.Achievements.recordZombieKilled из flushZombieDeathFx batch seam.
         // Survives partial reset; clamp на MAX_SAFE_INTEGER. Source breakdown в zombieKillsBySource.
         zombieKillsTotal: 0,
+        // tank_building family — сколько танков ровно уровня L было СОЗДАНО
+        // (ключи — String(level)). Инкремент только через
+        // Game.Achievements.recordTankCreatedAtLevel из real-creation seam
+        // (game.js recordTankLevel с cause !== 'seed'). Лениво создаётся
+        // при первом инкременте — cold start / legacy save → отсутствует → 0.
+        tanksCreatedByLevel: {},
         zombieKillsBySource: { tank: 0, drone: 0, talent: 0, wall: 0 },
       },
       ui: {

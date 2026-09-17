@@ -211,6 +211,16 @@
     autoMergeBasic:              { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeBasic' },
     autoMergeAdvanced:           { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeAdvanced' },
     autoMergeExpert:             { type: 'autoMerge',      amount: 0,     i18nKey: 'achievementRewardAutoMergeExpert' },
+    /* tank_building family (batch tank-building) — пассивный модификатор
+       разницы уровней покупки. type 'buyLevelOffset' НЕ выдаёт предметов:
+       grantByTable() его не обрабатывает, а grantAchievementReward() в
+       game.js делает early-return (тот же declarative-паттерн, что
+       'autoMerge'). Сама способность читается из флага unlocked через
+       Achievements.getBuyLevelOffset(state). amount — итоговый offset. */
+    tankBuildingOffset4:         { type: 'buyLevelOffset', amount: 4,     i18nKey: 'achievementRewardTankBuilding1' },
+    tankBuildingOffset3:         { type: 'buyLevelOffset', amount: 3,     i18nKey: 'achievementRewardTankBuilding2' },
+    tankBuildingOffset2:         { type: 'buyLevelOffset', amount: 2,     i18nKey: 'achievementRewardTankBuilding3' },
+    tankBuildingOffset1:         { type: 'buyLevelOffset', amount: 1,     i18nKey: 'achievementRewardTankBuilding4' },
     /* stable_income family */
     stableIncomeDamage100:       { type: 'damagePoints',   amount: 100,     i18nKey: 'achievementRewardStableIncomeDamage100' },
     stableIncomeDamage1000:      { type: 'damagePoints',   amount: 1000,    i18nKey: 'achievementRewardStableIncomeDamage1000' },

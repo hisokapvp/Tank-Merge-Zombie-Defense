@@ -132,7 +132,12 @@
         "noRepairAttackWaveStreakCount":  { "type": "integer", "minimum": 0 },
         "bonusBoxesOpenedCount":          { "type": "integer", "minimum": 0 },
         "dustEarnedLifetime":             { "type": "integer", "minimum": 0 },
-        "fragmentsAcquired":              { "type": "integer", "minimum": 0 }
+        "fragmentsAcquired":              { "type": "integer", "minimum": 0 },
+        "tanksCreatedByLevel": {
+          "description": "tank_building family counter — сколько танков ровно уровня L было создано (ключи — String(level)). Инкремент только из real-creation seam (game.js recordTankLevel с cause !== 'seed'); seed/restore не засчитываются.",
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
       }
     },
     "mapSeeds": {

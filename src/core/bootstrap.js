@@ -782,11 +782,59 @@
         settingsTooltip.setAttribute('aria-hidden', 'true');
       }
 
-      function positionUnifiedTooltip(clientX, clientY) {
-        if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
-        settingsTooltip.style.left = clientX + 'px';
-        settingsTooltip.style.top = (clientY + 12) + 'px';
-        settingsTooltip.style.transform = 'translate(-50%, 0)';
+      /* Позиционирование тултипа.
+         Приоритет — привязка к ГРАНИЦАМ целевого элемента, а не к курсору:
+         при cursor-anchored позиционировании тултип у высоких кнопок
+         (напр. «Создать танк» в HUD) начинался ниже курсора и перекрывал
+         саму кнопку. Element-anchored вариант ставит тултип под элементом
+         (или над ним, если снизу нет места) и центрирует по элементу.
+         Fallback на курсор — если target недоступен (touch/edge cases). */
+      function positionUnifiedTooltip(clientX, clientY, target) {
+        var rect = settingsTooltip.getBoundingClientRect();
+        var viewportWidth = windowObj.innerWidth || 0;
+        var viewportHeight = windowObj.innerHeight || 0;
+        var edgeGap = 8;
+        var gap = 12;
+
+        var anchor = null;
+        if (target && typeof target.getBoundingClientRect === 'function') {
+          var targetRect = target.getBoundingClientRect();
+          if (targetRect && (targetRect.width > 0 || targetRect.height > 0)) {
+            anchor = targetRect;
+          }
+        }
+
+        if (anchor) {
+          var centerX = anchor.left + anchor.width / 2;
+          var top = anchor.bottom + gap;
+          if (viewportHeight > 0 && rect.height > 0 && top + rect.height + edgeGap > viewportHeight) {
+            var aboveTop = anchor.top - gap - rect.height;
+            if (aboveTop >= edgeGap) top = aboveTop;
+          }
+          settingsTooltip.style.transform = 'translate(-50%, 0)';
+          settingsTooltip.style.top = top + 'px';
+          settingsTooltip.style.left = centerX + 'px';
+        } else {
+          if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
+          settingsTooltip.style.transform = 'translate(-50%, 0)';
+          settingsTooltip.style.left = clientX + 'px';
+          settingsTooltip.style.top = (clientY + gap) + 'px';
+        }
+
+        /* Горизонтальный clamp: у правого/левого края viewport тултип
+           выходил за экран и обрезался. Если ширина ещё не измерена
+           (элемент только что показан) — оставляем позицию как есть. */
+        if (!(rect.width > 0) || !(viewportWidth > 0)) return;
+        var half = rect.width / 2;
+        var minCenter = half + edgeGap;
+        var maxCenter = viewportWidth - half - edgeGap;
+        if (maxCenter < minCenter) return;
+        var currentLeft = parseFloat(settingsTooltip.style.left);
+        if (!Number.isFinite(currentLeft)) return;
+        var clampedCenter = Math.max(minCenter, Math.min(maxCenter, currentLeft));
+        if (clampedCenter !== currentLeft) {
+          settingsTooltip.style.left = clampedCenter + 'px';
+        }
       }
 
       function getTooltipText(target) {
@@ -812,7 +860,7 @@
         settingsTooltip.textContent = text;
         settingsTooltip.classList.remove('hidden');
         settingsTooltip.setAttribute('aria-hidden', 'false');
-        positionUnifiedTooltip(event.clientX, event.clientY);
+        positionUnifiedTooltip(event.clientX, event.clientY, target);
       }, true);
 
       documentObj.addEventListener('pointermove', function (event) {
@@ -827,7 +875,7 @@
           return;
         }
         settingsTooltip.textContent = text;
-        positionUnifiedTooltip(event.clientX, event.clientY);
+        positionUnifiedTooltip(event.clientX, event.clientY, activeTooltipTarget);
       }, true);
 
       documentObj.addEventListener('pointerout', function (event) {
@@ -858,7 +906,7 @@
         settingsTooltip.setAttribute('aria-hidden', 'false');
         var touch = event.touches && event.touches[0] ? event.touches[0] : null;
         if (touch) {
-          positionUnifiedTooltip(touch.clientX, touch.clientY + 12);
+          positionUnifiedTooltip(touch.clientX, touch.clientY + 12, target);
         }
       }, { passive: true, capture: true });
 

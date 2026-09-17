@@ -1417,6 +1417,67 @@
         },
       ],
     },
+    /* tank_building family (batch tank-building) — уменьшает разницу между
+       максимальным уровнем танка игрока и уровнем создаваемого танка.
+       Базовый offset = 5 (см. economy.js DEFAULT_BUY_LEVEL_OFFSET); каждый
+       тир снижает его на 1: 5 → 4 → 3 → 2 → 1. Прогресс — количество
+       созданных танков ровно указанного уровня (progressLevel в def),
+       канонический счётчик stats.tanksCreatedByLevel{level:N}, инкремент
+       только из recordTankCreatedAtLevel через real-creation seam в
+       recordTankLevel(level, cause). Seed/restore/bootstrap НЕ считаются
+       (см. gating в game.js recordTankLevel).
+       Награда — пассивный модификатор (type 'buyLevelOffset' в REWARD_TABLE),
+       сама способность читается через getBuyLevelOffset(state) из флага
+       unlocked — schema save не меняется. */
+    {
+      id: 'tank_building',
+      definitions: [
+        {
+          id: 'tank_building_1',
+          familyId: 'tank_building',
+          titleKey: 'achievementTankBuilding1',
+          descKey: 'achievementTankBuilding1Desc',
+          rewardKey: 'achievementRewardTankBuilding1',
+          target: 5,
+          progressType: 'tanksCreatedAtLevel',
+          progressLevel: 15,
+          rewardMode: 'tankBuildingOffset4',
+        },
+        {
+          id: 'tank_building_2',
+          familyId: 'tank_building',
+          titleKey: 'achievementTankBuilding2',
+          descKey: 'achievementTankBuilding2Desc',
+          rewardKey: 'achievementRewardTankBuilding2',
+          target: 5,
+          progressType: 'tanksCreatedAtLevel',
+          progressLevel: 30,
+          rewardMode: 'tankBuildingOffset3',
+        },
+        {
+          id: 'tank_building_3',
+          familyId: 'tank_building',
+          titleKey: 'achievementTankBuilding3',
+          descKey: 'achievementTankBuilding3Desc',
+          rewardKey: 'achievementRewardTankBuilding3',
+          target: 10,
+          progressType: 'tanksCreatedAtLevel',
+          progressLevel: 45,
+          rewardMode: 'tankBuildingOffset2',
+        },
+        {
+          id: 'tank_building_4',
+          familyId: 'tank_building',
+          titleKey: 'achievementTankBuilding4',
+          descKey: 'achievementTankBuilding4Desc',
+          rewardKey: 'achievementRewardTankBuilding4',
+          target: 10,
+          progressType: 'tanksCreatedAtLevel',
+          progressLevel: 60,
+          rewardMode: 'tankBuildingOffset1',
+        },
+      ],
+    },
   ];
 
   var ACHIEVEMENTS = flattenAchievementFamilies(ACHIEVEMENT_FAMILIES);
@@ -2219,6 +2280,17 @@
       if (!lvl4Dict || typeof lvl4Dict !== 'object') return 0;
       return normalizeCounter(lvl4Dict['4']);
     }
+    /* tank-building family — сколько танков ровно указанного уровня было
+       СОЗДАНО (не куплено/смержено отдельно — сам факт появления танка).
+       Канонический словарь stats.tanksCreatedByLevel, ключи — String(level).
+       Ленивое чтение: cold start / legacy save → пустой словарь → 0. */
+    if (type === 'tanksCreatedAtLevel') {
+      var createdDict = stats && stats.tanksCreatedByLevel;
+      if (!createdDict || typeof createdDict !== 'object') return 0;
+      var createdLevel = def && Number.isFinite(def.progressLevel) ? Math.floor(def.progressLevel) : 0;
+      if (createdLevel <= 0) return 0;
+      return normalizeCounter(createdDict[String(createdLevel)]);
+    }
 
     if (stats) {
       if (type === 'currentBalance') return normalizeCounter(state && state.coins);
@@ -2396,6 +2468,22 @@
     if (ach.unlocked.creator_pro) return 'buy5';
     if (ach.unlocked.creator_novice) return 'buy2';
     return 'none';
+  }
+
+  /* tank_building family — пассивный модификатор разницы уровней.
+     Возвращает, на сколько уровней ниже максимума создаётся танк.
+     База 5 (economy.js DEFAULT_BUY_LEVEL_OFFSET); каждый unlocked тир
+     снижает offset на 1. Читается из флага unlocked — отдельного
+     save-поля не требуется (тот же declarative-паттерн, что getBulkMode).
+     @returns {number} 1..5 */
+  function getBuyLevelOffset(state) {
+    var ach = ensureState(state);
+    if (!ach || !ach.unlocked) return 5;
+    if (ach.unlocked.tank_building_4) return 1;
+    if (ach.unlocked.tank_building_3) return 2;
+    if (ach.unlocked.tank_building_2) return 3;
+    if (ach.unlocked.tank_building_1) return 4;
+    return 5;
   }
 
   function addProgress(state, progressType, deltaCount) {
@@ -2861,6 +2949,25 @@
     return recalculateUnlocks(state);
   }
 
+  /* tank_building family — recorder счётчика созданных танков по уровню.
+     Канонический словарь stats.tanksCreatedByLevel{level:N}. Вызывается
+     ТОЛЬКО из real-creation seam (game.js recordTankLevel с cause !== seed),
+     поэтому seed/restore/bootstrap не накручивают прогресс.
+     @returns {string[]} unlocked ids */
+  function recordTankCreatedAtLevel(state, level) {
+    var ach = ensureState(state);
+    if (!ach) return [];
+    var lvl = Math.max(1, Math.floor(Number(level) || 0));
+    if (lvl <= 0) return [];
+    if (!state.stats || typeof state.stats !== 'object') state.stats = {};
+    if (!state.stats.tanksCreatedByLevel || typeof state.stats.tanksCreatedByLevel !== 'object') {
+      state.stats.tanksCreatedByLevel = {};
+    }
+    var key = String(lvl);
+    state.stats.tanksCreatedByLevel[key] = normalizeCounter(state.stats.tanksCreatedByLevel[key]) + 1;
+    return recalculateUnlocks(state);
+  }
+
   function recordProductionStorageSnapshot(state) {
     var ach = ensureState(state);
     if (!ach) return [];
@@ -2954,6 +3061,8 @@
     getProgressValue: getProgressValue,
     recalculateUnlocks: recalculateUnlocks,
     getBulkMode: getBulkMode,
+    getBuyLevelOffset: getBuyLevelOffset,
+    recordTankCreatedAtLevel: recordTankCreatedAtLevel,
     hasRewardGranted: hasRewardGranted,
     markRewardGranted: markRewardGranted,
     appendRewardHistory: appendRewardHistory,

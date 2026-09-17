@@ -2520,6 +2520,9 @@ function applyTranslations(){
   if (langSwitch){
     langSwitch.setAttribute('aria-label', t('menuLanguage'));
   }
+  /* tank_building — тултип кнопки покупки содержит i18n-строку, поэтому
+     пересобираем его при смене языка, а не ждём следующего updateUI(). */
+  refreshBuyButtonTooltip();
   renderBigMenuTexts();
   updateTalentUI();
   updateLevelModal();
@@ -4316,7 +4319,7 @@ function syncFenceTierWithMaxTankLevel(stateRef, options){
   return true;
 }
 
-function recordTankLevel(level){
+function recordTankLevel(level, cause){
   ensureFenceTierRuntimeState(state);
   const prevMaxLevel = Number.isFinite(state.maxTankLevelAchieved) ? Math.max(0, Math.floor(state.maxTankLevelAchieved)) : 0;
   const nextLevel = Number.isFinite(level) ? Math.max(1, Math.floor(level)) : 1;
@@ -4333,6 +4336,21 @@ function recordTankLevel(level){
   }
 
   syncFenceTierWithMaxTankLevel(state, { force: grewMax });
+
+  /* tank_building family — прогресс «создано танков N уровня».
+     Считаем ТОЛЬКО реальные события создания (покупка, merge, crate,
+     лотерейный бонус). Seed/restore/bootstrap (cause === 'seed') не
+     засчитываются, иначе new game / restart фармили бы достижения.
+     Вызов идёт до early-return по grewMax, потому что счётчик считает
+     количество танков, а не максимум уровня. */
+  if (cause !== 'seed' && AchievementsApi && typeof AchievementsApi.recordTankCreatedAtLevel === 'function') {
+    const createdUnlocked = AchievementsApi.recordTankCreatedAtLevel(state, nextLevel) || [];
+    if (createdUnlocked.length) {
+      reconcileAchievementRewards(createdUnlocked);
+      for (let ci = 0; ci < createdUnlocked.length; ci++) queueAchievementPopup(createdUnlocked[ci]);
+    }
+  }
+
   if (!grewMax) return;
   processAchievementProgress('maxTankLevel', nextLevel);
 }
@@ -4340,7 +4358,77 @@ function recordTankLevel(level){
 function buyTankLevel(){
   const maxLevel = Math.max(1, state.maxTankLevelAchieved || 1);
   const Econ = window.Game && window.Game.Economy;
-  return Econ ? Econ.computeBuyTankLevel(maxLevel) : 1;
+  if (!Econ) return 1;
+  /* tank_building family — offset читается из unlock-флагов достижений
+     (5 → 4 → 3 → 2 → 1). Единая точка: HUD, underground hangar и Phaser
+     сцена получают уровень через этот же вызов. */
+  const offset = (AchievementsApi && typeof AchievementsApi.getBuyLevelOffset === 'function')
+    ? AchievementsApi.getBuyLevelOffset(state)
+    : undefined;
+  return Econ.computeBuyTankLevel(maxLevel, offset);
+}
+
+/* tank_building family — UI-описание активного бонуса разницы уровней.
+   Возвращает null, когда бонуса нет (offset = 5, база), иначе
+   { offset, titleKey } для подписи «−N, Танкостроение X».
+   @returns {{offset:number, titleKey:string}|null} */
+function getBuyLevelOffsetInfo(){
+  const offset = (AchievementsApi && typeof AchievementsApi.getBuyLevelOffset === 'function')
+    ? AchievementsApi.getBuyLevelOffset(state)
+    : 5;
+  if (!Number.isFinite(offset) || offset >= 5) return null;
+  const titleKey = offset === 4 ? 'achievementTankBuilding1'
+    : offset === 3 ? 'achievementTankBuilding2'
+    : offset === 2 ? 'achievementTankBuilding3'
+    : 'achievementTankBuilding4';
+  return { offset: offset, titleKey: titleKey };
+}
+
+/* tank_building family — мгновенный рефреш всех поверхностей, показывающих
+   уровень создаваемого танка. Вызывается из applyAchievementRewardSideEffects
+   в момент unlock, чтобы игрок сразу увидел новый уровень, не дожидаясь
+   следующего updateUI(). */
+function refreshBuyLevelSurfaces(){
+  updateUI();
+  const UGHUI = window.Game && window.Game.UndergroundHangarUI;
+  if (UGHUI && typeof UGHUI.isOpen === 'function' && UGHUI.isOpen() && typeof UGHUI.render === 'function') {
+    try { UGHUI.render(); } catch (_) {}
+  }
+  /* Phaser overlay scene: если underground hangar открыт в Phaser-режиме,
+     обновляем текст кнопки покупки. getScene() возвращает сцену, но нам
+     нужна именно UndergroundHangarScene — берём её через scene manager
+     Phaser-игры, обёрнутый в SceneOverlayManager/. */
+  const overlayMgr = window.Game && window.Game.SceneOverlayManager;
+  const isUghVisible = overlayMgr && typeof overlayMgr.isVisible === 'function'
+    && overlayMgr.isVisible('UndergroundHangarScene');
+  if (!isUghVisible) return;
+  const bridge = window.Game && window.Game.PhaserBridge;
+  const phaserGame = bridge && typeof bridge.getScene === 'function' ? bridge.getScene() : null;
+  const sceneMgr = phaserGame && phaserGame.scene;
+  const scene = sceneMgr && typeof sceneMgr.getScene === 'function'
+    ? sceneMgr.getScene('UndergroundHangarScene')
+    : null;
+  if (scene && typeof scene._refreshButtons === 'function') {
+    try { scene._refreshButtons(); } catch (_) {}
+  }
+}
+
+/* tank_building family — тултип кнопки покупки с источником бонуса.
+   Подпись кнопки остаётся короткой («Создать танк N уровня — X$»), а
+   «−N, Танкостроение X» с пояснением показывается в стандартном
+   TMZD-тултипе (#settingsTooltip через data-ui-tooltip) при наведении.
+   Атрибут ставится только при активном бонусе и diff-guard'ится
+   (как _setHudText), чтобы не мутировать DOM на каждом кадре 60 fps. */
+function refreshBuyButtonTooltip(){
+  if (!ui.buy || typeof ui.buy.setAttribute !== 'function') return;
+  const info = getBuyLevelOffsetInfo();
+  const text = info
+    ? t('buyTankBonusTooltip', { offset: info.offset, name: t(info.titleKey) })
+    : '';
+  if (ui.buy.__lastBonusTooltip === text) return;
+  ui.buy.__lastBonusTooltip = text;
+  if (text) ui.buy.setAttribute('data-ui-tooltip', text);
+  else ui.buy.removeAttribute('data-ui-tooltip');
 }
 
 function baseBuyPrice(level){
@@ -4618,6 +4706,8 @@ function getSerializedAchievementStats(){
        ach.totalZombieKills via normalizeCounter+Math.max in ensureStats. */
     zombieKillsTotal: clampDevInt(Number.isFinite(stats.zombieKillsTotal) ? stats.zombieKillsTotal : ach.totalZombieKills),
     zombieKillsBySource: (stats.zombieKillsBySource && typeof stats.zombieKillsBySource === 'object') ? stats.zombieKillsBySource : {},
+    /* tank_building — словарь созданных танков по уровню ({"15": N, ...}). */
+    tanksCreatedByLevel: (stats.tanksCreatedByLevel && typeof stats.tanksCreatedByLevel === 'object') ? stats.tanksCreatedByLevel : {},
     moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
     perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
     hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
@@ -4646,6 +4736,8 @@ function applySavedAchievementStats(savedStats){
     /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter restore. */
     if (Number.isFinite(savedStats.zombieKillsTotal)) state.stats.zombieKillsTotal = clampDevInt(savedStats.zombieKillsTotal);
     if (savedStats.zombieKillsBySource && typeof savedStats.zombieKillsBySource === 'object') state.stats.zombieKillsBySource = savedStats.zombieKillsBySource;
+    /* tank_building — restore словаря созданных танков по уровню. */
+    if (savedStats.tanksCreatedByLevel && typeof savedStats.tanksCreatedByLevel === 'object') state.stats.tanksCreatedByLevel = savedStats.tanksCreatedByLevel;
     if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
     if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
     if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
@@ -12814,7 +12906,7 @@ function spawnInitialTanksLvl1(targetState, count = 1){
   for (let i = 0; i < stateRef.cells.length && spawned < requested; i++) {
     trySpawnAtCell(stateRef.cells[i]);
   }
-  if (spawned > 0) recordTankLevel(1);
+  if (spawned > 0) recordTankLevel(1, 'seed');
   return spawned;
 }
 
@@ -13459,6 +13551,10 @@ function updateUI(){
   const buyLabel = ui.buy.querySelector('[data-i18n="buyTank"]');
   if (buyLabel) _setHudText(buyLabel, t('buyTank', {level}));
   _setHudText(ui.buyCost, fmt(cost));
+  /* tank_building family — подпись кнопки остаётся короткой, а источник
+     бонуса разницы уровней («−N, Танкостроение X») показывается в
+     тултипе при наведении. */
+  refreshBuyButtonTooltip();
 
   const hasFree = hasAvailableTankSlot();
   const _buyDisabled = state.coins < cost || !hasFree;
@@ -13771,6 +13867,10 @@ ensureAchievementRewardsModule();
 // в game.js поверх table-driven Game.AchievementRewards.REWARD_TABLE. Этот switch не
 // заменяет canonical grant flow — он только нормализует side-effects (UI refresh,
 // damage-points / talents-v2 sync), удерживая реальные суммы внутри REWARD_TABLE.
+/* tank_building family — последний применённый offset, чтобы declarative
+   награда не рефрешила UI на каждый recalc (см. grantAchievementReward). */
+let lastAppliedBuyLevelOffset = 5;
+
 function applyAchievementRewardSideEffects(rewardMode){
   if (typeof rewardMode !== 'string' || !rewardMode) return;
   switch (rewardMode) {
@@ -13820,7 +13920,26 @@ function grantAchievementReward(achievementId){
   if (!def || typeof def.rewardMode !== 'string') return false;
   const rewardTable = (Game.AchievementRewards && Game.AchievementRewards.REWARD_TABLE) || {};
   const entry = rewardTable[def.rewardMode];
-  if (!entry || entry.type === 'autoMerge') return false;
+  if (!entry) return false;
+  /* tank_building — пассивный модификатор: предметов не выдаём, но сразу
+     обновляем все поверхности с уровнем создаваемого танка (HUD,
+     underground hangar DOM, Phaser-сцена), чтобы игрок увидел эффект
+     в момент unlock, а не после следующего updateUI(). */
+  if (entry.type === 'buyLevelOffset') {
+    /* Идемпотентность: reconcileAchievementRewards() для declarative-наград
+       вызывает grantAchievementReward при каждом recalc (grant не помечает
+       rewarded), поэтому рефрешим поверхности только когда offset реально
+       изменился, а не на каждый вызов. */
+    const currentOffset = (AchievementsApi && typeof AchievementsApi.getBuyLevelOffset === 'function')
+      ? AchievementsApi.getBuyLevelOffset(state)
+      : 5;
+    if (currentOffset !== lastAppliedBuyLevelOffset) {
+      lastAppliedBuyLevelOffset = currentOffset;
+      refreshBuyLevelSurfaces();
+    }
+    return false;
+  }
+  if (entry.type === 'autoMerge') return false;
   const achievementRewardsApi = getAchievementRewardsApi() || ensureAchievementRewardsModule();
   if (!achievementRewardsApi || typeof achievementRewardsApi.grant !== 'function') return false;
   const granted = !!achievementRewardsApi.grant(state, def);

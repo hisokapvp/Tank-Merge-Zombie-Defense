@@ -44,19 +44,34 @@
     return v >= MAX_COIN_PER_SHOT ? MAX_COIN_PER_SHOT : v;
   }
 
-  // Максимальный уровень покупаемого танка
+  // Максимальный уровень покупаемого танка.
   // batch solo-pipeline-yandex-vk#2 (item 4): расширено с 50 до 55 уровня.
-  // Ассеты tank_lvl1..tank_lvl60 уже существуют, формула цены 50*2^(L-1) работает на любом L.
-  const MAX_BUY_TANK_LEVEL = 55;
+  // tank_building batch: поднято до 59, чтобы награда «Танкостроение IV»
+  // (offset −1 при maxTankLevelAchieved = 60) действительно давала 59-й танк,
+  // а не срезалась прежним потолком 55. Ассеты tank_lvl1..tank_lvl60 уже
+  // существуют, формула цены 50*2^(L-1) работает на любом L.
+  const MAX_BUY_TANK_LEVEL = 59;
+
+  // Дефолтная разница между максимальным уровнем танка игрока и уровнем
+  // создаваемого танка. Уменьшается семейством достижений `tank_building`
+  // (см. achievements.js getBuyLevelOffset): 5 → 4 → 3 → 2 → 1.
+  const DEFAULT_BUY_LEVEL_OFFSET = 5;
 
   /**
-   * Вычисляет уровень покупаемого танка по формуле: max-5, минимум 1, максимум MAX_BUY_TANK_LEVEL (55).
+   * Вычисляет уровень покупаемого танка по формуле: max − offset, минимум 1,
+   * максимум MAX_BUY_TANK_LEVEL.
    * @param {number} maxLevel — максимальный достигнутый уровень танка
+   * @param {number} [offsetOverride] — насколько уровней ниже максимума создаётся
+   *   танк; по умолчанию DEFAULT_BUY_LEVEL_OFFSET. Значения 1..60 clamp-ятся.
    * @returns {number} — уровень покупаемого танка
    */
-  function computeBuyTankLevel(maxLevel) {
+  function computeBuyTankLevel(maxLevel, offsetOverride) {
     const maxL = Math.max(1, Math.floor(maxLevel || 1));
-    const buy = Math.max(1, maxL - 5);
+    const rawOffset = Number.isFinite(offsetOverride)
+      ? Math.floor(offsetOverride)
+      : DEFAULT_BUY_LEVEL_OFFSET;
+    const offset = Math.max(1, Math.min(60, rawOffset));
+    const buy = Math.max(1, maxL - offset);
     return Math.min(MAX_BUY_TANK_LEVEL, buy);
   }
 
@@ -67,6 +82,7 @@
     coinsForShot,
     MAX_COIN_PER_SHOT,
     MAX_BUY_TANK_LEVEL,
+    DEFAULT_BUY_LEVEL_OFFSET,
     computeBuyTankLevel,
   };
 })(typeof window !== 'undefined' ? window : this);
