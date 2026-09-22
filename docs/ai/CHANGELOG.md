@@ -2,6 +2,14 @@
 
 ## 2026-09-22
 
+### Rewarded-ad gate распространён на кнопку открытия коробки производственного склада
+- `src/ui/adService.js`: capture-фаза click-gate обобщена — вместо хардкода `#crateGet` появился список `AD_GATED_SELECTORS = ['#crateGet', '#plConfirmYes']`, resolver `_findGatedButton(target)` и generic installer `installRewardedAdGate()`. Внутренний `crateClaimGate` переименован в `rewardedClaimGate` (поведение не изменилось: блок исходного клика → `requestRewardedAd()` → ровно один синтетический re-click при `success === true`).
+- Добавление новой rewarded-площадки теперь selector-only правка: `#plConfirmYes` («Открыть» в confirm-диалоге `#plConfirmOverlay`) проходит через тот же seam, тот же pause-лок `rewardAd` и ту же fail-open/fail-closed политику, что и «Получить» в «Военная помощь». `openBox`-handler производственной линии больше не открывает коробку без просмотра рекламы.
+- `index.html`: `?v=` для `src/ui/adService.js` и `src/yandex/yandexSdk.js` синхронизированы с entry token `20260922-chipshop-cards-typography` (pack15 CB-2 parity).
+- `Test/pack15/crateIntervalAndRewardedAd.test.js`: ADS-6 переведён на литерал `'#crateGet'`, добавлен ADS-6b (наличие `#plConfirmYes`, `AD_GATED_SELECTORS`, `_findGatedButton`, `installRewardedAdGate`) — 29 проверок вместо 28.
+- Verification: `node Test/pack15/crateIntervalAndRewardedAd.test.js` → 29 passed, 0 failed.
+- i18n: новых строк не требуется — переиспользованы `plConfirmOpenBox` / `plConfirmYes_label` / `plConfirmNo_label`.
+
 ### Магазин чипов: увеличены шрифты описания и цены наборов
 - `style.css`: `.chipShopModal__cardDesc` `11px → 14px` (минимум `12px`), `.chipShopModal__price` `16px → 21px` (минимум `16px`), `min-width` цены `120px → 140px`, `min-height` описания `45px → 57px` под 3 строки нового кегля.
 - Обе величины заданы через `max(<floor>, calc(Npx * var(--ui-scale)))`: `Game.FontFloor` (`src/ui/fontFloor.js`, глобальный `MIN_FONT_PX = 10`) выставляет инлайновый `font-size:10px`, когда computed-размер меньше порога, и на `--ui-scale` 0.667 обычный `calc()`-кейгль откатывался обратно к 10px — то есть увеличение не срабатывало. С `max()` размер остаётся выше floor при любом ui-scale.

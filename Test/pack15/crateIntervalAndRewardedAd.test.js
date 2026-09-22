@@ -8,6 +8,8 @@
  *      напрямую, хардкод 120 в них отсутствует.
  *   2) Кнопка «Получить» в «Военная помощь» запускает rewarded-рекламу
  *      Яндекс.Игр через `ysdk.adv.showRewardedVideo({ callbacks })`.
+ *   3) Кнопка «Открыть» производственного склада (`#plConfirmYes`) идёт через
+ *      тот же rewarded-ad gate — открытие коробки тоже требует рекламы.
  *
  * Политика (выбор пользователя): технический сбой рекламы = fail-open
  * (награда выдаётся), досрочное закрытие игроком = fail-closed (нет награды).
@@ -125,9 +127,16 @@ test('ADS-5: watchdog guarantees the promise always settles', () => {
 });
 
 test('ADS-6: capture-phase #crateGet gate still blocks the raw click', () => {
-  assert(adSrc.indexOf("closest('#crateGet')") !== -1, 'listens on #crateGet');
+  assert(adSrc.indexOf("'#crateGet'") !== -1, 'listens on #crateGet');
   assert(adSrc.indexOf('stopImmediatePropagation') !== -1, 'blocks propagation');
   assert(adSrc.indexOf('allowNextClick') !== -1, 'single synthetic re-click gate');
+});
+
+test('ADS-6b: production-storage box-open button is on the same rewarded gate', () => {
+  assert(adSrc.indexOf("'#plConfirmYes'") !== -1, '#plConfirmYes is a gated selector');
+  assert(adSrc.indexOf('AD_GATED_SELECTORS') !== -1, 'gate selectors are declared in one list');
+  assert(adSrc.indexOf('_findGatedButton') !== -1, 'shared gated-button resolver present');
+  assert(adSrc.indexOf('installRewardedAdGate') !== -1, 'generic gate installer wiring the listener');
 });
 
 test('ADS-7: adService exposes only the documented public surface', () => {

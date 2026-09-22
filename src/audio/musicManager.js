@@ -11,6 +11,13 @@
  *     track (B) plays during an attack wave; transitions crossfade over ~1.0s and are
  *     triggered exactly when the attack-wave rain starts/stops.
  *
+ * Playback-position contract (menu-pause fix):
+ *   - A track that fades to silence is PAUSED in place; its `currentTime` is never
+ *     rewound. Opening a menu / supercomputer / any modal therefore pauses the battle
+ *     track where it was, and closing the modal resumes it from that exact position
+ *     (both the wave track and the calm no-wave track). Only a real source change or
+ *     an explicit reset rewinds playback.
+ *
  * Design contract:
  *   - Fully self-contained HTMLAudioElement instances (own bus), independent of the
  *     SFX pool. Cross-format fallback (ogg -> mp3) mirrors the SFX runtime.
@@ -237,8 +244,11 @@
       }
       if (track.audio) {
         try { track.audio.volume = clamp01(track.cur); } catch (e) { /* noop */ }
+        // Menu-pause fix: pause in place without rewinding. A later resume (menu
+        // close, wave edge) calls play() and continues from the saved currentTime
+        // instead of restarting the composition from the beginning.
         if (track.cur <= 0 && track.target <= 0 && !track.audio.paused) {
-          try { track.audio.pause(); track.audio.currentTime = 0; } catch (e) { /* noop */ }
+          try { track.audio.pause(); } catch (e) { /* noop */ }
         }
       }
     });
@@ -417,7 +427,14 @@
       inWave: _state.inWave,
       duck: { cur: _state.duck.cur, target: _state.duck.target },
       tracks: Object.keys(_tracks).reduce(function (acc, id) {
-        acc[id] = { cur: _tracks[id].cur, target: _tracks[id].target, ready: _tracks[id].ready };
+        var t = _tracks[id];
+        var paused = true;
+        var currentTime = 0;
+        if (t && t.audio) {
+          try { paused = !!t.audio.paused; } catch (e) { paused = true; }
+          try { currentTime = Number(t.audio.currentTime) || 0; } catch (e) { currentTime = 0; }
+        }
+        acc[id] = { cur: t.cur, target: t.target, ready: t.ready, paused: paused, currentTime: currentTime };
         return acc;
       }, {}),
     };

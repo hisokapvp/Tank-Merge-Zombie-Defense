@@ -20,10 +20,14 @@
  * gets the tank instead of losing the box to an infrastructure hiccup. Only a
  * deliberate early close is treated as `success: false`.
  *
- * The capture-phase click gate on `#crateGet` lives here as well: it blocks
- * the original click, runs the ad, and re-issues exactly one synthetic click
- * on success. `claimCrateReward()` in game.js therefore never sees a click
- * that was not preceded by a completed (or fail-open) ad.
+ * The capture-phase click gate lives here as well. It covers both rewarded
+ * placements with one seam:
+ *   - `#crateGet`     — military-aid crate claim («Получить»)
+ *   - `#plConfirmYes` — production-storage box-open confirm («Открыть»)
+ * It blocks the original click, runs the ad, and re-issues exactly one
+ * synthetic click on success. `claimCrateReward()` in game.js and the
+ * production-line `openBox` handler therefore never see a click that was not
+ * preceded by a completed (or fail-open) ad.
  *
  * Host callbacks are registered defensively (`onOpen` / `onRewarded` /
  * `onClose` / `onError` are all optional on the host side), and a watchdog
@@ -39,12 +43,22 @@
   // Bounded wait for SDK readiness when a click lands before init finished.
   var SDK_READY_TIMEOUT_MS = 2500;
 
-  var crateClaimGate = {
+  var rewardedClaimGate = {
     pending: false,
     allowNextClick: false,
   };
 
   var sdkAdInFlight = false;
+
+  // Every button whose action must be gated behind a completed rewarded video.
+  //
+  //   #crateGet     — military-aid crate modal («Получить»)
+  //   #plConfirmYes — production-storage box-open confirm («Открыть»)
+  //
+  // Both run through the exact same seam: the raw click is blocked, an ad is
+  // requested, and only a successful result lets exactly one synthetic re-click
+  // reach the real handler. Adding a placement is a selector-only change.
+  var AD_GATED_SELECTORS = ['#crateGet', '#plConfirmYes'];
 
   function _warn() {
     try {
@@ -216,24 +230,35 @@
       });
   }
 
-  function installCrateRewardStub() {
+  /**
+   * Resolve the gated button a click originated from, or null.
+   * @param {EventTarget} target
+   * @returns {Element|null}
+   */
+  function _findGatedButton(target) {
+    if (!target || typeof target.closest !== 'function') return null;
+    for (var i = 0; i < AD_GATED_SELECTORS.length; i++) {
+      var button = target.closest(AD_GATED_SELECTORS[i]);
+      if (button) return button;
+    }
+    return null;
+  }
+
+  function installRewardedAdGate() {
     var documentObj = global.document;
-    if (!documentObj || installCrateRewardStub._installed) return;
-    installCrateRewardStub._installed = true;
+    if (!documentObj || installRewardedAdGate._installed) return;
+    installRewardedAdGate._installed = true;
 
     documentObj.addEventListener('click', function (event) {
-      var target = event.target;
-      var button = target && typeof target.closest === 'function'
-        ? target.closest('#crateGet')
-        : null;
+      var button = _findGatedButton(event.target);
       if (!button) return;
 
-      if (crateClaimGate.allowNextClick) {
-        crateClaimGate.allowNextClick = false;
+      if (rewardedClaimGate.allowNextClick) {
+        rewardedClaimGate.allowNextClick = false;
         return;
       }
 
-      if (crateClaimGate.pending || button.disabled) {
+      if (rewardedClaimGate.pending || button.disabled) {
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
@@ -241,20 +266,20 @@
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      crateClaimGate.pending = true;
+      rewardedClaimGate.pending = true;
       button.disabled = true;
 
       Promise.resolve(requestRewardedAd()).then(function (result) {
-        crateClaimGate.pending = false;
+        rewardedClaimGate.pending = false;
         if (!result || result.success !== true) {
           button.disabled = false;
           return;
         }
-        crateClaimGate.allowNextClick = true;
+        rewardedClaimGate.allowNextClick = true;
         button.disabled = false;
         if (typeof button.click === 'function') button.click();
       }, function () {
-        crateClaimGate.pending = false;
+        rewardedClaimGate.pending = false;
         button.disabled = false;
       });
     }, true);
@@ -262,9 +287,9 @@
 
   if (global.document) {
     if (global.document.readyState === 'loading') {
-      global.document.addEventListener('DOMContentLoaded', installCrateRewardStub, { once: true });
+      global.document.addEventListener('DOMContentLoaded', installRewardedAdGate, { once: true });
     } else {
-      installCrateRewardStub();
+      installRewardedAdGate();
     }
   }
 
