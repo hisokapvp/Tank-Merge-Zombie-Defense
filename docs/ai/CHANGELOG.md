@@ -2,6 +2,23 @@
 
 ## 2026-09-22
 
+### Магазин чипов: увеличены шрифты описания и цены наборов
+- `style.css`: `.chipShopModal__cardDesc` `11px → 14px` (минимум `12px`), `.chipShopModal__price` `16px → 21px` (минимум `16px`), `min-width` цены `120px → 140px`, `min-height` описания `45px → 57px` под 3 строки нового кегля.
+- Обе величины заданы через `max(<floor>, calc(Npx * var(--ui-scale)))`: `Game.FontFloor` (`src/ui/fontFloor.js`, глобальный `MIN_FONT_PX = 10`) выставляет инлайновый `font-size:10px`, когда computed-размер меньше порога, и на `--ui-scale` 0.667 обычный `calc()`-кейгль откатывался обратно к 10px — то есть увеличение не срабатывало. С `max()` размер остаётся выше floor при любом ui-scale.
+- `index.html`: entry token поднят до `20260922-chipshop-cards-typography` (style.css грузится через `resolve()`); синхронизированы `?v=` для `chipShopModal.js`, `fallbackStrings.js`, `adService.js`, `yandexSdk.js`.
+- Verification: `node Test/tests.js` → 102 passed; `Test/pack15/...` → 28 passed; `Test/test_shop_apply_bundle.js` → 10 passed; `ci/check_style.ps1` — только pre-existing trailing whitespace в `src/render/canvasRoot.js`; Playwright 1600/1280/1000/420: описание 12px, цена 16–17.5px, плашки равной высоты, состав ровно 2/3/3 строки.
+
+### Магазин чипов: переименование наборов и переработка карточек
+- Имена бандлов приведены к каноническим: «Малый набор чипов» / «Средний набор чипов» / «Большой набор чипов» (EN: Small/Medium/Large chip pack) в `src/i18n/ru.json`, `src/i18n/en.json`, `src/i18n/fallbackStrings.js`.
+- `src/ui/chipShopModal.js`: имя карточки резолвится по `tier` через `_bundleNameKey()` (`shop.bundleSmall|Medium|Large.name`) вместо `bundle.id` — раньше карточка показывала SKU-идентификатор `small_chip_pack`, поскольку `displayName` в `assets/shop.json` отсутствует. `_t(key, vars)` научился подставлять переменные в fallback-словарь.
+- Состав бандла рендерится построчно (`\n`, CSS `white-space: pre-line`), новый ключ `shop.reward.units` («шт.» / «pcs.») и `shop.reward.dronesWithLevel` («Дроны {level} ур.») — уровень дрона берётся из `contents.drones[].level`.
+- Иконки карточек (img/emoji-fallback) удалены вместе с `BUNDLE_TIER_EMOJI` / `_bundleEmoji`.
+- `index.html`: удалён футер `#chipShopFooter` с дисклеймером «Покупки доступны только в Яндекс Играх…». Entry token поднят до `20260922-chipshop-bundles-polish`; синхронизированы `?v=` для `chipShopModal.js`, `fallbackStrings.js`, `adService.js`, `yandexSdk.js`.
+- `style.css`: `.chipShopModal__panel` больше не масштабируется от `--ui-scale` (`min(1180px, 96vw)`) — микрошрифты магазина зажаты font-floor-clamp'ом, из-за чего текст состава переносился по словам; сетка карточек `repeat(auto-fit, minmax(min(360px,100%), 1fr))` + `grid-auto-rows: 1fr` дают одинаковую высоту всех плашек (высота берётся от самого большого набора). Цена получила сплошную рамку, glow и text-shadow. Удалено мёртвое правило `.chipShopModal__footer`.
+- `game.js`: `applyTranslations()` теперь вызывает `Game.ChipShop.UI.refreshCatalog()` — имена и состав карточек перерисовываются при смене языка в сессии.
+- `Test/pack15/crateIntervalAndRewardedAd.test.js`: CB-2 больше не хардкодит значение токена, а выводит его из `var token` — тест проверяет parity, а не конкретную строку (был красным после release-пасса).
+- Verification: `node Test/tests.js` → 102 passed; `Test/pack15/...` → 28 passed; `Test/test_shop_apply_bundle.js` → 10 passed; Playwright на 1920/1280/900/420 — равная высота плашек, состав ровно 2/3/3 визуальные строки без рваных переносов, иконок и футера нет, цена 13.3–16px.
+
 ### Бокс раз в 90 секунд + rewarded-реклама Яндекс.Игр на кнопке «Получить»
 - `game.js`: `BAL.crateIntervalSec` понижен `120 → 90`. Единственный owner тайминга; `maybeSpawnCrate()` (`src/mechanics/crateRuntime.js`) и cleanup-seam'ы `claimCrateReward()` / `declineCrateReward()` / worldReset читают ту же константу — хардкода `120` больше нет.
 - `src/ui/adService.js`: `requestRewardedAd()` получил второй backend. На хосте Яндекс.Игр вызывается реальный `ysdk.adv.showRewardedVideo({ callbacks: { onOpen, onRewarded, onClose, onError } })`; вне хоста (local dev, VK, standalone) сохраняется прежняя заглушка и тестовый хук `window.__AD_ALWAYS_SUCCESS__`.

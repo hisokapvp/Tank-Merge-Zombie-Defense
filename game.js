@@ -2480,6 +2480,13 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-html]').forEach(el => {
     el.innerHTML = t(el.dataset.i18nHtml);
   });
+  // Chip-bundle shop: имена бандлов и состав рендерятся из JS, поэтому
+  // смена языка требует явного перерисовывания каталога (data-i18n на
+  // title/футере обновляется общим проходом выше).
+  if (window.Game && Game.ChipShop && Game.ChipShop.UI
+      && typeof Game.ChipShop.UI.refreshCatalog === 'function') {
+    Game.ChipShop.UI.refreshCatalog();
+  }
   const overlay = document.getElementById('talentOverlay');
   if (overlay){
     const title = overlay.querySelector('.modalTitle');

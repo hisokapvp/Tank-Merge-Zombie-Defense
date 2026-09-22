@@ -175,12 +175,19 @@ console.log('\n  --- Section 4: entry cache-bust ---');
 test('CB-1: entry token bumped for this change', () => {
   const m = indexSrc.match(/var token = '([^']+)'/);
   assert(m, 'entry token present');
-  assertEqual(m[1], '20260922-crate-90s-ad-reward', 'entry token value');
+  assertEqual(m[1], '20260922-chipshop-cards-typography', 'entry token value');
 });
 
-test('CB-2: adService.js and yandexSdk.js carry the shared token', () => {
-  assert(indexSrc.indexOf('src/ui/adService.js?v=20260922-crate-90s-ad-reward') !== -1, 'adService bumped');
-  assert(indexSrc.indexOf('src/yandex/yandexSdk.js?v=20260922-crate-90s-ad-reward') !== -1, 'yandexSdk bumped');
+test('CB-2: adService.js and yandexSdk.js carry the shared entry token', () => {
+  const entry = indexSrc.match(/var token = '([^']+)'/)[1];
+  assert(
+    indexSrc.indexOf('src/ui/adService.js?v=' + entry) !== -1,
+    'adService carries the shared entry token'
+  );
+  assert(
+    indexSrc.indexOf('src/yandex/yandexSdk.js?v=' + entry) !== -1,
+    'yandexSdk carries the shared entry token'
+  );
 });
 
 test('CB-3: adService.js loads before game.js', () => {

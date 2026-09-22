@@ -56,16 +56,24 @@
     'shop.loading': 'Покупка…',
     'shop.reward.chips': 'Чипы',
     'shop.reward.drones': 'Дроны',
+    'shop.reward.dronesWithLevel': 'Дроны {level} ур.',
     'shop.reward.siliconDust': 'Кремниевая пыль',
+    'shop.reward.units': 'шт.',
   };
 
-  function _t(key) {
+  function _t(key, vars) {
     var i18n = global.Game && global.Game.I18n;
     if (i18n && typeof i18n.t === 'function') {
-      var v = i18n.t(key);
+      var v = i18n.t(key, vars);
       if (v && v !== key) return v;
     }
-    return FALLBACK_RU[key] || key;
+    var fb = FALLBACK_RU[key] || key;
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        fb = fb.split('{' + k + '}').join(String(vars[k]));
+      });
+    }
+    return fb;
   }
 
   function _shopCfg() {
@@ -112,12 +120,13 @@
     return !!(cfg && cfg.debugForceEnable === true);
   }
 
-  // Emoji-fallback для иконок бандлов, если iconAsset отсутствует или
-  // вернул 404 (batch #9 rework, item B).
-  var BUNDLE_TIER_EMOJI = { small: '\uD83D\uDED2', medium: '\uD83D\uDC8E', large: '\uD83D\uDC8E', '': '\uD83D\uDED2' };
-  function _bundleEmoji(bundle) {
+  // i18n-ключи имён бандлов. Каталог (assets/shop.json) хранит только
+  // технический id вида `small_chip_pack`, поэтому имя для UI резолвится
+  // по tier, а не по id — иначе карточка показывала бы SKU-идентификатор.
+  var BUNDLE_TIER_KEYS = { small: 'Small', medium: 'Medium', large: 'Large', '': 'Small' };
+  function _bundleNameKey(bundle) {
     var t = (bundle && typeof bundle.tier === 'string') ? bundle.tier.toLowerCase() : '';
-    return BUNDLE_TIER_EMOJI[t] || BUNDLE_TIER_EMOJI[''];
+    return 'shop.bundle' + (BUNDLE_TIER_KEYS[t] || BUNDLE_TIER_KEYS['']) + '.name';
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -150,76 +159,69 @@
     return rub + ' ' + cur;
   }
 
+  // Состав бандла рендерится построчно (каждый элемент с новой строки),
+  // например: «Чипы - 8 шт.» / «Дроны 3 ур. - 2 шт.» / «Кремниевая пыль -
+  // 500 шт.». Перенос строк обеспечивается CSS white-space: pre-line.
   function _bundleDescription(bundle) {
     var contents = bundle && bundle.contents;
     if (!contents) return '';
-    var parts = [];
+    var units = _t('shop.reward.units');
+    var lines = [];
     if (Array.isArray(contents.chips)) {
       var chipsTotal = 0;
       for (var i = 0; i < contents.chips.length; i++) {
         var c = contents.chips[i] || {};
         chipsTotal += (c.count | 0);
       }
-      if (chipsTotal > 0) parts.push(_t('shop.reward.chips') + ' × ' + chipsTotal);
+      if (chipsTotal > 0) lines.push(_t('shop.reward.chips') + ' - ' + chipsTotal + ' ' + units);
     }
     if (Array.isArray(contents.drones)) {
       var dronesTotal = 0;
+      var dronesLevel = 0;
       for (var k = 0; k < contents.drones.length; k++) {
         var d = contents.drones[k] || {};
         dronesTotal += (d.count | 0);
+        var lv = d.level | 0;
+        if (lv > dronesLevel) dronesLevel = lv;
       }
-      if (dronesTotal > 0) parts.push(_t('shop.reward.drones') + ' × ' + dronesTotal);
+      if (dronesTotal > 0) {
+        var droneLabel = dronesLevel > 0
+          ? _t('shop.reward.dronesWithLevel', { level: dronesLevel })
+          : _t('shop.reward.drones');
+        lines.push(droneLabel + ' - ' + dronesTotal + ' ' + units);
+      }
     }
     var dust = contents.siliconDust | 0;
-    if (dust > 0) parts.push(_t('shop.reward.siliconDust') + ' × ' + dust);
-    return parts.join(' · ');
+    if (dust > 0) lines.push(_t('shop.reward.siliconDust') + ' - ' + dust + ' ' + units);
+    return lines.join('\n');
   }
 
   function _buildCard(bundle, livePriceText, paymentsReady) {
     var card = doc.createElement('div');
-    card.className = 'chipShopCard';
+    // `chipShopModal__card` — канонический селектор CSS-плашки. Без него
+    // карточка оставалась без рамки/фона и выглядела как голый текст.
+    card.className = 'chipShopCard chipShopModal__card';
     card.setAttribute('role', 'listitem');
+    if (typeof bundle.tier === 'string' && bundle.tier) {
+      card.dataset.tier = bundle.tier.toLowerCase();
+    }
     card.dataset.productId = bundle.yandexProductId || '';
     card.dataset.bundleId = bundle.id || '';
 
-    if (bundle.iconAsset) {
-      var icon = doc.createElement('img');
-      icon.className = 'chipShopCard__icon';
-      icon.alt = '';
-      icon.src = bundle.iconAsset;
-      // 404 / network error → грациозный fallback на emoji-иконку.
-      icon.addEventListener('error', function () {
-        try {
-          var span = doc.createElement('span');
-          span.className = 'chipShopCard__icon chipShopCard__icon--emoji';
-          span.setAttribute('aria-hidden', 'true');
-          span.textContent = _bundleEmoji(bundle);
-          if (icon.parentNode) icon.parentNode.replaceChild(span, icon);
-        } catch (_) {}
-      });
-      card.appendChild(icon);
-    } else {
-      // iconAsset пуст → рисуем emoji-fallback сразу.
-      var emojiSpan = doc.createElement('span');
-      emojiSpan.className = 'chipShopCard__icon chipShopCard__icon--emoji';
-      emojiSpan.setAttribute('aria-hidden', 'true');
-      emojiSpan.textContent = _bundleEmoji(bundle);
-      card.appendChild(emojiSpan);
-    }
-
+    var nameKey = _bundleNameKey(bundle);
     var name = doc.createElement('div');
-    name.className = 'chipShopCard__name';
-    name.setAttribute('data-i18n', 'shop.bundle.' + (bundle.id || '') + '.name');
-    name.textContent = bundle.displayName || bundle.id || '';
+    name.className = 'chipShopCard__name chipShopModal__cardName';
+    name.setAttribute('data-i18n', nameKey);
+    name.textContent = bundle.displayName || _t(nameKey);
     card.appendChild(name);
 
     var desc = doc.createElement('div');
-    desc.className = 'chipShopCard__desc';
+    desc.className = 'chipShopCard__desc chipShopModal__cardDesc';
     desc.textContent = _bundleDescription(bundle);
     card.appendChild(desc);
 
     var price = doc.createElement('div');
-    price.className = 'chipShopCard__price';
+    price.className = 'chipShopCard__price chipShopModal__price';
     price.textContent = livePriceText || _formatPriceHint(bundle.priceHint);
     card.appendChild(price);
 

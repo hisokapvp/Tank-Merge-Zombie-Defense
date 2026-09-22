@@ -9237,8 +9237,11 @@ button.hangarChipInvItem{
    #hudShopButton — HUD-кнопка корзины, наследует от .settingsGear.
    ============================================================ */
 .chipShopModal__panel{
-  max-width: calc(720px * var(--ui-scale));
-  width: 92%;
+  /* Ширина считается от контента, а не от --ui-scale: микрошрифты
+     магазина зажаты font-floor-clamp'ом (минимум 10px), поэтому при
+     малом ui-scale текст состава больше не ужимается вместе с панелью. */
+  max-width: min(1180px, 96vw);
+  width: 96%;
   display: flex;
   flex-direction: column;
   gap: calc(12px * var(--ui-scale));
@@ -9250,7 +9253,13 @@ button.hangarChipInvItem{
 }
 .chipShopModal__cards{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(calc(180px * var(--ui-scale)), 1fr));
+  /* На узком экране сетка сама схлопывается в одну колонку, поэтому
+     каждая строка состава («Кремниевая пыль - 500 шт.») помещается
+     целиком вместо рваного переноса по словам. */
+  grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+  /* Все плашки одной высоты: grid-auto-rows:1fr растягивает ряды по
+     самому высокому контенту (large-набор — 3 строки состава). */
+  grid-auto-rows: 1fr;
   gap: calc(12px * var(--ui-scale));
   width: 100%;
   padding: 0 calc(8px * var(--ui-scale));
@@ -9260,7 +9269,7 @@ button.hangarChipInvItem{
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: calc(8px * var(--ui-scale));
   padding: calc(12px * var(--ui-scale));
   background: #0d140b;
@@ -9270,6 +9279,8 @@ button.hangarChipInvItem{
   font-family: 'Courier New', Courier, monospace;
   text-align: center;
   position: relative;
+  height: 100%;
+  box-sizing: border-box;
 }
 .chipShopModal__card[data-tier="medium"]{
   border-color: #f6c84a;
@@ -9288,18 +9299,33 @@ button.hangarChipInvItem{
   letter-spacing: 1px;
 }
 .chipShopModal__cardDesc{
-  font-size: calc(11px * var(--ui-scale));
+  /* max() держит размер выше font-floor (10px), иначе на малом
+     --ui-scale описание упиралось бы в пол и не увеличивалось. */
+  font-size: max(12px, calc(14px * var(--ui-scale)));
   line-height: 1.35;
   opacity: 0.85;
-  min-height: calc(44px * var(--ui-scale));
+  /* Состав — каждый элемент с новой строки. Высота зафиксирована на
+     3 строки (самый большой набор), чтобы все плашки читались ровно. */
+  white-space: pre-line;
+  min-height: max(49px, calc(57px * var(--ui-scale)));
+  text-align: left;
+  flex: 1 1 auto;
 }
 .chipShopModal__price{
-  font-size: calc(13px * var(--ui-scale));
+  /* Цена — главный акцент карточки: компактная плашка по центру вместо
+     растянутой на всю ширину полосы, чтобы число с валютой читалось
+     с первого взгляда. */
+  font-size: max(16px, calc(21px * var(--ui-scale)));
   font-weight: bold;
   letter-spacing: 1px;
-  padding: calc(4px * var(--ui-scale)) 0;
-  border-top: 1px dashed currentColor;
-  border-bottom: 1px dashed currentColor;
+  padding: calc(7px * var(--ui-scale)) calc(20px * var(--ui-scale));
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid currentColor;
+  box-shadow: 0 0 calc(8px * var(--ui-scale)) currentColor;
+  text-shadow: 0 0 calc(8px * var(--ui-scale)) currentColor;
+  align-self: center;
+  min-width: max(120px, calc(140px * var(--ui-scale)));
+  margin-top: auto;
 }
 .chipShopModal__buy,
 .chipShopCard__buyBtn{
@@ -9337,13 +9363,6 @@ button.hangarChipInvItem{
 .chipShopCard__buyBtn[data-state="loading"]{
   opacity: 0.75;
   cursor: progress;
-}
-.chipShopModal__footer{
-  font-size: calc(10px * var(--ui-scale));
-  opacity: 0.7;
-  font-style: italic;
-  text-align: center;
-  margin-top: calc(4px * var(--ui-scale));
 }
 
 /* HUD-кнопка корзины (item 13). Наследует визуал от .settingsGear /
