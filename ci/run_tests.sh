@@ -53,9 +53,11 @@ run_test "Pack 10 (FX density render parity)" "Test/pack10/fxDensityRender.test.
 run_test "Pack 11 (meta hoarder unlocks)" "Test/pack11/metaHoarderUnlocks.test.js"
 run_test "Pack 11 (production line unlocks)" "Test/pack11/productionLineUnlocks.test.js"
 run_test "Pack 12 (hangar cell chip persistence)" "Test/pack12/hangarCellsPersistence.test.js"
+run_test "Pack 12 (player fragment persistence)" "Test/pack12/playerFragmentsPersistence.test.js"
 run_test "Pack 12 (chip craft + tech-upgrade match stability)" "Test/pack12/chipCraftAndTechMatch.test.js"
 run_test "Pack 13 (supercomputer viewport placement)" "Test/pack13/supercomputerViewportPlacement.test.js"
 run_test "Pack 14 (tank_building family unlock + offset)" "Test/pack14/tankBuildingUnlocks.test.js"
+run_test "Pack 15 (crate 90s cadence + rewarded ad)" "Test/pack15/crateIntervalAndRewardedAd.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

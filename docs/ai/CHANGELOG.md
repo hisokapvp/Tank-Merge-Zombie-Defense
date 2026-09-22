@@ -1,5 +1,18 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-09-22
+
+### Бокс раз в 90 секунд + rewarded-реклама Яндекс.Игр на кнопке «Получить»
+- `game.js`: `BAL.crateIntervalSec` понижен `120 → 90`. Единственный owner тайминга; `maybeSpawnCrate()` (`src/mechanics/crateRuntime.js`) и cleanup-seam'ы `claimCrateReward()` / `declineCrateReward()` / worldReset читают ту же константу — хардкода `120` больше нет.
+- `src/ui/adService.js`: `requestRewardedAd()` получил второй backend. На хосте Яндекс.Игр вызывается реальный `ysdk.adv.showRewardedVideo({ callbacks: { onOpen, onRewarded, onClose, onError } })`; вне хоста (local dev, VK, standalone) сохраняется прежняя заглушка и тестовый хук `window.__AD_ALWAYS_SUCCESS__`.
+- **Политика сбоя (выбор пользователя):** технический сбой (`onError`, reject, нет `ysdk.adv`, нет SDK-handle) — **fail-open**, награда выдаётся; досрочное закрытие игроком (`onClose` без `onRewarded`) — **fail-closed**, награды нет. Watchdog `120000ms` гарантирует, что промис всегда резолвится, а capture-gate на `#crateGet` не остаётся залипшим. Переиспользование in-flight запроса блокируется (`sdkAdInFlight`) — два хостовых объявления не накладываются.
+- `src/yandex/yandexSdk.js`: публичные probes `getAdv()` и `isYandexEnv()`, чтобы `adService` не дублировал host-detection и не выносил dev-host литералы в `src/` (sanitiser-контракт `docs/ai/SYSTEMS/yandex.md` соблюдён — substring-fragment'ы остаются в SDK-модуле).
+- `game.js`: новый pause-лок `menuPauseLocks.rewardAd` + мост `window.Game._setAdPauseLock(open)` → `setMenuPauseSource('rewardAd', ...)`. Лок включён и в агрегат `isAnyMenuPauseOpen()`, и в tab-inactive menu-open fallback; `setSimulationClockPaused` сдвигает `simClockOffsetSec`, поэтому 90-секундный таймер бокса не утекает за время просмотра рекламы.
+- `index.html`: entry token поднят до `20260922-crate-90s-ad-reward`; локальные bump'ы `?v=` для реально изменённых `src/ui/adService.js` и `src/yandex/yandexSdk.js` (общий token, по прецеденту `20260917-crate-decline-button`).
+- i18n: новые строки не добавлялись — переиспользованы существующие `crateAdLoading` / `crateGet` (parity ru/en/fallback уже выполнена).
+- `Test/pack15/crateIntervalAndRewardedAd.test.js`: новый pack (28 проверок) — cadence 90 s, отсутствие stale-хардкода, host-интеграция `showRewardedVideo`, fail-open/fail-closed, watchdog, capture-gate, SDK-поверхность, pause-мост, cache-bust parity и 8 live-сценариев `requestRewardedAd` (полный просмотр / досрочное закрытие / `onError` / reject / нет adv / forced-failure / pause-мост). Зарегистрирован в `ci/run_tests.sh`.
+- Verification: `node Test/pack15/...` → 28 passed, 0 failed (exit 0); `node --check` OK для `game.js`, `src/ui/adService.js`, `src/yandex/yandexSdk.js`.
+
 ## 2026-09-17
 
 ### Кнопка «Отказаться» в призовом боксе (модалка «Военная помощь»)

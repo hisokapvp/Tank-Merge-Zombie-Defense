@@ -205,6 +205,19 @@
     setSplashProgress: setSplashProgress,
     isReady: function () { return ready; },
     getYsdk: function () { return ysdk; },
+    /**
+     * Rewarded/fullscreen ad surface for consumers that must not hold the SDK
+     * handle themselves (src/ui/adService.js). Returns null outside the host
+     * iframe so callers degrade to their non-Yandex path.
+     */
+    getAdv: function () { return (ysdk && ysdk.adv) ? ysdk.adv : null; },
+    /**
+     * Host-detection probe. Exposed so adService can decide whether a missing
+     * SDK handle means "not on Yandex" (use the stub) vs "still initialising"
+     * (wait, then fail-open). Kept as a function so the substring-fragment
+     * allowlist stays the single source of truth.
+     */
+    isYandexEnv: function () { return _isYandexEnv(); },
   };
 
   init();

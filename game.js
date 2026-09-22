@@ -541,7 +541,9 @@ const BAL = {
   maxDecals: 120,
   tankTrackCenterOffset: 0.5,
 
-  crateIntervalSec: 120,
+  // Canonical crate cadence: a gift box drops every 90 s (was 120 s).
+  // Consumed by maybeSpawnCrate()/claimCrateReward()/declineCrateReward().
+  crateIntervalSec: 90,
   crateDropSpeed: 220,
   crateSize: 34,
   // Underground-crate fallback timings (see src/mechanics/undergroundHangar.js
@@ -1761,6 +1763,8 @@ let menuPauseLocks = {
   undergroundHangar: false,
   chipShop: false,
   critical: false,
+  /** Rewarded video on screen (Yandex host). Owned by src/ui/adService.js. */
+  rewardAd: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
 };
 let supercomputerMenuController = null;
@@ -1906,7 +1910,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function isAnyMenuPauseOpen(){
-  return !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.bigMenu);
+  return !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.rewardAd || menuPauseLocks.bigMenu);
 }
 
 function recomputeMenuPauseLock(){
@@ -1941,6 +1945,13 @@ function setMenuPauseSource(source, open){
 // Mirrors the pause-source contract used by ProductionLine/UndergroundHangar.
 window.Game._setShopPauseLock = function (open) {
   setMenuPauseSource('chipShop', !!open);
+};
+
+// Rewarded-ad pause bridge. src/ui/adService.js owns the ad lifecycle and toggles
+// this while the Yandex rewarded video is on screen, so the crate-drop timer and
+// combat simulation do not advance behind the ad (the player cannot see them).
+window.Game._setAdPauseLock = function (open) {
+  setMenuPauseSource('rewardAd', !!open);
 };
 
 function enterCriticalPause(){
@@ -7722,11 +7733,13 @@ function restoreFullState(saved){
       window.Game.HangarChipsUI.setPlayerChips(saved.playerChips, { reason: 'restore' });
     }
   }
-  /* Restore player fragments (chip shards) */
-  if (Array.isArray(saved.playerFragments)) {
-    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
-      window.Game.HangarChipsUI.setPlayerFragments(saved.playerFragments);
-    }
+  /* Restore player fragments (chip shards). Unconditional — mirroring the
+     `hangarCells` contract above: fragments are module-owned in HangarChipsUI
+     and are NOT derived from `state`, so a legacy/different-slot payload without
+     `playerFragments` must CLEAR them instead of leaking the previous session's
+     shards into this run. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
+    window.Game.HangarChipsUI.setPlayerFragments(Array.isArray(saved.playerFragments) ? saved.playerFragments : []);
   }
   if (reconcileAchievementRewardsAfterRestore) {
     reconcileAchievementRewardsForUnlocked();
@@ -8031,10 +8044,11 @@ function applySavedProgress(data){
       window.Game.HangarChipsUI.setPlayerChips(data.playerChips, { reason: 'restore' });
     }
   }
-  if (Array.isArray(data.playerFragments)) {
-    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
-      window.Game.HangarChipsUI.setPlayerFragments(data.playerFragments);
-    }
+  /* Restore player fragments (chip shards). Unconditional — see the `hangarCells`
+     contract in `restoreFullState`: a payload without `playerFragments` must
+     clear the module-owned shard inventory rather than keep stale entries. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
+    window.Game.HangarChipsUI.setPlayerFragments(Array.isArray(data.playerFragments) ? data.playerFragments : []);
   }
   if (reconcileAchievementRewardsAfterApply) {
     reconcileAchievementRewardsForUnlocked();
@@ -10701,7 +10715,7 @@ function stepZombies(dt){
 
     if (z.dotUntil){
       if (nowSec() < z.dotUntil){
-        applyDamageToZombie(z, ((z.dotDps || 0) * dt) / attackMult.damageMult, 'tank');
+        applyDamageToZombie(z, (z.dotDps || 0) * dt, 'tank');
       } else {
         z.dotUntil = 0;
         z.dotDps = 0;
@@ -11673,8 +11687,6 @@ function impactAt(x,y,b,opts){
   if (_profImpact) _profImpact.start('impactAt');
   const suppressCombatFx = !!(opts && opts.suppressCombatFx);
   const mods = getMods();
-  const attackMult = getZombieAttackMultipliers();
-  const damageMul = attackMult.damageMult;
 
   // ── Chip: Laser Mark boost (mod 13) ──
   const ChipFx = window.Game && window.Game.ChipEffects;
@@ -11750,7 +11762,7 @@ function impactAt(x,y,b,opts){
     const falloff = 0.55 + 0.45 * (1 - d / aoe);
     const baseDmg = baseDamage * falloff;
     const isCrit = Math.random() < critChance;
-    const finalDmg = (baseDmg * (isCrit ? 1.5 : 1)) / damageMul;
+    const finalDmg = baseDmg * (isCrit ? 1.5 : 1);
     let dmgRounded = Math.round(finalDmg);
     if (_profImpact) _profImpact.end('impactAt.damageLoop');
     if (hasTalentsHit) {
@@ -11875,8 +11887,6 @@ function impactAt(x,y,b,opts){
 
 function chainLightning(x,y,b,opts){
   const suppressCombatFx = !!(opts && opts.suppressCombatFx);
-  const attackMult = getZombieAttackMultipliers();
-  const damageMul = attackMult.damageMult;
   const range = b.prof?.chainRange ?? 84;
   const rangeSq = range * range;
   const jumps = b.prof?.chainJumps ?? 3;
@@ -11937,7 +11947,7 @@ function chainLightning(x,y,b,opts){
     const tankLevel = b.level ?? 1;
     const critChance = critChanceFromTankLevel(tankLevel);
     const isCrit = Math.random() < critChance;
-    const finalChainDmg = (baseChainDmg * (isCrit ? 1.5 : 1)) / damageMul;
+    const finalChainDmg = baseChainDmg * (isCrit ? 1.5 : 1);
     const dmgRounded = Math.round(finalChainDmg);
     applyDamageToZombie(best, dmgRounded, 'tank');
     addDamageNumber(bestX, bestY, dmgRounded, isCrit, b.kind);
@@ -15715,7 +15725,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.chipShop && !menuPauseLocks.critical && !menuPauseLocks.bigMenu) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.chipShop && !menuPauseLocks.critical && !menuPauseLocks.rewardAd && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },

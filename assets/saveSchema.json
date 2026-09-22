@@ -157,6 +157,18 @@
       "type": "array",
       "items": { "type": "object", "additionalProperties": true }
     },
+    "playerFragments": {
+      "description": "Chip-shard inventory owned by src/ui/hangarChipsUI.js (module-owned, NOT part of runtime state). Array of {fragmentId, count}; writer — storage.js serializePlayerFragments() (live-first via Game.HangarChipsUI.getPlayerFragments(), fallback state.playerFragments); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setPlayerFragments() (unconditional, [] fallback). Optional: legacy saves without this field restore an empty shard inventory.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "fragmentId": { "type": "integer", "minimum": 1 },
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
     "hangarCells": {
       "description": "Persisted subset of the installed-chip grid owned by src/ui/hangarChipsUI.js (module-owned, NOT part of runtime state). Only {id, redSlots, yellowSlots} with {chipId, modIds, sourceComboKey, rotation, level} per slot are stored; derived fields (activeModifiers/uiState) are recomputed on load via Game.HangarChipsUI.setCells(). Optional: legacy saves without this field restore an empty grid.",
       "type": ["array", "null"],

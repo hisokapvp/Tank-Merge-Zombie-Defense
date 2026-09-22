@@ -125,6 +125,10 @@
    * @property {boolean} forceFenceRuntimeResetOnLoad — однократный reset-флаг для fence runtime на load.
    * @property {Array} playerChips — инвентарь чипов игрока; canonical writer `Game.State.setPlayerChips(...)`
    *   (через `src/ui/hangarChipsUI.js`). Hangar UI — derived view, не owner.
+   * @property {Array} playerFragments — chip-shard inventory (`{ fragmentId, count }`). Owner — module-owned
+   *   состояние `src/ui/hangarChipsUI.js` (`getPlayerFragments()`), НЕ `state`. Writer — `storage.js`
+   *   `serializePlayerFragments()` (live-first, fallback `state.playerFragments`); reader — `restoreFullState` /
+   *   `applySavedProgress` через `Game.HangarChipsUI.setPlayerFragments()` (безусловно, с fallback `[]`).
    * @property {Array|null} hangarCells — persisted subset module-owned grid установленных чипов
    *   (`Game.HangarChipsUI.getCells()`); формат `[{ id, redSlots, yellowSlots }]`, каждый slot —
    *   `{ chipId, modIds, sourceComboKey, rotation, level }`. Derived-поля (`activeModifiers`, `uiState`)

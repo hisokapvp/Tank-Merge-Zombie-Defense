@@ -46,7 +46,7 @@
 | `cells` | core | `state.cells` | [game.js](../../../game.js) hangar cells | массив фиксированной длины |
 | `productionLine` | hangar | `state.productionLine` | [src/mechanics/productionLine.js](../../../src/mechanics/productionLine.js) `serialize()`/`deserialize()` | `null` → `createInitialState().productionLine` |
 | `playerChips` | hangar | `state.playerChips` (canonical owner) | [game.js](../../../game.js) `Game.State.setPlayerChips()` + [src/persistence/storage.js](../../../src/persistence/storage.js#L485) | `[]` если отсутствует или не массив; HangarChipsUI — derived view |
-| `playerFragments` | hangar | `Game.HangarChipsUI.getPlayerFragments()` | [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `[]` + `normalizeFragmentsInventory()` |
+| `playerFragments` | hangar | `Game.HangarChipsUI.getPlayerFragments()` | [src/persistence/storage.js](../../../src/persistence/storage.js) `serializePlayerFragments()`; writer модуль — [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `[]` + `normalizeFragmentsInventory()`; payload без поля → пустой инвентарь (не утечка прошлой сессии) |
 | `hangarCells` | hangar | `Game.HangarChipsUI.getCells()` (module-owned grid) | [src/persistence/storage.js](../../../src/persistence/storage.js) `serializeHangarCells()`; writer модуль — [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `null`/отсутствует → пустой grid; на load `Game.HangarChipsUI.setCells()` валидирует slots и пересчитывает `activeModifiers`/`uiState`. Installed chips НЕ живут в `state` — payload читает live grid через UI API, fallback на `state.hangarCells`. `partial-preserve` (grid не входит в `takeProgressSnapshot`, но partial reset и так сохраняет run-scope чипы) |
 | `techStudying` | hangar | `Game.HangarChipsUI.getTechStudying()` | [src/ui/hangarChipsUI.js](../../../src/ui/hangarChipsUI.js) | `null`, таймер пересоздаётся |
 | `drones` | progression | `state.drones` | [src/mechanics/drones.js](../../../src/mechanics/drones.js), [src/persistence/dronesPersist.js](../../../src/persistence/dronesPersist.js) | `[]` через `DronesApi.restoreSavedDrones` |
@@ -228,6 +228,15 @@
   - `reason === 'reset'` (partial reset / «Перезагрузка симуляции») **намеренно** сохраняет инвентарь через `takeProgressSnapshot()` / `restoreProgressSnapshot()`: [src/core/worldReset.js](../../../src/core/worldReset.js#L33-L142), [game.js](../../../game.js).
   - Загрузка сохранений (`restoreFullState` / `applySavedProgress`) восстанавливает `playerChips` и `playerFragments` из payload и **не** вызывает `resetPlayerInventory`.
   - Регрессия закреплена тестом `T5-17` в `Test/pack1/newGamePopupReset.test.js`.
+
+## Player Fragments (инвентарь фрагментов чипов)
+- **Owner**: module-owned состояние `Game.HangarChipsUI` (`getPlayerFragments()` / `.setPlayerFragments(arr)`), НЕ `state`. Формат: массив `{ fragmentId, count }` (`fragmentId` = modId 1..30); нормализуется через `Game.HangarChips.normalizeFragmentsInventory()`.
+- **Writer**: `serializeState()` → `playerFragments` через `serializePlayerFragments()` ([src/persistence/storage.js](../../../src/persistence/storage.js)). Читает live-инвентарь (`getPlayerFragments()`), fallback — `state.playerFragments`; malformed / `count <= 0` / `fragmentId <= 0` записи дропаются. Всегда массив (никогда не `null`).
+- **Reader**: `restoreFullState()` / `applySavedProgress()` вызывают `HangarChipsUI.setPlayerFragments(Array.isArray(payload.playerFragments) ? payload.playerFragments : [])` — **безусловно**, с явным `[]` fallback (зеркалит контракт `hangarCells`). Payload без поля (легаси-сейв / другой слот) обязан очистить инвентарь, а не утечь фрагменты прошлой сессии.
+- **Backward compatibility**: старые save без `playerFragments` → пустой инвентарь, игра не падает.
+- **New Game**: `resetPlayerInventory({ reason: 'new_game' })` очищает `_playerFragments = []`, поэтому фрагменты не переживают New Game без перезагрузки страницы.
+- **Partial reset**: `partial-preserve` — фрагменты сохраняются через `takeProgressSnapshot()` / `restoreProgressSnapshot()` ([src/core/worldReset.js](../../../src/core/worldReset.js)).
+- Регрессия закреплена тестом `FGP-1..8` в `Test/pack12/playerFragmentsPersistence.test.js`.
 
 ## Tech Studying (процесс изучения технологий)
 - Runtime-источник: `Game.HangarChipsUI.getTechStudying()` / `.setTechStudying(obj)`.

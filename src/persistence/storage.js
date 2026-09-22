@@ -447,6 +447,46 @@
     return cells;
   }
 
+  /**
+   * Собрать chip-shard inventory (фрагменты чипов) для save payload.
+   *
+   * Фрагменты живут в module-owned состоянии `src/ui/hangarChipsUI.js`
+   * (`Game.HangarChipsUI.getPlayerFragments()`), а НЕ в `state`. Зеркалим
+   * паттерн `serializeHangarCells`: читаем live-инвентарь, чтобы каждый
+   * save-путь (включая slot-save, который передаёт raw `state`) захватил
+   * актуальное содержимое. Fallback — `state.playerFragments`.
+   *
+   * Без этой записи фрагменты исчезали после загрузки сейва: reader
+   * (`restoreFullState` / `applySavedProgress`) поле читал, а writer его не
+   * клал в payload.
+   *
+   * @param {object} state
+   * @returns {Array} массив `{ fragmentId, count }` (никогда не null)
+   */
+  function serializePlayerFragments(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getPlayerFragments === 'function' ? chipsUi.getPlayerFragments() : null;
+    } catch (_) { live = null; }
+    if (!Array.isArray(live)) {
+      live = state && Array.isArray(state.playerFragments) ? state.playerFragments : null;
+    }
+    if (!Array.isArray(live)) return [];
+    var fragments = [];
+    for (var i = 0; i < live.length; i++) {
+      var entry = live[i];
+      if (!entry || typeof entry !== 'object') continue;
+      var fragmentId = Number.isFinite(entry.fragmentId)
+        ? Math.floor(entry.fragmentId)
+        : (Number.isFinite(entry.modId) ? Math.floor(entry.modId) : 0);
+      var count = Number.isFinite(entry.count) ? Math.max(0, Math.floor(entry.count)) : 0;
+      if (fragmentId <= 0 || count <= 0) continue;
+      fragments.push({ fragmentId: fragmentId, count: count });
+    }
+    return fragments;
+  }
+
   function serializeState(state) {
     if (!state) return {};
     // Fence damage persistence:
@@ -603,6 +643,7 @@
       drones: drones,
       forceFenceRuntimeResetOnLoad: !!state.forceFenceRuntimeResetOnLoad,
       playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
+      playerFragments: serializePlayerFragments(state),
       productionLine: state.productionLine || null,
       hangarCells: serializeHangarCells(state),
     };

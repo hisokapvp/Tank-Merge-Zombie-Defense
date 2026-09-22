@@ -100,6 +100,19 @@ boundary, exclude `www.w3.org`, etc.) instead of widening the allowlist.
 * Did you `bash ci/build_release.sh` after your edit? The final assertion
   is the source of truth — never bypass it locally.
 
+## Rewarded video (2026-09-22)
+
+Кнопка «Получить» в призовом боксе запускает rewarded-рекламу хоста.
+
+- **Owner:** [src/ui/adService.js](../../../src/ui/adService.js) — единственный модуль, знающий про `ysdk.adv`. Наружу отдаёт только `Game.AdService.requestRewardedAd()` → `Promise<{ success: boolean }>`.
+- **SDK-handle:** берётся через `Game.YandexSDK.getYsdk()` (плюс `isYandexEnv()` / `isReady()` как probes). `adService` намеренно не содержит host-detection — это сохраняет sanitiser-контракт substring-fragment'ов в одном месте (`src/yandex/yandexSdk.js`), см. раздел «Two-layer defense» выше.
+- **Сборка без рекламы.** Вне хоста (local dev, VK, standalone upload) модуль резолвится в заглушку и выдаёт награду. Дополнительный выключатель для тестов — `window.__AD_ALWAYS_SUCCESS__ = false`, он форсирует failure-ветку независимо от окружения.
+- **Политика сбоя (fail-open / fail-closed).** Технический сбой — `onError`, reject от `showRewardedVideo`, отсутствие `ysdk.adv`, недоступный SDK-handle — трактуется как **fail-open**: `{ success: true }`, игрок получает танк. Досрочное закрытие игроком (`onClose` без предшествующего `onRewarded`) — **fail-closed**: награды нет. Итог определяется флагом `rewarded`, который выставляет только `onRewarded`.
+- **Watchdog.** `AD_WATCHDOG_MS = 120000`; если хост не прислал ни одного терминального колбэка, промис резолвится fail-open. Это гарантирует, что capture-gate на `#crateGet` не останется залипшим и кнопка не «умрёт» навсегда.
+- **Пауза.** На `onOpen` модуль вызывает `window.Game._setAdPauseLock(true)` (owner — `game.js`), на settle — `false`. Лок живёт в `menuPauseLocks.rewardAd` и участвует в `isAnyMenuPauseOpen()`; `setSimulationClockPaused` сдвигает `simClockOffsetSec`, поэтому таймер следующего бокса не истекает, пока игрок смотрит рекламу.
+- **Дубль-защита.** `sdkAdInFlight` не даёт наложить два хостовых объявления: повторный запрос во время показа резолвится в `{ success: false }`.
+- **Тесты.** [Test/pack15/crateIntervalAndRewardedAd.test.js](../../../Test/pack15/crateIntervalAndRewardedAd.test.js) покрывает полный просмотр, досрочное закрытие, `onError`, reject, отсутствие `adv`, forced-failure hook и pause-мост.
+
 ## Shop wrapper modules (`solo-pipeline-yandex-vk` batches #2–#3, item 20 batch #7)
 
 Поверх базового `src/yandex/yandexSdk.js` shop-семейство добавило два первоклассных wrapper-модуля. Оба подчиняются тем же substring-fragment / sanitiser-allowlist правилам, что и `yandexSdk.js`. Полный контракт магазина — [docs/ai/SYSTEMS/shop.md](./shop.md); как добавить SKU — [docs/ai/PLAYBOOKS/shop-add-bundle.md](../PLAYBOOKS/shop-add-bundle.md); save-side payload — [docs/ai/SYSTEMS/save.md](./save.md).
