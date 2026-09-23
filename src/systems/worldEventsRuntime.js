@@ -331,6 +331,132 @@
       return zombie.idleWaveRetreatPx;
     }
 
+    /**
+     * Upper bound для countdown'а до следующей волны атаки.
+     * `attackStartAt` — абсолютное sim-время, поэтому разница не может превышать
+     * текущий интервал между волнами.
+     */
+    function getAttackWaveIntervalSec(attackCfg) {
+      var cfg = attackCfg || getWorldEventsAttackCfg();
+      return Number.isFinite(cfg && cfg.attackEverySec) ? Math.max(1, cfg.attackEverySec) : 75;
+    }
+
+    /**
+     * Upper bound для остатка активной волны — длительность самой волны.
+     */
+    function getAttackWaveDurationSec(attackCfg) {
+      var cfg = attackCfg || getWorldEventsAttackCfg();
+      return Number.isFinite(cfg && cfg.attackDurationSec) ? Math.max(0, cfg.attackDurationSec) : 20;
+    }
+
+    function clampAttackWaveRemainingSec(value, attackCfg) {
+      if (!Number.isFinite(value)) return null;
+      var cap = getAttackWaveIntervalSec(attackCfg);
+      return Math.max(0, Math.min(cap, value));
+    }
+
+    /**
+     * Полный снимок расписания волны атаки для save payload.
+     *
+     * `attackStartAt` / `currentAttackStartAt` / `attackEndAt` — абсолютное
+     * sim-время текущей страницы, поэтому персистятся только ОТНОСИТЕЛЬНЫЕ
+     * остатки. Флаг `active` фиксирует, что игрок сохранился ВНУТРИ волны:
+     * без него загрузка выключала волну и заново отсчитывала полный интервал.
+     *
+     * @returns {{remainingSec:number, active:boolean, remainingActiveSec:number}|null}
+     *   null — attack mode выключен или принудительно активен (debug).
+     */
+    function getAttackWaveSnapshot() {
+      var worldEventsState = deps.getWorldEventsState();
+      var attackCfg = getWorldEventsAttackCfg();
+      if (!attackCfg.enabled || attackCfg.forceEnabled) return null;
+      var now = deps.nowSec();
+      var startAt = Number.isFinite(worldEventsState.attackStartAt) ? worldEventsState.attackStartAt : 0;
+      var currentStartAt = Number.isFinite(worldEventsState.currentAttackStartAt) ? worldEventsState.currentAttackStartAt : 0;
+      var endAt = Number.isFinite(worldEventsState.attackEndAt) ? worldEventsState.attackEndAt : 0;
+      var active = currentStartAt > 0 && endAt > currentStartAt && now < endAt;
+      if (!active && startAt <= 0) return null;
+      return {
+        remainingSec: startAt > 0 ? clampAttackWaveRemainingSec(startAt - now, attackCfg) : 0,
+        active: active,
+        remainingActiveSec: active ? Math.max(0, Math.min(getAttackWaveDurationSec(attackCfg), endAt - now)) : 0,
+      };
+    }
+
+    /**
+     * Сколько sim-секунд осталось до следующей волны атаки, либо `null`,
+     * если attack mode выключен или принудительно активен (debug) — в этих
+     * состояниях `attackStartAt` не описывает реальное расписание.
+     *
+     * Единственный canonical read-path для save payload: `game.js`
+     * `getAttackWaveRemainingSec()` → `storage.js` `serializeState()`.
+     */
+    function getAttackWaveRemainingSec() {
+      var snapshot = getAttackWaveSnapshot();
+      return snapshot ? snapshot.remainingSec : null;
+    }
+
+    /**
+     * Восстановить расписание волны атаки из save payload.
+     *
+     * Контракт:
+     *  - `active: true` → волна ПРОДОЛЖАЕТСЯ: `attackEndAt` = now + остаток,
+     *    `currentAttackStartAt` = now (эпизод уже идёт, повторный begin не нужен);
+     *  - `active: false` → волна начнётся через `remainingSec`;
+     *  - legacy payload без поля → полный интервал (прежнее поведение).
+     *
+     * @param {{remainingSec?:number, active?:boolean, remainingActiveSec?:number}|null|undefined} snapshot
+     * @returns {boolean} применён ли timing (false — attack mode off/force).
+     */
+    function applyLoadedAttackWaveSnapshot(snapshot) {
+      var worldEventsState = deps.getWorldEventsState();
+      var attackCfg = getWorldEventsAttackCfg();
+      if (!attackCfg.enabled || attackCfg.forceEnabled) return false;
+      var src = snapshot && typeof snapshot === 'object' ? snapshot : null;
+      var now = deps.nowSec();
+      var intervalSec = getAttackWaveIntervalSec(attackCfg);
+      var remaining = clampAttackWaveRemainingSec(src ? src.remainingSec : null, attackCfg);
+      var active = !!(src && src.active === true);
+      var remainingActive = active
+        ? Math.max(0, Math.min(getAttackWaveDurationSec(attackCfg), Number.isFinite(src.remainingActiveSec) ? src.remainingActiveSec : 0))
+        : 0;
+      worldEventsState.attackStartAt = now + (remaining == null ? intervalSec : remaining);
+      if (active) {
+        worldEventsState.currentAttackStartAt = now;
+        worldEventsState.attackEndAt = now + remainingActive;
+      } else {
+        worldEventsState.currentAttackStartAt = 0;
+        worldEventsState.attackEndAt = 0;
+      }
+      return true;
+    }
+
+    /**
+     * Countdown-only обёртка над `applyLoadedAttackWaveSnapshot()`.
+     * Используется там, где волна гарантированно не активна.
+     *
+     * @returns {boolean} применён ли timing (false — attack mode off/force).
+     */
+    function applyLoadedAttackWaveTiming(remainingSec) {
+      return applyLoadedAttackWaveSnapshot({ remainingSec: remainingSec, active: false });
+    }
+
+    /**
+     * Единственный canonical owner «первой волны после старта симуляции»:
+     * полный `attackEverySec` от текущего момента. Используется New Game,
+     * «Перезапуском симуляции» и загрузкой critical-сейва
+     * (`forceFenceRuntimeResetOnLoad`), где стартовый разгон обязателен.
+     */
+    function scheduleFirstAttackWaveAfterRestart() {
+      var worldEventsState = deps.getWorldEventsState();
+      var attackCfg = getWorldEventsAttackCfg();
+      var intervalSec = getAttackWaveIntervalSec(attackCfg);
+      worldEventsState.attackStartAt = deps.nowSec() + intervalSec;
+      worldEventsState.currentAttackStartAt = 0;
+      worldEventsState.attackEndAt = 0;
+      return intervalSec;
+    }
+
     function updateWorldEvents(dt) {
       var worldEventsState = deps.getWorldEventsState();
       var state = deps.getState();
@@ -589,6 +715,11 @@
       shouldZombieAttemptAttack: shouldZombieAttemptAttack,
       getZombieFenceAttackDamageMul: getZombieFenceAttackDamageMul,
       getZombieIdleRetreatOffsetPx: getZombieIdleRetreatOffsetPx,
+      getAttackWaveRemainingSec: getAttackWaveRemainingSec,
+      getAttackWaveSnapshot: getAttackWaveSnapshot,
+      applyLoadedAttackWaveTiming: applyLoadedAttackWaveTiming,
+      applyLoadedAttackWaveSnapshot: applyLoadedAttackWaveSnapshot,
+      scheduleFirstAttackWaveAfterRestart: scheduleFirstAttackWaveAfterRestart,
       forceDisableAttackModeRuntime: forceDisableAttackModeRuntime,
       updateWorldEvents: updateWorldEvents,
       ensureRainCache: ensureRainCache,

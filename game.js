@@ -3107,11 +3107,19 @@ const worldEventsState = {
 function resetWorldEventsRuntimeForNewGame(){
   resetNoRepairAttackWaveRuntime();
   resetDefenseOrderRuntime();
-  const attackCfg = getWorldEventsAttackCfg();
-  const everySec = Number.isFinite(attackCfg.attackEverySec) ? Math.max(1, attackCfg.attackEverySec) : 75;
-  worldEventsState.attackStartAt = nowSec() + everySec;
-  worldEventsState.currentAttackStartAt = 0;
-  worldEventsState.attackEndAt = 0;
+  // Первая волна после старта симуляции (New Game / «Перезапуск симуляции» /
+  // critical-сейв) всегда получает полный `attackEverySec`. Единственный owner
+  // расписания — `worldEventsRuntime.scheduleFirstAttackWaveAfterRestart()`.
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.scheduleFirstAttackWaveAfterRestart === 'function') {
+    controller.scheduleFirstAttackWaveAfterRestart();
+  } else {
+    const attackCfg = getWorldEventsAttackCfg();
+    const everySec = Number.isFinite(attackCfg.attackEverySec) ? Math.max(1, attackCfg.attackEverySec) : 75;
+    worldEventsState.attackStartAt = nowSec() + everySec;
+    worldEventsState.currentAttackStartAt = 0;
+    worldEventsState.attackEndAt = 0;
+  }
   worldEventsState.forceAttackActive = false;
   worldEventsState.eveningDimBlend = 0;
   worldEventsState.weatherUntil = 0;
@@ -4059,6 +4067,84 @@ function ensureWorldEventsRuntimeController(){
 function getWorldEventsAttackCfg(){
   return ensureWorldEventsRuntimeController()?.getWorldEventsAttackCfg() || null;
 }
+
+/**
+ * Canonical read-path для save payload: сколько sim-секунд осталось до
+ * следующей волны атаки, либо `null` если расписание неизвестно (attack mode
+ * выключен или принудительно активен debug-флагом).
+ *
+ * Живёт в `game.js`, потому что `worldEventsState` — module-scope этого файла,
+ * а `storage.js` читает значение через `Game.getAttackWaveRemainingSec()`.
+ */
+function getAttackWaveRemainingSec(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (!controller || typeof controller.getAttackWaveRemainingSec !== 'function') return null;
+  const remaining = controller.getAttackWaveRemainingSec();
+  return Number.isFinite(remaining) ? remaining : null;
+}
+
+/**
+ * Canonical read-path для save payload: полный снимок расписания волны атаки
+ * (`remainingSec` до следующей волны, `active` — идёт ли волна сейчас,
+ * `remainingActiveSec` — сколько ей осталось).
+ *
+ * Без флага `active` загрузка выключала волну и заново отсчитывала полный
+ * `attackEverySec` — именно этот баг чинит снимок.
+ *
+ * @returns {{remainingSec:number, active:boolean, remainingActiveSec:number}|null}
+ */
+function getAttackWaveSnapshot(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (!controller || typeof controller.getAttackWaveSnapshot !== 'function') return null;
+  const snapshot = controller.getAttackWaveSnapshot();
+  return snapshot && typeof snapshot === 'object' ? snapshot : null;
+}
+
+/**
+ * Применить сохранённый countdown после загрузки обычного сейва (не New Game,
+ * не «Перезапуск симуляции»). Волна продолжается с того места, где игрок
+ * сохранился, вместо нового полного интервала.
+ *
+ * @param {number|null|undefined} remainingSec
+ * @returns {boolean} применён ли timing
+ */
+function applyLoadedAttackWaveTiming(remainingSec){
+  const controller = ensureWorldEventsRuntimeController();
+  if (!controller || typeof controller.applyLoadedAttackWaveTiming !== 'function') return false;
+  return !!controller.applyLoadedAttackWaveTiming(remainingSec);
+}
+
+/**
+ * Применить сохранённый снимок расписания волны после загрузки обычного сейва.
+ * Если игрок сохранился ВНУТРИ волны (`active: true`), волна продолжается
+ * с сохранённым остатком вместо выключения и нового двухминутного отсчёта.
+ *
+ * @param {{remainingSec?:number, active?:boolean, remainingActiveSec?:number}|null|undefined} snapshot
+ * @returns {boolean} применён ли timing
+ */
+function applyLoadedAttackWaveSnapshot(snapshot){
+  const controller = ensureWorldEventsRuntimeController();
+  if (!controller || typeof controller.applyLoadedAttackWaveSnapshot !== 'function') return false;
+  return !!controller.applyLoadedAttackWaveSnapshot(snapshot);
+}
+
+/**
+ * Первая волна после старта симуляции (New Game, «Перезапуск симуляции»,
+ * critical-сейв и загрузка такого же сейва из big menu).
+ */
+function scheduleFirstAttackWaveAfterRestart(){
+  const controller = ensureWorldEventsRuntimeController();
+  if (controller && typeof controller.scheduleFirstAttackWaveAfterRestart === 'function') {
+    return controller.scheduleFirstAttackWaveAfterRestart();
+  }
+  const attackCfg = getWorldEventsAttackCfg();
+  const everySec = Number.isFinite(attackCfg && attackCfg.attackEverySec) ? Math.max(1, attackCfg.attackEverySec) : 75;
+  worldEventsState.attackStartAt = nowSec() + everySec;
+  return everySec;
+}
+
+GameApi.getAttackWaveRemainingSec = getAttackWaveRemainingSec;
+GameApi.getAttackWaveSnapshot = getAttackWaveSnapshot;
 
 function getWeatherCfg(){
   return ensureWorldEventsRuntimeController()?.getWeatherCfg() || null;
@@ -7710,7 +7796,7 @@ const __KNOWN_PAYLOAD_KEYS = [
   'damagePointsSpent','fenceLevel','fenceRepairCount','cells','supercomputer','computerLevel','player',
   'buyCounts','buyPrices','crate','nextCrateAt','maxTankLevelAchieved','boostUntil','activeEffects',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
-  'playerFragments','techStudying','productionLine','talentsV2','talentsApplied','talentsPending',
+  'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','productionLine','talentsV2','talentsApplied','talentsPending',
   'activeCooldowns','lastSeenAt','hangarCells'
 ];
 function reportUnknownPayloadKeys(payload, ctx){
@@ -8037,6 +8123,30 @@ function restoreFullState(saved){
       try { FenceSprites.ensureLevel(state.currentFenceTierApplied); } catch (e) {}
     }
   }
+  // Attack-wave schedule (2026-09-23):
+  //  - критический сейв (`forceFenceRuntimeResetOnLoad`) = «Перезапуск симуляции»,
+  //    значит первый запуск волны обязан дать полный `attackEverySec`;
+  //  - обычный сейв продолжает сохранённое расписание: если игрок сохранился
+  //    ВНУТРИ волны (`attackWaveActive`), волна продолжается с сохранённым
+  //    остатком; иначе волна начнётся через `attackWaveRemainingSec`;
+  //  - legacy payload без полей → полный интервал (поведение до этого фикса).
+  if (forceFenceRuntimeResetOnLoad) {
+    scheduleFirstAttackWaveAfterRestart();
+  } else {
+    applyLoadedAttackWaveSnapshot({
+      remainingSec: saved.attackWaveRemainingSec,
+      active: saved.attackWaveActive === true,
+      remainingActiveSec: saved.attackWaveRemainingActiveSec,
+    });
+  }
+  // Восстановленная активная волна должна получить свой episode-key, иначе
+  // `handleNoRepairAttackWaveTransition()` увидит `wasAttackActive === true` и
+  // НЕ вызовет `beginNoRepairAttackWaveEpisode()` — волна останется без
+  // achievement-эпизода и без баннера. `begin` идемпотентен по ключу эпизода.
+  if (!forceFenceRuntimeResetOnLoad && isZombieAttackModeActive()) {
+    beginNoRepairAttackWaveEpisode();
+    beginDefenseOrderEpisode();
+  }
   // Зомби — runtime-состояние, не сохраняется; при restore всегда сбрасываем.
   if (Array.isArray(state.zombies)) state.zombies.length = 0;
   // Restore underground hangar state
@@ -8238,6 +8348,14 @@ function applySavedProgress(data){
   if (data.techStudying && typeof data.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
     window.Game.HangarChipsUI.setTechStudying(data.techStudying);
   }
+  // Attack-wave schedule: legacy-progress payload не несёт `forceFenceRuntimeResetOnLoad`,
+  // поэтому это всегда обычная загрузка — продолжаем сохранённое расписание
+  // (включая активную волну) либо, при legacy payload без полей, даём полный интервал.
+  applyLoadedAttackWaveSnapshot({
+    remainingSec: data.attackWaveRemainingSec,
+    active: data.attackWaveActive === true,
+    remainingActiveSec: data.attackWaveRemainingActiveSec,
+  });
   return true;
 }
 

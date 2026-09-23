@@ -801,6 +801,39 @@ test('TUT-8W: restore plus recalculation unlocks track cleanup IV-V once and pre
   assertEqual(rewardsApi.grant(restoredState, byId.track_cleanup_5), false, 'restored rewarded map blocks duplicate track cleanup V rewards');
 });
 
+test('TUT-8X: attack-wave schedule persists and resumes on plain load, resets on restart', () => {
+  // New save fields (`attackWaveRemainingSec` / `attackWaveActive` /
+  // `attackWaveRemainingActiveSec`) with nontrivial reset-scope:
+  //   - writer: storage.js serializeAttackWaveSnapshot() via Game.getAttackWaveSnapshot();
+  //   - reader: game.js restoreFullState() -> applyLoadedAttackWaveSnapshot();
+  //   - reset-scope: New Game / partial restart / critical save re-arm the FULL interval.
+  // Full behavioural coverage lives in Test/pack17/attackWaveCountdownPersistence.test.js;
+  // this case is the TUT-8X anchor required by docs/ai/SYSTEMS/save.md.
+  assert(storageJs.indexOf('function serializeAttackWaveSnapshot(state)') !== -1, 'storage.js owns the schedule writer');
+  assert(storageJs.indexOf('attackWaveActive: attackWaveSnapshot ? attackWaveSnapshot.active : false') !== -1, 'payload carries the active-wave flag');
+  assert(storageJs.indexOf('attackWaveRemainingActiveSec: attackWaveSnapshot ? attackWaveSnapshot.remainingActiveSec : 0') !== -1, 'payload carries the active remainder');
+  assert(gameJs.indexOf('GameApi.getAttackWaveSnapshot = getAttackWaveSnapshot;') !== -1, 'game.js exposes the canonical schedule reader');
+  assert(gameJs.indexOf('applyLoadedAttackWaveSnapshot({') !== -1, 'restoreFullState resumes the saved schedule');
+  assert(gameJs.indexOf('active: saved.attackWaveActive === true,') !== -1, 'restoreFullState restores the active-wave flag');
+  const knownKeysStart = gameJs.indexOf('const __KNOWN_PAYLOAD_KEYS = [');
+  const knownKeysEnd = gameJs.indexOf('];', knownKeysStart);
+  const knownKeys = gameJs.slice(knownKeysStart, knownKeysEnd);
+  assert(knownKeys.indexOf("'attackWaveRemainingSec'") !== -1, 'countdown is a known payload key');
+  assert(knownKeys.indexOf("'attackWaveActive'") !== -1, 'active flag is a known payload key');
+  assert(knownKeys.indexOf("'attackWaveRemainingActiveSec'") !== -1, 'active remainder is a known payload key');
+  const restoreStart = gameJs.indexOf('function restoreFullState(saved){');
+  const restoreEnd = gameJs.indexOf('function inflateBuyPrice(', restoreStart);
+  const restoreBody = gameJs.slice(restoreStart, restoreEnd);
+  const forceIdx = restoreBody.indexOf('if (forceFenceRuntimeResetOnLoad) {');
+  const schedulerIdx = restoreBody.indexOf('scheduleFirstAttackWaveAfterRestart();', forceIdx);
+  const snapshotIdx = restoreBody.indexOf('applyLoadedAttackWaveSnapshot({', forceIdx);
+  assert(schedulerIdx > forceIdx, 'critical-save load re-arms the full interval (restart-scope)');
+  assert(snapshotIdx > schedulerIdx, 'plain save load resumes the saved schedule instead');
+  const gateIdx = restoreBody.indexOf('isZombieAttackModeActive()', snapshotIdx);
+  const beginIdx = restoreBody.indexOf('beginNoRepairAttackWaveEpisode();', snapshotIdx);
+  assert(gateIdx > snapshotIdx && beginIdx > gateIdx, 'a restored active wave re-begins its achievement episode');
+});
+
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
   assert(aiIndexMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'AI index links to dedicated tutorial runtime map');
   assert(uiSystemMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'UI system doc links to dedicated tutorial runtime map');

@@ -487,6 +487,41 @@
     return fragments;
   }
 
+  /**
+   * Прочитать текущий снимок расписания волны атаки из runtime.
+   *
+   * `worldEventsState.attackStartAt` / `currentAttackStartAt` / `attackEndAt`
+   * живут в module-scope `game.js` и являются absolute sim-временем, поэтому
+   * в payload кладутся только ОТНОСИТЕЛЬНЫЕ остатки + флаг `active`.
+   * Live-first чтение через публичный seam `Game.getAttackWaveSnapshot()`,
+   * с fallback на `state.attackWave*` (если runtime уже проставил их).
+   *
+   * @param {object} state
+   * @returns {{remainingSec:number, active:boolean, remainingActiveSec:number}|null}
+   */
+  function serializeAttackWaveSnapshot(state) {
+    var live = null;
+    try {
+      var reader = global.Game && global.Game.getAttackWaveSnapshot;
+      live = typeof reader === 'function' ? reader() : null;
+    } catch (_) { live = null; }
+    if (!live || typeof live !== 'object') {
+      var fallbackRemaining = state && Number.isFinite(state.attackWaveRemainingSec) ? state.attackWaveRemainingSec : null;
+      if (!Number.isFinite(fallbackRemaining)) return null;
+      live = {
+        remainingSec: fallbackRemaining,
+        active: !!(state && state.attackWaveActive),
+        remainingActiveSec: state && Number.isFinite(state.attackWaveRemainingActiveSec) ? state.attackWaveRemainingActiveSec : 0,
+      };
+    }
+    var remainingSec = Number.isFinite(live.remainingSec) ? Math.max(0, live.remainingSec) : 0;
+    var active = live.active === true;
+    var remainingActiveSec = active && Number.isFinite(live.remainingActiveSec)
+      ? Math.max(0, live.remainingActiveSec)
+      : 0;
+    return { remainingSec: remainingSec, active: active, remainingActiveSec: remainingActiveSec };
+  }
+
   function serializeState(state) {
     if (!state) return {};
     // Fence damage persistence:
@@ -568,6 +603,7 @@
         decorSeed: state.mapSeeds.decorSeed,
       };
     }
+    var attackWaveSnapshot = serializeAttackWaveSnapshot(state);
     var achievements = state.achievements && typeof state.achievements === 'object' ? state.achievements : {};
     var stats = {
       tanksMergedCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksMergedCount) ? state.stats.tanksMergedCount : achievements.totalMerges),
@@ -633,6 +669,14 @@
       buyPrices: state.buyPrices,
       crate: crate,
       nextCrateAt: state.nextCrateAt,
+      // Attack-wave schedule: относительные sim-остатки + флаг активной волны.
+      // Без `active` загрузка выключала волну и заново отсчитывала полный
+      // `attackEverySec` (см. restoreFullState / applyLoadedAttackWaveSnapshot).
+      // `null` — расписание неизвестно (attack mode off, debug force-attack,
+      // legacy save).
+      attackWaveRemainingSec: attackWaveSnapshot ? attackWaveSnapshot.remainingSec : null,
+      attackWaveActive: attackWaveSnapshot ? attackWaveSnapshot.active : false,
+      attackWaveRemainingActiveSec: attackWaveSnapshot ? attackWaveSnapshot.remainingActiveSec : 0,
       maxTankLevelAchieved: state.maxTankLevelAchieved,
       boostUntil: state.boostUntil,
       activeEffects: state.activeEffects,

@@ -59,6 +59,7 @@ run_test "Pack 13 (supercomputer viewport placement)" "Test/pack13/supercomputer
 run_test "Pack 14 (tank_building family unlock + offset)" "Test/pack14/tankBuildingUnlocks.test.js"
 run_test "Pack 15 (crate 90s cadence + rewarded ad)" "Test/pack15/crateIntervalAndRewardedAd.test.js"
 run_test "Pack 16 (merge popup for all hangars)" "Test/pack16/mergePopupAllHangars.test.js"
+run_test "Pack 17 (attack wave countdown persistence)" "Test/pack17/attackWaveCountdownPersistence.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

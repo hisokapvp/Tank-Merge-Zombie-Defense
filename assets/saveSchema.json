@@ -89,6 +89,20 @@
       ]
     },
     "nextCrateAt": { "type": "number" },
+    "attackWaveRemainingSec": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Сколько sim-секунд осталось до следующей волны атаки на момент save. Относительная величина; writer — storage.js serializeAttackWaveSnapshot() (live-first через Game.getAttackWaveSnapshot()), reader — restoreFullState()/applyLoadedAttackWaveSnapshot(). null = legacy save / attack mode off / debug force-attack."
+    },
+    "attackWaveActive": {
+      "type": "boolean",
+      "description": "true, если игрок сохранился ВНУТРИ волны атаки. Без этого флага загрузка выключала волну и заново отсчитывала полный attackEverySec. Reader — restoreFullState()/applyLoadedAttackWaveSnapshot()."
+    },
+    "attackWaveRemainingActiveSec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Сколько sim-секунд осталось текущей активной волне (attackEndAt − now). Значимо только при attackWaveActive === true; clamped [0, attackDurationSec]."
+    },
     "maxTankLevelAchieved": { "type": "integer", "minimum": 1, "maximum": 60 },
     "boostUntil": { "type": "number" },
     "activeEffects": { "type": "array" },

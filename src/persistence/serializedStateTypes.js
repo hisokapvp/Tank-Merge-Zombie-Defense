@@ -114,6 +114,17 @@
    * @property {Object} buyPrices — per-level текущая цена (subject to reset на partial reset).
    * @property {SerializedCrate|null} crate — текущий ящик на поле или null.
    * @property {number} nextCrateAt — timestamp следующего спавна ящика.
+   * @property {number|null} attackWaveRemainingSec — сколько sim-секунд осталось
+   *   до следующей волны атаки на момент save. Относительная величина (абсолютный
+   *   `worldEventsState.attackStartAt` не персистится). Reader — `restoreFullState()`
+   *   через `applyLoadedAttackWaveSnapshot()`; `null` у legacy-сейвов и при
+   *   выключенном/принудительном attack mode.
+   * @property {boolean} attackWaveActive — `true`, если игрок сохранился ВНУТРИ
+   *   волны атаки. Без этого флага загрузка выключала волну и заново отсчитывала
+   *   полный `attackEverySec`.
+   * @property {number} attackWaveRemainingActiveSec — сколько sim-секунд осталось
+   *   текущей активной волне (`attackEndAt − now`). Значимо только при
+   *   `attackWaveActive === true`; clamped `[0, attackDurationSec]`.
    * @property {number} maxTankLevelAchieved — максимальный достигнутый уровень танка.
    * @property {number} boostUntil — timestamp окончания буста.
    * @property {Array} activeEffects — список активных временных эффектов.
