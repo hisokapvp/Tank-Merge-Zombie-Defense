@@ -25,6 +25,7 @@
 - Hover SFX должен быть throttled через cooldown (минимум 100ms), чтобы избежать спама в плотных pointer-сценариях.
 - Hover SFX должен запускаться однократно при входе на кнопку: переходы между child-элементами внутри той же кнопки не должны повторно триггерить звук (`relatedTarget` guard).
 - Для merge-сценария `mergeNewMaxLevel` используется вместо `levelUp` только когда merge впервые повышает `maxLevel` в рамках текущего merge и успешно запускает `Game.MergePopup.show(level)`; в обычном merge остаётся `levelUp`.
+- Выбор SFX сосредоточен в `game.js._notifyMergeNewTankLevel()` и применяется одинаково для main-мержа, подземного мержа и кросс-ангарного мержа — отдельные ветки не дублируют условие `mergeNewMaxLevel`/`levelUp`.
 - `useActiveAbility(branch)` в `game.js` проигрывает `playSfx('activeAbility')` только после успешного `activateOffenseActive` / `activateDefenseActive` / `activateEconomyActive`; источник задаётся как `active_ability.ogg -> active_ability.mp3` fallback и должен оставаться синхронизированным в `game.js`, `src/audio/sfxPoolRuntime.js`, `src/audio/settingsAudio.js` и `assets/sfx/registry.json`.
 
 ## Slider preview SFX

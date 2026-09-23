@@ -976,6 +976,12 @@
               : 40,
             blockRadiusK: Number.isFinite(data.blockRadiusK) ? Math.max(0.1, data.blockRadiusK) : 0.35,
             blockRadiusMin: Number.isFinite(data.blockRadiusMin) ? Math.max(1, data.blockRadiusMin) : 8,
+            // collisionPulse передаётся как есть (сырой authoring-объект):
+            // валидацию/нормализацию делает Game.DecorCollisionPulse в game.js,
+            // чтобы loader не зависел от порядка <script> тегов.
+            collisionPulse: (data.collisionPulse && typeof data.collisionPulse === 'object')
+              ? data.collisionPulse
+              : null,
             smoke: data.smoke && typeof data.smoke === 'object'
               ? data.smoke
               : { frames: [], fps: 0, offset: { x: 0, y: 0 }, scale: 1 },

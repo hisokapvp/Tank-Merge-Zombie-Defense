@@ -47,7 +47,7 @@ run_test "Pack 8 (chip effect visual toggle)" "Test/pack8/chipEffectVisualToggle
 run_test "Pack 8 (balance tool parity)" "Test/pack8/balanceToolParity.test.js"
 run_test "Pack 8 (balance optimizer locks)" "Test/pack8/balanceOptimizerLocks.test.js"
 run_test "Pack 8 (balance curve repair)" "Test/pack8/balanceCurveRepair.test.js"
-run_test "Pack 8 (zombie fail-safe teleport)" "Test/pack8/zombieFailSafeTeleport.test.js"
+run_test "Pack 8 (decor collision pulse)" "Test/pack8/decorCollisionPulse.test.js"
 run_test "Pack 9 (offline modal UI/i18n)" "Test/pack9/offlineModal_ui_i18n.test.js"
 run_test "Pack 10 (FX density render parity)" "Test/pack10/fxDensityRender.test.js"
 run_test "Pack 11 (meta hoarder unlocks)" "Test/pack11/metaHoarderUnlocks.test.js"
@@ -58,6 +58,7 @@ run_test "Pack 12 (chip craft + tech-upgrade match stability)" "Test/pack12/chip
 run_test "Pack 13 (supercomputer viewport placement)" "Test/pack13/supercomputerViewportPlacement.test.js"
 run_test "Pack 14 (tank_building family unlock + offset)" "Test/pack14/tankBuildingUnlocks.test.js"
 run_test "Pack 15 (crate 90s cadence + rewarded ad)" "Test/pack15/crateIntervalAndRewardedAd.test.js"
+run_test "Pack 16 (merge popup for all hangars)" "Test/pack16/mergePopupAllHangars.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

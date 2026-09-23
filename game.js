@@ -557,6 +557,10 @@ const BAL = {
   decorCount: null,
   decorNoSpawnZones: [],
   decorMaxAttempts: 400,
+  // Runtime-оверрайд для `assets/decor.json` → `collisionPulse`. null =
+  // использовать authoring-значения из JSON. Объект, например:
+  // `{ enabled: true, periodSec: 10, offDurationMinSec: 1, offDurationMaxSec: 2 }`.
+  decorCollisionPulse: null,
 };
 
 const ACTIVE_ABILITY_DURATION_SEC = 6;
@@ -676,6 +680,7 @@ let creditsData = [];
 
 let sfxPoolRuntimeController = null;
 let worldEventsRuntimeController = null;
+let decorCollisionPulseState = null;
 let crateRuntimeController = null;
 let zombieRenderRuntimeController = null;
 let bigMenuRuntimeController = null;
@@ -3575,9 +3580,87 @@ function initBoard(){
   initDecors();
 }
 
+function resolveDecorCollisionPulseConfig(){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  const authoring = (DecorSprites && DecorSprites.config && DecorSprites.config.collisionPulse)
+    ? DecorSprites.config.collisionPulse
+    : null;
+  // BAL.decorCollisionPulse — runtime-оверрайд authoring-значений из decor.json.
+  // Если задан объект, он полностью заменяет JSON-блок (как и другие BAL.decor* поля).
+  const balOverride = (BAL.decorCollisionPulse && typeof BAL.decorCollisionPulse === 'object')
+    ? BAL.decorCollisionPulse
+    : null;
+  const source = balOverride || authoring;
+  if (!api || typeof api.normalizeConfig !== 'function') {
+    // Fallback без модуля: не подавляем коллизию (безопасное поведение).
+    return { enabled: false, periodSec: 10, offDurationMinSec: 1, offDurationMaxSec: 2 };
+  }
+  return api.normalizeConfig(source);
+}
+
+function ensureDecorCollisionPulseState(){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  if (!api || typeof api.createState !== 'function') return null;
+  const cfg = resolveDecorCollisionPulseConfig();
+  if (!decorCollisionPulseState) {
+    decorCollisionPulseState = api.createState(cfg, Math.random);
+    return decorCollisionPulseState;
+  }
+  decorCollisionPulseState.config = cfg;
+  if (!cfg.enabled) decorCollisionPulseState.suppressed = false;
+  return decorCollisionPulseState;
+}
+
+function resetDecorCollisionPulse(){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  const cfg = resolveDecorCollisionPulseConfig();
+  if (!api || typeof api.resetState !== 'function') {
+    decorCollisionPulseState = null;
+    return false;
+  }
+  if (!decorCollisionPulseState) {
+    decorCollisionPulseState = api.createState(cfg, Math.random);
+  } else {
+    api.resetState(decorCollisionPulseState, cfg);
+  }
+  return true;
+}
+
+// Hot-path: вызывается один раз за кадр из stepZombies() (до цикла по зомби),
+// чтобы подавление коллизии читалось как флаг, а не пересчитывалось на каждого зомби.
+function stepDecorCollisionPulse(dt){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  if (!api || typeof api.step !== 'function') return false;
+  const pulse = ensureDecorCollisionPulseState();
+  if (!pulse) return false;
+  if (!state || !Array.isArray(state.wallDecors) || state.wallDecors.length === 0) {
+    // Нет непроходимых декораций — окно не нужно, но таймлайн не сбрасываем.
+    pulse.suppressed = false;
+    return false;
+  }
+  return api.step(pulse, dt);
+}
+
+function isDecorCollisionSuppressed(){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  if (!api || typeof api.isSuppressed !== 'function') return false;
+  return api.isSuppressed(decorCollisionPulseState);
+}
+
+function getDecorCollisionPulseDebugInfo(){
+  const api = GameApi && GameApi.DecorCollisionPulse;
+  if (!api || typeof api.describe !== 'function') {
+    return { enabled: false, suppressed: false, elapsedSec: 0, secondsToNextOff: 0, secondsLeftInOff: 0 };
+  }
+  const info = api.describe(decorCollisionPulseState);
+  info.wallDecorCount = (state && Array.isArray(state.wallDecors)) ? state.wallDecors.length : 0;
+  return info;
+}
+
 function initDecors(){
   state.decors = [];
   state.wallDecors = [];
+  resetDecorCollisionPulse();
   const mapSeeds = ensureMapSeedsState();
   const decorSeed = (mapSeeds.decorSeed !== undefined && mapSeeds.decorSeed !== null)
     ? mapSeeds.decorSeed
@@ -6035,6 +6118,32 @@ function _applyMergeLevelBonus(baseLvl){
   return baseLvl;
 }
 
+/* Единый seam «новый уровень танка» для ВСЕХ путей merge
+   (основной ангар, только подземный ангар, кросс-ангар).
+   Модалка первого получения уровня не должна зависеть от того, где
+   именно игрок объединил два танка, поэтому показ popup-а и выбор
+   SFX централизованы здесь, а не дублируются по веткам.
+   Подземные ячейки не имеют геометрии доски, поэтому fxContext может
+   быть null — resolveMergeFxPosition корректно уходит в fallback.
+   @param {number} oldMaxLevel — maxTankLevelAchieved ДО recordTankLevel
+   @param {number} lvl — уровень созданного в результате merge танка
+   @param {{resultCellIndex?:number,resultTankId?:string}|null} fxContext
+   @returns {boolean} true, если popup был реально показан впервые. */
+function _notifyMergeNewTankLevel(oldMaxLevel, lvl, fxContext){
+  const newMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
+  let mergePopupShown = false;
+  if (window.Game && window.Game.MergePopup && typeof window.Game.MergePopup.show === 'function') {
+    mergePopupShown = !!window.Game.MergePopup.show(lvl);
+  }
+  const isNewMaxLevel = newMaxLevel > oldMaxLevel && mergePopupShown;
+  playMergeFx({
+    resultCellIndex: fxContext && Number.isFinite(fxContext.resultCellIndex) ? fxContext.resultCellIndex : undefined,
+    resultTankId: fxContext && typeof fxContext.resultTankId === 'string' ? fxContext.resultTankId : undefined,
+    sfxId: isNewMaxLevel ? 'mergeNewMaxLevel' : 'levelUp',
+  });
+  return mergePopupShown;
+}
+
 function performMerge(fromIdx, toIdx, opts){
   const options = opts || {};
   const placeResult = options.placeResult === 'hangar' ? 'hangar' : 'original';
@@ -6068,22 +6177,14 @@ function performMerge(fromIdx, toIdx, opts){
   invalidateDefenseOrderEpisode();
   checkHangarMasterAchievement();
   recordTankLevel(lvl);
-  const newMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
   if (window.Game && window.Game.Telemetry) window.Game.Telemetry.event('merge');
   if (window.Game && window.Game.TelemetryLogger) window.Game.TelemetryLogger.log('merge', { fromLevel: fromLevel, toLevel: lvl });
   if (window.Game && window.Game.Funnel) window.Game.Funnel.trackStep('first_merge', { level: lvl });
 
   // Show merge popup for first time achieving this level
-  let mergePopupShown = false;
-  if (window.Game && window.Game.MergePopup) {
-    mergePopupShown = !!window.Game.MergePopup.show(lvl);
-  }
-
-  const isNewMaxLevelMergePopup = newMaxLevel > oldMaxLevel && mergePopupShown;
-  playMergeFx({
+  _notifyMergeNewTankLevel(oldMaxLevel, lvl, {
     resultCellIndex: resultCellIndex,
     resultTankId: resultCell.tank && resultCell.tank.id,
-    sfxId: isNewMaxLevelMergePopup ? 'mergeNewMaxLevel' : 'levelUp',
   });
 
   popText(resultCell.x + resultCell.w/2, resultCell.y + resultCell.h/2 - 16, t('levelUp', {level: lvl}), '#eaf1ff');
@@ -6106,10 +6207,13 @@ function _performUndergroundMerge(fromIdx, toIdx){
   if (lvl > MAX_TANK_LEVEL) return false;
   b.tank = makeTank(lvl, false);
   a.tank = null;
+  const oldMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
   processAchievementProgress('merges', 1);
   invalidateDefenseOrderEpisode();
   checkHangarMasterAchievement();
   recordTankLevel(lvl);
+  // Подземные ячейки не имеют геометрии доски — popup обязателен, canvas-FX без привязки к ячейке.
+  _notifyMergeNewTankLevel(oldMaxLevel, lvl, null);
   return true;
 }
 
@@ -6128,10 +6232,14 @@ function _performCrossHangarMerge(srcType, srcIdx, tgtType, tgtIdx){
   if (lvl > MAX_TANK_LEVEL) return false;
   tgtCell.tank = makeTank(lvl, false);
   srcCell.tank = null;
+  const oldMaxLevel = Math.max(0, Number.isFinite(state.maxTankLevelAchieved) ? state.maxTankLevelAchieved : 0);
   processAchievementProgress('merges', 1);
   invalidateDefenseOrderEpisode();
   checkHangarMasterAchievement();
   recordTankLevel(lvl);
+  // Кросс-ангарный merge может завершиться как в основном, так и в подземном слоте:
+  // popup не должен зависеть от того, куда лёг результат.
+  _notifyMergeNewTankLevel(oldMaxLevel, lvl, null);
   return true;
 }
 
@@ -7184,16 +7292,39 @@ function refreshTalentResetCooldownModalState(){
   else if (refreshBtn) refreshBtn.textContent = t('talentResetCooldownRefreshNow');
   if (refreshBtn) {
     refreshBtn.removeAttribute('title');
-    refreshBtn.setAttribute('data-ui-tooltip', t('talentResetCooldownRefreshStub'));
+    refreshBtn.setAttribute('data-ui-tooltip', t('talentResetCooldownRefreshAdTooltip'));
   }
 
   scheduleTalentResetCooldownModalRefresh();
 }
 
+/**
+ * Real handler of the «Обновить моментально» CTA.
+ *
+ * The button is a rewarded-ad placement (`#talentResetCooldownModalRefresh` is
+ * listed in `AD_GATED_SELECTORS`, src/ui/adService.js), so this function only
+ * runs after a completed (or fail-open) rewarded video — the raw click is
+ * blocked and re-issued synthetically by the ad gate.
+ *
+ * On success only the 2-hour cooldown gate is cleared; `resetCount` is kept so
+ * the escalating respec price ladder cannot be farmed through ads. The paid
+ * reset itself still needs explicit confirmation in `#resetTalentsModal`.
+ */
 function handleTalentResetCooldownRefreshNow(){
-  if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
-    window.Game.Toast.show(t('talentResetCooldownRefreshStub'), 2200);
+  if (!isTalentsV2Ready()) return;
+  const api = getTalentsV2Api();
+  if (!api || typeof api.clearRespecCooldown !== 'function') return;
+  const result = api.clearRespecCooldown({ nowMs: Date.now() });
+  if (!result || result.ok !== true) {
+    updateTalentUI();
+    updateUI();
+    return;
   }
+  syncPlayerTalentsV2FromApi();
+  closeTalentResetCooldownModal();
+  updateTalentUI();
+  updateUI();
+  requestResetAllTalents();
 }
 
 function refreshResetTalentsModalState(){
@@ -8445,10 +8576,6 @@ function makeZombie(fromEdge=true, slotIndex=null, slotCount=1){
     deathFrameRateFps: animCfg.deathFps,
     deathCommonFrameRateFps: animCfg.deathCommonFps,
     spawnTimeSec: spawnedAtSec,
-    failSafeTeleported: false,
-    failSafeDecorSinceSec: 0,
-    failSafeDecorAnchorX: NaN,
-    failSafeDecorAnchorY: NaN,
     breached: false,
     breachStrafePhase: Math.random() * Math.PI * 2,
     breachStrafeBaseAngle: theta,
@@ -8595,7 +8722,7 @@ function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
   let nextX = fromX + dx * stepMul;
   let nextY = fromY + dy * stepMul;
 
-  const walls = Array.isArray(state.wallDecors) ? state.wallDecors : null;
+  const walls = (!isDecorCollisionSuppressed() && Array.isArray(state.wallDecors)) ? state.wallDecors : null;
   if (walls && walls.length) {
     for (let pass = 0; pass < 2; pass++) {
       let adjusted = false;
@@ -8634,6 +8761,7 @@ function resolveZombieWallMove(z, fromX, fromY, toX, toY, dt){
 
 function isZombieDecorBlockedAt(z, x, y, extraPadding = 0){
   if (!Number.isFinite(x) || !Number.isFinite(y)) return true;
+  if (isDecorCollisionSuppressed()) return false;
   const walls = Array.isArray(state.wallDecors) ? state.wallDecors : null;
   if (!walls || !walls.length) return false;
   const zR = zombieCollisionRadius(z);
@@ -8758,68 +8886,6 @@ function syncZombieCalmSuppressionState(z, isCalmed, targetNow){
   z.attackTargetId = targetNow.kind === 'fence'
     ? (targetNow.seg && targetNow.seg.id ? targetNow.seg.id : null)
     : 'supercomputer';
-  return true;
-}
-
-function findZombieFenceFailSafeTeleport(z){
-  const fenceLimit = zombieFenceLimit(z);
-  const baseTheta = Number.isFinite(z.anchorTheta) ? z.anchorTheta : (Number.isFinite(z.theta) ? z.theta : 0);
-  const thetaStep = Math.PI / 24;
-  const thetaOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
-  for (let i = 0; i < thetaOffsets.length; i++) {
-    const theta = baseTheta + thetaOffsets[i] * thetaStep;
-    const offset = 20 + Math.random() * 10;
-    const r = fenceLimit + offset;
-    const x = center.x + Math.cos(theta) * r;
-    const y = center.y + Math.sin(theta) * r;
-    if (isZombieDecorBlockedAt(z, x, y)) continue;
-    return { theta: theta, r: r };
-  }
-  return { theta: baseTheta, r: fenceLimit + 25 };
-}
-
-function maybeTeleportZombieNearFence(z, now){
-  if (!z || z.state === 'dying' || z.breached || z.failSafeTeleported) return false;
-  const currentX = center.x + Math.cos(z.theta) * z.r;
-  const currentY = center.y + Math.sin(z.theta) * z.r;
-  if (!isZombieDecorBlockedAt(z, currentX, currentY, 20)) {
-    z.failSafeDecorSinceSec = 0;
-    z.failSafeDecorAnchorX = NaN;
-    z.failSafeDecorAnchorY = NaN;
-    return false;
-  }
-
-  if (!Number.isFinite(z.failSafeDecorSinceSec) ||
-      !Number.isFinite(z.failSafeDecorAnchorX) || !Number.isFinite(z.failSafeDecorAnchorY)) {
-    z.failSafeDecorSinceSec = now;
-    z.failSafeDecorAnchorX = currentX;
-    z.failSafeDecorAnchorY = currentY;
-    return false;
-  }
-
-  if (Math.abs(currentX - z.failSafeDecorAnchorX) > 5 || Math.abs(currentY - z.failSafeDecorAnchorY) > 5) {
-    z.failSafeDecorSinceSec = now;
-    z.failSafeDecorAnchorX = currentX;
-    z.failSafeDecorAnchorY = currentY;
-    return false;
-  }
-
-  if (now - z.failSafeDecorSinceSec < 25) return false;
-  const fenceLimit = zombieFenceLimit(z);
-  if (z.r <= fenceLimit + 20) return false;
-  const candidate = findZombieFenceFailSafeTeleport(z);
-  if (!candidate) return false;
-  z.theta = candidate.theta;
-  z.anchorTheta = candidate.theta;
-  z.r = Math.max(fenceLimit + 20, candidate.r);
-  z.targetR = z.r;
-  z.side = getSideByPosition(center.x + Math.cos(z.theta) * z.r, center.y + Math.sin(z.theta) * z.r);
-  z.failSafeTeleported = true;
-  z.failSafeDecorSinceSec = 0;
-  z.failSafeDecorAnchorX = NaN;
-  z.failSafeDecorAnchorY = NaN;
-  z._unstickTimer = 0;
-  z._unstickCheckR = z.r;
   return true;
 }
 
@@ -10414,6 +10480,10 @@ function stepZombies(dt){
   const scCoordsValid = !!sc && Number.isFinite(sc.x) && Number.isFinite(sc.y);
   const scTarget = scCoordsValid ? resolveSupercomputerAttackHitbox(sc) : null;
   const breachAwarenessRadiusPx = getFenceBreachAwarenessRadiusPx();
+  // Decor collision pulse: одно обновление за кадр, до цикла по зомби. Пока окно
+  // открыто, непроходимые декорации игнорируются и застрявшие зомби проходят сквозь.
+  // Вызов идёт внутри stepZombies → пауза симуляции автоматически замораживает окно.
+  stepDecorCollisionPulse(dt);
   for (const z of state.zombies){
     if (z.state === 'dying'){
       z.deathTimer -= dt;
@@ -10628,7 +10698,9 @@ function stepZombies(dt){
       if (z._unstickTimer >= 4) {
         const radialGain = z._unstickCheckR - z.r; // positive means got closer to center
         if (radialGain < 2) {
-          // Zombie hasn't moved ≥2px closer in 4 sec — nudge toward fence
+          // Zombie hasn't moved ≥2px closer in 4 sec — nudge toward fence.
+          // Decor collision pulse is the primary unstick mechanism; this nudge
+          // stays as a soft assist and never teleports the zombie.
           const fenceR = zombieFenceLimit(z);
           const nudge = Math.min(8, Math.max(1, (z.r - fenceR) * 0.15));
           z.r = Math.max(fenceR, z.r - nudge);
@@ -10637,8 +10709,6 @@ function stepZombies(dt){
         z._unstickCheckR = z.r;
       }
     }
-
-    maybeTeleportZombieNearFence(z, now);
 
     const targetNow = (effectiveShouldAttackTargets && !isStunned)
       ? selectZombieAttackTargetForZombie(z, z.attackRangePx, allowSupercomputerTarget)
@@ -14979,7 +15049,7 @@ function openTalentResetCooldownModal(cooldownRemainingMs){
       dismissLabel: t('menuClose'),
       closeAriaLabel: t('menuClose'),
       refreshLabel: t('talentResetCooldownRefreshNow'),
-      refreshTooltip: t('talentResetCooldownRefreshStub'),
+      refreshTooltip: t('talentResetCooldownRefreshAdTooltip'),
     });
     refreshTalentResetCooldownModalState();
     return;

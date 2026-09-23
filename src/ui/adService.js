@@ -20,14 +20,16 @@
  * gets the tank instead of losing the box to an infrastructure hiccup. Only a
  * deliberate early close is treated as `success: false`.
  *
- * The capture-phase click gate lives here as well. It covers both rewarded
- * placements with one seam:
- *   - `#crateGet`     — military-aid crate claim («Получить»)
- *   - `#plConfirmYes` — production-storage box-open confirm («Открыть»)
+ * The capture-phase click gate lives here as well. It covers every rewarded
+ * placement with one seam:
+ *   - `#crateGet`                      — military-aid crate claim («Получить»)
+ *   - `#plConfirmYes`                  — production-storage box-open confirm («Открыть»)
+ *   - `#talentResetCooldownModalRefresh` — talent-tree respec cooldown «Обновить моментально»
  * It blocks the original click, runs the ad, and re-issues exactly one
- * synthetic click on success. `claimCrateReward()` in game.js and the
- * production-line `openBox` handler therefore never see a click that was not
- * preceded by a completed (or fail-open) ad.
+ * synthetic click on success. `claimCrateReward()` in game.js, the
+ * production-line `openBox` handler and
+ * `handleTalentResetCooldownRefreshNow()` therefore never see a click that was
+ * not preceded by a completed (or fail-open) ad.
  *
  * Host callbacks are registered defensively (`onOpen` / `onRewarded` /
  * `onClose` / `onError` are all optional on the host side), and a watchdog
@@ -52,13 +54,14 @@
 
   // Every button whose action must be gated behind a completed rewarded video.
   //
-  //   #crateGet     — military-aid crate modal («Получить»)
-  //   #plConfirmYes — production-storage box-open confirm («Открыть»)
+  //   #crateGet                          — military-aid crate modal («Получить»)
+  //   #plConfirmYes                      — production-storage box-open confirm («Открыть»)
+  //   #talentResetCooldownModalRefresh   — talent respec cooldown («Обновить моментально»)
   //
-  // Both run through the exact same seam: the raw click is blocked, an ad is
+  // All run through the exact same seam: the raw click is blocked, an ad is
   // requested, and only a successful result lets exactly one synthetic re-click
   // reach the real handler. Adding a placement is a selector-only change.
-  var AD_GATED_SELECTORS = ['#crateGet', '#plConfirmYes'];
+  var AD_GATED_SELECTORS = ['#crateGet', '#plConfirmYes', '#talentResetCooldownModalRefresh'];
 
   function _warn() {
     try {

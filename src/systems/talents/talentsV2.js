@@ -2297,6 +2297,41 @@
     };
   }
 
+  /**
+   * Clear an active respec cooldown — the rewarded-ad "refresh instantly" seam.
+   *
+   * `resetCount` is intentionally preserved: only the 2-hour gate is removed,
+   * so the escalating price ladder cannot be farmed by watching ads.
+   *
+   * @param {{ nowMs?: number }} [options]
+   * @returns {{ ok: boolean, reason?: string, resetCount: number, cooldownEndsAtMs: number, cooldownRemainingMs: number }}
+   */
+  function clearRespecCooldown(options) {
+    var opts = options || {};
+    var nowMs = isFiniteNumber(opts.nowMs) ? Math.max(0, opts.nowMs) : runtime.nowMsFn();
+    var respec = sanitizeRespecState(runtime.respec);
+    if (respec.cooldownEndsAtMs <= nowMs) {
+      return {
+        ok: false,
+        reason: 'no_cooldown',
+        resetCount: respec.resetCount,
+        cooldownEndsAtMs: respec.cooldownEndsAtMs,
+        cooldownRemainingMs: 0,
+      };
+    }
+    runtime.respec = {
+      resetCount: respec.resetCount,
+      cooldownEndsAtMs: 0,
+    };
+    persistSave();
+    return {
+      ok: true,
+      resetCount: runtime.respec.resetCount,
+      cooldownEndsAtMs: 0,
+      cooldownRemainingMs: 0,
+    };
+  }
+
   function refundAll() {
     return respec();
   }
@@ -4612,6 +4647,7 @@
     refundAll: refundAll,
     respec: respec,
     tryRespec: tryRespec,
+    clearRespecCooldown: clearRespecCooldown,
     validate: validate,
     computeModsFromTalents: computeModsFromTalents,
     MIGRATE_V1_TO_V2: MIGRATE_V1_TO_V2,

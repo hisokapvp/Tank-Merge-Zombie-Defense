@@ -204,8 +204,8 @@
       pointerAnimation: 'click',
       activation: {
         kind: 'min_damage_points',
-        value: 2,
-        pendingGreyDamageValue: 20000,
+        value: 230,
+        pendingGreyDamageValue: 2300000,
         includePendingGreyDamage: true,
       },
       target: {
@@ -228,8 +228,8 @@
       activation: {
         kind: 'supercomputer_root_open',
         requiresStepBubbleShown: 'supercomputer_damage_open_menu',
-        minDamagePoints: 2,
-        minPendingGreyDamage: 20000,
+        minDamagePoints: 230,
+        minPendingGreyDamage: 2300000,
         includePendingGreyDamage: true,
       },
       target: {

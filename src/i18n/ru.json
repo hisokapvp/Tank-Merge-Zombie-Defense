@@ -479,7 +479,7 @@
   "talentResetModalWatchBtn": "Да",
   "talentResetCooldownModalText": "Следующий сброс возможен через {time}; дождитесь окончания сброса",
   "talentResetCooldownRefreshNow": "Обновить моментально",
-  "talentResetCooldownRefreshStub": "Моментальное обновление пока недоступно: рекламная заглушка ещё не подключена",
+  "talentResetCooldownRefreshAdTooltip": "Посмотрите рекламу, чтобы сбросить улучшения не дожидаясь окончания таймера",
   "talentPending": "Выбрано",
   "talentNeedPoints": "Не хватает очков",
   "talentActive": "Использовать активку",

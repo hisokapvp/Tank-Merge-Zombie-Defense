@@ -250,7 +250,8 @@
 | 4350 | `makeZombie(type, level)` |
 | 4420 | `ensureZombieCount()` |
 | 4520 | `zombiePos(z)` |
-| 4560 | `resolveZombieWallMove(z, dt)` |
+| 4560 | `resolveZombieWallMove(z, dt)` (decor collision respect pulse) |
+| 4580 | `stepDecorCollisionPulse(dt)` / `isDecorCollisionSuppressed()` — окно отключения коллизии декора |
 | 5200 | `selectZombieFenceTarget(z)` |
 | 5250 | `selectZombieAttackTargetForZombie(z)` |
 | 5300 | `applyFenceSegmentDamage(seg, damage)` |

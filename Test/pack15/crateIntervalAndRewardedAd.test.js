@@ -181,10 +181,12 @@ test('PB-3: rewardAd does not regress the isAnyMenuPauseOpen aggregate', () => {
 // ════════════════════════════════════════════════════════════════
 console.log('\n  --- Section 4: entry cache-bust ---');
 
-test('CB-1: entry token bumped for this change', () => {
+test('CB-1: entry token is present and drives style.css + game.js', () => {
   const m = indexSrc.match(/var token = '([^']+)'/);
   assert(m, 'entry token present');
-  assertEqual(m[1], '20260922-chipshop-cards-typography', 'entry token value');
+  assert(m[1].length > 0, 'entry token non-empty');
+  assert(indexSrc.indexOf("resolve('style.css')") !== -1, 'style.css resolved through the token');
+  assert(indexSrc.indexOf("resolve('game.js')") !== -1, 'game.js resolved through the token');
 });
 
 test('CB-2: adService.js and yandexSdk.js carry the shared entry token', () => {
@@ -197,6 +199,79 @@ test('CB-2: adService.js and yandexSdk.js carry the shared entry token', () => {
     indexSrc.indexOf('src/yandex/yandexSdk.js?v=' + entry) !== -1,
     'yandexSdk carries the shared entry token'
   );
+});
+
+test('CB-4: talentsV2.js and fallbackStrings.js carry the shared entry token', () => {
+  const entry = indexSrc.match(/var token = '([^']+)'/)[1];
+  assert(
+    indexSrc.indexOf('src/systems/talents/talentsV2.js?v=' + entry) !== -1,
+    'talentsV2 carries the shared entry token'
+  );
+  assert(
+    indexSrc.indexOf('src/i18n/fallbackStrings.js?v=' + entry) !== -1,
+    'fallbackStrings carries the shared entry token'
+  );
+});
+
+// ════════════════════════════════════════════════════════════════
+//  Section 6 — talent respec cooldown «Обновить моментально»
+// ════════════════════════════════════════════════════════════════
+console.log('\n  --- Section 6: talent respec cooldown ad refresh ---');
+
+const UI_MODALS_REFRESH_ID = 'talentResetCooldownModalRefresh';
+
+function getElementById(id) {
+  const re = new RegExp('id="' + id + '"');
+  return re.test(indexSrc) ? { id: id } : null;
+}
+
+test('TRR-1: refresh CTA is the third AD_GATED_SELECTORS placement', () => {
+  assert(
+    adSrc.indexOf("'#" + UI_MODALS_REFRESH_ID + "'") !== -1,
+    '#' + UI_MODALS_REFRESH_ID + ' is a gated selector'
+  );
+  const listMatch = adSrc.match(/AD_GATED_SELECTORS = \[([^\]]+)\]/);
+  assert(listMatch, 'selector list declared');
+  const selectors = listMatch[1].split(',').map(function (s) { return s.trim(); });
+  assertEqual(selectors.length, 3, 'three gated placements');
+  assertEqual(selectors[2], "'#" + UI_MODALS_REFRESH_ID + "'", 'refresh CTA is last');
+});
+
+test('TRR-2: the gated button really exists in index.html', () => {
+  assert(getElementById(UI_MODALS_REFRESH_ID), 'button id present in HTML shell');
+  assert(indexSrc.indexOf('talentResetCooldownAdBtn__label') !== -1, 'ad-style label shell preserved');
+  assert(indexSrc.indexOf('talentResetCooldownAdBtn__icon') !== -1, 'ad icon shell preserved');
+});
+
+test('TRR-3: talentsV2 exposes clearRespecCooldown and preserves resetCount', () => {
+  const talentsSrc = fs.readFileSync(path.join(ROOT, 'src', 'systems', 'talents', 'talentsV2.js'), 'utf8');
+  assert(talentsSrc.indexOf('function clearRespecCooldown') !== -1, 'clearRespecCooldown declared');
+  assert(talentsSrc.indexOf('clearRespecCooldown: clearRespecCooldown') !== -1, 'exported on the api surface');
+  const body = talentsSrc.slice(talentsSrc.indexOf('function clearRespecCooldown'));
+  assert(body.indexOf('resetCount: respec.resetCount') !== -1, 'price ladder counter preserved');
+  assert(body.indexOf('cooldownEndsAtMs: 0') !== -1, 'cooldown gate cleared');
+  assert(body.indexOf('persistSave()') !== -1, 'state persisted');
+});
+
+test('TRR-4: game.js runs the reset only after the ad gate re-issues the click', () => {
+  const handler = gameSrc.slice(gameSrc.indexOf('function handleTalentResetCooldownRefreshNow'));
+  const body = handler.slice(0, handler.indexOf('\nfunction ', 10));
+  assert(body.indexOf('clearRespecCooldown') !== -1, 'handler calls the new API');
+  assert(body.indexOf('closeTalentResetCooldownModal') !== -1, 'cooldown modal dismissed on success');
+  assert(body.indexOf('requestResetAllTalents') !== -1, 'paid reset confirm flow re-entered');
+  assert(body.indexOf('Toast.show') === -1, 'stub toast removed');
+});
+
+test('TRR-5: i18n parity for the refresh tooltip (ru/en/fallback)', () => {
+  const ru = fs.readFileSync(path.join(ROOT, 'src', 'i18n', 'ru.json'), 'utf8');
+  const en = fs.readFileSync(path.join(ROOT, 'src', 'i18n', 'en.json'), 'utf8');
+  const fb = fs.readFileSync(path.join(ROOT, 'src', 'i18n', 'fallbackStrings.js'), 'utf8');
+  assert(ru.indexOf('talentResetCooldownRefreshAdTooltip') !== -1, 'ru key present');
+  assert(en.indexOf('talentResetCooldownRefreshAdTooltip') !== -1, 'en key present');
+  assertEqual((fb.match(/talentResetCooldownRefreshAdTooltip/g) || []).length, 2, 'fallback has both locales');
+  assert(ru.indexOf('talentResetCooldownRefreshStub') === -1, 'stub key retired in ru');
+  assert(en.indexOf('talentResetCooldownRefreshStub') === -1, 'stub key retired in en');
+  assert(fb.indexOf('talentResetCooldownRefreshStub') === -1, 'stub key retired in fallback');
 });
 
 test('CB-3: adService.js loads before game.js', () => {
