@@ -2,6 +2,24 @@
 
 ## 2026-09-24
 
+### Подарочный бокс ставит игру на паузу
+- Баг: при нажатии на подарочный бокс и открытии модалки «Военная помощь» симуляция продолжала идти — зомби атаковали забор, снаряды летели и таймер следующего бокса тикал за спиной открытого окна. Остальные модалки (меню, суперкомпьютер, достижения, производственный склад, подземный ангар) игру паузили, а бокс — нет.
+- Root cause: `crate` отсутствовал в `menuPauseLocks` (game.js), поэтому `setMenuPauseSource('crate', …)` молча игнорировался whitelist-проверкой `Object.prototype.hasOwnProperty.call(menuPauseLocks, source)`, и агрегатный `isAnyMenuPauseOpen()` не видел открытого бокса.
+- `game.js`: новый источник `crate` в `menuPauseLocks`; `isAnyMenuPauseOpen()` и `hasHigherPriorityEscapeLock()` учитывают crate, tab-inactive fallback (`reasons.tabInactive`) исключает crate-lock. Lock приобретается в `openCrateModal()` через `setMenuPauseSource('crate', true)` **до** ветки `UIModals`, поэтому Phaser-backed `.crateReward` путь (`ModalAdapter` → `CrateRewardScene`) паузит идентично DOM-ветке.
+- `game.js`: `closeCrateModal()` безусловно снимает lock (`setMenuPauseSource('crate', false)`) **перед** веткой `UIModals`, поэтому claim / decline / backdrop / Escape (`a11y onClose`) / `stopAndResetSessionToBigMenu()` не могут оставить crate-lock залипшим.
+- `docs/ai/SYSTEMS/ui.md`: секция «Military aid / crate modal» дополнена pause-контрактом с объяснением, почему lock живёт в `game.js`, а не в DOM-элементе.
+- `Test/pack22/crateModalPause.test.js` (новый, 10 проверок `CMP-1..10`) + регистрация в `ci/run_tests.sh`: статические guard'ы на все четыре точки интеграции источника, порядок acquire/release относительно ветки `UIModals`, **runtime**-проверки реального исходника в sandbox (включение/снятие паузы, отсутствие залипания, изоляция от чужого источника `settings`, игнор неизвестного источника), docs- и entry-token-parity.
+- `index.html`: entry token поднят до `20260924-crate-modal-pause` (все `?v=` маркеры синхронизированы).
+### Меню всегда открывается на главной странице (защита от потери прогресса)
+- Баг: игрок открывал меню, переходил во вкладку «Загрузка», загружал слот, играл дальше — но при повторном открытии меню попадал **снова на таблицу загрузки**. Невнимательный клик по «Загрузить» затирал живой забег старым сейвом.
+- Root cause: sub-view меню жил в CSS-классах, которые переключались только вместе с самим overlay. `setSlotViewsOpen('none'|'save'|'load')` в `src/core/bootstrap.js` ставил `smallMenuRootView.is-hidden` и `smallMenuSaveView.is-active` / `smallMenuLoadView.is-active`, а `UIModals.setMenuOpen` в `src/ui/modals.js` скрывал overlay классом `hidden`, не трогая эти состояния. Залипал и highlight action-кнопки (`.menuActionSelected` + `btnPrimary` на «Загрузка»), из-за чего primary-CTA снова вёл на деструктивный экран.
+- `src/ui/modals.js`: `UIModals.setMenuOpen` на **close**-пути вызывает необязательный dep `resetMenuView`. Сброс сделан именно на close, а не на open: `openCriticalSaveView()` намеренно открывает меню сразу на таблице сохранения (`openSaveView(...)` **до** `setMenuOpen(true)`), и open-время сброса сломало бы guided-flow «Сохранить прогресс и выйти».
+- `src/core/bootstrap.js`: новый `resetMenuView()` — снимает highlight action-кнопки и нормализует shell через `openMainMenuView()` (`setSlotViewsOpen('none')` + `setMenuView('main')`); экспортируется наружу в `onSmallMenuApiReady` вместе с `openSaveView`/`openCriticalSaveView`.
+- `game.js`: `resetSmallMenuToMainView()` делегирует в `smallMenuRuntimeController.resetMenuView()`; dep передаётся в `UIModals.setMenuOpen`, а fallback-ветка (когда `Game.UIModals` отсутствует) сбрасывает view сама.
+- `src/ui/bigMenuRuntime.js`: тот же инвариант для big menu — `setBigMenuOpen(false)` сбрасывает `lastActiveButtonIdBigMenu` и зовёт `openBigMenuRootView()`, чтобы `bigMenuLoadView` не оставался активным после закрытия.
+- `docs/ai/SYSTEMS/ui.md`: новый раздел «In-game menu всегда открывается на главной странице» рядом с контрактом Escape/menu priority — фиксирует правило, явно объясняет выбор close-пути и привязку к `openCriticalSaveView`.
+- `Test/pack21/menuReopenOnHomePage.test.js` (новый, 12 проверок `MMV-1..12`) + регистрация в `ci/run_tests.sh`: статические guard'ы на close-only сброс, **runtime**-проверки реальных `Game.UIModals.setMenuOpen` и `Game.BigMenuRuntime` через sandbox (spy на `resetMenuView`, отсутствие сброса на open, legacy-caller без dep, очистка highlight и возврат root-вида big menu), плюс docs- и entry-token-parity.
+
 ### Целые чипы переживают save → load (рецидив после правок по dust/fragments)
 
 - Баг: после загрузки сохранённой игры из инвентаря исчезали **целые чипы**, тогда как фрагменты и кремниевая пыль сохранялись.

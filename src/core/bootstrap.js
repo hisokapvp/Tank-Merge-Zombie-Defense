@@ -414,6 +414,18 @@
       applySmallMenuSelectedState();
     }
 
+    /* Home-page normalization for the in-game menu. `game.js` calls this from the
+       close path of `UIModals.setMenuOpen`, so a menu that was left on the
+       Save/Load view (or on an exit/new-game confirm) always reopens on the main
+       page. Without it the overlay kept its sub-view classes across close/open,
+       and the player could load an old save while trying to save the live run.
+       Also drops the highlighted action button, because a still-primary
+       "Загрузка" tile silently steered the player back to the destructive screen. */
+    function resetMenuView() {
+      lastActiveButtonIdSmallMenu = null;
+      openMainMenuView();
+    }
+
     function openSaveView(config) {
       var cfg = config && typeof config === 'object' ? config : {};
       saveViewConfig.manualOnly = !!cfg.manualOnly;
@@ -521,6 +533,7 @@
           openSaveView({ manualOnly: true, exitAfterSave: true, disableBackButton: true });
           opts.setMenuOpen(true);
         },
+        resetMenuView: resetMenuView,
       });
     }
 

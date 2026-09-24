@@ -1768,6 +1768,8 @@ let menuPauseLocks = {
   undergroundHangar: false,
   chipShop: false,
   critical: false,
+  /** Gift box modal («Военная помощь»). Owned by openCrateModal()/closeCrateModal(). */
+  crate: false,
   /** Rewarded video on screen (Yandex host). Owned by src/ui/adService.js. */
   rewardAd: false,
   bigMenu: !!(ui.bigMenuOverlay && !ui.bigMenuOverlay.classList.contains('bigMenuOverlayHidden')),
@@ -1915,7 +1917,7 @@ function setSimulationPaused(nextPaused, reasons){
 }
 
 function isAnyMenuPauseOpen(){
-  return !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.rewardAd || menuPauseLocks.bigMenu);
+  return !!(menuPauseLocks.settings || menuPauseLocks.supercomputer || menuPauseLocks.achievements || menuPauseLocks.productionStorage || menuPauseLocks.undergroundHangar || menuPauseLocks.chipShop || menuPauseLocks.critical || menuPauseLocks.crate || menuPauseLocks.rewardAd || menuPauseLocks.bigMenu);
 }
 
 function recomputeMenuPauseLock(){
@@ -10649,13 +10651,13 @@ function stepZombies(dt){
         z.corpseTimerLeft = z.corpseTimer - dt;
       }
       if (Number.isFinite(z.corpseTimerLeft)) z.corpseTimer = z.corpseTimerLeft;
-      
+
       // Advance death animation frame (non-loop: clamp to last frame)
       if (z.deathAnim) {
         const maxFrame = (z.deathAnim.frames || 1) - 1;
         z.deathFrame = Math.min((z.deathFrame || 0) + dt * (z.deathAnimSpeed || 10), maxFrame);
       }
-      
+
       z.anim += dt * 4.5;
       continue;
     }
@@ -11736,7 +11738,7 @@ function spawnProjectile(p){
   b.isMatryoshkaChild = p.isMatryoshkaChild || false;
   b.isChainChild = p.isChainChild || false;
   b.isCascadeChild = p.isCascadeChild || false;
-  
+
   if (!b.isMatryoshkaChild && !b.isChainChild && !b.isCascadeChild) {
     if (typeof spawnMuzzleFlash === 'function') {
       spawnMuzzleFlash(b.x, b.y, b.rotation, b.color);
@@ -12225,11 +12227,11 @@ function addDamageNumber(x, y, value, isCrit = false, damageType = 'physical'){
     ? _Fx.scaleCap(MAX_DAMAGE_NUMBERS, 8)
     : MAX_DAMAGE_NUMBERS;
   const arr = state.damageNumbers;
-  
+
   const jitter = 8;
   const entry = _damageNumberPool[_damageNumberPoolIndex];
   _damageNumberPoolIndex = (_damageNumberPoolIndex + 1) % _damageNumberPool.length;
-  
+
   entry.x = x + (Math.random() * 2 - 1) * jitter;
   entry.y = y + (Math.random() * 2 - 1) * jitter;
   entry.value = formatDamageNumber(value);
@@ -12243,7 +12245,7 @@ function addDamageNumber(x, y, value, isCrit = false, damageType = 'physical'){
   if (arr.indexOf(entry) !== -1) {
     return;
   }
-  
+
   if (arr.length < cap) {
     arr.push(entry);
     _damageNumberWriteIndex = arr.length % Math.max(1, cap);
@@ -12601,7 +12603,7 @@ function spawnDroneWeldingSparks(x, y, targetX, targetY) {
   const dy = targetY - y;
   const dist = Math.sqrt(dx * dx + dy * dy);
   const angle = dist > 0.01 ? Math.atan2(dy, dx) : 0;
-  
+
   // Bright blue-white and cyan welding sparks
   const colors = ['#00ffff', '#ffffff', '#8bd3ff', '#99f0ff'];
   const count = 3 + Math.floor(Math.random() * 4); // 3 to 6 particles per tick
@@ -12661,6 +12663,18 @@ function stepParticles(dt){
   arr.length = _w;
 }
 
+/* Home-page normalization for the in-game menu (`#menuOverlay`).
+   The overlay only toggles its own `hidden` class, so without this the sub-view
+   classes survived close/open: a player who had been on "Загрузить" reopened the
+   menu straight on the load table and could wipe the live run by loading an old
+   slot. Called from the close path of `UIModals.setMenuOpen` only — the
+   intentional open-into-save-view flow (critical save-and-exit) must survive. */
+function resetSmallMenuToMainView(){
+  if (smallMenuRuntimeController && typeof smallMenuRuntimeController.resetMenuView === 'function') {
+    smallMenuRuntimeController.resetMenuView();
+  }
+}
+
 function setMenuOpen(open){
   var canOpenSmallMenu = sessionStartGate === 'unlocked';
   var shouldOpen = !!open && canOpenSmallMenu;
@@ -12676,6 +12690,7 @@ function setMenuOpen(open){
       a11yOpen,
       a11yClose,
       onClose: () => setMenuOpen(false),
+      resetMenuView: resetSmallMenuToMainView,
       updateMenuState,
     });
     _notifyModal('pauseMenu', shouldOpen);
@@ -12687,7 +12702,7 @@ function setMenuOpen(open){
     ui.menuOverlay.classList.toggle('hidden', !shouldOpen);
     ui.menuOverlay.setAttribute('aria-hidden', (!shouldOpen).toString());
     if (shouldOpen) a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: () => setMenuOpen(false) });
-    else a11yClose(ui.menuOverlay);
+    else { resetSmallMenuToMainView(); a11yClose(ui.menuOverlay); }
   }
   _notifyModal('pauseMenu', shouldOpen);
   updateMenuState();
@@ -12754,6 +12769,7 @@ function hasHigherPriorityEscapeLock(){
     || menuPauseLocks.undergroundHangar
     || menuPauseLocks.chipShop
     || menuPauseLocks.critical
+    || menuPauseLocks.crate
     || menuPauseLocks.bigMenu);
 }
 
@@ -15244,6 +15260,13 @@ function closeResetTalentsModal(){
 }
 
 function openCrateModal(){
+  // Gift box («Военная помощь») is a blocking modal: pause the simulation exactly
+  // like the menu / supercomputer / achievements / production-storage surfaces do.
+  // The lock is owned HERE (not by the DOM element) so the Phaser-backed
+  // `.crateReward` path (ModalAdapter → CrateRewardScene) pauses identically —
+  // the crate timer, zombies and projectiles must not tick behind the modal.
+  if (!state.crate || !ui.crateModal) return;
+  setMenuPauseSource('crate', true);
   if (UIModals && typeof UIModals.openCrateModal === 'function') {
     UIModals.openCrateModal({
       state,
@@ -15256,7 +15279,6 @@ function openCrateModal(){
     _notifyModal('crateReward', true, { rewardLevel: state.crate ? state.crate.rewardLevel : 1 });
     return;
   }
-  if (!state.crate || !ui.crateModal) return;
   ui.crateModal.classList.remove('hidden');
   ui.crateModal.setAttribute('aria-hidden', 'false');
   if (ui.crateText) ui.crateText.textContent = t('crateModalText');
@@ -15275,6 +15297,10 @@ function openCrateModal(){
 }
 
 function closeCrateModal(){
+  // Release the crate pause-lock on EVERY close path (claim, decline, backdrop,
+  // Escape via a11y onClose, session reset to big menu). Unconditional so a
+  // nested/aborted flow can never leave the simulation frozen.
+  setMenuPauseSource('crate', false);
   if (UIModals && typeof UIModals.closeCrateModal === 'function') {
     UIModals.closeCrateModal({ ui, a11yClose });
     _notifyModal('crateReward', false);
@@ -15957,7 +15983,7 @@ if (PauseManagerApi && typeof PauseManagerApi.createPauseManager === 'function')
     isAutoPauseEnabled: () => isAutoPauseEnabledSetting(),
     onChange: ({ paused, reasons }) => {
       setSimulationPaused(paused, reasons);
-      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.chipShop && !menuPauseLocks.critical && !menuPauseLocks.rewardAd && !menuPauseLocks.bigMenu) {
+      if (reasons && reasons.tabInactive && !menuPauseLocks.settings && !menuPauseLocks.supercomputer && !menuPauseLocks.productionStorage && !menuPauseLocks.undergroundHangar && !menuPauseLocks.chipShop && !menuPauseLocks.critical && !menuPauseLocks.crate && !menuPauseLocks.rewardAd && !menuPauseLocks.bigMenu) {
         setMenuOpen(true);
       }
     },
@@ -18790,7 +18816,7 @@ function drawProjectiles(){
   let glowCount = 0;
   for (const b of state.projectiles){
     if (b.isTankAttackingZombie === true) continue;
-    
+
     const shouldGlow = glowCount < 10 && (b.kind === 'tesla' || b.kind === 'toxic' || b.kind === 'laser' || b.kind === 'plasma');
 
     const bulletSprite = b.bulletCfg && b.bulletCfg.bulletSprite ? b.bulletCfg.bulletSprite : null;
@@ -19200,12 +19226,12 @@ function drawDamageNumbers(){
     if (d.x < minX || d.x > maxX || d.y < minY || d.y > maxY) continue;
     const lifeRatio = d.life / d.max;
     const age = 1.0 - lifeRatio;
-    
+
     let scale = 1.0;
     if (age < 0.15) {
       scale = 1.0 + (0.15 - age) * 4.0;
     }
-    
+
     const baseSize = d.isCrit ? 15 : 10;
     const currentSize = Math.round(baseSize * scale);
     ctx.font = (d.isCrit ? 'bold ' : '') + currentSize + 'px system-ui, -apple-system, Segoe UI, Roboto, Arial';
@@ -19224,10 +19250,10 @@ function drawDamageNumbers(){
     }
 
     if (fill !== lastFill){ ctx.fillStyle = fill; lastFill = fill; }
-    
+
     const alpha = lifeRatio <= 0.25 ? lifeRatio / 0.25 : 1.0;
     ctx.globalAlpha = clamp(alpha, 0, 1);
-    
+
     // Draw robust black outline for maximum visibility on all maps/backgrounds
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = d.isCrit ? 3 : 2;

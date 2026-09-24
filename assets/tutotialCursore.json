@@ -36,17 +36,72 @@
     "starter_tank": {
       "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": -50, "y": 10 }
+      "offset": { "x": -30, "y": 10 }
     },
     "second_tank": {
-      "spriteRotationDeg": 0,
+      "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": 0, "y": 0 }
+      "offset": { "x": -50, "y": 20 }
     },
     "merge_tank": {
       "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": 0, "y": 0 }
+      "offset": { "x": -10, "y": 20 }
+    },
+    "supercomputer_open_menu": {
+      "spriteRotationDeg": 0,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "supercomputer_open_talent_tree": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "supercomputer_apply_caliber": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": -15, "y": 20 }
+    },
+    "supercomputer_damage_open_menu": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "supercomputer_damage_open_tank_wall_mods": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "supercomputer_damage_apply_level1_weapon_upgrade": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": -20, "y": 15 }
+    },
+    "production_storage_open_first_box": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "production_storage_open_box": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "first_whole_chip_open_supercomputer": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "first_whole_chip_open_hangar_mods": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
+    },
+    "first_whole_chip_install_first_red_slot": {
+      "spriteRotationDeg": 90,
+      "motionAngleDeg": 0,
+      "offset": { "x": 0, "y": 20 }
     }
   }
 }

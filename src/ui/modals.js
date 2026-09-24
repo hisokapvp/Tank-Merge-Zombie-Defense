@@ -410,8 +410,18 @@
         if (typeof opts.a11yOpen === 'function') {
           opts.a11yOpen(ui.menuOverlay, { initialFocus: ui.menuContinue, onClose: opts.onClose });
         }
-      } else if (typeof opts.a11yClose === 'function') {
-        opts.a11yClose(ui.menuOverlay);
+      } else {
+        /* Normalize the sub-view while the overlay is hidden so the next open
+           always lands on the main page. A menu left on the Load view (player
+           loaded a slot) or on the Save view used to reopen on that same screen,
+           so an inattentive click could overwrite the live run with an old save.
+           Resetting on the CLOSE path (not on open) keeps the intentional
+           "open straight into the save view" flows working: critical
+           save-and-exit calls openSaveView() before setMenuOpen(true). */
+        if (typeof opts.resetMenuView === 'function') opts.resetMenuView();
+        if (typeof opts.a11yClose === 'function') {
+          opts.a11yClose(ui.menuOverlay);
+        }
       }
     }
 

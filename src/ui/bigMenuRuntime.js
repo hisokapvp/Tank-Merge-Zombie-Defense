@@ -28,6 +28,14 @@
       if (documentObj && documentObj.body) {
         documentObj.body.classList.toggle('big-menu-open', !!open);
       }
+
+      if (!open) {
+        /* Same invariant as the in-game menu: closing normalizes the shell to its
+           root view, so the next open never lands on the Load screen. */
+        runtime.lastActiveButtonIdBigMenu = null;
+        applyBigMenuSelectedState();
+        openBigMenuRootView();
+      }
     }
 
     function isBigMenuOpen() {
