@@ -834,6 +834,90 @@ test('TUT-8X: attack-wave schedule persists and resumes on plain load, resets on
   assert(gateIdx > snapshotIdx && beginIdx > gateIdx, 'a restored active wave re-begins its achievement episode');
 });
 
+test('TUT-8Y: module-owned hangar resources (dust / tech study / feed progress) persist across save-load', () => {
+  // New save fields with nontrivial restore-reset / reset-scope:
+  //   - `siliconDust` (integer >= 0)      — module-owned dust balance;
+  //   - `techStudying` (object|null)      — in-progress timed technology study;
+  //   - `techFeedProgress` (object)       — per-tech fed-chip counters.
+  //   - writers: storage.js serializeSiliconDust() / serializeTechStudying() / serializeTechFeedProgress();
+  //   - readers: game.js restoreFullState() + applySavedProgress(), unconditional with explicit fallbacks;
+  //   - reset-scope: New Game clears all three via resetPlayerInventory().
+  // Full behavioural coverage lives in Test/pack18/hangarResourcePersistence.test.js;
+  // this case is the pack anchor required by docs/ai/SYSTEMS/save.md.
+  assert(storageJs.indexOf('function serializeSiliconDust(state)') !== -1, 'storage.js owns the dust writer');
+  assert(storageJs.indexOf('function serializeTechStudying(state)') !== -1, 'storage.js owns the tech-study writer');
+  assert(storageJs.indexOf('function serializeTechFeedProgress(state)') !== -1, 'storage.js owns the feed-progress writer');
+  assert(storageJs.indexOf('siliconDust: serializeSiliconDust(state),') !== -1, 'payload carries the dust balance');
+  assert(storageJs.indexOf('techStudying: serializeTechStudying(state),') !== -1, 'payload carries the tech study');
+  assert(storageJs.indexOf('techFeedProgress: serializeTechFeedProgress(state),') !== -1, 'payload carries the feed progress');
+
+  const restoreStart = gameJs.indexOf('function restoreFullState(saved){');
+  const restoreEnd = gameJs.indexOf('function inflateBuyPrice(', restoreStart);
+  const restoreBody = gameJs.slice(restoreStart, restoreEnd);
+  assert(restoreBody.indexOf('setSiliconDust(Number.isFinite(saved.siliconDust)') !== -1, 'restoreFullState restores dust with an explicit fallback');
+  assert(restoreBody.indexOf('setTechFeedProgress(') !== -1, 'restoreFullState restores fed-chip counters');
+  assert(restoreBody.indexOf('setTechStudying(') !== -1, 'restoreFullState restores the tech study unconditionally');
+
+  const applyStart = gameJs.indexOf('function applySavedProgress(data){');
+  const applyEnd = gameJs.indexOf('\nfunction ', applyStart + 10);
+  const applyBody = gameJs.slice(applyStart, applyEnd);
+  assert(applyBody.indexOf('setSiliconDust(Number.isFinite(data.siliconDust)') !== -1, 'legacy restore restores dust');
+  assert(applyBody.indexOf('setTechFeedProgress(') !== -1, 'legacy restore restores fed-chip counters');
+  assert(applyBody.indexOf('setTechStudying(') !== -1, 'legacy restore restores the tech study');
+
+  const knownKeysStart = gameJs.indexOf('const __KNOWN_PAYLOAD_KEYS = [');
+  const knownKeysEnd = gameJs.indexOf('];', knownKeysStart);
+  const knownKeys = gameJs.slice(knownKeysStart, knownKeysEnd);
+  assert(knownKeys.indexOf("'siliconDust'") !== -1, 'dust balance is a known payload key');
+  assert(knownKeys.indexOf("'techStudying'") !== -1, 'tech study is a known payload key');
+  assert(knownKeys.indexOf("'techFeedProgress'") !== -1, 'feed progress is a known payload key');
+
+  assert(hangarChipsUiJs.indexOf('_siliconDust = 0;') !== -1, 'New Game clears the dust balance');
+  assert(hangarChipsUiJs.indexOf('_techFeedProgress = {};') !== -1, 'New Game clears fed-chip counters');
+});
+
+test('TUT-8Z: whole-chip inventory (playerChips) persists across save-load with a live-first writer', () => {
+  // Nontrivial restore-reset / reset-scope for an EXISTING field whose contract changed:
+  //   - the documented canonical owner `Game.State.getPlayerChips/setPlayerChips` does NOT
+  //     exist in the codebase, so chips live in the module-owned `_playerChipsFallback`;
+  //   - writer: storage.js serializePlayerChips() (live-first via
+  //     Game.HangarChipsUI.getPlayerChips(), fallback state.playerChips);
+  //   - reader: restoreFullState() + applySavedProgress(), unconditional with [] fallback;
+  //   - reset-scope: New Game clears the inventory via resetPlayerInventory().
+  // Full behavioural coverage lives in Test/pack19/playerChipsPersistence.test.js;
+  // this case is the pack anchor required by docs/ai/SYSTEMS/save.md.
+  assert(storageJs.indexOf('function serializePlayerChips(state)') !== -1, 'storage.js owns the live-first chips writer');
+  assert(storageJs.indexOf('playerChips: serializePlayerChips(state),') !== -1, 'payload routes playerChips through the live-first writer');
+  assert(
+    storageJs.indexOf('playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],') === -1,
+    'payload must not write the permanently-empty state.playerChips mirror'
+  );
+
+  const restoreStart = gameJs.indexOf('function restoreFullState(saved){');
+  const restoreEnd = gameJs.indexOf('function inflateBuyPrice(', restoreStart);
+  const restoreBody = gameJs.slice(restoreStart, restoreEnd);
+  assert(
+    restoreBody.indexOf('setPlayerChips(Array.isArray(saved.playerChips) ? saved.playerChips.slice() : [], { reason: \'restore\' })') !== -1,
+    'restoreFullState restores the inventory unconditionally with a [] fallback'
+  );
+  assert(
+    restoreBody.indexOf('if (Array.isArray(saved.playerChips)) {') === -1,
+    'restoreFullState must not gate the inventory restore behind Array.isArray'
+  );
+
+  const applyStart = gameJs.indexOf('function applySavedProgress(data){');
+  const applyEnd = gameJs.indexOf('\nfunction ', applyStart + 10);
+  const applyBody = gameJs.slice(applyStart, applyEnd);
+  assert(
+    applyBody.indexOf('setPlayerChips(Array.isArray(data.playerChips) ? data.playerChips.slice() : [], { reason: \'restore\' })') !== -1,
+    'legacy restore path restores the inventory unconditionally'
+  );
+
+  const knownKeysStart = gameJs.indexOf('const __KNOWN_PAYLOAD_KEYS = [');
+  const knownKeysEnd = gameJs.indexOf('];', knownKeysStart);
+  assert(gameJs.slice(knownKeysStart, knownKeysEnd).indexOf("'playerChips'") !== -1, 'playerChips is a known payload key');
+});
+
 test('TUT-8D: tutorial runtime documentation lives in a dedicated map and UI docs only link to it', () => {
   assert(aiIndexMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'AI index links to dedicated tutorial runtime map');
   assert(uiSystemMd.indexOf('docs/ai/SYSTEMS/tutorial-runtime.md') !== -1, 'UI system doc links to dedicated tutorial runtime map');

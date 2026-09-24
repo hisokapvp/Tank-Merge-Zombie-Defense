@@ -60,6 +60,9 @@ run_test "Pack 14 (tank_building family unlock + offset)" "Test/pack14/tankBuild
 run_test "Pack 15 (crate 90s cadence + rewarded ad)" "Test/pack15/crateIntervalAndRewardedAd.test.js"
 run_test "Pack 16 (merge popup for all hangars)" "Test/pack16/mergePopupAllHangars.test.js"
 run_test "Pack 17 (attack wave countdown persistence)" "Test/pack17/attackWaveCountdownPersistence.test.js"
+run_test "Pack 18 (hangar resource persistence)" "Test/pack18/hangarResourcePersistence.test.js"
+run_test "Pack 19 (whole-chip persistence)" "Test/pack19/playerChipsPersistence.test.js"
+run_test "Pack 20 (entry-file encoding immunity)" "Test/pack20/entryEncodingImmunity.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

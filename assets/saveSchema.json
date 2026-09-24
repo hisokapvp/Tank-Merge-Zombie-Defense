@@ -171,6 +171,22 @@
       "type": "array",
       "items": { "type": "object", "additionalProperties": true }
     },
+    "playerChips": {
+      "description": "Whole-chip inventory (owned, uninstalled chips). Module-owned in src/ui/hangarChipsUI.js — note that the documented canonical owner `Game.State.getPlayerChips/setPlayerChips` does NOT exist in the codebase, so every mutation lands in the module's `_playerChipsFallback` and `state.playerChips` stays []. Writer — storage.js serializePlayerChips() (live-first via Game.HangarChipsUI.getPlayerChips(), fallback state.playerChips); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setPlayerChips(payload.slice(), {reason:'restore'}) (unconditional, [] fallback; .slice() transfers ownership). Optional: legacy saves without this field restore an empty inventory.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "chipId": { "type": "integer", "minimum": 1 },
+          "chipColor": { "type": "string" },
+          "modIds": { "type": "array", "items": { "type": "integer" } },
+          "sourceComboKey": { "type": "string" },
+          "level": { "type": "integer", "minimum": 1 },
+          "count": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
     "playerFragments": {
       "description": "Chip-shard inventory owned by src/ui/hangarChipsUI.js (module-owned, NOT part of runtime state). Array of {fragmentId, count}; writer — storage.js serializePlayerFragments() (live-first via Game.HangarChipsUI.getPlayerFragments(), fallback state.playerFragments); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setPlayerFragments() (unconditional, [] fallback). Optional: legacy saves without this field restore an empty shard inventory.",
       "type": "array",
@@ -182,6 +198,32 @@
           "count": { "type": "integer", "minimum": 0 }
         }
       }
+    },
+    "siliconDust": {
+      "description": "Silicon dust (Кремниевая пыль) balance owned by src/ui/hangarChipsUI.js (module-owned, NOT part of runtime state). Writer — storage.js serializeSiliconDust() (live-first via Game.HangarChipsUI.getSiliconDust(), fallback state.siliconDust); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setSiliconDust() (unconditional, 0 fallback; neutral write, does NOT bump dustEarnedLifetime). Optional: legacy saves without this field restore 0 dust.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "techStudying": {
+      "description": "In-progress timed technology study owned by src/ui/hangarChipsUI.js. Shape {modId, elapsed, duration, acceleratedPct}; writer — storage.js serializeTechStudying() (live-first via Game.HangarChipsUI.getTechStudying(), fallback state.techStudying); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setTechStudying() (unconditional, null fallback) which restarts the countdown timer. null = no study in progress / legacy save.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "modId": { "type": "integer", "minimum": 1 },
+            "elapsed": { "type": "number", "minimum": 0 },
+            "duration": { "type": "number", "minimum": 0 },
+            "acceleratedPct": { "type": "number", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "techFeedProgress": {
+      "description": "Per-tech fed-chip counters (instant-unlock path) owned by src/ui/hangarChipsUI.js. Keys are modId, values are fed chip counts; writer — storage.js serializeTechFeedProgress() (live-first via Game.HangarChipsUI.getTechFeedProgress(), fallback state.techFeedProgress); reader — restoreFullState()/applySavedProgress() through Game.HangarChipsUI.setTechFeedProgress() (unconditional, {} fallback). Optional: legacy saves without this field restore {}.",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
     },
     "hangarCells": {
       "description": "Persisted subset of the installed-chip grid owned by src/ui/hangarChipsUI.js (module-owned, NOT part of runtime state). Only {id, redSlots, yellowSlots} with {chipId, modIds, sourceComboKey, rotation, level} per slot are stored; derived fields (activeModifiers/uiState) are recomputed on load via Game.HangarChipsUI.setCells(). Optional: legacy saves without this field restore an empty grid.",

@@ -1,6 +1,31 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-09-24
+
+### Целые чипы переживают save → load (рецидив после правок по dust/fragments)
+
+- Баг: после загрузки сохранённой игры из инвентаря исчезали **целые чипы**, тогда как фрагменты и кремниевая пыль сохранялись.
+- Root cause — на стороне **WRITE**, и он же объясняет, почему баг возвращался: документально canonical owner инвентаря — `Game.State.getPlayerChips()` / `.setPlayerChips()`, но этого namespace **нет нигде в кодовой базе**. Поэтому `_canonicalPlayerChipsApi()` в `src/ui/hangarChipsUI.js` всегда возвращает `null`, вся мутация чипов идёт в module-owned `_playerChipsFallback`, а `state.playerChips` навсегда остаётся `[]` (его ставит `createInitialState()`). `serializeState()` писал именно `state.playerChips` — то есть пустое зеркало — и каждое сохранение персистило `playerChips: []`. Restore-путь стирал инвентарь, потому что `[]` — это массив, а вызов был обёрнут в `if (Array.isArray(saved.playerChips))`.
+- Фрагменты и пыль не пострадали, т.к. их writer'ы уже были live-first (`getPlayerFragments()` / `getSiliconDust()`), а `playerChips` — единственный, кто читал `state`.
+- `src/persistence/storage.js`: новый `serializePlayerChips(state)` — live-first через `Game.HangarChipsUI.getPlayerChips()`, fallback `state.playerChips`; дропает записи, которые нельзя резолвить (нет валидного `chipId` **и** нет `modIds`); всегда массив. `serializeState()` переведён на него вместо чтения `state.playerChips`.
+- `game.js`: оба restore-пути (`restoreFullState` + legacy `applySavedProgress`) восстанавливают инвентарь **безусловно** — `setPlayerChips(payload.slice(), {reason:'restore'})` с явным `[]` fallback (`.slice()` передаёт ownership массива, payload не алиасится). Снят гейт `if (Array.isArray(...))`, из-за которого легаси-сейв без поля оставлял чипы прошлой сессии. `state.playerChips` синхронизируется с восстановленным инвентарём, потому что `src/ui/tutorialRuntime.js` читает его напрямую для детекта owned-чипов.
+- `assets/saveSchema.json` + `src/persistence/serializedStateTypes.js` + `docs/ai/SYSTEMS/save.md`: строка `playerChips` переписана под live-first writer, добавлено явное предупреждение, что `Game.State` — несуществующий owner и writer ОБЯЗАН читать UI API.
+- `index.html`: entry token поднят до `20260924-whole-chip-persistence` (178 `?v=` тегов синхронизированы).
+- `Test/pack19/playerChipsPersistence.test.js` (новый, 10 проверок `CPS-1..10`) + регистрация в `ci/run_tests.sh`: round-trip через реальный write-path `saveSlot`/`loadSlot` **без** `Game.State` в sandbox (воспроизводит реальный runtime), fallback writer'а, дроп мусорных записей, безусловные restore-вызовы, ownership transfer, New Game очистка, known key, schema/typedef/save.md, entry token. Проверено на pre-fix исходниках: `CPS-1` падает с `expected 2, got 0` — ровно симптом игрока.
+
 ## 2026-09-23
+
+### Кремниевая пыль и прогресс изучения технологий переживают save → load
+
+- Баг 1: «Кремниевая пыль» исчезала после загрузки сохранённой игры. Баг 2: технология, поставленная на изучение и уже набравшая больше часа прогресса, после save → load отображалась так, будто изучение вообще не начиналось (весь прогресс стирался).
+- Root cause — тот же класс дефекта, что и у `playerFragments` (см. Pack 12): dust и tech-study живут в module-owned состоянии `src/ui/hangarChipsUI.js` (`getSiliconDust()` / `getTechStudying()` / `getTechFeedProgress()`), а НЕ в `state`. `serializeState()` писал `playerChips`, `playerFragments`, `hangarCells`, `productionLine`, `techStudying` — но **никогда** `siliconDust` и `techFeedProgress`; при этом restore-путь читал `saved.techStudying` под условием `if (saved.techStudying && ...)`, поэтому payload без поля молча оставлял таймер в неопределённом состоянии, а пыль просто не попадала в сейв.
+- `src/persistence/storage.js`: три новых writer'а, зеркалящих `serializePlayerFragments()` (live-first через UI API, fallback на `state.*`): `serializeSiliconDust()` (clamp `>= 0`, всегда число), `serializeTechStudying()` (`{modId, elapsed, duration, acceleratedPct}`, `elapsed` clamp `[0, duration]`, `acceleratedPct` clamp `[0, 100]`, malformed/неполный → `null`), `serializeTechFeedProgress()` (ключи — modId, невалидные/`<= 0` дропаются, всегда объект). Payload получил поля `siliconDust`, `techStudying`, `techFeedProgress`.
+- `game.js`: оба restore-пути (`restoreFullState` и legacy `applySavedProgress`) теперь восстанавливают все три поля **безусловно** с явными fallback'ами (`0` / `null` / `{}`) — payload без поля очищает ресурс, а не утекает прошлую сессию. Dust восстанавливается через нейтральный `setSiliconDust` (НЕ `creditSiliconDust`) — иначе загрузка повторно накручивала бы монотонный `dustEarnedLifetime`. `techStudying`-ветка переведена с `if (saved.techStudying && ...)` на безусловную (как у `playerFragments`/`hangarCells`). Все три поля добавлены в `__KNOWN_PAYLOAD_KEYS`.
+- `assets/saveSchema.json` + `src/persistence/serializedStateTypes.js`: описаны `siliconDust` (integer `>= 0`), `techStudying` (object|null с нормализованным shape) и `techFeedProgress` (object modId → integer).
+- New Game не сломан: `resetPlayerInventory({ reason: 'new_game' })` очищает `_siliconDust`, `_techFeedProgress` и `_techStudying` (контракт сохранён и закреплён тестом `DSP-10`), поэтому фрагменты/пыль не остаются у игрока после «Новая игра».
+- `index.html`: entry token поднят до `20260923-hangar-resource-persistence`, все 178 дочерних `?v=` тегов синхронизированы.
+- `Test/pack18/hangarResourcePersistence.test.js` (новый, 12 проверок `DSP-1..12`) + регистрация в `ci/run_tests.sh`: round-trip через реальный write-path `saveSlot`/`loadSlot`, fallback'и writer'ов, нормализация/клэмпы, безусловные restore-вызовы, known keys, schema + typedef, New Game очистка, нейтральный dust-seam, entry-token parity.
+- Docs: `docs/ai/SYSTEMS/save.md` — три строки Payload Contract Map (с `reset-scope`) и новый regression anchor.
 
 ### Сохранение во время волны атаки: волна продолжается после загрузки
 - Баг: если игрок сохранялся ВНУТРИ волны атаки, после загрузки волна была выключена, а счётчик до следующей волны заново стартовал с полных 2 минут. Причина — персистился только countdown до следующей волны, а факт активной волны (`currentAttackStartAt`/`attackEndAt`) терялся, и `applyLoadedAttackWaveTiming()` явно занулял окно атаки.

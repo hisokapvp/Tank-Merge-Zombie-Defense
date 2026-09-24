@@ -136,10 +136,32 @@
    * @property {boolean} forceFenceRuntimeResetOnLoad — однократный reset-флаг для fence runtime на load.
    * @property {Array} playerChips — инвентарь чипов игрока; canonical writer `Game.State.setPlayerChips(...)`
    *   (через `src/ui/hangarChipsUI.js`). Hangar UI — derived view, не owner.
+   * @property {Array} playerChips — инвентарь целых чипов игрока. Внимание: документально canonical
+   *   writer — `Game.State.setPlayerChips(...)`, НО этот namespace отсутствует в кодовой базе, поэтому
+   *   `_canonicalPlayerChipsApi()` в `src/ui/hangarChipsUI.js` всегда возвращает `null` и вся мутация идёт
+   *   в module-owned `_playerChipsFallback`; `state.playerChips` остаётся `[]`. Writer — `storage.js`
+   *   `serializePlayerChips()` (live-first, fallback `state.playerChips`); reader — `restoreFullState` /
+   *   `applySavedProgress` через `Game.HangarChipsUI.setPlayerChips(payload.slice(), {reason:'restore'})`
+   *   (безусловно, с fallback `[]`; `.slice()` передаёт ownership массива).
    * @property {Array} playerFragments — chip-shard inventory (`{ fragmentId, count }`). Owner — module-owned
    *   состояние `src/ui/hangarChipsUI.js` (`getPlayerFragments()`), НЕ `state`. Writer — `storage.js`
    *   `serializePlayerFragments()` (live-first, fallback `state.playerFragments`); reader — `restoreFullState` /
    *   `applySavedProgress` через `Game.HangarChipsUI.setPlayerFragments()` (безусловно, с fallback `[]`).
+   * @property {number} siliconDust — баланс «Кремниевой пыли». Owner — module-owned
+   *   `src/ui/hangarChipsUI.js` (`getSiliconDust()`), НЕ `state`. Writer — `storage.js`
+   *   `serializeSiliconDust()` (live-first, fallback `state.siliconDust`); reader — `restoreFullState` /
+   *   `applySavedProgress` через `Game.HangarChipsUI.setSiliconDust()` (безусловно, с fallback `0`;
+   *   нейтральная запись — НЕ инкрементит `dustEarnedLifetime`).
+   * @property {{modId:number, elapsed:number, duration:number, acceleratedPct:number}|null} techStudying —
+   *   незавершённое таймерное изучение технологии. Owner — module-owned `src/ui/hangarChipsUI.js`
+   *   (`getTechStudying()`). Writer — `storage.js` `serializeTechStudying()` (live-first, fallback
+   *   `state.techStudying`); reader — `restoreFullState` / `applySavedProgress` через
+   *   `Game.HangarChipsUI.setTechStudying()` (безусловно, с fallback `null`), что перезапускает таймер.
+   * @property {Object<string, number>} techFeedProgress — per-tech fed-chip counters (instant-unlock path).
+   *   Owner — module-owned `src/ui/hangarChipsUI.js` (`getTechFeedProgress()`). Writer — `storage.js`
+   *   `serializeTechFeedProgress()` (live-first, fallback `state.techFeedProgress`); reader —
+   *   `restoreFullState` / `applySavedProgress` через `Game.HangarChipsUI.setTechFeedProgress()`
+   *   (безусловно, с fallback `{}`).
    * @property {Array|null} hangarCells — persisted subset module-owned grid установленных чипов
    *   (`Game.HangarChipsUI.getCells()`); формат `[{ id, redSlots, yellowSlots }]`, каждый slot —
    *   `{ chipId, modIds, sourceComboKey, rotation, level }`. Derived-поля (`activeModifiers`, `uiState`)

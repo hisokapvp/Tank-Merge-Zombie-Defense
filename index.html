@@ -33,7 +33,7 @@
       } catch (_) {}
     }());
   </script>
-  <!-- Yandex Games SDK (item 7+8 — solo-pipeline-yandex-vk batch A3).
+  <!-- Yandex Games SDK (item 7+8 - solo-pipeline-yandex-vk batch A3).
        solo-pipeline-yandex-vk#A1-9items-rework / console-diag: load the SDK
        script ONLY inside a real Yandex Games iframe. The SDK script v2 itself
        fires postMessage during evaluation, which floods the console with
@@ -81,7 +81,7 @@
        solo-pipeline-yandex-vk#A1-9items-rework / item 7: restyled to match TMZD's
        in-game palette (#101610 panel bg, #4af626 accent green, Press Start 2P type,
        hard-edge box-shadow, CRT scanlines). The progress bar is JS-driven (linear
-       0→95% over 10s) instead of a CSS pulse, so the user sees a steady fill rather
+       0->95% over 10s) instead of a CSS pulse, so the user sees a steady fill rather
        than a bouncing fake-progress effect. */
     .yandexLoadingSplash {
       position: fixed; inset: 0; z-index: 100000;
@@ -195,7 +195,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260923-attack-wave-countdown';
+      var token = '20260924-whole-chip-persistence';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -225,14 +225,14 @@
       <div class="yandexLoadingSplash__bar" aria-hidden="true">
         <div class="yandexLoadingSplash__barFill" id="yandexLoadingSplashBar"></div>
       </div>
-      <div class="yandexLoadingSplash__status" id="yandexLoadingSplashStatus">ЗАГРУЗКА…</div>
+      <div class="yandexLoadingSplash__status" id="yandexLoadingSplashStatus">&#x417;&#x410;&#x413;&#x420;&#x423;&#x417;&#x41A;&#x410;&#x2026;</div>
     </div>
   </div>
   <script>
     /* solo-pipeline-yandex-vk#A1-9items-rework / item 7:
        Smooth deterministic progress driver for the loading splash bar.
-       Replaces the previous CSS pulse (12%↔92% bounce) with a linear ramp from
-       0% → 95% over 10 seconds. Holds at 95% until Game.YandexSDK.signalLoaded()
+       Replaces the previous CSS pulse (12%<->92% bounce) with a linear ramp from
+       0% -> 95% over 10 seconds. Holds at 95% until Game.YandexSDK.signalLoaded()
        toggles the .yandexLoadingSplash--hidden class on the splash element; at
        that moment the driver jumps the bar to 100% (CSS transition 200ms linear)
        and clears its tick interval so nothing keeps running after the splash
@@ -320,16 +320,16 @@
     <section class="stage">
       <div class="stageCanvas">
         <canvas id="c" width="1100" height="650"></canvas>
-        <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" tabindex="0" aria-label="Настройки" title="Настройки">⚙</button>
-        <!-- HUD-кнопка магазина чипов (item 13, batch#5 of solo-pipeline-yandex-vk).
-             Hidden by default; src/ui/hudShopButton.js показывает её только если
+        <button id="settingsBtn" class="btn btnIcon settingsGear" type="button" tabindex="0" aria-label="&#x41D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;" title="&#x41D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;">&#x2699;</button>
+        <!-- HUD-knopka magazina chipov (item 13, batch#5 of solo-pipeline-yandex-vk).
+             Hidden by default; src/ui/hudShopButton.js pokazyvaet ee tolko esli
              Config.Shop.enabled && _isYandexEnv() && YandexPayments.isReady().
-             Иконка корзины — CSS-only placeholder (data-i18n driven). -->
-        <button id="hudShopButton" class="btn btnIcon hudShopButton hidden" type="button" tabindex="0" aria-hidden="true" aria-label="Магазин чипов" data-i18n-aria-label="shop.title" title="Магазин чипов" data-i18n-title="shop.title">🛒</button>
+             Ikonka korziny - CSS-only placeholder (data-i18n driven). -->
+        <button id="hudShopButton" class="btn btnIcon hudShopButton hidden" type="button" tabindex="0" aria-hidden="true" aria-label="&#x41C;&#x430;&#x433;&#x430;&#x437;&#x438;&#x43D; &#x447;&#x438;&#x43F;&#x43E;&#x432;" data-i18n-aria-label="shop.title" title="&#x41C;&#x430;&#x433;&#x430;&#x437;&#x438;&#x43D; &#x447;&#x438;&#x43F;&#x43E;&#x432;" data-i18n-title="shop.title">&#x1F6D2;</button>
         <div id="achievementToast" class="achievementToast hidden" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
         <div class="stageUi stageUiRight">
           <button id="terminalExpandBtn" class="terminalExpandBtn" type="button" aria-label="Expand terminal" data-ui-tooltip="Expand terminal">
-            <img src="assets/ui/icons/terminal_icon.png" alt="Terminal" id="terminalExpandIcon" onerror="this.style.display='none'; this.parentElement.innerText='🖥'" />
+            <img src="assets/ui/icons/terminal_icon.png" alt="Terminal" id="terminalExpandIcon" onerror="this.style.display='none'; this.parentElement.innerText='&#x1F5A5;'" />
           </button>
 
           <div class="terminal-panel" id="terminalPanel">
@@ -340,7 +340,7 @@
               </div>
 
               <div class="xpPanel hudPanel" id="xpWrap">
-                <div class="xpLabel" id="lvlText">Уровень: 1</div>
+                <div class="xpLabel" id="lvlText">&#x423;&#x440;&#x43E;&#x432;&#x435;&#x43D;&#x44C;: 1</div>
                 <div class="xpBar">
                   <div id="xpBar" class="xpFill"></div>
                 </div>
@@ -348,36 +348,36 @@
               </div>
 
               <div class="xpPanel hudPanel" id="simResetsWrap">
-                <div class="xpLabel" id="simResetsText">Перезагрузка симуляции: 0 раз</div>
+                <div class="xpLabel" id="simResetsText">&#x41F;&#x435;&#x440;&#x435;&#x437;&#x430;&#x433;&#x440;&#x443;&#x437;&#x43A;&#x430; &#x441;&#x438;&#x43C;&#x443;&#x43B;&#x44F;&#x446;&#x438;&#x438;: 0 &#x440;&#x430;&#x437;</div>
               </div>
 
               <div class="xpPanel hudPanel" id="currentWaveWrap">
-                <div class="xpLabel" id="currentWaveText">Текущая волна: 0</div>
+                <div class="xpLabel" id="currentWaveText">&#x422;&#x435;&#x43A;&#x443;&#x449;&#x430;&#x44F; &#x432;&#x43E;&#x43B;&#x43D;&#x430;: 0</div>
               </div>
 
               <div class="talentAbilitySlots stageAbilitySlots" id="stageAbilitySlots">
-                <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="Атака"></button>
-                <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="Защита"></button>
-                <button id="stageActive2" class="btn talentAbilitySlot talentAbilitySlot_economy" type="button" data-branch="2" title="" aria-label="Экономика"></button>
+                <button id="stageActive0" class="btn talentAbilitySlot talentAbilitySlot_attack" type="button" data-branch="0" title="" aria-label="&#x410;&#x442;&#x430;&#x43A;&#x430;"></button>
+                <button id="stageActive1" class="btn talentAbilitySlot talentAbilitySlot_defense" type="button" data-branch="1" title="" aria-label="&#x417;&#x430;&#x449;&#x438;&#x442;&#x430;"></button>
+                <button id="stageActive2" class="btn talentAbilitySlot talentAbilitySlot_economy" type="button" data-branch="2" title="" aria-label="&#x42D;&#x43A;&#x43E;&#x43D;&#x43E;&#x43C;&#x438;&#x43A;&#x430;"></button>
               </div>
 
-              <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">Достижения</button>
+              <button id="achievementsBtn" class="btn btnSecondary" type="button" data-i18n="achievementsBtn">&#x414;&#x43E;&#x441;&#x442;&#x438;&#x436;&#x435;&#x43D;&#x438;&#x44F;</button>
               
               <div class="stageActions">
                 <button id="buy" class="btn btnPrimary">
-                  <span data-i18n="buyTank">Создать танк Lv1</span>
-                  <span class="price"> — <span id="buyCost">50</span>$</span>
+                  <span data-i18n="buyTank">&#x421;&#x43E;&#x437;&#x434;&#x430;&#x442;&#x44C; &#x442;&#x430;&#x43D;&#x43A; Lv1</span>
+                  <span class="price"> &#x2014; <span id="buyCost">50</span>$</span>
                 </button>
-                <button id="buyBulk" class="btn btnSecondary hidden" type="button">Создать 2 танка</button>
-                <button id="autoMergeBtn" class="btn btnSecondary hidden" type="button">Соединить 2 танка</button>
-                <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>Разобрать танк</button>
+                <button id="buyBulk" class="btn btnSecondary hidden" type="button">&#x421;&#x43E;&#x437;&#x434;&#x430;&#x442;&#x44C; 2 &#x442;&#x430;&#x43D;&#x43A;&#x430;</button>
+                <button id="autoMergeBtn" class="btn btnSecondary hidden" type="button">&#x421;&#x43E;&#x435;&#x434;&#x438;&#x43D;&#x438;&#x442;&#x44C; 2 &#x442;&#x430;&#x43D;&#x43A;&#x430;</button>
+                <button id="dismantleBtn" class="btn btnSecondary" type="button" data-i18n="dismantleBtn" disabled>&#x420;&#x430;&#x437;&#x43E;&#x431;&#x440;&#x430;&#x442;&#x44C; &#x442;&#x430;&#x43D;&#x43A;</button>
               </div>
             </div>
             <button id="terminalCollapseBtn" class="terminalCollapseBtn" type="button" aria-label="Collapse terminal" data-ui-tooltip="Collapse terminal">_</button>
           </div>
         </div>
-        <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="Суперкомпьютер" title="Суперкомпьютер">
-          <span class="supercomputerHudBtn__icon" aria-hidden="true">🖥</span>
+        <button id="supercomputerBtn" class="btn btnSecondary supercomputerHudBtn" type="button" aria-label="&#x421;&#x443;&#x43F;&#x435;&#x440;&#x43A;&#x43E;&#x43C;&#x43F;&#x44C;&#x44E;&#x442;&#x435;&#x440;" title="&#x421;&#x443;&#x43F;&#x435;&#x440;&#x43A;&#x43E;&#x43C;&#x43F;&#x44C;&#x44E;&#x442;&#x435;&#x440;">
+          <span class="supercomputerHudBtn__icon" aria-hidden="true">&#x1F5A5;</span>
         </button>
         <div class="menuOverlay" id="menuOverlay" aria-hidden="true">
           <div class="menuBackdrop"></div>
@@ -387,48 +387,48 @@
             </div>
             <div id="smallMenuRootView" class="smallMenuRoot">
               <div class="menuActions" id="menuMainActions">
-                <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">Продолжить</button>
-                <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">Новая игра</button>
-                <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">Сохранить</button>
-                <button id="menuLoad" class="btn btnSecondary" type="button" data-i18n="menuLoad">Загрузка</button>
-                <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">Выход</button>
+                <button id="menuContinue" class="btn btnSecondary" type="button" data-i18n="menuContinue">&#x41F;&#x440;&#x43E;&#x434;&#x43E;&#x43B;&#x436;&#x438;&#x442;&#x44C;</button>
+                <button id="menuNew" class="btn btnSecondary" type="button" data-i18n="menuNew">&#x41D;&#x43E;&#x432;&#x430;&#x44F; &#x438;&#x433;&#x440;&#x430;</button>
+                <button id="menuSave" class="btn btnSecondary" type="button" data-i18n="menuSave">&#x421;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x44C;</button>
+                <button id="menuLoad" class="btn btnSecondary" type="button" data-i18n="menuLoad">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x43A;&#x430;</button>
+                <button id="menuExit" class="btn btnSecondary" type="button" data-i18n="menuExit">&#x412;&#x44B;&#x445;&#x43E;&#x434;</button>
               </div>
               <div id="menuMainView" class="menuView">
               <div class="menuSettings">
                 <div class="menuRow">
-                  <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">Громкость эффектов</label>
+                  <label class="menuLabel" for="menuSfx" data-i18n="menuSfx">&#x413;&#x440;&#x43E;&#x43C;&#x43A;&#x43E;&#x441;&#x442;&#x44C; &#x44D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x43E;&#x432;</label>
                   <div class="menuSlider">
                     <input id="menuSfx" type="range" min="0" max="100" step="1" value="75" />
                     <span class="menuValue" id="menuSfxValue">75%</span>
                   </div>
                 </div>
                 <div class="menuRow">
-                  <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">Громкость музыки</label>
+                  <label class="menuLabel" for="menuMusic" data-i18n="menuMusic">&#x413;&#x440;&#x43E;&#x43C;&#x43A;&#x43E;&#x441;&#x442;&#x44C; &#x43C;&#x443;&#x437;&#x44B;&#x43A;&#x438;</label>
                   <div class="menuSlider">
                     <input id="menuMusic" type="range" min="0" max="100" step="1" value="60" />
                     <span class="menuValue" id="menuMusicValue">60%</span>
                   </div>
                 </div>
                 <div class="menuRow" id="menuFxDensityRow">
-                  <label class="menuLabel" id="menuFxDensityLabel" for="menuFxDensity" data-i18n="bigMenuFxDensity">Плотность эффектов</label>
+                  <label class="menuLabel" id="menuFxDensityLabel" for="menuFxDensity" data-i18n="bigMenuFxDensity">&#x41F;&#x43B;&#x43E;&#x442;&#x43D;&#x43E;&#x441;&#x442;&#x44C; &#x44D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x43E;&#x432;</label>
                   <div class="menuSlider">
                     <input id="menuFxDensity" type="range" min="0" max="100" step="5" value="100" />
                     <span class="menuValue" id="menuFxDensityValue">100%</span>
                   </div>
                 </div>
                 <div class="menuRow menuRowHint" id="menuFxDensityHintRow">
-                  <span class="menuHint" id="menuFxDensityHint" data-i18n="bigMenuFxDensityHint">Снижает плотность визуальных эффектов для повышения FPS. Погода и молнии не зависят от этой настройки.</span>
+                  <span class="menuHint" id="menuFxDensityHint" data-i18n="bigMenuFxDensityHint">&#x421;&#x43D;&#x438;&#x436;&#x430;&#x435;&#x442; &#x43F;&#x43B;&#x43E;&#x442;&#x43D;&#x43E;&#x441;&#x442;&#x44C; &#x432;&#x438;&#x437;&#x443;&#x430;&#x43B;&#x44C;&#x43D;&#x44B;&#x445; &#x44D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x43E;&#x432; &#x434;&#x43B;&#x44F; &#x43F;&#x43E;&#x432;&#x44B;&#x448;&#x435;&#x43D;&#x438;&#x44F; FPS. &#x41F;&#x43E;&#x433;&#x43E;&#x434;&#x430; &#x438; &#x43C;&#x43E;&#x43B;&#x43D;&#x438;&#x438; &#x43D;&#x435; &#x437;&#x430;&#x432;&#x438;&#x441;&#x44F;&#x442; &#x43E;&#x442; &#x44D;&#x442;&#x43E;&#x439; &#x43D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;.</span>
                 </div>
                 <div class="menuRow">
                   <label class="menuToggle">
                     <input id="menuAutoPause" type="checkbox" />
-                    <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+                    <span class="menuLabel" data-i18n="menuAutoPause">&#x410;&#x432;&#x442;&#x43E;&#x43F;&#x430;&#x443;&#x437;&#x430; &#x43F;&#x440;&#x438; &#x43D;&#x435;&#x430;&#x43A;&#x442;&#x438;&#x432;&#x43D;&#x43E;&#x439; &#x432;&#x43A;&#x43B;&#x430;&#x434;&#x43A;&#x435;</span>
                   </label>
                 </div>
                 <div class="menuRow">
                   <label class="menuToggle">
                     <input id="menuTutorialToggle" type="checkbox" checked />
-                    <span class="menuLabel" data-i18n="menuTutorialToggle">Обучение</span>
+                    <span class="menuLabel" data-i18n="menuTutorialToggle">&#x41E;&#x431;&#x443;&#x447;&#x435;&#x43D;&#x438;&#x435;</span>
                   </label>
                 </div>
               </div>
@@ -436,61 +436,61 @@
 
               <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
                 <div class="menuRow">
-                  <div class="menuExitText" data-i18n="menuExitConfirm">Если Вы выйдите из игры, прогресс игры не сохранится. Уверенны что хотите закончить игру?</div>
+                  <div class="menuExitText" data-i18n="menuExitConfirm">&#x415;&#x441;&#x43B;&#x438; &#x412;&#x44B; &#x432;&#x44B;&#x439;&#x434;&#x438;&#x442;&#x435; &#x438;&#x437; &#x438;&#x433;&#x440;&#x44B;, &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x435;&#x441;&#x441; &#x438;&#x433;&#x440;&#x44B; &#x43D;&#x435; &#x441;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x441;&#x44F;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x437;&#x430;&#x43A;&#x43E;&#x43D;&#x447;&#x438;&#x442;&#x44C; &#x438;&#x433;&#x440;&#x443;?</div>
                 </div>
                 <div class="menuInlineActions">
-                  <button id="menuExitConfirmLeave" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmLeave">Выйти</button>
-                  <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">Отмена</button>
+                  <button id="menuExitConfirmLeave" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmLeave">&#x412;&#x44B;&#x439;&#x442;&#x438;</button>
+                  <button id="menuExitConfirmCancel" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmCancel">&#x41E;&#x442;&#x43C;&#x435;&#x43D;&#x430;</button>
                 </div>
               </div>
 
               <div id="menuNewConfirmView" class="menuView hidden" aria-hidden="true">
                 <div class="menuRow">
-                  <div class="menuExitText" data-i18n="menuNewConfirm">Если Вы начнёте новую игру, весь прогресс будет потерян. Уверены что хотите начать новую игру?</div>
+                  <div class="menuExitText" data-i18n="menuNewConfirm">&#x415;&#x441;&#x43B;&#x438; &#x412;&#x44B; &#x43D;&#x430;&#x447;&#x43D;&#x451;&#x442;&#x435; &#x43D;&#x43E;&#x432;&#x443;&#x44E; &#x438;&#x433;&#x440;&#x443;, &#x432;&#x435;&#x441;&#x44C; &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x435;&#x441;&#x441; &#x431;&#x443;&#x434;&#x435;&#x442; &#x43F;&#x43E;&#x442;&#x435;&#x440;&#x44F;&#x43D;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x43D;&#x430;&#x447;&#x430;&#x442;&#x44C; &#x43D;&#x43E;&#x432;&#x443;&#x44E; &#x438;&#x433;&#x440;&#x443;?</div>
                 </div>
                 <div class="menuInlineActions">
-                  <button id="menuNewConfirmStart" class="btn btnSecondary" type="button" data-i18n="menuNewConfirmContinue">Продолжить</button>
-                  <button id="menuNewConfirmBack" class="btn btnSecondary" type="button" data-i18n="common.back">Назад</button>
+                  <button id="menuNewConfirmStart" class="btn btnSecondary" type="button" data-i18n="menuNewConfirmContinue">&#x41F;&#x440;&#x43E;&#x434;&#x43E;&#x43B;&#x436;&#x438;&#x442;&#x44C;</button>
+                  <button id="menuNewConfirmBack" class="btn btnSecondary" type="button" data-i18n="common.back">&#x41D;&#x430;&#x437;&#x430;&#x434;</button>
                 </div>
               </div>
             </div>
 
             <div id="smallMenuSaveView" class="smallMenuSaveView" aria-hidden="true">
-              <div class="smallMenuSaveView__header" data-i18n="menu.save.title">Сохранение</div>
-              <div class="smallMenuSaveView__subtitle" data-i18n="menu.save.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveView__header" data-i18n="menu.save.title">&#x421;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x435;&#x43D;&#x438;&#x435;</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.save.subtitle">&#x412;&#x44B;&#x431;&#x435;&#x440;&#x438;&#x442;&#x435; &#x441;&#x43B;&#x43E;&#x442;</div>
               <div class="smallMenuSaveTable" role="table" aria-label="Save slots">
                 <div class="smallMenuSaveTable__head" role="rowgroup">
                   <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.save.col.number">№</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.save.col.name">Имя</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.save.col.date">Дата</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.save.col.action">Сохранить</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.save.col.number">&#x2116;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.save.col.name">&#x418;&#x43C;&#x44F;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.save.col.date">&#x414;&#x430;&#x442;&#x430;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.save.col.action">&#x421;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x44C;</div>
                   </div>
                 </div>
                 <div id="smallMenuSaveRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
               </div>
               <div id="smallMenuSaveToast" class="smallMenuSaveToast" aria-live="polite" aria-atomic="true"></div>
               <div class="menuInlineActions smallMenuSaveActions">
-                <button id="smallMenuSaveBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+                <button id="smallMenuSaveBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">&#x41D;&#x430;&#x437;&#x430;&#x434;</button>
               </div>
             </div>
 
             <div id="smallMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
-              <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
-              <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+              <div class="smallMenuSaveView__header" data-i18n="menu.load.title">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x43A;&#x430;</div>
+              <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">&#x412;&#x44B;&#x431;&#x435;&#x440;&#x438;&#x442;&#x435; &#x441;&#x43B;&#x43E;&#x442;</div>
               <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
                 <div class="smallMenuSaveTable__head" role="rowgroup">
                   <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
-                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">&#x2116;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">&#x418;&#x43C;&#x44F;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">&#x414;&#x430;&#x442;&#x430;</div>
+                    <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x438;&#x442;&#x44C;</div>
                   </div>
                 </div>
                 <div id="smallMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
               </div>
               <div class="menuInlineActions smallMenuSaveActions">
-                <button id="smallMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+                <button id="smallMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">&#x41D;&#x430;&#x437;&#x430;&#x434;</button>
               </div>
             </div>
           </div>
@@ -498,27 +498,27 @@
         <div class="levelModal hidden" id="levelModal" aria-hidden="true">
           <div class="levelModal__backdrop"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="levelTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="levelModalClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="levelTitle">Вы достигли 1 уровня!</div>
-            <div class="levelModal__line" id="levelTalent">Вы получили: 1 Очки улучшений</div>
-            <div class="levelModal__line" id="levelGold">Вы получили 0 золота</div>
-            <button id="levelAccept" class="btn btnPrimary" type="button" data-i18n="levelUpAccept">Принять награду</button>
+            <button class="levelModal__close scModal__close" id="levelModalClose" type="button" aria-label="Close">&#xD7;</button>
+            <div class="levelModal__title" id="levelTitle">&#x412;&#x44B; &#x434;&#x43E;&#x441;&#x442;&#x438;&#x433;&#x43B;&#x438; 1 &#x443;&#x440;&#x43E;&#x432;&#x43D;&#x44F;!</div>
+            <div class="levelModal__line" id="levelTalent">&#x412;&#x44B; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x438;&#x43B;&#x438;: 1 &#x41E;&#x447;&#x43A;&#x438; &#x443;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x439;</div>
+            <div class="levelModal__line" id="levelGold">&#x412;&#x44B; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x438;&#x43B;&#x438; 0 &#x437;&#x43E;&#x43B;&#x43E;&#x442;&#x430;</div>
+            <button id="levelAccept" class="btn btnPrimary" type="button" data-i18n="levelUpAccept">&#x41F;&#x440;&#x438;&#x43D;&#x44F;&#x442;&#x44C; &#x43D;&#x430;&#x433;&#x440;&#x430;&#x434;&#x443;</button>
           </div>
         </div>
         <div class="levelModal crateModal hidden" id="crateModal" aria-hidden="true">
           <div class="levelModal__backdrop crateModal__backdrop" data-crate-close="true"></div>
           <div class="levelModal__panel crateModal__panel" role="dialog" aria-modal="true" aria-labelledby="crateTitle" aria-describedby="crateText" tabindex="-1">
-            <button class="levelModal__close crateModal__close scModal__close" id="crateClose" type="button" aria-label="Закрыть">×</button>
+            <button class="levelModal__close crateModal__close scModal__close" id="crateClose" type="button" aria-label="&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;">&#xD7;</button>
             <div class="crateModal__content">
               <div class="crateModal__iconWrap">
                 <canvas id="crateTankIcon" width="96" height="96"></canvas>
               </div>
-              <div class="levelModal__title crateModal__title" id="crateTitle" data-i18n="crateModalTitle">Военная помощь</div>
-              <div class="levelModal__line crateModal__text" id="crateText" data-i18n="crateModalText">Для успешного завершения миссии центр управления отправил Вам дополнительный танк</div>
+              <div class="levelModal__title crateModal__title" id="crateTitle" data-i18n="crateModalTitle">&#x412;&#x43E;&#x435;&#x43D;&#x43D;&#x430;&#x44F; &#x43F;&#x43E;&#x43C;&#x43E;&#x449;&#x44C;</div>
+              <div class="levelModal__line crateModal__text" id="crateText" data-i18n="crateModalText">&#x414;&#x43B;&#x44F; &#x443;&#x441;&#x43F;&#x435;&#x448;&#x43D;&#x43E;&#x433;&#x43E; &#x437;&#x430;&#x432;&#x435;&#x440;&#x448;&#x435;&#x43D;&#x438;&#x44F; &#x43C;&#x438;&#x441;&#x441;&#x438;&#x438; &#x446;&#x435;&#x43D;&#x442;&#x440; &#x443;&#x43F;&#x440;&#x430;&#x432;&#x43B;&#x435;&#x43D;&#x438;&#x44F; &#x43E;&#x442;&#x43F;&#x440;&#x430;&#x432;&#x438;&#x43B; &#x412;&#x430;&#x43C; &#x434;&#x43E;&#x43F;&#x43E;&#x43B;&#x43D;&#x438;&#x442;&#x435;&#x43B;&#x44C;&#x43D;&#x44B;&#x439; &#x442;&#x430;&#x43D;&#x43A;</div>
               <div class="crateModal__actions">
-                <button id="crateDismiss" class="btn btnSecondary" type="button" data-crate-close="true" data-i18n="menuClose">Закрыть</button>
+                <button id="crateDismiss" class="btn btnSecondary" type="button" data-crate-close="true" data-i18n="menuClose">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
                 <button id="crateGet" class="btn btnPrimary talentResetCooldownAdBtn crateModal__claimBtn" type="button">
-                  <span class="talentResetCooldownAdBtn__label">Получить</span>
+                  <span class="talentResetCooldownAdBtn__label">&#x41F;&#x43E;&#x43B;&#x443;&#x447;&#x438;&#x442;&#x44C;</span>
                   <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
                 </button>
               </div>
@@ -526,14 +526,14 @@
                    Kept on its own row below the claim/close pair so the existing
                    2-button layout (including the mobile column-reverse order) is
                    untouched. Guarded by the #crateDeclineConfirm round-trip. -->
-              <button id="crateDecline" class="btn crateModal__declineBtn" type="button" data-i18n="crateDecline">Отказаться</button>
+              <button id="crateDecline" class="btn crateModal__declineBtn" type="button" data-i18n="crateDecline">&#x41E;&#x442;&#x43A;&#x430;&#x437;&#x430;&#x442;&#x44C;&#x441;&#x44F;</button>
             </div>
             <div class="crateModal__declineConfirm hidden" id="crateDeclineConfirm">
               <div class="crateModal__declineBox" role="alertdialog" aria-modal="true" aria-labelledby="crateDeclineConfirmText" tabindex="-1">
-                <div class="levelModal__line crateModal__declineText" id="crateDeclineConfirmText" data-i18n="crateDeclineConfirmText">Отказаться от награды? Бокс исчезнет, танк не будет получен.</div>
+                <div class="levelModal__line crateModal__declineText" id="crateDeclineConfirmText" data-i18n="crateDeclineConfirmText">&#x41E;&#x442;&#x43A;&#x430;&#x437;&#x430;&#x442;&#x44C;&#x441;&#x44F; &#x43E;&#x442; &#x43D;&#x430;&#x433;&#x440;&#x430;&#x434;&#x44B;? &#x411;&#x43E;&#x43A;&#x441; &#x438;&#x441;&#x447;&#x435;&#x437;&#x43D;&#x435;&#x442;, &#x442;&#x430;&#x43D;&#x43A; &#x43D;&#x435; &#x431;&#x443;&#x434;&#x435;&#x442; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x435;&#x43D;.</div>
                 <div class="levelModal__actions crateModal__declineActions">
-                  <button id="crateDeclineCancel" class="btn btnSecondary crateModal__declineActionBtn" type="button" data-i18n="crateDeclineCancel">Отмена</button>
-                  <button id="crateDeclineConfirmYes" class="btn crateModal__declineActionBtn crateModal__declineBtn" type="button" data-i18n="crateDeclineContinue">Продолжить</button>
+                  <button id="crateDeclineCancel" class="btn btnSecondary crateModal__declineActionBtn" type="button" data-i18n="crateDeclineCancel">&#x41E;&#x442;&#x43C;&#x435;&#x43D;&#x430;</button>
+                  <button id="crateDeclineConfirmYes" class="btn crateModal__declineActionBtn crateModal__declineBtn" type="button" data-i18n="crateDeclineContinue">&#x41F;&#x440;&#x43E;&#x434;&#x43E;&#x43B;&#x436;&#x438;&#x442;&#x44C;</button>
                 </div>
               </div>
             </div>
@@ -546,43 +546,43 @@
         <div class="levelModal hidden" id="chipShopOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-chip-shop-close="true"></div>
           <div class="levelModal__panel chipShopModal__panel" role="dialog" aria-modal="true" aria-labelledby="chipShopTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="chipShopClose" type="button" aria-label="Закрыть">×</button>
-            <div class="levelModal__title chipShopModal__title" id="chipShopTitle" data-i18n="shop.title">Магазин чипов</div>
+            <button class="levelModal__close scModal__close" id="chipShopClose" type="button" aria-label="&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;">&#xD7;</button>
+            <div class="levelModal__title chipShopModal__title" id="chipShopTitle" data-i18n="shop.title">&#x41C;&#x430;&#x433;&#x430;&#x437;&#x438;&#x43D; &#x447;&#x438;&#x43F;&#x43E;&#x432;</div>
             <div class="chipShopModal__cards" id="chipShopCards" role="list"></div>
           </div>
         </div>
         <div class="levelModal hidden" id="dismantleModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-dismantle-close="true"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="dismantleConfirmTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="dismantleClose" type="button" aria-label="Close">×</button>
+            <button class="levelModal__close scModal__close" id="dismantleClose" type="button" aria-label="Close">&#xD7;</button>
             <div class="levelModal__title hidden" id="dismantleConfirmTitle"></div>
             <div class="levelModal__line" id="dismantleConfirmText"></div>
             <div id="dismantleIconsWrap" class="levelModal__line" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px;margin:10px 0;"></div>
             <div class="levelModal__actions dismantleModal__actions">
-              <button id="dismantleYes" class="btn btnPrimary dismantleModal__btn" type="button" data-i18n="dismantleConfirmYes">Подтвердить</button>
-              <button id="dismantleNo" class="btn btnSecondary dismantleModal__btn" type="button" data-i18n="dismantleConfirmCancel">Отменить</button>
+              <button id="dismantleYes" class="btn btnPrimary dismantleModal__btn" type="button" data-i18n="dismantleConfirmYes">&#x41F;&#x43E;&#x434;&#x442;&#x432;&#x435;&#x440;&#x434;&#x438;&#x442;&#x44C;</button>
+              <button id="dismantleNo" class="btn btnSecondary dismantleModal__btn" type="button" data-i18n="dismantleConfirmCancel">&#x41E;&#x442;&#x43C;&#x435;&#x43D;&#x438;&#x442;&#x44C;</button>
             </div>
           </div>
         </div>
         <div class="levelModal hidden" id="achievementsModal" aria-hidden="true">
           <div class="levelModal__backdrop" data-achievements-close="true"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="achievementsClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="achievementsTitle" data-i18n="achievementsTitle">Достижения</div>
+            <button class="levelModal__close scModal__close" id="achievementsClose" type="button" aria-label="Close">&#xD7;</button>
+            <div class="levelModal__title" id="achievementsTitle" data-i18n="achievementsTitle">&#x414;&#x43E;&#x441;&#x442;&#x438;&#x436;&#x435;&#x43D;&#x438;&#x44F;</div>
             <div class="achievementsList" id="achievementsList"></div>
           </div>
         </div>
         <div class="levelModal hidden" id="achievementPopup" aria-hidden="true">
           <div class="levelModal__backdrop"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementPopupTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">Достижение получено</div>
+            <button class="levelModal__close scModal__close" id="achievementPopupClose" type="button" aria-label="Close">&#xD7;</button>
+            <div class="levelModal__title" id="achievementPopupTitle" data-i18n="achievementUnlockedTitle">&#x414;&#x43E;&#x441;&#x442;&#x438;&#x436;&#x435;&#x43D;&#x438;&#x435; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x435;&#x43D;&#x43E;</div>
             <div class="levelModal__line achievementPopup__name" id="achievementPopupName"></div>
             <div class="levelModal__line achievementPopup__meta" id="achievementPopupCondition"></div>
             <div class="levelModal__line achievementPopup__meta" id="achievementPopupReward"></div>
             <div class="achievementPopup__actions">
-              <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">Получить</button>
-              <button id="achievementPopupDismiss" class="btn btnSecondary" type="button" data-i18n="menuClose">Закрыть</button>
+              <button id="achievementPopupClaim" class="btn btnPrimary" type="button" data-i18n="achievementClaim">&#x41F;&#x43E;&#x43B;&#x443;&#x447;&#x438;&#x442;&#x44C;</button>
+              <button id="achievementPopupDismiss" class="btn btnSecondary" type="button" data-i18n="menuClose">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
             </div>
           </div>
         </div>
@@ -591,22 +591,22 @@
           <div class="plStorage__backdrop"></div>
           <div class="plStorage__panel" role="dialog" aria-modal="true" aria-labelledby="plStorageTitle" tabindex="-1">
             <div class="plStorage__header">
-              <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">Производственный склад</div>
+              <div class="levelModal__title" id="plStorageTitle" data-i18n="plStorageTitle">&#x41F;&#x440;&#x43E;&#x438;&#x437;&#x432;&#x43E;&#x434;&#x441;&#x442;&#x432;&#x435;&#x43D;&#x43D;&#x44B;&#x439; &#x441;&#x43A;&#x43B;&#x430;&#x434;</div>
               <div class="plStorage__headerActions">
                 <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn plStorage__headerHelp" id="plStorageHelp" type="button" aria-label="Help" data-font-floor-ignore="true">?</button>
-                <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">×</button>
+                <button class="levelModal__close scModal__close" id="plStorageClose" type="button" aria-label="Close">&#xD7;</button>
               </div>
             </div>
             <div class="plStorage__grid" id="plStorageGrid"></div>
             <div class="plStorage__confirm hidden" id="plConfirmOverlay">
               <div class="plStorage__confirmBox">
-                <div id="plConfirmText" class="levelModal__line">Хотите открыть коробку?</div>
+                <div id="plConfirmText" class="levelModal__line">&#x425;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x43E;&#x442;&#x43A;&#x440;&#x44B;&#x442;&#x44C; &#x43A;&#x43E;&#x440;&#x43E;&#x431;&#x43A;&#x443;?</div>
                 <div class="levelModal__actions plStorage__confirmActions">
                   <button id="plConfirmYes" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
-                    <span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">Открыть</span>
+                    <span class="talentResetCooldownAdBtn__label" data-i18n="plConfirmYes_label">&#x41E;&#x442;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</span>
                     <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
                   </button>
-                  <button id="plConfirmNo" class="btn btnSecondary" type="button">Нет</button>
+                  <button id="plConfirmNo" class="btn btnSecondary" type="button">&#x41D;&#x435;&#x442;</button>
                 </div>
               </div>
             </div>
@@ -616,22 +616,22 @@
         <div class="levelModal hidden" id="supercomputerMenuOverlay" aria-hidden="true">
           <div class="levelModal__backdrop" data-supercomputer-root-close="true"></div>
           <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="supercomputerMenuTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">×</button>
-            <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">Варианты технологий</div>
+            <button class="levelModal__close scModal__close" id="supercomputerMenuClose" type="button" aria-label="Close">&#xD7;</button>
+            <div class="levelModal__title" id="supercomputerMenuTitle" data-i18n="supercomputerMenuTitle">&#x412;&#x430;&#x440;&#x438;&#x430;&#x43D;&#x442;&#x44B; &#x442;&#x435;&#x445;&#x43D;&#x43E;&#x43B;&#x43E;&#x433;&#x438;&#x439;</div>
             <div class="scModal__body">
               <div id="supercomputerMenuRootView" class="supercomputerMenuView">
                 <div class="levelModal__actions scRootTiles">
                   <button id="supercomputerOpenHangarMods" class="btn scButton scRootTile" type="button">
                     <span class="scRootTile__icon" aria-hidden="true"></span>
-                    <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">Модификации ангара</span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsHangarBtn">&#x41C;&#x43E;&#x434;&#x438;&#x444;&#x438;&#x43A;&#x430;&#x446;&#x438;&#x438; &#x430;&#x43D;&#x433;&#x430;&#x440;&#x430;</span>
                   </button>
                   <button id="supercomputerOpenTankWallMods" class="btn scButton scRootTile" type="button">
                     <span class="scRootTile__icon" aria-hidden="true"></span>
-                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">Модификации техники и стен</span>
+                    <span class="scRootTile__label" data-i18n="supercomputerModsTankWallBtn">&#x41C;&#x43E;&#x434;&#x438;&#x444;&#x438;&#x43A;&#x430;&#x446;&#x438;&#x438; &#x442;&#x435;&#x445;&#x43D;&#x438;&#x43A;&#x438; &#x438; &#x441;&#x442;&#x435;&#x43D;</span>
                   </button>
                   <button id="supercomputerOpenTalents" class="btn scButton scRootTile" type="button">
                     <span class="scRootTile__icon" aria-hidden="true"></span>
-                    <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">Варианты технологий</span>
+                    <span class="scRootTile__label" data-i18n="supercomputerTalentsBtn">&#x412;&#x430;&#x440;&#x438;&#x430;&#x43D;&#x442;&#x44B; &#x442;&#x435;&#x445;&#x43D;&#x43E;&#x43B;&#x43E;&#x433;&#x438;&#x439;</span>
                   </button>
                 </div>
               </div>
@@ -645,14 +645,14 @@
           <div class="levelModal__backdrop" data-mods-hangar-close="true"></div>
           <div class="levelModal__panel scModal hangarChipsModal" role="dialog" aria-modal="true" aria-labelledby="modsHangarTitle" tabindex="-1">
             <div class="scModal__headerActions">
-              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsHangarHelpBtn" type="button" data-tech-help-open="true" aria-label="Справка">?</button>
-              <button class="levelModal__close scModal__close" id="modsHangarClose" type="button" aria-label="Close">×</button>
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsHangarHelpBtn" type="button" data-tech-help-open="true" aria-label="&#x421;&#x43F;&#x440;&#x430;&#x432;&#x43A;&#x430;">?</button>
+              <button class="levelModal__close scModal__close" id="modsHangarClose" type="button" aria-label="Close">&#xD7;</button>
             </div>
-            <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">Улучшения ячеек ангара</div>
+            <div class="levelModal__title" id="modsHangarTitle" data-i18n="modsHangarTitle">&#x423;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x44F; &#x44F;&#x447;&#x435;&#x435;&#x43A; &#x430;&#x43D;&#x433;&#x430;&#x440;&#x430;</div>
             <div class="scTabs" role="tablist" aria-label="Hangar tabs">
-              <button id="hangarTabCells" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="hangarPanelCells" tabindex="0" data-i18n="hangarChipsTabCells">Улучшение ячеек</button>
-              <button id="hangarTabWorkshop" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelWorkshop" tabindex="-1" data-i18n="hangarChipsTabWorkshop">Мастерская</button>
-              <button id="hangarTabTechUnlock" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelTechUnlock" tabindex="-1" data-i18n="hangarChipsTabTechUnlock">Открытие технологий</button>
+              <button id="hangarTabCells" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="hangarPanelCells" tabindex="0" data-i18n="hangarChipsTabCells">&#x423;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x435; &#x44F;&#x447;&#x435;&#x435;&#x43A;</button>
+              <button id="hangarTabWorkshop" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelWorkshop" tabindex="-1" data-i18n="hangarChipsTabWorkshop">&#x41C;&#x430;&#x441;&#x442;&#x435;&#x440;&#x441;&#x43A;&#x430;&#x44F;</button>
+              <button id="hangarTabTechUnlock" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="hangarPanelTechUnlock" tabindex="-1" data-i18n="hangarChipsTabTechUnlock">&#x41E;&#x442;&#x43A;&#x440;&#x44B;&#x442;&#x438;&#x435; &#x442;&#x435;&#x445;&#x43D;&#x43E;&#x43B;&#x43E;&#x433;&#x438;&#x439;</button>
             </div>
             <div class="scModal__body">
               <section class="scTabPanel hangarPanel" id="hangarPanelCells" role="tabpanel" aria-labelledby="hangarTabCells">
@@ -660,7 +660,7 @@
                   <div class="hangarDetail" id="hangarDetail">
                     <div class="hangarRow">
                       <div class="hangarSlotViewWrap">
-                        <div class="hangarCellTitle" id="hangarCellTitle">Ячейка 1</div>
+                        <div class="hangarCellTitle" id="hangarCellTitle">&#x42F;&#x447;&#x435;&#x439;&#x43A;&#x430; 1</div>
                         <div class="hangarSlotView" id="hangarSlotView"></div>
                       </div>
                       <div class="hangarRightCol">
@@ -676,9 +676,9 @@
               </section>
               <section class="scTabPanel" id="hangarPanelWorkshop" role="tabpanel" aria-labelledby="hangarTabWorkshop" hidden>
                 <div class="workshopSubTabs" role="tablist" aria-label="Workshop sub-tabs">
-                  <button id="workshopTabChipUpgrade" class="btn scButton workshopSubTab workshopSubTab--active" type="button" role="tab" aria-selected="true" aria-controls="workshopPanelChipUpgrade" tabindex="0" data-i18n="workshopTabChipUpgrade">Улучшение чипов</button>
-                  <button id="workshopTabChipCraft" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipCraft" tabindex="-1" data-i18n="workshopTabChipCraft">Создание чипов</button>
-                  <button id="workshopTabChipRecycle" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipRecycle" tabindex="-1" data-i18n="workshopTabChipRecycle">Переработка чипов</button>
+                  <button id="workshopTabChipUpgrade" class="btn scButton workshopSubTab workshopSubTab--active" type="button" role="tab" aria-selected="true" aria-controls="workshopPanelChipUpgrade" tabindex="0" data-i18n="workshopTabChipUpgrade">&#x423;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x435; &#x447;&#x438;&#x43F;&#x43E;&#x432;</button>
+                  <button id="workshopTabChipCraft" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipCraft" tabindex="-1" data-i18n="workshopTabChipCraft">&#x421;&#x43E;&#x437;&#x434;&#x430;&#x43D;&#x438;&#x435; &#x447;&#x438;&#x43F;&#x43E;&#x432;</button>
+                  <button id="workshopTabChipRecycle" class="btn scButton workshopSubTab" type="button" role="tab" aria-selected="false" aria-controls="workshopPanelChipRecycle" tabindex="-1" data-i18n="workshopTabChipRecycle">&#x41F;&#x435;&#x440;&#x435;&#x440;&#x430;&#x431;&#x43E;&#x442;&#x43A;&#x430; &#x447;&#x438;&#x43F;&#x43E;&#x432;</button>
                 </div>
                 <section class="workshopSubPanel" id="workshopPanelChipUpgrade" role="tabpanel" aria-labelledby="workshopTabChipUpgrade">
                   <div class="chipUpgradeGrid" id="chipUpgradeGrid"></div>
@@ -695,7 +695,7 @@
               </section>
             </div>
             <div class="levelModal__actions modsHangarActions">
-              <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+              <button id="modsHangarBack" class="btn scButton" type="button" data-i18n="supercomputerBack">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
             </div>
           </div>
         </div>
@@ -703,36 +703,36 @@
           <div class="levelModal__backdrop" data-mods-tank-wall-close="true"></div>
           <div class="levelModal__panel scModal" role="dialog" aria-modal="true" aria-labelledby="modsTankWallTitle" tabindex="-1">
             <div class="scModal__headerActions">
-              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="Справка">?</button>
-              <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">×</button>
+              <button class="btn scButton uiButtonBehavior hangarChipsHelpBtn" id="modsTankWallHelpBtn" type="button" aria-label="&#x421;&#x43F;&#x440;&#x430;&#x432;&#x43A;&#x430;">?</button>
+              <button class="levelModal__close scModal__close" id="modsTankWallClose" type="button" aria-label="Close">&#xD7;</button>
             </div>
-            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">Модификации техники и стен</div>
-            <div class="scTabs" role="tablist" aria-label="Модификации техники и стен">
-              <button id="modsTankWallTabGuns" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="modsTankWallPanelGuns" tabindex="0" data-i18n="modsTabGuns">Орудия</button>
-              <button id="modsTankWallTabDrones" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelDrones" tabindex="-1" data-i18n="modsTabDrones">Дроны</button>
-              <button id="modsTankWallTabWalls" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelWalls" tabindex="-1" data-i18n="modsTabWalls">Стены</button>
+            <div class="levelModal__title" id="modsTankWallTitle" data-i18n="modsTankWallTitle">&#x41C;&#x43E;&#x434;&#x438;&#x444;&#x438;&#x43A;&#x430;&#x446;&#x438;&#x438; &#x442;&#x435;&#x445;&#x43D;&#x438;&#x43A;&#x438; &#x438; &#x441;&#x442;&#x435;&#x43D;</div>
+            <div class="scTabs" role="tablist" aria-label="&#x41C;&#x43E;&#x434;&#x438;&#x444;&#x438;&#x43A;&#x430;&#x446;&#x438;&#x438; &#x442;&#x435;&#x445;&#x43D;&#x438;&#x43A;&#x438; &#x438; &#x441;&#x442;&#x435;&#x43D;">
+              <button id="modsTankWallTabGuns" class="btn scButton scTab" type="button" role="tab" aria-selected="true" aria-controls="modsTankWallPanelGuns" tabindex="0" data-i18n="modsTabGuns">&#x41E;&#x440;&#x443;&#x434;&#x438;&#x44F;</button>
+              <button id="modsTankWallTabDrones" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelDrones" tabindex="-1" data-i18n="modsTabDrones">&#x414;&#x440;&#x43E;&#x43D;&#x44B;</button>
+              <button id="modsTankWallTabWalls" class="btn scButton scTab" type="button" role="tab" aria-selected="false" aria-controls="modsTankWallPanelWalls" tabindex="-1" data-i18n="modsTabWalls">&#x421;&#x442;&#x435;&#x43D;&#x44B;</button>
             </div>
             <div class="scModal__body">
               <div class="scTabPanels">
                 <section class="scTabPanel" id="modsTankWallPanelGuns" role="tabpanel" aria-labelledby="modsTankWallTabGuns">
-                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">&#x412; &#x440;&#x430;&#x437;&#x440;&#x430;&#x431;&#x43E;&#x442;&#x43A;&#x435;</div>
                 </section>
                 <section class="scTabPanel" id="modsTankWallPanelDrones" role="tabpanel" aria-labelledby="modsTankWallTabDrones" hidden>
-                  <div class="levelModal__line" data-i18n="modsInDevelopment">В разработке</div>
+                  <div class="levelModal__line" data-i18n="modsInDevelopment">&#x412; &#x440;&#x430;&#x437;&#x440;&#x430;&#x431;&#x43E;&#x442;&#x43A;&#x435;</div>
                 </section>
                 <section class="scTabPanel" id="modsTankWallPanelWalls" role="tabpanel" aria-labelledby="modsTankWallTabWalls" hidden>
-                  <div class="levelModal__line" id="modsTankWallDamagePoints">Очки урона: 0</div>
-                  <div class="levelModal__line" id="modsTankWallFenceLevel">Уровень стен: 1</div>
-                  <div class="levelModal__line" id="modsTankWallFenceHp">HP сегмента: 0</div>
-                  <div class="levelModal__line" id="modsTankWallFenceArmor">Броня: 0</div>
+                  <div class="levelModal__line" id="modsTankWallDamagePoints">&#x41E;&#x447;&#x43A;&#x438; &#x443;&#x440;&#x43E;&#x43D;&#x430;: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceLevel">&#x423;&#x440;&#x43E;&#x432;&#x435;&#x43D;&#x44C; &#x441;&#x442;&#x435;&#x43D;: 1</div>
+                  <div class="levelModal__line" id="modsTankWallFenceHp">HP &#x441;&#x435;&#x433;&#x43C;&#x435;&#x43D;&#x442;&#x430;: 0</div>
+                  <div class="levelModal__line" id="modsTankWallFenceArmor">&#x411;&#x440;&#x43E;&#x43D;&#x44F;: 0</div>
                   <div class="levelModal__actions modsTankWall__panelActions">
-                    <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">Улучшить</button>
+                    <button id="modsTankWallFenceUpgrade" class="btn scButton" type="button" data-i18n="modsWallsUpgrade">&#x423;&#x43B;&#x443;&#x447;&#x448;&#x438;&#x442;&#x44C;</button>
                   </div>
                 </section>
               </div>
             </div>
             <div class="levelModal__actions modsTankWall__footerActions">
-              <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">Закрыть</button>
+              <button id="modsTankWallBack" class="btn scButton" type="button" data-i18n="supercomputerBack">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
             </div>
           </div>
         </div>
@@ -741,24 +741,24 @@
           <div class="ughBackdrop" data-ugh-close="true"></div>
           <div class="ughPanel" role="dialog" aria-modal="true" aria-labelledby="undergroundHangarTitle" tabindex="-1">
             <div class="scModal__headerActions ughPanel__headerActions">
-              <button class="levelModal__close scModal__close" id="undergroundHangarClose" type="button" aria-label="Close">×</button>
+              <button class="levelModal__close scModal__close" id="undergroundHangarClose" type="button" aria-label="Close">&#xD7;</button>
             </div>
-            <div class="levelModal__title" id="undergroundHangarTitle" data-i18n="ughModalTitle">Подземный ангар</div>
+            <div class="levelModal__title" id="undergroundHangarTitle" data-i18n="ughModalTitle">&#x41F;&#x43E;&#x434;&#x437;&#x435;&#x43C;&#x43D;&#x44B;&#x439; &#x430;&#x43D;&#x433;&#x430;&#x440;</div>
             <div class="scModal__body" id="undergroundHangarBody"></div>
           </div>
         </div>
         <div class="levelModal levelModal_onTop hidden" id="criticalOverlay" aria-hidden="true">
           <div class="levelModal__backdrop"></div>
           <div class="levelModal__panel criticalModal" role="dialog" aria-modal="true" aria-labelledby="criticalTitle" tabindex="-1">
-            <button class="levelModal__close scModal__close hidden" id="criticalCloseX" type="button" aria-label="Close" data-font-floor-ignore="true">×</button>
-            <div class="levelModal__title" id="criticalTitle" data-i18n="criticalTitle">Критическое состояние</div>
+            <button class="levelModal__close scModal__close hidden" id="criticalCloseX" type="button" aria-label="Close" data-font-floor-ignore="true">&#xD7;</button>
+            <div class="levelModal__title" id="criticalTitle" data-i18n="criticalTitle">&#x41A;&#x440;&#x438;&#x442;&#x438;&#x447;&#x435;&#x441;&#x43A;&#x43E;&#x435; &#x441;&#x43E;&#x441;&#x442;&#x43E;&#x44F;&#x43D;&#x438;&#x435;</div>
             <pre class="criticalModal__log" id="criticalLog" aria-live="polite"></pre>
             <div class="criticalModal__actions criticalModal__actions_single">
-              <button id="criticalSkipBtn" class="btn btnSecondary" type="button" data-i18n="criticalSkip">Пропустить</button>
+              <button id="criticalSkipBtn" class="btn btnSecondary" type="button" data-i18n="criticalSkip">&#x41F;&#x440;&#x43E;&#x43F;&#x443;&#x441;&#x442;&#x438;&#x442;&#x44C;</button>
             </div>
             <div class="criticalModal__actions">
-              <button id="criticalRestartBtn" class="btn btnPrimary hidden" type="button" data-i18n="criticalRestart">Перезапустить симуляцию</button>
-              <button id="criticalSaveExitBtn" class="btn btnSecondary hidden" type="button" data-i18n="criticalSaveExit">Сохранить прогресс и выйти</button>
+              <button id="criticalRestartBtn" class="btn btnPrimary hidden" type="button" data-i18n="criticalRestart">&#x41F;&#x435;&#x440;&#x435;&#x437;&#x430;&#x43F;&#x443;&#x441;&#x442;&#x438;&#x442;&#x44C; &#x441;&#x438;&#x43C;&#x443;&#x43B;&#x44F;&#x446;&#x438;&#x44E;</button>
+              <button id="criticalSaveExitBtn" class="btn btnSecondary hidden" type="button" data-i18n="criticalSaveExit">&#x421;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x44C; &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x435;&#x441;&#x441; &#x438; &#x432;&#x44B;&#x439;&#x442;&#x438;</button>
             </div>
           </div>
         </div>
@@ -768,44 +768,44 @@
   <div class="levelModal levelModal_onTop hidden" id="resetTalentsModal" aria-hidden="true">
     <div class="levelModal__backdrop" data-reset-talents-close="true"></div>
     <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="resetTalentsModalText" tabindex="-1">
-      <button class="levelModal__close scModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">×</button>
+      <button class="levelModal__close scModal__close" id="resetTalentsModalClose" type="button" aria-label="Close">&#xD7;</button>
       <div class="levelModal__contentWrap">
-          <div class="levelModal__title" id="resetTalentsModalText">Для сброса улучшений требуется 500$, Вы уверены что хотите сбросить улучшения?</div>
-          <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">Да</button>
+          <div class="levelModal__title" id="resetTalentsModalText">&#x414;&#x43B;&#x44F; &#x441;&#x431;&#x440;&#x43E;&#x441;&#x430; &#x443;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x439; &#x442;&#x440;&#x435;&#x431;&#x443;&#x435;&#x442;&#x441;&#x44F; 500$, &#x412;&#x44B; &#x443;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x441;&#x431;&#x440;&#x43E;&#x441;&#x438;&#x442;&#x44C; &#x443;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x44F;?</div>
+          <button id="resetTalentsModalWatch" class="btn btnPrimary" type="button">&#x414;&#x430;</button>
       </div>
     </div>
   </div>
   <div class="levelModal levelModal_onTop hidden" id="talentResetCooldownModal" aria-hidden="true">
     <div class="levelModal__backdrop" data-talent-reset-cooldown-close="true"></div>
     <div class="levelModal__panel levelModal__panel_boost" role="dialog" aria-modal="true" aria-labelledby="talentResetCooldownModalTitle" tabindex="-1">
-      <button class="levelModal__close scModal__close" id="talentResetCooldownModalClose" type="button" aria-label="Закрыть">×</button>
+      <button class="levelModal__close scModal__close" id="talentResetCooldownModalClose" type="button" aria-label="&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;">&#xD7;</button>
       <div class="levelModal__contentWrap">
-        <div class="levelModal__title" id="talentResetCooldownModalTitle">Сбросить улучшения</div>
-        <div class="levelModal__line talentResetCooldownModal__text" id="talentResetCooldownModalText">Следующий сброс возможен через 00:00:00; дождитесь окончания сброса</div>
+        <div class="levelModal__title" id="talentResetCooldownModalTitle">&#x421;&#x431;&#x440;&#x43E;&#x441;&#x438;&#x442;&#x44C; &#x443;&#x43B;&#x443;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x44F;</div>
+        <div class="levelModal__line talentResetCooldownModal__text" id="talentResetCooldownModalText">&#x421;&#x43B;&#x435;&#x434;&#x443;&#x44E;&#x449;&#x438;&#x439; &#x441;&#x431;&#x440;&#x43E;&#x441; &#x432;&#x43E;&#x437;&#x43C;&#x43E;&#x436;&#x435;&#x43D; &#x447;&#x435;&#x440;&#x435;&#x437; 00:00:00; &#x434;&#x43E;&#x436;&#x434;&#x438;&#x442;&#x435;&#x441;&#x44C; &#x43E;&#x43A;&#x43E;&#x43D;&#x447;&#x430;&#x43D;&#x438;&#x44F; &#x441;&#x431;&#x440;&#x43E;&#x441;&#x430;</div>
         <div class="menuInlineActions" id="talentResetCooldownModalActions">
-          <button id="talentResetCooldownModalDismiss" class="btn btnSecondary" type="button">Закрыть</button>
+          <button id="talentResetCooldownModalDismiss" class="btn btnSecondary" type="button">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
           <button id="talentResetCooldownModalRefresh" class="btn btnPrimary talentResetCooldownAdBtn" type="button">
-            <span class="talentResetCooldownAdBtn__label">Обновить моментально</span>
+            <span class="talentResetCooldownAdBtn__label">&#x41E;&#x431;&#x43D;&#x43E;&#x432;&#x438;&#x442;&#x44C; &#x43C;&#x43E;&#x43C;&#x435;&#x43D;&#x442;&#x430;&#x43B;&#x44C;&#x43D;&#x43E;</span>
             <span class="talentResetCooldownAdBtn__icon" aria-hidden="true"></span>
           </button>
         </div>
       </div>
     </div>
   </div>
-  <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true" data-i18n="menuSettings">Настройки</div>
+  <div id="settingsTooltip" class="settingsTooltip hidden" aria-hidden="true" data-i18n="menuSettings">&#x41D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;</div>
 
   <!-- Merge Popup Modal -->
   <div class="mergePopupModal hidden" id="mergePopupModal" aria-hidden="true">
     <div class="mergePopupModal__backdrop"></div>
     <div class="mergePopupModal__panel" role="dialog" aria-modal="true" aria-labelledby="mergePopupTitle" aria-describedby="mergePopupSubtitle" tabindex="-1">
-      <button class="levelModal__close scModal__close mergePopupModal__close" id="mergePopupCloseX" type="button" aria-label="Close">×</button>
-      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle" data-i18n="mergePopupSubtitle">ОТКРЫТ НОВЫЙ УРОВЕНЬ ТАНКА!</div>
+      <button class="levelModal__close scModal__close mergePopupModal__close" id="mergePopupCloseX" type="button" aria-label="Close">&#xD7;</button>
+      <div class="mergePopupModal__subtitle" id="mergePopupSubtitle" data-i18n="mergePopupSubtitle">&#x41E;&#x422;&#x41A;&#x420;&#x42B;&#x422; &#x41D;&#x41E;&#x412;&#x42B;&#x419; &#x423;&#x420;&#x41E;&#x412;&#x415;&#x41D;&#x42C; &#x422;&#x410;&#x41D;&#x41A;&#x410;!</div>
       <canvas id="mergePopupCanvas" width="200" height="120"></canvas>
-      <div class="mergePopupModal__title" id="mergePopupTitle">Новый танк уровень 2</div>
+      <div class="mergePopupModal__title" id="mergePopupTitle">&#x41D;&#x43E;&#x432;&#x44B;&#x439; &#x442;&#x430;&#x43D;&#x43A; &#x443;&#x440;&#x43E;&#x432;&#x435;&#x43D;&#x44C; 2</div>
       <div class="mergePopupModal__stats" id="mergePopupStats"></div>
       <div class="mergePopupModal__actions">
-        <button id="btn-fight" class="btn btnPrimary" type="button" data-i18n="mergePopupFight">В бой!</button>
-        <button id="btn-close" class="btn btnSecondary" type="button" data-i18n="mergePopupClose">Закрыть</button>
+        <button id="btn-fight" class="btn btnPrimary" type="button" data-i18n="mergePopupFight">&#x412; &#x431;&#x43E;&#x439;!</button>
+        <button id="btn-close" class="btn btnSecondary" type="button" data-i18n="mergePopupClose">&#x417;&#x430;&#x43A;&#x440;&#x44B;&#x442;&#x44C;</button>
       </div>
     </div>
   </div>
@@ -819,7 +819,7 @@
     <div class="lessonProgress__list"></div>
     <div class="lessonProgressPanel__footer">
       <div class="lessonProgress__schedule">
-        <div class="lessonProgress__next" id="lessonNextReviewText" data-i18n="lessonNextReviewNone">Next review: —</div>
+        <div class="lessonProgress__next" id="lessonNextReviewText" data-i18n="lessonNextReviewNone">Next review: &#x2014;</div>
         <div class="lessonProgress__scheduleActions">
           <button id="lessonRepeatNextBtn" class="btn btnSecondary" type="button" data-i18n="lessonRepeatNow">Repeat now</button>
           <button id="lessonExportScheduleBtn" class="btn btnSecondary" type="button" data-i18n="lessonExportSchedule">Export schedule</button>
@@ -842,45 +842,45 @@
     <div class="bigMenuPanel" role="dialog" aria-modal="true" aria-labelledby="bigMenuTitle" tabindex="-1">
       <div class="bigMenuTitle" id="bigMenuTitle">Merge Tank: Zombie invasion</div>
       <div id="bigMenuRootView" class="bigMenuRootView" aria-hidden="false">
-        <div class="bigMenuActions" aria-label="Главное меню">
-          <button id="bigMenuNew" class="btn btnSecondary" type="button">Новая игра</button>
-          <button id="bigMenuLoad" class="btn btnSecondary" type="button">Загрузить</button>
+        <div class="bigMenuActions" aria-label="&#x413;&#x43B;&#x430;&#x432;&#x43D;&#x43E;&#x435; &#x43C;&#x435;&#x43D;&#x44E;">
+          <button id="bigMenuNew" class="btn btnSecondary" type="button">&#x41D;&#x43E;&#x432;&#x430;&#x44F; &#x438;&#x433;&#x440;&#x430;</button>
+          <button id="bigMenuLoad" class="btn btnSecondary" type="button">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x438;&#x442;&#x44C;</button>
           <div id="bigMenuSoundWrap" class="bigMenuActionWithPanel">
-            <button id="bigMenuSound" class="btn btnSecondary" type="button">Звук</button>
+            <button id="bigMenuSound" class="btn btnSecondary" type="button">&#x417;&#x432;&#x443;&#x43A;</button>
             <div id="bigMenuSoundPanel" class="bigMenuSubpanel bigMenuSoundInlinePanel" aria-hidden="true">
-              <div class="bigMenuSubpanelTitle">Звук</div>
+              <div class="bigMenuSubpanelTitle">&#x417;&#x432;&#x443;&#x43A;</div>
               <div class="menuRow">
-                <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">Эффекты</label>
+                <label class="menuLabel" id="bigMenuSfxLabel" for="bigMenuSfx">&#x42D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x44B;</label>
                 <div class="menuSlider">
                   <input id="bigMenuSfx" type="range" min="0" max="100" step="1" value="75" />
                   <span class="menuValue" id="bigMenuSfxValue">75%</span>
                 </div>
               </div>
               <div class="menuRow">
-                <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">Музыка</label>
+                <label class="menuLabel" id="bigMenuMusicLabel" for="bigMenuMusic">&#x41C;&#x443;&#x437;&#x44B;&#x43A;&#x430;</label>
                 <div class="menuSlider">
                   <input id="bigMenuMusic" type="range" min="0" max="100" step="1" value="60" />
                   <span class="menuValue" id="bigMenuMusicValue">60%</span>
                 </div>
               </div>
               <div class="menuRow" id="bigMenuFxDensityRow">
-                <label class="menuLabel" id="bigMenuFxDensityLabel" for="bigMenuFxDensity">Плотность эффектов</label>
+                <label class="menuLabel" id="bigMenuFxDensityLabel" for="bigMenuFxDensity">&#x41F;&#x43B;&#x43E;&#x442;&#x43D;&#x43E;&#x441;&#x442;&#x44C; &#x44D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x43E;&#x432;</label>
                 <div class="menuSlider">
                   <input id="bigMenuFxDensity" type="range" min="0" max="100" step="5" value="100" />
                   <span class="menuValue" id="bigMenuFxDensityValue">100%</span>
                 </div>
               </div>
               <div class="menuRow menuRowHint" id="bigMenuFxDensityHintRow">
-                <span class="menuHint" id="bigMenuFxDensityHint">Снижает плотность визуальных эффектов для повышения FPS. Погода и молнии не зависят от этой настройки.</span>
+                <span class="menuHint" id="bigMenuFxDensityHint">&#x421;&#x43D;&#x438;&#x436;&#x430;&#x435;&#x442; &#x43F;&#x43B;&#x43E;&#x442;&#x43D;&#x43E;&#x441;&#x442;&#x44C; &#x432;&#x438;&#x437;&#x443;&#x430;&#x43B;&#x44C;&#x43D;&#x44B;&#x445; &#x44D;&#x444;&#x444;&#x435;&#x43A;&#x442;&#x43E;&#x432; &#x434;&#x43B;&#x44F; &#x43F;&#x43E;&#x432;&#x44B;&#x448;&#x435;&#x43D;&#x438;&#x44F; FPS. &#x41F;&#x43E;&#x433;&#x43E;&#x434;&#x430; &#x438; &#x43C;&#x43E;&#x43B;&#x43D;&#x438;&#x438; &#x43D;&#x435; &#x437;&#x430;&#x432;&#x438;&#x441;&#x44F;&#x442; &#x43E;&#x442; &#x44D;&#x442;&#x43E;&#x439; &#x43D;&#x430;&#x441;&#x442;&#x440;&#x43E;&#x439;&#x43A;&#x438;.</span>
               </div>
             </div>
           </div>
           <div id="bigMenuLanguageWrap" class="bigMenuActionWithPanel">
-            <button id="bigMenuLanguage" class="btn btnSecondary" type="button">Язык</button>
+            <button id="bigMenuLanguage" class="btn btnSecondary" type="button">&#x42F;&#x437;&#x44B;&#x43A;</button>
             <div id="bigMenuLanguagePanel" class="bigMenuSubpanel bigMenuLanguageInlinePanel bigMenuLanguagePanelClosed" aria-hidden="true">
               <div class="bigMenuLangActions">
-                <button id="bigMenuLangRu" class="btn btnSecondary" type="button">Русский</button>
-                <button id="bigMenuLangEn" class="btn btnSecondary" type="button">Английский</button>
+                <button id="bigMenuLangRu" class="btn btnSecondary" type="button">&#x420;&#x443;&#x441;&#x441;&#x43A;&#x438;&#x439;</button>
+                <button id="bigMenuLangEn" class="btn btnSecondary" type="button">&#x410;&#x43D;&#x433;&#x43B;&#x438;&#x439;&#x441;&#x43A;&#x438;&#x439;</button>
               </div>
             </div>
           </div>
@@ -889,28 +889,28 @@
         <div class="menuRow">
           <label class="menuToggle" id="bigMenuRootAutoPauseLabel">
             <input id="bigMenuRootAutoPause" type="checkbox" />
-            <span class="menuLabel" data-i18n="menuAutoPause">Автопауза при неактивной вкладке</span>
+            <span class="menuLabel" data-i18n="menuAutoPause">&#x410;&#x432;&#x442;&#x43E;&#x43F;&#x430;&#x443;&#x437;&#x430; &#x43F;&#x440;&#x438; &#x43D;&#x435;&#x430;&#x43A;&#x442;&#x438;&#x432;&#x43D;&#x43E;&#x439; &#x432;&#x43A;&#x43B;&#x430;&#x434;&#x43A;&#x435;</span>
           </label>
         </div>
 
       </div>
 
       <div id="bigMenuLoadView" class="smallMenuSaveView" aria-hidden="true">
-        <div class="smallMenuSaveView__header" data-i18n="menu.load.title">Загрузка</div>
-        <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">Выберите слот</div>
+        <div class="smallMenuSaveView__header" data-i18n="menu.load.title">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x43A;&#x430;</div>
+        <div class="smallMenuSaveView__subtitle" data-i18n="menu.load.subtitle">&#x412;&#x44B;&#x431;&#x435;&#x440;&#x438;&#x442;&#x435; &#x441;&#x43B;&#x43E;&#x442;</div>
         <div class="smallMenuSaveTable" role="table" aria-label="Load slots">
           <div class="smallMenuSaveTable__head" role="rowgroup">
             <div class="smallMenuSaveTable__row smallMenuSaveTable__row_head" role="row">
-              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">№</div>
-              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">Имя</div>
-              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">Дата</div>
-              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">Загрузить</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_num" role="columnheader" data-i18n="menu.load.col.number">&#x2116;</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_name" role="columnheader" data-i18n="menu.load.col.name">&#x418;&#x43C;&#x44F;</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_date" role="columnheader" data-i18n="menu.load.col.date">&#x414;&#x430;&#x442;&#x430;</div>
+              <div class="smallMenuSaveTable__cell smallMenuSaveTable__cell_action" role="columnheader" data-i18n="menu.load.col.action">&#x417;&#x430;&#x433;&#x440;&#x443;&#x437;&#x438;&#x442;&#x44C;</div>
             </div>
           </div>
           <div id="bigMenuLoadRows" class="smallMenuSaveTable__body" role="rowgroup"></div>
         </div>
         <div class="menuInlineActions smallMenuSaveActions">
-          <button id="bigMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">Назад</button>
+          <button id="bigMenuLoadBack" class="btn btnSecondary uiButtonBehavior" type="button" data-i18n="common.back">&#x41D;&#x430;&#x437;&#x430;&#x434;</button>
         </div>
       </div>
 
@@ -920,230 +920,230 @@
   <div class="levelModal levelModal_onTop hidden" id="creditsModal" aria-hidden="true">
     <div class="levelModal__backdrop" data-credits-close="true"></div>
     <div class="levelModal__panel creditsModal__panel" role="dialog" aria-modal="true" aria-labelledby="creditsModalTitle" tabindex="-1">
-      <button class="levelModal__close" id="creditsModalClose" type="button" aria-label="Close">×</button>
-      <div class="levelModal__title" id="creditsModalTitle">Создатели</div>
+      <button class="levelModal__close" id="creditsModalClose" type="button" aria-label="Close">&#xD7;</button>
+      <div class="levelModal__title" id="creditsModalTitle">&#x421;&#x43E;&#x437;&#x434;&#x430;&#x442;&#x435;&#x43B;&#x438;</div>
       <div id="creditsModalList" class="creditsModal__list"></div>
     </div>
   </div>
 
-  <script src="src/core/runtimeTasks.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/utils/numberFormat.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/utils/telemetry.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/utils/eventTelemetry.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/utils/tankConfig.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/tankVisualTiers.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/lessons/catalog.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/scheduler/srs.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/trackQuery.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/trackDistribution.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/garage.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/economy.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/cannonUpgrades.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/levelFlow.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/progression.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/supercomputer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/productionLine.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/combatProfiles.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/combat.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/fenceSides.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/fenceRepair.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/decorCollision.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/zombieSpawn.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/initialState.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/serializedStateTypes.js?v=20260923-attack-wave-countdown"></script>
-  <script src="tools/saveSchemaValidator.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/saveSchemaLoader.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/storage.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/offlineRewardModel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/persistence/offlineProgress.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/canvasRoot.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/hudScratch.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/core/events.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/layoutTuning.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/criticalModalTuning.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/criticalAudioPolicy.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/worldEvents.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/shop.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/layout/hangarLayout.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/fenceLayout.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/groundGen.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/utils/seededRng.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/groundLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/spriteLoaders.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/slotActivityOverlay.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/productionLineRender.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/cornerTowers.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/tankPortrait.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/tankHangarAnimation.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/input.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/tutorialSteps.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/adService.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/continueFlow.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/shopUI.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/toast.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/mergePreview/mergePreviewModel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/mergePreview/mergePreviewRenderer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/mergePopup/mergePopupSeenLevels.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/mergePopup/mergePopupStats.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/audioUi.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/buttonBehavior.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/inputGuards.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/fontFloor.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/mergePopup.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/zombieAnimPreview.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/telemetry/telemetry.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/analytics/collector.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/analytics/funnel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/tools/anki/importer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/tools/anki/anki_export.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/flags/flags.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/core/engineAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/experiments/experiments.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/core/gameEvents.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/perf/profiler.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/perf/perfCapture.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/spriteRefCache.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/perf/mobileMode.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/perf/fxDensity.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/i18n/index.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/i18n/pluralize.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/adminFlags.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/adminDamagePoints.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/analyticsPanel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/experimentsPanel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/funnelPanel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/bugTriage.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/debugPanel.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/hangarChips.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/chipEffects.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/chipCraftLayout.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/hangarChipsUI.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/modals.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/achievementsModal.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/talentOverlayDom.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/talentOverlayRenderer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/talentOverlayUi.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/config/tankWallStatCatalog.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/supercomputerMenu.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/productionLineUI.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/criticalModal.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/systems/pauseManager.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/systems/depthSort.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/perf/objectPool.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/audio/settingsAudio.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/audio/sfxRegistry.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/audio/sfxPoolRuntime.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/audio/musicManager.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/accessibility/a11y.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/render/zombieRender.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/crateRuntime.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/systems/worldEventsRuntime.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/systems/talents/talentsV2.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/bigMenuRuntime.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/lessonProgress.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/tutorialRuntime.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/core/bootstrap.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/core/worldReset.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/targeting.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/achievements.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/drones.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/autoMerge.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/undergroundHangar.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/undergroundHangarUI.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/mechanics/corpseDespawn.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/ui/supercomputerBuildTankFx.js?v=20260923-attack-wave-countdown"></script>
-  <!-- ── Phaser 3 migration layer ── -->
+  <script src="src/core/runtimeTasks.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/utils/numberFormat.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/utils/telemetry.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/utils/eventTelemetry.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/utils/tankConfig.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/tankVisualTiers.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/lessons/catalog.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/scheduler/srs.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/trackQuery.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/trackDistribution.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/garage.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/economy.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/cannonUpgrades.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/levelFlow.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/progression.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/supercomputer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/productionLine.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/combatProfiles.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/combat.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/fenceSides.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/fenceRepair.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/decorCollision.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/zombieSpawn.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/initialState.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/serializedStateTypes.js?v=20260924-whole-chip-persistence"></script>
+  <script src="tools/saveSchemaValidator.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/saveSchemaLoader.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/storage.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/offlineRewardModel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/persistence/offlineProgress.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/canvasRoot.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/hudScratch.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/core/events.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/layoutTuning.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/criticalModalTuning.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/criticalAudioPolicy.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/worldEvents.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/shop.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/layout/hangarLayout.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/fenceLayout.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/groundGen.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/utils/seededRng.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/groundLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/spriteLoaders.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/slotActivityOverlay.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/productionLineRender.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/cornerTowers.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/tankPortrait.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/tankHangarAnimation.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/input.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/tutorialSteps.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/adService.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/continueFlow.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/shopUI.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/toast.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/mergePreview/mergePreviewModel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/mergePreview/mergePreviewRenderer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/mergePopup/mergePopupSeenLevels.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/mergePopup/mergePopupStats.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/audioUi.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/buttonBehavior.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/inputGuards.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/fontFloor.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/mergePopup.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/zombieAnimPreview.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/telemetry/telemetry.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/analytics/collector.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/analytics/funnel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/tools/anki/importer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/tools/anki/anki_export.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/flags/flags.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/core/engineAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/experiments/experiments.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/core/gameEvents.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/perf/profiler.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/perf/perfCapture.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/spriteRefCache.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/perf/mobileMode.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/perf/fxDensity.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/i18n/index.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/i18n/pluralize.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/adminFlags.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/adminDamagePoints.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/analyticsPanel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/experimentsPanel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/funnelPanel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/bugTriage.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/debugPanel.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/hangarChips.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/chipEffects.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/chipCraftLayout.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/hangarChipsUI.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/modals.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/achievementsModal.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/talentOverlayDom.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/talentOverlayRenderer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/talentOverlayUi.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/config/tankWallStatCatalog.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/supercomputerMenu.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/productionLineUI.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/criticalModal.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/systems/pauseManager.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/systems/depthSort.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/perf/objectPool.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/audio/settingsAudio.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/audio/sfxRegistry.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/audio/sfxPoolRuntime.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/audio/musicManager.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/accessibility/a11y.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/render/zombieRender.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/crateRuntime.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/systems/worldEventsRuntime.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/systems/talents/talentsV2.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/bigMenuRuntime.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/lessonProgress.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/tutorialRuntime.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/core/bootstrap.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/core/worldReset.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/targeting.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/achievements.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/drones.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/autoMerge.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/undergroundHangar.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/undergroundHangarUI.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/mechanics/corpseDespawn.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/ui/supercomputerBuildTankFx.js?v=20260924-whole-chip-persistence"></script>
+  <!-- -- Phaser 3 migration layer -- -->
   <!-- Phaser is always loaded (cached by browser); activation controlled by usePhaser flag -->
   <script src="vendor/phaser.min.js"></script>
   <!-- Phase 1: core bridge/clock/scenes/bootstrap -->
-  <script src="src/phaser/phaserBridge.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/clockAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/BootScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/GameScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/phaserBootstrap.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/phaserBridge.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/clockAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/BootScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/GameScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/phaserBootstrap.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 2: input adapter + render registry -->
-  <script src="src/phaser/inputAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/renderRegistry.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/inputAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/renderRegistry.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 2c: Phaser layer manager + layer modules -->
-  <script src="src/phaser/layers/PhaserLayerManager.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/BackgroundLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/TankTrackLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/FenceHpBarsLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/EveningDimLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/FenceBaseLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/BoardLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/OrbitingTanksLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/SupercomputerLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/ProductionLineLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/ZombiesCorpsesLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/ProjectilesEffectsLayer.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/layers/DronesLayer.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/layers/PhaserLayerManager.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/BackgroundLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/TankTrackLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/FenceHpBarsLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/EveningDimLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/FenceBaseLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/BoardLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/OrbitingTanksLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/SupercomputerLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/ProductionLineLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/ZombiesCorpsesLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/ProjectilesEffectsLayer.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/layers/DronesLayer.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 2d: audio adapter + input comparison harness -->
-  <script src="src/phaser/audioAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/inputComparisonHarness.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/audioAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/inputComparisonHarness.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 3: HUD / modal / overlay adapters + HUD scene -->
-  <script src="src/phaser/hudAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/sceneOverlayManager.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/modalAdapter.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/HudScene.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/hudAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/sceneOverlayManager.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/modalAdapter.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/HudScene.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 3b: Modal overlay scenes -->
-  <script src="src/phaser/scenes/PauseMenuScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/LevelUpScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/CrateRewardScene.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/scenes/PauseMenuScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/LevelUpScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/CrateRewardScene.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 3c: Progression & achievement overlay scenes -->
-  <script src="src/phaser/scenes/BigMenuScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/AchievementsScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/AchievementPopupScene.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/scenes/BigMenuScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/AchievementsScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/AchievementPopupScene.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 3d: Talents, supercomputer root, help, tutorial overlay scenes -->
-  <script src="src/phaser/scenes/TalentsScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/SupercomputerRootScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/HelpScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/TutorialOverlayScene.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/scenes/TalentsScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/SupercomputerRootScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/HelpScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/TutorialOverlayScene.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 3e: Hangar, workshop, underground hangar overlay scenes -->
-  <script src="src/phaser/scenes/HangarChipsScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/WorkshopScene.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/scenes/UndergroundHangarScene.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/scenes/HangarChipsScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/WorkshopScene.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/scenes/UndergroundHangarScene.js?v=20260924-whole-chip-persistence"></script>
   <!-- Phase 4: Parity & rollout modules -->
-  <script src="src/phaser/parityHarness.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/parityGate.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/rolloutController.js?v=20260923-attack-wave-countdown"></script>
-  <script src="src/phaser/legacyCleanupManifest.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/phaser/parityHarness.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/parityGate.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/rolloutController.js?v=20260924-whole-chip-persistence"></script>
+  <script src="src/phaser/legacyCleanupManifest.js?v=20260924-whole-chip-persistence"></script>
   <!-- Yandex SDK wrapper (item 7+8). Loaded before game.js so Game.YandexSDK
        is available during boot for i18n env.lang lookup. -->
-  <script src="src/yandex/yandexSdk.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/yandex/yandexSdk.js?v=20260924-whole-chip-persistence"></script>
   <!-- Yandex Payments wrapper (item 4, batch#2 of solo-pipeline-yandex-vk).
        Must load AFTER yandexSdk.js so Game.YandexSDK.onReady is wired. -->
-  <script src="src/yandex/yandexPayments.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/yandex/yandexPayments.js?v=20260924-whole-chip-persistence"></script>
   <!-- Yandex CloudSave adapter (item 8, batch#3 of solo-pipeline-yandex-vk).
        Pushes only state.shop via player.setData/getData. Must load AFTER
        yandexPayments.js so the SDK and config kill-switches are settled. -->
-  <script src="src/persistence/cloudSave.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/persistence/cloudSave.js?v=20260924-whole-chip-persistence"></script>
   <!-- Shop ledger (item 9, batch#3 of solo-pipeline-yandex-vk).
        Writes entitlements/pendingDeliveries through to state.shop. Must
        load AFTER cloudSave.js so flushShop is referenceable. -->
-  <script src="src/shop/shopLedger.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/shop/shopLedger.js?v=20260924-whole-chip-persistence"></script>
   <!-- Atomic chip-bundle delivery (item 10, batch#4 of solo-pipeline-yandex-vk).
        Reads Game.HangarChipsUI/Game.Drones/Game.ShopLedger; idempotent on
        purchaseToken. Must load AFTER shopLedger.js. -->
-  <script src="src/shop/applyBundle.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/shop/applyBundle.js?v=20260924-whole-chip-persistence"></script>
   <!-- Chip-bundle shop modal UI (item 12, batch#4 of solo-pipeline-yandex-vk).
        Wires #chipShopOverlay DOM to Game.A11y / Game.ModalAdapter and
-       drives the YandexPayments.purchase → applyBundle flow. Must load
+       drives the YandexPayments.purchase -> applyBundle flow. Must load
        AFTER applyBundle.js so Game.ChipShop.applyBundle is wired. -->
-  <script src="src/ui/chipShopModal.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/ui/chipShopModal.js?v=20260924-whole-chip-persistence"></script>
   <!-- HUD shop button (item 13, batch#5 of solo-pipeline-yandex-vk).
-       Wires #hudShopButton click → Game.ChipShop.UI.open(). Must load
+       Wires #hudShopButton click -> Game.ChipShop.UI.open(). Must load
        AFTER chipShopModal.js so Game.ChipShop.UI is exported before any
        click resolves the namespace. -->
-  <script src="src/ui/hudShopButton.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/ui/hudShopButton.js?v=20260924-whole-chip-persistence"></script>
   <!-- Shop bootstrap wiring (item 16, batch#6 of solo-pipeline-yandex-vk).
-       Game.ShopBootstrap.run() — idempotent: payments.init →
-       cloudSave.pullShop merge → getPurchases replay → applyBundle +
+       Game.ShopBootstrap.run() - idempotent: payments.init ->
+       cloudSave.pullShop merge -> getPurchases replay -> applyBundle +
        consumePurchase. Defensive on offline/network errors. Called from
        boot() in game.js after shop.json fetch. Must load AFTER
        hudShopButton.js so all surfaces it nudges are already exported. -->
-  <script src="src/core/shopBootstrap.js?v=20260923-attack-wave-countdown"></script>
+  <script src="src/core/shopBootstrap.js?v=20260924-whole-chip-persistence"></script>
   <script>
     (function (global, doc) {
       var game = global.Game || {};

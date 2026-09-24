@@ -7768,6 +7768,8 @@ function saveProgress(){
       playerChips: ((window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerChips === 'function') ? window.Game.HangarChipsUI.getPlayerChips() : null) || (Array.isArray(state.playerChips) ? state.playerChips : []),
       playerFragments: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getPlayerFragments === 'function') ? window.Game.HangarChipsUI.getPlayerFragments() : [],
       techStudying: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getTechStudying === 'function') ? window.Game.HangarChipsUI.getTechStudying() : null,
+      techFeedProgress: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getTechFeedProgress === 'function') ? window.Game.HangarChipsUI.getTechFeedProgress() : {},
+      siliconDust: (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.getSiliconDust === 'function') ? window.Game.HangarChipsUI.getSiliconDust() : 0,
     }));
   }catch(e){}
 }
@@ -7796,7 +7798,7 @@ const __KNOWN_PAYLOAD_KEYS = [
   'damagePointsSpent','fenceLevel','fenceRepairCount','cells','supercomputer','computerLevel','player',
   'buyCounts','buyPrices','crate','nextCrateAt','maxTankLevelAchieved','boostUntil','activeEffects',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
-  'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','productionLine','talentsV2','talentsApplied','talentsPending',
+  'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','techFeedProgress','siliconDust','productionLine','talentsV2','talentsApplied','talentsPending',
   'activeCooldowns','lastSeenAt','hangarCells'
 ];
 function reportUnknownPayloadKeys(payload, ctx){
@@ -7950,13 +7952,18 @@ function restoreFullState(saved){
   } else {
     state.drones = Array.isArray(saved.drones) ? saved.drones : [];
   }
-  /* Restore player chips for Workshop/Chip Upgrade — один emit `playerChips.changed` с reason='restore' (P3.8). */
-  if (Array.isArray(saved.playerChips)) {
-    state.playerChips = saved.playerChips;
-    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
-      window.Game.HangarChipsUI.setPlayerChips(saved.playerChips, { reason: 'restore' });
-    }
+  /* Restore whole-chip inventory for Workshop/Chip Upgrade. Unconditional — mirrors
+     the `playerFragments` / `hangarCells` contract: the inventory is module-owned
+     in HangarChipsUI (it lands in `_playerChipsFallback`, because the documented
+     `Game.State` owner namespace does not exist), so a payload without `playerChips`
+     must CLEAR it instead of leaking the previous session's chips into this run.
+     `.slice()` transfers ownership — the payload array is not aliased. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
+    window.Game.HangarChipsUI.setPlayerChips(Array.isArray(saved.playerChips) ? saved.playerChips.slice() : [], { reason: 'restore' });
   }
+  /* Keep the `state.playerChips` mirror in sync with the restored inventory:
+     `src/ui/tutorialRuntime.js` reads it directly to detect owned whole chips. */
+  state.playerChips = Array.isArray(saved.playerChips) ? saved.playerChips.slice() : [];
   /* Restore player fragments (chip shards). Unconditional — mirroring the
      `hangarCells` contract above: fragments are module-owned in HangarChipsUI
      and are NOT derived from `state`, so a legacy/different-slot payload without
@@ -7964,6 +7971,20 @@ function restoreFullState(saved){
      shards into this run. */
   if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
     window.Game.HangarChipsUI.setPlayerFragments(Array.isArray(saved.playerFragments) ? saved.playerFragments : []);
+  }
+  /* Restore silicon dust. Unconditional (same contract as `playerFragments`):
+     dust is module-owned in HangarChipsUI and NOT derived from `state`, so a
+     payload without `siliconDust` must reset it to 0 instead of leaking the
+     previous session's balance into this run. Uses the neutral `setSiliconDust`
+     write so the monotonic `dustEarnedLifetime` counter is NOT re-credited on load. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setSiliconDust === 'function') {
+    window.Game.HangarChipsUI.setSiliconDust(Number.isFinite(saved.siliconDust) ? Math.max(0, Math.floor(saved.siliconDust)) : 0);
+  }
+  /* Restore per-tech fed-chip counters (instant-unlock path). Unconditional. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechFeedProgress === 'function') {
+    window.Game.HangarChipsUI.setTechFeedProgress(
+      saved.techFeedProgress && typeof saved.techFeedProgress === 'object' ? saved.techFeedProgress : {}
+    );
   }
   if (reconcileAchievementRewardsAfterRestore) {
     reconcileAchievementRewardsForUnlocked();
@@ -8013,9 +8034,14 @@ function restoreFullState(saved){
   if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setCells === 'function') {
     window.Game.HangarChipsUI.setCells(Array.isArray(saved.hangarCells) ? saved.hangarCells : []);
   }
-  /* Restore tech study state */
-  if (saved.techStudying && typeof saved.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
-    window.Game.HangarChipsUI.setTechStudying(saved.techStudying);
+  /* Restore tech study state. Unconditional — a payload without `techStudying`
+     must CLEAR the module-owned study (mirrors the `playerFragments` /
+     `hangarCells` contract), otherwise an unfinished study from the previous
+     session would keep ticking into this run. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
+    window.Game.HangarChipsUI.setTechStudying(
+      saved.techStudying && typeof saved.techStudying === 'object' ? saved.techStudying : null
+    );
   }
   /* Restore production line state */
   {
@@ -8285,18 +8311,27 @@ function applySavedProgress(data){
   state.zombieWaveAtkMult = data.zombieWaveAtkMult;
   state.zombieWaveHpMult = data.zombieWaveHpMult;
   recomputeZombieWaveMultipliers({ reason: 'apply-saved' });
-  /* Restore player chips for Workshop/Chip Upgrade — один emit `playerChips.changed` с reason='restore' (P3.8). */
-  if (Array.isArray(data.playerChips)) {
-    state.playerChips = data.playerChips;
-    if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
-      window.Game.HangarChipsUI.setPlayerChips(data.playerChips, { reason: 'restore' });
-    }
+  /* Restore whole-chip inventory. Unconditional — see the `restoreFullState`
+     contract above (legacy-progress payload without `playerChips` clears it). */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerChips === 'function') {
+    window.Game.HangarChipsUI.setPlayerChips(Array.isArray(data.playerChips) ? data.playerChips.slice() : [], { reason: 'restore' });
   }
+  state.playerChips = Array.isArray(data.playerChips) ? data.playerChips.slice() : [];
   /* Restore player fragments (chip shards). Unconditional — see the `hangarCells`
      contract in `restoreFullState`: a payload without `playerFragments` must
      clear the module-owned shard inventory rather than keep stale entries. */
   if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setPlayerFragments === 'function') {
     window.Game.HangarChipsUI.setPlayerFragments(Array.isArray(data.playerFragments) ? data.playerFragments : []);
+  }
+  /* Restore silicon dust — unconditional, same contract as in `restoreFullState`. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setSiliconDust === 'function') {
+    window.Game.HangarChipsUI.setSiliconDust(Number.isFinite(data.siliconDust) ? Math.max(0, Math.floor(data.siliconDust)) : 0);
+  }
+  /* Restore per-tech fed-chip counters — unconditional. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechFeedProgress === 'function') {
+    window.Game.HangarChipsUI.setTechFeedProgress(
+      data.techFeedProgress && typeof data.techFeedProgress === 'object' ? data.techFeedProgress : {}
+    );
   }
   if (reconcileAchievementRewardsAfterApply) {
     reconcileAchievementRewardsForUnlocked();
@@ -8344,9 +8379,11 @@ function applySavedProgress(data){
   if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setCells === 'function') {
     window.Game.HangarChipsUI.setCells(Array.isArray(data.hangarCells) ? data.hangarCells : []);
   }
-  /* Restore tech study state */
-  if (data.techStudying && typeof data.techStudying === 'object' && window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
-    window.Game.HangarChipsUI.setTechStudying(data.techStudying);
+  /* Restore tech study state. Unconditional — see the `restoreFullState` contract. */
+  if (window.Game && window.Game.HangarChipsUI && typeof window.Game.HangarChipsUI.setTechStudying === 'function') {
+    window.Game.HangarChipsUI.setTechStudying(
+      data.techStudying && typeof data.techStudying === 'object' ? data.techStudying : null
+    );
   }
   // Attack-wave schedule: legacy-progress payload не несёт `forceFenceRuntimeResetOnLoad`,
   // поэтому это всегда обычная загрузка — продолжаем сохранённое расписание

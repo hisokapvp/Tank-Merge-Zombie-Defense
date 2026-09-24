@@ -1,0 +1,45 @@
+# --- Encoding & line-ending policy (see Test/pack20/entryEncodingImmunity.test.js) ---
+#
+# `index.html` has been damaged twice by a legacy-ANSI round trip:
+# PowerShell 5.1 `Get-Content` defaults to the system ANSI codepage (cp1251),
+# then `Set-Content -Encoding UTF8` writes UTF-8. Every non-ASCII character gets
+# double-encoded (mojibake) and a BOM is added. Player-visible symptoms were the
+# loading splash showing `Р—РђР“Р РЈР—РљРђвЂ¦` and the supercomputer icon turning
+# into a broken glyph instead of 🖥.
+#
+# `index.html` is now 100% ASCII (text -> numeric character references, raw-text
+# zones and comments -> transliteration). ASCII bytes are identical in UTF-8 and
+# cp1251, so any such round trip is byte-for-byte a no-op. Pack 20 enforces this.
+#
+# Line endings: index.html / style.css / game.js are authored with LF. `text=auto`
+# keeps normalisation consistent across machines instead of relying on the local
+# `core.autocrlf` setting.
+index.html	text=auto eol=lf
+style.css	text=auto eol=lf
+game.js		text=auto eol=lf
+
+# Other source files: normalise line endings, no per-file EOL override.
+*.js		text=auto eol=lf
+*.json		text=auto eol=lf
+*.md		text=auto eol=lf
+*.sh		text eol=lf
+*.cjs		text=auto eol=lf
+*.mjs		text=auto eol=lf
+*.py		text=auto eol=lf
+*.yml		text=auto eol=lf
+*.yaml		text=auto eol=lf
+
+# Binary assets: never touch.
+*.png		binary
+*.jpg		binary
+*.jpeg		binary
+*.gif		binary
+*.webp		binary
+*.ico		binary
+*.woff		binary
+*.woff2		binary
+*.ttf		binary
+*.otf		binary
+*.mp3		binary
+*.ogg		binary
+*.wav		binary

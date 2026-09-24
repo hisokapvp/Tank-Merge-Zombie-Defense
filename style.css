@@ -845,7 +845,7 @@ body::after{
 
 /* Rivets */
 .menuPanel::before, .levelModal__panel::before, .bigMenuPanel::before, .creditsModal__panel::before, .mergePopupModal__panel::before {
-  content: "•";
+  content: "\2022 ";
   position: absolute;
   font-family: Arial;
   font-size: 24px;
@@ -2861,7 +2861,7 @@ input, select, textarea, button {
   opacity: 0.3;
 }
 .talentTreeModal::before {
-  content: "•";
+  content: "\2022 ";
   position: absolute;
   font-family: Arial;
   font-size: 24px;
@@ -4322,7 +4322,7 @@ button[data-tutorial-locked="true"]::before,
 
 button[data-tutorial-locked="true"]::after,
 [role="button"][data-tutorial-locked="true"]::after{
-  content:'🔒';
+  content:'\1F512 ';
   position:absolute;
   top:50%;
   left:50%;
@@ -6026,7 +6026,7 @@ button.hangarChipInvItem{
   opacity: 0.4;
 }
 .techUnlockCard--locked::after {
-  content: "🔒";
+  content: "\1F512 ";
   position: absolute;
   top: 10px;
   right: 10px;
@@ -7155,7 +7155,7 @@ button.hangarChipInvItem{
   display:flex;
 }
 .chipCraftReprogramSelectWrap::after{
-  content:'▾';
+  content:'\25BE ';
   position:absolute;
   top:50%;
   right:12px;

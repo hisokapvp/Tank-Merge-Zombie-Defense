@@ -448,6 +448,49 @@
   }
 
   /**
+   * Собрать инвентарь целых чипов (playerChips) для save payload.
+   *
+   * Чипы — самый ранний из module-owned ресурсов: документально их canonical
+   * owner — `Game.State.getPlayerChips()` / `.setPlayerChips()`, НО этого
+   * namespace нет нигде в кодовой базе, поэтому `_canonicalPlayerChipsApi()`
+   * в `src/ui/hangarChipsUI.js` всегда возвращает `null` и вся мутация идёт в
+   * module-owned `_playerChipsFallback`. Как следствие `state.playerChips`
+   * навсегда остаётся `[]` после New Game.
+   *
+   * Прежний writer брал `state.playerChips` — то есть ПУСТОЕ зеркало — и каждое
+   * сохранение писало `playerChips: []`, а restore стирал инвентарь. Зеркалим
+   * контракт `serializePlayerFragments` / `serializeSiliconDust` / `serializeHangarCells`:
+   * читаем live-инвентарь, fallback — `state.playerChips`.
+   *
+   * @param {object} state
+   * @returns {Array} массив chip-record (никогда не null)
+   */
+  function serializePlayerChips(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getPlayerChips === 'function' ? chipsUi.getPlayerChips() : null;
+    } catch (_) { live = null; }
+    if (!Array.isArray(live)) {
+      live = state && Array.isArray(state.playerChips) ? state.playerChips : null;
+    }
+    if (!Array.isArray(live)) return [];
+    var chips = [];
+    for (var i = 0; i < live.length; i++) {
+      var entry = live[i];
+      if (!entry || typeof entry !== 'object') continue;
+      /* Запись валидна, если её можно резолвить: либо известный chipId, либо
+         modIds, из которых `_healPlayerChipEntry` восстановит chipId на restore.
+         Все остальные объекты — мусор, который сломал бы slot-lookup. */
+      var hasId = Number.isFinite(entry.chipId) && entry.chipId > 0;
+      var hasMods = Array.isArray(entry.modIds) && entry.modIds.length > 0;
+      if (!hasId && !hasMods) continue;
+      chips.push(entry);
+    }
+    return chips;
+  }
+
+  /**
    * Собрать chip-shard inventory (фрагменты чипов) для save payload.
    *
    * Фрагменты живут в module-owned состоянии `src/ui/hangarChipsUI.js`
@@ -485,6 +528,95 @@
       fragments.push({ fragmentId: fragmentId, count: count });
     }
     return fragments;
+  }
+
+  /**
+   * Собрать silicon-dust balance для save payload.
+   *
+   * «Кремниевая пыль» живёт в module-owned состоянии `src/ui/hangarChipsUI.js`
+   * (`Game.HangarChipsUI.getSiliconDust()`), а НЕ в `state`. Зеркалим контракт
+   * `serializePlayerFragments` / `serializeHangarCells`: читаем live-баланс,
+   * чтобы каждый save-путь (включая slot-save с raw `state`) захватил актуальное
+   * значение. Fallback — `state.siliconDust`.
+   *
+   * Без этой записи пыль исчезала после загрузки сейва: restore-пути поле
+   * читали, а writer его не клал в payload (тот же класс дефекта, что и у
+   * `playerFragments`).
+   *
+   * @param {object} state
+   * @returns {number} неотрицательное целое (никогда не null/NaN)
+   */
+  function serializeSiliconDust(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getSiliconDust === 'function' ? chipsUi.getSiliconDust() : null;
+    } catch (_) { live = null; }
+    if (!Number.isFinite(live)) {
+      live = state && Number.isFinite(state.siliconDust) ? state.siliconDust : 0;
+    }
+    return Number.isFinite(live) ? Math.max(0, Math.floor(live)) : 0;
+  }
+
+  /**
+   * Собрать in-progress tech study (таймерное изучение технологии) для payload.
+   *
+   * Источник — module-owned `Game.HangarChipsUI.getTechStudying()` (форма
+   * `{ modId, elapsed, duration, acceleratedPct }`), fallback `state.techStudying`.
+   * Малаформированный/незавершённый объект нормализуется или схлопывается в
+   * `null` (легаси-сейв → процесс изучения не активен).
+   *
+   * @param {object} state
+   * @returns {{modId:number, elapsed:number, duration:number, acceleratedPct:number}|null}
+   */
+  function serializeTechStudying(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getTechStudying === 'function' ? chipsUi.getTechStudying() : null;
+    } catch (_) { live = null; }
+    if (!live || typeof live !== 'object') {
+      live = state && state.techStudying && typeof state.techStudying === 'object' ? state.techStudying : null;
+    }
+    if (!live || typeof live !== 'object') return null;
+    var modId = Number.isFinite(live.modId) ? Math.floor(live.modId) : null;
+    var duration = Number.isFinite(live.duration) && live.duration > 0 ? live.duration : null;
+    if (modId == null || modId <= 0 || duration == null) return null;
+    var elapsed = Number.isFinite(live.elapsed) ? Math.max(0, Math.min(duration, live.elapsed)) : 0;
+    var acceleratedPct = Number.isFinite(live.acceleratedPct) ? Math.max(0, Math.min(100, live.acceleratedPct)) : 0;
+    return { modId: modId, elapsed: elapsed, duration: duration, acceleratedPct: acceleratedPct };
+  }
+
+  /**
+   * Собрать per-tech fed-chip counters (instant-unlock путь) для payload.
+   *
+   * Источник — module-owned `Game.HangarChipsUI.getTechFeedProgress()`, fallback
+   * `state.techFeedProgress`. Ключи — modId, значения — скармливаемые чипы.
+   * Невалидные/нулевые/отрицательные записи дропаются, всегда объект.
+   *
+   * @param {object} state
+   * @returns {Object<string, number>}
+   */
+  function serializeTechFeedProgress(state) {
+    var live = null;
+    try {
+      var chipsUi = global.Game && global.Game.HangarChipsUI;
+      live = chipsUi && typeof chipsUi.getTechFeedProgress === 'function' ? chipsUi.getTechFeedProgress() : null;
+    } catch (_) { live = null; }
+    if (!live || typeof live !== 'object') {
+      live = state && state.techFeedProgress && typeof state.techFeedProgress === 'object' ? state.techFeedProgress : null;
+    }
+    if (!live || typeof live !== 'object') return {};
+    var out = {};
+    var keys = Object.keys(live);
+    for (var i = 0; i < keys.length; i++) {
+      var modId = Number(keys[i]);
+      var fed = live[keys[i]];
+      if (!Number.isFinite(modId) || modId <= 0) continue;
+      if (!Number.isFinite(fed) || fed <= 0) continue;
+      out[String(Math.floor(modId))] = Math.max(0, Math.floor(fed));
+    }
+    return out;
   }
 
   /**
@@ -686,8 +818,14 @@
       mapSeeds: mapSeeds,
       drones: drones,
       forceFenceRuntimeResetOnLoad: !!state.forceFenceRuntimeResetOnLoad,
-      playerChips: Array.isArray(state.playerChips) ? state.playerChips : [],
+      playerChips: serializePlayerChips(state),
       playerFragments: serializePlayerFragments(state),
+      // Module-owned hangar progress (НЕ часть `state`): silicon dust, таймерное
+      // изучение технологии и per-tech fed-chip counters. Без этих полей
+      // соответствующие ресурсы/прогресс молча обнулялись после загрузки сейва.
+      siliconDust: serializeSiliconDust(state),
+      techStudying: serializeTechStudying(state),
+      techFeedProgress: serializeTechFeedProgress(state),
       productionLine: state.productionLine || null,
       hangarCells: serializeHangarCells(state),
     };
