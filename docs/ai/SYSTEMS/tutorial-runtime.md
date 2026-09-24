@@ -14,6 +14,7 @@
 - Completion-проверки обязаны уважать prereq вроде `requiresStepBubbleShown`, `minSupercomputerLevel`, `minDamagePoints`, но не должны ломаться только потому, что целевой клик уже переключил UI из исходного root-view в дочерний экран.
 - Для supercomputer-цепочек переходный шаг должен считаться завершённым по факту открытия целевого view: root menu, talents view, tank/wall mods. Не требовать, чтобы предыдущий root-view всё ещё оставался видимым в тот же тик.
 - Шаг `supercomputer_damage_apply_level1_weapon_upgrade` теперь таргетит expand-toggle первой weapon row (`[data-guns-action="toggle"]`), unlock'ит stat controls во всех трёх табах (`guns/drones/walls`) и должен схлопываться по любому реально применённому damage-upgrade в weapons, drones или walls; шаг не должен «оживать» повторно после того, как у игрока уже есть applied upgrade в этой подсистеме.
+- Цепочка `first_whole_chip_*` объясняет игроку **вставку** чипа, поэтому её гейт — только целый чип: оба сайта (`isStepAvailable` и `isStepCompletionEligible` для `first_whole_chip_supercomputer_entry`) обязаны вызывать `hasWholePlayerChip(state)`. `hasAnyPlayerOwnedChip(state)` (целые чипы + `playerFragments` + уже установленные чипы) здесь недопустим: игрок с одним фрагментом получал ложный старт урока вместо скрафченного чипа. Широкая проверка остаётся только в `hasExistingProgress()`, где она означает «это не first-run».
 
 ## Activation / Completion
 - Activation описывается data-driven в `src/config/tutorialSteps.js`.

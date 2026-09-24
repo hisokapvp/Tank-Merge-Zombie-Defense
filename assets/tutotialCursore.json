@@ -81,17 +81,17 @@
     "production_storage_open_first_box": {
       "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": 0, "y": 20 }
+      "offset": { "x": -25, "y": 10 }
     },
     "production_storage_open_box": {
       "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": 0, "y": 20 }
+      "offset": { "x": -15, "y": 20 }
     },
     "first_whole_chip_open_supercomputer": {
       "spriteRotationDeg": 90,
       "motionAngleDeg": 0,
-      "offset": { "x": 0, "y": 20 }
+      "offset": { "x": -20, "y": 20 }
     },
     "first_whole_chip_open_hangar_mods": {
       "spriteRotationDeg": 90,

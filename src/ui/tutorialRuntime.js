@@ -915,7 +915,7 @@
       return isMinDamageActivationSatisfied(state, activation);
     }
     if (stepDefinition.activation.kind === 'first_whole_chip_supercomputer_entry') {
-      return hasAnyPlayerOwnedChip(state) && !isGameplayBlockingModalOpen();
+      return hasWholePlayerChip(state) && !isGameplayBlockingModalOpen();
     }
     if (stepDefinition.activation.kind === 'hangar_first_red_slot_install_ready') {
       return isHangarFirstRedSlotInstallReady();
@@ -963,7 +963,7 @@
       if (getProductionStorageBoxCount(state) < Math.max(0, Math.floor(Number(activation.minUnopenedProductionBoxes)))) return false;
     }
     if (activation.kind === 'first_whole_chip_supercomputer_entry') {
-      return hasAnyPlayerOwnedChip(state);
+      return hasWholePlayerChip(state);
     }
     if (activation.kind === 'hangar_first_red_slot_install_ready') {
       return isHangarCellsTabOpen() && !isHangarTutorialModalBlocking() && !!getHangarFirstRedSlotTarget();

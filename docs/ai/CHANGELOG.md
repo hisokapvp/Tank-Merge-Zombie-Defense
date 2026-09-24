@@ -2,6 +2,14 @@
 
 ## 2026-09-24
 
+### Урок «вставьте чип» снова стартует только на целый чип, а не на фрагмент
+- Баг: обучение вставке чипа (`first_whole_chip_open_supercomputer` → `first_whole_chip_open_hangar_mods` → `first_whole_chip_install_first_red_slot`) включалось в момент получения **фрагмента** чипа. Игроку показывали указатель на красный слот ангара и текст «вставьте чип», хотя вставлять было нечего — фрагмент сначала нужно превратить в чип рецептом в мастерской.
+- Root cause: коммит `5423250` заменил в шаге гейт `hasWholePlayerChip(state)` на `hasAnyPlayerOwnedChip(state)`. Новая функция трактует как валидный **любой** chip-ресурс: целые чипы, `playerFragments` и уже установленные в ячейки чипы (`hasInstalledChipEntries`). Так как ветка `exists progress` намеренно выравнивалась с активацией, фрагмент из награды за достижение или из бокса военной помощи немедленно поднимал урок.
+- `src/ui/tutorialRuntime.js`: оба гейта шага (`isStepAvailable` и `isStepCompletionEligible` для `first_whole_chip_supercomputer_entry`) возвращены на `hasWholePlayerChip(state)` — то есть целый чип в `state.playerChips`, либо `Game.HangarChipsUI.hasPlayerOwnedWholeChip()`, либо live-инвентарь `getPlayerChips()`. `hasAnyPlayerOwnedChip()` остаётся только для `hasExistingProgress()`, где его широкая семантика уместна (старый save с любым chip-ресурсом — уже не first-run).
+- `index.html`: entry token поднят до `20260924-whole-chip-tutorial-gate` (все 179 `?v=` маркеров синхронизированы).
+- `Test/pack23/wholeChipTutorialGate.test.js` (новый, 9 проверок `WCG-1..9`) + регистрация в `ci/run_tests.sh`: статические guard'ы на оба гейта и на отсутствие fragment/cell-проб в теле `hasWholePlayerChip`, **runtime**-проверки реального исходника в sandbox (фрагмент не берёт pause-lock и не ставит `tutorial-modal-open`, уже установленный чип тоже, настоящий целый чип активирует шаг и берёт lock, шаг не завершается на одних фрагментах), плюс step-config и entry-token parity.
+- `docs/ai/SYSTEMS/tutorial-runtime.md`: зафиксирован инвариант «гейт chip-урока — только целый чип» с явным указанием, почему `hasAnyPlayerOwnedChip` тут недопустим.
+
 ### Подарочный бокс ставит игру на паузу
 - Баг: при нажатии на подарочный бокс и открытии модалки «Военная помощь» симуляция продолжала идти — зомби атаковали забор, снаряды летели и таймер следующего бокса тикал за спиной открытого окна. Остальные модалки (меню, суперкомпьютер, достижения, производственный склад, подземный ангар) игру паузили, а бокс — нет.
 - Root cause: `crate` отсутствовал в `menuPauseLocks` (game.js), поэтому `setMenuPauseSource('crate', …)` молча игнорировался whitelist-проверкой `Object.prototype.hasOwnProperty.call(menuPauseLocks, source)`, и агрегатный `isAnyMenuPauseOpen()` не видел открытого бокса.

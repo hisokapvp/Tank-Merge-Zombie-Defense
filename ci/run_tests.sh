@@ -65,6 +65,7 @@ run_test "Pack 19 (whole-chip persistence)" "Test/pack19/playerChipsPersistence.
 run_test "Pack 20 (entry-file encoding immunity)" "Test/pack20/entryEncodingImmunity.test.js"
 run_test "Pack 21 (menu reopens on home page)" "Test/pack21/menuReopenOnHomePage.test.js"
 run_test "Pack 22 (crate modal pause lock)" "Test/pack22/crateModalPause.test.js"
+run_test "Pack 23 (whole-chip tutorial gate)" "Test/pack23/wholeChipTutorialGate.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."
