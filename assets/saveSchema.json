@@ -89,6 +89,11 @@
       ]
     },
     "nextCrateAt": { "type": "number" },
+    "crateRemainingSec": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Сколько sim-секунд осталось до следующего подарочного бокса на момент save. Относительная величина (домен nowSec() перезапускается с ~0 на каждой загрузке); writer — storage.js serializeCrateRemainingSec() (live-first через Game.getCrateRemainingSec()), reader — restoreFullState(). null/отсутствие = таймер задаётся полным BAL.crateIntervalSec."
+    },
     "attackWaveRemainingSec": {
       "type": ["number", "null"],
       "minimum": 0,

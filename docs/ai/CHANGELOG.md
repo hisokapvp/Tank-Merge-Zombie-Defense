@@ -2,6 +2,25 @@
 
 ## 2026-09-24
 
+### Оповещение о волне атаки показывало «1 волна» при счётчике 18
+- Баг: после загрузки сейва баннер перед волной атаки сообщал «1 волна нападения», тогда как HUD-панель показывала «Текущая волна: 18».
+- Root cause: `beginNoRepairAttackWaveEpisode()` (game.js) вычислял номер волны из lifetime-счётчика `state.stats.attackWavesCompletedCount + 1`. Этот счётчик НЕ сериализуется в save payload (`storage.js serializeState()` его не пишет, а `restoreFullState()`/`applySavedProgress()` не восстанавливают `ach.totalAttackWavesCompleted`), поэтому после любой загрузки он равен 0 и баннер всегда начинал с 1. HUD «Текущая волна: X» при этом читает другой — корректно персистируемый per-run счётчик `state.stats.currentWaveCount`; отсюда расхождение.
+- Fix: новый helper `getCurrentAttackWaveNumber()` = `state.stats.currentWaveCount + 1` — единый per-run источник номера волны; `beginNoRepairAttackWaveEpisode()` использует его вместо lifetime-счётчика. После 18 пережитых волн баннер сообщает «19 волна нападения», совпадая со счётчиком.
+- `Test/tests.js` T-ACH-3 расширен: helper существует, begin-сим передаёт номер через `getCurrentAttackWaveNumber`, и в этом seam больше нет `state.stats.attackWavesCompletedCount + 1`.
+- `index.html`: entry token → `20260924-attack-wave-banner-counter` (179 маркеров, 0 mismatch).
+- Browser smoke (Playwright, реальный UI load path): сейв с `currentWaveCount: 18` → HUD «Текущая волна: 18», баннер «Началась 19 волна нападения. Выживете любой ценой!».
+
+### Подарочные боксы снова падают после save → load (clock-domain mismatch)
+- Баг: «в какой-то момент перестают прилетать подарочные боксы». Точная причина — рассинхрон домена времени, а не счётчик.
+- Root cause: `state.nextCrateAt` — абсолютный timestamp в домене `nowSec()` (`performance.now()/1000` минус pause-offset `simClockOffsetSec`). Этот домен **сессионный**: он сбрасывается в ~0 на каждой загрузке страницы и НЕ восстанавливается из payload. При этом `nextCrateAt` сохранялся сырым (`storage.js` → `nextCrateAt: state.nextCrateAt`) и восстанавливался сырым (`restoreFullState()` → `if (saved.nextCrateAt != null) state.nextCrateAt = saved.nextCrateAt`). Итог: сохранение на 60-й секунде сессии (`nextCrateAt ≈ 90`) после reload давало `nextCrateAt = 90` при `nowSec() ≈ 3` → `maybeSpawnCrate()` никогда не видел `now >= nextCrateAt` → боксы не падали до конца сессии. `boostUntil`/`activeEffects` защищены `normalizeStoredUntilSec()`, а `nextCrateAt` — нет; attack-wave прошёл точно тем же путём ранее (Pack 17).
+- `game.js`: новый seam `getCrateRemainingSec()` (`state.nextCrateAt - nowSec()`, `null` если таймер не инициализирован), экспорт `GameApi.getCrateRemainingSec`.
+- `game.js`: `restoreFullState()` читает переносимый остаток `saved.crateRemainingSec`; legacy `nextCrateAt` трактуется как ОСТАТОК (`saved.nextCrateAt - now`), результат клампится до одного `BAL.crateIntervalSec`; при отсутствии/невалидности — полный интервал. Убран сырой absolute-ассайн.
+- `src/persistence/storage.js`: новый `serializeCrateRemainingSec()` (live-first через `Game.getCrateRemainingSec()`, fallback `null`) + поле `crateRemainingSec` в payload.
+- `assets/saveSchema.json`: `crateRemainingSec` (`number|null`, minimum 0). `game.js` `__KNOWN_PAYLOAD_KEYS`: добавлен `crateRemainingSec`.
+- `docs/ai/SYSTEMS/save.md`: строка Payload Contract Map переписана — `crateRemainingSec` как относительный остаток с явным объяснением session-domain ловушки.
+- `Test/pack24/crateTimerPersistence.test.js` (новый, 15 проверок `CTP-1..15`) + регистрация в `ci/run_tests.sh`: writer/reader/схема/known-key, конвертация legacy `nextCrateAt`, clamp до `crateIntervalSec`, отсутствие сырого absolute-ассайна, сохранность spawn-gate и cadence-owner.
+- `index.html`: entry token синхронизирован до `20260924-crate-timer-persistence` (был рассинхронизирован и на HEAD: token `20260924-whole-chip-tutorial-gate` против 178 `?v=` тегов `20260924-release-152731`; теперь 0/178 mismatch).
+
 ### Урок «вставьте чип» снова стартует только на целый чип, а не на фрагмент
 - Баг: обучение вставке чипа (`first_whole_chip_open_supercomputer` → `first_whole_chip_open_hangar_mods` → `first_whole_chip_install_first_red_slot`) включалось в момент получения **фрагмента** чипа. Игроку показывали указатель на красный слот ангара и текст «вставьте чип», хотя вставлять было нечего — фрагмент сначала нужно превратить в чип рецептом в мастерской.
 - Root cause: коммит `5423250` заменил в шаге гейт `hasWholePlayerChip(state)` на `hasAnyPlayerOwnedChip(state)`. Новая функция трактует как валидный **любой** chip-ресурс: целые чипы, `playerFragments` и уже установленные в ячейки чипы (`hasInstalledChipEntries`). Так как ветка `exists progress` намеренно выравнивалась с активацией, фрагмент из награды за достижение или из бокса военной помощи немедленно поднимал урок.

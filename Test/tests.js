@@ -394,6 +394,16 @@ test('T-ACH-3: current-wave HUD counter is per-run and increments once per finis
   const worldResetJs = fs.readFileSync(path.resolve(__dirname, '..', 'src', 'core', 'worldReset.js'), 'utf-8');
   assert(!worldResetJs.includes('currentWaveCount'), 'currentWaveCount must NOT be part of progress snapshot (per-run reset)');
 
+  // Attack banner must read the SAME per-run source as the HUD (getCurrentAttackWaveNumber),
+  // not the lifetime `attackWavesCompletedCount` (absent from save payload -> after load it
+  // was 0 and the banner said "1 wave" while the HUD showed 18).
+  assert(gameJs.includes('function getCurrentAttackWaveNumber()'), 'getCurrentAttackWaveNumber helper must exist');
+  const beginIdx = gameJs.indexOf('function beginNoRepairAttackWaveEpisode()');
+  const beginEndIdx = gameJs.indexOf('function finalizeNoRepairAttackWaveEpisode()', beginIdx);
+  const bannerBlock = beginIdx !== -1 && beginEndIdx !== -1 ? gameJs.slice(beginIdx, beginEndIdx) : '';
+  assert(bannerBlock.includes('getCurrentAttackWaveNumber()'), 'beginNoRepairAttackWaveEpisode must compute banner wave via getCurrentAttackWaveNumber');
+  assert(!/state\.stats\.attackWavesCompletedCount\s*\+\s*1/.test(bannerBlock), 'banner must not derive its wave number from lifetime attackWavesCompletedCount');
+
   // i18n parity
   assertEqual(ruJson.supercomputerCurrentWaveInfo, 'Текущая волна: {count}', 'ru key must exist');
   assertEqual(enJson.supercomputerCurrentWaveInfo, 'Current wave: {count}', 'en key must exist');

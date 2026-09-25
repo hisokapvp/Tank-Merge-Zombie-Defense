@@ -2,7 +2,7 @@
   "_readme": "=== КОНФИГУРАЦИЯ ДЕКОРА (decor.json) === Декоративные объекты размещаются случайно по карте. Можно задать count/spriteIds/noSpawnZones прямо тут. spawnWeights позволяет задавать веса/проценты по selector: точный id (car) или family pattern с * в конце (tree*, car*). Сумма весов не обязана быть 100: runtime нормализует её автоматически. Для id без явного совпадения используется spawnWeightFallback. noSpawnZones работают в world-coords относительно центра экрана: circle { type:'circle', cx, cy, r } и rect { type:'rect', x, y, w, h }. В game.js значения BAL.decorNoSpawnZones / BAL.decorCount / BAL.decorSpriteIds имеют приоритет и переопределяют JSON при явной настройке. blockRadiusK/blockRadiusMin управляют радиусом непроходимой зоны у основания decor. frames: id, x, y, w, h, anchor(optional), isWall(optional: true => препятствие для зомби). collisionPulse: периодическое окно, в котором коллизия ВСЕХ isWall-декора выключается, чтобы зомби не застревали: enabled, periodSec (каждые N секунд), offDurationMinSec/offDurationMaxSec (длительность окна прохода).",
   "atlas": "decor_atlas.png",
   "seed": "decor-default-seed",
-  "count":60,
+  "count":55,
   "placementMaxAttempts": 100,
   "blockRadiusK": 0.35,
   "blockRadiusMin": 8,

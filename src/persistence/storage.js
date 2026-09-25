@@ -620,6 +620,28 @@
   }
 
   /**
+   * Прочитать переносимый остаток таймера подарочного бокса (в sim-секундах).
+   *
+   * `state.nextCrateAt` — абсолютный timestamp в домене `nowSec()`
+   * (`performance.now()/1000` минус pause-offset), который перезапускается с ~0
+   * на каждой загрузке страницы. Поэтому в payload кладётся ОТНОСИТЕЛЬНЫЙ
+   * остаток; live-first чтение через `Game.getCrateRemainingSec()` с fallback на
+   * `state.nextCrateAt` (см. `getCrateRemainingSec()` в game.js).
+   *
+   * @param {object} state
+   * @returns {number|null}
+   */
+  function serializeCrateRemainingSec(state) {
+    var live = null;
+    try {
+      var reader = global.Game && global.Game.getCrateRemainingSec;
+      live = typeof reader === 'function' ? reader() : null;
+    } catch (_) { live = null; }
+    if (Number.isFinite(live)) return Math.max(0, live);
+    return null;
+  }
+
+  /**
    * Прочитать текущий снимок расписания волны атаки из runtime.
    *
    * `worldEventsState.attackStartAt` / `currentAttackStartAt` / `attackEndAt`
@@ -801,6 +823,9 @@
       buyPrices: state.buyPrices,
       crate: crate,
       nextCrateAt: state.nextCrateAt,
+      // Переносимый остаток таймера бокса (session-relative). Без него сырой
+      // `nextCrateAt` после reload оказывался в будущем домене `nowSec()`.
+      crateRemainingSec: serializeCrateRemainingSec(state),
       // Attack-wave schedule: относительные sim-остатки + флаг активной волны.
       // Без `active` загрузка выключала волну и заново отсчитывала полный
       // `attackEverySec` (см. restoreFullState / applyLoadedAttackWaveSnapshot).

@@ -4148,6 +4148,24 @@ function scheduleFirstAttackWaveAfterRestart(){
 GameApi.getAttackWaveRemainingSec = getAttackWaveRemainingSec;
 GameApi.getAttackWaveSnapshot = getAttackWaveSnapshot;
 
+/**
+ * Canonical read-path для save payload: сколько sim-секунд осталось до
+ * следующего подарочного бокса, либо `null` если таймер ещё не инициализирован.
+ *
+ * `state.nextCrateAt` живёт в домене `nowSec()` (session-relative
+ * `performance.now()/1000` минус pause-offset), который перезапускается с ~0 на
+ * каждой загрузке страницы. Поэтому в payload уходит ОТНОСИТЕЛЬНЫЙ остаток, а не
+ * абсолютный timestamp — иначе после reload таймер «уезжает» в будущее и боксы
+ * перестают падать (тот же класс бага, что уже закрыт для attack-wave).
+ * `storage.js` читает значение через этот seam.
+ */
+function getCrateRemainingSec(){
+  if (!state || !Number.isFinite(state.nextCrateAt) || state.nextCrateAt <= 0) return null;
+  return Math.max(0, state.nextCrateAt - nowSec());
+}
+
+GameApi.getCrateRemainingSec = getCrateRemainingSec;
+
 function getWeatherCfg(){
   return ensureWorldEventsRuntimeController()?.getWeatherCfg() || null;
 }
@@ -5049,11 +5067,13 @@ function beginNoRepairAttackWaveEpisode(){
   // Battle music wave crossfade is driven from the rain start/stop seam in
   // worldEventsRuntime (user follow-up: wave music synced to the rain), not here.
 
-  // Trigger cyber wave banner
+  // Trigger cyber wave banner.
+  // Номер берём из ЕДИНОГО per-run источника (getCurrentAttackWaveNumber),
+  // а не из lifetime `attackWavesCompletedCount`: последний НЕ сериализуется
+  // в save payload, поэтому после загрузки сбрасывался в 0 и баннер показывал
+  // «1 волна атаки» при счётчике «Текущая волна: 18».
   try {
-    const waveNum = (state.stats && typeof state.stats.attackWavesCompletedCount === 'number')
-      ? state.stats.attackWavesCompletedCount + 1
-      : 1;
+    const waveNum = getCurrentAttackWaveNumber();
     if (window.Game && typeof window.Game.onWaveStart === 'function') {
       window.Game.onWaveStart(waveNum);
     }
@@ -5117,6 +5137,17 @@ function incrementCurrentWaveCounter(){
   const next = prev + 1;
   state.stats.currentWaveCount = next;
   return next;
+}
+
+// Item — номер НАЧИНАЮЩЕЙСЯ волны атаки: per-run счётчик пережитых волн + 1.
+// Единый источник для HUD-панели «Текущая волна: X» (читает state.stats.currentWaveCount)
+// и для баннера перед волной. `attackWavesCompletedCount` (lifetime) для баннера
+// не подходит: он не входит в save payload и после загрузки был равен 0.
+function getCurrentAttackWaveNumber(){
+  const prev = (state.stats && Number.isFinite(state.stats.currentWaveCount))
+    ? Math.max(0, Math.floor(state.stats.currentWaveCount))
+    : 0;
+  return prev + 1;
 }
 
 function completeAttackEpisodeAchievementProgress(){
@@ -7798,7 +7829,7 @@ function getSavedProgress(){
 const __KNOWN_PAYLOAD_KEYS = [
   'version','coins','kills','tutorial','totalDamageDealtRaw','zombieWaveAtkMult','zombieWaveHpMult',
   'damagePointsSpent','fenceLevel','fenceRepairCount','cells','supercomputer','computerLevel','player',
-  'buyCounts','buyPrices','crate','nextCrateAt','maxTankLevelAchieved','boostUntil','activeEffects',
+  'buyCounts','buyPrices','crate','nextCrateAt','crateRemainingSec','maxTankLevelAchieved','boostUntil','activeEffects',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
   'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','techFeedProgress','siliconDust','productionLine','talentsV2','talentsApplied','talentsPending',
   'activeCooldowns','lastSeenAt','hangarCells'
@@ -8059,7 +8090,26 @@ function restoreFullState(saved){
   if (supercomputerController && supercomputerController.syncLevel) {
     supercomputerController.syncLevel(scRestored, SupercomputerSprites.config);
   }
-  if (saved.nextCrateAt != null) state.nextCrateAt = saved.nextCrateAt;
+  // Gift-box (подарочный бокс) countdown.
+  // `nextCrateAt` — абсолютный timestamp в домене nowSec(), а nowSec()
+  // (performance.now()/1000 минус pause-offset) перезапускается с ~0 на каждой
+  // загрузке страницы. Сырое присваивание сохранённого значения оставляло
+  // таймер далеко в будущем → бокс больше не падал до конца сессии. Поэтому
+  // читаем переносимый остаток (`crateRemainingSec` от
+  // `Game.getCrateRemainingSec()`), а legacy-field `nextCrateAt` трактуем как
+  // остаток и в любом случае клампим до одного crateIntervalSec от «сейчас».
+  {
+    const crateNow = nowSec();
+    const crateInterval = Number.isFinite(BAL.crateIntervalSec) && BAL.crateIntervalSec > 0
+      ? BAL.crateIntervalSec
+      : 90;
+    let crateRemaining = null;
+    if (Number.isFinite(saved.crateRemainingSec)) crateRemaining = Math.max(0, saved.crateRemainingSec);
+    else if (Number.isFinite(saved.nextCrateAt) && saved.nextCrateAt > 0) crateRemaining = saved.nextCrateAt - crateNow;
+    state.nextCrateAt = (Number.isFinite(crateRemaining) && crateRemaining > 0)
+      ? crateNow + Math.min(crateRemaining, crateInterval)
+      : crateNow + crateInterval;
+  }
   if (saved.mapSeeds && typeof saved.mapSeeds === 'object') {
     if (saved.mapSeeds.stampsSeed !== undefined && saved.mapSeeds.stampsSeed !== null) {
       state.mapSeeds.stampsSeed = saved.mapSeeds.stampsSeed;

@@ -1082,7 +1082,7 @@
         "w": 64,
         "h": 64,
         "frames": 6,
-        "attackRangePx": 24,
+        "attackRangePx": 30,
         "attackCooldownSec": 0.35,
         "attackHitAt": 0.5
       },
