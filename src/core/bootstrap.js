@@ -71,6 +71,10 @@
     var lastActiveButtonIdSmallMenu = null;
     var lastActiveButtonIdConfirm = null;
     var AUTO_SLOT_INDEX = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+    var WAVE_AUTO_SLOT_INDEX = storageApi && Number.isFinite(storageApi.WAVE_AUTO_SLOT_INDEX) ? storageApi.WAVE_AUTO_SLOT_INDEX : 10;
+    var TOTAL_SLOT_COUNT = storageApi && Number.isFinite(storageApi.SAVE_SLOTS_COUNT) && storageApi.SAVE_SLOTS_COUNT > 0
+      ? Math.floor(storageApi.SAVE_SLOTS_COUNT)
+      : 11;
     var saveViewConfig = {
       manualOnly: false,
       exitAfterSave: false,
@@ -95,6 +99,21 @@
         return !!slot.isAuto;
       }
       return index === AUTO_SLOT_INDEX;
+    }
+
+    function isWaveAutoSlot(slot, index) {
+      if (slot && typeof slot === 'object' && Object.prototype.hasOwnProperty.call(slot, 'isWaveAuto')) {
+        return !!slot.isWaveAuto;
+      }
+      if (slot && typeof slot === 'object' && slot.isAuto === undefined && Number.isFinite(Number(slot.index))) {
+        return Number(slot.index) === WAVE_AUTO_SLOT_INDEX;
+      }
+      return index === WAVE_AUTO_SLOT_INDEX;
+    }
+
+    // Обе auto-ячейки служебные: их нельзя переименовать, сохранить вручную или удалить.
+    function isReadOnlySlot(slot, index) {
+      return isAutoSlot(slot, index) || isWaveAutoSlot(slot, index);
     }
 
     function getSmallMenuButtons() {
@@ -196,6 +215,7 @@
 
     function getSlotName(slot, index) {
       if (isAutoSlot(slot, index)) return opts.t('save.autoRetryName');
+      if (isWaveAutoSlot(slot, index)) return opts.t('save.autoWaveName');
       var raw = slot && typeof slot === 'object' ? slot.name : '';
       if (typeof raw !== 'string') return defaultSlotName(index);
       var text = raw.trim();
@@ -270,7 +290,7 @@
       var slotIndex = Number(row.getAttribute('data-slot-index'));
       if (!Number.isFinite(slotIndex)) return -1;
       slotIndex = Math.floor(slotIndex);
-      if (slotIndex < 0 || slotIndex > 9) return -1;
+      if (slotIndex < 0 || slotIndex >= TOTAL_SLOT_COUNT) return -1;
       return slotIndex;
     }
 
@@ -280,7 +300,7 @@
       var meta = getSaveMeta();
       var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
       targetRows.innerHTML = '';
-      var rowCount = mode === 'save' && saveViewConfig.manualOnly ? 9 : 10;
+      var rowCount = mode === 'save' && saveViewConfig.manualOnly ? 9 : TOTAL_SLOT_COUNT;
 
       for (var i = 0; i < rowCount; i++) {
         var row = documentObj.createElement('div');
@@ -289,7 +309,7 @@
         row.setAttribute('data-slot-index', String(i));
 
         var slot = slots[i] || null;
-        var isAuto = isAutoSlot(slot, i);
+        var isAuto = isReadOnlySlot(slot, i);
         row.setAttribute('data-slot-auto', isAuto ? 'true' : 'false');
 
         var numberCell = documentObj.createElement('div');
@@ -636,7 +656,7 @@
       var saveBtn = target.closest('[data-save-slot-btn="true"]');
       if (!saveBtn) return;
       var slotIndex = Number(saveBtn.getAttribute('data-slot-index'));
-      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return;
+      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex >= TOTAL_SLOT_COUNT) return;
       performSaveToSlot(slotIndex);
     });
     opts.ui.smallMenuLoadRows && opts.ui.smallMenuLoadRows.addEventListener('click', function (event) {
@@ -646,7 +666,7 @@
       if (!loadBtn) return;
       if (loadBtn.disabled) return;
       var slotIndex = Number(loadBtn.getAttribute('data-slot-index'));
-      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return;
+      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex >= TOTAL_SLOT_COUNT) return;
       performLoadFromSlot(slotIndex);
     });
 

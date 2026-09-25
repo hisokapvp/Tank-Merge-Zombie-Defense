@@ -279,7 +279,7 @@ body::after{
   right:calc(16px * var(--ui-scale));
   align-items:flex-end;
   width:min(var(--ui-terminal-width), 36vw);
-  padding: 0; 
+  padding: 0;
   box-sizing:border-box;
   transition: width 0.3s ease;
 }
@@ -294,7 +294,7 @@ body::after{
   border: 2px solid #4af127;
   border-radius: 0px;
   padding: clamp(28px, calc(34px * var(--ui-scale)), 34px) clamp(16px, calc(20px * var(--ui-scale)), 20px) clamp(30px, calc(40px * var(--ui-scale)), 40px) clamp(16px, calc(20px * var(--ui-scale)), 20px);
-  box-shadow: 
+  box-shadow:
     0 0 20px rgba(0, 0, 0, 0.8),
     inset 0 0 40px rgba(74, 246, 38, 0.05),
     2px 2px 0px #1a1a1a;
@@ -489,7 +489,7 @@ body::after{
   position: absolute;
   inset: 4px;
   border: 1px solid rgba(255,255,255,0.05);
-  box-shadow: 
+  box-shadow:
     0 0 0 4px #222,
     4px 4px 0 #111,
     -4px -4px 0 #111,
@@ -505,7 +505,7 @@ body::after{
 
 /* Simpler rivets: dots in corners */
 .menuPanel, .levelModal__panel, .bigMenuPanel, .creditsModal__panel, .mergePopupModal__panel {
-  background-image: 
+  background-image:
     radial-gradient(circle at 10px 10px, #111 3px, transparent 4px),
     radial-gradient(circle at calc(100% - 10px) 10px, #111 3px, transparent 4px),
     radial-gradient(circle at 10px calc(100% - 10px), #111 3px, transparent 4px),
@@ -988,6 +988,13 @@ body::after{
 }
 .smallMenuSaveTable__body .smallMenuSaveTable__row{
   border-bottom:1px solid rgba(255, 184, 114, 0.08);
+}
+/* 11 слотов (9 manual + pre-retry auto + wave autosave) не влезают в `.menuPanel`
+   с `overflow:hidden` на низких экранах, поэтому именно body скроллится, а
+   заголовок таблицы остаётся закреплённым. */
+.smallMenuSaveTable__body{
+  max-height:min(52vh, 420px);
+  overflow-y:auto;
 }
 .smallMenuSaveTable__body .smallMenuSaveTable__row:last-child{
   border-bottom:none;
@@ -5359,7 +5366,7 @@ body.ugh-open::before{
   100% { transform: translate(1px, -2px) rotate(-1deg); }
 }
 
-/* Individual shakes (randomly delayed or offset could be done via JS, 
+/* Individual shakes (randomly delayed or offset could be done via JS,
    but here we provide classes that can be assigned) */
 .shake-fast { animation-duration: 0.1s; }
 .shake-alt { animation-direction: reverse; }

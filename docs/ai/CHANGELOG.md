@@ -1,5 +1,36 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-09-25
+
+### Автосейв после волны не срабатывал: переход true→false не детектировался
+- Баг (после ручного теста): прождал 2 волны атаки — сохранения нет, ячейка `11` пустая.
+- Root cause: `updateWorldEvents()` (game.js) вычислял `wasAttackActive` через `isZombieAttackModeActive()` **до** вызова `worldEventsRuntime.updateWorldEvents(dt)`, а «после» — уже **после**. Но `attackEndAt` — абсолютное sim-время, и runtime в **первом же кадре** после конца волны обнуляет `currentAttackStartAt`/`attackEndAt`. Поэтому оба чтения возвращали `false`: переход `true→false` не детектировался, `handleNoRepairAttackWaveTransition()` не заходил в ветку finalize, и `saveWaveAutoSlotAfterWaveEnd()` не вызывался **никогда** — без каких-либо ошибок в консоли.
+- Доказательство (Playwright, реальный браузер, ускоренный конфиг): `trueToFalseDetected: 0`, `seamCalls: 0`, `writerCalls: 0`, `slot10: empty` при том, что `stats.currentWaveCount` рос `0→1→2` (значит `finalizeNoRepairAttackWaveEpisode()` вызывался — но только из fallback-веток без action-переходов).
+- Fix: новый last-value latch `var zombieAttackModeActivePrev` в game.js. `updateWorldEvents()` теперь сначала выполняет runtime-update, затем читает `attackActiveNow`, вызывает `handleNoRepairAttackWaveTransition(zombieAttackModeActivePrev, attackActiveNow)` и записывает latch. Сравнение идёт с предыдущим **кадром**, а не с состоянием до update — окно, в котором runtime успевал обнулить `attackEndAt`, больше не имеет значения.
+  - `var`, а не `let`: `resetWorldEventsRuntimeForNewGame()` объявлена выше по файлу и тоже пишет в latch — с `let` был бы TDZ `ReferenceError`.
+  - `resetWorldEventsRuntimeForNewGame()` синхронизирует latch в `false` (иначе первый кадр после New Game / «Перезапуска симуляции» дал бы фантомный true→false и писал wave-автосейв по пустому миру).
+  - `restoreFullState()` синхронизирует latch с восстановленным расписанием сразу после `applyLoadedAttackWaveSnapshot()` (иначе load сам себе устраивал бы фантомный переход).
+- Post-fix проверка в том же реальном браузере: `trueToFalseDetected: 2`, `seamCalls: 2`, `writerCalls: 2`, `slot10: DATA`, `payloadReset: false`, `payloadRemaining: 4.99` (расписание продолжается, а не рестартует интервал), `slot9: empty` (pre-retry слот не тронут). Загрузка слота `11` через `restoreFullState()` фантомного автосейва не даёт (`writerCallsAfterLoad: 0`), состояние живое (танки/HP/монеты сохранены).
+- `Test/pack25/waveAutosaveSlot.test.js`: добавлены `WAS-20..WAS-23` (latch-контракт, `var` vs TDZ, ре-sync на world reset, ре-sync на restore) — всего `23` проверки.
+- `index.html`: entry token → `20260925-wave-autosave-latch-fix` (179 маркеров, 0 mismatch).
+- Урок: если transition-детектор читает состояние «до/после» вызова, который сам его модулирует, порядок чтения становится критичным. Надёжнее держать own last-value latch между кадрами, чем выводить переход из двух чтений вокруг мутирующего вызова.
+
+### Автосейв в отдельную ячейку после каждой завершённой волны атаки
+- Задача: нужен ещё один автосейв, который срабатывает каждый раз после завершения волны атаки, причём как **новая** ячейка сохранения — существующий pre-retry auto slot переиспользовать нельзя.
+- Почему нельзя переиспользовать: слот `10` (`index 9`) — это `save before retry`, его читает critical modal кнопкой «Перезапустить симуляцию» (`loadPreRetryPayloadFromAutoSlot()` / `canRestartFromAutoSlot()`). Запись в него живого состояния во время волны сломала бы restart (он получил бы не pre-retry payload).
+- `src/persistence/storage.js`: `SAVE_SLOTS_COUNT` 10 → 11; новые константы `WAVE_AUTO_SLOT_INDEX = 10`, `WAVE_AUTO_SLOT_NAME = 'AutoWave'`; `getDefaultSlotName()`/`sanitizeSlotName()` знают новый служебный слот; `listSlots()` помечает его `isWaveAuto: true` (отдельно от `isAuto`); новые API `saveWaveAutoSlot(state, { lastSavedAt })` и `loadWaveAutoSlot()`; экспорт `WAVE_AUTO_SLOT_INDEX`.
+  - Backward compatible: ключ `saveSlotsMeta_v1` и `SAVE_VERSION` не меняются, `normalizeSaveSlotsMeta()` достраивает 11-ю запись из `getDefaultSlotName(10)`, legacy meta с 10 слотами не ломается.
+- `game.js`: новый `getWaveAutoSlotIndex()` и `saveWaveAutoSlotAfterWaveEnd()`; вызов добавлен в `handleNoRepairAttackWaveTransition()` в ветке attack active → inactive, **после** `finalizeNoRepairAttackWaveEpisode()` / `finalizeDefenseOrderEpisode()` / `checkPerfectFenceWave()`, чтобы payload захватил уже начисленные награды, инкрементнутый `stats.currentWaveCount` и расписание следующей волны (в этот момент `currentAttackStartAt` уже сброшен, поэтому `attackWaveRemainingSec` = полный `attackEverySec`).
+  - Guard'ы: не пишет в critical-flow (`criticalFlowActive`) и при `supercomputer.state === 'destroyed'`; ошибка записи (quota/доступ) не ломает волновой flow — только `console.warn`.
+- Payload — **живое** состояние (как обычный manual save), но с явным `forceFenceRuntimeResetOnLoad = false`, поэтому загрузка продолжает сохранённое расписание волн, а не стартует полный `attackEverySec` заново.
+- `src/core/bootstrap.js` (small menu) и `src/ui/bigMenuRuntime.js` (big menu Load): жёсткие `> 9` bounds и `i < 10` заменены на `Storage.SAVE_SLOTS_COUNT`; добавлены `isWaveAutoSlot()` / `isReadOnlySlot()`; имя слота резолвится по i18n-ключу `save.autoWaveName`; служебная ячейка недоступна для save/rename/delete, как и pre-retry auto.
+- `src/phaser/scenes/BigMenuScene.js` (Phaser overlay-вариант меню): Load view рендерит `SAVE_SLOTS_COUNT` строк, имена auto/wave-auto слотов подставляются по i18n; высота/зазор строки уменьшены (`32→26`, `gap 6→4`), чтобы 11 строк влезали в `PANEL.height = 480`.
+- `style.css`: `.smallMenuSaveTable__body` получил `max-height:min(52vh,420px)` + `overflow-y:auto` — 11-й ряд не выталкивает кнопку «Назад» из `.menuPanel` с `overflow:hidden`.
+- i18n: `save.autoWaveName` добавлен в `src/i18n/ru.json` («Автосейв после волны»), `src/i18n/en.json` («Post-wave autosave») и оба словаря `src/i18n/fallbackStrings.js` (ru + en блоки).
+- `index.html`: entry token → `20260925-wave-autosave-slot` (179 маркеров, diff — только эта строка, LF/BOM не тронуты).
+- `Test/pack25/waveAutosaveSlot.test.js` (новый) + регистрация в `ci/run_tests.sh`: тест исполняет реальный `storage.js` в sandbox и проверяет независимость wave-слота от pre-retry слота, `forceFenceRuntimeResetOnLoad = false`, сохранение расписания волн, обратную совместимость meta с 10 записями, а также статические guard'ы на seam `handleNoRepairAttackWaveTransition` и UI-bounds.
+- `docs/ai/SYSTEMS/save.md`: раздел «Слоты и ключи localStorage (v1)» и «Save/Load и Auto-trigger» обновлены под 11 слотов и контракт wave-автосейва.
+
 ## 2026-09-24
 
 ### Оповещение о волне атаки показывало «1 волна» при счётчике 18

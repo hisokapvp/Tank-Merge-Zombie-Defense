@@ -2,7 +2,7 @@
  * BigMenuScene — Phaser 3 overlay scene for the main progression/meta menu.
  *
  * Root view: New Game, Load, Sound, Language, Credits buttons.
- * Load subview: scrollable table of 10 save slots.
+ * Load subview: scrollable table of 11 save slots (9 manual + pre-retry auto + wave autosave).
  * Sound subview: SFX/Music sliders + Auto-pause toggle.
  * Language subview: RU/EN buttons.
  * Credits subview: name + role list loaded from assets/credits.json.
@@ -45,12 +45,12 @@
 
   var SLOT_BTN = {
     width: 340,
-    height: 32,
+    height: 26,
     radius: 6,
     bgColor: 0x223344,
     hoverColor: 0x334466,
     emptyColor: 0x1a2030,
-    gap: 6,
+    gap: 4,
   };
 
   var SLIDER = {
@@ -172,7 +172,7 @@
       var apResult = _createAutoPauseToggle(self, cx, apY);
       _rootGroup.push.apply(_rootGroup, apResult.elements);
 
-      // ── Load view (10 slot rows + back button) ──
+      // ── Load view (11 slot rows + back button) ──
       _createLoadView(self, cx, cy);
 
       // ── Sound view (sliders + back) ──
@@ -463,7 +463,7 @@
     var startY = headerY + 35;
     _slotRows = [];
 
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < _getSlotCount(); i++) {
       var rowY = startY + i * (SLOT_BTN.height + SLOT_BTN.gap);
       var row = _createSlotRow(scene, cx, rowY, i);
       _slotRows.push(row);
@@ -503,16 +503,32 @@
     return { bg: bg, numText: numText, nameText: nameText, dateText: dateText, btnText: btnText, zone: zone, hasData: false };
   }
 
+  function _getSlotCount() {
+    var storageApi = global.Game && global.Game.Storage;
+    if (storageApi && Number.isFinite(storageApi.SAVE_SLOTS_COUNT) && storageApi.SAVE_SLOTS_COUNT > 0) {
+      return Math.floor(storageApi.SAVE_SLOTS_COUNT);
+    }
+    return 11;
+  }
+
   function _populateSlots(slots, t) {
     var noSaveText = t('bigMenuNoSave') || 'No save found';
     var loadText = t('menu.load.col.action') || 'Load';
-    for (var i = 0; i < 10; i++) {
+    var storageApi = global.Game && global.Game.Storage;
+    var autoIndex = storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+    var waveAutoIndex = storageApi && Number.isFinite(storageApi.WAVE_AUTO_SLOT_INDEX) ? storageApi.WAVE_AUTO_SLOT_INDEX : 10;
+    var autoName = t('save.autoRetryName') || 'Auto';
+    var waveAutoName = t('save.autoWaveName') || autoName;
+    for (var i = 0; i < _slotRows.length; i++) {
       var row = _slotRows[i];
       if (!row) continue;
       var slot = slots[i] || null;
       if (slot && slot.hasData) {
+        var slotLabel = slot.name || '';
+        if (i === autoIndex) slotLabel = autoName;
+        else if (i === waveAutoIndex) slotLabel = waveAutoName;
         row.hasData = true;
-        row.nameText.setText(slot.name || '');
+        row.nameText.setText(slotLabel);
         row.dateText.setText(slot.date || '');
         row.btnText.setText(loadText);
         row.btnText.setStyle(TEXT_STYLE.slotBtn);

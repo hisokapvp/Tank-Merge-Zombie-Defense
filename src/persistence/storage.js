@@ -8,10 +8,18 @@
   var SAVE_VERSION = 2;
   var SAVE_SLOTS_META_KEY = 'saveSlotsMeta_v1';
   var SAVE_SLOT_KEY_PREFIX = 'saveSlot_v1_';
-  var SAVE_SLOTS_COUNT = 10;
+  // 10 manual/auto slots (0..8 manual, 9 pre-retry auto) + 1 wave autosave slot (10).
+  // Backward compatible: legacy `saveSlotsMeta_v1` with 10 entries is padded up by
+  // normalizeSaveSlotsMeta(), so no SAVE_VERSION / meta-key migration is needed.
+  var SAVE_SLOTS_COUNT = 11;
   var SAVE_SLOT_NAME_MAX_LEN = 20;
   var AUTO_SLOT_INDEX = 9;
   var AUTO_SLOT_NAME = 'Auto';
+  // Отдельная ячейка автосейва «после завершения волны атаки». Не переиспользует
+  // pre-retry auto slot (index 9): restart-simulation path читает именно его, и
+  // перезапись сломала бы «Перезапустить симуляцию».
+  var WAVE_AUTO_SLOT_INDEX = 10;
+  var WAVE_AUTO_SLOT_NAME = 'AutoWave';
 
   function normalizeTotalDamageDealtRaw(value) {
     if (!Number.isFinite(value)) return 0;
@@ -39,6 +47,7 @@
 
   function getDefaultSlotName(index) {
     if (index === AUTO_SLOT_INDEX) return AUTO_SLOT_NAME;
+    if (index === WAVE_AUTO_SLOT_INDEX) return WAVE_AUTO_SLOT_NAME;
     return 'Слот ' + (index + 1);
   }
 
@@ -49,6 +58,7 @@
 
   function sanitizeSlotName(index, name) {
     if (index === AUTO_SLOT_INDEX) return AUTO_SLOT_NAME;
+    if (index === WAVE_AUTO_SLOT_INDEX) return WAVE_AUTO_SLOT_NAME;
     var text = typeof name === 'string' ? name : '';
     text = text.trim();
     if (text.length > SAVE_SLOT_NAME_MAX_LEN) {
@@ -245,6 +255,7 @@
           lastSavedAt: sanitizeLastSavedAt(slotMeta.lastSavedAt),
           hasData: !!slotPayload.payload,
           isAuto: i === AUTO_SLOT_INDEX,
+          isWaveAuto: i === WAVE_AUTO_SLOT_INDEX,
         });
       }
       if (!migration.ok) return { ok: false, meta: meta, slots: slots, error: migration.error };
@@ -890,6 +901,48 @@
   }
 
   /**
+   * Записать автосейв «после завершения волны атаки» в выделенную ячейку.
+   *
+   * Отдельная ячейка от pre-retry auto slot: restart-simulation path читает
+   * именно `AUTO_SLOT_INDEX`, поэтому переиспользование сломало бы
+   * «Перезапустить симуляцию». Payload — живое состояние (как обычный save):
+   * `serializeState()` получает тот же `state`, что и manual save, плюс
+   * явный `forceFenceRuntimeResetOnLoad = false`, чтобы загрузка продолжила
+   * сохранённое расписание волн, а не начинала полный интервал.
+   *
+   * @param {object} state
+   * @param {{ lastSavedAt?: number }} [options]
+   * @returns {{ok:boolean, error:?string}}
+   */
+  function saveWaveAutoSlot(state, options) {
+    var opts = options && typeof options === 'object' ? options : {};
+    var payload = null;
+    try {
+      payload = serializeState(state || {});
+    } catch (e) {
+      reportStorageError('saveWaveAutoSlot', e);
+      return { ok: false, error: e && e.message ? e.message : 'serialize_error' };
+    }
+    payload.version = 1;
+    payload.forceFenceRuntimeResetOnLoad = false;
+    var write = safeSetItem(getSlotDataKey(WAVE_AUTO_SLOT_INDEX), JSON.stringify(payload));
+    if (!write.ok) return { ok: false, error: write.error };
+    var metaRes = updateMetaField(WAVE_AUTO_SLOT_INDEX, {
+      lastSavedAt: Number.isFinite(opts.lastSavedAt) ? opts.lastSavedAt : Date.now(),
+    });
+    if (!metaRes.ok) return { ok: false, error: metaRes.error };
+    return { ok: true, error: null };
+  }
+
+  /**
+   * Прочитать payload wave-autosave ячейки.
+   * @returns {{ok:boolean, payload:?object, error:?string}}
+   */
+  function loadWaveAutoSlot() {
+    return loadSlotPayloadRaw(WAVE_AUTO_SLOT_INDEX);
+  }
+
+  /**
    * Сохранить игру. meta.lastSeenAt обновляется снаружи при visibilitychange.
    * @param {object} state
    * @param {{ lastSeenAt?: number }} meta
@@ -918,12 +971,15 @@
     SAVE_SLOTS_COUNT: SAVE_SLOTS_COUNT,
     SAVE_SLOT_NAME_MAX_LEN: SAVE_SLOT_NAME_MAX_LEN,
     AUTO_SLOT_INDEX: AUTO_SLOT_INDEX,
+    WAVE_AUTO_SLOT_INDEX: WAVE_AUTO_SLOT_INDEX,
     loadGame: loadGame,
     saveGame: saveGame,
     listSlots: listSlots,
     saveSlot: saveSlot,
     loadSlot: loadSlot,
     deleteSlot: deleteSlot,
+    saveWaveAutoSlot: saveWaveAutoSlot,
+    loadWaveAutoSlot: loadWaveAutoSlot,
     loadSaveSlotsMeta: loadSaveSlotsMeta,
     setSlotName: setSlotName,
     markSlotSaved: markSlotSaved,

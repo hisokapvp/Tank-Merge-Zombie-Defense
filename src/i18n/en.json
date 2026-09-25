@@ -26,6 +26,7 @@
   "menu.load.toast.loaded": "Loaded",
   "menu.load.toast.error": "Load failed",
   "save.autoRetryName": "Pre-retry save",
+  "save.autoWaveName": "Post-wave autosave",
   "ui.toast.noSaves": "No saves",
   "ui.toast.unavailable": "Unavailable",
   "ughAutoMergeUnavailableDetailed": "No tanks are available for merging, or they have not been created yet.",

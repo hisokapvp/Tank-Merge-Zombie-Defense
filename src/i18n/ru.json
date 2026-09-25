@@ -27,6 +27,7 @@
   "menu.load.toast.loaded": "Загрузка выполнена",
   "menu.load.toast.error": "Ошибка загрузки",
   "save.autoRetryName": "Сейв перед повтором",
+  "save.autoWaveName": "Автосейв после волны",
   "ui.toast.noSaves": "Нет сохранений",
   "ui.toast.unavailable": "Недоступно",
   "ughAutoMergeUnavailableDetailed": "Нет доступных танков для объединения, либо они ещё не создались.",

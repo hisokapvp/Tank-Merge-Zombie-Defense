@@ -3137,6 +3137,10 @@ function resetWorldEventsRuntimeForNewGame(){
   worldEventsState.attackSpawnPrevPrimaryDir = null;
   worldEventsState.attackSpawnPrimaryStreak = 0;
   worldEventsState.attackSpawnEpisodeKey = null;
+  // Весь attack-mode ушёл в baseline: синхронизируем last-value latch, иначе
+  // первый кадр после рестарта дал бы ложный переход true→false и вызывал
+  // wave-autosave на пустом мире.
+  zombieAttackModeActivePrev = false;
 }
 
 function getDefaultZombieTargetAlive(){
@@ -4231,10 +4235,27 @@ function getZombieIdleWavePhase(){
   return 'inactive';
 }
 
+/**
+ * Attack-mode active flag с ПРЕДЫДУЩЕГО вызова `updateWorldEvents()`.
+ *
+ * `attackEndAt` — абсолютное sim-время, и в ПЕРВОМ кадре после окончания волны
+ * `worldEventsRuntime.updateWorldEvents()` обнуляет `currentAttackStartAt`/`attackEndAt`
+ * до того, как `getAttackWaveSnapshot()` успевает сообщить `active: true`. Поэтому
+ * чтение «было ли активно» через снапшот до/после update давало `false → false`:
+ * переход true→false не детектировался, `handleNoRepairAttackWaveTransition()` не
+ * вызывал finalize по этой ветке, и wave-автосейв никогда не срабатывал.
+ * Детектируем переход по собственному last-value флагу между кадрами.
+ *
+ * `var` (не `let`) — переменная читается/пишется из функций, объявленных выше по
+ * файлу (`resetWorldEventsRuntimeForNewGame`), поэтому TDZ недопустим.
+ */
+var zombieAttackModeActivePrev = false;
+
 function updateWorldEvents(dt){
-  const wasAttackActive = isZombieAttackModeActive();
   ensureWorldEventsRuntimeController()?.updateWorldEvents(dt);
-  handleNoRepairAttackWaveTransition(wasAttackActive, isZombieAttackModeActive());
+  const attackActiveNow = isZombieAttackModeActive();
+  handleNoRepairAttackWaveTransition(zombieAttackModeActivePrev, attackActiveNow);
+  zombieAttackModeActivePrev = attackActiveNow;
 }
 
 function ensureRainCache(requiredCount){
@@ -5330,6 +5351,11 @@ function handleNoRepairAttackWaveTransition(wasAttackActive, attackActiveNow){
     finalizeNoRepairAttackWaveEpisode();
     finalizeDefenseOrderEpisode();
     checkPerfectFenceWave();
+    // Автосейв в отдельную ячейку после завершения волны атаки. Идёт ПОСЛЕ
+    // finalize/counters, чтобы payload захватил уже начисленные награды и
+    // инкрементнутый per-run счётчик волн; расписание следующей волны в этот
+    // момент уже содержит полный `attackEverySec`.
+    saveWaveAutoSlotAfterWaveEnd();
     return;
   }
   if (!attackActiveNow && noRepairAttackWaveRuntime.activeEpisodeKey) {
@@ -8217,6 +8243,10 @@ function restoreFullState(saved){
       remainingActiveSec: saved.attackWaveRemainingActiveSec,
     });
   }
+  // Load заменил расписание волн целиком: синхронизируем last-value latch с
+  // восстановленным состоянием, иначе первый кадр выглядел бы как переход и
+  // породил ложный begin/finalize (включая незаслуженный wave-autosave).
+  zombieAttackModeActivePrev = isZombieAttackModeActive();
   // Восстановленная активная волна должна получить свой episode-key, иначе
   // `handleNoRepairAttackWaveTransition()` увидит `wasAttackActive === true` и
   // НЕ вызовет `beginNoRepairAttackWaveEpisode()` — волна останется без
@@ -13231,6 +13261,43 @@ function clearAllTanksFromCells(targetState){
 function getAutoRetrySlotIndex(){
   var storageApi = window.Game && window.Game.Storage;
   return storageApi && Number.isFinite(storageApi.AUTO_SLOT_INDEX) ? storageApi.AUTO_SLOT_INDEX : 9;
+}
+
+/**
+ * Автосейв «после завершения волны атаки».
+ *
+ * Отдельная ячейка (`Storage.WAVE_AUTO_SLOT_INDEX`, index 10) — НЕ переиспользует
+ * pre-retry auto slot (index 9), иначе «Перезапустить симуляцию» читал бы живой
+ * сейв вместо pre-retry payload-а.
+ *
+ * Payload — живое состояние (как обычный manual save): танки в ячейках, текущий HP
+ * стен, монеты, накопленные ресурсы и сохранённое расписание следующей волны
+ * (`attackWaveRemainingSec` = полный `attackEverySec`, т.к. вызывается уже после
+ * сброса `currentAttackStartAt`). `forceFenceRuntimeResetOnLoad = false`, чтобы
+ * загрузка продолжила расписание, а не начинала полный интервал заново.
+ *
+ * Вызывается ровно один раз на переход attack active → inactive из
+ * `handleNoRepairAttackWaveTransition()`. Ошибка записи (quota/доступ) не ломает
+ * волновой flow — только console.warn.
+ */
+function saveWaveAutoSlotAfterWaveEnd(){
+  // Не пишем служебный сейв поверх critical-сценария: там уже есть свой pre-retry
+  // автосейв в index 9, а state уже сброшен (танки сняты, HP суперкомпьютера в пороге).
+  if (criticalFlowActive) return false;
+  var sc = getComputerState();
+  if (sc && (sc.state === 'destroyed' || sc.state === 'destroy')) return false;
+
+  var storageApi = window.Game && window.Game.Storage;
+  if (!storageApi || typeof storageApi.saveWaveAutoSlot !== 'function') return false;
+
+  var result = storageApi.saveWaveAutoSlot(state, {
+    lastSavedAt: Date.now(),
+  });
+  if (!result || !result.ok) {
+    console.warn('Wave-end autosave failed:', result && result.error ? result.error : 'unknown');
+    return false;
+  }
+  return true;
 }
 
 function isValidSavedPayload(payload){

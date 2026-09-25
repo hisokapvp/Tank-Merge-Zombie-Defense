@@ -103,8 +103,26 @@
       return index === autoIndex;
     }
 
+    function isWaveAutoSlot(slot, index) {
+      if (slot && typeof slot === 'object' && Object.prototype.hasOwnProperty.call(slot, 'isWaveAuto')) {
+        return !!slot.isWaveAuto;
+      }
+      var storageApi = global.Game && global.Game.Storage;
+      var waveAutoIndex = storageApi && Number.isFinite(storageApi.WAVE_AUTO_SLOT_INDEX) ? storageApi.WAVE_AUTO_SLOT_INDEX : 10;
+      return index === waveAutoIndex;
+    }
+
+    function getBigMenuTotalSlotCount() {
+      var storageApi = global.Game && global.Game.Storage;
+      if (storageApi && Number.isFinite(storageApi.SAVE_SLOTS_COUNT) && storageApi.SAVE_SLOTS_COUNT > 0) {
+        return Math.floor(storageApi.SAVE_SLOTS_COUNT);
+      }
+      return 11;
+    }
+
     function getBigMenuSlotName(slot, index) {
       if (isAutoSlot(slot, index)) return deps.t('save.autoRetryName');
+      if (isWaveAutoSlot(slot, index)) return deps.t('save.autoWaveName');
       var raw = slot && typeof slot === 'object' ? slot.name : '';
       if (typeof raw !== 'string') return getBigMenuDefaultSlotName(index);
       var text = raw.trim();
@@ -138,7 +156,7 @@
       var meta = getBigMenuSaveMeta();
       var slots = Array.isArray(meta && meta.slots) ? meta.slots : [];
       ui.bigMenuLoadRows.innerHTML = '';
-      for (var i = 0; i < 10; i++) {
+      for (var i = 0; i < getBigMenuTotalSlotCount(); i++) {
         var slot = slots[i] || null;
         var row = document.createElement('div');
         row.className = 'smallMenuSaveTable__row';
@@ -189,7 +207,7 @@
       var btn = node.closest('[data-big-load-slot-btn="true"]');
       if (!btn) return -1;
       var slotIndex = Number(btn.getAttribute('data-slot-index'));
-      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex > 9) return -1;
+      if (!Number.isFinite(slotIndex) || slotIndex < 0 || slotIndex >= getBigMenuTotalSlotCount()) return -1;
       return Math.floor(slotIndex);
     }
 

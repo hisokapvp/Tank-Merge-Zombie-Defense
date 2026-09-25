@@ -163,13 +163,17 @@ Anchor-кейсы для module-owned hangar-ресурсов: `TUT-8Y` (silicon
 
 ## Слоты и ключи localStorage (v1)
 - Метаданные слотов: `saveSlotsMeta_v1`.
-- Данные слотов: `saveSlot_v1_0 ... saveSlot_v1_9` (индексы `0..9`, UI слоты `1..10`).
-- Формат meta: `{ slots: Array<{ name: string, lastSavedAt: number|null }> }`, всегда нормализуется до 10 элементов.
+- Данные слотов: `saveSlot_v1_0 ... saveSlot_v1_10` (индексы `0..10`, UI слоты `1..11`).
+- Формат meta: `{ slots: Array<{ name: string, lastSavedAt: number|null }> }`, всегда нормализуется до `SAVE_SLOTS_COUNT` (11) элементов. Legacy meta с 10 записями **не** ломается: `normalizeSaveSlotsMeta()` достраивает 11-й слот через `getDefaultSlotName(10)`; `SAVE_VERSION` и ключ `saveSlotsMeta_v1` не меняются.
 - Формат payload слота: сериализованное состояние игры + `payload.version = 1`.
 - Слот `10` (`index = 9`) зарезервирован под Auto (`save before retry`):
 	- в UI `Load` он отображается по i18n-ключу `save.autoRetryName` (meta.name игнорируется),
 	- в UI `Save` он недоступен для сохранения/rename/delete,
 	- логика авто-слота определяется через `slot.isAuto` из `Storage.listSlots()`.
+- Слот `11` (`index = 10`, `Storage.WAVE_AUTO_SLOT_INDEX`) зарезервирован под автосейв после волны атаки:
+	- в UI `Load` отображается по i18n-ключу `save.autoWaveName` (meta.name игнорируется),
+	- в UI `Save` недоступен для сохранения/rename/delete (тот же `data-slot-auto="true"` path, что и у pre-retry auto),
+	- в `Storage.listSlots()` помечается `isWaveAuto: true` (отдельно от `isAuto`, потому что semantic владельца разная).
 
 ## Backend-абстракция слотов
 - Реализация в `src/persistence/storage.js` разделена на backend-контракт и текущий LocalStorage backend.
@@ -195,12 +199,20 @@ Anchor-кейсы для module-owned hangar-ресурсов: `TUT-8Y` (silicon
 
 ## Save/Load и Auto-trigger
 - Manual Save (`small menu -> Save`) пишет payload в выбранный слот `1..9`.
-- Load (`big menu Load` и `small menu Load`) использует тот же список 10 статичных слотов, пустые слоты disabled.
+- Load (`big menu Load` и `small menu Load`) использует тот же список 11 статичных слотов, пустые слоты disabled; `.smallMenuSaveTable__body` скроллится (`max-height:min(52vh,420px)`), чтобы extra ряд не выталкивал кнопку «Назад».
 - `saveSlot()` обновляет meta только полем `lastSavedAt` (без передачи `name`), чтобы обычное сохранение не перетирало пользовательский rename.
 - Autosave `pre-retry` в слот `10` (`index 9`) выполняется на входе в critical-режим **один раз за critical-эпизод**.
 	- После выхода из critical-фазы флаг эпизода сбрасывается; при следующем входе autosave снова выполняется.
 	- Payload pre-retry: runtime сброшен (1 стартовый танк L1 в ангаре, стены L1, монеты 40), meta-прогресс сохранён (achievements, mods, talents, drones, damage points, cannon/fence upgrades), а purchase-economy возвращена к baseline (`buyCounts = {}`, `buyPrices = {}`, `maxTankLevelAchieved = 1`).
 	- Ошибка autosave (quota/parse/доступ) не ломает critical flow: ставится runtime-флаг `preRetrySaveFailed`, показывается warning/toast.
+- Autosave после волны атаки в слот `11` (`index 10`) выполняется на каждом переходе attack active → inactive.
+	- Seam: `handleNoRepairAttackWaveTransition()` в `game.js` вызывает `saveWaveAutoSlotAfterWaveEnd()` ПОСЛЕ `finalizeNoRepairAttackWaveEpisode()` / `finalizeDefenseOrderEpisode()` / `checkPerfectFenceWave()`, поэтому payload фиксирует уже начисленные награды и инкрементнутый `stats.currentWaveCount`.
+	- **Переход детектится last-value latch-ом `zombieAttackModeActivePrev`, а не двумя чтениями вокруг `runtime.updateWorldEvents()`.** `attackEndAt` — абсолютное sim-время, и runtime обнуляет его в первом же кадре после конца волны; чтение «до» и «после» вокруг этого вызова давало `false → false` и автосейв не срабатывал никогда. Latch сравнивает текущий кадр с предыдущим, поэтому порядок мутаций внутри update больше не важен: [game.js](../../../game.js).
+		- `zombieAttackModeActivePrev` объявлена через `var` (читается из `resetWorldEventsRuntimeForNewGame()`, объявленной выше) — `let` дал бы TDZ `ReferenceError`.
+		- Ре-sync latch обязателен в двух местах: `resetWorldEventsRuntimeForNewGame()` (→ `false`) и `restoreFullState()` (→ фактическое состояние после `applyLoadedAttackWaveSnapshot()`), иначе получается фантомный переход и незаслуженный/пропущенный сейв.
+	- Payload — **живое** состояние (как manual save): `storage.js` `saveWaveAutoSlot()` вызывает `serializeState(state)` без pre-retry сброса. Отличие от обычного slot-save: явный `forceFenceRuntimeResetOnLoad = false`, поэтому загрузка продолжает сохранённое расписание и не запускает полный `attackEverySec` заново.
+	- Не пишется в critical-flow (`criticalFlowActive`) и при `supercomputer.state === 'destroyed'` — там владелец сейва pre-retry слот.
+	- Ошибка записи (quota/parse/доступ) не ломает волновой flow: только `console.warn`, сейв остаётся прежним.
 
 ## Critical modal и save/load сценарии
 - `Перезапустить симуляцию`:
