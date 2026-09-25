@@ -68,6 +68,7 @@ run_test "Pack 22 (crate modal pause lock)" "Test/pack22/crateModalPause.test.js
 run_test "Pack 23 (whole-chip tutorial gate)" "Test/pack23/wholeChipTutorialGate.test.js"
 run_test "Pack 24 (crate timer persistence)" "Test/pack24/crateTimerPersistence.test.js"
 run_test "Pack 25 (wave-end autosave slot)" "Test/pack25/waveAutosaveSlot.test.js"
+run_test "Pack 26 (timed-effect clock-domain guard)" "Test/pack26/timedEffectClockDomainGuard.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

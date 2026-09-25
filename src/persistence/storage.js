@@ -653,6 +653,42 @@
   }
 
   /**
+   * Прочитать переносимые остатки timed-эффектов (в sim-секундах): speed-буст
+   * суперкомпьютера и три активки — Шквал (`attackSec`), Купол (`defenseSec`),
+   * Золотое время (`economySec`).
+   *
+   * `state.boostUntil` / `state.activeEffects.*Until` — абсолютные timestamps в
+   * домене `nowSec()` (`performance.now()/1000` минус pause-offset), который
+   * перезапускается с ~0 на каждой загрузке страницы. Сырое абсолютное значение
+   * после reload давало «бафф длится столько, сколько длилась прошлая сессия»
+   * (баг «Шквал 1100+ секунд»). Live-first чтение через
+   * `Game.getTimedEffectRemainders()` с fallback на relative-пересчёт от
+   * `state.activeEffects` (см. `getTimedEffectRemainders()` в game.js).
+   *
+   * @param {object} state
+   * @returns {{boostSec:number, attackSec:number, defenseSec:number, economySec:number}|null}
+   */
+  function serializeTimedEffectRemainders(state) {
+    var live = null;
+    try {
+      var reader = global.Game && global.Game.getTimedEffectRemainders;
+      live = typeof reader === 'function' ? reader() : null;
+    } catch (_) { live = null; }
+    if (live && typeof live === 'object') {
+      return {
+        boostSec: Number.isFinite(live.boostSec) ? Math.max(0, live.boostSec) : 0,
+        attackSec: Number.isFinite(live.attackSec) ? Math.max(0, live.attackSec) : 0,
+        defenseSec: Number.isFinite(live.defenseSec) ? Math.max(0, live.defenseSec) : 0,
+        economySec: Number.isFinite(live.economySec) ? Math.max(0, live.economySec) : 0,
+      };
+    }
+    // Без живого seam остаток вычислить нельзя (нужен `nowSec()` из game.js).
+    // `null` заставляет reader трактовать legacy-поля как остатки прошлой сессии
+    // и отбросить всё, что больше полной длительности эффекта.
+    return null;
+  }
+
+  /**
    * Прочитать текущий снимок расписания волны атаки из runtime.
    *
    * `worldEventsState.attackStartAt` / `currentAttackStartAt` / `attackEndAt`
@@ -848,6 +884,11 @@
       maxTankLevelAchieved: state.maxTankLevelAchieved,
       boostUntil: state.boostUntil,
       activeEffects: state.activeEffects,
+      // Переносимые ОСТАТКИ timed-эффектов (session-relative, сек). Без них
+      // абсолютные `boostUntil` / `activeEffects.*Until` после reload попадали в
+      // чужой clock-домен, и бафф активки (Шквал/Купол/Золотое время) жил
+      // столько, сколько длилась прошлая сессия.
+      timedEffectsRemainingSec: serializeTimedEffectRemainders(state),
       fenceState: fenceState,
       achievements: state.achievements,
       stats: stats,

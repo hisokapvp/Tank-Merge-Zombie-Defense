@@ -418,11 +418,19 @@ test('WAS-19: entry token is bumped and shared by the touched entry assets', fun
   const m = indexHtml.match(/var token = '([^']+)'/);
   assert(m, 'entry token present');
   const entry = m[1];
-  assertEqual(entry, '20260925-wave-autosave-latch-fix', 'entry token reflects this change');
+  // Не хардкодим значение токена: он бампается каждым следующим проходом
+  // (прецедент — pack15 CB-2). Проверяем, что токен непустой и реально
+  // распространён на затронутые entry assets.
+  assert(entry.length > 0, 'entry token is non-empty');
   assert(indexHtml.indexOf('src/persistence/storage.js?v=' + entry) !== -1, 'storage.js carries the token');
   assert(indexHtml.indexOf('src/core/bootstrap.js?v=' + entry) !== -1, 'bootstrap.js carries the token');
   assert(indexHtml.indexOf('src/ui/bigMenuRuntime.js?v=' + entry) !== -1, 'bigMenuRuntime.js carries the token');
   assert(indexHtml.indexOf('src/i18n/fallbackStrings.js?v=' + entry) !== -1, 'fallbackStrings.js carries the token');
+  // 0 mismatch: каждый ?v= маркер обязан нести тот же токен.
+  const markers = indexHtml.match(/\?v=[A-Za-z0-9._-]+/g) || [];
+  assert(markers.length > 0, 'index.html has cache-bust markers');
+  assert(markers.every(function (marker) { return marker === '?v=' + entry; }),
+    'every ?v= marker carries the shared entry token (0 mismatch)');
 });
 
 /* ------------------------------------------------------------------ */

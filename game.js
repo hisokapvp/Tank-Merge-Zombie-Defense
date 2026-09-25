@@ -439,6 +439,7 @@ function normalizeActiveEffectsTimestamps(){
   state.activeEffects.attackUntil = normalizeStoredUntilSec(state.activeEffects.attackUntil);
   state.activeEffects.speedUntil = normalizeStoredUntilSec(state.activeEffects.speedUntil);
   state.activeEffects.economyUntil = normalizeStoredUntilSec(state.activeEffects.economyUntil);
+  clampTimedEffectsToTimeDomain();
 }
 
 function getAppliedFenceUpgradeLevel(level){
@@ -570,6 +571,152 @@ const BOOST_EFFECT_DEFS = [
   { boostId: 'defenseBoost', source: 'activeEffects', key: 'speedUntil', secondsTotal: ACTIVE_ABILITY_DURATION_SEC },
   { boostId: 'economyBoost', source: 'activeEffects', key: 'economyUntil', secondsTotal: ACTIVE_ABILITY_DURATION_SEC },
 ];
+
+/* ── Timed-effect clock-domain guard ─────────────────────────────────────────
+ * `state.boostUntil` и `state.activeEffects.*Until` — абсолютные timestamps в
+ * домене `nowSec()` (`performance.now()/1000` минус pause-offset). Домен
+ * перезапускается с ~0 на КАЖДОЙ загрузке страницы и не восстанавливается из
+ * payload, поэтому сырое сохранение абсолютного значения превращало остаток
+ * баффа в «сколько длилась прошлая сессия»: после загрузки «Шквал» держался
+ * 1100+ секунд, и баг невозможно было поймать в свежей сессии.
+ *
+ * Инвариант защиты: `until − now` НИКОГДА не превышает полную длительность
+ * эффекта. Всё, что больше, — артефакт clock-domain и усекается до одной полной
+ * длительности. Покрывает все три активки (Шквал → attackUntil, Купол →
+ * speedUntil, Золотое время → economyUntil) и speed-буст суперкомпьютера
+ * (boostUntil).
+ */
+const TIMED_EFFECT_KEYS = ['attackUntil', 'speedUntil', 'economyUntil'];
+// Страховочный потолок, когда точная длительность ещё не резолвится (talentsV2
+// не инициализирован): 60 с — максимальная полная длительность среди
+// timed-эффектов (`BAL.boostDurationSec`), активки короче.
+const TIMED_EFFECT_RESTORE_CEILING_SEC = 60;
+const timedEffectRuntime = { durationsSec: null, abilitiesResolved: false };
+
+/** Полные длительности эффектов (сек). Резолвятся только на холодных путях. */
+function resolveTimedEffectDurationsSec(){
+  const out = { boostUntil: 0, attackUntil: 0, speedUntil: 0, economyUntil: 0 };
+  if (Number.isFinite(BAL && BAL.boostDurationSec) && BAL.boostDurationSec > 0) {
+    out.boostUntil = BAL.boostDurationSec;
+  }
+  const api = getTalentsV2Api();
+  if (api && typeof api.getActiveState === 'function') {
+    for (let i = 0; i < TIMED_EFFECT_KEYS.length; i++) {
+      try {
+        const activeState = api.getActiveState(getTalentV2BranchIdByIndex(i), Date.now());
+        const ms = Number(activeState && activeState.durationMs);
+        if (Number.isFinite(ms) && ms > 0) out[TIMED_EFFECT_KEYS[i]] = ms / 1000;
+      } catch (_e) { /* talentsV2 не готов — остаётся страховочный потолок */ }
+    }
+  }
+  return out;
+}
+
+function refreshTimedEffectDurationsCache(){
+  const durations = resolveTimedEffectDurationsSec();
+  timedEffectRuntime.durationsSec = durations;
+  // Полный набор доступен только при готовом talentsV2; до этого держим флаг
+  // снятым, чтобы `clampTimedEffectsToTimeDomain()` повторил resolve.
+  timedEffectRuntime.abilitiesResolved = TIMED_EFFECT_KEYS.every(function (key) {
+    return Number(durations[key]) > 0;
+  });
+}
+
+/** Чистый резолвер потолка — без побочных эффектов (важно для hot-path). */
+function getTimedEffectCeilingSec(key){
+  const cached = timedEffectRuntime.durationsSec;
+  const precise = cached ? Number(cached[key]) : 0;
+  if (Number.isFinite(precise) && precise > 0) return precise;
+  return TIMED_EFFECT_RESTORE_CEILING_SEC;
+}
+
+/**
+ * Инвариант clock-domain: остаток timed-эффекта не может превышать его полную
+ * длительность. Значение из чужого домена (session-relative absolute после
+ * reload) усекается до `now + duration` — тот же приём, что уже применён к
+ * `nextCrateAt` в Pack 24 (клампим до одного полного интервала, а не
+ * выбрасываем расписание целиком).
+ */
+function clampTimedEffectUntilSec(untilSec, nowSecValue, durationSec){
+  const until = Number.isFinite(untilSec) ? untilSec : 0;
+  if (!(until > 0)) return 0;
+  const nowValue = Number.isFinite(nowSecValue) ? nowSecValue : 0;
+  const total = Number.isFinite(durationSec) && durationSec > 0 ? durationSec : TIMED_EFFECT_RESTORE_CEILING_SEC;
+  if (until <= nowValue) return until;
+  return Math.min(until, nowValue + total);
+}
+
+/** См. `clampTimedEffectUntilSec`: `until = now + clamp(remainder, 0, duration)`. */
+function applyTimedEffectRemainder(remainderSec, nowSecValue, durationSec){
+  const remainder = Number.isFinite(remainderSec) ? remainderSec : 0;
+  const nowValue = Number.isFinite(nowSecValue) ? nowSecValue : 0;
+  const total = Number.isFinite(durationSec) && durationSec > 0 ? durationSec : TIMED_EFFECT_RESTORE_CEILING_SEC;
+  if (!(remainder > 0)) return 0;
+  return nowValue + Math.min(remainder, total);
+}
+
+/** Self-healing clamp: вызывается каждый кадр из `normalizeActiveEffectsTimestamps()`. */
+function clampTimedEffectsToTimeDomain(){
+  if (!state || typeof state !== 'object') return;
+  // Ленивый одноразовый resolve: точные длительности активок доступны сразу после
+  // init talentsV2, поэтому полный набор резолвится на первых же кадрах. Гейт по
+  // `abilitiesResolved` не даёт платить за это на каждом кадре.
+  if (!timedEffectRuntime.abilitiesResolved && typeof isTalentsV2Ready === 'function' && isTalentsV2Ready()) {
+    refreshTimedEffectDurationsCache();
+  }
+  const nowSecValue = nowSec();
+  state.boostUntil = clampTimedEffectUntilSec(state.boostUntil, nowSecValue, getTimedEffectCeilingSec('boostUntil'));
+  const effects = state.activeEffects;
+  if (!effects || typeof effects !== 'object') return;
+  for (let i = 0; i < TIMED_EFFECT_KEYS.length; i++) {
+    const key = TIMED_EFFECT_KEYS[i];
+    effects[key] = clampTimedEffectUntilSec(effects[key], nowSecValue, getTimedEffectCeilingSec(key));
+  }
+}
+
+/**
+ * Читает timed-эффекты из payload (`restoreFullState` / `applySavedProgress`).
+ * Приоритет — `timedEffectsRemainingSec` (относительные остатки, writer —
+ * `storage.js`). Legacy-поля `boostUntil` / `activeEffects` трактуются как
+ * ОСТАТКИ прошлой сессии; всё, что больше полной длительности, усекается до
+ * одной полной длительности (см. Pack 24 precedent для `nextCrateAt`).
+ */
+function restoreTimedEffectsFromSave(saved){
+  if (!state || typeof state !== 'object' || !saved || typeof saved !== 'object') return;
+  refreshTimedEffectDurationsCache();
+  const nowSecValue = nowSec();
+  const savedRemainders = saved.timedEffectsRemainingSec && typeof saved.timedEffectsRemainingSec === 'object'
+    ? saved.timedEffectsRemainingSec
+    : null;
+  const savedEffects = saved.activeEffects && typeof saved.activeEffects === 'object' ? saved.activeEffects : null;
+  const pickRemainder = function (key, legacyAbsolute){
+    if (savedRemainders && Number.isFinite(savedRemainders[key])) return savedRemainders[key];
+    return (Number.isFinite(legacyAbsolute) && legacyAbsolute > 0) ? (legacyAbsolute - nowSecValue) : 0;
+  };
+  if (!state.activeEffects || typeof state.activeEffects !== 'object') {
+    state.activeEffects = { attackUntil: 0, speedUntil: 0, economyUntil: 0 };
+  }
+  state.boostUntil = applyTimedEffectRemainder(
+    pickRemainder('boostSec', saved.boostUntil),
+    nowSecValue,
+    getTimedEffectCeilingSec('boostUntil')
+  );
+  state.activeEffects.attackUntil = applyTimedEffectRemainder(
+    pickRemainder('attackSec', savedEffects && savedEffects.attackUntil),
+    nowSecValue,
+    getTimedEffectCeilingSec('attackUntil')
+  );
+  state.activeEffects.speedUntil = applyTimedEffectRemainder(
+    pickRemainder('defenseSec', savedEffects && savedEffects.speedUntil),
+    nowSecValue,
+    getTimedEffectCeilingSec('speedUntil')
+  );
+  state.activeEffects.economyUntil = applyTimedEffectRemainder(
+    pickRemainder('economySec', savedEffects && savedEffects.economyUntil),
+    nowSecValue,
+    getTimedEffectCeilingSec('economyUntil')
+  );
+}
 
 const BASE_BAL = {
   cellW: 48,
@@ -4170,6 +4317,32 @@ function getCrateRemainingSec(){
 
 GameApi.getCrateRemainingSec = getCrateRemainingSec;
 
+/**
+ * Canonical read-path для timed-эффектов в save payload: ОТНОСИТЕЛЬНЫЕ остатки
+ * (сек) для speed-буста и всех трёх активок, либо `null` если state недоступен.
+ *
+ * Абсолютные timestamps здесь недопустимы: домен `nowSec()` перезапускается с ~0
+ * на каждой загрузке страницы, поэтому сырой absolute после reload означал
+ * «бафф продлится столько, сколько длилась прошлая сессия» (баг «Шквал 1100+
+ * секунд»). `storage.js` читает значения через этот seam.
+ */
+function getTimedEffectRemainders(){
+  if (!state || typeof state !== 'object') return null;
+  const nowSecValue = nowSec();
+  const effects = state.activeEffects && typeof state.activeEffects === 'object' ? state.activeEffects : null;
+  const remainingSec = function (untilSec){
+    return (Number.isFinite(untilSec) && untilSec > nowSecValue) ? (untilSec - nowSecValue) : 0;
+  };
+  return {
+    boostSec: remainingSec(state.boostUntil),
+    attackSec: effects ? remainingSec(effects.attackUntil) : 0,
+    defenseSec: effects ? remainingSec(effects.speedUntil) : 0,
+    economySec: effects ? remainingSec(effects.economyUntil) : 0,
+  };
+}
+
+GameApi.getTimedEffectRemainders = getTimedEffectRemainders;
+
 function getWeatherCfg(){
   return ensureWorldEventsRuntimeController()?.getWeatherCfg() || null;
 }
@@ -7527,6 +7700,9 @@ function getFirstTrackTank(){
 
 function useActiveAbility(branch){
   if (!isTalentsV2Ready()) return;
+  // Точные длительности активок доступны здесь (talentsV2 готов), поэтому
+  // clock-domain guard снимает любой poisoned-остаток до `Math.max(...)` ниже.
+  refreshTimedEffectDurationsCache();
   normalizeActiveEffectsTimestamps();
   const api = getTalentsV2Api();
   if (!api) return;
@@ -7564,9 +7740,15 @@ function useActiveAbility(branch){
     untilSec = remainMs > 0 ? nowSecValue + (remainMs / 1000) : 0;
   }
   if (untilSec > 0 && state.activeEffects && typeof state.activeEffects === 'object') {
-    if (branch === 0) state.activeEffects.attackUntil = Math.max(state.activeEffects.attackUntil || 0, untilSec);
-    else if (branch === 1) state.activeEffects.speedUntil = Math.max(state.activeEffects.speedUntil || 0, untilSec);
-    else if (branch === 2) state.activeEffects.economyUntil = Math.max(state.activeEffects.economyUntil || 0, untilSec);
+    // Инвариант clock-domain: остаток активки не может превышать её полную
+    // длительность. Если в state лежал poisoned-absolute из чужого домена
+    // (post-load), `Math.max` не должен его унаследовать.
+    const abilityKey = branch === 0 ? 'attackUntil' : (branch === 1 ? 'speedUntil' : (branch === 2 ? 'economyUntil' : ''));
+    const abilityCeiling = getTimedEffectCeilingSec(abilityKey);
+    const clampedUntil = Math.min(nowSecValue + abilityCeiling, untilSec);
+    if (branch === 0) state.activeEffects.attackUntil = clampedUntil;
+    else if (branch === 1) state.activeEffects.speedUntil = clampedUntil;
+    else if (branch === 2) state.activeEffects.economyUntil = clampedUntil;
   }
   updateUI();
 }
@@ -7856,6 +8038,7 @@ const __KNOWN_PAYLOAD_KEYS = [
   'version','coins','kills','tutorial','totalDamageDealtRaw','zombieWaveAtkMult','zombieWaveHpMult',
   'damagePointsSpent','fenceLevel','fenceRepairCount','cells','supercomputer','computerLevel','player',
   'buyCounts','buyPrices','crate','nextCrateAt','crateRemainingSec','maxTankLevelAchieved','boostUntil','activeEffects',
+  'timedEffectsRemainingSec',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
   'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','techFeedProgress','siliconDust','productionLine','talentsV2','talentsApplied','talentsPending',
   'activeCooldowns','lastSeenAt','hangarCells'
@@ -7951,8 +8134,12 @@ function restoreFullState(saved){
   state.currentFenceTierApplied = Number.isFinite(state.fenceLevel)
     ? Math.max(1, Math.floor(state.fenceLevel))
     : 1;
-  if (saved.boostUntil != null) state.boostUntil = saved.boostUntil;
-  if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects };
+  // Timed-эффекты (Шквал/Купол/Золотое время + speed boost суперкомпьютера):
+  // остаток читается из `timedEffectsRemainingSec`, legacy-поля `boostUntil` /
+  // `activeEffects` трактуются как ОСТАТКИ прошлой сессии. Сырое абсолютное
+  // значение продлевало бафф на всю длительность прошлой сессии — отсюда баг
+  // «Шквал после загрузки длится 1100+ секунд».
+  restoreTimedEffectsFromSave(saved);
   normalizeActiveEffectsTimestamps();
   let reconcileAchievementRewardsAfterRestore = false;
   if (saved.achievements && typeof saved.achievements === 'object') {
@@ -8475,6 +8662,12 @@ function applySavedProgress(data){
     active: data.attackWaveActive === true,
     remainingActiveSec: data.attackWaveRemainingActiveSec,
   });
+  // Timed-эффекты активаций (Шквал/Купол/Золотое время) + speed boost: читаются из
+  // относительных остатков `timedEffectsRemainingSec`, legacy-поля — как остатки.
+  // Тот же контракт, что в `restoreFullState()`; без него прогресс-загрузка
+  // переносила бы абсолютный timestamp чужого clock-домена.
+  restoreTimedEffectsFromSave(data);
+  normalizeActiveEffectsTimestamps();
   return true;
 }
 
@@ -14492,6 +14685,16 @@ function ensureProgressUI(){
   const topbar = document.querySelector('.stageUiRight') || document.querySelector('.stageCanvas') || document.body;
   if (document.getElementById('xpWrap')) return;
 
+  // HUD-порядок: xpWrap → simResetsWrap → currentWaveWrap → stageAbilitySlots.
+  // Панели счётчиков вставляются ПЕРЕД слотами активок, иначе fallback-сборка
+  // (старый HTML без xpWrap) отрисует оба счётчика под иконками способностей.
+  const anchor = document.getElementById('stageAbilitySlots');
+
+  const mount = (node) => {
+    if (anchor && anchor.parentNode) anchor.before(node);
+    else topbar.appendChild(node);
+  };
+
   const wrap = document.createElement('div');
   wrap.id = 'xpWrap';
   wrap.className = 'xpPanel hudPanel';
@@ -14503,7 +14706,7 @@ function ensureProgressUI(){
     </div>
     <div class="xpValue" id="xpText">0/0</div>
   `;
-  topbar.appendChild(wrap);
+  mount(wrap);
 
   // Item 2 — Отдельная панель «Перезагрузка симуляции: X раз» под xpWrap, тот же стиль .xpPanel.hudPanel.
   if (!document.getElementById('simResetsWrap')) {
@@ -14513,7 +14716,7 @@ function ensureProgressUI(){
     simWrap.innerHTML = `
       <div class="xpLabel" id="simResetsText">${(t('supercomputerSimResetsInfo') || 'Перезагрузка симуляции: 0 раз').replace('{count}', 0)}</div>
     `;
-    topbar.appendChild(simWrap);
+    mount(simWrap);
   }
 
   // Item — Отдельная панель «Текущая волна: X» под simResetsWrap, тот же стиль .xpPanel.hudPanel.
@@ -14524,7 +14727,7 @@ function ensureProgressUI(){
     waveWrap.innerHTML = `
       <div class="xpLabel" id="currentWaveText">${(t('supercomputerCurrentWaveInfo') || 'Текущая волна: 0').replace('{count}', 0)}</div>
     `;
-    topbar.appendChild(waveWrap);
+    mount(waveWrap);
   }
 }
 
@@ -16027,6 +16230,16 @@ canvas.addEventListener('pointerleave', ()=>{
 ui.buy.addEventListener('click', ()=> tryBuyTank());
 ui.buyBulk?.addEventListener('click', ()=> tryBuyBulk());
 ui.autoMergeBtn?.addEventListener('click', ()=> runAutoMergeClick());
+// HUD-контракт терминала: #xpWrap (уровень суперкомпьютера) → #simResetsWrap →
+// #currentWaveWrap → #stageAbilitySlots. Сворачивание переносит слоты активок к
+// #terminalExpandBtn, поэтому разворот обязан вернуть их после ПОСЛЕДНЕЙ панели
+// счётчика, а не после #xpWrap — иначе оба счётчика уезжают под иконки активок.
+function getHudCounterAnchor(){
+  return document.getElementById('currentWaveWrap')
+    || document.getElementById('simResetsWrap')
+    || ui.xpWrap
+    || null;
+}
 ui.terminalCollapseBtn?.addEventListener('click', () => {
   ui.stageUiRight?.classList.add('collapsed');
   if (ui.stageAbilitySlots && ui.terminalExpandBtn) {
@@ -16035,8 +16248,9 @@ ui.terminalCollapseBtn?.addEventListener('click', () => {
 });
 ui.terminalExpandBtn?.addEventListener('click', () => {
   ui.stageUiRight?.classList.remove('collapsed');
-  if (ui.stageAbilitySlots && ui.xpWrap) {
-    ui.xpWrap.after(ui.stageAbilitySlots);
+  const counterAnchor = getHudCounterAnchor();
+  if (ui.stageAbilitySlots && counterAnchor) {
+    counterAnchor.after(ui.stageAbilitySlots);
   }
 });
 ui.achievementsBtn?.addEventListener('click', () => openAchievementsModal());

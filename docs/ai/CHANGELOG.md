@@ -2,6 +2,31 @@
 
 ## 2026-09-25
 
+### Бафф активки («Шквал») после загрузки длился 1100+ секунд — clock-domain guard для timed-эффектов
+- Баг (ручной тест): после загрузки сейва бафф от активки «Шквал» держался «больше 1100 секунд»; в свежей сессии воспроизвести не удавалось.
+- Root cause: `state.boostUntil` и `state.activeEffects.{attackUntil,speedUntil,economyUntil}` — абсолютные timestamps в домене `nowSec()` (`performance.now()/1000` минус pause-offset), который перезапускается с ~0 на КАЖДОЙ загрузке страницы и из payload не восстанавливается. При этом `activeEffects` уходил в save **сырым** (`storage.js` → `activeEffects: state.activeEffects`) и читался **сырым** (`game.js` → `if (saved.activeEffects) state.activeEffects = { ...state.activeEffects, ...saved.activeEffects }`). Сессия длиной ~1100 с, бафф активирован на предпоследней секунде (`attackUntil ≈ 1105`) → после reload `nowSec() ≈ 3` → остаток 1102 с вместо 10 с. Это ровно описанный симптом. Тот же класс бага, что уже закрыт для attack-wave (Pack 17) и подарочного бокса (Pack 24).
+- Защита (три слоя, все три покрывают Шквал → `attackUntil`, Купол → `speedUntil`, Золотое время → `economyUntil` и speed-буст суперкомпьютера → `boostUntil`):
+  - **writer** `src/persistence/storage.js`: новый `serializeTimedEffectRemainders()` — live-first через публичный seam `Game.getTimedEffectRemainders()`, кладёт ОТНОСИТЕЛЬНЫЕ остатки (`timedEffectsRemainingSec: { boostSec, attackSec, defenseSec, economySec }`); `null`, если seam недоступен.
+  - **reader** `game.js`: новый `restoreTimedEffectsFromSave(saved)`; вызывается из **обоих** restore-путей (`restoreFullState()` и `applySavedProgress()`). Предпочитает относительные остатки, legacy-поля трактует как остатки прошлой сессии и клампит до полной длительности эффекта (тот же приём, что `nextCrateAt` в Pack 24).
+  - **runtime guard** `game.js`: `clampTimedEffectsToTimeDomain()` вызывается каждый кадр из `normalizeActiveEffectsTimestamps()`; `useActiveAbility()` больше не наследует poisoned-absolute через `Math.max(...)` — запись ограничена `now + durationMs/1000`.
+- Инвариант: остаток timed-эффекта никогда не превышает полную длительность эффекта. Точные длительности резолвятся из talentsV2 (`getActiveState().durationMs`), fallback-потолок — `BAL.boostDurationSec` (60 s); резолв только на холодных путях (load / активация), hot-path читает кэш.
+- `assets/saveSchema.json`: новое поле `timedEffectsRemainingSec` (object|null). `game.js __KNOWN_PAYLOAD_KEYS`: ключ внесён (нет dev-warning). `src/persistence/serializedStateTypes.js`: контракт задокументирован.
+- `Test/pack26/timedEffectClockDomainGuard.test.js`: 21 проверка — guard-семантика (извлечена и прогнана в `vm`), покрытие всех трёх активок, оба reader-пути, writer/seam, schema/payload contract, entry-token parity. Wired в `ci/run_tests.sh`.
+- `index.html`: entry token → `20260925-active-buff-clock-domain-guard` (179 маркеров, 0 mismatch, байт-безопасный bump: LF-only, без BOM, ASCII-only).
+- Урок: любое поле, живущее в домене `nowSec()`, обязано персиститься как ОТНОСИТЕЛЬНЫЙ остаток. `normalizeStoredUntilSec()` защищает только от http-эпохи (ms > 1e6), но НЕ от session-absolute того же порядка — поэтому абсолютный timestamp «выглядит валидным» и проходит нормализацию.
+
+### Разворот терминала уносил счётчики под иконки активок
+- Баг (ручной тест): свернуть и развернуть терминал кнопкой `_` → панели «Перезагрузка симуляции» и «Текущая волна» оказывались **под** иконками активных способностей.
+- Root cause: сворачивание физически переносит `#stageAbilitySlots` к `#terminalExpandBtn` (`terminalExpandBtn.after(...)`), а разворот возвращал слоты жёстко через `ui.xpWrap.after(ui.stageAbilitySlots)`. `#xpWrap` — первая из трёх панелей, поэтому слоты вставлялись между уровнем суперкомпьютера и обоими счётчиками.
+- Доказательство (Playwright, реальный браузер, `:8899`): до фикса `oldExpand_buggy = hud>xpWrap>stageAbilitySlots>simResetsWrap>currentWaveWrap>…`; после — `hud>xpWrap>simResetsWrap>currentWaveWrap>stageAbilitySlots>…`. Pre-fix geometry: `simResetsWrap.top = 125` при `stageAbilitySlots.top = 149` (счётчики ниже иконок).
+- Fix: новый хелпер `getHudCounterAnchor()` в `game.js` резолвит последнюю панель счётчика (`#currentWaveWrap` → `#simResetsWrap` → `ui.xpWrap`) и expand-хендлер возвращает слоты за ней.
+- `ensureProgressUI()` (fallback для сборок со старым HTML) переведён с `topbar.appendChild(...)` на `anchor.before(node)` относительно `#stageAbilitySlots`, чтобы fallback-путь не воспроизводил тот же порядок.
+- `Test/tests.js`: новый `T-ACH-4` (порядок панелей в HTML, приоритет якоря, отсутствие `ui.xpWrap.after(...)` в expand-блоке, anchor-монтаж в `ensureProgressUI`); всего `103` проверки.
+- `Test/pack25/waveAutosaveSlot.test.js`: `WAS-19` больше не хардкодит значение токена (прецедент — pack15 `CB-2`), а проверяет non-empty токен + 0 mismatch по всем `?v=` маркерам.
+- `index.html`: entry token → `20260925-hud-counter-anchor-fix` (178 маркеров, 0 mismatch, байт-безопасный bump: LF-only, без BOM, ASCII-only).
+- Пост-фикс проверка в том же браузере: 4 цикла свернуть/развернуть идемпотентны; геометрия `xpWrap(73-119) → simResetsWrap(125-171) → currentWaveWrap(177-209) → stageAbilitySlots(223-273)`.
+- Урок: если обработчик одной кнопки **физически перемещает** узел, симметричный обработчик обязан вычислять место возврата по актуальному DOM-контракту, а не по «первому якорю, который был под рукой».
+
 ### Автосейв после волны не срабатывал: переход true→false не детектировался
 - Баг (после ручного теста): прождал 2 волны атаки — сохранения нет, ячейка `11` пустая.
 - Root cause: `updateWorldEvents()` (game.js) вычислял `wasAttackActive` через `isZombieAttackModeActive()` **до** вызова `worldEventsRuntime.updateWorldEvents(dt)`, а «после» — уже **после**. Но `attackEndAt` — абсолютное sim-время, и runtime в **первом же кадре** после конца волны обнуляет `currentAttackStartAt`/`attackEndAt`. Поэтому оба чтения возвращали `false`: переход `true→false` не детектировался, `handleNoRepairAttackWaveTransition()` не заходил в ветку finalize, и `saveWaveAutoSlotAfterWaveEnd()` не вызывался **никогда** — без каких-либо ошибок в консоли.

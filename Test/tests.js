@@ -409,6 +409,46 @@ test('T-ACH-3: current-wave HUD counter is per-run and increments once per finis
   assertEqual(enJson.supercomputerCurrentWaveInfo, 'Current wave: {count}', 'en key must exist');
 });
 
+test('T-ACH-4: terminal expand restores ability slots after the LAST HUD counter panel', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '..', 'game.js'), 'utf-8');
+  const indexHtml = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf-8');
+
+  // HUD DOM order inside .stageUiRight (single source of truth for both idle and collapsed states).
+  assert(/id="xpWrap"[\s\S]*id="simResetsWrap"[\s\S]*id="currentWaveWrap"[\s\S]*id="stageAbilitySlots"/
+    .test(indexHtml), 'index.html order must be xpWrap -> simResetsWrap -> currentWaveWrap -> stageAbilitySlots');
+
+  // Collapse moves the ability slots next to the expand button, so expand MUST re-anchor
+  // them after the last counter panel — anchoring after #xpWrap dragged both counters
+  // ("Перезагрузка симуляции" / "Текущая волна") below the ability icons.
+  assert(gameJs.includes('function getHudCounterAnchor()'), 'getHudCounterAnchor helper must exist');
+  const anchorBlockMatch = gameJs.match(/function getHudCounterAnchor\(\)\{[\s\S]*?\n\}/);
+  assert(anchorBlockMatch, 'getHudCounterAnchor body must be inspectable');
+  const anchorBlock = anchorBlockMatch[0];
+  assert(anchorBlock.includes("getElementById('currentWaveWrap')"),
+    'anchor must prefer currentWaveWrap (last counter panel)');
+  assert(anchorBlock.indexOf("getElementById('currentWaveWrap')")
+    < anchorBlock.indexOf('ui.xpWrap'), 'currentWaveWrap must be resolved before the xpWrap fallback');
+
+  const expandIdx = gameJs.indexOf("ui.terminalExpandBtn?.addEventListener('click'");
+  assert(expandIdx !== -1, 'terminal expand handler must exist');
+  const expandBlock = gameJs.slice(expandIdx, gameJs.indexOf("ui.achievementsBtn?.addEventListener", expandIdx));
+  assert(expandBlock.includes('getHudCounterAnchor()'), 'expand handler must resolve the counter anchor');
+  assert(expandBlock.includes('counterAnchor.after(ui.stageAbilitySlots)'),
+    'expand handler must re-anchor ability slots via counterAnchor.after(...)');
+  assert(!/ui\.xpWrap\.after\(ui\.stageAbilitySlots\)/.test(expandBlock),
+    'expand handler must not anchor ability slots directly after xpWrap');
+
+  // Fallback build path: ensureProgressUI must mount counter panels BEFORE stageAbilitySlots.
+  const ensureIdx = gameJs.indexOf('function ensureProgressUI()');
+  const ensureEnd = gameJs.indexOf('function updateProgressUI()', ensureIdx);
+  assert(ensureIdx !== -1 && ensureEnd !== -1, 'ensureProgressUI must be inspectable');
+  const ensureBlock = gameJs.slice(ensureIdx, ensureEnd);
+  assert(ensureBlock.includes("document.getElementById('stageAbilitySlots')"),
+    'ensureProgressUI must resolve stageAbilitySlots as insertion anchor');
+  assert(ensureBlock.indexOf('anchor.before(node)') !== -1,
+    'ensureProgressUI must insert counter panels before the ability slots anchor');
+});
+
 // ═══════════════════════════════════════════════
 // T-DA: pickDeathAnim — детерминированный выбор death-анимации
 // ═══════════════════════════════════════════════

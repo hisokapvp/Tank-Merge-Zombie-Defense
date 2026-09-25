@@ -128,6 +128,13 @@
    * @property {number} maxTankLevelAchieved — максимальный достигнутый уровень танка.
    * @property {number} boostUntil — timestamp окончания буста.
    * @property {Array} activeEffects — список активных временных эффектов.
+   * @property {Object|null} timedEffectsRemainingSec — переносимые ОСТАТКИ (сек)
+   *   timed-эффектов: `{ boostSec, attackSec (Шквал), defenseSec (Купол),
+   *   economySec (Золотое время) }`. `boostUntil` / `activeEffects.*Until` —
+   *   absolute в домене `nowSec()`, который перезапускается с ~0 на каждой
+   *   загрузке страницы, поэтому персистятся только относительные остатки;
+   *   legacy-поля reader трактует как остатки и клампит до полной длительности
+   *   (`restoreTimedEffectsFromSave()` в game.js). `null` = live seam недоступен.
    * @property {SerializedFenceState} fenceState — snapshot HP каждого fence-сегмента.
    * @property {Object} achievements — объект достижений (rewarded, totals, completedModifierTechs).
    * @property {SerializedStats} stats — canonical counters (см. SerializedStats).

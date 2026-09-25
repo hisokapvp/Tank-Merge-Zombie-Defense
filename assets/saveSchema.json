@@ -111,6 +111,11 @@
     "maxTankLevelAchieved": { "type": "integer", "minimum": 1, "maximum": 60 },
     "boostUntil": { "type": "number" },
     "activeEffects": { "type": "array" },
+    "timedEffectsRemainingSec": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Переносимые ОСТАТКИ timed-эффектов в sim-секундах: boostSec (speed-буст суперкомпьютера), attackSec (Шквал), defenseSec (Купол), economySec (Золотое время). Writer — storage.js serializeTimedEffectRemainders() (live-first через Game.getTimedEffectRemainders()), reader — restoreTimedEffectsFromSave(). Без этого поля абсолютные boostUntil/activeEffects.*Until после reload попадали в чужой clock-домен и бафф жил столько, сколько длилась прошлая сессия (баг «Шквал 1100+ секунд»). null = живой seam недоступен / legacy save."
+    },
     "fenceState": {
       "type": "object",
       "required": ["hpById"],
