@@ -11501,7 +11501,6 @@ let projectilesNext = [];
 // between frames in stepTanks/stepProjectiles to avoid heap churn in hot path.
 // Invariants preserved: zero-allocation per-frame, no behavior change.
 const _stepTanksTargetPool = [];
-const _projectileZmap = new Map();
 
 // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): uniform grid for
 // projectile↔zombie / impactAt collision queries. Built once per stepProjectiles
@@ -12107,21 +12106,11 @@ function stepProjectiles(dt){
   // at runtime via Profiler.setEnabled(true).
   const _profStep = (window.Game && window.Game.Profiler && window.Game.Profiler.isEnabled()) ? window.Game.Profiler : null;
   if (_profStep) _profStep.start('stepProjectiles');
-  // perf-capture-tool: deep sub-phase 'gridRebuild' (zmap fill + collision grid).
+  // perf-capture-tool: deep sub-phase 'gridRebuild' (collision grid only).
   if (_profStep) _profStep.start('stepProjectiles.gridRebuild');
-  // Perf (solo-pipeline-yandex-vk#3 / item bonus-1): reuse module-scope Map
-  // across frames instead of `new Map(state.zombies.map(...))` per frame.
-  // Eliminates per-frame allocation of N pairs + Map instance.
-  const zmap = _projectileZmap;
-  zmap.clear();
-  const _zsP = state.zombies;
-  for (let _zpi = 0; _zpi < _zsP.length; _zpi++){
-    const _zp = _zsP[_zpi];
-    if (_zp) zmap.set(_zp.id, _zp);
-  }
   // Perf (solo-pipeline-yandex-vk#4-perf-deep / bonus-1): build the uniform
   // collision grid once per frame so impactAt() can query O(1) cells instead
-  // of scanning all zombies. Rebuild here (after zmap fill) — impactAt is only
+  // of scanning all zombies. Rebuild here — impactAt is only
   // called downstream from this function and from stepZombies (which runs
   // immediately after stepProjectiles in the canonical loop order).
   rebuildZombieCollisionGrid();
@@ -12140,19 +12129,7 @@ function stepProjectiles(dt){
       continue;
     }
 
-    // update target point (moving zombie)
-    const z = zmap.get(b.toZombieId);
     const targeting = window.Game && window.Game.Targeting;
-    if (targeting && targeting.updateProjectileAim) {
-      targeting.updateProjectileAim(b, z, zombiePos);
-    } else if (z && z.state !== 'dying') {
-      const p = zombiePos(z);
-      b.toX = p.x;
-      b.toY = p.y;
-    } else if (z && z.state === 'dying') {
-      b.toZombieId = null;
-    }
-
     const dx = b.toX - b.x;
     const dy = b.toY - b.y;
     const dist = Math.hypot(dx,dy) || 1;
@@ -12161,8 +12138,23 @@ function stepProjectiles(dt){
     b.rotation = Math.atan2(vy, vx);
     b.animTime = (b.animTime || 0) + dt;
 
-    b.x += vx * b.speed * dt;
-    b.y += vy * b.speed * dt;
+    const reachesDestination = targeting && typeof targeting.advanceProjectileToDestination === 'function'
+      ? targeting.advanceProjectileToDestination(b, dt)
+      : dist <= Math.max(10, b.r * 2.2) || b.speed * dt >= Math.max(0, dist - Math.max(10, b.r * 2.2));
+    if (reachesDestination) {
+      if (!targeting || typeof targeting.advanceProjectileToDestination !== 'function') {
+        b.x = b.toX;
+        b.y = b.toY;
+      }
+      impactAt(b.x, b.y, b, { suppressCombatFx: b.isTankAttackingZombie === true });
+      releaseProjectile(b);
+      continue;
+    }
+
+    if (!targeting || typeof targeting.advanceProjectileToDestination !== 'function') {
+      b.x += vx * b.speed * dt;
+      b.y += vy * b.speed * dt;
+    }
 
     // trail particles (scaled by effectIntensity)
     if (b.isTankAttackingZombie !== true){
@@ -12183,12 +12175,6 @@ function stepProjectiles(dt){
         trailColorAdj = trailColor;
       }
       particle(b.x - vx*8, b.y - vy*8, trailR, trailColorAdj, 0.25);
-    }
-
-    if (dist < Math.max(10, b.r*2.2)){
-      impactAt(b.x, b.y, b, { suppressCombatFx: b.isTankAttackingZombie === true });
-      releaseProjectile(b);
-      continue;
     }
 
     next.push(b);
@@ -12303,17 +12289,22 @@ function impactAt(x,y,b,opts){
   const _aoeCandidates = queryZombieIndicesInRadius(x, y, b.aoe, false);
   const _zArr = state.zombies;
   const _impactVictimIndices = _impactVictimIndicesScratch;
-  _impactVictimIndices.length = 0;
-  for (let _ci = 0; _ci < _aoeCandidates.length; _ci++){
-    const _ai = _aoeCandidates[_ci];
-    const _az = _zArr[_ai];
-    if (!_az || _az.state === 'dying') continue;
-    const _apx = _az._sx;
-    const _apy = _az._sy;
-    const _adx = _apx - x;
-    const _ady = _apy - y;
-    if (_adx * _adx + _ady * _ady <= _aoeSq) {
-      _impactVictimIndices.push(_ai);
+  const targetingImpact = window.Game && window.Game.Targeting;
+  if (targetingImpact && typeof targetingImpact.collectImpactVictimIndices === 'function') {
+    targetingImpact.collectImpactVictimIndices(_zArr, _aoeCandidates, x, y, aoe, _impactVictimIndices);
+  } else {
+    _impactVictimIndices.length = 0;
+    for (let _ci = 0; _ci < _aoeCandidates.length; _ci++){
+      const _ai = _aoeCandidates[_ci];
+      const _az = _zArr[_ai];
+      if (!_az || _az.state === 'dying') continue;
+      const _apx = _az._sx;
+      const _apy = _az._sy;
+      const _adx = _apx - x;
+      const _ady = _apy - y;
+      if (_adx * _adx + _ady * _ady <= _aoeSq) {
+        _impactVictimIndices.push(_ai);
+      }
     }
   }
   const aoeVictimsCount = _impactVictimIndices.length;

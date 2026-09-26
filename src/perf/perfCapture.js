@@ -40,7 +40,7 @@
     'talents.update': 'talents v2 onUpdate()/tickStatuses() (loop)',
     'stepTanks': 'game.js: stepTanks()',
     'stepProjectiles': 'game.js: stepProjectiles()',
-    'stepProjectiles.gridRebuild': 'game.js: stepProjectiles() zmap fill + rebuildZombieCollisionGrid()',
+    'stepProjectiles.gridRebuild': 'game.js: stepProjectiles() rebuildZombieCollisionGrid()',
     'stepProjectiles.bullets': 'game.js: stepProjectiles() bullet loop',
     'impactAt': 'game.js: impactAt()',
     'stepDecals': 'game.js: stepDecals()',

@@ -51,7 +51,7 @@
       },
       weatherLeadInSec: 5,
       weatherLeadOutSec: 3,
-      targetAliveMult: 3,
+      targetAliveMult: 5,
       targetAliveRampSec: 3,
       speedMult: 1.65,
       damageMult: 3,

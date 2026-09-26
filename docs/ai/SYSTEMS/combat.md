@@ -15,6 +15,12 @@
 - Не ломать интеграцию с `worldEvents`, `supercomputer`, `fence`.
 - Чип-модификаторы: эффекты реализованы в `chipEffects.js`, визуал/звуки настраиваются через `assets/chips.json`.
 
+## Полёт снаряда и AoE impact
+- `spawnProjectile()` фиксирует `toX/toY` в координатах игрового мира при создании снаряда; `stepProjectiles(dt)` продвигает его к этому endpoint без повторного чтения исходной цели. При пересечении endpoint за шаг снаряд ставится точно в destination и детонирует один раз: [game.js](../../../game.js#L12052-L12189), [src/mechanics/targeting.js](../../../src/mechanics/targeting.js#L141-L159).
+- AoE-цели не закрепляются на launch: `impactAt()` в момент детонации спрашивает spatial grid, затем `Game.Targeting.collectImpactVictimIndices()` заново фильтрует живые цели по текущему snapshot `_sx/_sy` и радиусу. Переиспользуемый output buffer очищается на каждом impact; dying и вышедшие из области zombies не получают урон: [game.js](../../../game.js#L12253-L12307), [src/mechanics/targeting.js](../../../src/mechanics/targeting.js#L122-L139).
+- Chip, talent, chain/cascade и остальные impact callbacks остаются на прежнем `impactAt()` пути; Phaser `ProjectilesEffects` остаётся render delegation, симуляция — в общем gameplay step.
+- Регрессии: `Test/pack6/projectileAimFallback.test.js` (`PA-8`..`PA-11`), зарегистрирован в `ci/run_tests.sh`.
+
 ## Равномерное распределение танков по треку
 
 Танки с `tank.onTrack === true` делят полный круг на равные сектора `360°/N` независимо от уровня танка и от того, в каких ячейках ангара они стоят. Скорость вращения едина для всех танков, поэтому расстояние между соседними танками всегда равно `360°/N`.

@@ -86,6 +86,68 @@ test('PA-7: shouldProjectileImpact does not latch when the previous pass was sti
   assertEqual(Targeting.shouldProjectileImpact(proj, 0.2), false, 'far target should not latch');
 });
 
+test('PA-8: projectile endpoint stays fixed after its launch target moves', () => {
+  const gameJs = fs.readFileSync(path.resolve(__dirname, '../../game.js'), 'utf-8');
+  const stepStart = gameJs.indexOf('function stepProjectiles(dt){');
+  const stepEnd = gameJs.indexOf('function critChanceFromTankLevel', stepStart);
+  const stepBody = gameJs.slice(stepStart, stepEnd);
+  const projectile = { x: 0, y: 0, toX: 100, toY: 40, speed: 20, r: 4 };
+  const target = { x: 100, y: 40 };
+
+  Targeting.advanceProjectileToDestination(projectile, 0.25);
+  const firstStepX = projectile.x;
+  const firstStepY = projectile.y;
+  target.x = 500;
+  target.y = 600;
+  Targeting.advanceProjectileToDestination(projectile, 0.25);
+  assert(projectile.x > firstStepX, 'projectile continues along its original path');
+  assert(projectile.y > firstStepY, 'projectile does not turn toward the moved target');
+  assertEqual(projectile.toX, 100, 'destination X stays fixed');
+  assertEqual(projectile.toY, 40, 'destination Y stays fixed');
+  assert(stepBody.includes('advanceProjectileToDestination(b, dt)'), 'flight advances toward fixed destination');
+  assert(!stepBody.includes('updateProjectileAim'), 'flight does not re-read target position');
+  assert(!stepBody.includes('b.toX ='), 'flight does not overwrite destination X');
+  assert(!stepBody.includes('b.toY ='), 'flight does not overwrite destination Y');
+});
+
+test('PA-9: a large dt clamps the projectile to its destination for one impact dispatch', () => {
+  const projectile = { x: 0, y: 0, toX: 30, toY: 40, speed: 100, r: 4 };
+  assertEqual(Targeting.advanceProjectileToDestination(projectile, 1), true, 'large step reaches destination');
+  assertEqual(projectile.x, 30, 'impact X is the fixed destination');
+  assertEqual(projectile.y, 40, 'impact Y is the fixed destination');
+  assertEqual(Targeting.advanceProjectileToDestination(projectile, 1), true, 'already-arrived projectile remains at endpoint');
+});
+
+test('PA-10: impact selection uses current nearby zombies and excludes stale/out-of-radius targets', () => {
+  const zombies = [
+    { id: 1, state: 'alive', _sx: 10, _sy: 0 },
+    { id: 2, state: 'alive', _sx: 80, _sy: 0 },
+    { id: 3, state: 'dying', _sx: 5, _sy: 0 },
+  ];
+  const candidates = [0, 1, 2];
+  const victims = [];
+
+  Targeting.collectImpactVictimIndices(zombies, candidates, 0, 0, 20, victims);
+  assertEqual(victims.length, 1, 'only current live target in radius is selected');
+  assertEqual(victims[0], 0, 'first nearby zombie is selected');
+
+  zombies[0]._sx = 60;
+  zombies[1]._sx = 15;
+  zombies.push({ id: 4, state: 'alive', _sx: 8, _sy: 0 });
+  candidates.push(3);
+  Targeting.collectImpactVictimIndices(zombies, candidates, 0, 0, 20, victims);
+  assertEqual(victims.length, 2, 'victims are recomputed from impact-time positions');
+  assertEqual(victims[0], 1, 'target that moved into radius is hit');
+  assertEqual(victims[1], 3, 'new target near impact is hit');
+});
+
+test('PA-11: an empty impact radius returns no victims without changing the reusable buffer', () => {
+  const victims = [99];
+  const result = Targeting.collectImpactVictimIndices([], [], 0, 0, 20, victims);
+  assertEqual(result, victims, 'caller scratch buffer is reused');
+  assertEqual(victims.length, 0, 'empty radius has no stale victims');
+});
+
 // Summary
 console.log('\n═══════════════════════════');
 console.log('ProjectileAimFallback: ' + passCount + ' passed, ' + failCount + ' failed');

@@ -1,5 +1,13 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-09-26
+
+### Зафиксированный endpoint танковых снарядов и impact-time AoE
+- `stepProjectiles()` больше не перестраивает zombie-id map и не обновляет endpoint по движущейся цели каждый кадр; `Game.Targeting.advanceProjectileToDestination()` двигает снаряд по world-space координатам, зажимает большой шаг точно в destination и инициирует одну детонацию.
+- `impactAt()` сохраняет collision-grid broadphase, но через `collectImpactVictimIndices()` выбирает текущих живых AoE-целей при взрыве, используя scratch buffer без новых per-impact allocations. Chip/talent impact ordering и общий gameplay owner оставлены; UI не менялся.
+- Добавлены PA-8..PA-11 и регистрация projectile pack в `ci/run_tests.sh`.
+- Проверки: targeted pack 11/11; `node Test/tests.js` 103/103; syntax checks чистые. Полный CI/style: style блокируется существующими trailing spaces в `src/render/canvasRoot.js` (L18, L21, L26, L31); CI runner отработал до сводки style/helper, полный итог требует повторного подтверждения.
+
 ## 2026-09-25
 
 ### Альтернативный путь уровня: 500 000 убийств + тултип на полоске опыта

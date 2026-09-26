@@ -119,6 +119,45 @@
     projectile.toY = p.y;
   }
 
+  function collectImpactVictimIndices(zombies, candidateIndices, x, y, radius, out) {
+    if (!Array.isArray(out)) return null;
+    out.length = 0;
+    if (!Array.isArray(zombies) || !Array.isArray(candidateIndices) || !Number.isFinite(radius)) return out;
+    var radiusSq = radius * radius;
+    for (var i = 0; i < candidateIndices.length; i++) {
+      var index = candidateIndices[i];
+      var zombie = zombies[index];
+      if (!zombie || zombie.state === 'dying') continue;
+      var zx = zombie._sx;
+      var zy = zombie._sy;
+      if (!Number.isFinite(zx) || !Number.isFinite(zy)) continue;
+      var dx = zx - x;
+      var dy = zy - y;
+      if (dx * dx + dy * dy <= radiusSq) out.push(index);
+    }
+    return out;
+  }
+
+  function advanceProjectileToDestination(projectile, dt) {
+    if (!projectile) return false;
+    var dx = Number(projectile.toX) - Number(projectile.x);
+    var dy = Number(projectile.toY) - Number(projectile.y);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
+    var dist = Math.hypot(dx, dy);
+    var stepDist = getProjectileStepDistance(projectile, dt);
+    var impactRadius = getProjectileImpactRadius(projectile);
+    if (dist <= impactRadius || stepDist >= Math.max(0, dist - impactRadius)) {
+      projectile.x = projectile.toX;
+      projectile.y = projectile.toY;
+      return true;
+    }
+    if (dist > 0 && stepDist > 0) {
+      projectile.x += dx / dist * stepDist;
+      projectile.y += dy / dist * stepDist;
+    }
+    return false;
+  }
+
   function getProjectileImpactRadius(projectile) {
     var radius = projectile && Number.isFinite(projectile.r) ? projectile.r : 0;
     return Math.max(10, radius * 2.2);
@@ -159,6 +198,8 @@
     pickBurstTargets: pickBurstTargets,
     pickBurstTargetsBySide: pickBurstTargetsBySide,
     updateProjectileAim: updateProjectileAim,
+    collectImpactVictimIndices: collectImpactVictimIndices,
+    advanceProjectileToDestination: advanceProjectileToDestination,
     getProjectileImpactRadius: getProjectileImpactRadius,
     shouldProjectileImpact: shouldProjectileImpact,
   };
