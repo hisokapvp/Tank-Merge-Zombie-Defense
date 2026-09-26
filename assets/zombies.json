@@ -110,7 +110,7 @@
     }
   ],
   "spawn": {
-    "targetAlive": 160,
+    "targetAlive": 250,
     "sideCount": 4,
     "perSideTarget": 40,
     "perSideTolerance": 5

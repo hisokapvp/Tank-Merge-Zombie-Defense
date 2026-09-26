@@ -12209,6 +12209,7 @@ const _impactTalentsHitCtx = {
   aoeVictimsCount: 0,
   zombies: null,
   getZombiePos: null,
+  queryZombieIndicesInRadius: null,
   rng: Math,
   mods: null,
 };
@@ -12319,6 +12320,7 @@ function impactAt(x,y,b,opts){
     _talentsHitCtx.aoeVictimsCount = aoeVictimsCount;
     _talentsHitCtx.zombies = _zArr;
     _talentsHitCtx.getZombiePos = zombiePos;
+    _talentsHitCtx.queryZombieIndicesInRadius = queryZombieIndicesInRadius;
     _talentsHitCtx.rng = Math;
     _talentsHitCtx.mods = mods;
   }
@@ -12382,6 +12384,7 @@ function impactAt(x,y,b,opts){
     _talentsHitCtx.aoeVictimsCount = 0;
     _talentsHitCtx.zombies = null;
     _talentsHitCtx.getZombiePos = null;
+    _talentsHitCtx.queryZombieIndicesInRadius = null;
     _talentsHitCtx.mods = null;
   }
   flushImpactDamageNumbers(_impactDamageNumberCap);

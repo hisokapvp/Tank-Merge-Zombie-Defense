@@ -405,6 +405,7 @@
   };
   var DOT_TICK_STEP_MS = 200;
   var DOT_KEYS = ['acid', 'converted'];
+  var ricochetVisitedScratch = [];
 
   function isFiniteNumber(value) {
     return Number.isFinite(value);
@@ -2589,27 +2590,17 @@
     return null;
   }
 
-  function buildVisitedKey(entity) {
-    if (!entity || typeof entity !== 'object') return null;
-    if (entity.id !== undefined && entity.id !== null) return 'id:' + String(entity.id);
-    return null;
-  }
-
   function isVisitedEntity(visited, entity) {
     if (!visited || !entity || typeof entity !== 'object') return false;
-    var key = buildVisitedKey(entity);
-    if (key !== null) return visited.has(key);
-    return visited.has(entity);
+    for (var i = 0; i < visited.length; i++) {
+      if (visited[i] === entity) return true;
+    }
+    return false;
   }
 
   function markVisitedEntity(visited, entity) {
     if (!visited || !entity || typeof entity !== 'object') return;
-    var key = buildVisitedKey(entity);
-    if (key !== null) {
-      visited.add(key);
-      return;
-    }
-    visited.add(entity);
+    visited.push(entity);
   }
 
   function findNearestRicochetTarget(ctx) {
@@ -2618,26 +2609,44 @@
     var visited = ctx && ctx.visited;
     var radius = Math.max(0, toNumber(ctx && ctx.radius, 0));
     var getZombiePosFn = ctx ? ctx.getZombiePosFn : null;
+    var queryZombieIndicesFn = ctx ? ctx.queryZombieIndicesFn : null;
     if (!from || !zombies.length || radius <= 0) return null;
 
-    var fromPos = resolveEntityPosition(from, getZombiePosFn);
-    if (!fromPos) return null;
+    var fromX = Number.isFinite(from._sx) ? from._sx : null;
+    var fromY = Number.isFinite(from._sy) ? from._sy : null;
+    if (fromX === null || fromY === null) {
+      var fromPos = resolveEntityPosition(from, getZombiePosFn);
+      if (!fromPos) return null;
+      fromX = fromPos.x;
+      fromY = fromPos.y;
+    }
 
     var best = null;
     var bestDistSq = Infinity;
     var radiusSq = radius * radius;
 
-    for (var i = 0; i < zombies.length; i++) {
-      var candidate = zombies[i];
+    var candidateIndices = typeof queryZombieIndicesFn === 'function'
+      ? queryZombieIndicesFn(fromX, fromY, radius, false)
+      : null;
+    var candidateCount = candidateIndices ? candidateIndices.length : zombies.length;
+    for (var i = 0; i < candidateCount; i++) {
+      var candidateIndex = candidateIndices ? candidateIndices[i] : i;
+      var candidate = zombies[candidateIndex];
       if (!candidate || candidate === from) continue;
       if (candidate.state === 'dying') continue;
       if (isVisitedEntity(visited, candidate)) continue;
 
-      var candidatePos = resolveEntityPosition(candidate, getZombiePosFn);
-      if (!candidatePos) continue;
+      var candidateX = Number.isFinite(candidate._sx) ? candidate._sx : null;
+      var candidateY = Number.isFinite(candidate._sy) ? candidate._sy : null;
+      if (candidateX === null || candidateY === null) {
+        var candidatePos = resolveEntityPosition(candidate, getZombiePosFn);
+        if (!candidatePos) continue;
+        candidateX = candidatePos.x;
+        candidateY = candidatePos.y;
+      }
 
-      var dx = candidatePos.x - fromPos.x;
-      var dy = candidatePos.y - fromPos.y;
+      var dx = candidateX - fromX;
+      var dy = candidateY - fromY;
       var distSq = dx * dx + dy * dy;
       if (distSq > radiusSq) continue;
       if (distSq < bestDistSq) {
@@ -2906,6 +2915,9 @@
     var isRicochetSource = source === 'ricochet';
     var isAoe = !!ctx.isAoe;
     var aoeVictimsCount = Math.max(0, toInt(ctx.aoeVictimsCount, 0));
+    var queryZombieIndicesFn = typeof ctx.queryZombieIndicesInRadius === 'function'
+      ? ctx.queryZombieIndicesInRadius
+      : null;
 
     var tankRt = ensureTankRt(tank);
     var zRt = ensureZombieRt(zombie);
@@ -3019,7 +3031,8 @@
         var radius = Math.max(0, getModNumber(mods, 'ricochetRadius', [], 0));
         var ricochetDamageMul = Math.max(0, getModNumber(mods, 'ricochetDamageMul', [], 1));
         if (bounces > 0 && radius > 0) {
-          var visited = new Set();
+          var visited = ricochetVisitedScratch;
+          visited.length = 0;
           markVisitedEntity(visited, zombie);
           var from = zombie;
           var zombies = Array.isArray(ctx.zombies) ? ctx.zombies : [];
@@ -3032,6 +3045,7 @@
               visited: visited,
               radius: radius,
               getZombiePosFn: getZombiePosFn,
+              queryZombieIndicesFn: queryZombieIndicesFn,
             });
             if (!next) break;
 
