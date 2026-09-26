@@ -984,6 +984,21 @@
     return null;
   }
 
+  // Overflow target for a full main drone rack: park the incoming drone in the
+  // underground hangar instead of silently dropping it. Returns the stored
+  // drone, or null when the underground hangar is also full.
+  function tryStoreIncomingDroneInUndergroundHangar(state, level) {
+    var UH = global.Game && global.Game.UndergroundHangar;
+    if (!UH || typeof UH.storeDrone !== 'function') return null;
+    var drone = sanitizeDrone(state, {
+      level: level,
+      mode: MODE_STANDBY,
+      substate: SUBSTATE_REPAIR_PATROL,
+      slotIndex: null,
+    }, level);
+    return UH.storeDrone(state, drone);
+  }
+
   function addDron(state, level, options) {
     ensureState(state);
     assignMissingDroneSlots(state);
@@ -994,6 +1009,11 @@
     var lvl = clamp(toSafeInt(level, 1), 1, maxLevel);
     var freeSlotIndex = findFirstFreeSlotIndex(state);
     if (freeSlotIndex == null) {
+      // All main drone slots are occupied — store the drone in the underground
+      // hangar. Only when that is full too do we fall back to the legacy
+      // level-absorb behaviour (and finally to dropping the drone).
+      var stored = tryStoreIncomingDroneInUndergroundHangar(state, lvl);
+      if (stored) return stored;
       return tryAbsorbIncomingDroneIntoFullSlots(state, lvl, maxLevel);
     }
 

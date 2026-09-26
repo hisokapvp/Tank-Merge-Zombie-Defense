@@ -3,6 +3,10 @@
 
   var DAMAGE_PROGRESS_PER_POINT = 10000;
   var SUPERCOMPUTER_LEVEL_TWO_DAMAGE_POINTS_REWARD = 5;
+  /* Порог альтернативного получения уровня по убийствам (kill-level).
+     Осознанно НЕ совпадает с HUD-счётчиком state.kills: это отдельный
+     per-level счётчик supercomputer.levelKills. */
+  var DEFAULT_KILL_LEVEL_THRESHOLD = 500000;
 
   /* Bonus upgrade points for milestone levels */
   var LEVEL_BONUS_UPGRADE_POINTS = {
@@ -76,6 +80,13 @@
     var showCenterNotification = opts.showCenterNotification || function () {};
     var xpNeededForLevel = opts.xpNeededForLevel || function () { return 500; };
     var levelGoldReward = opts.levelGoldReward || function () { return 0; };
+    /* Альтернативный путь получения уровня: накопленные убийства.
+       Счётчик живёт в supercomputer.levelKills (НЕ state.kills, который
+       выводится в HUD/терминале) и сбрасывается после КАЖДОГО полученного
+       уровня — и по XP, и по убийствам. См. grantXP(). */
+    var killLevelThreshold = Number.isFinite(opts.killLevelThreshold) && opts.killLevelThreshold > 0
+      ? Math.floor(opts.killLevelThreshold)
+      : DEFAULT_KILL_LEVEL_THRESHOLD;
     var onComputerLevelChanged = typeof opts.onComputerLevelChanged === 'function' ? opts.onComputerLevelChanged : null;
     var onTalentPointsGained = typeof opts.onTalentPointsGained === 'function' ? opts.onTalentPointsGained : null;
     var windowObj = opts.windowObj || (typeof window !== 'undefined' ? window : null);
@@ -102,6 +113,7 @@
           xp: Number.isFinite(state.player.xp) ? state.player.xp : 0,
           xpToNext: Number.isFinite(state.player.xpToNext) ? state.player.xpToNext : getDefaultXpToNext(state.player.level),
           maxLevel: Number.isFinite(state.player.maxLevel) ? state.player.maxLevel : 60,
+          levelKills: normalizeKillProgress(state.player.levelKills),
           eventShown40: !!state.player.eventShown40,
           eventShown50: !!state.player.eventShown50,
           eventShown60: !!state.player.eventShown60,
@@ -117,12 +129,19 @@
       state.player.xp = computer.xp;
       state.player.xpToNext = computer.xpToNext;
       state.player.maxLevel = computer.maxLevel;
+      state.player.levelKills = normalizeKillProgress(computer.levelKills);
       state.player.eventShown40 = !!computer.eventShown40;
       state.player.eventShown50 = !!computer.eventShown50;
       state.player.eventShown60 = !!computer.eventShown60;
     }
 
     function normalizeDamageProgress(value) {
+      return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    }
+
+    /* supercomputer.levelKills — альтернативный per-level прогресс убийств.
+       Всегда неотрицательное целое; отсутствующее/битое значение → 0. */
+    function normalizeKillProgress(value) {
       return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
     }
 
@@ -295,62 +314,111 @@
       }
     }
 
+    /* Общий агрегатор наград за пачку уровней. Один и тот же объект
+       наполняется и XP-путём, и kill-путём, чтобы награды/модалка/VFX
+       не разъезжались между двумя источниками уровня. */
+    function createLevelAggregate(p) {
+      return {
+        gainedLevels: 0,
+        bonusUpgradePoints: 0,
+        rewardGold: 0,
+        rewardDamagePoints: 0,
+        previousMaxHp: Number.isFinite(p && p.maxHp) ? p.maxHp : 1,
+      };
+    }
+
+    /* +1 уровень: общие счётчики награды (золото / damage points / milestone). */
+    function consumeLevel(p, agg) {
+      p.computerLevel += 1;
+      agg.gainedLevels += 1;
+      agg.rewardGold += levelGoldReward(p.computerLevel);
+      var dmgRewardForLevel = effectiveDamageRewards[p.computerLevel];
+      if (dmgRewardForLevel) agg.rewardDamagePoints += dmgRewardForLevel;
+      var levelBonus = effectiveMilestones[p.computerLevel];
+      if (levelBonus) agg.bonusUpgradePoints += levelBonus;
+    }
+
+    /* Хвост левелапа: очки улучшений, золото, damage points, VFX, модалка,
+       power-moments, save/UI. Вызывается ТОЛЬКО когда agg.gainedLevels > 0. */
+    function applyLevelRewards(p, agg) {
+      var totalUpgradePoints = agg.gainedLevels * effectiveBaseUpgradePoints + agg.bonusUpgradePoints;
+      if (state.player) {
+        state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + totalUpgradePoints;
+        if (state.player.talentsV2 && typeof state.player.talentsV2 === 'object') {
+          state.player.talentsV2.freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0)) + totalUpgradePoints;
+          state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
+        } else if (Number.isFinite(state.player.freeTalentPointsV2)) {
+          state.player.freeTalentPointsV2 = Math.max(0, Math.floor(state.player.freeTalentPointsV2 || 0)) + totalUpgradePoints;
+        }
+      }
+      if (onTalentPointsGained) onTalentPointsGained(totalUpgradePoints);
+      state.coins += agg.rewardGold;
+      var rewardDamagePoints = grantDamagePointReward(agg.rewardDamagePoints);
+      if (onComputerLevelChanged) {
+        onComputerLevelChanged({
+          computer: p,
+          oldMaxHp: agg.previousMaxHp,
+        });
+      }
+      refreshTanksPowerTier();
+      triggerLevelUpVfx(p.computerLevel);
+      checkPowerMomentEvents(p.computerLevel);
+      queueLevelReward(p.computerLevel, totalUpgradePoints, agg.rewardGold, rewardDamagePoints);
+      saveProgress();
+      updateUI();
+    }
+
     function grantXP(amount) {
       var p = getComputer();
       if (!p || p.computerLevel >= p.maxLevel) return;
 
       p.xp += amount;
-      var leveled = false;
-      var gainedLevels = 0;
-      var bonusUpgradePoints = 0;
-      var rewardGold = 0;
-      var rewardDamagePoints = 0;
-      var previousMaxHp = Number.isFinite(p.maxHp) ? p.maxHp : 1;
+      var agg = createLevelAggregate(p);
 
       while (p.computerLevel < p.maxLevel) {
         p.xpToNext = xpNeededForLevel(p.computerLevel);
         if (p.xp < p.xpToNext) break;
 
         p.xp -= p.xpToNext;
-        p.computerLevel += 1;
-        leveled = true;
-        gainedLevels += 1;
-        rewardGold += levelGoldReward(p.computerLevel);
-        var dmgRewardForLevel = effectiveDamageRewards[p.computerLevel];
-        if (dmgRewardForLevel) rewardDamagePoints += dmgRewardForLevel;
-        var levelBonus = effectiveMilestones[p.computerLevel];
-        if (levelBonus) bonusUpgradePoints += levelBonus;
+        consumeLevel(p, agg);
       }
 
       p.xpToNext = xpNeededForLevel(p.computerLevel);
-      if (leveled) {
-        var totalUpgradePoints = gainedLevels * effectiveBaseUpgradePoints + bonusUpgradePoints;
-        if (state.player) {
-          state.player.talentPoints = Math.max(0, Math.floor(state.player.talentPoints || 0)) + totalUpgradePoints;
-          if (state.player.talentsV2 && typeof state.player.talentsV2 === 'object') {
-            state.player.talentsV2.freePoints = Math.max(0, Math.floor(state.player.talentsV2.freePoints || 0)) + totalUpgradePoints;
-            state.player.freeTalentPointsV2 = state.player.talentsV2.freePoints;
-          } else if (Number.isFinite(state.player.freeTalentPointsV2)) {
-            state.player.freeTalentPointsV2 = Math.max(0, Math.floor(state.player.freeTalentPointsV2 || 0)) + totalUpgradePoints;
-          }
-        }
-        if (onTalentPointsGained) onTalentPointsGained(totalUpgradePoints);
-        state.coins += rewardGold;
-        rewardDamagePoints = grantDamagePointReward(rewardDamagePoints);
-        if (onComputerLevelChanged) {
-          onComputerLevelChanged({
-            computer: p,
-            oldMaxHp: previousMaxHp,
-          });
-        }
-        refreshTanksPowerTier();
-        triggerLevelUpVfx(p.computerLevel);
-        checkPowerMomentEvents(p.computerLevel);
-        queueLevelReward(p.computerLevel, totalUpgradePoints, rewardGold, rewardDamagePoints);
-        saveProgress();
-        updateUI();
+      if (agg.gainedLevels > 0) {
+        /* Per ТЗ: счётчик убийств для повышения уровня сбрасывается после
+           ЛЮБОГО полученного уровня — включая уровень, полученный по XP. */
+        p.levelKills = 0;
+        applyLevelRewards(p, agg);
       }
       writeBackLegacyComputer(p);
+    }
+
+    /* grantKillProgress — альтернативный путь получения уровня.
+       Инкрементит отдельный per-level счётчик supercomputer.levelKills
+       (НЕ state.kills, который выводится в HUD) и при достижении порога
+       выдаёт уровень. Счётчик СБРАСЫВАЕТСЯ (остаток сверх порога не
+       переносится) после каждого полученного уровня.
+
+       @returns {number} сколько уровней было получено за этот вызов */
+    function grantKillProgress(amount) {
+      var p = getComputer();
+      var inc = Number.isFinite(amount) ? Math.floor(amount) : 0;
+      if (!p || inc <= 0 || p.computerLevel >= p.maxLevel) return 0;
+
+      p.levelKills = normalizeKillProgress(p.levelKills) + inc;
+      var agg = createLevelAggregate(p);
+
+      while (p.computerLevel < p.maxLevel && p.levelKills >= killLevelThreshold) {
+        p.levelKills = 0;
+        consumeLevel(p, agg);
+      }
+
+      p.xpToNext = xpNeededForLevel(p.computerLevel);
+      if (agg.gainedLevels > 0) {
+        applyLevelRewards(p, agg);
+      }
+      writeBackLegacyComputer(p);
+      return agg.gainedLevels;
     }
 
     return {
@@ -360,6 +428,8 @@
       queueLevelReward: queueLevelReward,
       acceptLevelReward: acceptLevelReward,
       grantXP: grantXP,
+      grantKillProgress: grantKillProgress,
+      getKillLevelThreshold: function () { return killLevelThreshold; },
       triggerLevelUpVfx: triggerLevelUpVfx,
       checkPowerMomentEvents: checkPowerMomentEvents,
     };

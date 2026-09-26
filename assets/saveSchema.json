@@ -250,6 +250,26 @@
       }
     },
     "lastSeenAt": { "type": "number" },
+    "undergroundHangar": {
+      "description": "Underground hangar storage (state.undergroundHangar). 16 cells, each holding either a tank or a drone (never both). Drones land here when every main drone slot is occupied, so this field is what keeps overflow drones from vanishing across reloads. Optional: legacy saves without this field restore an empty hangar.",
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "cells": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["i"],
+            "additionalProperties": true,
+            "properties": {
+              "i": { "type": "integer", "minimum": 0 },
+              "tank": { "type": ["object", "null"], "additionalProperties": true },
+              "drone": { "type": ["object", "null"], "additionalProperties": true }
+            }
+          }
+        }
+      }
+    },
     "shop": {
       "description": "Yandex chip-bundle shop ledger block (solo-pipeline-yandex-vk batch#2 default-init, batch#3 schema). OPTIONAL at the top level: legacy saves from batch#1/#2 written before this field existed must still validate (backfill-safe). Inner fields are also optional so partial blobs (e.g. cloud-pulled with only entitlements) round-trip cleanly.",
       "type": "object",

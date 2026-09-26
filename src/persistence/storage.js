@@ -459,6 +459,60 @@
   }
 
   /**
+   * Собрать подземный ангар (state.undergroundHangar) для save payload.
+   *
+   * Ячейки ангара хранят либо танк, либо дрон. Без этого поля дроны, которые
+   * не поместились в основные слоты и были отправлены в подземный ангар,
+   * исчезали после перезагрузки (restoreFullState/applySavedProgress читали
+   * `saved.undergroundHangar`, но writer его никогда не писал).
+   *
+   * @param {object} state
+   * @returns {object|null} { cells: [...] } или null, если ангара нет
+   */
+  function serializeUndergroundHangar(state) {
+    var ugh = state && state.undergroundHangar;
+    if (!ugh || typeof ugh !== 'object' || !Array.isArray(ugh.cells)) return null;
+    var cells = [];
+    for (var i = 0; i < ugh.cells.length; i++) {
+      var cell = ugh.cells[i];
+      if (!cell || typeof cell !== 'object') {
+        cells.push({ i: i, tank: null, drone: null });
+        continue;
+      }
+      var tank = null;
+      if (cell.tank) {
+        tank = {
+          id: cell.tank.id,
+          level: cell.tank.level,
+          onTrack: !!cell.tank.onTrack,
+          powerTier: cell.tank.powerTier,
+        };
+      }
+      var drone = null;
+      if (cell.drone && typeof cell.drone === 'object') {
+        drone = {
+          id: cell.drone.id,
+          level: Number.isFinite(cell.drone.level) ? Math.max(1, Math.floor(cell.drone.level)) : 1,
+          mode: cell.drone.mode,
+          substate: cell.drone.substate,
+          slotIndex: null,
+          pos: {
+            x: Number.isFinite(cell.drone.pos && cell.drone.pos.x) ? cell.drone.pos.x : 0,
+            y: Number.isFinite(cell.drone.pos && cell.drone.pos.y) ? cell.drone.pos.y : 0,
+          },
+          basePos: {
+            x: Number.isFinite(cell.drone.basePos && cell.drone.basePos.x) ? cell.drone.basePos.x : 0,
+            y: Number.isFinite(cell.drone.basePos && cell.drone.basePos.y) ? cell.drone.basePos.y : 0,
+          },
+          patrolSeed: Number.isFinite(cell.drone.patrolSeed) ? cell.drone.patrolSeed : 0,
+        };
+      }
+      cells.push({ i: i, tank: tank, drone: drone });
+    }
+    return { cells: cells };
+  }
+
+  /**
    * Собрать инвентарь целых чипов (playerChips) для save payload.
    *
    * Чипы — самый ранний из module-owned ресурсов: документально их canonical
@@ -905,6 +959,8 @@
       techFeedProgress: serializeTechFeedProgress(state),
       productionLine: state.productionLine || null,
       hangarCells: serializeHangarCells(state),
+      // Подземный ангар: танки и дроны, не поместившиеся в основные слоты.
+      undergroundHangar: serializeUndergroundHangar(state),
     };
   }
 

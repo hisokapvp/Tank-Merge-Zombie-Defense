@@ -872,13 +872,28 @@
 
       function getTooltipText(target) {
         if (!target || !target.getAttribute) return '';
+        /* Динамический провайдер: элементы с быстро меняющимся текстом
+           (напр. полоска опыта с прогрессом убийств) регистрируют функцию
+           через `data-ui-tooltip-provider`, чтобы не мутировать DOM каждый
+           кадр. Провайдер имеет приоритет над статичным атрибутом. */
+        var providerName = target.getAttribute('data-ui-tooltip-provider');
+        if (providerName) {
+          var provider = windowObj.Game && windowObj.Game.TooltipProviders
+            ? windowObj.Game.TooltipProviders[providerName]
+            : null;
+          if (typeof provider === 'function') {
+            var provided = '';
+            try { provided = provider(target); } catch (_) { provided = ''; }
+            if (typeof provided === 'string' && provided.trim()) return provided.trim();
+          }
+        }
         var text = target.getAttribute('data-ui-tooltip');
         return typeof text === 'string' ? text.trim() : '';
       }
 
       documentObj.addEventListener('pointerover', function (event) {
         var target = event && event.target && event.target.closest
-          ? event.target.closest('[data-ui-tooltip]')
+          ? event.target.closest('[data-ui-tooltip],[data-ui-tooltip-provider]')
           : null;
         if (!target) {
           hideUnifiedTooltip();
@@ -922,7 +937,7 @@
 
       documentObj.addEventListener('touchstart', function (event) {
         var target = event && event.target && event.target.closest
-          ? event.target.closest('[data-ui-tooltip]')
+          ? event.target.closest('[data-ui-tooltip],[data-ui-tooltip-provider]')
           : null;
         if (!target) {
           hideUnifiedTooltip();

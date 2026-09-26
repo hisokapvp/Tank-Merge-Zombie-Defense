@@ -430,11 +430,50 @@
     }
   }
 
+  // ─── Drone storage (overflow target for full main drone slots) ───
+
+  // Returns the index of the first underground cell that holds neither a tank
+  // nor a drone, or -1 when the underground hangar is full.
+  function findFreeDroneCellIndex(stateRef) {
+    ensureStateShape(stateRef);
+    const ugh = stateRef && stateRef.undergroundHangar;
+    const cells = ugh && Array.isArray(ugh.cells) ? ugh.cells : null;
+    if (!cells) return -1;
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      if (cell && !cell.tank && !cell.drone) return i;
+    }
+    return -1;
+  }
+
+  // Park an incoming drone in the underground hangar. Used when every main
+  // drone slot is occupied, so the drone is stored instead of being dropped.
+  // Returns the stored drone, or null when the underground hangar is full.
+  function storeDrone(stateRef, drone) {
+    if (!stateRef || !drone || typeof drone !== 'object') return null;
+    const index = findFreeDroneCellIndex(stateRef);
+    if (index < 0) return null;
+    const DronesApi = global.Game && global.Game.Drones;
+    const stored = DronesApi && typeof DronesApi.sanitizeDrone === 'function'
+      ? DronesApi.sanitizeDrone(stateRef, drone, drone.level || 1)
+      : drone;
+    stored.mode = DronesApi && DronesApi.MODE_STANDBY ? DronesApi.MODE_STANDBY : 'standby';
+    stored.substate = DronesApi && DronesApi.SUBSTATE_RETURN_TO_BASE ? DronesApi.SUBSTATE_RETURN_TO_BASE : 'repair_patrol';
+    stored.targetSegmentId = null;
+    stored.reservedSegmentId = null;
+    stored.repair = null;
+    stored.slotIndex = null;
+    stateRef.undergroundHangar.cells[index].drone = stored;
+    return stored;
+  }
+
   // ─── Public API ───
 
   global.Game = global.Game || {};
   global.Game.UndergroundHangar = {
     CELL_INDEX: CELL_INDEX,
+    findFreeDroneCellIndex: findFreeDroneCellIndex,
+    storeDrone: storeDrone,
     load: load,
     draw: draw,
     hitTest: hitTest,

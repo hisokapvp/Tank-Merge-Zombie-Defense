@@ -69,6 +69,9 @@
         computerLevel: toSafeInt(supercomputer.computerLevel, 0, 0),
         xp: toSafeInt(supercomputer.xp, 0, 0),
         xpToNext: toSafeInt(supercomputer.xpToNext, getSupercomputerXpFallback(supercomputer), 1),
+        // Альтернативный per-level kill-счётчик — часть прогрессии уровня
+        // (как xp), поэтому partial reset его сохраняет.
+        levelKills: toSafeInt(supercomputer.levelKills, 0, 0),
         maxLevel: toSafeInt(supercomputer.maxLevel, 60, 1),
         eventShown40: !!supercomputer.eventShown40,
         eventShown50: !!supercomputer.eventShown50,
@@ -76,6 +79,9 @@
       },
       drones: cloneObject(src.drones, []),
       productionLine: cloneObject(src.productionLine, null),
+      // Подземный ангар (танки + дроны-overflow) — partial-preserve: «Перезагрузка
+      // симуляции» не должна терять то, что игрок туда сложил.
+      undergroundHangar: cloneObject(src.undergroundHangar, null),
       // Item 11: big chips inventory (playerChips) must survive partial reset ("Перезагрузка симуляции").
       playerChips: cloneArray(src.playerChips),
     };
@@ -134,12 +140,17 @@
   target.supercomputer.computerLevel = toSafeInt(supercomputer.computerLevel, 0, 0);
     target.supercomputer.xp = toSafeInt(supercomputer.xp, 0, 0);
   target.supercomputer.xpToNext = toSafeInt(supercomputer.xpToNext, getSupercomputerXpFallback(supercomputer), 1);
+    target.supercomputer.levelKills = toSafeInt(supercomputer.levelKills, 0, 0);
     target.supercomputer.maxLevel = toSafeInt(supercomputer.maxLevel, 60, 1);
     target.supercomputer.eventShown40 = !!supercomputer.eventShown40;
     target.supercomputer.eventShown50 = !!supercomputer.eventShown50;
     target.supercomputer.eventShown60 = !!supercomputer.eventShown60;
 
     target.drones = cloneObject(src.drones, []);
+
+    if (src.undergroundHangar && typeof src.undergroundHangar === 'object') {
+      target.undergroundHangar = cloneObject(src.undergroundHangar, { cells: [] });
+    }
 
     if (src.productionLine) {
       target.productionLine = cloneObject(src.productionLine, target.productionLine || null);

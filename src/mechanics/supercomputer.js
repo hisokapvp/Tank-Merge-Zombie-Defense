@@ -215,6 +215,9 @@
     sc.xpToNext = Number.isFinite(sc.xpToNext)
       ? Math.max(1, Math.floor(sc.xpToNext))
       : (sc.computerLevel <= 0 ? 50 : 500);
+    // Альтернативный per-level kill-счётчик (500 000 убийств → уровень).
+    // Сбрасывается в levelFlow после каждого полученного уровня.
+    sc.levelKills = Number.isFinite(sc.levelKills) ? Math.max(0, Math.floor(sc.levelKills)) : 0;
 
     var stats = resolveStatsForLevel(config, sc.computerLevel);
     sc.maxHp = Number.isFinite(sc.maxHp) ? Math.max(1, Math.floor(sc.maxHp)) : stats.maxHp;

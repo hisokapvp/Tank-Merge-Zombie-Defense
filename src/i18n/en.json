@@ -492,6 +492,7 @@
   "talentCantBuy_requires": "Required talents",
   "talentCantBuy_maxRank": "Max rank reached",
   "levelLabel": "Computer level",
+  "levelAltKillTooltip": "Alternative: Kill {target} Zombies.\nProgress {kills} / {target}",
   "levelShort": "Lv",
   "levelUp": "Lv{level}!",
   "levelModalTitle": "Supercomputer reached level {level}!",
@@ -841,6 +842,7 @@
   ,"plConfirmYes_label": "Open"
   ,"plConfirmNo_label": "No"
   ,"lootDrone": "You got a drone!"
+  ,"droneStoredUnderground": "All drone slots are full — the drone was sent to the underground hangar"
   ,"lootTwoBigChips": "You got 2 chips!"
   ,"lootOneBigChip": "You got a chip!"
   ,"lootThreeFragments": "You got 3 chip fragments!"

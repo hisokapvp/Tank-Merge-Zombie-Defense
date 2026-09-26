@@ -133,10 +133,15 @@ const ui = {
   terminalExpandBtn: document.getElementById('terminalExpandBtn'),
   stageAbilitySlots: document.getElementById('stageAbilitySlots'),
   xpWrap: document.getElementById('xpWrap'),
+  xpBar: document.getElementById('xpBar'),
   stageUiRight: document.querySelector('.stageUiRight'),
 };
 
 const MAX_TANK_LEVEL = 60;
+/* Альтернативный способ получить уровень: убить столько зомби.
+   Счётчик — ОТДЕЛЬНЫЙ от HUD-счётчика `state.kills` (supercomputer.levelKills),
+   сбрасывается после каждого полученного уровня. */
+const LEVEL_KILL_THRESHOLD = 500000;
 const CANNON_UPGRADES_LEVELS = 60;
 const ProgressionApi = GameApi?.Progression ?? null;
 function computePowerTier(computerLevel){
@@ -856,7 +861,7 @@ function createInitialState(options){
         fenceSegments: [], fenceSegmentsMeta: null, savedFenceState: null,
         crate: null, nextCrateAt: 0, dragging: null, boostUntil: 0, empUntil: 0,
         activeEffects: { attackUntil: 0, speedUntil: 0, economyUntil: 0 },
-        supercomputer: { computerLevel: 0, xp: 0, xpToNext: 50, maxLevel: MAX_TANK_LEVEL,
+        supercomputer: { computerLevel: 0, xp: 0, xpToNext: 50, levelKills: 0, maxLevel: MAX_TANK_LEVEL,
           hp: 920, maxHp: 920, armorFlat: 2, x: 0, y: 0, offsetY: 64,
           state: 'idle', animElapsedSec: 0, glitchLoopsRemaining: 0,
           glitchCooldownUntil: 0, wantsBuildTank: false, pendingBuildTank: false,
@@ -1427,6 +1432,7 @@ function getComputerState() {
       computerLevel: Number.isFinite(state.player && state.player.level) ? state.player.level : 1,
       xp: Number.isFinite(state.player && state.player.xp) ? state.player.xp : 0,
       xpToNext: Number.isFinite(state.player && state.player.xpToNext) ? state.player.xpToNext : 500,
+      levelKills: Number.isFinite(state.player && state.player.levelKills) ? Math.max(0, Math.floor(state.player.levelKills)) : 0,
       maxLevel: Number.isFinite(state.player && state.player.maxLevel) ? state.player.maxLevel : MAX_TANK_LEVEL,
       hp: 920,
       maxHp: 920,
@@ -4488,6 +4494,16 @@ function addDron(level){
         window.Game.Events.emit('drone.acquired', { totalDrones: totalDrones });
       }
     } catch (_) {}
+    // Overflow path: all main drone slots were occupied, so the drone was
+    // parked in the underground hangar (slotIndex stays null). Tell the player
+    // where it went instead of letting it look like the drone vanished.
+    if (!Number.isFinite(drone.slotIndex)) {
+      try {
+        if (window.Game && window.Game.Toast && typeof window.Game.Toast.show === 'function') {
+          window.Game.Toast.show(t('droneStoredUnderground'), 2200);
+        }
+      } catch (_) {}
+    }
     updateUI();
   }
   return drone;
@@ -7250,6 +7266,7 @@ function getLevelFlowController(){
     refreshTanksPowerTier,
     playSfx,
     showCenterNotification,
+    killLevelThreshold: LEVEL_KILL_THRESHOLD,
     xpNeededForLevel,
     levelGoldReward,
     onComputerLevelChanged,
@@ -7296,6 +7313,49 @@ function acceptLevelReward(){
 function grantXP(amount){
   const lf = getLevelFlowController();
   if (lf && lf.grantXP) return lf.grantXP(amount);
+}
+
+/* grantKillProgress — альтернативный путь уровня (500 000 убийств).
+   Счётчик — supercomputer.levelKills, НЕ state.kills (HUD-«Kills»), и он
+   сбрасывается после каждого полученного уровня внутри levelFlow. */
+function grantKillProgress(amount){
+  const lf = getLevelFlowController();
+  if (lf && lf.grantKillProgress) return lf.grantKillProgress(amount);
+  return 0;
+}
+
+function getLevelKillThreshold(){
+  const lf = getLevelFlowController();
+  if (lf && lf.getKillLevelThreshold) return lf.getKillLevelThreshold();
+  return LEVEL_KILL_THRESHOLD;
+}
+
+/* Текст тултипа полоски опыта: альтернативный путь уровня по убийствам.
+   Числа выводятся как есть (без K/M-суффиксов), чтобы совпадать с ТЗ:
+   «Прогресс X / 500000». */
+function buildXpTooltipText(){
+  const p = getComputerState();
+  const threshold = getLevelKillThreshold();
+  const kills = p && Number.isFinite(p.levelKills) ? Math.max(0, Math.floor(p.levelKills)) : 0;
+  return t('levelAltKillTooltip', { kills: String(kills), target: String(threshold) });
+}
+
+/* Провайдер для unified tooltip (#settingsTooltip): bootstrap читает его
+   через data-ui-tooltip-provider, поэтому DOM не мутируется каждый кадр. */
+window.Game = window.Game || {};
+window.Game.TooltipProviders = window.Game.TooltipProviders || {};
+window.Game.TooltipProviders.xpLevel = function () { return buildXpTooltipText(); };
+
+let _xpTooltipHovered = false;
+
+/* Пока тултип открыт и курсор на полоске опыта — обновляем текст на месте,
+   иначе при неподвижном курсоре прогресс убийств «замирал». */
+function refreshXpTooltipIfVisible(){
+  if (!_xpTooltipHovered) return;
+  const tip = document.getElementById('settingsTooltip');
+  if (!tip || tip.classList.contains('hidden')) return;
+  const text = buildXpTooltipText();
+  if (tip.textContent !== text) tip.textContent = text;
 }
 
 function triggerLevelUpVfx(level){
@@ -8041,7 +8101,7 @@ const __KNOWN_PAYLOAD_KEYS = [
   'timedEffectsRemainingSec',
   'fenceState','achievements','stats','mapSeeds','drones','forceFenceRuntimeResetOnLoad','playerChips',
   'attackWaveRemainingSec','attackWaveActive','attackWaveRemainingActiveSec','playerFragments','techStudying','techFeedProgress','siliconDust','productionLine','talentsV2','talentsApplied','talentsPending',
-  'activeCooldowns','lastSeenAt','hangarCells'
+  'activeCooldowns','lastSeenAt','hangarCells','undergroundHangar'
 ];
 function reportUnknownPayloadKeys(payload, ctx){
   if (!payload || typeof payload !== 'object') return;
@@ -8586,6 +8646,19 @@ function applySavedProgress(data){
     window.Game.HangarChipsUI.setPlayerChips(Array.isArray(data.playerChips) ? data.playerChips.slice() : [], { reason: 'restore' });
   }
   state.playerChips = Array.isArray(data.playerChips) ? data.playerChips.slice() : [];
+  /* Restore underground hangar (tanks + overflow drones). Unconditional — a
+     payload without `undergroundHangar` must clear the previous session's
+     stored entities rather than leak them into the loaded game. */
+  {
+    const _UH = window.Game && window.Game.UndergroundHangar;
+    if (data.undergroundHangar && typeof data.undergroundHangar === 'object') {
+      state.undergroundHangar = cloneJsonSafe(data.undergroundHangar, { cells: [] });
+    } else {
+      state.undergroundHangar = { cells: [] };
+    }
+    if (_UH && typeof _UH.ensureStateShape === 'function') _UH.ensureStateShape(state);
+    if (_UH && state.cells && state.cells[_UH.CELL_INDEX]) state.cells[_UH.CELL_INDEX].tank = null;
+  }
   /* Restore player fragments (chip shards). Unconditional — see the `hangarCells`
      contract in `restoreFullState`: a payload without `playerFragments` must
      clear the module-owned shard inventory rather than keep stale entries. */
@@ -10744,6 +10817,9 @@ function markZombieDying(z) {
   state.coins += _killCoins;
   state.kills += 1;
   grantXP(_killXp);
+  // Альтернативный путь уровня: параллельно копим per-level счётчик убийств.
+  // Сброс происходит в levelFlow.grantKillProgress() после каждого уровня.
+  grantKillProgress(1);
   // solo-pipeline-yandex-vk#1-followup-3: per-wave accumulators для
   // TalentsV2.onWaveEnd → eco_clean_defense (post-wave bonus coins/xp).
   // Накапливаем только в активной attack-волне; idle-kills вне волны не учитываем.
@@ -14681,9 +14757,38 @@ function closeAchievementPopup(){
   _notifyModal('achievementPopup', false);
 }
 
+/* Навешивает hover-обработчики на полоску опыта, чтобы открытый тултип
+   обновлялся на месте (прогресс убийств растёт, пока курсор неподвижен).
+   Идемпотентно: повторный вызов на том же элементе ничего не делает. */
+function attachXpTooltipHandlers(el){
+  if (!el || el.__xpTooltipWired) return;
+  el.__xpTooltipWired = true;
+  el.addEventListener('pointerenter', function () { _xpTooltipHovered = true; });
+  el.addEventListener('pointerleave', function () { _xpTooltipHovered = false; });
+  el.addEventListener('pointercancel', function () { _xpTooltipHovered = false; });
+}
+
+/* HTML-путь: полоска опыта уже в разметке (index.html), но провайдер и
+   обработчики нужно доустановить. Вызывается из ensureProgressUI(). */
+function ensureXpTooltipWiring(){
+  const bar = document.getElementById('xpBar');
+  if (!bar) return;
+  const host = bar.parentElement;
+  if (!host) return;
+  if (!host.getAttribute('data-ui-tooltip-provider')) {
+    host.setAttribute('data-ui-tooltip-provider', 'xpLevel');
+  }
+  attachXpTooltipHandlers(host);
+}
+
 function ensureProgressUI(){
   const topbar = document.querySelector('.stageUiRight') || document.querySelector('.stageCanvas') || document.body;
-  if (document.getElementById('xpWrap')) return;
+  if (document.getElementById('xpWrap')) {
+    // HTML-путь: панель уже в разметке, но обработчики тултипа нужно
+    // навесить ровно один раз (idempotent).
+    ensureXpTooltipWiring();
+    return;
+  }
 
   // HUD-порядок: xpWrap → simResetsWrap → currentWaveWrap → stageAbilitySlots.
   // Панели счётчиков вставляются ПЕРЕД слотами активок, иначе fallback-сборка
@@ -14701,13 +14806,13 @@ function ensureProgressUI(){
 
   wrap.innerHTML = `
     <div class="xpLabel" id="lvlText">${t('levelLabel')}: 1</div>
-    <div class="xpBar">
+    <div class="xpBar" id="xpBarWrap" data-ui-tooltip-provider="xpLevel">
       <div id="xpBar" class="xpFill"></div>
     </div>
     <div class="xpValue" id="xpText">0/0</div>
   `;
   mount(wrap);
-
+  attachXpTooltipHandlers(wrap.querySelector('#xpBarWrap'));
   // Item 2 — Отдельная панель «Перезагрузка симуляции: X раз» под xpWrap, тот же стиль .xpPanel.hudPanel.
   if (!document.getElementById('simResetsWrap')) {
     const simWrap = document.createElement('div');
@@ -14788,6 +14893,9 @@ function updateProgressUI(){
     const nextWidth = `${pctRounded}%`;
     if (xpBar.style.width !== nextWidth) xpBar.style.width = nextWidth;
   }
+  // Тултип полоски опыта показывает альтернативный прогресс убийств.
+  // Обновляем только когда он реально открыт (иначе DOM не трогаем).
+  refreshXpTooltipIfVisible();
 }
 
 function ensureTalentUI(){

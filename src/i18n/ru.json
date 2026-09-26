@@ -494,6 +494,7 @@
   "talentCantBuy_requires": "Требуются таланты",
   "talentCantBuy_maxRank": "Достигнут максимальный ранг",
   "levelLabel": "Уровень компьютера",
+  "levelAltKillTooltip": "Альтернативный вариант: Убить {target} Зомби.\nПрогресс {kills} / {target}",
   "levelShort": "Ур.",
   "levelUp": "Ур.{level}!",
   "levelModalTitle": "Суперкомпьютер достиг {level} уровня!",
@@ -841,6 +842,7 @@
   ,"plConfirmYes_label": "Открыть"
   ,"plConfirmNo_label": "Нет"
   ,"lootDrone": "Вы получили дрон!"
+  ,"droneStoredUnderground": "Все слоты дронов заняты — дрон отправлен в подземный ангар"
   ,"lootTwoBigChips": "Вы получили 2 чипа!"
   ,"lootOneBigChip": "Вы получили чип!"
   ,"lootThreeFragments": "Вы получили 3 фрагмента чипа!"
