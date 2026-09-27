@@ -182,14 +182,14 @@
     // Fallback drawing when atlas is not loaded
     if (!_ready || !_atlasImg || !_config) {
       drawFallback(ctx, cell);
-      drawTankCountBadge(ctx, cell, arguments[2]);
+      drawStoredCountBadge(ctx, cell, arguments[2]);
       return;
     }
 
     const anim = _anims[_animState] || _anims.idle;
     if (!anim) {
       drawFallback(ctx, cell);
-      drawTankCountBadge(ctx, cell, arguments[2]);
+      drawStoredCountBadge(ctx, cell, arguments[2]);
       return;
     }
 
@@ -232,11 +232,14 @@
     ctx.restore();
 
     // Badge drawn AFTER restore so it is not clipped
-    drawTankCountBadge(ctx, cell, arguments[2]);
+    drawStoredCountBadge(ctx, cell, arguments[2]);
   }
 
-  function drawTankCountBadge(ctx, cell, tankCount) {
-    const count = Math.max(0, Math.floor(Number(tankCount) || 0));
+  // Badge on the hangar hatch. Counts EVERYTHING parked underground — tanks and
+  // drones alike — so the player can see at a glance how full the hangar is.
+  // (Historically this only counted tanks, so overflow drones were invisible.)
+  function drawStoredCountBadge(ctx, cell, storedCount) {
+    const count = Math.max(0, Math.floor(Number(storedCount) || 0));
     if (!cell || count <= 0) return;
 
     const radius = Math.max(10, Math.floor(Math.min(cell.w, cell.h) * 0.18));
@@ -430,6 +433,33 @@
     }
   }
 
+  // ─── Stored-entity counting (badge on the hatch) ───
+
+  // Number of entities parked in the underground hangar. `kind` narrows the
+  // count to 'tank' or 'drone'; omit it for the combined total shown on the
+  // hatch badge. Never mutates state — safe to call from the render hot path.
+  function getStoredCount(stateRef, kind) {
+    const ugh = stateRef && stateRef.undergroundHangar;
+    const cells = ugh && Array.isArray(ugh.cells) ? ugh.cells : null;
+    if (!cells) return 0;
+    let count = 0;
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      if (!cell) continue;
+      if (kind === 'tank') {
+        if (cell.tank) count += 1;
+        continue;
+      }
+      if (kind === 'drone') {
+        if (cell.drone) count += 1;
+        continue;
+      }
+      if (cell.tank) count += 1;
+      else if (cell.drone) count += 1;
+    }
+    return count;
+  }
+
   // ─── Drone storage (overflow target for full main drone slots) ───
 
   // Returns the index of the first underground cell that holds neither a tank
@@ -474,6 +504,7 @@
     CELL_INDEX: CELL_INDEX,
     findFreeDroneCellIndex: findFreeDroneCellIndex,
     storeDrone: storeDrone,
+    getStoredCount: getStoredCount,
     load: load,
     draw: draw,
     hitTest: hitTest,

@@ -119,14 +119,28 @@
       if (typeof a11yClose === 'function') a11yClose(overlay);
     }
 
-    function buildLines(hasDrones) {
+    function formatCount(template, count) {
+      var tmpl = typeof template === 'string' ? template : '';
+      return tmpl.replace('{count}', String(count));
+    }
+
+    function buildLines(hasDrones, info) {
       var lines = [
         translate('criticalLogDetected'),
         translate('criticalLogThreshold'),
+      ];
+      var details = info && typeof info === 'object' ? info : null;
+      if (details && Number.isFinite(details.waveNumber)) {
+        lines.push(formatCount(translate('criticalLogWaveInfo'), Math.max(0, Math.floor(details.waveNumber))));
+      }
+      if (details && Number.isFinite(details.resetCount)) {
+        lines.push(formatCount(translate('criticalLogResetInfo'), Math.max(0, Math.floor(details.resetCount))));
+      }
+      lines.push(
         translate('criticalLogAutosaveStart'),
         translate('criticalLogSaveErrorTanks'),
         translate('criticalLogTanksPurged'),
-      ];
+      );
       if (hasDrones) {
         lines.push(translate('criticalLogDronesStandby'));
       }
@@ -246,7 +260,7 @@
       state.onRestart = typeof params.onRestart === 'function' ? params.onRestart : null;
       state.onClose = typeof params.onClose === 'function' ? params.onClose : null;
       state.canRestart = params.canRestart !== false;
-      state.lines = buildLines(!!params.hasDrones);
+      state.lines = buildLines(!!params.hasDrones, params.info);
       logEl.textContent = '';
       setFinalActionsVisible(false);
       setSkipVisible(false);

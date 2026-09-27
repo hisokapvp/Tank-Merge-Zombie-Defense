@@ -6743,6 +6743,23 @@ function getUndergroundHangarStoredTankCount(){
   return count;
 }
 
+// Combined count of everything parked in the underground hangar (tanks AND
+// drones). Drives the hatch badge so overflow drones are visible on the board,
+// not just inside the modal.
+function getUndergroundHangarStoredEntityCount(){
+  const UH = window.Game && window.Game.UndergroundHangar;
+  if (UH && typeof UH.ensureStateShape === 'function') UH.ensureStateShape(state);
+  if (UH && typeof UH.getStoredCount === 'function') return UH.getStoredCount(state);
+  const ugh = state.undergroundHangar;
+  const cells = ugh && Array.isArray(ugh.cells) ? ugh.cells : [];
+  let count = 0;
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
+    if (cell && (cell.tank || cell.drone)) count += 1;
+  }
+  return count;
+}
+
 function _findDroneStateIndexBySlotIndex(slotIdx){
   if (!Array.isArray(state.drones)) return -1;
   for (let i = 0; i < state.drones.length; i++) {
@@ -6903,6 +6920,15 @@ function _removeDroneFromLocation(location){
 }
 
 function _mergeDroneLocations(srcType, srcIdx, tgtType, tgtIdx){
+  // Same-location guard. A drag that starts and ends on the same cell resolves
+  // source and target to the SAME drone object; without this early return the
+  // merge branch below would level the drone up and then `_removeDroneFromLocation`
+  // would delete it — the drone vanished on a no-op drag. `_getEntityAt` returns
+  // the same object reference for both locations, so identity is the reliable
+  // check (the `source.drone === target.drone` test below is unreachable because
+  // the level comparison runs first and always passes for the same drone).
+  if (srcType === tgtType && srcIdx === tgtIdx) return false;
+
   const source = _resolveDroneLocation(srcType, srcIdx);
   const target = _resolveDroneLocation(tgtType, tgtIdx);
   if (!source || !target) return false;
@@ -6917,6 +6943,10 @@ function _mergeDroneLocations(srcType, srcIdx, tgtType, tgtIdx){
     return DronesApi.mergeDroneSlots(state, source.drone, target.drone, dronConfig);
   }
 
+  // The merged drone must never keep a rack slotIndex when it lands in an
+  // underground cell — a stale slotIndex would make it invisible to the
+  // underground UI (which resolves drones by cell) while still occupying a
+  // rack slot in `state.drones`.
   const targetSlotIndex = target.type === 'drone' ? target.index : null;
   _clearStoredDroneRepairState(target.drone);
   target.drone.level = Math.max(1, Math.min(maxLevel, Math.floor(target.drone.level) + 1));
@@ -14014,8 +14044,20 @@ function openCriticalModal(){
   ensureWorldEventsRuntimeController()?.forceDisableAttackModeRuntime(worldEventsState);
   clearAllTanksFromCells(state);
   const hasDrones = Array.isArray(state.drones) && state.drones.length > 0;
+  // Информация для лога модалки: волна, на которой закончилась игра, и текущая
+  // перезагрузка симуляции. Счётчик totalSimulationResets уже инкрементирован на
+  // critical-entry (до openCriticalModal), поэтому берём его как есть — без +1
+  // за текущий проигрыш.
+  const _achForCritical = (state && state.achievements && typeof state.achievements === 'object')
+    ? state.achievements
+    : null;
+  const _criticalResetCount = (_achForCritical && Number.isFinite(_achForCritical.totalSimulationResets))
+    ? Math.max(0, Math.floor(_achForCritical.totalSimulationResets))
+    : 0;
+  const _criticalWaveNumber = getCurrentAttackWaveNumber();
   controller.open({
     hasDrones,
+    info: { waveNumber: _criticalWaveNumber, resetCount: _criticalResetCount },
     onSaveExit: handleCriticalSaveAndExit,
     onRestart: performCriticalRestart,
     onClose: handleCriticalCloseToMenu,
@@ -18492,7 +18534,10 @@ function drawSlotActivityOverlay(targetCtx, x, y, w, h, r, timeSec){
 
 function drawBoard(){
   const br = state.boardRect;
-  const undergroundTankCount = getUndergroundHangarStoredTankCount();
+  // Badge counts tanks AND drones parked underground (see
+  // getUndergroundHangarStoredEntityCount) so overflow drones are visible on
+  // the hatch, not only inside the modal.
+  const undergroundStoredCount = getUndergroundHangarStoredEntityCount();
   ctx.save();
 
   ctx.fillStyle = 'rgba(8,12,22,.66)';
@@ -18508,7 +18553,7 @@ function drawBoard(){
     // Underground hangar cell: delegate drawing to UndergroundHangar module
     const _UH = window.Game && window.Game.UndergroundHangar;
     if (_UH && c.i === _UH.CELL_INDEX) {
-      if (typeof _UH.draw === 'function') _UH.draw(ctx, c, undergroundTankCount);
+      if (typeof _UH.draw === 'function') _UH.draw(ctx, c, undergroundStoredCount);
       continue;
     }
 

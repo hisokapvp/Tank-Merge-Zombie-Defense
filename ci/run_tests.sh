@@ -72,6 +72,7 @@ run_test "Pack 25 (wave-end autosave slot)" "Test/pack25/waveAutosaveSlot.test.j
 run_test "Pack 26 (timed-effect clock-domain guard)" "Test/pack26/timedEffectClockDomainGuard.test.js"
 run_test "Pack 27 (drone overflow into underground hangar)" "Test/pack27/droneOverflowUndergroundHangar.test.js"
 run_test "Pack 28 (kill-based level progression)" "Test/pack28/killLevelProgression.test.js"
+run_test "Pack 29 (underground hangar drone integrity + hatch badge)" "Test/pack29/undergroundHangarDroneIntegrity.test.js"
 
 if [ "$fail" -ne 0 ]; then
   echo "\nSome tests failed."

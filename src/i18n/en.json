@@ -140,6 +140,8 @@
   "criticalSaveExit": "Save progress and exit",
   "criticalLogDetected": "[CRITICAL] Critical supercomputer damage detected.",
   "criticalLogThreshold": "[SYS] Emergency threshold reached: 5% remaining energy.",
+  "criticalLogWaveInfo": "[SYS] Game ended on wave: {count}.",
+  "criticalLogResetInfo": "[SYS] Current simulation reset: {count}.",
   "criticalLogAutosaveStart": "[SYS] Starting emergency state save protocol.",
   "criticalLogSaveErrorTanks": "[ERR] Tank save error. Combat unit registry is corrupted.",
   "criticalLogTanksPurged": "[SYS] Tanks unloaded from simulation to prevent cascading failure.",

@@ -142,6 +142,8 @@
   "criticalSaveExit": "Сохранить прогресс и выйти",
   "criticalLogDetected": "[CRITICAL] Обнаружено критическое повреждение суперкомпьютера.",
   "criticalLogThreshold": "[SYS] Зафиксирован аварийный порог: 5% остатка энергии.",
+  "criticalLogWaveInfo": "[SYS] Игра завершена на волне: {count}.",
+  "criticalLogResetInfo": "[SYS] Текущая перезагрузка симуляции: {count}.",
   "criticalLogAutosaveStart": "[SYS] Запуск аварийного протокола сохранения состояния.",
   "criticalLogSaveErrorTanks": "[ERR] Ошибка сохранения танков. Реестр боевых юнитов повреждён.",
   "criticalLogTanksPurged": "[SYS] Для предотвращения каскадной ошибки танки выгружены из симуляции.",
