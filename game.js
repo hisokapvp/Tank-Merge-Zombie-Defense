@@ -9106,9 +9106,8 @@ function ensureZombieCount(){
   const target = spawnCfg.targetAlive; // attackDesiredAlive
   const baseTarget = spawnCfgBase.targetAlive; // baseDesiredAlive
   const slotCount = Math.max(1, target);
-  const taken = new Set();
-  const aliveBySide = new Array(spawnCfg.sideCount).fill(0);
   let aliveCount = 0;
+  let hasUnassignedSlotZombie = false;
 
   for (const z of state.zombies){
     if (z.state === 'dying') continue;
@@ -9116,10 +9115,20 @@ function ensureZombieCount(){
     if (Number.isFinite(z.slotIndex)){
       const idx = ((z.slotIndex % slotCount) + slotCount) % slotCount;
       z.slotIndex = idx;
-      taken.add(idx);
-      const side = zombieSideForSlot(idx, slotCount, spawnCfg.sideCount);
-      aliveBySide[side] = (aliveBySide[side] || 0) + 1;
+    } else if (z.attackSpawnSupplemental !== true) {
+      hasUnassignedSlotZombie = true;
     }
+  }
+
+  if (aliveCount >= target && !hasUnassignedSlotZombie) return;
+
+  const taken = new Set();
+  const aliveBySide = new Array(spawnCfg.sideCount).fill(0);
+  for (const z of state.zombies){
+    if (z.state === 'dying' || !Number.isFinite(z.slotIndex)) continue;
+    taken.add(z.slotIndex);
+    const side = zombieSideForSlot(z.slotIndex, slotCount, spawnCfg.sideCount);
+    aliveBySide[side] = (aliveBySide[side] || 0) + 1;
   }
 
   const missingBySide = Array.from({ length: spawnCfg.sideCount }, () => []);

@@ -482,6 +482,76 @@ test('CFX-15: calming does not suppress zombies that are only walking and not at
   assertEqual(zombie.calmHitCount, 0, 'walking zombie does not consume calm hit counter');
 });
 
+test('CFX-16: cascade skips wide fallback query when preferred targets fill the burst', () => {
+  const api = createChipEffectsApi(deepClone(chipsConfig));
+  const zombies = Array.from({ length: 16 }, (_, index) => ({
+    id: index + 1,
+    state: 'alive',
+    px: 125 + index * 5,
+    py: 0,
+  }));
+  const radii = [];
+  const spawns = [];
+
+  api.applyImpactEffects({
+    shotMods: { pendingCascadeMods: [{ modId: 1 }], pendingYellowMods: [], cellIndex: 0 },
+    x: 0,
+    y: 0,
+    b: { dmg: 200, aoe: 40, level: 1, prof: {}, bulletCfg: {}, effectIntensity: 1, shotId: 1 },
+    zombies,
+    getZombiePos: function (zombie) { return { x: zombie.px, y: zombie.py }; },
+    queryZombieIndicesInRadius: function (x, y, radius) {
+      radii.push(radius);
+      const radiusSq = radius * radius;
+      return zombies.reduce(function (indices, zombie, index) {
+        const dx = zombie.px - x;
+        const dy = zombie.py - y;
+        if (dx * dx + dy * dy <= radiusSq) indices.push(index);
+        return indices;
+      }, []);
+    },
+    spawnProjectile: function (projectile) { spawns.push(projectile); },
+  });
+
+  assertEqual(radii.length, 1, 'sufficient preferred-range targets need no wide fallback query');
+  assertEqual(radii[0], 250, 'only the preferred cascade radius is queried');
+  assert(spawns.length >= 2, 'cascade still spawns its configured projectiles');
+});
+
+test('CFX-17: cascade uses wide fallback query when preferred targets are insufficient', () => {
+  const api = createChipEffectsApi(deepClone(chipsConfig));
+  const zombies = [
+    { id: 1, state: 'alive', px: 130, py: 0 },
+    { id: 2, state: 'alive', px: 500, py: 0 },
+  ];
+  const radii = [];
+  const spawns = [];
+
+  api.applyImpactEffects({
+    shotMods: { pendingCascadeMods: [{ modId: 1 }], pendingYellowMods: [], cellIndex: 0 },
+    x: 0,
+    y: 0,
+    b: { dmg: 200, aoe: 40, level: 1, prof: {}, bulletCfg: {}, effectIntensity: 1, shotId: 1 },
+    zombies,
+    getZombiePos: function (zombie) { return { x: zombie.px, y: zombie.py }; },
+    queryZombieIndicesInRadius: function (x, y, radius) {
+      radii.push(radius);
+      const radiusSq = radius * radius;
+      return zombies.reduce(function (indices, zombie, index) {
+        const dx = zombie.px - x;
+        const dy = zombie.py - y;
+        if (dx * dx + dy * dy <= radiusSq) indices.push(index);
+        return indices;
+      }, []);
+    },
+    spawnProjectile: function (projectile) { spawns.push(projectile); },
+  });
+
+  assertEqual(radii.length, 2, 'insufficient nearby targets activate one fallback query');
+  assertEqual(radii[1], 2400, 'fallback keeps its established range');
+  assert(spawns.some(function (projectile) { return projectile.toZombieId === 2; }), 'fallback target remains selectable');
+});
+
 console.log('\n═══════════════════════════');
 console.log('ChipEffectVisualToggle: ' + passCount + ' passed, ' + failCount + ' failed');
 if (failures.length) {

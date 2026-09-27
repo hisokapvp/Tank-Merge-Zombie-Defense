@@ -1,6 +1,6 @@
 ﻿# Система: Performance
 
-> Обновлён: 2026-06-06 (добавлен perf-capture tool + Profiler per-frame accumulator).
+> Обновлён: 2026-09-26 (fast path zombie slot-пула + lazy cascade fallback по PerfCapture).
 
 ## Где править
 - Профилирование (markers + budgets + per-frame accumulator): `src/perf/profiler.js`
@@ -8,7 +8,7 @@
 - Debug-панель Perf-вкладка (Start/Stop/Reset/Copy/Download): `src/ui/debugPanel.js`
 - Пулы: `src/perf/objectPool.js`
 - Мобайл-режим: `src/perf/mobileMode.js`
-- Hot-path в `game.js`: `loop`, `draw`, `stepTanks`, `stepZombies`, `stepProjectiles`, `stepParticles`, `impactAt`, `selectZombieFenceTarget`, `selectZombieAttackTargetForZombie`, `pickFenceSegmentByPoint`.
+- Hot-path в `game.js`: `loop`, `draw`, `ensureZombieCount`, `stepTanks`, `stepZombies`, `stepProjectiles`, `stepParticles`, `impactAt`, `selectZombieFenceTarget`, `selectZombieAttackTargetForZombie`, `pickFenceSegmentByPoint`.
 
 ## Правила
 - Любые изменения в `loop`/`draw`/`step*` делать без мусора в куче.
@@ -69,6 +69,8 @@ Zero-alloc per-frame **SUM**-аккумулятор поверх существ�
 
 Сохраняй invariant «нет heap allocations в hot path» при любых правках:
 
+- `ensureZombieCount()` вызывается из игрового цикла. После подсчёта живых и нормализации слотов он обязан выйти до создания `Set`/side-массивов и `Array.from`, когда `aliveCount >= targetAlive` и нет обычного зомби без слота. Supplemental-зомби с `attackSpawnSupplemental === true` и `slotIndex: null` не блокируют fast path. Scratch-перестроение нужно только при спавне или восстановлении обычных слотов ([game.js](../../game.js#L9103-L9215)).
+- `_findCascadeTargets()` не должен собирать/сортировать широкий fallback-набор, если цели диапазона 100–250px уже покрывают projectile count; широкий радиус 2400px остаётся для неполного набора ([chipEffects.js](../../src/mechanics/chipEffects.js#L816-L869)). В PerfCapture для 1553 L59 zombies каскадный fallback и сортировка были подозреваемым per-impact full-crowd scan; после правки необходим новый capture для количественной проверки frame-time.
 - **Не** создавай `[]`/`{}`/`new Map()` каждый кадр в step*/draw/select* функциях. Заводи module-scope scratch (`_stepTanksTargetPool`, `_projectileZmap`) и переиспользуй через `length = 0` или `.clear()`.
 - **Не** используй `.sort()`/`.map()`/`.filter()`/`.reduce()` на массивах per-frame в stepTanks/stepZombies/stepProjectiles. Заменяй на single-pass tracking inline-переменными.
 - **Не** вызывай `Math.hypot(dx, dy)` для skip-проверок типа `d > range`. Используй `dx*dx + dy*dy > range*range`. `Math.sqrt` — только когда точное расстояние нужно для дальнейших вычислений (например falloff).
@@ -87,6 +89,7 @@ Zero-alloc per-frame **SUM**-аккумулятор поверх существ�
 | `impactAt` aoe-count | `state.zombies.reduce(...)` + Math.hypot | for-loop + squared distance + inlined pos | reduce closure + N hypot + N {x,y}/impact |
 | `impactAt` damage | `Math.hypot` для skip | squared-distance early-skip | (N_zombies - N_victims) hypot/impact |
 | `stepParticles` | `const next = []` + push | write-index in-place compaction | до ~1600 push на новый array/кадр |
+| `ensureZombieCount` | каждый кадр создавались `Set`/side-массивы и перестраивались missing slots | один проход по живым; ранний выход для заполненного пула до scratch allocation | нет per-frame коллекций и O(targetAlive) slot scan в стабильной волне |
 | `selectZombieFenceTarget` | `const candidate = {seg, index, distance, isCorner}` per seg | inline 4 best-vars, allocate only return | ~N_zombies × N_segments объектов/кадр в attack mode |
 
 - `impactAt()` теперь пишет эксклюзивные subphase samples `impactAt.query`, `impactAt.damageLoop`, `impactAt.talents`, `impactAt.chipFx`, `impactAt.visualFx`, `impactAt.chainLightning`, поэтому PerfCapture может отделять базовый AoE hit loop от on-hit hooks и чисто визуальных побочных эффектов ([game.js](../../game.js#L11386-L11590)).

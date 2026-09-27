@@ -2,6 +2,21 @@
 
 ## 2026-09-26
 
+### Оптимизация поиска целей рикошета
+- Новый PerfCapture показал `impactAt.talents` = 75.35 ms/кадр (71.6%) при 1000 живых L59 зомби. Max-rank `off_ricochet` разрешает до двух скачков с радиусом 500px на каждый hit.
+- `findNearestRicochetTarget()` теперь ищет по растущим радиусам 96, 192, 384, 500px и останавливается на первом круге с доступным ближайшим кандидатом; линейный fallback без spatial query не менялся.
+- TalentsV2 pack: 7 passed, основной набор: 103 passed, projectile pack: 11 passed. Нужен новый capture на той же сборке для итоговых frame-time цифр.
+
+### Ленивая выборка cascade-целей при impact
+- PerfCapture `tmzd-perf-20260926-192121.json` показал `stepProjectiles` avg 16.16 ms / 40.2% CPU кадра при 1553 зомби L59, 15 танках и около 85 снарядах; `impactAt.chipFx` — 7.79 ms, `impactAt.talents` — 4.14 ms.
+- `_findCascadeTargets()` теперь запускает широкий запрос радиуса 2400 px, сбор fallback-кандидатов и сортировку только если целей из предпочтительного диапазона 100–250 px недостаточно. Выбор целей и fallback-правило не меняются.
+- Добавлены CFX-16/17: достаточный набор целей пропускает fallback; недостаточный продолжает выбирать цель через широкий запрос. Pack 8 — 17 passed, 0 failed; основной набор — 103 passed, 0 failed. Полный `ci/run_tests.sh` не завершился в лимите времени после Pack 18; packs 19–28 пройдены отдельно.
+
+### Fast path для стабильной толпы зомби
+- `ensureZombieCount()` теперь выходит после одного прохода, если цель по живым зомби достигнута и у каждого обычного зомби уже есть слот. Это пропускает per-frame создание `Set`/массивов и перестроение диапазона слотов; supplemental-зомби с `slotIndex: null` не блокируют выход.
+- Повторный подсчёт сторон и восстановление слотов остаются на пути спавна или при отсутствии слота у обычного зомби.
+- Проверки: `node Test/tests.js` — 103 passed, 0 failed; отдельная VM-проверка 1000-зомби steady state подтвердила выход до создания временных коллекций.
+
 ### Зафиксированный endpoint танковых снарядов и impact-time AoE
 - `stepProjectiles()` больше не перестраивает zombie-id map и не обновляет endpoint по движущейся цели каждый кадр; `Game.Targeting.advanceProjectileToDestination()` двигает снаряд по world-space координатам, зажимает большой шаг точно в destination и инициирует одну детонацию.
 - `impactAt()` сохраняет collision-grid broadphase, но через `collectImpactVictimIndices()` выбирает текущих живых AoE-целей при взрыве, используя scratch buffer без новых per-impact allocations. Chip/talent impact ordering и общий gameplay owner оставлены; UI не менялся.

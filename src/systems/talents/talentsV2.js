@@ -2621,40 +2621,45 @@
       fromY = fromPos.y;
     }
 
-    var best = null;
-    var bestDistSq = Infinity;
-    var radiusSq = radius * radius;
+    var searchRadius = queryZombieIndicesFn ? Math.min(radius, 96) : radius;
+    while (true) {
+      var best = null;
+      var bestDistSq = Infinity;
+      var searchRadiusSq = searchRadius * searchRadius;
+      var candidateIndices = queryZombieIndicesFn
+        ? queryZombieIndicesFn(fromX, fromY, searchRadius, false)
+        : null;
+      var candidateCount = candidateIndices ? candidateIndices.length : zombies.length;
+      for (var i = 0; i < candidateCount; i++) {
+        var candidateIndex = candidateIndices ? candidateIndices[i] : i;
+        var candidate = zombies[candidateIndex];
+        if (!candidate || candidate === from) continue;
+        if (candidate.state === 'dying') continue;
+        if (isVisitedEntity(visited, candidate)) continue;
 
-    var candidateIndices = typeof queryZombieIndicesFn === 'function'
-      ? queryZombieIndicesFn(fromX, fromY, radius, false)
-      : null;
-    var candidateCount = candidateIndices ? candidateIndices.length : zombies.length;
-    for (var i = 0; i < candidateCount; i++) {
-      var candidateIndex = candidateIndices ? candidateIndices[i] : i;
-      var candidate = zombies[candidateIndex];
-      if (!candidate || candidate === from) continue;
-      if (candidate.state === 'dying') continue;
-      if (isVisitedEntity(visited, candidate)) continue;
+        var candidateX = Number.isFinite(candidate._sx) ? candidate._sx : null;
+        var candidateY = Number.isFinite(candidate._sy) ? candidate._sy : null;
+        if (candidateX === null || candidateY === null) {
+          var candidatePos = resolveEntityPosition(candidate, getZombiePosFn);
+          if (!candidatePos) continue;
+          candidateX = candidatePos.x;
+          candidateY = candidatePos.y;
+        }
 
-      var candidateX = Number.isFinite(candidate._sx) ? candidate._sx : null;
-      var candidateY = Number.isFinite(candidate._sy) ? candidate._sy : null;
-      if (candidateX === null || candidateY === null) {
-        var candidatePos = resolveEntityPosition(candidate, getZombiePosFn);
-        if (!candidatePos) continue;
-        candidateX = candidatePos.x;
-        candidateY = candidatePos.y;
+        var dx = candidateX - fromX;
+        var dy = candidateY - fromY;
+        var distSq = dx * dx + dy * dy;
+        if (distSq > searchRadiusSq) continue;
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          best = candidate;
+        }
       }
 
-      var dx = candidateX - fromX;
-      var dy = candidateY - fromY;
-      var distSq = dx * dx + dy * dy;
-      if (distSq > radiusSq) continue;
-      if (distSq < bestDistSq) {
-        bestDistSq = distSq;
-        best = candidate;
-      }
+      // Any target outside this searched circle is farther than the nearest hit.
+      if (best || searchRadius >= radius) return best;
+      searchRadius = Math.min(radius, searchRadius * 2);
     }
-    return best;
   }
 
   function getRicochetBounces(mods) {

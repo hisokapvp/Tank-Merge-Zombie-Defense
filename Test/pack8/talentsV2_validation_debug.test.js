@@ -179,6 +179,54 @@ console.log('\n── Pack 8: Talents v2 validation/debug/fps guards ──');
     assert(!!snap.migration, 'debugDump has migration block');
   });
 
+  await test('P8-V7: ricochet search stops at nearest target and expands only when needed', async function () {
+    const { api } = await createApiAndInit();
+    const mods = {
+      ricochetChance: 1,
+      ricochetBounces: 1,
+      ricochetRadius: 500,
+      ricochetDamageMul: 0.7,
+      damageMul: 1,
+    };
+
+    function hitAt(distance) {
+      const from = { id: 'from-' + distance, state: 'alive', hp: 100, maxHp: 100, _sx: 0, _sy: 0 };
+      const nearest = { id: 'nearest-' + distance, state: 'alive', hp: 100, maxHp: 100, _sx: distance, _sy: 0 };
+      const farther = { id: 'farther-' + distance, state: 'alive', hp: 100, maxHp: 100, _sx: 420, _sy: 0 };
+      const zombies = [from, nearest, farther];
+      const radii = [];
+      const out = api.onHit({
+        tank: { id: 'ricochet-tank-' + distance },
+        zombie: from,
+        zombies,
+        damage: 100,
+        timeMs: 1000,
+        mods,
+        queryZombieIndicesInRadius: function (x, y, radius) {
+          radii.push(radius);
+          const radiusSq = radius * radius;
+          return zombies.reduce(function (indices, zombie, index) {
+            const dx = zombie._sx - x;
+            const dy = zombie._sy - y;
+            if (dx * dx + dy * dy <= radiusSq) indices.push(index);
+            return indices;
+          }, []);
+        },
+      });
+      assertEqual(out.extraHits[0].zombie, nearest, 'the same nearest target is selected');
+      return radii;
+    }
+
+    const denseRadii = hitAt(70);
+    assertEqual(denseRadii.length, 1, 'dense targets need one small-radius query');
+    assertEqual(denseRadii[0], 96, 'dense targets avoid scanning the full 500px radius');
+
+    const sparseRadii = hitAt(140);
+    assertEqual(sparseRadii.length, 2, 'sparse targets expand once before a hit');
+    assertEqual(sparseRadii[0], 96, 'search starts at one collision-grid cell');
+    assertEqual(sparseRadii[1], 192, 'search doubles until it finds the nearest target');
+  });
+
   console.log('\n═══════════════════════════');
   console.log('Pack8 TalentsValidationDebug: ' + passCount + ' passed, ' + failCount + ' failed');
   if (failures.length) {

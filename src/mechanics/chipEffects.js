@@ -816,7 +816,6 @@
   function _findCascadeTargets(x, y, count, opts) {
     var zombies = opts.zombies;
     var candidates = [];
-    var fallbackCandidates = [];
 
     _forEachZombieInRadius(opts, x, y, CASCADE_MAX_DIST, true, function (z, p, d) {
       if (z.state === 'dying') return;
@@ -839,15 +838,16 @@
       }
     }
 
-    /* Fallback: if not enough in preferred range, accept any alive zombie ≥50px. */
-    _forEachZombieInRadius(opts, x, y, 2400, true, function (z, p, d) {
-      if (z.state === 'dying') return;
-      if (usedIds[z.id]) return;
-      if (d < 50) return;
-      fallbackCandidates.push({ z: z, d: d });
-    });
-    fallbackCandidates.sort(function (a, b) { return a.d - b.d; });
     if (results.length < count) {
+      /* Only scan and sort the wide-radius fallback when preferred targets are insufficient. */
+      var fallbackCandidates = [];
+      _forEachZombieInRadius(opts, x, y, 2400, true, function (z, p, d) {
+        if (z.state === 'dying') return;
+        if (usedIds[z.id]) return;
+        if (d < 50) return;
+        fallbackCandidates.push({ z: z, d: d });
+      });
+      fallbackCandidates.sort(function (a, b) { return a.d - b.d; });
       for (var k = 0; k < fallbackCandidates.length && results.length < count; k++) {
         var zf = fallbackCandidates[k].z;
         if (!usedIds[zf.id]) {

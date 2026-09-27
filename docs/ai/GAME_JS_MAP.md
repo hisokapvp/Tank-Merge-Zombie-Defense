@@ -248,7 +248,7 @@
 | Строка | Функция |
 |---|---|
 | 4350 | `makeZombie(type, level)` |
-| 4420 | `ensureZombieCount()` |
+| 9103 | `ensureZombieCount()` |
 | 4520 | `zombiePos(z)` |
 | 4560 | `resolveZombieWallMove(z, dt)` (decor collision respect pulse) |
 | 4580 | `stepDecorCollisionPulse(dt)` / `isDecorCollisionSuppressed()` — окно отключения коллизии декора |
