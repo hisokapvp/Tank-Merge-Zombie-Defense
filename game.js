@@ -5106,62 +5106,114 @@ function clampDevInt(value){
 function getSerializedAchievementStats(){
   const ach = ensureAchievementsState();
   const stats = state.stats && typeof state.stats === 'object' ? state.stats : {};
-  return {
-    tanksMergedCount: clampDevInt(Number.isFinite(stats.tanksMergedCount) ? stats.tanksMergedCount : ach.totalMerges),
-    tanksBoughtCount: clampDevInt(Number.isFinite(stats.tanksBoughtCount) ? stats.tanksBoughtCount : ach.totalPurchased),
-    manualFenceRepairsCount: clampDevInt(Number.isFinite(stats.manualFenceRepairsCount) ? stats.manualFenceRepairsCount : ach.totalManualFenceRepairs),
-    modifierTechUnlocksCount: clampDevInt(Number.isFinite(stats.modifierTechUnlocksCount) ? stats.modifierTechUnlocksCount : ach.totalModifierTechUnlocks),
-    droneAcquisitionsCount: clampDevInt(Number.isFinite(stats.droneAcquisitionsCount) ? stats.droneAcquisitionsCount : ach.totalDroneAcquisitions),
-    noRepairAttackWaveStreakCount: clampDevInt(Number.isFinite(stats.noRepairAttackWaveStreakCount) ? stats.noRepairAttackWaveStreakCount : ach.totalNoRepairAttackWaveStreak),
-    attackWavesCompletedCount: clampDevInt(Number.isFinite(stats.attackWavesCompletedCount) ? stats.attackWavesCompletedCount : ach.totalAttackWavesCompleted),
-    // Item — per-run «Текущая волна» counter (сбрасывается на New Game / partial reset).
-    currentWaveCount: clampDevInt(Number.isFinite(stats.currentWaveCount) ? stats.currentWaveCount : 0),
-    coinsSpentTotal: clampDevInt(Number.isFinite(stats.coinsSpentTotal) ? stats.coinsSpentTotal : ach.totalCoinsSpent),
-    coinsSpentBySource: (stats.coinsSpentBySource && typeof stats.coinsSpentBySource === 'object') ? stats.coinsSpentBySource : {},
-    /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter +
-       per-source breakdown (tank/drone/talent/wall). Mirrored on
-       ach.totalZombieKills via normalizeCounter+Math.max in ensureStats. */
-    zombieKillsTotal: clampDevInt(Number.isFinite(stats.zombieKillsTotal) ? stats.zombieKillsTotal : ach.totalZombieKills),
-    zombieKillsBySource: (stats.zombieKillsBySource && typeof stats.zombieKillsBySource === 'object') ? stats.zombieKillsBySource : {},
-    /* tank_building — словарь созданных танков по уровню ({"15": N, ...}). */
-    tanksCreatedByLevel: (stats.tanksCreatedByLevel && typeof stats.tanksCreatedByLevel === 'object') ? stats.tanksCreatedByLevel : {},
-    moneyEarnedCount: clampDevInt(Number.isFinite(stats.moneyEarnedCount) ? stats.moneyEarnedCount : ach.totalMoneyEarned),
-    perfectFenceWavesCount: clampDevInt(Number.isFinite(stats.perfectFenceWavesCount) ? stats.perfectFenceWavesCount : ach.totalPerfectFenceWaves),
-    hangarMasterLevelCount: clampDevInt(Number.isFinite(stats.hangarMasterLevelCount) ? stats.hangarMasterLevelCount : ach.totalHangarMasterLevel),
-    defenseOrderStreakCount: clampDevInt(Number.isFinite(stats.defenseOrderStreakCount) ? stats.defenseOrderStreakCount : ach.totalDefenseOrderStreak),
-    chipComboTriplesCount: clampDevInt(Number.isFinite(stats.chipComboTriplesCount) ? stats.chipComboTriplesCount : ach.totalChipComboTriples),
-    chipCraftFromFragmentsCount: clampDevInt(Number.isFinite(stats.chipCraftFromFragmentsCount) ? stats.chipCraftFromFragmentsCount : ach.totalChipCraftFromFragments),
-    achievementsUnlockedCount: clampDevInt(Number.isFinite(stats.achievementsUnlockedCount) ? stats.achievementsUnlockedCount : ach.totalAchievementsUnlocked),
+  /* Generic copy of the WHOLE stats surface. Achievement progress is read from
+     `state.stats.*` (see getProgressValueFromState in src/mechanics/achievements.js),
+     so a hand-picked subset silently dropped ~23 families' progress on reload
+     (attackWavesCompleted, moneyEarned, perfectFenceWaves, hangarMasterLevel,
+     defenseOrderStreak, maxTankLevel, chipComboTriples, chipCraftFromFragments,
+     achievementsUnlocked, coinsSpent, zombieKills, dustEarnedLifetime,
+     fragmentsAcquired, talent*, survivorWaveCompletions, droneRepairsCompleted,
+     autoMergeActivations, totalLoginDays, bonusBoxesOpened, productionBoxes*,
+     tanksCreatedByLevel). Copying every scalar/plain-object entry keeps current
+     and future counters persisted without touching this function again. */
+  const out = {};
+  for (const key in stats) {
+    if (!Object.prototype.hasOwnProperty.call(stats, key)) continue;
+    const value = stats[key];
+    if (typeof value === 'number') out[key] = clampDevInt(value);
+    else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const map = {};
+      for (const mk in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, mk)) continue;
+        const mv = value[mk];
+        if (typeof mv === 'number') map[mk] = clampDevInt(mv);
+        else if (typeof mv === 'boolean' || typeof mv === 'string') map[mk] = mv;
+      }
+      out[key] = map;
+    }
+  }
+  /* Legacy ach.* mirrors as fallbacks for counters absent from state.stats
+     (old saves / cold start). */
+  const legacyFallbacks = {
+    tanksMergedCount: ach.totalMerges,
+    tanksBoughtCount: ach.totalPurchased,
+    manualFenceRepairsCount: ach.totalManualFenceRepairs,
+    modifierTechUnlocksCount: ach.totalModifierTechUnlocks,
+    droneAcquisitionsCount: ach.totalDroneAcquisitions,
+    noRepairAttackWaveStreakCount: ach.totalNoRepairAttackWaveStreak,
+    attackWavesCompletedCount: ach.totalAttackWavesCompleted,
+    droneRepairsCompletedCount: ach.totalDroneRepairsCompleted,
+    autoMergeActivationsCount: ach.totalAutoMergeActivations,
+    coinsSpentTotal: ach.totalCoinsSpent,
+    moneyEarnedCount: ach.totalMoneyEarned,
+    perfectFenceWavesCount: ach.totalPerfectFenceWaves,
+    hangarMasterLevelCount: ach.totalHangarMasterLevel,
+    defenseOrderStreakCount: ach.totalDefenseOrderStreak,
+    maxTankLevelCount: ach.totalMaxTankLevel,
+    chipComboTriplesCount: ach.totalChipComboTriples,
+    chipCraftFromFragmentsCount: ach.totalChipCraftFromFragments,
+    achievementsUnlockedCount: ach.totalAchievementsUnlocked,
+    dustEarnedLifetime: ach.dustEarnedLifetime,
+    fragmentsAcquired: ach.fragmentsAcquired,
+    totalLoginDays: ach.totalLoginDays,
+    zombieKillsTotal: ach.totalZombieKills,
+    survivorWaveCompletionsCount: ach.totalSurvivorWaveCompletions,
+    talentPointsSpentTotal: ach.totalTalentPointsSpent,
+    talentBranchesMaxedPeak: ach.totalTalentBranchesMaxed,
+    talentBranchActivesMaxedPeak: ach.totalTalentBranchActivesMaxed,
   };
+  for (const fk in legacyFallbacks) {
+    if (!Object.prototype.hasOwnProperty.call(legacyFallbacks, fk)) continue;
+    if (!Object.prototype.hasOwnProperty.call(out, fk)) out[fk] = clampDevInt(legacyFallbacks[fk]);
+  }
+  if (!Object.prototype.hasOwnProperty.call(out, 'currentWaveCount')) out.currentWaveCount = 0;
+  return out;
 }
 
 function applySavedAchievementStats(savedStats){
   if (savedStats && typeof savedStats === 'object') {
     if (!state.stats || typeof state.stats !== 'object') state.stats = {};
-    if (Number.isFinite(savedStats.tanksMergedCount)) state.stats.tanksMergedCount = clampDevInt(savedStats.tanksMergedCount);
-    if (Number.isFinite(savedStats.tanksBoughtCount)) state.stats.tanksBoughtCount = clampDevInt(savedStats.tanksBoughtCount);
-    if (Number.isFinite(savedStats.manualFenceRepairsCount)) state.stats.manualFenceRepairsCount = clampDevInt(savedStats.manualFenceRepairsCount);
-    if (Number.isFinite(savedStats.modifierTechUnlocksCount)) state.stats.modifierTechUnlocksCount = clampDevInt(savedStats.modifierTechUnlocksCount);
-    if (Number.isFinite(savedStats.droneAcquisitionsCount)) state.stats.droneAcquisitionsCount = clampDevInt(savedStats.droneAcquisitionsCount);
-    if (Number.isFinite(savedStats.noRepairAttackWaveStreakCount)) state.stats.noRepairAttackWaveStreakCount = clampDevInt(savedStats.noRepairAttackWaveStreakCount);
-    if (Number.isFinite(savedStats.attackWavesCompletedCount)) state.stats.attackWavesCompletedCount = clampDevInt(savedStats.attackWavesCompletedCount);
-    // Item — per-run «Текущая волна» counter: восстанавливается из payload, чтобы
-    // save/load внутри одного run не терял прогресс волн.
-    if (Number.isFinite(savedStats.currentWaveCount)) state.stats.currentWaveCount = clampDevInt(savedStats.currentWaveCount);
-    if (Number.isFinite(savedStats.coinsSpentTotal)) state.stats.coinsSpentTotal = clampDevInt(savedStats.coinsSpentTotal);
-    if (savedStats.coinsSpentBySource && typeof savedStats.coinsSpentBySource === 'object') state.stats.coinsSpentBySource = savedStats.coinsSpentBySource;
-    /* solo-pipeline-yandex-vk — zombie_slayer lifetime counter restore. */
-    if (Number.isFinite(savedStats.zombieKillsTotal)) state.stats.zombieKillsTotal = clampDevInt(savedStats.zombieKillsTotal);
-    if (savedStats.zombieKillsBySource && typeof savedStats.zombieKillsBySource === 'object') state.stats.zombieKillsBySource = savedStats.zombieKillsBySource;
-    /* tank_building — restore словаря созданных танков по уровню. */
-    if (savedStats.tanksCreatedByLevel && typeof savedStats.tanksCreatedByLevel === 'object') state.stats.tanksCreatedByLevel = savedStats.tanksCreatedByLevel;
-    if (Number.isFinite(savedStats.moneyEarnedCount)) state.stats.moneyEarnedCount = clampDevInt(savedStats.moneyEarnedCount);
-    if (Number.isFinite(savedStats.perfectFenceWavesCount)) state.stats.perfectFenceWavesCount = clampDevInt(savedStats.perfectFenceWavesCount);
-    if (Number.isFinite(savedStats.hangarMasterLevelCount)) state.stats.hangarMasterLevelCount = clampDevInt(savedStats.hangarMasterLevelCount);
-    if (Number.isFinite(savedStats.defenseOrderStreakCount)) state.stats.defenseOrderStreakCount = clampDevInt(savedStats.defenseOrderStreakCount);
-    if (Number.isFinite(savedStats.chipComboTriplesCount)) state.stats.chipComboTriplesCount = clampDevInt(savedStats.chipComboTriplesCount);
-    if (Number.isFinite(savedStats.chipCraftFromFragmentsCount)) state.stats.chipCraftFromFragmentsCount = clampDevInt(savedStats.chipCraftFromFragmentsCount);
-    if (Number.isFinite(savedStats.achievementsUnlockedCount)) state.stats.achievementsUnlockedCount = clampDevInt(savedStats.achievementsUnlockedCount);
+    /* Generic restore of the whole stats surface. Counters are monotonic
+       lifetime progress, so we take Math.max against the live value: a stale or
+       partial payload can never demote progress, while a fresh payload restores
+       it after a reload / partial reset. Counter dictionaries are merged the
+       same way per key. */
+    for (const key in savedStats) {
+      if (!Object.prototype.hasOwnProperty.call(savedStats, key)) continue;
+      const value = savedStats[key];
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value)) continue;
+        const incoming = clampDevInt(value);
+        /* currentWaveCount is a per-run counter, not lifetime progress: the
+           loaded save is authoritative, so assign directly instead of Math.max
+           (otherwise loading an older save would keep the live session's higher
+           wave number). Every other stats counter is monotonic lifetime
+           progress and merges via Math.max. */
+        if (key === 'currentWaveCount') {
+          state.stats[key] = incoming;
+          continue;
+        }
+        const current = Number.isFinite(state.stats[key]) ? clampDevInt(state.stats[key]) : 0;
+        state.stats[key] = Math.max(current, incoming);
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        if (!state.stats[key] || typeof state.stats[key] !== 'object' || Array.isArray(state.stats[key])) {
+          state.stats[key] = {};
+        }
+        const target = state.stats[key];
+        for (const mk in value) {
+          if (!Object.prototype.hasOwnProperty.call(value, mk)) continue;
+          const mv = value[mk];
+          if (typeof mv === 'number') {
+            if (!Number.isFinite(mv)) continue;
+            const incoming = clampDevInt(mv);
+            const current = Number.isFinite(target[mk]) ? clampDevInt(target[mk]) : 0;
+            target[mk] = Math.max(current, incoming);
+          } else if (typeof mv === 'boolean' || typeof mv === 'string') {
+            target[mk] = mv;
+          }
+        }
+      }
+    }
   }
   ensureAchievementsState();
 }
@@ -9187,6 +9239,20 @@ function ensureZombieCount(){
       const spawnIndex = Number.isFinite(nextSlot.slotIndex) ? nextSlot.slotIndex : aliveCount;
       state.zombies.push(makeZombie(true, spawnIndex, slotCount));
       if (nextSlot.side != null) aliveBySide[nextSlot.side] = (aliveBySide[nextSlot.side] || 0) + 1;
+      aliveCount++;
+      continue;
+    }
+    // Post-attack ramp-down: episode dirs are stale once the wave ends, so spawn
+    // from a random side instead (user follow-up: zombies must come from all sides
+    // right after the attack wave finishes, not keep funneling from the attack
+    // directions while aliveMultCurrent ramps back to 1).
+    if (!isZombieAttackModeActive()) {
+      const zAny = makeZombie(true, null, slotCount);
+      if (zAny) {
+        zAny.slotIndex = null;
+        zAny.attackSpawnSupplemental = true;
+        state.zombies.push(zAny);
+      }
       aliveCount++;
       continue;
     }
@@ -13901,6 +13967,23 @@ function restartSimulationPartial(){
         } else if (Array.isArray(snapshotState && snapshotState.playerChips)) {
           snap.playerChips = snapshotState.playerChips.slice();
         }
+        /* Achievement progress lives in `state.stats.*`, but partial reset
+           recreates `state` via createInitialState(), which zeroes every
+           counter. Snapshot the whole stats surface here (game.js owns this
+           override, so worldReset.js stays free of the per-run counter name)
+           and drop the per-run wave counter — it must restart from 0. */
+        var srcStats = snapshotState && snapshotState.stats && typeof snapshotState.stats === 'object'
+          ? snapshotState.stats
+          : {};
+        var statsSnap = {};
+        for (var sk in srcStats) {
+          if (!Object.prototype.hasOwnProperty.call(srcStats, sk)) continue;
+          if (sk === 'currentWaveCount') continue;
+          var sv = srcStats[sk];
+          if (typeof sv === 'number') statsSnap[sk] = clampDevInt(sv);
+          else if (sv && typeof sv === 'object' && !Array.isArray(sv)) statsSnap[sk] = cloneJsonSafe(sv, {});
+        }
+        snap.stats = statsSnap;
         return snap;
       },
       restoreProgressSnapshot: function (targetState, snap) {
@@ -13912,6 +13995,36 @@ function restartSimulationPartial(){
           var HCUI = window.Game && window.Game.HangarChipsUI;
           if (HCUI && typeof HCUI.setPlayerChips === 'function') {
             HCUI.setPlayerChips(snap.playerChips.slice());
+          }
+        }
+        /* Restore the achievement stats surface captured above. Monotonic
+           Math.max merge so a stale snapshot can never demote progress; the
+           per-run wave counter is intentionally absent from the snapshot. */
+        if (snap && snap.stats && typeof snap.stats === 'object' && targetState && typeof targetState === 'object') {
+          if (!targetState.stats || typeof targetState.stats !== 'object') targetState.stats = {};
+          var snapStats = snap.stats;
+          for (var rk in snapStats) {
+            if (!Object.prototype.hasOwnProperty.call(snapStats, rk)) continue;
+            var rv = snapStats[rk];
+            if (typeof rv === 'number') {
+              var cur = Number.isFinite(targetState.stats[rk]) ? clampDevInt(targetState.stats[rk]) : 0;
+              targetState.stats[rk] = Math.max(cur, clampDevInt(rv));
+            } else if (rv && typeof rv === 'object' && !Array.isArray(rv)) {
+              if (!targetState.stats[rk] || typeof targetState.stats[rk] !== 'object' || Array.isArray(targetState.stats[rk])) {
+                targetState.stats[rk] = {};
+              }
+              var tgt = targetState.stats[rk];
+              for (var rmk in rv) {
+                if (!Object.prototype.hasOwnProperty.call(rv, rmk)) continue;
+                var rmv = rv[rmk];
+                if (typeof rmv === 'number') {
+                  var curM = Number.isFinite(tgt[rmk]) ? clampDevInt(tgt[rmk]) : 0;
+                  tgt[rmk] = Math.max(curM, clampDevInt(rmv));
+                } else if (typeof rmv === 'boolean' || typeof rmv === 'string') {
+                  tgt[rmk] = rmv;
+                }
+              }
+            }
           }
         }
       },

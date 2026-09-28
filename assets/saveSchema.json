@@ -154,9 +154,43 @@
         "modifierTechUnlocksCount":       { "type": "integer", "minimum": 0 },
         "droneAcquisitionsCount":         { "type": "integer", "minimum": 0 },
         "noRepairAttackWaveStreakCount":  { "type": "integer", "minimum": 0 },
+        "attackWavesCompletedCount":      { "type": "integer", "minimum": 0 },
+        "droneRepairsCompletedCount":     { "type": "integer", "minimum": 0 },
+        "autoMergeActivationsCount":      { "type": "integer", "minimum": 0 },
+        "coinsSpentTotal":                { "type": "integer", "minimum": 0 },
+        "moneyEarnedCount":               { "type": "integer", "minimum": 0 },
+        "perfectFenceWavesCount":         { "type": "integer", "minimum": 0 },
+        "hangarMasterLevelCount":         { "type": "integer", "minimum": 0 },
+        "defenseOrderStreakCount":        { "type": "integer", "minimum": 0 },
+        "maxTankLevelCount":              { "type": "integer", "minimum": 0 },
+        "chipComboTriplesCount":          { "type": "integer", "minimum": 0 },
+        "chipCraftFromFragmentsCount":    { "type": "integer", "minimum": 0 },
+        "achievementsUnlockedCount":      { "type": "integer", "minimum": 0 },
+        "totalLoginDays":                 { "type": "integer", "minimum": 0 },
+        "zombieKillsTotal":               { "type": "integer", "minimum": 0 },
+        "survivorWaveCompletionsCount":   { "type": "integer", "minimum": 0 },
+        "talentPointsSpentTotal":         { "type": "integer", "minimum": 0 },
+        "talentBranchesMaxedPeak":        { "type": "integer", "minimum": 0 },
+        "talentBranchActivesMaxedPeak":   { "type": "integer", "minimum": 0 },
+        "currentWaveCount":               { "type": "integer", "minimum": 0 },
         "bonusBoxesOpenedCount":          { "type": "integer", "minimum": 0 },
         "dustEarnedLifetime":             { "type": "integer", "minimum": 0 },
         "fragmentsAcquired":              { "type": "integer", "minimum": 0 },
+        "coinsSpentBySource": {
+          "description": "Per-source breakdown of coinsSpentTotal (buy/merge/repair/...).",
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "zombieKillsBySource": {
+          "description": "Per-source breakdown of zombieKillsTotal (tank/drone/talent/wall).",
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "productionBoxesOpenedByLevel": {
+          "description": "production_line family counter — сколько боксов уровня L было открыто (ключи — String(level)).",
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
         "tanksCreatedByLevel": {
           "description": "tank_building family counter — сколько танков ровно уровня L было создано (ключи — String(level)). Инкремент только из real-creation seam (game.js recordTankLevel с cause !== 'seed'); seed/restore не засчитываются.",
           "type": "object",

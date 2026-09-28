@@ -36,6 +36,90 @@
     return Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value)));
   }
 
+  /* Clone a plain counter dictionary (tanksCreatedByLevel, zombieKillsBySource,
+     coinsSpentBySource, productionBoxesOpenedByLevel, ...) keeping only scalar
+     entries so junk/undefined never leaks into the save payload. */
+  function clonePlainCounterMap(value) {
+    var out = {};
+    if (!value || typeof value !== 'object') return out;
+    for (var k in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, k)) continue;
+      var v = value[k];
+      if (typeof v === 'number') out[k] = normalizeSafeCounter(v);
+      else if (typeof v === 'boolean' || typeof v === 'string') out[k] = v;
+    }
+    return out;
+  }
+
+  /* Canonical achievement-progress serializer.
+
+     Achievement progress is read from `state.stats.*` (see
+     `getProgressValueFromState` in src/mechanics/achievements.js), so the save
+     payload MUST carry the whole stats surface. Previously only 7 counters were
+     written, which silently dropped ~23 families (attackWavesCompleted,
+     moneyEarned, perfectFenceWaves, hangarMasterLevel, defenseOrderStreak,
+     maxTankLevel, chipComboTriples, chipCraftFromFragments,
+     achievementsUnlocked, coinsSpent, zombieKills, dustEarnedLifetime,
+     fragmentsAcquired, talent*, survivorWaveCompletions, droneRepairsCompleted,
+     autoMergeActivations, totalLoginDays, bonusBoxesOpened, productionBoxes*,
+     tanksCreatedByLevel) — their progress reset to 0 after every reload.
+
+     Generic copy keeps every current and future counter persisted; the legacy
+     `ach.*` mirrors are used only as fallbacks when a counter is absent from
+     `state.stats` (old saves / cold start). */
+  function serializeAchievementStats(state, achievements) {
+    var src = state && state.stats && typeof state.stats === 'object' ? state.stats : {};
+    var ach = achievements && typeof achievements === 'object' ? achievements : {};
+    var out = {};
+    for (var key in src) {
+      if (!Object.prototype.hasOwnProperty.call(src, key)) continue;
+      var value = src[key];
+      if (typeof value === 'number') out[key] = normalizeSafeCounter(value);
+      else if (value && typeof value === 'object' && !Array.isArray(value)) out[key] = clonePlainCounterMap(value);
+    }
+    var legacyFallbacks = {
+      tanksMergedCount: ach.totalMerges,
+      tanksBoughtCount: ach.totalPurchased,
+      manualFenceRepairsCount: ach.totalManualFenceRepairs,
+      modifierTechUnlocksCount: ach.totalModifierTechUnlocks,
+      droneAcquisitionsCount: ach.totalDroneAcquisitions,
+      noRepairAttackWaveStreakCount: ach.totalNoRepairAttackWaveStreak,
+      attackWavesCompletedCount: ach.totalAttackWavesCompleted,
+      droneRepairsCompletedCount: ach.totalDroneRepairsCompleted,
+      autoMergeActivationsCount: ach.totalAutoMergeActivations,
+      coinsSpentTotal: ach.totalCoinsSpent,
+      moneyEarnedCount: ach.totalMoneyEarned,
+      perfectFenceWavesCount: ach.totalPerfectFenceWaves,
+      hangarMasterLevelCount: ach.totalHangarMasterLevel,
+      defenseOrderStreakCount: ach.totalDefenseOrderStreak,
+      maxTankLevelCount: ach.totalMaxTankLevel,
+      chipComboTriplesCount: ach.totalChipComboTriples,
+      chipCraftFromFragmentsCount: ach.totalChipCraftFromFragments,
+      achievementsUnlockedCount: ach.totalAchievementsUnlocked,
+      dustEarnedLifetime: ach.dustEarnedLifetime,
+      fragmentsAcquired: ach.fragmentsAcquired,
+      totalLoginDays: ach.totalLoginDays,
+      zombieKillsTotal: ach.totalZombieKills,
+      survivorWaveCompletionsCount: ach.totalSurvivorWaveCompletions,
+      talentPointsSpentTotal: ach.totalTalentPointsSpent,
+      talentBranchesMaxedPeak: ach.totalTalentBranchesMaxed,
+      talentBranchActivesMaxedPeak: ach.totalTalentBranchActivesMaxed,
+    };
+    for (var fk in legacyFallbacks) {
+      if (!Object.prototype.hasOwnProperty.call(legacyFallbacks, fk)) continue;
+      if (!Object.prototype.hasOwnProperty.call(out, fk)) out[fk] = normalizeSafeCounter(legacyFallbacks[fk]);
+    }
+    /* Per-run «Текущая волна» counter — fresh-start field, no legacy mirror.
+       Kept as an explicit literal so the canonical save-shape guard test can
+       assert `serializeState` persists it. */
+    var freshStartDefaults = { currentWaveCount: 0 };
+    for (var dk in freshStartDefaults) {
+      if (!Object.prototype.hasOwnProperty.call(freshStartDefaults, dk)) continue;
+      if (!Object.prototype.hasOwnProperty.call(out, dk)) out[dk] = freshStartDefaults[dk];
+    }
+    return out;
+  }
+
   function safeParse(raw, fallback) {
     try {
       if (raw == null || raw === '') return fallback;
@@ -860,16 +944,10 @@
     }
     var attackWaveSnapshot = serializeAttackWaveSnapshot(state);
     var achievements = state.achievements && typeof state.achievements === 'object' ? state.achievements : {};
-    var stats = {
-      tanksMergedCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksMergedCount) ? state.stats.tanksMergedCount : achievements.totalMerges),
-      tanksBoughtCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.tanksBoughtCount) ? state.stats.tanksBoughtCount : achievements.totalPurchased),
-      manualFenceRepairsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.manualFenceRepairsCount) ? state.stats.manualFenceRepairsCount : achievements.totalManualFenceRepairs),
-      modifierTechUnlocksCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.modifierTechUnlocksCount) ? state.stats.modifierTechUnlocksCount : achievements.totalModifierTechUnlocks),
-      droneAcquisitionsCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.droneAcquisitionsCount) ? state.stats.droneAcquisitionsCount : achievements.totalDroneAcquisitions),
-      noRepairAttackWaveStreakCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.noRepairAttackWaveStreakCount) ? state.stats.noRepairAttackWaveStreakCount : achievements.totalNoRepairAttackWaveStreak),
-      // Item — per-run «Текущая волна» counter (no legacy mirror: fresh-start field).
-      currentWaveCount: normalizeSafeCounter(Number.isFinite(state.stats && state.stats.currentWaveCount) ? state.stats.currentWaveCount : 0),
-    };
+    // Full stats surface (all achievement counters + counter dictionaries).
+    // See serializeAchievementStats() — a 7-field subset silently dropped most
+    // achievement families' progress on reload.
+    var stats = serializeAchievementStats(state, achievements);
     var drones = [];
     if (Array.isArray(state.drones)) {
       for (var di = 0; di < state.drones.length; di++) {
