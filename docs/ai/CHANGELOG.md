@@ -1,5 +1,21 @@
 ﻿# Журнал изменений (A2DP)
 
+## 2026-10-01
+
+### Фрагмент технологии не считается завершённым исследованием при восстановлении
+- `HangarChips.reconcileUnlockedTechsFromData()` реконструирует completed unlocks только по модификаторам в owned chips/cells; fragment inventory остаётся расходуемым ресурсом для исследования и не добавляет tech IDs в `completedModifierTechs`.
+- Существующие завершённые тиры и их prerequisite chain продолжают восстанавливаться из chip/cell inventory; формат старых сохранений не менялся.
+- `Test/pack8/hangarChipTechResolution.test.js` HTR-3 проверяет fragment-only Multishot III против сохранённого Multishot III chip; focused pack: 3 passed, 0 failed.
+
+## 2026-09-29
+
+### Фикс: достижения «Постоянный командир» выдавались за один вечер
+- Симптом (запрос игрока): после загрузки игры выдавались все достижения семьи `daily_attendance` («Постоянный командир I–IV», 2/7/14/30 дней), хотя игрок не заходил столько дней.
+- Root cause: `recordDailyLoginTick()` защищён от двойного счёта через `ach.lastLoginDate` (ISO yyyy-mm-dd UTC), но **ни один** restore-путь не копировал это поле обратно в `state.achievements` — ни `restoreFullState()` (`saved.achievements.*`), ни `applySavedProgress()` (`achievements.*`). На каждом boot `ach.lastLoginDate` был `''`, guard не срабатывал, и `totalLoginDays` инкрементился при **каждом** reload/F5. Несколько перезагрузок за вечер открывали всю семью.
+- Фикс: оба restore-пути восстанавливают `ach.lastLoginDate`; `ensureStats` бэкфиллит anchor из `stats.lastLoginDate` mirror (defensive); `recordDailyLoginTick` пишет mirror в `stats.lastLoginDate`; `saveSchema.json` объявляет `achievements.lastLoginDate`.
+- `Test/pack31/dailyAttendanceIdempotency.test.js`: 5 проверок — идемпотентность в течение UTC-суток, +1 на новый день, backfill из mirror, оба restore-пути, схема. Wired в `ci/run_tests.sh`.
+- Проверки: pack31 5/5, pack30 8/8, pack11 15/15, pack10 5/5, `node Test/tests.js` 103/103.
+
 ## 2026-09-26
 
 ### Оптимизация поиска целей рикошета

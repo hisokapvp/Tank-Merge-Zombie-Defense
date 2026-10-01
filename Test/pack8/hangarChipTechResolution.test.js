@@ -63,6 +63,18 @@ test('HTR-2: red-slot Calming active modifier resolves to the latest unlocked ti
   assertEqual(result.modifiers[0].modId, 30, 'active red modifier upgrades from base Calming to tier III');
 });
 
+test('HTR-3: a technology fragment is not evidence that its technology was completed', () => {
+  const fragmentOnlyApi = createApi();
+  fragmentOnlyApi.reconcileUnlockedTechsFromData([], [], [{ fragmentId: 16 }]);
+  assertEqual(fragmentOnlyApi.isTechUnlocked(16), false, 'a feed fragment must not unlock Multishot III');
+  assertEqual(fragmentOnlyApi.isTechUnlocked(15), false, 'a feed fragment must not unlock Multishot II');
+
+  const ownedChipApi = createApi();
+  ownedChipApi.reconcileUnlockedTechsFromData([{ modIds: [16] }], [], []);
+  assertEqual(ownedChipApi.isTechUnlocked(16), true, 'an owned chip with completed Multishot III preserves the unlock');
+  assertEqual(ownedChipApi.isTechUnlocked(15), true, 'the completed tech keeps its prerequisite chain');
+});
+
 console.log('\n═══════════════════════════');
 console.log('HangarChipTechResolution: ' + passCount + ' passed, ' + failCount + ' failed');
 if (failures.length) {

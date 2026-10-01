@@ -757,11 +757,10 @@
   function isTechUnlocked(modId) { return !!_unlockedTechs[modId]; }
 
   /**
-   * Reconcile _unlockedTechs from chip inventory, hangar cells and fragments.
-   * If a tech modId is present in the data, both it and its prerequisite(s)
-   * must have been unlocked at some point.
+   * Reconcile _unlockedTechs from owned chips and hangar cells.
+   * A tech fragment is a research resource, not evidence that research completed.
    */
-  function reconcileUnlockedTechsFromData(chips, cells, fragments) {
+  function reconcileUnlockedTechsFromData(chips, cells) {
     var found = {};
     var i, j, entry;
     if (Array.isArray(chips)) {
@@ -783,14 +782,6 @@
             var cellMid = entry.modIds[j];
             if (isTechMod(cellMid)) found[cellMid] = true;
           }
-        }
-      }
-    }
-    if (Array.isArray(fragments)) {
-      for (i = 0; i < fragments.length; i++) {
-        entry = fragments[i];
-        if (entry && Number.isFinite(entry.fragmentId) && isTechMod(entry.fragmentId)) {
-          found[entry.fragmentId] = true;
         }
       }
     }

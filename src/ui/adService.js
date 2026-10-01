@@ -23,13 +23,16 @@
  * The capture-phase click gate lives here as well. It covers every rewarded
  * placement with one seam:
  *   - `#crateGet`                      — military-aid crate claim («Получить»)
- *   - `#plConfirmYes`                  — production-storage box-open confirm («Открыть»)
  *   - `#talentResetCooldownModalRefresh` — talent-tree respec cooldown «Обновить моментально»
  * It blocks the original click, runs the ad, and re-issues exactly one
- * synthetic click on success. `claimCrateReward()` in game.js, the
- * production-line `openBox` handler and
+ * synthetic click on success. `claimCrateReward()` in game.js and
  * `handleTalentResetCooldownRefreshNow()` therefore never see a click that was
  * not preceded by a completed (or fail-open) ad.
+ *
+ * The production-storage box-open flow is deliberately excluded from this
+ * gate: it has two open paths (with / without a rewarded ad) and a level-4
+ * target picker, so `productionLineUI.js` calls `requestRewardedAd()` directly
+ * and opens the box with the correct boost only after the ad resolves.
  *
  * Host callbacks are registered defensively (`onOpen` / `onRewarded` /
  * `onClose` / `onError` are all optional on the host side), and a watchdog
@@ -55,13 +58,17 @@
   // Every button whose action must be gated behind a completed rewarded video.
   //
   //   #crateGet                          — military-aid crate modal («Получить»)
-  //   #plConfirmYes                      — production-storage box-open confirm («Открыть»)
   //   #talentResetCooldownModalRefresh   — talent respec cooldown («Обновить моментально»)
   //
   // All run through the exact same seam: the raw click is blocked, an ad is
   // requested, and only a successful result lets exactly one synthetic re-click
   // reach the real handler. Adding a placement is a selector-only change.
-  var AD_GATED_SELECTORS = ['#crateGet', '#plConfirmYes', '#talentResetCooldownModalRefresh'];
+  //
+  // NOTE: the production-storage box-open flow is intentionally NOT listed
+  // here. It has two open paths (with / without a rewarded ad) plus a level-4
+  // target picker, so `productionLineUI.js` requests the ad explicitly via
+  // `requestRewardedAd()` and only then opens the box with the right boost.
+  var AD_GATED_SELECTORS = ['#crateGet', '#talentResetCooldownModalRefresh'];
 
   function _warn() {
     try {

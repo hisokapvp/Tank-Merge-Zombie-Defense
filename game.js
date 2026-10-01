@@ -8322,6 +8322,14 @@ function restoreFullState(saved){
     ach.completedModifierTechs = saved.achievements.completedModifierTechs && typeof saved.achievements.completedModifierTechs === 'object'
       ? { ...saved.achievements.completedModifierTechs }
       : ach.completedModifierTechs;
+    /* daily_attendance idempotency anchor. Без восстановления lastLoginDate
+       recordDailyLoginTick() считал каждый boot новым днём и инкрементил
+       totalLoginDays при каждом F5 — игрок получал всю семью «Постоянный
+       командир» за один вечер. Строка ISO yyyy-mm-dd (UTC); пустая строка
+       для legacy save (тогда первый tick честно засчитает текущий день). */
+    ach.lastLoginDate = typeof saved.achievements.lastLoginDate === 'string'
+      ? saved.achievements.lastLoginDate
+      : ach.lastLoginDate;
     ach.popupQueue = [];
     reconcileAchievementRewardsAfterRestore = true;
   }
@@ -8704,6 +8712,9 @@ function applySavedProgress(data){
     ach.totalNoRepairAttackWaveStreak = Number.isFinite(achievements.totalNoRepairAttackWaveStreak) ? Math.max(0, Math.floor(achievements.totalNoRepairAttackWaveStreak)) : ach.totalNoRepairAttackWaveStreak;
     ach.totalDefenseOrderStreak = Number.isFinite(achievements.totalDefenseOrderStreak) ? Math.max(0, Math.floor(achievements.totalDefenseOrderStreak)) : ach.totalDefenseOrderStreak;
     ach.completedModifierTechs = achievements.completedModifierTechs && typeof achievements.completedModifierTechs === 'object' ? { ...achievements.completedModifierTechs } : ach.completedModifierTechs;
+    /* daily_attendance idempotency anchor — см. restoreFullState(). Без этого
+       каждый boot засчитывался как новый день входа. */
+    ach.lastLoginDate = typeof achievements.lastLoginDate === 'string' ? achievements.lastLoginDate : ach.lastLoginDate;
     ach.popupQueue = [];
     reconcileAchievementRewardsAfterApply = true;
   }
@@ -21217,10 +21228,10 @@ initBigMainMenu();
           window.Game.Toast.show(msg);
         }
       },
-      onOpenBox: function (boxIndex) {
+      onOpenBox: function (boxIndex, boost) {
         const PL = window.Game && window.Game.ProductionLine;
         if (!PL) return null;
-        const result = PL.openBox(state, boxIndex);
+        const result = PL.openBox(state, boxIndex, boost || null);
         updateUI();
         return result;
       },

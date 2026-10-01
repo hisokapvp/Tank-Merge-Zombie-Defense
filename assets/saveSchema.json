@@ -135,6 +135,10 @@
         "unlocked":  { "type": "object", "additionalProperties": { "type": "boolean" } },
         "rewarded":  { "type": "object", "additionalProperties": { "type": "boolean" } },
         "popupQueue": { "type": "array" },
+        "lastLoginDate": {
+          "type": "string",
+          "description": "ISO yyyy-mm-dd (UTC) последнего засчитанного дня входа. Idempotency anchor для recordDailyLoginTick: без него каждый boot инкрементил totalLoginDays и выдавал семью daily_attendance за один вечер. Reader — restoreFullState()/applySavedProgress(); writer — recordDailyLoginTick()."
+        },
         "totalManualFenceRepairs":      { "type": "integer", "minimum": 0 },
         "totalModifierTechUnlocks":     { "type": "integer", "minimum": 0 },
         "totalDroneAcquisitions":       { "type": "integer", "minimum": 0 },

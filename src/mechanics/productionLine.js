@@ -35,6 +35,18 @@
     4: { three_fragments: true, one_big_chip: true },
   };
 
+  // ─── Rewarded-ad boost contract ────────────────────────────
+  // The two "rarest" drops. A rewarded ad doubles their weight inside the
+  // level pool (levels 1–3). Level 4 has only these two entries, so instead
+  // of a blanket x2 the player picks ONE target and gets +25% to it.
+  // Weights are NEVER mutated in place — the boost is applied to a local
+  // weight array so LOOT_TABLE / LOOT_POOLS_BY_LEVEL stay immutable.
+  const RARE_LOOT_IDS = { drone: true, two_big_chips: true };
+  const AD_RARE_MULTIPLIER = 2;
+  // Level 4 has only the two rare drops, so instead of doubling we add a flat
+  // +25 percentage points to the chosen drop (50% → 75%).
+  const AD_LEVEL4_TARGET_ADD_PP = 0.25;
+
   const LOOT_POOLS_BY_LEVEL = (function buildLootPools() {
     const pools = [];
     const excluded = Object.create(null);
@@ -122,14 +134,87 @@
     return normalized;
   }
 
-  function rollLootForLevel(level) {
+  // ─── Boost resolution ──────────────────────────────────────
+  // Normalises the optional `boost` argument into a probability spec. The
+  // rewarded ad raises the chance of the rarest drop(s) and takes the added
+  // percentage points away from the remaining (most common) drops, so the
+  // total always stays 100%. Two shapes are supported:
+  //   { rare: true }                      → double both rare drops (levels 1–3)
+  //   { target: 'drone'|'two_big_chips' } → +25 percentage points (level 4)
+  // Returns null when no boost applies, so the hot path stays allocation-free.
+  function resolveBoostSpec(level, boost) {
+    if (!boost || typeof boost !== 'object') return null;
+    const normalizedLevel = normalizeBoxLevel(level);
+    if (normalizedLevel >= MAX_BOX_LEVEL) {
+      const target = boost.target;
+      if (target !== 'drone' && target !== 'two_big_chips') return null;
+      return { mode: 'add', ids: [target], addPp: AD_LEVEL4_TARGET_ADD_PP };
+    }
+    if (boost.rare === true) {
+      return { mode: 'double', ids: ['drone', 'two_big_chips'], addPp: 0 };
+    }
+    return null;
+  }
+
+  function rollLootForLevel(level, boost) {
     const normalizedLevel = normalizeBoxLevel(level);
     const pool = LOOT_POOLS_BY_LEVEL[normalizedLevel] || LOOT_POOLS_BY_LEVEL[1];
     const entries = pool && Array.isArray(pool.entries) && pool.entries.length ? pool.entries : LOOT_TABLE;
     const totalWeight = pool && Number.isFinite(pool.totalWeight) && pool.totalWeight > 0 ? pool.totalWeight : TOTAL_WEIGHT;
-    let r = Math.random() * totalWeight;
+    const spec = resolveBoostSpec(normalizedLevel, boost);
+
+    // Fast path: no boost → identical to the original weighted roll.
+    if (!spec) {
+      let r = Math.random() * totalWeight;
+      for (let i = 0; i < entries.length; i++) {
+        r -= entries[i].weight;
+        if (r <= 0) return entries[i];
+      }
+      return entries[entries.length - 1];
+    }
+
+    // Boosted path: build a probability table that always sums to 1.
+    //   1. Base probability of every entry = weight / totalWeight.
+    //   2. Boosted entries get their target probability:
+    //        double → base * 2
+    //        add    → base + addPp
+    //   3. The remaining probability (1 - sum(boosted)) is shared among the
+    //      non-boosted entries proportionally to their base weights, so the
+    //      most common drops give up exactly the added percentage points.
+    const boostedSet = Object.create(null);
+    for (let i = 0; i < spec.ids.length; i++) boostedSet[spec.ids[i]] = true;
+
+    const probs = new Array(entries.length);
+    let boostedSum = 0;
+    let restBaseSum = 0;
     for (let i = 0; i < entries.length; i++) {
-      r -= entries[i].weight;
+      const base = entries[i].weight / totalWeight;
+      if (boostedSet[entries[i].id]) {
+        const target = spec.mode === 'double' ? base * AD_RARE_MULTIPLIER : base + spec.addPp;
+        probs[i] = target;
+        boostedSum += target;
+      } else {
+        probs[i] = base;
+        restBaseSum += base;
+      }
+    }
+
+    // Degenerate guard: a boost that would consume the whole pool (or leave
+    // nothing to scale) falls back to a pure boosted roll.
+    if (boostedSum >= 1 || restBaseSum <= 0) {
+      let r = Math.random() * boostedSum;
+      for (let i = 0; i < entries.length; i++) {
+        if (!boostedSet[entries[i].id]) continue;
+        r -= probs[i];
+        if (r <= 0) return entries[i];
+      }
+      return entries[entries.length - 1];
+    }
+
+    const restScale = (1 - boostedSum) / restBaseSum;
+    let r = Math.random();
+    for (let i = 0; i < entries.length; i++) {
+      r -= boostedSet[entries[i].id] ? probs[i] : probs[i] * restScale;
       if (r <= 0) return entries[i];
     }
     return entries[entries.length - 1];
@@ -322,7 +407,13 @@
   }
 
   // ─── Open box: resolve loot ────────────────────────────────
-  function openBox(state, boxIndex) {
+  // `boost` (optional) is the rewarded-ad modifier:
+  //   { rare: true }                      → double both rare drops (levels 1–3)
+  //   { target: 'drone'|'two_big_chips' } → +25 percentage points (level 4)
+  // The added chance is taken from the most common drops, so the total stays
+  // 100%. It only affects the roll; the guaranteed first-new-game chip is
+  // untouched.
+  function openBox(state, boxIndex, boost) {
     const pl = ensureState(state);
     if (boxIndex < 0 || boxIndex >= pl.storage.length) return null;
 
@@ -346,8 +437,8 @@
       BridgeOpen.Achievements.recordProductionStorageSnapshot(state);
     }
 
-    const loot = (box.level === 1 ? getLootById(box.guaranteedLootId) : null) || rollLootForLevel(box.level);
-    const result = { lootId: loot.id, label: loot.label, items: [], boxLevel: box.level };
+    const loot = (box.level === 1 ? getLootById(box.guaranteedLootId) : null) || rollLootForLevel(box.level, boost);
+    const result = { lootId: loot.id, label: loot.label, items: [], boxLevel: box.level, boosted: !!boost };
 
     const ChipsUI = global.Game && global.Game.HangarChipsUI;
     const addDron  = global.Game && global.Game._productionLineAddDron;
@@ -509,7 +600,12 @@
     killCostForBox: killCostForBox,
     canMergeBoxes: canMergeBoxes,
     mergeBoxes: mergeBoxes,
+    rollLootForLevel: rollLootForLevel,
+    resolveBoostSpec: resolveBoostSpec,
     LOOT_TABLE: LOOT_TABLE,
+    RARE_LOOT_IDS: RARE_LOOT_IDS,
+    AD_RARE_MULTIPLIER: AD_RARE_MULTIPLIER,
+    AD_LEVEL4_TARGET_ADD_PP: AD_LEVEL4_TARGET_ADD_PP,
     DEFAULT_STORAGE_SLOTS: DEFAULT_STORAGE_SLOTS,
     STORAGE_COLS: STORAGE_COLS,
     MAX_BOX_LEVEL: MAX_BOX_LEVEL,

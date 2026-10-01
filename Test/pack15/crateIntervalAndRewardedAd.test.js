@@ -132,11 +132,31 @@ test('ADS-6: capture-phase #crateGet gate still blocks the raw click', () => {
   assert(adSrc.indexOf('allowNextClick') !== -1, 'single synthetic re-click gate');
 });
 
-test('ADS-6b: production-storage box-open button is on the same rewarded gate', () => {
-  assert(adSrc.indexOf("'#plConfirmYes'") !== -1, '#plConfirmYes is a gated selector');
+test('ADS-6b: production-storage box-open is NOT on the global capture gate', () => {
+  // The box-open flow has two paths (with / without ad) plus a level-4 target
+  // picker, so it requests the ad explicitly instead of using the global gate.
+  assert(adSrc.indexOf("'#plConfirmYes'") === -1, '#plConfirmYes is not a gated selector');
   assert(adSrc.indexOf('AD_GATED_SELECTORS') !== -1, 'gate selectors are declared in one list');
   assert(adSrc.indexOf('_findGatedButton') !== -1, 'shared gated-button resolver present');
   assert(adSrc.indexOf('installRewardedAdGate') !== -1, 'generic gate installer wiring the listener');
+});
+
+test('ADS-6c: productionLineUI requests the rewarded ad explicitly', () => {
+  const plUiSrc = fs.readFileSync(path.join(ROOT, 'src', 'ui', 'productionLineUI.js'), 'utf8');
+  assert(plUiSrc.indexOf('requestRewardedAd') !== -1, 'UI calls AdService.requestRewardedAd');
+  assert(plUiSrc.indexOf('_requestAdThenOpen') !== -1, 'ad-then-open seam present');
+  assert(plUiSrc.indexOf('_confirmOpenPlain') !== -1, 'plain (no-ad) open path present');
+  assert(plUiSrc.indexOf('_confirmBoostAccept') !== -1, 'level-4 boost accept path present');
+});
+
+test('ADS-6d: productionLineUI wires all three confirm screens', () => {
+  const plUiSrc = fs.readFileSync(path.join(ROOT, 'src', 'ui', 'productionLineUI.js'), 'utf8');
+  assert(plUiSrc.indexOf('plConfirmChoiceScreen') !== -1, 'choice screen wired');
+  assert(plUiSrc.indexOf('plConfirmNoAdScreen') !== -1, 'no-ad warning screen wired');
+  assert(plUiSrc.indexOf('plConfirmBoostScreen') !== -1, 'level-4 boost screen wired');
+  assert(plUiSrc.indexOf('plConfirmOpenPlain') !== -1, 'plain open button wired');
+  assert(plUiSrc.indexOf('plConfirmNoAdYes') !== -1, 'no-ad confirm button wired');
+  assert(plUiSrc.indexOf('plConfirmBoostAccept') !== -1, 'boost accept button wired');
 });
 
 test('ADS-7: adService exposes only the documented public surface', () => {
@@ -233,8 +253,8 @@ test('TRR-1: refresh CTA is the third AD_GATED_SELECTORS placement', () => {
   const listMatch = adSrc.match(/AD_GATED_SELECTORS = \[([^\]]+)\]/);
   assert(listMatch, 'selector list declared');
   const selectors = listMatch[1].split(',').map(function (s) { return s.trim(); });
-  assertEqual(selectors.length, 3, 'three gated placements');
-  assertEqual(selectors[2], "'#" + UI_MODALS_REFRESH_ID + "'", 'refresh CTA is last');
+  assertEqual(selectors.length, 2, 'two gated placements (crate + talent refresh)');
+  assertEqual(selectors[1], "'#" + UI_MODALS_REFRESH_ID + "'", 'refresh CTA is last');
 });
 
 test('TRR-2: the gated button really exists in index.html', () => {

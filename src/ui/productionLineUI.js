@@ -47,8 +47,19 @@
 
     const yesBtn = document.getElementById('plConfirmYes');
     const noBtn  = document.getElementById('plConfirmNo');
-    if (yesBtn) yesBtn.addEventListener('click', _confirmOpen);
+    if (yesBtn) yesBtn.addEventListener('click', _confirmOpenAd);
     if (noBtn)  noBtn.addEventListener('click', _cancelConfirm);
+
+    const plainBtn = document.getElementById('plConfirmOpenPlain');
+    if (plainBtn) plainBtn.addEventListener('click', _confirmOpenPlain);
+    const noAdNo = document.getElementById('plConfirmNoAdNo');
+    if (noAdNo) noAdNo.addEventListener('click', _cancelConfirm);
+    const noAdYes = document.getElementById('plConfirmNoAdYes');
+    if (noAdYes) noAdYes.addEventListener('click', _confirmOpenNoAd);
+    const boostNo = document.getElementById('plConfirmBoostNo');
+    if (boostNo) boostNo.addEventListener('click', _cancelConfirm);
+    const boostAccept = document.getElementById('plConfirmBoostAccept');
+    if (boostAccept) boostAccept.addEventListener('click', _confirmBoostAccept);
 
     if (typeof global.addEventListener === 'function') {
       global.addEventListener('resize', _syncResponsiveShellState);
@@ -386,40 +397,166 @@
   }
 
   // ─── Confirm dialog ────────────────────────────────────────
+  // Three screens share one overlay:
+  //   1. choice  — «Нет» / «Открыть» (no ad) / «Открыть» + ad icon
+  //   2. no-ad   — warning that the rare-drop chance is halved
+  //   3. boost   — level-4 target picker (Дрон / 2 чипа), then ad
+  // The rewarded ad is requested explicitly here (not via the global
+  // capture-phase gate) so level 4 can defer the ad until «Принять».
+  let _adPending = false;
+
+  function _getConfirmScreen(id) { return document.getElementById(id); }
+
+  function _showConfirmScreen(screenId) {
+    const screens = ['plConfirmChoiceScreen', 'plConfirmNoAdScreen', 'plConfirmBoostScreen'];
+    for (let i = 0; i < screens.length; i++) {
+      const el = _getConfirmScreen(screens[i]);
+      if (el) el.classList.toggle('hidden', screens[i] !== screenId);
+    }
+  }
+
+  function _resetBoostTarget() {
+    const drone = document.getElementById('plBoostDrone');
+    const chips = document.getElementById('plBoostChips');
+    if (drone) drone.checked = true;
+    if (chips) chips.checked = false;
+  }
+
+  function _readBoostTarget() {
+    const chips = document.getElementById('plBoostChips');
+    return chips && chips.checked ? 'two_big_chips' : 'drone';
+  }
+
   function _showConfirm(index) {
     _pendingIdx = index;
+    _adPending = false;
     if (!_confirmEl) return;
-    const text = _confirmEl.querySelector('#plConfirmText');
+    const text = _getConfirmScreen('plConfirmText');
     if (text) text.textContent = _t('plConfirmOpenBox');
 
-    const yesBtn = document.getElementById('plConfirmYes');
-    const noBtn  = document.getElementById('plConfirmNo');
-    if (yesBtn) {
-      var lbl = yesBtn.querySelector('.talentResetCooldownAdBtn__label');
+    const noBtn = document.getElementById('plConfirmNo');
+    if (noBtn) noBtn.textContent = _t('plConfirmNo_label');
+    const plainBtn = document.getElementById('plConfirmOpenPlain');
+    if (plainBtn) plainBtn.textContent = _t('plConfirmYes_label');
+    const adBtn = document.getElementById('plConfirmYes');
+    if (adBtn) {
+      const lbl = adBtn.querySelector('.talentResetCooldownAdBtn__label');
       if (lbl) lbl.textContent = _t('plConfirmYes_label');
     }
-    if (noBtn)  noBtn.textContent = _t('plConfirmNo_label');
+    const adHint = _getConfirmScreen('plConfirmAdHint');
+    if (adHint) adHint.textContent = _t('plConfirmAdHint');
 
+    _resetBoostTarget();
+    _showConfirmScreen('plConfirmChoiceScreen');
     _confirmEl.classList.remove('hidden');
   }
 
   function _hideConfirm() {
     _pendingIdx = -1;
+    _adPending = false;
     if (_confirmEl) _confirmEl.classList.add('hidden');
   }
 
-  function _confirmOpen() {
+  // Open the pending box with the given boost (or none) and close the modal.
+  function _openBoxWithBoost(boost) {
     const idx = _pendingIdx;
     _hideConfirm();
     if (idx < 0 || typeof _onOpenBox !== 'function') return;
-    const result = _onOpenBox(idx);
+    const result = _onOpenBox(idx, boost || null);
     if (result && _toastFn) {
       _toastFn(_formatLootMessage(result));
     }
-    // Re-render grid to reflect removed box
-    const PL = global.Game && global.Game.ProductionLine;
-    // state may need to be passed; caller refreshes via open(state)
     close();
+  }
+
+  // Plain «Открыть» — show the no-ad warning screen first.
+  function _confirmOpenPlain() {
+    const text = _getConfirmScreen('plConfirmNoAdText');
+    if (text) text.textContent = _t('plConfirmNoAdText');
+    const noBtn = document.getElementById('plConfirmNoAdNo');
+    if (noBtn) noBtn.textContent = _t('plConfirmNo_label');
+    const yesBtn = document.getElementById('plConfirmNoAdYes');
+    if (yesBtn) yesBtn.textContent = _t('plConfirmYesShort');
+    _showConfirmScreen('plConfirmNoAdScreen');
+  }
+
+  // «Да» on the no-ad warning screen — no ad, normal chance.
+  function _confirmOpenNoAd() {
+    _openBoxWithBoost(null);
+  }
+
+  // Ad button on the choice screen.
+  //   levels 1–3 → request the ad now, then open with x2 rare-drop boost
+  //   level 4    → show the target picker first (ad runs on «Принять»)
+  function _confirmOpenAd() {
+    if (_adPending) return;
+    const idx = _pendingIdx;
+    if (idx < 0) return;
+    const box = _getPendingBox(idx);
+    const level = _getBoxLevel(box);
+    if (level >= _getMaxBoxLevel()) {
+      _showBoostScreen();
+      return;
+    }
+    _requestAdThenOpen({ rare: true });
+  }
+
+  function _showBoostScreen() {
+    const text = _getConfirmScreen('plConfirmBoostText');
+    if (text) text.textContent = _t('plConfirmBoostText');
+    const droneLabel = document.querySelector('#plBoostDrone + span');
+    if (droneLabel) droneLabel.textContent = _t('plConfirmBoostDrone');
+    const chipsLabel = document.querySelector('#plBoostChips + span');
+    if (chipsLabel) chipsLabel.textContent = _t('plConfirmBoostChips');
+    const noBtn = document.getElementById('plConfirmBoostNo');
+    if (noBtn) noBtn.textContent = _t('plConfirmNo_label');
+    const acceptBtn = document.getElementById('plConfirmBoostAccept');
+    if (acceptBtn) acceptBtn.textContent = _t('plConfirmBoostAccept');
+    _resetBoostTarget();
+    _showConfirmScreen('plConfirmBoostScreen');
+  }
+
+  // «Принять» on the level-4 picker — request the ad, then open with +25%.
+  function _confirmBoostAccept() {
+    if (_adPending) return;
+    _requestAdThenOpen({ target: _readBoostTarget() });
+  }
+
+  function _requestAdThenOpen(boost) {
+    const adService = global.Game && global.Game.AdService;
+    if (!adService || typeof adService.requestRewardedAd !== 'function') {
+      // No ad service (minimal bootstrap) → open without boost, fail-open.
+      _openBoxWithBoost(null);
+      return;
+    }
+    _adPending = true;
+    _setConfirmButtonsDisabled(true);
+    Promise.resolve(adService.requestRewardedAd()).then(function (result) {
+      _adPending = false;
+      _setConfirmButtonsDisabled(false);
+      if (!result || result.success !== true) return; // early close → stay on screen
+      _openBoxWithBoost(boost);
+    }, function () {
+      _adPending = false;
+      _setConfirmButtonsDisabled(false);
+    });
+  }
+
+  function _setConfirmButtonsDisabled(disabled) {
+    const ids = ['plConfirmNo', 'plConfirmOpenPlain', 'plConfirmYes', 'plConfirmNoAdNo', 'plConfirmNoAdYes', 'plConfirmBoostNo', 'plConfirmBoostAccept'];
+    for (let i = 0; i < ids.length; i++) {
+      const el = document.getElementById(ids[i]);
+      if (el) el.disabled = !!disabled;
+    }
+  }
+
+  function _getPendingBox(index) {
+    if (!_stateRef || !_stateRef.productionLine || !Array.isArray(_stateRef.productionLine.storage)) return null;
+    return _stateRef.productionLine.storage[index] || null;
+  }
+
+  function _getMaxBoxLevel() {
+    return (global.Game && global.Game.ProductionLine && global.Game.ProductionLine.MAX_BOX_LEVEL) || 4;
   }
 
   function _cancelConfirm() {

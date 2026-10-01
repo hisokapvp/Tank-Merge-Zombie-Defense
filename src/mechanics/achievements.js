@@ -1952,7 +1952,14 @@
        Math.max — монотонный рост обеспечивается recorder'ом. */
     if (!hasTotalLoginDays) stats.totalLoginDays = legacyTotalLoginDays;
     else stats.totalLoginDays = normalizeCounter(stats.totalLoginDays);
-    if (!ach.lastLoginDate || typeof ach.lastLoginDate !== 'string') ach.lastLoginDate = '';
+    /* lastLoginDate — idempotency anchor для recordDailyLoginTick.
+       Приоритет: ach.lastLoginDate (canonical, восстанавливается из save),
+       затем stats.lastLoginDate mirror (defensive backfill для payload'ов,
+       где ach-поле потерялось). Пустая строка = legacy save / cold start. */
+    if (!ach.lastLoginDate || typeof ach.lastLoginDate !== 'string') {
+      ach.lastLoginDate = (typeof stats.lastLoginDate === 'string') ? stats.lastLoginDate : '';
+    }
+    stats.lastLoginDate = ach.lastLoginDate;
 
     /* zombie_slayer canonical counter — Math.max guard (lifetime),
        плюс ensure source breakdown object с whitelisted keys. */
@@ -2689,6 +2696,9 @@
     state.stats.totalLoginDays = current + 1;
     ach.totalLoginDays = state.stats.totalLoginDays;
     ach.lastLoginDate = todayUtc;
+    /* Mirror в stats — defensive: если по какой-то причине ach-поле не
+       переживёт сериализацию, ensureStats восстановит anchor из mirror. */
+    state.stats.lastLoginDate = todayUtc;
     return recalculateUnlocks(state);
   }
 

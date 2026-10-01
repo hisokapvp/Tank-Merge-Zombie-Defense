@@ -369,6 +369,13 @@
 
   function getFirstProductionStorageBoxTarget() {
     if (!runtime.documentObj || typeof runtime.documentObj.querySelector !== 'function') return null;
+    // Once the open-choice overlay is visible, guide the player to the plain
+    // «Открыть» button (no ad) instead of the box cell behind the overlay.
+    const confirmOverlay = runtime.documentObj.getElementById('plConfirmOverlay');
+    if (isElementVisible(confirmOverlay)) {
+      const plainBtn = runtime.documentObj.getElementById('plConfirmOpenPlain');
+      if (isElementVisible(plainBtn)) return plainBtn;
+    }
     return runtime.documentObj.querySelector('#plStorageGrid .plStorage__cell--filled');
   }
 
