@@ -220,6 +220,19 @@ test('WAS-7: wave autosave payload resumes the stored attack-wave schedule', fun
   assertEqual(payload.forceFenceRuntimeResetOnLoad, false, 'loading must not restart the wave interval');
 });
 
+test('WAS-7b: post-wave runtime remainder is persisted as 60s, not a restarted 120s interval', function () {
+  const box = createStorageSandbox();
+  const Storage = box.global.Game.Storage;
+  box.global.Game.getAttackWaveSnapshot = function () {
+    return { remainingSec: 60, active: false, remainingActiveSec: 0 };
+  };
+  Storage.saveWaveAutoSlot(makeState({ attackWaveRemainingSec: 120 }), {});
+  const payload = Storage.loadWaveAutoSlot().payload;
+  assertEqual(payload.attackWaveRemainingSec, 60, 'live relative snapshot must win over the stale 120s state fallback');
+  assertEqual(payload.attackWaveActive, false, 'completed wave stays inactive');
+  assertEqual(payload.forceFenceRuntimeResetOnLoad, false, 'wave autosave must resume the relative schedule');
+});
+
 test('WAS-8: wave autosave preserves live tank cells and fence HP (живое состояние)', function () {
   const box = createStorageSandbox();
   const Storage = box.global.Game.Storage;
@@ -230,6 +243,45 @@ test('WAS-8: wave autosave preserves live tank cells and fence HP (живое с
   assertEqual(payload.cells[0].tank.level, 7, 'tank level is the live one');
   assert(payload.fenceState && payload.fenceState.hpById, 'fence HP map serialized');
   assertEqual(payload.fenceState.hpById.s1, 0, 'broken wall stays broken in the wave autosave');
+});
+
+test('WAS-25: New Game then immediate wave-slot load keeps damaged Tier 3 fence HP', function () {
+  const box = createStorageSandbox();
+  const Storage = box.global.Game.Storage;
+  Storage.saveWaveAutoSlot(makeState({
+    fenceLevel: 3,
+    savedFenceState: { segmentsPerSide: 4, hpById: { 'sideTop#0': 37, 'sideTop#1': 0 } },
+  }), {});
+  const payload = Storage.loadWaveAutoSlot().payload;
+
+  assertEqual(payload.fenceLevel, 3, 'the restored fence is above Tier 1');
+  assertEqual(payload.forceFenceRuntimeResetOnLoad, false, 'wave autosave follows the normal restore path');
+  assertEqual(payload.fenceState.hpById['sideTop#0'], 37, 'partial segment damage is saved');
+  assertEqual(payload.fenceState.hpById['sideTop#1'], 0, 'destroyed segment is saved');
+
+  const restoreStart = gameJs.indexOf('function restoreFullState(saved){');
+  const restoreEnd = gameJs.indexOf('function restoreSupercomputerAfterCritical(){', restoreStart);
+  assert(restoreStart >= 0 && restoreEnd > restoreStart, 'restoreFullState body is delimited');
+  const restoreBody = gameJs.slice(restoreStart, restoreEnd);
+  const tierSyncIndex = restoreBody.indexOf('syncFenceTierWithMaxTankLevel(state, { force: true });');
+  const reapplyStart = restoreBody.indexOf('if (saved.fenceState && typeof saved.fenceState === \'object\') {', tierSyncIndex);
+  const reapplyEnd = restoreBody.indexOf('\n  if (forceFenceRuntimeResetOnLoad) {', reapplyStart);
+  assert(tierSyncIndex >= 0 && reapplyStart > tierSyncIndex && reapplyEnd > reapplyStart,
+    'saved fence snapshot is re-applied after tier sync and before the critical reset branch');
+
+  const newGameState = {
+    savedFenceState: { segmentsPerSide: 4, hpById: { 'sideTop#0': 120, 'sideTop#1': 120 } },
+  };
+  new Function('state', 'saved', restoreBody.slice(reapplyStart, reapplyEnd))(newGameState, payload);
+  assertEqual(newGameState.savedFenceState.hpById['sideTop#0'], 37,
+    'wave-slot HP replaces the intact New Game wall snapshot');
+  assertEqual(newGameState.savedFenceState.hpById['sideTop#1'], 0,
+    'destroyed segment remains destroyed after immediate load');
+
+  assert(bootstrapJs.includes('storageApi.loadSlot(slotIndex)') && bootstrapJs.includes('opts.restoreFullState(loaded.payload)'),
+    'small menu uses the canonical slot reader and full-state restore');
+  assert(bigMenuJs.includes('storageApi.loadSlot(slotIndex)') && bigMenuJs.includes('deps.restoreFullState(selectedPayload)'),
+    'big menu uses the canonical slot reader and full-state restore');
 });
 
 test('WAS-9: wave autosave does not touch manual slots', function () {
@@ -418,6 +470,7 @@ test('WAS-19: entry token is bumped and shared by the touched entry assets', fun
   const m = indexHtml.match(/var token = '([^']+)'/);
   assert(m, 'entry token present');
   const entry = m[1];
+  assert(entry !== '20260929-release-162708', 'the fence restore entry URL must not reuse the stale pre-fix cache token');
   // Не хардкодим значение токена: он бампается каждым следующим проходом
   // (прецедент — pack15 CB-2). Проверяем, что токен непустой и реально
   // распространён на затронутые entry assets.

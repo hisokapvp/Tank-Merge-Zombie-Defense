@@ -127,6 +127,43 @@ test('TUT-2B: critical restart normalization resets purchase progress for new an
   assert(restoreBlock.indexOf('state.maxTankLevelAchieved = 1;') !== -1, 'legacy retry payload load clears maxTankLevelAchieved');
 });
 
+test('TUT-2C: manual and critical restart share progress snapshot and reset payload', () => {
+  const snapshotIdx = gameJs.indexOf('function takePartialRestartProgressSnapshot');
+  const snapshotEndIdx = gameJs.indexOf('function restorePartialRestartProgressSnapshot', snapshotIdx);
+  const snapshotBlock = snapshotIdx !== -1 && snapshotEndIdx !== -1 ? gameJs.slice(snapshotIdx, snapshotEndIdx) : '';
+  const payloadIdx = gameJs.indexOf('function buildPreRetryPayload');
+  const payloadEndIdx = gameJs.indexOf('function savePreRetryPayloadToAutoSlot', payloadIdx);
+  const payloadBlock = payloadIdx !== -1 && payloadEndIdx !== -1 ? gameJs.slice(payloadIdx, payloadEndIdx) : '';
+  const restartIdx = gameJs.indexOf('function restartSimulationPartial');
+  const restartEndIdx = gameJs.indexOf('function applyCriticalRestartPostLoad', restartIdx);
+  const restartBlock = restartIdx !== -1 && restartEndIdx !== -1 ? gameJs.slice(restartIdx, restartEndIdx) : '';
+  const saveExitIdx = gameJs.indexOf('function buildSmallMenuSavePayload');
+  const saveExitEndIdx = gameJs.indexOf('function handleCriticalSaveAndExit', saveExitIdx);
+  const saveExitBlock = saveExitIdx !== -1 && saveExitEndIdx !== -1 ? gameJs.slice(saveExitIdx, saveExitEndIdx) : '';
+
+  assert(snapshotBlock.includes('snapshot.stats = statsSnapshot;'), 'shared restart snapshot includes achievement progress');
+  assert(snapshotBlock.includes("key === 'currentWaveCount'"), 'shared snapshot resets only the per-run wave counter');
+  assert(snapshotBlock.includes('underground.cells[i].tank = null;'), 'shared snapshot removes underground tanks');
+  assert(snapshotBlock.includes('snapshot.playerFragments = uiFragments.slice();'), 'shared snapshot includes chip fragments');
+  assert(payloadBlock.includes('takePartialRestartProgressSnapshot(source)'), 'critical payload uses shared progress snapshot');
+  assert(payloadBlock.includes('payload.forceFenceRuntimeResetOnLoad = true;'), 'all critical saves restart the attack timer');
+  assert(restartBlock.includes('takeProgressSnapshot: takePartialRestartProgressSnapshot'), 'manual restart uses shared snapshot source');
+  assert(restartBlock.includes('restoreProgressSnapshot: restorePartialRestartProgressSnapshot'), 'manual restart uses shared restore');
+  assert(saveExitBlock.includes('cfg.exitAfterSave') && saveExitBlock.includes('return buildCriticalSavePayload();'), 'save-and-exit selects the same canonical restart payload');
+  assert(gameJs.includes('function buildCriticalSavePayload(){\n  return buildPreRetryPayload(state);'), 'save-and-exit uses the same canonical payload');
+});
+
+test('TUT-2D: pre-retry autosave label is synchronized across locales', () => {
+  assert(ru.includes('"save.autoRetryName": "Автосейв перезагрузки симуляции"'), 'Russian autosave name is updated');
+  assert(en.includes('"save.autoRetryName": "Simulation restart autosave"'), 'English autosave name is updated');
+  assert(fallback.includes("'save.autoRetryName': 'Автосейв перезагрузки симуляции'"), 'Russian fallback autosave name is updated');
+  assert(fallback.includes("'save.autoRetryName': 'Simulation restart autosave'"), 'English fallback autosave name is updated');
+  const nameTextIdx = styleCss.indexOf('.smallMenuSaveNameText{');
+  const nameTextEndIdx = styleCss.indexOf('}', nameTextIdx);
+  const nameTextBlock = nameTextIdx !== -1 && nameTextEndIdx !== -1 ? styleCss.slice(nameTextIdx, nameTextEndIdx) : '';
+  assert(nameTextBlock.includes('white-space:normal;') && nameTextBlock.includes('overflow-wrap:anywhere;'), 'long autosave name wraps instead of being ellipsized');
+});
+
 test('TUT-3: bootstrap seeds exactly one starter tank and initializes tutorial runtime', () => {
   assert(bootstrapJs.indexOf('opts.ensureStarterTanks(getState(), 1);') !== -1, 'bootstrap seeds one starter tank');
   assert(bootstrapJs.indexOf('windowObj.Game.TutorialRuntime.init({') !== -1, 'bootstrap initializes tutorial runtime');

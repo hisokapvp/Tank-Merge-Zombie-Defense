@@ -1026,9 +1026,8 @@ body::after{
 }
 .smallMenuSaveNameText{
   display:block;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  white-space:normal;
+  overflow-wrap:anywhere;
 }
 .smallMenuSaveNameInput{
   width:100%;

@@ -7,12 +7,16 @@
 - Офлайн-прогресс: `src/persistence/offlineProgress.js`, `src/persistence/offlineRewardModel.js`
 - UI потока: `src/ui/offlineModal.js`, `src/ui/continueFlow.js`
 - Partial runtime reset: `src/core/worldReset.js` + `game.js` (`resetWorldRuntimeState`, `restartSimulationPartial`)
+- Restart snapshot extensions: `game.js` (`takePartialRestartProgressSnapshot`, `restorePartialRestartProgressSnapshot`, `buildPreRetryPayload`)
 
 ## Правила
 - Новые ключи `localStorage` добавлять только в разрешённых модулях.
 - При изменении формата сейва обеспечить миграцию и fallback.
 - Для офлайн-наград сохранять цепочку `offlineProgress -> offlineModal -> continueFlow`.
 - Для partial reset сохранять snapshot только прогресса: achievements, upgrades tree, modifications, supercomputer progression, drones progression.
+- Обычная «Перезагрузка симуляции», critical autosave и сейв из «Сохранить и выйти» используют общие capture/restore helpers в `game.js`; из `state.stats` сохраняется прогресс достижений, но `currentWaveCount` сбрасывается.
+- В reset payload очищаются tank-поля всех основных и подземных ячеек; underground drones, дроны верхнего уровня, чипы/фрагменты, модификации, прогрессия и производственный склад остаются.
+- Критические restart-сейвы имеют `forceFenceRuntimeResetOnLoad = true`: после загрузки стартует чистая симуляция со штатным двухминутным ожиданием следующей волны.
 - Контракт reset: runtime-мир очищается как при старте уровня, snapshot прогресса восстанавливается после reset, затем в `onAfterRestore` выполняется обязательное доведение runtime.
 
 ## Offline combat snapshot contract
@@ -167,7 +171,7 @@ Anchor-кейсы для module-owned hangar-ресурсов: `TUT-8Y` (silicon
 - Данные слотов: `saveSlot_v1_0 ... saveSlot_v1_10` (индексы `0..10`, UI слоты `1..11`).
 - Формат meta: `{ slots: Array<{ name: string, lastSavedAt: number|null }> }`, всегда нормализуется до `SAVE_SLOTS_COUNT` (11) элементов. Legacy meta с 10 записями **не** ломается: `normalizeSaveSlotsMeta()` достраивает 11-й слот через `getDefaultSlotName(10)`; `SAVE_VERSION` и ключ `saveSlotsMeta_v1` не меняются.
 - Формат payload слота: сериализованное состояние игры + `payload.version = 1`.
-- Слот `10` (`index = 9`) зарезервирован под Auto (`save before retry`):
+- Слот `10` (`index = 9`) зарезервирован под «Автосейв перезагрузки симуляции» (`save.autoRetryName`):
 	- в UI `Load` он отображается по i18n-ключу `save.autoRetryName` (meta.name игнорируется),
 	- в UI `Save` он недоступен для сохранения/rename/delete,
 	- логика авто-слота определяется через `slot.isAuto` из `Storage.listSlots()`.
@@ -204,7 +208,9 @@ Anchor-кейсы для module-owned hangar-ресурсов: `TUT-8Y` (silicon
 - `saveSlot()` обновляет meta только полем `lastSavedAt` (без передачи `name`), чтобы обычное сохранение не перетирало пользовательский rename.
 - Autosave `pre-retry` в слот `10` (`index 9`) выполняется на входе в critical-режим **один раз за critical-эпизод**.
 	- После выхода из critical-фазы флаг эпизода сбрасывается; при следующем входе autosave снова выполняется.
-	- Payload pre-retry: runtime сброшен (1 стартовый танк L1 в ангаре, стены L1, монеты 40), meta-прогресс сохранён (achievements, mods, talents, drones, damage points, cannon/fence upgrades), а purchase-economy возвращена к baseline (`buyCounts = {}`, `buyPrices = {}`, `maxTankLevelAchieved = 1`).
+	- Источник payload — `buildPreRetryPayload()`; его progress snapshot собирается теми же `takePartialRestartProgressSnapshot()` / `restorePartialRestartProgressSnapshot()`, что и обычный `restartSimulationPartial()`.
+	- Payload очищает танки во всех ангарах и оставляет ровно один стартовый танк L1, стены L1 и `$40`; сохраняет achievement state и `stats` (кроме per-run `currentWaveCount`), mods, talents, upgrades, drones, damage points, chips/fragments, silicon dust, installed chips и production storage. Purchase counters возвращаются к baseline (`buyCounts = {}`, `buyPrices = {}`, `maxTankLevelAchieved = 1`).
+	- Оба critical пути используют `forceFenceRuntimeResetOnLoad = true`: загрузка restart payload начинает новую волну через штатные 2 минуты, а не продолжает сохранённую активную волну.
 	- Ошибка autosave (quota/parse/доступ) не ломает critical flow: ставится runtime-флаг `preRetrySaveFailed`, показывается warning/toast.
 - Autosave после волны атаки в слот `11` (`index 10`) выполняется на каждом переходе attack active → inactive.
 	- Seam: `handleNoRepairAttackWaveTransition()` в `game.js` вызывает `saveWaveAutoSlotAfterWaveEnd()` ПОСЛЕ `finalizeNoRepairAttackWaveEpisode()` / `finalizeDefenseOrderEpisode()` / `checkPerfectFenceWave()`, поэтому payload фиксирует уже начисленные награды и инкрементнутый `stats.currentWaveCount`.
@@ -219,10 +225,11 @@ Anchor-кейсы для module-owned hangar-ресурсов: `TUT-8Y` (silicon
 - `Перезапустить симуляцию`:
 	- использует только Auto-slot (`index 9`),
 	- если autosave неуспешен или слот пуст/битый — кнопка restart disabled,
-	- при успехе применяется тот же load/start path, что и big menu `Load` (`startFromBigMenu({ kind: 'load-slot' ... })`) без запуска второго main loop.
+	- при успехе загружает тот же canonical restart payload через общий load/start path big menu (`startFromBigMenu({ kind: 'load-slot' ... })`) без запуска второго main loop.
 - `Сохранить прогресс и выйти`:
 	- открывает save-view в small menu только для manual-слотов `1..9` (`index 0..8`),
-	- после успешного сохранения выполняется штатный выход в меню.
+	- пишет в выбранный слот тот же `buildPreRetryPayload()`, что и Auto-slot; после успешного сохранения выполняется штатный выход в меню.
+- Обычная «Перезагрузка симуляции» использует те же progress-snapshot helpers, поэтому runtime reset и оба critical save не расходятся по набору сохраняемого прогресса.
 - `×`:
 	- без дополнительных действий завершает critical-сценарий и возвращает в меню.
 

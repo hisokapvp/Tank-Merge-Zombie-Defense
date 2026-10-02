@@ -195,7 +195,7 @@
   <script>
     (function (global, doc) {
       var game = global.Game = global.Game || {};
-      var token = '20260929-release-162708';
+      var token = '20261001-wave-autosave-fence-tier-restore';
       function resolve(path) {
         var normalized = String(path || '');
         var separator = normalized.indexOf('?') === -1 ? '?' : '&';
@@ -436,7 +436,7 @@
 
               <div id="menuExitConfirmView" class="menuView hidden" aria-hidden="true">
                 <div class="menuRow">
-                  <div class="menuExitText" data-i18n="menuExitConfirm">&#x415;&#x441;&#x43B;&#x438; &#x412;&#x44B; &#x432;&#x44B;&#x439;&#x434;&#x438;&#x442;&#x435; &#x438;&#x437; &#x438;&#x433;&#x440;&#x44B;, &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x435;&#x441;&#x441; &#x438;&#x433;&#x440;&#x44B; &#x43D;&#x435; &#x441;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x441;&#x44F;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x437;&#x430;&#x43A;&#x43E;&#x43D;&#x447;&#x438;&#x442;&#x44C; &#x438;&#x433;&#x440;&#x443;?</div>
+                  <div class="menuExitText" data-i18n="menuExitConfirm">&#x415;&#x441;&#x43B;&#x438; &#x412;&#x44B; &#x432;&#x44B;&#x439;&#x434;&#x438;&#x442;&#x435; &#x438;&#x437; &#x438;&#x433;&#x440;&#x44B;, &#x43F;&#x440;&#x43E;&#x433;&#x440;&#x435;&#x441;&#x441; &#x438;&#x433;&#x440;&#x44B; &#x43D;&#x435; &#x441;&#x43E;&#x445;&#x440;&#x430;&#x43D;&#x438;&#x442;&#x441;&#x44F;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x437;&#x430;&#x43A;&#x43E;&#x43D;&#x447;&#x438;&#x442;&#x44C; &#x438;&#x433;&#x440;&#x443;?</div>
                 </div>
                 <div class="menuInlineActions">
                   <button id="menuExitConfirmLeave" class="btn btnSecondary" type="button" data-i18n="menuExitConfirmLeave">&#x412;&#x44B;&#x439;&#x442;&#x438;</button>
@@ -453,6 +453,7 @@
                   <button id="menuNewConfirmBack" class="btn btnSecondary" type="button" data-i18n="common.back">&#x41D;&#x430;&#x437;&#x430;&#x434;</button>
                 </div>
               </div>
+
             </div>
 
             <div id="smallMenuSaveView" class="smallMenuSaveView" aria-hidden="true">
@@ -568,7 +569,7 @@
           <div class="levelModal__backdrop" data-achievements-close="true"></div>
           <div class="levelModal__panel" role="dialog" aria-modal="true" aria-labelledby="achievementsTitle" tabindex="-1">
             <button class="levelModal__close scModal__close" id="achievementsClose" type="button" aria-label="Close">&#xD7;</button>
-            <div class="levelModal__title" id="achievementsTitle" data-i18n="achievementsTitle">&#x414;&#x43E;&#x441;&#x442;&#x438;&#x436;&#x435;&#x43D;&#x438;&#x44F;</div>
+            <div class="levelModal__title" id="achievementsTitle">&#x414;&#x43E;&#x441;&#x442;&#x438;&#x436;&#x435;&#x43D;&#x438;&#x44F;</div>
             <div class="achievementsList" id="achievementsList"></div>
           </div>
         </div>
@@ -617,7 +618,7 @@
                 </div>
                 <!-- Screen 2: no-ad confirmation -->
                 <div class="plStorage__confirmScreen hidden" id="plConfirmNoAdScreen">
-                  <div id="plConfirmNoAdText" class="levelModal__line" data-i18n="plConfirmNoAdText">&#x41E;&#x442;&#x43A;&#x440;&#x44B;&#x432;&#x430;&#x44F; &#x431;&#x43E;&#x43A;&#x441; &#x431;&#x435;&#x437; &#x43F;&#x440;&#x43E;&#x441;&#x43C;&#x43E;&#x442;&#x440;&#x430; &#x440;&#x435;&#x43A;&#x43B;&#x430;&#x43C;&#x44B; &#x448;&#x430;&#x43D;&#x441; &#x43D;&#x430; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x435;&#x43D;&#x438;&#x435; &#x441;&#x430;&#x43C;&#x43E;&#x433;&#x43E; &#x440;&#x435;&#x434;&#x43A;&#x43E;&#x433;&#x43E; &#x434;&#x440;&#x43E;&#x43F;&#x430; &#x432; 2 &#x440;&#x430;&#x437;&#x430; &#x43D;&#x438;&#x436;&#x435;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x43F;&#x440;&#x43E;&#x434;&#x43E;&#x43B;&#x436;&#x438;&#x442;&#x44C;?</div>
+                  <div id="plConfirmNoAdText" class="levelModal__line" data-i18n="plConfirmNoAdText">&#x41E;&#x442;&#x43A;&#x440;&#x432;&#x430;&#x44F; &#x431;&#x43E;&#x43A;&#x441; &#x431;&#x435;&#x437; &#x43F;&#x440;&#x43E;&#x441;&#x43C;&#x43E;&#x442;&#x440;&#x430; &#x440;&#x435;&#x43A;&#x43B;&#x430;&#x43C;&#x44B; &#x448;&#x430;&#x43D;&#x441; &#x43D;&#x430; &#x43F;&#x43E;&#x43B;&#x443;&#x447;&#x435;&#x43D;&#x438;&#x435; &#x441;&#x430;&#x43C;&#x43E;&#x433;&#x43E; &#x440;&#x435;&#x434;&#x43A;&#x43E;&#x433;&#x43E; &#x434;&#x440;&#x43E;&#x43F;&#x430; &#x432; 2 &#x440;&#x430;&#x437;&#x430; &#x43D;&#x438;&#x436;&#x435;. &#x423;&#x432;&#x435;&#x440;&#x435;&#x43D;&#x44B; &#x447;&#x442;&#x43E; &#x445;&#x43E;&#x442;&#x438;&#x442;&#x435; &#x43F;&#x440;&#x43E;&#x434;&#x43E;&#x43B;&#x436;&#x438;&#x442;&#x44C;?</div>
                   <div class="levelModal__actions plStorage__confirmActions">
                     <button id="plConfirmNoAdNo" class="btn btnSecondary" type="button" data-i18n="plConfirmNo_label">&#x41D;&#x435;&#x442;</button>
                     <button id="plConfirmNoAdYes" class="btn btnPrimary" type="button" data-i18n="plConfirmYesShort">&#x414;&#x430;</button>
@@ -625,7 +626,7 @@
                 </div>
                 <!-- Screen 3: level-4 boost target picker -->
                 <div class="plStorage__confirmScreen hidden" id="plConfirmBoostScreen">
-                  <div id="plConfirmBoostText" class="levelModal__line" data-i18n="plConfirmBoostText">&#x423;&#x432;&#x435;&#x43B;&#x438;&#x447;&#x438;&#x442;&#x44C; &#x448;&#x430;&#x43D;&#x441; &#x432;&#x44B;&#x43F;&#x430;&#x434;&#x435;&#x43D;&#x438;&#x44F; &#x434;&#x43B;&#x44F;:</div>
+                  <div id="plConfirmBoostText" class="levelModal__line" data-i18n="plConfirmBoostText">&#x423;&#x432;&#x435;&#x43B;&#x438;&#x447;&#x448;&#x435;&#x43D;&#x438;&#x44F; &#x448;&#x430;&#x43D;&#x441; &#x432;&#x44B;&#x43F;&#x430;&#x434;&#x435;&#x43D;&#x438;&#x44F; &#x434;&#x43B;&#x44F;:</div>
                   <div class="plStorage__boostOptions" role="radiogroup" aria-labelledby="plConfirmBoostText">
                     <label class="plStorage__boostOption">
                       <input type="radio" name="plBoostTarget" id="plBoostDrone" value="drone" checked>
@@ -959,224 +960,224 @@
     </div>
   </div>
 
-  <script src="src/core/runtimeTasks.js?v=20260929-release-162708"></script>
-  <script src="src/utils/numberFormat.js?v=20260929-release-162708"></script>
-  <script src="src/utils/telemetry.js?v=20260929-release-162708"></script>
-  <script src="src/utils/eventTelemetry.js?v=20260929-release-162708"></script>
-  <script src="src/utils/tankConfig.js?v=20260929-release-162708"></script>
-  <script src="src/config/tankVisualTiers.js?v=20260929-release-162708"></script>
-  <script src="src/lessons/catalog.js?v=20260929-release-162708"></script>
-  <script src="src/scheduler/srs.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/trackQuery.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/trackDistribution.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/garage.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/economy.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/cannonUpgrades.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/levelFlow.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/progression.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/supercomputer.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/productionLine.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/combatProfiles.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/combat.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/fenceSides.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/fenceRepair.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/decorCollision.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/zombieSpawn.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/initialState.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/serializedStateTypes.js?v=20260929-release-162708"></script>
-  <script src="tools/saveSchemaValidator.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/saveSchemaLoader.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/storage.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/offlineRewardModel.js?v=20260929-release-162708"></script>
-  <script src="src/persistence/offlineProgress.js?v=20260929-release-162708"></script>
-  <script src="src/render/canvasRoot.js?v=20260929-release-162708"></script>
-  <script src="src/render/hudScratch.js?v=20260929-release-162708"></script>
-  <script src="src/core/events.js?v=20260929-release-162708"></script>
-  <script src="src/config/layoutTuning.js?v=20260929-release-162708"></script>
-  <script src="src/config/criticalModalTuning.js?v=20260929-release-162708"></script>
-  <script src="src/config/criticalAudioPolicy.js?v=20260929-release-162708"></script>
-  <script src="src/config/worldEvents.js?v=20260929-release-162708"></script>
-  <script src="src/config/shop.js?v=20260929-release-162708"></script>
-  <script src="src/render/layout/hangarLayout.js?v=20260929-release-162708"></script>
-  <script src="src/render/fenceLayout.js?v=20260929-release-162708"></script>
-  <script src="src/render/groundGen.js?v=20260929-release-162708"></script>
-  <script src="src/utils/seededRng.js?v=20260929-release-162708"></script>
-  <script src="src/render/groundLayer.js?v=20260929-release-162708"></script>
-  <script src="src/render/spriteLoaders.js?v=20260929-release-162708"></script>
-  <script src="src/render/slotActivityOverlay.js?v=20260929-release-162708"></script>
-  <script src="src/render/productionLineRender.js?v=20260929-release-162708"></script>
-  <script src="src/render/cornerTowers.js?v=20260929-release-162708"></script>
-  <script src="src/render/tankPortrait.js?v=20260929-release-162708"></script>
-  <script src="src/render/tankHangarAnimation.js?v=20260929-release-162708"></script>
-  <script src="src/render/input.js?v=20260929-release-162708"></script>
-  <script src="src/config/tutorialSteps.js?v=20260929-release-162708"></script>
-  <script src="src/ui/adService.js?v=20260929-release-162708"></script>
-  <script src="src/ui/continueFlow.js?v=20260929-release-162708"></script>
-  <script src="src/ui/shopUI.js?v=20260929-release-162708"></script>
-  <script src="src/ui/toast.js?v=20260929-release-162708"></script>
-  <script src="src/ui/mergePreview/mergePreviewModel.js?v=20260929-release-162708"></script>
-  <script src="src/ui/mergePreview/mergePreviewRenderer.js?v=20260929-release-162708"></script>
-  <script src="src/ui/mergePopup/mergePopupSeenLevels.js?v=20260929-release-162708"></script>
-  <script src="src/ui/mergePopup/mergePopupStats.js?v=20260929-release-162708"></script>
-  <script src="src/config/audioUi.js?v=20260929-release-162708"></script>
-  <script src="src/ui/buttonBehavior.js?v=20260929-release-162708"></script>
-  <script src="src/ui/inputGuards.js?v=20260929-release-162708"></script>
-  <script src="src/ui/fontFloor.js?v=20260929-release-162708"></script>
-  <script src="src/ui/mergePopup.js?v=20260929-release-162708"></script>
-  <script src="src/ui/zombieAnimPreview.js?v=20260929-release-162708"></script>
-  <script src="src/telemetry/telemetry.js?v=20260929-release-162708"></script>
-  <script src="src/analytics/collector.js?v=20260929-release-162708"></script>
-  <script src="src/analytics/funnel.js?v=20260929-release-162708"></script>
-  <script src="src/tools/anki/importer.js?v=20260929-release-162708"></script>
-  <script src="src/tools/anki/anki_export.js?v=20260929-release-162708"></script>
-  <script src="src/flags/flags.js?v=20260929-release-162708"></script>
-  <script src="src/core/engineAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/experiments/experiments.js?v=20260929-release-162708"></script>
-  <script src="src/core/gameEvents.js?v=20260929-release-162708"></script>
-  <script src="src/perf/profiler.js?v=20260929-release-162708"></script>
-  <script src="src/perf/perfCapture.js?v=20260929-release-162708"></script>
-  <script src="src/render/spriteRefCache.js?v=20260929-release-162708"></script>
-  <script src="src/perf/mobileMode.js?v=20260929-release-162708"></script>
-  <script src="src/perf/fxDensity.js?v=20260929-release-162708"></script>
-  <script src="src/i18n/index.js?v=20260929-release-162708"></script>
-  <script src="src/i18n/fallbackStrings.js?v=20260929-release-162708"></script>
-  <script src="src/i18n/pluralize.js?v=20260929-release-162708"></script>
-  <script src="src/ui/adminFlags.js?v=20260929-release-162708"></script>
-  <script src="src/ui/adminDamagePoints.js?v=20260929-release-162708"></script>
-  <script src="src/ui/analyticsPanel.js?v=20260929-release-162708"></script>
-  <script src="src/ui/experimentsPanel.js?v=20260929-release-162708"></script>
-  <script src="src/ui/funnelPanel.js?v=20260929-release-162708"></script>
-  <script src="src/ui/bugTriage.js?v=20260929-release-162708"></script>
-  <script src="src/ui/debugPanel.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/hangarChips.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/chipEffects.js?v=20260929-release-162708"></script>
-  <script src="src/ui/chipCraftLayout.js?v=20260929-release-162708"></script>
-  <script src="src/ui/hangarChipsUI.js?v=20260929-release-162708"></script>
-  <script src="src/ui/modals.js?v=20260929-release-162708"></script>
-  <script src="src/ui/achievementsModal.js?v=20260929-release-162708"></script>
-  <script src="src/ui/talentOverlayDom.js?v=20260929-release-162708"></script>
-  <script src="src/ui/talentOverlayRenderer.js?v=20260929-release-162708"></script>
-  <script src="src/ui/talentOverlayUi.js?v=20260929-release-162708"></script>
-  <script src="src/config/tankWallStatCatalog.js?v=20260929-release-162708"></script>
-  <script src="src/ui/supercomputerMenu.js?v=20260929-release-162708"></script>
-  <script src="src/ui/productionLineUI.js?v=20260929-release-162708"></script>
-  <script src="src/ui/criticalModal.js?v=20260929-release-162708"></script>
-  <script src="src/systems/pauseManager.js?v=20260929-release-162708"></script>
-  <script src="src/systems/depthSort.js?v=20260929-release-162708"></script>
-  <script src="src/perf/objectPool.js?v=20260929-release-162708"></script>
-  <script src="src/audio/settingsAudio.js?v=20260929-release-162708"></script>
-  <script src="src/audio/sfxRegistry.js?v=20260929-release-162708"></script>
-  <script src="src/audio/sfxPoolRuntime.js?v=20260929-release-162708"></script>
-  <script src="src/audio/musicManager.js?v=20260929-release-162708"></script>
-  <script src="src/accessibility/a11y.js?v=20260929-release-162708"></script>
-  <script src="src/render/zombieRender.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/crateRuntime.js?v=20260929-release-162708"></script>
-  <script src="src/systems/worldEventsRuntime.js?v=20260929-release-162708"></script>
-  <script src="src/systems/talents/talentsV2.js?v=20260929-release-162708"></script>
-  <script src="src/ui/bigMenuRuntime.js?v=20260929-release-162708"></script>
-  <script src="src/ui/lessonProgress.js?v=20260929-release-162708"></script>
-  <script src="src/ui/tutorialRuntime.js?v=20260929-release-162708"></script>
-  <script src="src/core/bootstrap.js?v=20260929-release-162708"></script>
-  <script src="src/core/worldReset.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/targeting.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/achievements.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/drones.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/autoMerge.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/undergroundHangar.js?v=20260929-release-162708"></script>
-  <script src="src/ui/undergroundHangarUI.js?v=20260929-release-162708"></script>
-  <script src="src/mechanics/corpseDespawn.js?v=20260929-release-162708"></script>
-  <script src="src/ui/supercomputerBuildTankFx.js?v=20260929-release-162708"></script>
+  <script src="src/core/runtimeTasks.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/utils/numberFormat.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/utils/telemetry.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/utils/eventTelemetry.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/utils/tankConfig.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/tankVisualTiers.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/lessons/catalog.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/scheduler/srs.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/trackQuery.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/trackDistribution.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/garage.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/economy.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/cannonUpgrades.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/levelFlow.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/progression.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/supercomputer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/productionLine.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/combatProfiles.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/combat.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/fenceSides.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/fenceRepair.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/decorCollision.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/zombieSpawn.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/initialState.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/serializedStateTypes.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="tools/saveSchemaValidator.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/saveSchemaLoader.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/storage.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/offlineRewardModel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/persistence/offlineProgress.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/canvasRoot.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/hudScratch.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/core/events.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/layoutTuning.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/criticalModalTuning.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/criticalAudioPolicy.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/worldEvents.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/shop.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/layout/hangarLayout.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/fenceLayout.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/groundGen.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/utils/seededRng.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/groundLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/spriteLoaders.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/slotActivityOverlay.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/productionLineRender.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/cornerTowers.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/tankPortrait.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/tankHangarAnimation.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/input.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/tutorialSteps.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/adService.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/continueFlow.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/shopUI.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/toast.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/mergePreview/mergePreviewModel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/mergePreview/mergePreviewRenderer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/mergePopup/mergePopupSeenLevels.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/mergePopup/mergePopupStats.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/audioUi.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/buttonBehavior.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/inputGuards.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/fontFloor.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/mergePopup.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/zombieAnimPreview.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/telemetry/telemetry.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/analytics/collector.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/analytics/funnel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/tools/anki/importer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/tools/anki/anki_export.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/flags/flags.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/core/engineAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/experiments/experiments.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/core/gameEvents.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/perf/profiler.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/perf/perfCapture.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/spriteRefCache.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/perf/mobileMode.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/perf/fxDensity.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/i18n/index.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/i18n/fallbackStrings.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/i18n/pluralize.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/adminFlags.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/adminDamagePoints.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/analyticsPanel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/experimentsPanel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/funnelPanel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/bugTriage.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/debugPanel.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/hangarChips.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/chipEffects.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/chipCraftLayout.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/hangarChipsUI.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/modals.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/achievementsModal.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/talentOverlayDom.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/talentOverlayRenderer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/talentOverlayUi.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/config/tankWallStatCatalog.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/supercomputerMenu.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/productionLineUI.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/criticalModal.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/systems/pauseManager.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/systems/depthSort.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/perf/objectPool.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/audio/settingsAudio.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/audio/sfxRegistry.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/audio/sfxPoolRuntime.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/audio/musicManager.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/accessibility/a11y.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/render/zombieRender.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/crateRuntime.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/systems/worldEventsRuntime.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/systems/talents/talentsV2.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/bigMenuRuntime.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/lessonProgress.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/tutorialRuntime.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/core/bootstrap.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/core/worldReset.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/targeting.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/achievements.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/drones.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/autoMerge.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/undergroundHangar.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/undergroundHangarUI.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/mechanics/corpseDespawn.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/ui/supercomputerBuildTankFx.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- -- Phaser 3 migration layer -- -->
   <!-- Phaser is always loaded (cached by browser); activation controlled by usePhaser flag -->
   <script src="vendor/phaser.min.js"></script>
   <!-- Phase 1: core bridge/clock/scenes/bootstrap -->
-  <script src="src/phaser/phaserBridge.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/clockAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/BootScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/GameScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/phaserBootstrap.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/phaserBridge.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/clockAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/BootScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/GameScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/phaserBootstrap.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 2: input adapter + render registry -->
-  <script src="src/phaser/inputAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/renderRegistry.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/inputAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/renderRegistry.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 2c: Phaser layer manager + layer modules -->
-  <script src="src/phaser/layers/PhaserLayerManager.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/BackgroundLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/TankTrackLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/FenceHpBarsLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/EveningDimLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/FenceBaseLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/BoardLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/OrbitingTanksLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/SupercomputerLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/ProductionLineLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/ZombiesCorpsesLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/ProjectilesEffectsLayer.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/layers/DronesLayer.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/layers/PhaserLayerManager.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/BackgroundLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/TankTrackLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/FenceHpBarsLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/EveningDimLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/FenceBaseLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/BoardLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/OrbitingTanksLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/SupercomputerLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/ProductionLineLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/ZombiesCorpsesLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/ProjectilesEffectsLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/layers/DronesLayer.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 2d: audio adapter + input comparison harness -->
-  <script src="src/phaser/audioAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/inputComparisonHarness.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/audioAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/inputComparisonHarness.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 3: HUD / modal / overlay adapters + HUD scene -->
-  <script src="src/phaser/hudAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/sceneOverlayManager.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/modalAdapter.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/HudScene.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/hudAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/sceneOverlayManager.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/modalAdapter.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/HudScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 3b: Modal overlay scenes -->
-  <script src="src/phaser/scenes/PauseMenuScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/LevelUpScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/CrateRewardScene.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/scenes/PauseMenuScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/LevelUpScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/CrateRewardScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 3c: Progression & achievement overlay scenes -->
-  <script src="src/phaser/scenes/BigMenuScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/AchievementsScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/AchievementPopupScene.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/scenes/BigMenuScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/AchievementsScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/AchievementPopupScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 3d: Talents, supercomputer root, help, tutorial overlay scenes -->
-  <script src="src/phaser/scenes/TalentsScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/SupercomputerRootScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/HelpScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/TutorialOverlayScene.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/scenes/TalentsScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/SupercomputerRootScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/HelpScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/TutorialOverlayScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 3e: Hangar, workshop, underground hangar overlay scenes -->
-  <script src="src/phaser/scenes/HangarChipsScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/WorkshopScene.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/scenes/UndergroundHangarScene.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/scenes/HangarChipsScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/WorkshopScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/scenes/UndergroundHangarScene.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Phase 4: Parity & rollout modules -->
-  <script src="src/phaser/parityHarness.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/parityGate.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/rolloutController.js?v=20260929-release-162708"></script>
-  <script src="src/phaser/legacyCleanupManifest.js?v=20260929-release-162708"></script>
+  <script src="src/phaser/parityHarness.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/parityGate.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/rolloutController.js?v=20261001-wave-autosave-fence-tier-restore"></script>
+  <script src="src/phaser/legacyCleanupManifest.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Yandex SDK wrapper (item 7+8). Loaded before game.js so Game.YandexSDK
        is available during boot for i18n env.lang lookup. -->
-  <script src="src/yandex/yandexSdk.js?v=20260929-release-162708"></script>
+  <script src="src/yandex/yandexSdk.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Yandex Payments wrapper (item 4, batch#2 of solo-pipeline-yandex-vk).
        Must load AFTER yandexSdk.js so Game.YandexSDK.onReady is wired. -->
-  <script src="src/yandex/yandexPayments.js?v=20260929-release-162708"></script>
+  <script src="src/yandex/yandexPayments.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Yandex CloudSave adapter (item 8, batch#3 of solo-pipeline-yandex-vk).
        Pushes only state.shop via player.setData/getData. Must load AFTER
        yandexPayments.js so the SDK and config kill-switches are settled. -->
-  <script src="src/persistence/cloudSave.js?v=20260929-release-162708"></script>
+  <script src="src/persistence/cloudSave.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Shop ledger (item 9, batch#3 of solo-pipeline-yandex-vk).
        Writes entitlements/pendingDeliveries through to state.shop. Must
        load AFTER cloudSave.js so flushShop is referenceable. -->
-  <script src="src/shop/shopLedger.js?v=20260929-release-162708"></script>
+  <script src="src/shop/shopLedger.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Atomic chip-bundle delivery (item 10, batch#4 of solo-pipeline-yandex-vk).
        Reads Game.HangarChipsUI/Game.Drones/Game.ShopLedger; idempotent on
        purchaseToken. Must load AFTER shopLedger.js. -->
-  <script src="src/shop/applyBundle.js?v=20260929-release-162708"></script>
+  <script src="src/shop/applyBundle.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Chip-bundle shop modal UI (item 12, batch#4 of solo-pipeline-yandex-vk).
        Wires #chipShopOverlay DOM to Game.A11y / Game.ModalAdapter and
        drives the YandexPayments.purchase -> applyBundle flow. Must load
        AFTER applyBundle.js so Game.ChipShop.applyBundle is wired. -->
-  <script src="src/ui/chipShopModal.js?v=20260929-release-162708"></script>
+  <script src="src/ui/chipShopModal.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- HUD shop button (item 13, batch#5 of solo-pipeline-yandex-vk).
        Wires #hudShopButton click -> Game.ChipShop.UI.open(). Must load
        AFTER chipShopModal.js so Game.ChipShop.UI is exported before any
        click resolves the namespace. -->
-  <script src="src/ui/hudShopButton.js?v=20260929-release-162708"></script>
+  <script src="src/ui/hudShopButton.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <!-- Shop bootstrap wiring (item 16, batch#6 of solo-pipeline-yandex-vk).
        Game.ShopBootstrap.run() - idempotent: payments.init ->
        cloudSave.pullShop merge -> getPurchases replay -> applyBundle +
        consumePurchase. Defensive on offline/network errors. Called from
        boot() in game.js after shop.json fetch. Must load AFTER
        hudShopButton.js so all surfaces it nudges are already exported. -->
-  <script src="src/core/shopBootstrap.js?v=20260929-release-162708"></script>
+  <script src="src/core/shopBootstrap.js?v=20261001-wave-autosave-fence-tier-restore"></script>
   <script>
     (function (global, doc) {
       var game = global.Game || {};

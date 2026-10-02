@@ -201,6 +201,10 @@ test('AWC-8: after a wave fires, the next countdown equals the full interval', f
   controller.updateWorldEvents(0.1);
   assertEqual(worldEventsState.waveNumber, 1, 'wave #1 fired');
   assertClose(controller.getAttackWaveRemainingSec(), ATTACK_EVERY_SEC, 1e-6, 'next wave is a full interval away');
+  now += ATTACK_DURATION_SEC;
+  controller.updateWorldEvents(0.1);
+  assertClose(controller.getAttackWaveRemainingSec(), ATTACK_EVERY_SEC - ATTACK_DURATION_SEC, 1e-6,
+    'after the 60-second wave ends, 60 seconds remain in the 120-second start-to-start interval');
 });
 
 /* ------------------------------------------------------------------ */

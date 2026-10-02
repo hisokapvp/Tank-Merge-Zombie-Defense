@@ -56,12 +56,14 @@
 - `applyCriticalRestartPostLoad()`: при critical restart выполняется восстановление из pre-retry snapshot не только при пустом массиве, но и при деградации состава дронов (меньше количество/сумма уровней).
 
 9) Critical save & exit
-- При `HP supercomputer <= 5%` и выборе `Сохранить прогресс и выйти` сохраняется не «текущий аварийный runtime», а нормализованный pre-retry payload:
+- При `HP supercomputer <= 5%` «Автосейв перезагрузки симуляции», `Перезагрузить симуляцию` и `Сохранить и выйти` используют общий progress snapshot: achievements/stats (кроме счётчика волны текущего запуска), upgrades, modifications, drones, chip state и production storage сохраняются; tank-поля очищаются во всех ангарах.
+- Критические слоты получают нормализованный pre-retry payload:
   - `fenceLevel` сброшен в `1`,
-  - в payload проставляется флаг принудительного fence runtime reset при загрузке (`forceFenceRuntimeResetOnLoad`),
+  - в payload проставляется флаг полного restart при загрузке (`forceFenceRuntimeResetOnLoad`), включая сброс активной волны и её таймера,
   - `supercomputer.hp` восстановлен до `maxHp`,
   - runtime-объекты очищены,
-  - стартовый `lvl1` танк присутствует в payload.
+  - ровно один стартовый `lvl1` танк присутствует в payload, underground drones остаются на месте,
+  - `$40` и штатная задержка `2 минуты` до следующей волны.
 
 10) Fence pathing на нижних углах
 - В `zombieFenceLimit()` проверка «зомби стоит на сломанном сегменте» выполняется по фактической позиции (`pickFenceSegmentByPoint`) с fallback на `theta`.

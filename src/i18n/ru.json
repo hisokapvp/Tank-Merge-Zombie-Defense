@@ -26,7 +26,7 @@
   "menu.load.col.action": "Загрузить",
   "menu.load.toast.loaded": "Загрузка выполнена",
   "menu.load.toast.error": "Ошибка загрузки",
-  "save.autoRetryName": "Сейв перед повтором",
+  "save.autoRetryName": "Автосейв перезагрузки симуляции",
   "save.autoWaveName": "Автосейв после волны",
   "ui.toast.noSaves": "Нет сохранений",
   "ui.toast.unavailable": "Недоступно",

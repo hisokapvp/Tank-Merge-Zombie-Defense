@@ -13753,6 +13753,78 @@ function applyPreRetryRuntimeReset(targetState){
   sc.destroyedAt = 0;
 }
 
+function takePartialRestartProgressSnapshot(snapshotState){
+  var snapshot = WorldResetApi && typeof WorldResetApi.takeProgressSnapshot === 'function'
+    ? WorldResetApi.takeProgressSnapshot(snapshotState)
+    : {};
+  var HCUI = window.Game && window.Game.HangarChipsUI;
+  var uiChips = HCUI && typeof HCUI.getPlayerChips === 'function' ? HCUI.getPlayerChips() : null;
+  if (Array.isArray(uiChips) && uiChips.length) snapshot.playerChips = uiChips.slice();
+  else if (Array.isArray(snapshotState && snapshotState.playerChips)) snapshot.playerChips = snapshotState.playerChips.slice();
+  var uiFragments = HCUI && typeof HCUI.getPlayerFragments === 'function' ? HCUI.getPlayerFragments() : null;
+  if (Array.isArray(uiFragments)) snapshot.playerFragments = uiFragments.slice();
+
+  var srcStats = snapshotState && snapshotState.stats && typeof snapshotState.stats === 'object'
+    ? snapshotState.stats
+    : {};
+  var statsSnapshot = {};
+  for (var key in srcStats) {
+    if (!Object.prototype.hasOwnProperty.call(srcStats, key) || key === 'currentWaveCount') continue;
+    var value = srcStats[key];
+    if (typeof value === 'number') statsSnapshot[key] = clampDevInt(value);
+    else if (value && typeof value === 'object' && !Array.isArray(value)) statsSnapshot[key] = cloneJsonSafe(value, {});
+  }
+  snapshot.stats = statsSnapshot;
+
+  var underground = snapshot.undergroundHangar;
+  if (underground && Array.isArray(underground.cells)) {
+    for (var i = 0; i < underground.cells.length; i++) {
+      if (underground.cells[i]) underground.cells[i].tank = null;
+    }
+  }
+  return snapshot;
+}
+
+function restorePartialRestartProgressSnapshot(targetState, snapshot){
+  if (WorldResetApi && typeof WorldResetApi.restoreProgressSnapshot === 'function') {
+    WorldResetApi.restoreProgressSnapshot(targetState, snapshot);
+  }
+  if (!targetState || typeof targetState !== 'object') return;
+  var HCUI = window.Game && window.Game.HangarChipsUI;
+  if (snapshot && Array.isArray(snapshot.playerChips)) {
+    targetState.playerChips = snapshot.playerChips.slice();
+    if (HCUI && typeof HCUI.setPlayerChips === 'function') HCUI.setPlayerChips(snapshot.playerChips.slice());
+  }
+  if (snapshot && Array.isArray(snapshot.playerFragments) && HCUI && typeof HCUI.setPlayerFragments === 'function') {
+    HCUI.setPlayerFragments(snapshot.playerFragments.slice());
+  }
+  if (!snapshot || !snapshot.stats || typeof snapshot.stats !== 'object') return;
+  if (!targetState.stats || typeof targetState.stats !== 'object') targetState.stats = {};
+  for (var key in snapshot.stats) {
+    if (!Object.prototype.hasOwnProperty.call(snapshot.stats, key)) continue;
+    var value = snapshot.stats[key];
+    if (typeof value === 'number') {
+      var current = Number.isFinite(targetState.stats[key]) ? clampDevInt(targetState.stats[key]) : 0;
+      targetState.stats[key] = Math.max(current, clampDevInt(value));
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (!targetState.stats[key] || typeof targetState.stats[key] !== 'object' || Array.isArray(targetState.stats[key])) {
+        targetState.stats[key] = {};
+      }
+      var targetCounter = targetState.stats[key];
+      for (var nestedKey in value) {
+        if (!Object.prototype.hasOwnProperty.call(value, nestedKey)) continue;
+        var nestedValue = value[nestedKey];
+        if (typeof nestedValue === 'number') {
+          var currentNested = Number.isFinite(targetCounter[nestedKey]) ? clampDevInt(targetCounter[nestedKey]) : 0;
+          targetCounter[nestedKey] = Math.max(currentNested, clampDevInt(nestedValue));
+        } else if (typeof nestedValue === 'boolean' || typeof nestedValue === 'string') {
+          targetCounter[nestedKey] = nestedValue;
+        }
+      }
+    }
+  }
+}
+
 function buildPreRetryPayload(currentState){
   var source = currentState && typeof currentState === 'object' ? currentState : state;
   var payload = createInitialState({ reason: 'reset' });
@@ -13767,13 +13839,8 @@ function buildPreRetryPayload(currentState){
       });
     }
   }
-  var snapshot = null;
-  if (WorldResetApi && typeof WorldResetApi.takeProgressSnapshot === 'function') {
-    snapshot = WorldResetApi.takeProgressSnapshot(source);
-  }
-  if (snapshot && WorldResetApi && typeof WorldResetApi.restoreProgressSnapshot === 'function') {
-    WorldResetApi.restoreProgressSnapshot(payload, snapshot);
-  }
+  var snapshot = takePartialRestartProgressSnapshot(source);
+  restorePartialRestartProgressSnapshot(payload, snapshot);
 
   applyPreRetryRuntimeReset(payload);
   // Defensive: ensure drones survive pre-retry reset
@@ -13797,6 +13864,7 @@ function buildPreRetryPayload(currentState){
       payload.playerFragments = liveFragments.slice();
     }
   }
+  payload.forceFenceRuntimeResetOnLoad = true;
   return payload;
 }
 
@@ -13966,79 +14034,8 @@ function restartSimulationPartial(){
     WorldResetApi.restartSimulationPartial({
       getState: function () { return state; },
       resetWorldRuntime: resetWorldRuntimeState,
-      // Item 11: capture big-chip inventory from BOTH state and HangarChipsUI cache,
-      // because the UI module keeps its own copy that survives reset and would be
-      // resynced from the empty state.playerChips otherwise.
-      takeProgressSnapshot: function (snapshotState) {
-        var snap = WorldResetApi.takeProgressSnapshot(snapshotState);
-        var HCUI = window.Game && window.Game.HangarChipsUI;
-        var uiChips = HCUI && typeof HCUI.getPlayerChips === 'function' ? HCUI.getPlayerChips() : null;
-        if (Array.isArray(uiChips) && uiChips.length) {
-          snap.playerChips = uiChips.slice();
-        } else if (Array.isArray(snapshotState && snapshotState.playerChips)) {
-          snap.playerChips = snapshotState.playerChips.slice();
-        }
-        /* Achievement progress lives in `state.stats.*`, but partial reset
-           recreates `state` via createInitialState(), which zeroes every
-           counter. Snapshot the whole stats surface here (game.js owns this
-           override, so worldReset.js stays free of the per-run counter name)
-           and drop the per-run wave counter — it must restart from 0. */
-        var srcStats = snapshotState && snapshotState.stats && typeof snapshotState.stats === 'object'
-          ? snapshotState.stats
-          : {};
-        var statsSnap = {};
-        for (var sk in srcStats) {
-          if (!Object.prototype.hasOwnProperty.call(srcStats, sk)) continue;
-          if (sk === 'currentWaveCount') continue;
-          var sv = srcStats[sk];
-          if (typeof sv === 'number') statsSnap[sk] = clampDevInt(sv);
-          else if (sv && typeof sv === 'object' && !Array.isArray(sv)) statsSnap[sk] = cloneJsonSafe(sv, {});
-        }
-        snap.stats = statsSnap;
-        return snap;
-      },
-      restoreProgressSnapshot: function (targetState, snap) {
-        WorldResetApi.restoreProgressSnapshot(targetState, snap);
-        if (snap && Array.isArray(snap.playerChips)) {
-          if (targetState && typeof targetState === 'object') {
-            targetState.playerChips = snap.playerChips.slice();
-          }
-          var HCUI = window.Game && window.Game.HangarChipsUI;
-          if (HCUI && typeof HCUI.setPlayerChips === 'function') {
-            HCUI.setPlayerChips(snap.playerChips.slice());
-          }
-        }
-        /* Restore the achievement stats surface captured above. Monotonic
-           Math.max merge so a stale snapshot can never demote progress; the
-           per-run wave counter is intentionally absent from the snapshot. */
-        if (snap && snap.stats && typeof snap.stats === 'object' && targetState && typeof targetState === 'object') {
-          if (!targetState.stats || typeof targetState.stats !== 'object') targetState.stats = {};
-          var snapStats = snap.stats;
-          for (var rk in snapStats) {
-            if (!Object.prototype.hasOwnProperty.call(snapStats, rk)) continue;
-            var rv = snapStats[rk];
-            if (typeof rv === 'number') {
-              var cur = Number.isFinite(targetState.stats[rk]) ? clampDevInt(targetState.stats[rk]) : 0;
-              targetState.stats[rk] = Math.max(cur, clampDevInt(rv));
-            } else if (rv && typeof rv === 'object' && !Array.isArray(rv)) {
-              if (!targetState.stats[rk] || typeof targetState.stats[rk] !== 'object' || Array.isArray(targetState.stats[rk])) {
-                targetState.stats[rk] = {};
-              }
-              var tgt = targetState.stats[rk];
-              for (var rmk in rv) {
-                if (!Object.prototype.hasOwnProperty.call(rv, rmk)) continue;
-                var rmv = rv[rmk];
-                if (typeof rmv === 'number') {
-                  var curM = Number.isFinite(tgt[rmk]) ? clampDevInt(tgt[rmk]) : 0;
-                  tgt[rmk] = Math.max(curM, clampDevInt(rmv));
-                } else if (typeof rmv === 'boolean' || typeof rmv === 'string') {
-                  tgt[rmk] = rmv;
-                }
-              }
-            }
-          }
-        }
-      },
+      takeProgressSnapshot: takePartialRestartProgressSnapshot,
+      restoreProgressSnapshot: restorePartialRestartProgressSnapshot,
       onAfterRestore: function (restoredState) {
         // solo-pipeline-yandex-vk#1 (batch#1, item 3): partial-reset path runs
         // outside the `restoreFullState` / `applySaved` hot paths, so without
@@ -14131,11 +14128,7 @@ function performCriticalRestart(){
 }
 
 function buildCriticalSavePayload(){
-  var payload = buildPreRetryPayload(state);
-  if (payload && typeof payload === 'object') {
-    payload.forceFenceRuntimeResetOnLoad = true;
-  }
-  return payload;
+  return buildPreRetryPayload(state);
 }
 
 function buildSmallMenuSavePayload(slotIndex, saveView){
